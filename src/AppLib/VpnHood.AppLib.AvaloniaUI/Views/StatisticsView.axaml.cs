@@ -10,8 +10,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 
 public partial class StatisticsView : UserControl, IPage
 {
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
-
     public StatisticsView(MainView host)
     {
         _ = host;
@@ -22,7 +20,7 @@ public partial class StatisticsView : UserControl, IPage
     private void Fill()
     {
         var s = Strings.Current;
-        var state = _app.State;
+        var state = AppData.State;
         var session = state.SessionInfo;
         var status = state.SessionStatus;
         if (session == null)

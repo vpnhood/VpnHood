@@ -9,7 +9,6 @@ using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.Views.Dialogs;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
@@ -22,7 +21,6 @@ public partial class AccountView : UserControl, IPage
     private const string OneYear = "P1Y";
 
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private string? _premiumCode;
     private bool _isCodeRevealed;
     private TextBlock? _codeText;
@@ -51,7 +49,7 @@ public partial class AccountView : UserControl, IPage
     private void Fill()
     {
         var s = Strings.Current;
-        var state = _app.State;
+        var state = AppData.State;
         var account = AppData.Account;
         var profile = state.ClientProfile;
         var isPremiumUser = AppData.IsPremiumUser;
@@ -132,7 +130,7 @@ public partial class AccountView : UserControl, IPage
     {
         var s = Strings.Current;
         CodeRows.Children.Clear();
-        var canShowCode = AppData.CanViewAccessCode && _app.State.ClientProfile?.HasAccessCode == true;
+        var canShowCode = AppData.CanViewAccessCode && AppData.State.ClientProfile?.HasAccessCode == true;
         if (canShowCode)
             AddCodeRow();
 
@@ -171,7 +169,14 @@ public partial class AccountView : UserControl, IPage
         eye.Classes.Add("small");
         ((TextBlock)eye.Content).Classes.Add("mdi");
         ((TextBlock)eye.Content).Classes.Add("disabled");
-        eye.Click += async (_, _) => await ToggleReveal(eye);
+        eye.Click += async (_, _) => {
+            try {
+                await ToggleReveal(eye);
+            }
+            catch (Exception ex) {
+                await this.ReportError(ex);
+            }
+        };
         line.Children.Add(eye);
 
         var copy = new Button { Content = new TextBlock { Text = Mdi.ContentCopy, FontSize = 18 } };
@@ -179,7 +184,14 @@ public partial class AccountView : UserControl, IPage
         copy.Classes.Add("small");
         ((TextBlock)copy.Content).Classes.Add("mdi");
         ((TextBlock)copy.Content).Classes.Add("disabled");
-        copy.Click += async (_, _) => await CopyCode(copy);
+        copy.Click += async (_, _) => {
+            try {
+                await CopyCode(copy);
+            }
+            catch (Exception ex) {
+                await this.ReportError(ex);
+            }
+        };
         line.Children.Add(copy);
 
         Grid.SetColumn(line, 1);
@@ -188,7 +200,7 @@ public partial class AccountView : UserControl, IPage
     }
 
     // fetched on demand, never on arrival: the raw code leaves the app only when asked for
-    private string? LoadPremiumCode()
+    private async Task<string?> LoadPremiumCode()
     {
         if (_premiumCode != null)
             return _premiumCode;
@@ -199,26 +211,25 @@ public partial class AccountView : UserControl, IPage
             return null;
         }
 
-        var code = _app.ClientProfileService.Get(profileId.Value).AccessCode;
+        var code = await AppData.Api.ClientProfiles.GetAccessCode(profileId.Value, CancellationToken.None);
         _premiumCode = string.IsNullOrEmpty(code) ? Strings.Current.CouldNotGetPremiumCode : Format.CodeGroups(code);
         return _premiumCode;
     }
 
-    private Task ToggleReveal(Button eye)
+    private async Task ToggleReveal(Button eye)
     {
         if (!_isCodeRevealed)
-            LoadPremiumCode();
+            await LoadPremiumCode();
         _isCodeRevealed = !_isCodeRevealed;
         if (_codeText != null)
             _codeText.Text = _isCodeRevealed ? _premiumCode ?? MaskedCode : MaskedCode;
         if (eye.Content is TextBlock glyph)
             glyph.Text = _isCodeRevealed ? Mdi.EyeOffOutline : Mdi.EyeOutline;
-        return Task.CompletedTask;
     }
 
     private async Task CopyCode(Button copy)
     {
-        var code = LoadPremiumCode();
+        var code = await LoadPremiumCode();
         if (code == null)
             return;
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
@@ -300,12 +311,11 @@ public partial class AccountView : UserControl, IPage
     private async void OnManageClick(object? sender, RoutedEventArgs e)
     {
         try {
-            var billing = _app.Services.AccountService?.BillingService;
-            if (billing == null)
+            if (!AppData.Features.IsBillingSupported)
                 return;
             ManageButton.IsEnabled = false;
             try {
-                await billing.OpenSubscriptionManagement(AppUiContext.RequiredContext, CancellationToken.None);
+                await AppData.Api.Billing.OpenSubscriptionManagement(CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);

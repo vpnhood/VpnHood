@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using VpnHood.AppLib.AvaloniaUI.Controls;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
+using VpnHood.AppLib.Settings;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 
@@ -9,7 +10,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private (string Excludes, string Includes, string Blocks) _saved;
     private bool _isLoaded;
 
@@ -20,19 +20,22 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
     }
 
     protected MainView Host => _host;
-    protected VpnHoodApp App => _app;
+
+    // the settings the switch is in, saved as one (AppData.SaveUserSettings) once the switch moved
+    protected static UserSettings Settings => AppData.UserSettings;
 
     protected abstract string Title { get; }
     protected abstract string? SwitchDescription { get; }
     protected abstract bool IsSwitchOn { get; set; }
-    protected abstract (string Excludes, string Includes, string Blocks) Load();
-    protected abstract void Save(string excludes, string includes, string blocks);
+    protected abstract Task<(string Excludes, string Includes, string Blocks)> Load(CancellationToken cancellationToken);
+    protected abstract Task Save(string excludes, string includes, string blocks, CancellationToken cancellationToken);
     protected abstract void ConfigureInput(SplitListInput input);
 
     // an alert under the switch: the server that undoes a domain filter
     protected virtual string? SwitchWarning => null;
 
-    // the pages' own construction finishes before the lists can be read
+    // The pages' own construction finishes before the lists can be read. The lists come through
+    // the API, so the page shows its switch at once and its lists as they arrive.
     protected void Initialize()
     {
         Header.Title = Title;
@@ -45,30 +48,45 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
             EnabledItem.Extra = alert;
         }
         ConfigureInput(Input);
-
-        _saved = Load();
-        Input.Excludes = _saved.Excludes;
-        Input.Includes = _saved.Includes;
-        Input.Blocks = _saved.Blocks;
-        _isLoaded = true;
         ShowGate();
+        _ = LoadLists();
+    }
+
+    private async Task LoadLists()
+    {
+        try {
+            _saved = await Load(CancellationToken.None);
+            Input.Excludes = _saved.Excludes;
+            Input.Includes = _saved.Includes;
+            Input.Blocks = _saved.Blocks;
+            _isLoaded = true;
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
     }
 
     private void ShowGate()
     {
-        var isSplitOn = _app.UserSettings.SplitTunneling.Enabled;
+        var isSplitOn = Settings.SplitTunneling.Enabled;
         EnabledItem.IsDisabled = !isSplitOn;
         Input.IsDisabled = !isSplitOn || !IsSwitchOn;
     }
 
-    private bool IsDirty => Input.Excludes != _saved.Excludes || Input.Includes != _saved.Includes || Input.Blocks != _saved.Blocks;
+    private bool IsDirty => _isLoaded && (Input.Excludes != _saved.Excludes || Input.Includes != _saved.Includes || Input.Blocks != _saved.Blocks);
 
-    private void OnToggled(object? sender, EventArgs e)
+    private async void OnToggled(object? sender, EventArgs e)
     {
-        IsSwitchOn = EnabledItem.IsOn;
-        _app.SettingsService.Save();
-        ShowGate();
-        _host.ViewModel.Refresh();
+        try {
+            var settings = Settings;
+            IsSwitchOn = EnabledItem.IsOn;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            ShowGate();
+            _host.ViewModel.Refresh();
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
     }
 
     private void OnTurnedOn(object? sender, EventArgs e)
@@ -98,8 +116,8 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
             return true;
 
         try {
-            Save(Input.Excludes, Input.Includes, Input.Blocks);
-            _app.SettingsService.Save();
+            await Save(Input.Excludes, Input.Includes, Input.Blocks, CancellationToken.None);
+            await AppData.SaveUserSettings(Settings, CancellationToken.None);
             _host.ViewModel.Refresh();
             return true;
         }

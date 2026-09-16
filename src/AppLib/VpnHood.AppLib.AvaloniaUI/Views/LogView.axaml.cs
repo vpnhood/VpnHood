@@ -1,4 +1,3 @@
-using System.Text;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -7,12 +6,10 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 
-// The app's log, read the way the web server reads it for /api/app/log.txt. Nothing here is
+// The app's log, read through the API as the web UI reads /api/app/log.txt. Nothing here is
 // localized, as nothing is in the dialog this page comes from.
 public partial class LogView : UserControl, IPage
 {
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
-
     public LogView()
     {
         InitializeComponent();
@@ -53,9 +50,7 @@ public partial class LogView : UserControl, IPage
     private async Task Load()
     {
         try {
-            using var stream = new MemoryStream();
-            await _app.CopyLogToStream(stream);
-            LogText.Text = Encoding.UTF8.GetString(stream.ToArray());
+            LogText.Text = await AppData.Api.App.Log(CancellationToken.None);
 
             // the last lines are the ones being looked for, and they exist only once it is laid out
             Dispatcher.UIThread.Post(Scroller.ScrollToEnd, DispatcherPriority.Loaded);

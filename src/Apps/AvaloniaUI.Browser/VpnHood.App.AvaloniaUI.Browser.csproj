@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- published and zipped by _publish.ps1, embedded by the heads -->
+		<Description>The VpnHood Avalonia UI as a browser page: what the app's web server hands a paired device in place of the SPA</Description>
+		<TargetFramework>net10.0-browser</TargetFramework>
+		<RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>VpnHood.App.AvaloniaUI.Browser</RootNamespace>
+		<AssemblyName>VpnHoodAvaloniaBrowser</AssemblyName>
+		<WasmMainJSPath>wwwroot/main.js</WasmMainJSPath>
+
+		<!-- Interpreted, not AOT: the bundle is served over the LAN to a phone for a few minutes of
+		     settings, and AOT would double it. Trimmed to the full extent: the app's own assemblies are
+		     referenced for their DTOs alone, and the API client's JSON is generated ahead of time; the
+		     reflection path stays on for the few places the shared code still uses it. -->
+		<PublishTrimmed>true</PublishTrimmed>
+		<TrimMode>full</TrimMode>
+		<JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+	</PropertyGroup>
+
+	<!-- Built under the .NET 10 SDK named by global.json in this folder: SkiaSharp's WebAssembly
+	     libraries are built for its Emscripten (3.1.56), which the .NET 11 preview's (6.x) cannot link. -->
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia.Browser" Version="12.1.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI\VpnHood.AppLib.AvaloniaUI.csproj" />
+	</ItemGroup>
+</Project>

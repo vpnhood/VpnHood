@@ -25,19 +25,19 @@ public sealed class SplitIpsViaDeviceView : SplitListView
     protected override string? SwitchDescription => Strings.Current.SplitIpsViaDeviceShortDesc;
 
     protected override bool IsSwitchOn {
-        get => App.UserSettings.SplitTunneling.UseIpViaDevice;
-        set => App.UserSettings.SplitTunneling.UseIpViaDevice = value;
+        get => Settings.SplitTunneling.UseIpViaDevice;
+        set => Settings.SplitTunneling.UseIpViaDevice = value;
     }
 
-    protected override (string Excludes, string Includes, string Blocks) Load()
+    protected override async Task<(string Excludes, string Includes, string Blocks)> Load(CancellationToken cancellationToken)
     {
-        var ips = App.SettingsService.SplitIpViaDeviceSettings.Get();
+        var ips = await AppData.Api.App.GetSplitIpsViaDevice(cancellationToken);
         return (ips.Excludes, ips.Includes, "");
     }
 
-    protected override void Save(string excludes, string includes, string blocks)
+    protected override Task Save(string excludes, string includes, string blocks, CancellationToken cancellationToken)
     {
-        App.SettingsService.SplitIpViaDeviceSettings.Set(new SplitIpsViaDevice { Excludes = excludes, Includes = includes });
+        return AppData.Api.App.SetSplitIpsViaDevice(new SplitIpsViaDevice { Excludes = excludes, Includes = includes }, cancellationToken);
     }
 
     protected override void ConfigureInput(SplitListInput input)

@@ -30,16 +30,16 @@ public partial class AddServerView : UserControl, IPage
         // Enter in the field adds, as it would submit that dialog's form
         if (e.Key == Key.Enter && KeyBox.IsFocused) {
             e.Handled = true;
-            Add();
+            _ = Add();
             return;
         }
 
         base.OnKeyDown(e);
     }
 
-    private void OnAddClick(object? sender, RoutedEventArgs e)
+    private async void OnAddClick(object? sender, RoutedEventArgs e)
     {
-        Add();
+        await Add();
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)
@@ -49,14 +49,14 @@ public partial class AddServerView : UserControl, IPage
 
     // The key is the app's to judge: whatever it refuses is an unreadable key, and the page says so
     // in the web UI's own words rather than the exception's.
-    private void Add()
+    private async Task Add()
     {
         var accessKey = KeyBox.Text?.Trim();
         if (string.IsNullOrEmpty(accessKey))
             return;
 
         try {
-            var clientProfileId = _viewModel.AddAccessKey(accessKey);
+            var clientProfileId = await _viewModel.AddAccessKey(accessKey);
             _host.GoBack();
             _ = _viewModel.ConnectToProfile(clientProfileId);
         }

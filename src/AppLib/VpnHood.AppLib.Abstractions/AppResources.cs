@@ -9,6 +9,11 @@ public class AppResources
     // The null-vs-non-null check still tells "provided" from "not provided" without loading it.
     public Lazy<byte[]>? IpLocationZipData { get; set; }
     public byte[]? SpaZipData { get; set; }
+
+    // The Avalonia UI's browser build (VpnHood.App.AvaloniaUI.Browser), which the web server hands a
+    // paired device in place of the SPA; null when the head ships none, and the SPA serves everyone.
+    public byte[]? AvaloniaBrowserZipData { get; set; }
+
     public VhSize WindowSize { get; set; } = new(400, 700);
 
     public AppStrings Strings { get; set; } = new();

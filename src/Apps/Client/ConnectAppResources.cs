@@ -12,8 +12,11 @@ public static class ConnectAppResources
 
     private static AppResources Create()
     {
-        var resources = SpaResourcesFactory.FromSpaZip(typeof(ConnectAppResources).Assembly, "VpnHood.App.Client.spa.zip", "connect");
+        var assembly = typeof(ConnectAppResources).Assembly;
+        var resources = SpaResourcesFactory.FromSpaZip(assembly, "VpnHood.App.Client.spa.zip", "connect");
         resources.IpLocationZipData = new Lazy<byte[]>(() => Ip2LocationLiteDb.ZipData);
+        // the Avalonia UI's browser build, when this build embeds one (see the project file)
+        resources.AvaloniaBrowserZipData = EmbeddedResource.TryRead(assembly, "VpnHood.App.Client.avalonia-browser.zip");
         return resources;
     }
 

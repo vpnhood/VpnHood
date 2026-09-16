@@ -8,7 +8,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public partial class PrivacyView : UserControl, IPage
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
 
     public PrivacyView(MainView host)
     {
@@ -20,10 +19,10 @@ public partial class PrivacyView : UserControl, IPage
         var isTrackerSupported = AppData.IsAnonymousTrackerSupported;
         TrackerItem.Title = s.AllowAnonymousTracker;
         TrackerItem.Description = s.AllowAnonymousTrackerDesc;
-        TrackerItem.IsOn = _app.UserSettings.AllowAnonymousTracker;
+        TrackerItem.IsOn = AppData.UserSettings.AllowAnonymousTracker;
         TrackerItem.IsVisible = isTrackerSupported;
         NoticeText.IsVisible = isTrackerSupported;
-        PolicyButton.IsVisible = _app.Features.PrivacyPolicyUrl != null;
+        PolicyButton.IsVisible = AppData.Features.PrivacyPolicyUrl != null;
         PolicyCard.IsVisible = NoticeText.IsVisible || PolicyButton.IsVisible;
     }
 
@@ -34,16 +33,22 @@ public partial class PrivacyView : UserControl, IPage
         else Header.FocusBack();
     }
 
-    private void OnTrackerToggled(object? sender, EventArgs e)
+    private async void OnTrackerToggled(object? sender, EventArgs e)
     {
-        _app.UserSettings.AllowAnonymousTracker = TrackerItem.IsOn;
-        _app.SettingsService.Save();
+        try {
+            var settings = AppData.UserSettings;
+            settings.AllowAnonymousTracker = TrackerItem.IsOn;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnPolicyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (_app.Features.PrivacyPolicyUrl is { } url)
+            if (AppData.Features.PrivacyPolicyUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

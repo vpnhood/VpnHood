@@ -6,18 +6,16 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 
 public partial class SplitLocalNetworkView : UserControl, IPage
 {
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
-
     public SplitLocalNetworkView(MainView host)
     {
         _ = host;
         InitializeComponent();
         var s = Strings.Current;
-        var isAvailable = AppData.IsLocalNetworkAvailable(_app.State);
+        var isAvailable = AppData.IsLocalNetworkAvailable(AppData.State);
         EnforcedAlert.IsVisible = !isAvailable;
         EnabledItem.Title = s.SplitLocalNetwork;
         EnabledItem.Description = s.SplitLocalNetworkDesc;
-        EnabledItem.IsOn = _app.UserSettings.SplitTunneling.UseLocalNetwork;
+        EnabledItem.IsOn = AppData.UserSettings.SplitTunneling.UseLocalNetwork;
         EnabledItem.IsDisabled = !isAvailable;
     }
 
@@ -27,9 +25,15 @@ public partial class SplitLocalNetworkView : UserControl, IPage
         else Header.FocusBack();
     }
 
-    private void OnToggled(object? sender, EventArgs e)
+    private async void OnToggled(object? sender, EventArgs e)
     {
-        _app.UserSettings.SplitTunneling.UseLocalNetwork = EnabledItem.IsOn;
-        _app.SettingsService.Save();
+        try {
+            var settings = AppData.UserSettings;
+            settings.SplitTunneling.UseLocalNetwork = EnabledItem.IsOn;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 }

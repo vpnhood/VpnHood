@@ -2,6 +2,7 @@
 using Avalonia.Android;
 using VpnHood.AppLib;
 using VpnHood.AppLib.AvaloniaUI;
+using VpnHood.AppLib.Droid.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Services.Updaters;
@@ -50,6 +51,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     public override void OnCreate()
     {
         VpnHoodAndroidApp.Init(CreateAppOptions);
+        AndroidAvaloniaUi.Init();
         base.OnCreate();
     }
 

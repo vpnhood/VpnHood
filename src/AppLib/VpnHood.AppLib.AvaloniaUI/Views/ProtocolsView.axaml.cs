@@ -11,7 +11,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public partial class ProtocolsView : UserControl, IPage
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private readonly List<(ChannelProtocol Protocol, OptionRow Row)> _rows = [];
 
     public ProtocolsView(MainView host)
@@ -20,7 +19,7 @@ public partial class ProtocolsView : UserControl, IPage
         InitializeComponent();
         var s = Strings.Current;
 
-        CloakCard.IsVisible = _app.Features.IsTcpProxySupported;
+        CloakCard.IsVisible = AppData.Features.IsTcpProxySupported;
         CloakItem.Title = s.CloakMode;
         CloakItem.Description = s.CloakModeShortDesc;
         DropQuicItem.Title = s.ProtocolBlockQuic;
@@ -47,8 +46,8 @@ public partial class ProtocolsView : UserControl, IPage
 
     private void Show()
     {
-        var state = _app.State;
-        var settings = _app.UserSettings;
+        var state = AppData.State;
+        var settings = AppData.UserSettings;
         var reason = state.TcpProxyUsageReason;
 
         CloakItem.IsOn = state.SessionStatus?.IsTcpProxy ?? settings.UseTcpProxy;
@@ -84,30 +83,48 @@ public partial class ProtocolsView : UserControl, IPage
         else Header.FocusBack();
     }
 
-    private void Choose(ChannelProtocol protocol)
+    private async void Choose(ChannelProtocol protocol)
     {
-        _app.UserSettings.ChannelProtocol = protocol;
-        _app.SettingsService.Save();
-        Show();
-        _host.ViewModel.Refresh();
+        try {
+            var settings = AppData.UserSettings;
+            settings.ChannelProtocol = protocol;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            Show();
+            _host.ViewModel.Refresh();
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
     }
 
     // the first time the cloak is turned on, its page explains it (protocols.vue's cloakMode setter)
-    private void OnCloakToggled(object? sender, EventArgs e)
+    private async void OnCloakToggled(object? sender, EventArgs e)
     {
-        if (!_app.UserSettings.IsTcpProxyPrompted)
-            _host.Navigate(FeaturePages.CloakMode(_host));
+        try {
+            var settings = AppData.UserSettings;
+            if (!settings.IsTcpProxyPrompted)
+                _host.Navigate(FeaturePages.CloakMode(_host));
 
-        _app.UserSettings.UseTcpProxy = CloakItem.IsOn;
-        _app.SettingsService.Save();
-        Show();
-        _host.ViewModel.Refresh();
+            settings.UseTcpProxy = CloakItem.IsOn;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            Show();
+            _host.ViewModel.Refresh();
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
     }
 
-    private void OnDropQuicToggled(object? sender, EventArgs e)
+    private async void OnDropQuicToggled(object? sender, EventArgs e)
     {
-        _app.UserSettings.DropQuic = DropQuicItem.IsOn;
-        _app.SettingsService.Save();
+        try {
+            var settings = AppData.UserSettings;
+            settings.DropQuic = DropQuicItem.IsOn;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
     }
 
     private void OnLearnMoreClick(object? sender, RoutedEventArgs e)

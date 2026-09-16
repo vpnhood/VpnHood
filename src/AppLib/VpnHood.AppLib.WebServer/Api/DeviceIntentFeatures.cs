@@ -1,27 +1,44 @@
-﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Device;
 
 namespace VpnHood.AppLib.WebServer.Api;
 
-public class DeviceIntentFeatures(
-    IDeviceUiProvider? uiProvider,
-    IAppUserReviewProvider? userReviewProvider)
+// What the device can open or ask for, read off the providers once (Create) and carried as plain
+// values: the same object is deserialized by a UI on the other side of the API, which has no
+// providers to ask.
+public class DeviceIntentFeatures
 {
-    public bool IsUserReviewSupported => userReviewProvider != null;
+    public required bool IsUserReviewSupported { get; init; }
 
     // Whether a link may be handed to an external browser. The SPA can always render a page inside
     // itself, so this gates only what LEAVES the app — the account website, the web purchase page.
     // Not the same question as IsTv: a television with a browser installed can open both.
-    public bool IsWebBrowserSupported => uiProvider?.IsWebBrowserSupported ?? false;
+    public required bool IsWebBrowserSupported { get; init; }
 
+    public required bool IsQuickLaunchSupported { get; init; }
+    public required bool IsRequestQuickLaunchSupported { get; init; }
+    public required bool IsRequestNotificationSupported { get; init; }
+    public required bool IsPrivateDnsSettingsSupported { get; init; }
+    public required bool IsKillSwitchSettingsSupported { get; init; }
+    public required bool IsAlwaysOnSettingsSupported { get; init; }
+    public required bool IsSettingsSupported { get; init; }
+    public required bool IsAppSettingsSupported { get; init; }
+    public required bool IsAppNotificationSettingsSupported { get; init; }
 
-    public bool IsQuickLaunchSupported => uiProvider?.IsQuickLaunchSupported ?? false;
-    public bool IsRequestQuickLaunchSupported => uiProvider?.IsRequestQuickLaunchSupported ?? false;
-    public bool IsRequestNotificationSupported => uiProvider?.IsRequestNotificationSupported ?? false;
-    public bool IsPrivateDnsSettingsSupported => uiProvider?.IsPrivateDnsSettingsSupported ?? false;
-    public bool IsKillSwitchSettingsSupported => uiProvider?.IsKillSwitchSettingsSupported ?? false;
-    public bool IsAlwaysOnSettingsSupported => uiProvider?.IsAlwaysOnSettingsSupported ?? false;
-    public bool IsSettingsSupported => uiProvider?.IsSettingsSupported ?? false;
-    public bool IsAppSettingsSupported => uiProvider?.IsAppSettingsSupported ?? false;
-    public bool IsAppNotificationSettingsSupported => uiProvider?.IsAppNotificationSettingsSupported ?? false;
+    public static DeviceIntentFeatures Create(IDeviceUiProvider? uiProvider, IAppUserReviewProvider? userReviewProvider)
+    {
+        return new DeviceIntentFeatures {
+            IsUserReviewSupported = userReviewProvider != null,
+            IsWebBrowserSupported = uiProvider?.IsWebBrowserSupported ?? false,
+            IsQuickLaunchSupported = uiProvider?.IsQuickLaunchSupported ?? false,
+            IsRequestQuickLaunchSupported = uiProvider?.IsRequestQuickLaunchSupported ?? false,
+            IsRequestNotificationSupported = uiProvider?.IsRequestNotificationSupported ?? false,
+            IsPrivateDnsSettingsSupported = uiProvider?.IsPrivateDnsSettingsSupported ?? false,
+            IsKillSwitchSettingsSupported = uiProvider?.IsKillSwitchSettingsSupported ?? false,
+            IsAlwaysOnSettingsSupported = uiProvider?.IsAlwaysOnSettingsSupported ?? false,
+            IsSettingsSupported = uiProvider?.IsSettingsSupported ?? false,
+            IsAppSettingsSupported = uiProvider?.IsAppSettingsSupported ?? false,
+            IsAppNotificationSettingsSupported = uiProvider?.IsAppNotificationSettingsSupported ?? false
+        };
+    }
 }

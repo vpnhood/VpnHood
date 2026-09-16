@@ -14,7 +14,9 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class AppController(VpnHoodApp app, VpnHoodAppWebServer webServer) : ControllerBase, IAppController
+// The web server is asked for, not held: in process (InProcessAppApi) this controller exists before
+// any listener does, and only the three remote-access calls - the pairing page's - need one.
+internal class AppController(VpnHoodApp app, Func<VpnHoodAppWebServer> webServerProvider) : ControllerBase, IAppController
 {
     public override void AddRoutes(IRouteMapper mapper)
     {
@@ -212,7 +214,7 @@ internal class AppController(VpnHoodApp app, VpnHoodAppWebServer webServer) : Co
     {
         var ret = new AppData {
             Features = app.Features,
-            IntentFeatures = new DeviceIntentFeatures(app.Services.DeviceUiProvider, app.Services.UserReviewProvider),
+            IntentFeatures = DeviceIntentFeatures.Create(app.Services.DeviceUiProvider, app.Services.UserReviewProvider),
             UserSettings = app.UserSettings,
             ClientProfileInfos = [.. app.ClientProfileService.List().Select(x => x.ToInfo(app.Features))],
             State = app.State,
@@ -394,18 +396,18 @@ internal class AppController(VpnHoodApp app, VpnHoodAppWebServer webServer) : Co
     public Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        return webServer.RefreshRemoteAccess();
+        return webServerProvider().RefreshRemoteAccess();
     }
 
     public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        return webServer.StartRemoteAccess();
+        return webServerProvider().StartRemoteAccess();
     }
 
     public Task StopRemoteAccess(CancellationToken cancellationToken)
     {
-        webServer.StopRemoteAccess();
+        webServerProvider().StopRemoteAccess();
         return Task.CompletedTask;
     }
 }

@@ -15,7 +15,6 @@ public partial class ProxyEditDialog : DialogBase
     private readonly MainView _host;
     private readonly ProxySheetKind _kind;
     private readonly string? _oldId;
-    private readonly AppProxyEndPointService _service = VpnHoodApp.Instance.Services.ProxyEndPointService;
     private ProxyProtocol _protocol;
     private bool _isProcessing;
 
@@ -141,34 +140,39 @@ public partial class ProxyEditDialog : DialogBase
     }
 
     // a whole address pasted into the host field fills the other fields (processHostField)
-    private void OnHostLostFocus(object? sender, RoutedEventArgs e)
+    private async void OnHostLostFocus(object? sender, RoutedEventArgs e)
     {
-        var text = HostBox.Text?.Trim();
-        if (string.IsNullOrEmpty(text) || PortRule != null || _isProcessing)
-            return;
         try {
-            var parsed = ProxyEndPointParser.ParseHostToUrl(text, new ProxyEndPointDefaults {
-                IsEnabled = EnabledSwitch.IsChecked,
-                Protocol = _protocol,
-                Port = int.Parse(PortBox.Text ?? "0"),
-                Username = UsernameBox.Text,
-                Password = PasswordBox.Text
-            });
-            var endPoint = ProxyEndPointParser.FromUrl(parsed);
-            HostBox.Text = endPoint.Host;
-            PortBox.Text = endPoint.Port.ToString();
-            _protocol = endPoint.Protocol;
-            ProtocolText.Text = _protocol.ToString().ToLowerInvariant();
-            EnabledSwitch.IsChecked = endPoint.IsEnabled;
-            if (!string.IsNullOrEmpty(endPoint.Username) || !string.IsNullOrEmpty(endPoint.Password)) {
-                UsernameBox.Text = endPoint.Username ?? "";
-                PasswordBox.Text = endPoint.Password ?? "";
-                AuthSwitch.IsChecked = true;
-                AuthPanel.IsVisible = true;
+            var text = HostBox.Text?.Trim();
+            if (string.IsNullOrEmpty(text) || PortRule != null || _isProcessing)
+                return;
+            try {
+                var info = await AppData.Api.ProxyEndPoints.Parse(text, new ProxyEndPointDefaults {
+                    IsEnabled = EnabledSwitch.IsChecked,
+                    Protocol = _protocol,
+                    Port = int.Parse(PortBox.Text ?? "0"),
+                    Username = UsernameBox.Text,
+                    Password = PasswordBox.Text
+                }, CancellationToken.None);
+                var endPoint = info.EndPoint;
+                HostBox.Text = endPoint.Host;
+                PortBox.Text = endPoint.Port.ToString();
+                _protocol = endPoint.Protocol;
+                ProtocolText.Text = _protocol.ToString().ToLowerInvariant();
+                EnabledSwitch.IsChecked = endPoint.IsEnabled;
+                if (!string.IsNullOrEmpty(endPoint.Username) || !string.IsNullOrEmpty(endPoint.Password)) {
+                    UsernameBox.Text = endPoint.Username ?? "";
+                    PasswordBox.Text = endPoint.Password ?? "";
+                    AuthSwitch.IsChecked = true;
+                    AuthPanel.IsVisible = true;
+                }
+            }
+            catch (Exception) {
+                // not an address the parser reads: the fields stay as typed and the rules say what is wrong
             }
         }
-        catch (Exception) {
-            // not an address the parser reads: the fields stay as typed and the rules say what is wrong
+        catch (Exception ex) {
+            await this.ReportError(ex);
         }
     }
 
@@ -214,13 +218,13 @@ public partial class ProxyEditDialog : DialogBase
             try {
                 switch (_kind) {
                     case ProxySheetKind.Add:
-                        await _service.Add(BuildEndPoint());
+                        await AppData.Api.ProxyEndPoints.Add(BuildEndPoint(), CancellationToken.None);
                         break;
                     case ProxySheetKind.AddList:
-                        await _service.Import(ListBox.Text ?? "");
+                        await AppData.Api.ProxyEndPoints.Import(ListBox.Text ?? "", CancellationToken.None);
                         break;
                     default:
-                        await _service.Update(_oldId ?? throw new InvalidOperationException("The proxy to update has no id."), BuildEndPoint());
+                        await AppData.Api.ProxyEndPoints.Update(_oldId ?? throw new InvalidOperationException("The proxy to update has no id."), BuildEndPoint(), CancellationToken.None);
                         break;
                 }
                 Close(true);
@@ -246,7 +250,7 @@ public partial class ProxyEditDialog : DialogBase
             _isProcessing = true;
             UpdateSaveButton();
             try {
-                await _service.Delete(_oldId);
+                await AppData.Api.ProxyEndPoints.Delete(_oldId, CancellationToken.None);
                 Close(true);
             }
             catch (Exception ex) {

@@ -8,23 +8,27 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.ClientProfiles;
 
-public class ClientProfileInfo(ClientProfile clientProfile, AppFeatures appFeatures)
+// A profile as the UIs read it: plain values taken off the profile once (Create), so the same
+// object is read back by a UI on the other side of the API. The client country is baked in - the
+// policy and the locations depend on it - which is why ClientProfileService keeps one per profile
+// and region.
+public class ClientProfileInfo
 {
-    public Guid ClientProfileId => clientProfile.ClientProfileId;
-    public string ClientProfileName => GetTitle();
-    public string? SupportId => clientProfile.Token.SupportId;
-    public string? CustomData => clientProfile.CustomData;
-    public bool IsPremiumLocationSelected => clientProfile.IsPremiumLocationSelected;
-    public bool IsPremium => clientProfile.IsPremium;
-    public string TokenId => clientProfile.Token.TokenId;
-    public string[] HostNames => GetEndPoints(clientProfile.Token.ServerToken);
-    public bool IsValidHostName => clientProfile.Token.ServerToken.IsValidHostName;
-    public bool IsBuiltIn => clientProfile.IsBuiltIn;
-    public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
-    public AccessCodeRefusal? AccessCodeRefusal => clientProfile.AccessCodeRefusal;
-    public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile, appFeatures);
-    public bool CanGoPremium => ClientPolicy?.PremiumByCode == true || ClientPolicy?.PremiumByPurchase == true;
-    public bool CanTryPremium => ClientPolicy?.PremiumByTrial != null;
+    public required Guid ClientProfileId { get; init; }
+    public required string ClientProfileName { get; init; }
+    public required string? SupportId { get; init; }
+    public required string? CustomData { get; init; }
+    public required bool IsPremiumLocationSelected { get; init; }
+    public required bool IsPremium { get; init; }
+    public required string TokenId { get; init; }
+    public required string[] HostNames { get; init; }
+    public required bool IsValidHostName { get; init; }
+    public required bool IsBuiltIn { get; init; }
+    public required string? AccessCode { get; init; }
+    public required AccessCodeRefusal? AccessCodeRefusal { get; init; }
+    public required ClientServerLocationInfo[] LocationInfos { get; init; }
+    public required bool CanGoPremium { get; init; }
+    public required bool CanTryPremium { get; init; }
 
     /// <summary>
     /// May a code be TYPED IN on this profile at all (keyring plan §8)? The operator's policy AND
@@ -37,8 +41,7 @@ public class ClientProfileInfo(ClientProfile clientProfile, AppFeatures appFeatu
     /// exactly the people it exists for.
     /// </para>
     /// </summary>
-    public bool CanImportAccessCode =>
-        ClientPolicy?.PremiumByCode == true && appFeatures.Premium?.AllowImportAccessCode == true;
+    public required bool CanImportAccessCode { get; init; }
 
     /// <summary>
     /// May the code this device already holds be SHOWN? The operator's policy alone — never
@@ -48,33 +51,67 @@ public class ClientProfileInfo(ClientProfile clientProfile, AppFeatures appFeatu
     /// or Windows device, where typing it IS allowed. So an App Store build shows the code and
     /// offers no box to type one — the same person, premium on every device they own.
     /// </summary>
-    public bool CanViewAccessCode => ClientPolicy?.PremiumByCode == true;
+    public required bool CanViewAccessCode { get; init; }
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
-    public IPEndPoint[]? CustomServerEndpoints => clientProfile.CustomServerEndpoints;
+    public required IPEndPoint[]? CustomServerEndpoints { get; init; }
 
-    public bool IsCustomServerEndpointsEnabled => clientProfile.IsCustomServerEndpointsEnabled;
+    public required bool IsCustomServerEndpointsEnabled { get; init; }
+    public required ClientServerLocationInfo? SelectedLocationInfo { get; init; }
+    public required ClientPolicy? ClientPolicy { get; init; }
 
-    public ClientServerLocationInfo? SelectedLocationInfo {
-        get {
-            var ret =
-                LocationInfos.FirstOrDefault(x => x.LocationEquals(clientProfile.SelectedLocation)) ??
-                LocationInfos.FirstOrDefault(x => x.IsAuto) ??
-                LocationInfos.FirstOrDefault();
-
-            return ret;
-        }
+    public bool HasMultipleRegion(string countryCode)
+    {
+        return LocationInfos.Any(x => x.IsNestedCountry && x.CountryCode == countryCode);
     }
-    public ClientPolicy? ClientPolicy => _clientPolicy.Value;
 
-    private readonly Lazy<ClientPolicy?> _clientPolicy = new(() => {
+    public static ClientProfileInfo Create(ClientProfile clientProfile, AppFeatures appFeatures)
+    {
+        var token = clientProfile.Token;
+        var clientPolicy = FindClientPolicy(token);
+        var locationInfos = ClientServerLocationInfo.CreateFromToken(clientProfile, appFeatures);
+
+        // the selected location, else the automatic one, else the first
+        var selectedLocationInfo =
+            locationInfos.FirstOrDefault(x => x.LocationEquals(clientProfile.SelectedLocation)) ??
+            locationInfos.FirstOrDefault(x => x.IsAuto) ??
+            locationInfos.FirstOrDefault();
+
+        return new ClientProfileInfo {
+            ClientProfileId = clientProfile.ClientProfileId,
+            ClientProfileName = GetTitle(clientProfile),
+            SupportId = token.SupportId,
+            CustomData = clientProfile.CustomData,
+            IsPremiumLocationSelected = clientProfile.IsPremiumLocationSelected,
+            IsPremium = clientProfile.IsPremium,
+            TokenId = token.TokenId,
+            HostNames = GetEndPoints(token.ServerToken),
+            IsValidHostName = token.ServerToken.IsValidHostName,
+            IsBuiltIn = clientProfile.IsBuiltIn,
+            AccessCode = AccessCodeUtils.Redact(clientProfile.AccessCode),
+            AccessCodeRefusal = clientProfile.AccessCodeRefusal,
+            LocationInfos = locationInfos,
+            CanGoPremium = clientPolicy?.PremiumByCode == true || clientPolicy?.PremiumByPurchase == true,
+            CanTryPremium = clientPolicy?.PremiumByTrial != null,
+            CanImportAccessCode = clientPolicy?.PremiumByCode == true && appFeatures.Premium?.AllowImportAccessCode == true,
+            CanViewAccessCode = clientPolicy?.PremiumByCode == true,
+            CustomServerEndpoints = clientProfile.CustomServerEndpoints,
+            IsCustomServerEndpointsEnabled = clientProfile.IsCustomServerEndpointsEnabled,
+            SelectedLocationInfo = selectedLocationInfo,
+            ClientPolicy = clientPolicy
+        };
+    }
+
+    // the policy for the client's country, else the one for any country
+    private static ClientPolicy? FindClientPolicy(Token token)
+    {
         var countryCode = AppRegionInfo.CurrentRegion.Name;
-        return clientProfile.Token.ClientPolicies?.FirstOrDefault(x => 
+        return token.ClientPolicies?.FirstOrDefault(x =>
                    x.ClientCountries.Any(y => y.Equals(countryCode, StringComparison.OrdinalIgnoreCase))) ??
-               clientProfile.Token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
-    });
+               token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
+    }
 
-    private string GetTitle()
+    private static string GetTitle(ClientProfile clientProfile)
     {
         var token = clientProfile.Token;
 
@@ -100,10 +137,5 @@ public class ClientProfileInfo(ClientProfile clientProfile, AppFeatures appFeatu
             hostNames.AddRange(serverToken.HostEndPoints.Select(x => Redactor.Always.RedactIpAddress(x.Address)));
 
         return [.. hostNames];
-    }
-
-    public bool HasMultipleRegion(string countryCode)
-    {
-        return LocationInfos.Any(x => x.IsNestedCountry && x.CountryCode == countryCode);
     }
 }

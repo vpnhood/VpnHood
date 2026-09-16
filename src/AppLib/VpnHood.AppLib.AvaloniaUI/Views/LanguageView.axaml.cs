@@ -10,7 +10,6 @@ public partial class LanguageView : UserControl, IPage
     private const string SystemDefault = "sys";
 
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private readonly List<(string Code, OptionRow Row)> _rows = [];
 
     public LanguageView(MainView host)
@@ -19,10 +18,9 @@ public partial class LanguageView : UserControl, IPage
         InitializeComponent();
 
         var s = Strings.Current;
-        var state = _app.State;
+        var state = AppData.State;
         var systemCulture = state.SystemUiCultureInfo;
-        var cultures = _app.Services.CultureProvider.AvailableCultures
-            .Select(x => new UiCultureInfo(x))
+        var cultures = AppData.AvailableCultureInfos
             .OrderBy(x => x.NativeName, StringComparer.CurrentCulture)
             .ToArray();
 
@@ -57,7 +55,7 @@ public partial class LanguageView : UserControl, IPage
         Rows.Children.Add(row);
     }
 
-    private string CurrentCode => _app.UserSettings.CultureCode ?? SystemDefault;
+    private static string CurrentCode => AppData.UserSettings.CultureCode ?? SystemDefault;
 
     private void ShowChoice()
     {
@@ -66,13 +64,19 @@ public partial class LanguageView : UserControl, IPage
     }
 
     // the choice is saved and the app re-reads its culture; the words follow on the next beat
-    private void Choose(string code)
+    private async void Choose(string code)
     {
-        _app.UserSettings.CultureCode = code == SystemDefault ? null : code;
-        _app.SettingsService.Save();
-        ShowChoice();
-        _host.ViewModel.Refresh();
-        Header.Title = Strings.Current.Language;
+        try {
+            var settings = AppData.UserSettings;
+            settings.CultureCode = code == SystemDefault ? null : code;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            ShowChoice();
+            _host.ViewModel.Refresh();
+            Header.Title = Strings.Current.Language;
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
     }
 
     public void FocusDefault()

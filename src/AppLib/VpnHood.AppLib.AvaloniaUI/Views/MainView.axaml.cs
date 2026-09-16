@@ -61,12 +61,12 @@ public partial class MainView : UserControl
 
         // the consent a first run asks for, over everything until it is given (App.vue's
         // isShowPrivacyPolicyDialog)
-        var app = VpnHoodApp.Instance;
-        if (app.Features.IsLicenseAgreementRequired && !app.UserSettings.IsLicenseAccepted)
+        var features = AppData.Features;
+        if (features.IsLicenseAgreementRequired && !AppData.UserSettings.IsLicenseAccepted)
             Navigate(new PrivacyPolicyView(this));
         // the account, once, for a build that has one (App.vue's onMounted); the pages that change
         // it read it again themselves
-        if (VpnHoodApp.Instance.Features.IsAccountSupported)
+        if (features.IsAccountSupported)
             _ = LoadAccount();
     }
 
@@ -293,7 +293,7 @@ public partial class MainView : UserControl
 
         if (message.Actions?.IsPrivateDnsError == true && AppData.IsPremiumFeature(AppFeature.CustomDns)) {
             Navigate(FeaturePages.PrivateDnsError(this));
-            VpnHoodApp.Instance.ClearLastError();
+            await AppData.Api.App.ClearLastError(CancellationToken.None);
             return;
         }
 
@@ -364,7 +364,7 @@ public partial class MainView : UserControl
         UpdateDirectButton.IsVisible = publish.GooglePlayUrl == null;
         UpdateNoStoreButton.IsVisible = publish.GooglePlayUrl != null;
         UpdateAlternative.IsVisible = false;
-        UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {VpnHoodApp.Instance.Features.Version.ToString(3)}";
+        UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {AppData.Features.Version.ToString(3)}";
         UpdateNewText.Text = $"{Strings.Current.NewVersion} {publish.Version}";
         UpdateNotice.IsVisible = true;
     }
@@ -432,9 +432,14 @@ public partial class MainView : UserControl
         }
     }
 
-    private void OnReconnectDismissClick(object? sender, RoutedEventArgs e)
+    private async void OnReconnectDismissClick(object? sender, RoutedEventArgs e)
     {
-        ViewModel.ClearReconnectRequired();
+        try {
+            await ViewModel.ClearReconnectRequired();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     // ---- the drawer ----

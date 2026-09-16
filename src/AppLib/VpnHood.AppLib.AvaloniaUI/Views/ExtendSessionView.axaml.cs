@@ -9,7 +9,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public partial class ExtendSessionView : UserControl, IPage
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
 
     public ExtendSessionView(MainView host)
     {
@@ -20,7 +19,7 @@ public partial class ExtendSessionView : UserControl, IPage
         BackButton.IsVisible = !AppData.IsTvUi;
         RichText.Apply(TitleText, s.ExtendPremiumSession);
 
-        var state = _app.State;
+        var state = AppData.State;
         var options = state.ClientProfile?.SelectedLocationInfo?.Options;
         if (state.SessionStatus?.CanExtendByRewardedAd == true)
             Rows.Children.Add(new PromoteRow(Mdi.PlayBoxLockOpenOutline, s.WatchRewardedAd,
@@ -42,7 +41,7 @@ public partial class ExtendSessionView : UserControl, IPage
     private async Task ShowRewardedAd()
     {
         using (_host.Loading(Strings.Current.ExtendByRewardedAdNote))
-            await _app.AdManager.ExtendByRewardedAd(CancellationToken.None);
+            await AppData.Api.App.ExtendByRewardedAd(CancellationToken.None);
         _host.ShowSnackbar(Strings.Current.ExtendByRewardedAdConfirmMsg, SnackbarKind.Active);
         _host.GoHome();
     }

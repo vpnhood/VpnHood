@@ -1,17 +1,18 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.AvaloniaUI.Controls;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 
 public partial class PromoteView : UserControl, IPage
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private readonly Guid _clientProfileId;
     private readonly string _serverLocation;
     private readonly bool _isPremiumLocation;
@@ -29,14 +30,13 @@ public partial class PromoteView : UserControl, IPage
         RichText.Apply(TitleText, isPremiumLocation ? s.SelectedLocationIsPremium : s.SelectedLocationIsFree);
 
         // the location's options, read again so the page is driven by current server data
-        var info = _app.ClientProfileService.FindInfo(clientProfileId);
+        var info = AppData.FindClientProfileInfo(clientProfileId);
         var options = info?.LocationInfos.FirstOrDefault(x => x.ServerLocation == serverLocation)?.Options;
 
-        // the operator's own promotion when the app holds one, else the picture of the case
-        var promotion = _app.SettingsService.PromotionImageFilePath;
-        PromoImage.Source = _app.State.PromotionExists && promotion != null && File.Exists(promotion)
-            ? new Bitmap(promotion)
-            : AppAssets.Image(isPremiumLocation ? "premium-servers.webp" : "free-to-premium-servers.webp");
+        // the picture of the case, and over it the operator's own promotion when the app holds one
+        PromoImage.Source = AppAssets.Image(isPremiumLocation ? "premium-servers.webp" : "free-to-premium-servers.webp");
+        if (AppData.State.PromotionExists)
+            _ = LoadPromotionImage();
 
         var isFree = !isPremiumLocation && options?.Normal != null;
         var isFreeByAd = !isPremiumLocation && options?.NormalByRewardedAd != null;
@@ -59,6 +59,19 @@ public partial class PromoteView : UserControl, IPage
                 _host.Navigate(new PurchaseSubscriptionView(_host, clientProfileId));
                 return Task.CompletedTask;
             }));
+    }
+
+    // The promotion comes through the API, as everything does; the picture of the case shows
+    // until it arrives, and stays if it never does.
+    private async Task LoadPromotionImage()
+    {
+        try {
+            var bytes = await AppData.Api.App.PromotionImage(CancellationToken.None);
+            PromoImage.Source = new Bitmap(new MemoryStream(bytes));
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not load the promotion image.");
+        }
     }
 
     public void FocusDefault()

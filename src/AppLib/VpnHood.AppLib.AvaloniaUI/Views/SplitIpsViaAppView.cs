@@ -24,20 +24,20 @@ public sealed class SplitIpsViaAppView : SplitListView
     protected override string? SwitchDescription => Strings.Current.SplitIpsViaAppShortDesc;
 
     protected override bool IsSwitchOn {
-        get => App.UserSettings.SplitTunneling.UseIpViaApp;
-        set => App.UserSettings.SplitTunneling.UseIpViaApp = value;
+        get => Settings.SplitTunneling.UseIpViaApp;
+        set => Settings.SplitTunneling.UseIpViaApp = value;
     }
 
-    protected override (string Excludes, string Includes, string Blocks) Load()
+    protected override async Task<(string Excludes, string Includes, string Blocks)> Load(CancellationToken cancellationToken)
     {
-        var ips = App.SettingsService.SplitIpViaAppSettings.Get();
+        var ips = await AppData.Api.App.GetSplitIpsViaApp(cancellationToken);
         return (ips.Excludes, ips.Includes, ips.Blocks);
     }
 
     // no disconnect: the app applies the new list to a running session
-    protected override void Save(string excludes, string includes, string blocks)
+    protected override Task Save(string excludes, string includes, string blocks, CancellationToken cancellationToken)
     {
-        App.SettingsService.SplitIpViaAppSettings.Set(new SplitIpsViaApp { Excludes = excludes, Includes = includes, Blocks = blocks });
+        return AppData.Api.App.SetSplitIpsViaApp(new SplitIpsViaApp { Excludes = excludes, Includes = includes, Blocks = blocks }, cancellationToken);
     }
 
     protected override void ConfigureInput(SplitListInput input)

@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -10,9 +10,10 @@ using VpnHood.AppLib.AvaloniaUI.Views;
 namespace VpnHood.AppLib.AvaloniaUI;
 
 // The Avalonia Application: one view, MainView, whatever hosts it. A single-view host (Android,
-// tvOS) gets it as the main view; a desktop host gets it in a window that opens at a TV's size and
-// can be dragged down to a phone's, so both layouts can be walked with the arrow keys on a PC.
-// VpnHoodApp must be initialized by the host before this runs; the views bind to its instance.
+// tvOS, a browser) gets it as the main view; a desktop host gets it in a window that opens at a
+// TV's size and can be dragged down to a phone's, so both layouts can be walked with the arrow
+// keys on a PC. The head gives the UI the app's API before this runs (AppData.Init) and the
+// assets folder before the view is made (AppData.Configure); the views read nothing else.
 public class VpnHoodAvaloniaApp : Application
 {
     // Android TV lays out at 960x540 dp (a 1920x1080 panel at xhdpi), the measure the web UI's TV
@@ -25,18 +26,19 @@ public class VpnHoodAvaloniaApp : Application
     public override void Initialize()
     {
         // The fonts of the assets folder, before the styles that name them are read with the XAML
-        // below - where the head has named the folder by now. A desktop host and iOS have;
-        // Android's Application starts Avalonia before its activity names it (and in processes
-        // that never get an activity), so there the activity registers them, before its view.
+        // below - where the head has named the folder by now. A desktop host, iOS and a browser
+        // have; Android's Application starts Avalonia before its activity names it (and in
+        // processes that never get an activity), so there the activity registers them, before its
+        // view.
         if (AppAssets.IsFolderPathSet)
             AppAssets.RegisterFonts();
 
         AvaloniaXamlLoader.Load(this);
 
-        // The product's palette over the client's the XAML merged, before any style is applied:
-        // VpnHoodApp is initialized by the host first, except in the processes that get no view
-        // (below), which keep the default.
-        var themeOverride = AppTheme.OverrideFor(VpnHoodApp.IsInit ? VpnHoodApp.Instance.Features.UiName : null);
+        // The product's palette over the client's the XAML merged, before any style is applied: the
+        // head hands the UI the app's API first, except in the processes that get no view (below),
+        // which keep the default.
+        var themeOverride = AppTheme.OverrideFor(AppData.IsInit ? AppData.Features.UiName : null);
         if (themeOverride != null)
             Resources.MergedDictionaries.Add(themeOverride);
     }
@@ -44,8 +46,9 @@ public class VpnHoodAvaloniaApp : Application
     public override void OnFrameworkInitializationCompleted()
     {
         // On Android the process's Application class - and so this initialization - is shared with
-        // the VPN service and the quick tile, whose processes hold no VpnHoodApp: they get no view.
-        if (VpnHoodApp.IsInit)
+        // the VPN service and the quick tile, whose processes hold no app and are given no API:
+        // they get no view.
+        if (AppData.IsInit)
             ShowMainView();
         base.OnFrameworkInitializationCompleted();
     }
@@ -55,7 +58,7 @@ public class VpnHoodAvaloniaApp : Application
         switch (ApplicationLifetime) {
             case IClassicDesktopStyleApplicationLifetime desktop:
                 desktop.MainWindow = new Window {
-                    Title = VpnHoodApp.Instance.Resources.Strings.AppName,
+                    Title = AppData.Features.AppName,
                     Width = PanelWidth,
                     Height = PanelHeight,
                     MinWidth = MinPanelWidth,
@@ -78,12 +81,14 @@ public class VpnHoodAvaloniaApp : Application
         }
     }
 
+    // The view, once the head has configured the UI: the folder it draws from, and the app told
+    // which languages it has (AppData.Configure).
     private static MainView CreateMainView()
     {
-        // the languages this UI has, declared to the app as the web UI's configure call does
-        var app = VpnHoodApp.Instance;
-        app.Services.CultureProvider.AvailableCultures = [.. Strings.AvailableCultures];
-        app.UpdateUi();
+        if (!AppData.IsConfigured)
+            throw new InvalidOperationException(
+                $"The UI has not been configured. A head must call {nameof(AppData)}.{nameof(AppData.Configure)} before the view is made.");
+
         return new MainView();
     }
 

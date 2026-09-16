@@ -4,7 +4,7 @@ public static class ClientProfileExtensions
 {
     public static ClientProfileInfo ToInfo(this ClientProfile clientProfile, AppFeatures appFeatures)
     {
-        return new ClientProfileInfo(clientProfile, appFeatures);
+        return ClientProfileInfo.Create(clientProfile, appFeatures);
     }
 
     public static ClientProfileBaseInfo ToBaseInfo(this ClientProfileInfo clientProfileInfo)

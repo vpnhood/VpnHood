@@ -1,25 +1,107 @@
+using Avalonia;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.AvaloniaUI.Resources;
+using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Common.Messaging;
+using AppConfig = VpnHood.AppLib.WebServer.Api.AppData;
 
 namespace VpnHood.AppLib.AvaloniaUI;
 
-// What the pages read off the app, the way the web UI's VpnHoodAppData reads it off the API: the
-// same questions with the same answers, so a page ported from there asks nothing new. Every
-// reading is live - there is no copy to go stale - and State is built by the app on each read, so
-// a page that reads several of its fields takes it once.
+// What the pages read off the app, and the one way they reach it: the app's API (AppApi), the same
+// six interfaces in process - the web server's controllers, no listener - and over HTTP, from a
+// paired browser. The pages read plain values held here - the features, the state, the settings,
+// the profiles - and never the app itself, so the same pages run on the device and in a browser.
+// The values are read again through the API: the state every second by the home's clock and after
+// every action, the rest when the state says the configuration moved (AppState.ConfigTime, the
+// web UI's own signal) or a page saved. The web UI's VpnHoodAppData, question for question.
 public static class AppData
 {
-    private static VpnHoodApp App => VpnHoodApp.Instance;
+    private static AppApi? _api;
+    private static AppConfig? _config;
+    private static AppState? _state;
 
-    public static AppFeatures Features => App.Features;
-    public static UserSettings UserSettings => App.UserSettings;
-    public static AppState State => App.State;
+    public static AppApi Api => _api ?? throw new InvalidOperationException(
+        $"The UI has not been given the app's API. A head must call {nameof(AppData)}.{nameof(Init)} before the UI starts.");
 
-    // what the device can open or ask for (the web UI's intentFeatures), read off the providers
-    public static DeviceIntentFeatures Intents => new(App.Services.DeviceUiProvider, App.Services.UserReviewProvider);
+    public static bool IsInit => _api != null;
+    public static bool IsConfigured { get; private set; }
+
+    // The head's first step, before Avalonia starts: the API, and the configuration read through
+    // it - the features decide the theme, which is applied as the application initializes. In
+    // process the read completes at once.
+    public static async Task Init(AppApi api, CancellationToken cancellationToken)
+    {
+        _api = api;
+        await ReloadConfig(cancellationToken);
+    }
+
+    // The head's second step, once the assets folder exists (Android's activity names it after the
+    // application has started): the folder the UI draws from, and the languages this UI has,
+    // declared to the app as the web UI's configure call declares its own, so the app's language
+    // list and its best-culture choice are made from the words that exist. The fonts are registered
+    // here when Avalonia is already up (Android), else by the application as it initializes.
+    public static async Task Configure(string assetsFolderPath, CancellationToken cancellationToken)
+    {
+        AppAssets.FolderPath = assetsFolderPath;
+        if (Application.Current != null)
+            AppAssets.RegisterFonts();
+
+        _config = await Api.App.Configure(new ConfigParams { AvailableCultures = [.. Strings.AvailableCultures] }, cancellationToken);
+        _state = _config.State;
+        IsConfigured = true;
+    }
+
+    private static AppConfig Config => _config ?? throw new InvalidOperationException(
+        $"The app's configuration has not been read. {nameof(AppData)}.{nameof(Init)} reads it.");
+
+    public static AppFeatures Features => Config.Features;
+    public static DeviceIntentFeatures Intents => Config.IntentFeatures;
+    public static UserSettings UserSettings => Config.UserSettings;
+    public static IReadOnlyList<ClientProfileInfo> ClientProfileInfos => Config.ClientProfileInfos;
+    public static IReadOnlyList<UiCultureInfo> AvailableCultureInfos => Config.AvailableCultureInfos;
+    public static AppState State => _state ?? Config.State;
+
+    // Whether this UI is the remote: served by the app to a browser on another device, which is
+    // what the API says of the request that read the configuration (the web UI's isRemote). Never
+    // on the device itself.
+    public static bool IsRemote => Config.IsRemote;
+
+    // The profile the app is set to, whole (its locations), off the last configuration read; the
+    // state carries its base info.
+    public static ClientProfileInfo? CurrentClientProfileInfo => FindClientProfileInfo(UserSettings.ClientProfileId);
+
+    public static ClientProfileInfo? FindClientProfileInfo(Guid? clientProfileId)
+    {
+        return clientProfileId == null
+            ? null
+            : ClientProfileInfos.FirstOrDefault(x => x.ClientProfileId == clientProfileId);
+    }
+
+    public static async Task ReloadState(CancellationToken cancellationToken)
+    {
+        var state = await Api.App.GetState(cancellationToken);
+        var configMoved = _state != null && state.ConfigTime != _state.ConfigTime;
+        _state = state;
+        if (configMoved)
+            await ReloadConfig(cancellationToken);
+    }
+
+    public static async Task ReloadConfig(CancellationToken cancellationToken)
+    {
+        _config = await Api.App.GetConfig(cancellationToken);
+        _state = _config.State;
+    }
+
+    // The settings, written as one and read again: the app applies them as it saves, and may have
+    // corrected a value. The object is the caller's - the one it read here and changed - so a
+    // configuration read in between (the clock's) cannot lose the change.
+    public static async Task SaveUserSettings(UserSettings userSettings, CancellationToken cancellationToken)
+    {
+        await Api.App.SetUserSettings(userSettings, cancellationToken);
+        await ReloadConfig(cancellationToken);
+    }
 
     // The account, as the web UI keeps it in UserState: read once at start and after a sign-in,
     // sign-out or purchase, never polled (account.vue says why).
@@ -27,28 +109,26 @@ public static class AppData
 
     public static async Task LoadAccount(bool withRefresh, CancellationToken cancellationToken)
     {
-        var service = App.Services.AccountService;
-        if (service == null) {
+        if (!Features.IsAccountSupported) {
             Account = null;
             return;
         }
 
         if (withRefresh) {
             try {
-                await service.Refresh(cancellationToken);
+                await Api.Account.Refresh(cancellationToken);
             }
             catch (Exception) {
                 // best effort: the portal is often what is blocked, and the saved account still shows
             }
         }
 
-        Account = await service.GetAccount(cancellationToken);
+        Account = await Api.Account.Get(cancellationToken);
     }
 
-    // The TV layout: this UI runs on the device itself, never over the LAN, so the device's word
-    // is the whole answer (the web UI's isTvUi also asks whether the request came from another
-    // device; nothing here does).
-    public static bool IsTvUi => Features.IsTv;
+    // The TV layout: the device's word, unless this UI is the remote - the web UI's isTvUi, which
+    // asks the same two questions. A phone driving a TV gets the phone's layout.
+    public static bool IsTvUi => Features.IsTv && !IsRemote;
     public static bool IsConnectApp => AppProduct.IsConnect(Features.UiName);
     public static bool IsSingleProfileMode => AppProduct.IsSingleProfileMode(Features.UiName);
 
@@ -61,23 +141,31 @@ public static class AppData
 
     // A build with no premium tier is the full app: nothing sold, no crown, everything allowed.
     public static bool IsPremiumSupported => Features.Premium != null;
-    public static bool IsPremiumUser => App.CurrentClientProfileInfo?.IsPremium == true;
+    public static bool IsPremiumUser => State.ClientProfile?.IsPremium == true;
     public static bool IsPremiumByAccount => IsPremiumUser && Account?.Subscription != null;
     public static bool IsPremiumByCode => IsPremiumUser && !IsPremiumByAccount;
-    public static bool CanImportAccessCode => App.CurrentClientProfileInfo?.CanImportAccessCode == true;
-    public static bool CanViewAccessCode => App.CurrentClientProfileInfo?.CanViewAccessCode == true;
-    public static bool CanTryPremium => App.CurrentClientProfileInfo?.CanTryPremium == true;
-    public static bool CanGoPremium => App.CurrentClientProfileInfo?.CanGoPremium == true;
-    public static Guid? ClientProfileId => App.CurrentClientProfileInfo?.ClientProfileId ?? UserSettings.ClientProfileId;
+    public static bool CanImportAccessCode => State.ClientProfile?.CanImportAccessCode == true;
+    public static bool CanViewAccessCode => State.ClientProfile?.CanViewAccessCode == true;
+    public static bool CanTryPremium => State.ClientProfile?.CanTryPremium == true;
+    public static bool CanGoPremium => State.ClientProfile?.CanGoPremium == true;
+    public static Guid? ClientProfileId => State.ClientProfile?.ClientProfileId ?? UserSettings.ClientProfileId;
 
     public static bool IsPremiumFeature(AppFeature feature)
     {
         return Features.Premium?.Features.Contains(feature) ?? false;
     }
 
+    // VpnHoodApp.IsPremiumFeatureAllowed, from what the API gives: a build with no premium tier
+    // allows everything, a feature the tier does not sell is everyone's, the rest is the profile's.
     public static bool IsPremiumFeatureAllowed(AppFeature feature)
     {
-        return App.IsPremiumFeatureAllowed(feature);
+        if (Features.Premium == null)
+            return true;
+
+        if (!Features.Premium.Features.Contains(feature))
+            return true;
+
+        return IsPremiumUser;
     }
 
     // the crown marks what this session does not have yet: a feature a tier sells, a location's
@@ -182,9 +270,12 @@ public static class AppData
         };
     }
 
+    // VpnHoodApp.HasDebugCommand, from the settings: the commands are the words of DebugData1.
     public static bool HasDebugCommand(string command)
     {
-        return App.HasDebugCommand(command);
+        return UserSettings.DebugData1?
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Contains(command, StringComparer.OrdinalIgnoreCase) == true;
     }
 
     // Android only: the tools drive the Starlink app, which exists on no other platform; a debug

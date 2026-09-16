@@ -8,7 +8,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private IReadOnlyList<FilterItem> _items = [];
     private bool _isListLoaded;
 
@@ -27,8 +26,8 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         Show();
     }
 
-    private SplitTunnelingSettings Split => _app.UserSettings.SplitTunneling;
-    private bool IsListMode => Split.CountryMode == SplitCountryMode.ExcludeList;
+    private static SplitTunnelingSettings Split => AppData.UserSettings.SplitTunneling;
+    private static bool IsListMode => Split.CountryMode == SplitCountryMode.ExcludeList;
 
     private void Show()
     {
@@ -54,7 +53,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         List.IsLoading = true;
         try {
             var excluded = Split.Countries;
-            var countries = await _app.Services.SplitCountryService.GetSupportedSplitCountries(CancellationToken.None);
+            var countries = await AppData.Api.App.GetSupportedSplitCountries(CancellationToken.None);
             var mapped = countries.Select(x => new FilterItem {
                 Id = x.CountryCode,
                 Name = x.TranslatedName,
@@ -77,14 +76,19 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         }
     }
 
-    private void Choose(SplitCountryMode mode)
+    private async void Choose(SplitCountryMode mode)
     {
-        if (mode == SplitCountryMode.ExcludeMyCountry)
-            Split.Countries = [];
-        Split.CountryMode = mode;
-        _app.SettingsService.Save();
-        Show();
-        _host.ViewModel.Refresh();
+        try {
+            if (mode == SplitCountryMode.ExcludeMyCountry)
+                Split.Countries = [];
+            Split.CountryMode = mode;
+            await AppData.SaveUserSettings(AppData.UserSettings, CancellationToken.None);
+            Show();
+            _host.ViewModel.Refresh();
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
     }
 
     private void OnIncludeAllClick(object? sender, EventArgs e) => Choose(SplitCountryMode.IncludeAll);
@@ -109,9 +113,15 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
             return false;
         }
 
-        _app.SettingsService.Save();
-        _host.ViewModel.Refresh();
-        return true;
+        try {
+            await AppData.SaveUserSettings(AppData.UserSettings, CancellationToken.None);
+            _host.ViewModel.Refresh();
+            return true;
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+            return false;
+        }
     }
 
     public void FocusDefault()

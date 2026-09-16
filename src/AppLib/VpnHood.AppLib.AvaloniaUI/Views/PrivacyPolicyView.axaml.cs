@@ -12,7 +12,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
 
     public PrivacyPolicyView(MainView host)
     {
@@ -21,15 +20,15 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
         var (title, markup) = LoadDocument(AppData.IsConnectApp ? "privacy-consent" : "privacy-consent-client");
         TitleText.Text = title;
         RichText.Apply(DocumentText, markup);
-        TermsButton.IsVisible = _app.Features.TermsOfUseUrl != null;
-        PrivacyButton.IsVisible = _app.Features.PrivacyPolicyUrl != null;
+        TermsButton.IsVisible = AppData.Features.TermsOfUseUrl != null;
+        PrivacyButton.IsVisible = AppData.Features.PrivacyPolicyUrl != null;
     }
 
     // The document in the app's language, else in English: a language whose translation failed
     // verification ships no file, and the English text beats none - on a consent screen above all.
-    private (string Title, string Markup) LoadDocument(string name)
+    private static (string Title, string Markup) LoadDocument(string name)
     {
-        var culture = _app.State.CurrentUiCultureInfo.Code;
+        var culture = AppData.State.CurrentUiCultureInfo.Code;
         foreach (var language in new[] { culture, culture.Split('-')[0], "en" }) {
             if (AppAssets.ReadText($"content/{language}/{name}.md") is { } markdown)
                 return Markdown.Render(markdown);
@@ -47,17 +46,23 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
         return Task.FromResult(false);
     }
 
-    private void OnAcceptClick(object? sender, RoutedEventArgs e)
+    private async void OnAcceptClick(object? sender, RoutedEventArgs e)
     {
-        _app.UserSettings.IsLicenseAccepted = true;
-        _app.SettingsService.Save();
-        _host.GoHome();
+        try {
+            var settings = AppData.UserSettings;
+            settings.IsLicenseAccepted = true;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            _host.GoHome();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnTermsClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (_app.Features.TermsOfUseUrl is { } url)
+            if (AppData.Features.TermsOfUseUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.TermsOfUse);
         }
         catch (Exception ex) {
@@ -68,7 +73,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (_app.Features.PrivacyPolicyUrl is { } url)
+            if (AppData.Features.PrivacyPolicyUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

@@ -1,8 +1,7 @@
-﻿using Avalonia;
+using Avalonia;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.AvaloniaUI;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
@@ -59,11 +58,17 @@ internal static class Program
         var device = new TvOverrideDevice(new WinDevice(storageFolderPath, appOptions.IsDebugMode), isTv);
         var app = VpnHoodApp.Init(device, appOptions);
         try {
-            // the phone's half of the pairing: the server the pairing page hands out the address of
+            // the phone's half of the pairing: the server the pairing page hands out the address of,
+            // and - a debug build - the address a browser on this PC can open to see the same UI
+            // served as a page (http://<lan-ip>:9090/)
             using var webServer = VpnHoodAppWebServer.Init(app);
-            // the images, flags, fonts and words this UI draws from - the same files the web UI
-            // loads from this server, so the package carries one copy of each
-            AppAssets.FolderPath = webServer.AssetsFolderPath;
+
+            // The UI reaches the app through its API - the same six interfaces a paired browser
+            // dials over HTTP, here the app's own controllers in process - and draws from the
+            // bundle's assets folder the web server extracts, the same files the web UI loads from
+            // that server, so the package carries one copy of each. In process both complete at once.
+            AppData.Init(InProcessAppApi.Create(app), CancellationToken.None).GetAwaiter().GetResult();
+            AppData.Configure(webServer.AssetsFolderPath, CancellationToken.None).GetAwaiter().GetResult();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         finally {

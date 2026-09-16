@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer.Api;
@@ -38,9 +39,15 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private const string PairAlphabet = "abcdefghjkmnpqrstuvwxyz23456789";
     private const int PairTokenLength = 8;
 
+    private const string AssetsManifestName = "assets-manifest.json";
+    private static readonly Regex BrowserUiFingerprintRegex = new(@"\.[a-z0-9]{10}\.[a-z]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     private string? _indexHtml;
     private string? _spaHash;
     private string? _spaPath;
+    private string? _browserUiPath;
+    private string? _browserUiIndexHtml;
+    private string[]? _assetNames;
     private readonly bool _isDeveloperRemoteAccess;
     private readonly WebServerListener _primary;
     private IReadOnlyList<WebServerListener> _remoteListeners = []; // one per advertised address, replaced whole
@@ -449,31 +456,49 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         if (_app.Resources.SpaZipData is null)
             throw new InvalidOperationException("SpaZipData resource is required to run web server for SPA.");
 
-        using var memZipStream = new MemoryStream(_app.Resources.SpaZipData);
-        memZipStream.Seek(0, SeekOrigin.Begin);
-        using var md5 = MD5.Create();
-        var hash = md5.ComputeHash(memZipStream);
-        _spaHash = BitConverter.ToString(hash).Replace("-", "");
+        _spaPath = ExtractBundle(_app.Resources.SpaZipData, "SPA", out _spaHash);
+        return _spaPath;
+    }
 
-        var spaFolderPath = Path.Combine(_app.StorageFolderPath, "Temp", "SPA");
-        var spaPath = Path.Combine(spaFolderPath, _spaHash);
-        var htmlPath = Path.Combine(spaPath, "index.html");
+    // The Avalonia UI's browser build, when the head ships one (AppResources.AvaloniaBrowserZipData):
+    // extracted beside the SPA under its own hash, and served to a remote device in place of the
+    // SPA. Null when the head ships none, and the SPA serves everyone as before.
+    private string? GetBrowserUiPath()
+    {
+        if (_browserUiPath != null)
+            return _browserUiPath;
+
+        if (_app.Resources.AvaloniaBrowserZipData is null)
+            return null;
+
+        _browserUiPath = ExtractBundle(_app.Resources.AvaloniaBrowserZipData, "AvaloniaBrowser", out _);
+        return _browserUiPath;
+    }
+
+    // A bundle under Temp/<name>/<hash of its zip>, extracted once per version: a folder whose
+    // index.html exists is complete, and an older version's folder goes on the way.
+    private string ExtractBundle(byte[] zipData, string bundleName, out string hash)
+    {
+        hash = Convert.ToHexString(MD5.HashData(zipData));
+        var bundlesFolderPath = Path.Combine(_app.StorageFolderPath, "Temp", bundleName);
+        var bundlePath = Path.Combine(bundlesFolderPath, hash);
+        var htmlPath = Path.Combine(bundlePath, "index.html");
         if (!File.Exists(htmlPath)) {
-            if (Directory.Exists(spaFolderPath))
-                VhUtils.TryInvoke("Delete old SPA folder", () => Directory.Delete(spaFolderPath, true));
-            memZipStream.Seek(0, SeekOrigin.Begin);
-            using var zipArchive = new ZipArchive(memZipStream);
-            zipArchive.ExtractToDirectory(spaPath, true);
+            if (Directory.Exists(bundlesFolderPath))
+                VhUtils.TryInvoke($"Delete old {bundleName} folder", () => Directory.Delete(bundlesFolderPath, true));
+            using var zipArchive = new ZipArchive(new MemoryStream(zipData));
+            zipArchive.ExtractToDirectory(bundlePath, true);
         }
 
-        _spaPath = spaPath;
-        return spaPath;
+        return bundlePath;
     }
 
     private WebserverLite CreateWebServer(string host, int port)
     {
         var spaPath = GetSpaPath();
         _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
+        var browserUiPath = GetBrowserUiPath();
+        _browserUiIndexHtml = browserUiPath != null ? File.ReadAllText(Path.Combine(browserUiPath, "index.html")) : null;
 
         var settings = new WebserverSettings(host, port);
 
@@ -482,13 +507,13 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         foreach (var header in new[] { "Access-Control-Allow-Origin", "Access-Control-Allow-Methods", "Access-Control-Allow-Headers" })
             settings.Headers.DefaultHeaders.Remove(header);
 
-        var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath));
+        var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath, browserUiPath));
         server.Routes.PreRouting = ctx => OnPreRouting(ctx, host);
 
         // Initialize API routes through controllers - CORS is handled centrally in the route mapper
         server
             .AddRouteMapper(_isDeveloperRemoteAccess)
-            .AddController(new AppController(_app, this))
+            .AddController(new AppController(_app, () => this))
             .AddController(new ClientProfileController(_app))
             .AddController(new AccountController(_app))
             .AddController(new BillingController(_app))
@@ -498,21 +523,33 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         return server;
     }
 
-    private static Task ServeFile(HttpContextBase context, string fullPath)
+    private static Task ServeFile(HttpContextBase context, string fullPath, bool isFingerprinted)
     {
         var contentType = MimeTypeUtils.GetContentType(fullPath);
         context.Response.ContentType = contentType;
-        // The bundle's own files carry a hash of their content in the name, so a name is a version
-        // and can be kept for good; the assets folder's names are stable across versions - the
-        // native UI reads the same files by name - so its files must be asked for again each time.
-        context.Response.Headers["Cache-Control"] = fullPath.Contains($"{Path.DirectorySeparatorChar}assets{Path.DirectorySeparatorChar}",
-            StringComparison.OrdinalIgnoreCase)
-            ? "no-cache"
-            : "public, max-age=31536000, immutable";
+        // A file whose name carries a hash of its content is a version and can be kept for good;
+        // any other name is stable across versions and must be asked for again each time.
+        context.Response.Headers["Cache-Control"] = isFingerprinted
+            ? "public, max-age=31536000, immutable"
+            : "no-cache";
         return context.Response.Send(File.ReadAllBytes(fullPath));
     }
 
-    private async Task DefaultRoute(HttpContextBase context, string spaPath)
+    // The SPA's own files carry a hash in the name (Vite); the assets folder's names are stable
+    // across versions - the native UI reads the same files by name.
+    private static bool IsAssetPath(string localPath)
+    {
+        return localPath.StartsWith($"assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // .NET's browser build names the runtime and every assembly with a hash of its content
+    // (dotnet.native.<hash>.wasm); index.html, main.js and dotnet.js itself keep their names.
+    private static bool IsBrowserUiFileFingerprinted(string localPath)
+    {
+        return BrowserUiFingerprintRegex.IsMatch(Path.GetFileName(localPath));
+    }
+
+    private async Task DefaultRoute(HttpContextBase context, string spaPath, string? browserUiPath)
     {
         if (_indexHtml == null)
             throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
@@ -528,13 +565,50 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
         // use LocalPath for security reasons (Url.PathAndQuery can contain double dots)
         var localPath = context.Request.Url.Uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var fullPath = Path.Combine(spaPath, localPath);
-        if (File.Exists(fullPath)) {
-            await ServeFile(context, fullPath);
+
+        // the names under the assets folder, for a UI that has to fetch them (the browser build)
+        if (string.Equals(localPath, AssetsManifestName, StringComparison.OrdinalIgnoreCase)) {
+            await SendAssetsManifest(context, spaPath);
             return;
         }
 
+        // A remote device gets the Avalonia UI's browser build when the head ships one; the app's
+        // own web view - and every device, when it ships none - gets the SPA. The assets are the
+        // SPA's for both, served from its folder by the same names.
+        var remoteUiPath = context.IsRemote() ? browserUiPath : null;
+        var isBrowserUi = remoteUiPath != null;
+        var fullPath = Path.Combine(remoteUiPath ?? spaPath, localPath);
+        if (File.Exists(fullPath)) {
+            await ServeFile(context, fullPath, isBrowserUi ? IsBrowserUiFileFingerprinted(localPath) : !IsAssetPath(localPath));
+            return;
+        }
+
+        if (isBrowserUi && IsAssetPath(localPath)) {
+            var assetPath = Path.Combine(spaPath, localPath);
+            if (File.Exists(assetPath)) {
+                await ServeFile(context, assetPath, isFingerprinted: false);
+                return;
+            }
+        }
+
         context.Response.ContentType = "text/html";
-        await context.Response.Send(_indexHtml);
+        await context.Response.Send(isBrowserUi ? _browserUiIndexHtml ?? _indexHtml : _indexHtml);
+    }
+
+    // Every file under the assets folder by its name relative to it, the folder's separators as
+    // URL segments: what a UI on the other side of the API fetches before it starts. Read once.
+    private async Task SendAssetsManifest(HttpContextBase context, string spaPath)
+    {
+        var assetsPath = Path.Combine(spaPath, "assets");
+        _assetNames ??= Directory.Exists(assetsPath)
+            ? [
+                .. Directory.EnumerateFiles(assetsPath, "*", SearchOption.AllDirectories)
+                    .Select(x => Path.GetRelativePath(assetsPath, x).Replace(Path.DirectorySeparatorChar, '/'))
+                    .Order(StringComparer.Ordinal)
+            ]
+            : [];
+
+        context.Response.Headers["Cache-Control"] = "no-cache";
+        await context.SendJson(_assetNames);
     }
 }

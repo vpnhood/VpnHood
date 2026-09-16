@@ -4,7 +4,7 @@ using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 using Avalonia.Android;
-using VpnHood.AppLib.AvaloniaUI.Resources;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
@@ -48,13 +48,13 @@ public class AndroidAppAvaloniaMainActivity : AvaloniaMainActivity, IActivityEve
         // folder, and cannot draw a glyph before it is there. The web server is what extracts the
         // bundle - and what a phone pairs with - so it comes up here rather than on the pairing
         // screen. On this thread, deliberately: the first run of a version unpacks the bundle, and
-        // every frame after this line depends on it. The fonts are registered here as well:
-        // Avalonia itself started with the process's Application, before any activity could name
-        // the folder they are in.
+        // every frame after this line depends on it. AppData.Configure names the folder to the UI,
+        // registers the fonts (Avalonia itself started with the process's Application, before any
+        // activity could name the folder they are in) and tells the app which languages the UI
+        // has; in process it completes at once.
         if (!VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
-        AppAssets.FolderPath = VpnHoodAppWebServer.Instance.AssetsFolderPath;
-        AppAssets.RegisterFonts();
+        AppData.Configure(VpnHoodAppWebServer.Instance.AssetsFolderPath, CancellationToken.None).GetAwaiter().GetResult();
 
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });

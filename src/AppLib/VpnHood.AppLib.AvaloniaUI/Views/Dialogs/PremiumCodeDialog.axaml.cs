@@ -12,7 +12,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views.Dialogs;
 public partial class PremiumCodeDialog : DialogBase
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
 
     public PremiumCodeDialog(MainView host)
     {
@@ -65,14 +64,14 @@ public partial class PremiumCodeDialog : DialogBase
     private async Task Activate()
     {
         var code = CodeBox.Text?.Trim() ?? "";
-        var profileId = _app.State.ClientProfile?.ClientProfileId;
+        var profileId = AppData.State.ClientProfile?.ClientProfileId;
         if (profileId == null) {
             await _host.ShowError(Strings.Current.ProfileIdNotFoundDuringValidationMsg);
             return;
         }
 
         try {
-            await _app.UpdateClientProfile(profileId.Value, new ClientProfileUpdateParams {
+            await AppData.Api.ClientProfiles.Update(profileId.Value, new ClientProfileUpdateParams {
                 AccessCode = new Patch<string?>(code)
             }, CancellationToken.None);
         }
@@ -85,7 +84,7 @@ public partial class PremiumCodeDialog : DialogBase
         if (AppData.IsPremiumByAccount) {
             Close(true);
             await AppData.LoadAccount(true, CancellationToken.None);
-            _host.ViewModel.Refresh();
+            await _host.ViewModel.ReloadConfig();
             _host.ShowSnackbar(Strings.Current.PremiumCodeSavedForLaterMsg);
             return;
         }

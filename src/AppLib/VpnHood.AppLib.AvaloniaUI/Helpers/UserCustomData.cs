@@ -8,20 +8,20 @@ internal static class UserCustomData
 {
     public static bool GetBool(string key)
     {
-        var data = VpnHoodApp.Instance.UserSettings.CustomData;
+        var data = AppData.UserSettings.CustomData;
         return data is { ValueKind: JsonValueKind.Object } obj
                && obj.TryGetProperty(key, out var value)
                && value.ValueKind == JsonValueKind.True;
     }
 
-    public static void SetBool(string key, bool value)
+    public static Task SetBool(string key, bool value, CancellationToken cancellationToken)
     {
-        var settings = VpnHoodApp.Instance.UserSettings;
+        var settings = AppData.UserSettings;
         var bag = settings.CustomData is { ValueKind: JsonValueKind.Object } obj
             ? obj.EnumerateObject().ToDictionary(x => x.Name, x => x.Value)
             : new Dictionary<string, JsonElement>();
         bag[key] = JsonSerializer.SerializeToElement(value, CustomDataJsonContext.Default.Boolean);
         settings.CustomData = JsonSerializer.SerializeToElement(bag, CustomDataJsonContext.Default.DictionaryStringJsonElement);
-        VpnHoodApp.Instance.SettingsService.Save();
+        return AppData.SaveUserSettings(settings, cancellationToken);
     }
 }

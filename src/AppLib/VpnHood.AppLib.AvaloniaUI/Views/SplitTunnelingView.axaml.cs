@@ -10,7 +10,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public partial class SplitTunnelingView : UserControl, IPage
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
 
     public SplitTunnelingView(MainView host)
     {
@@ -28,12 +27,12 @@ public partial class SplitTunnelingView : UserControl, IPage
     private void Fill()
     {
         var s = Strings.Current;
-        var state = _app.State;
+        var state = AppData.State;
         var split = state.SplitTunnelingState;
-        var features = _app.Features;
+        var features = AppData.Features;
 
         EnabledItem.Title = s.SplitTunnelingToggle;
-        EnabledItem.IsOn = _app.UserSettings.SplitTunneling.Enabled;
+        EnabledItem.IsOn = AppData.UserSettings.SplitTunneling.Enabled;
         EnabledItem.Warning = split.IsEnabled ? s.LeakIp : null;
         EnabledItem.Description = split.IsEnabled ? s.SplitTunnelingToggleDesc : s.SplitTunnelingDisabledDesc;
         ServerSplitAlert.IsVisible = split.IsSplitByServer;
@@ -92,12 +91,18 @@ public partial class SplitTunnelingView : UserControl, IPage
         EnabledItem.FindFirstButton()?.LandFocus();
     }
 
-    private void OnEnabledToggled(object? sender, EventArgs e)
+    private async void OnEnabledToggled(object? sender, EventArgs e)
     {
-        _app.UserSettings.SplitTunneling.Enabled = EnabledItem.IsOn;
-        _app.SettingsService.Save();
-        Fill();
-        _host.ViewModel.Refresh();
+        try {
+            var settings = AppData.UserSettings;
+            settings.SplitTunneling.Enabled = EnabledItem.IsOn;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            Fill();
+            _host.ViewModel.Refresh();
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
     }
 
     private void OnAppsClick(object? sender, EventArgs e) => _host.Navigate(new SplitAppsView(_host));

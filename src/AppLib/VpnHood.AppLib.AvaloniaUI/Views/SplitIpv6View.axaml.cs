@@ -7,8 +7,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 
 public partial class SplitIpv6View : UserControl, IPage
 {
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
-
     public SplitIpv6View(MainView host)
     {
         _ = host;
@@ -25,7 +23,7 @@ public partial class SplitIpv6View : UserControl, IPage
 
     private void Show()
     {
-        var split = _app.UserSettings.SplitTunneling;
+        var split = AppData.UserSettings.SplitTunneling;
         BlockRow.IsChecked = split.UnsupportedIpV6Mode == SplitUnsupportedIpMode.Block;
         ExcludeRow.IsChecked = split.UnsupportedIpV6Mode == SplitUnsupportedIpMode.Exclude;
         BlockRow.IsDisabled = !split.Enabled;
@@ -36,15 +34,21 @@ public partial class SplitIpv6View : UserControl, IPage
 
     public void FocusDefault()
     {
-        if (_app.UserSettings.SplitTunneling.Enabled) (BlockRow.IsChecked ? BlockRow : ExcludeRow).LandFocus();
+        if (AppData.UserSettings.SplitTunneling.Enabled) (BlockRow.IsChecked ? BlockRow : ExcludeRow).LandFocus();
         else Header.FocusBack();
     }
 
-    private void Choose(SplitUnsupportedIpMode mode)
+    private async void Choose(SplitUnsupportedIpMode mode)
     {
-        _app.UserSettings.SplitTunneling.UnsupportedIpV6Mode = mode;
-        _app.SettingsService.Save();
-        Show();
+        try {
+            var settings = AppData.UserSettings;
+            settings.SplitTunneling.UnsupportedIpV6Mode = mode;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            Show();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnBlockClick(object? sender, EventArgs e) => Choose(SplitUnsupportedIpMode.Block);

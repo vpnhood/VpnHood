@@ -13,7 +13,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public partial class DeveloperView : UserControl, IPage, IDisposable
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private readonly DebugCommandItem[] _commands;
     private readonly string[] _unknown;
 
@@ -22,14 +21,14 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         _host = host;
         InitializeComponent();
 
-        var current = (_app.UserSettings.DebugData1 ?? "")
+        var current = (AppData.UserSettings.DebugData1 ?? "")
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        _commands = [.. _app.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })];
-        _unknown = [.. current.Except(_app.Features.DebugCommands)];
+        _commands = [.. AppData.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })];
+        _unknown = [.. current.Except(AppData.Features.DebugCommands)];
 
-        SupportIdText.Text = $"Support ID: {_app.CurrentClientProfileInfo?.SupportId}";
+        SupportIdText.Text = $"Support ID: {AppData.State.ClientProfile?.SupportId}";
         CommandList.ItemsSource = _commands;
-        DebugData2Box.Text = _app.UserSettings.DebugData2;
+        DebugData2Box.Text = AppData.UserSettings.DebugData2;
 
         foreach (var command in _commands)
             command.PropertyChanged += (_, _) => ShowChosen();
@@ -51,12 +50,17 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         NoCommandText.IsVisible = chosen.Length == 0;
     }
 
-    private void OnLogClick(object? sender, RoutedEventArgs e)
+    private async void OnLogClick(object? sender, RoutedEventArgs e)
     {
         // the dialog's "Open log", which opens the app web server's log.txt in a browser tab; this
         // head has no browser, so the log is a page of its own
-        Save();
-        _host.Navigate(new LogView());
+        try {
+            await Save();
+            _host.Navigate(new LogView());
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)
@@ -69,18 +73,18 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
     // when nothing differs - and the page is shown again when the log page above it is closed.
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        Save();
+        Save().Forget("Could not save the debug settings.");
         base.OnDetachedFromVisualTree(e);
     }
 
     public void Dispose()
     {
-        Save();
+        Save().Forget("Could not save the debug settings.");
     }
 
     // Saving applies the settings, so it happens only when something differs: a debug command takes
     // effect at the next launch, but the save itself reaches the running app.
-    private void Save()
+    private async Task Save()
     {
         var commands = _commands.Where(x => x.IsOn).Select(x => x.Command).Concat(_unknown);
         var debugData1 = string.Join(' ', commands);
@@ -88,11 +92,12 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
 
         var newData1 = debugData1.Length > 0 ? debugData1 : null;
         var newData2 = debugData2?.Length > 0 ? debugData2 : null;
-        if (newData1 == _app.UserSettings.DebugData1 && newData2 == _app.UserSettings.DebugData2)
+        var settings = AppData.UserSettings;
+        if (newData1 == settings.DebugData1 && newData2 == settings.DebugData2)
             return;
 
-        _app.UserSettings.DebugData1 = newData1;
-        _app.UserSettings.DebugData2 = newData2;
-        _app.SettingsService.Save();
+        settings.DebugData1 = newData1;
+        settings.DebugData2 = newData2;
+        await AppData.SaveUserSettings(settings, CancellationToken.None);
     }
 }

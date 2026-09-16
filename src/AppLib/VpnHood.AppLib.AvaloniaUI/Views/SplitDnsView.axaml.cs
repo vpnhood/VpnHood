@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.Core.Client.Abstractions;
 
@@ -6,8 +7,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 
 public partial class SplitDnsView : UserControl, IPage
 {
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
-
     public SplitDnsView(MainView host)
     {
         _ = host;
@@ -23,7 +22,7 @@ public partial class SplitDnsView : UserControl, IPage
 
     private void Show()
     {
-        var split = _app.UserSettings.SplitTunneling;
+        var split = AppData.UserSettings.SplitTunneling;
         IncludeAllRow.IsChecked = split.DnsMode == SplitDnsMode.IncludeAll;
         DefaultRouteRow.IsChecked = split.DnsMode == SplitDnsMode.DefaultRoute;
         IncludeAllRow.IsDisabled = !split.Enabled;
@@ -34,15 +33,21 @@ public partial class SplitDnsView : UserControl, IPage
 
     public void FocusDefault()
     {
-        if (_app.UserSettings.SplitTunneling.Enabled) (IncludeAllRow.IsChecked ? IncludeAllRow : DefaultRouteRow).LandFocus();
+        if (AppData.UserSettings.SplitTunneling.Enabled) (IncludeAllRow.IsChecked ? IncludeAllRow : DefaultRouteRow).LandFocus();
         else Header.FocusBack();
     }
 
-    private void Choose(SplitDnsMode mode)
+    private async void Choose(SplitDnsMode mode)
     {
-        _app.UserSettings.SplitTunneling.DnsMode = mode;
-        _app.SettingsService.Save();
-        Show();
+        try {
+            var settings = AppData.UserSettings;
+            settings.SplitTunneling.DnsMode = mode;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            Show();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnIncludeAllClick(object? sender, EventArgs e) => Choose(SplitDnsMode.IncludeAll);

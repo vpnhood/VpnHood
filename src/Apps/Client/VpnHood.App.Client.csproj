@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
@@ -24,7 +24,17 @@
 			<Visible>false</Visible>
 		</EmbeddedResource>
 	</ItemGroup>
-	
+
+	<!-- The Avalonia UI's browser build, when it has been published (src/Apps/AvaloniaUI.Browser/_publish.ps1
+	     writes the zip): embedded beside the SPA under the name ClientAppResources reads, so the web server
+	     hands a paired device the native UI in place of the SPA. Absent, the SPA serves everyone as before. -->
+	<ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\AvaloniaUI.Browser\bin\avalonia-browser.zip')">
+		<EmbeddedResource Include="$(MSBuildThisFileDirectory)..\AvaloniaUI.Browser\bin\avalonia-browser.zip">
+			<LogicalName>VpnHood.App.Client.avalonia-browser.zip</LogicalName>
+			<Visible>false</Visible>
+		</EmbeddedResource>
+	</ItemGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.SpaWebView\VpnHood.AppLib.SpaWebView.csproj" />

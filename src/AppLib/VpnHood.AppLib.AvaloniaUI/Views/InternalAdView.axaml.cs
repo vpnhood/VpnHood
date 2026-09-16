@@ -12,7 +12,6 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
     private const int AdSeconds = 10;
 
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private readonly DispatcherTimer _timer;
     private int _remaining = AdSeconds;
     private bool _isDismissed;
@@ -35,7 +34,7 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
     // build is let out
     public Task<bool> CanLeave()
     {
-        return Task.FromResult(_isDismissed || _remaining <= 0 || _app.Features.IsDebugMode);
+        return Task.FromResult(_isDismissed || _remaining <= 0 || AppData.Features.IsDebugMode);
     }
 
     private void Tick()
@@ -77,16 +76,15 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
 
     private async Task Dismiss(bool learnMore)
     {
-        if (_remaining > 0 && !_app.Features.IsDebugMode)
+        if (_remaining > 0 && !AppData.Features.IsDebugMode)
             return;
 
         _isDismissed = true;
-        _app.AdManager.AdService.InternalAdDismiss(learnMore ? ShowAdResult.Clicked : ShowAdResult.Closed);
+        await AppData.Api.App.InternalAdDismiss(learnMore ? ShowAdResult.Clicked : ShowAdResult.Closed, CancellationToken.None);
         if (learnMore)
             _host.Replace(new PurchaseSubscriptionView(_host, null));
         else
             _host.GoHome();
-        await Task.CompletedTask;
     }
 
     public void Dispose()

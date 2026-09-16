@@ -2,14 +2,11 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
-using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 
 public partial class TurnOffPrivateDnsView : UserControl, IPage
 {
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
-
     public TurnOffPrivateDnsView(MainView host)
     {
         _ = host;
@@ -37,8 +34,13 @@ public partial class TurnOffPrivateDnsView : UserControl, IPage
         else Header.FocusBack();
     }
 
-    private void OnSettingsClick(object? sender, RoutedEventArgs e)
+    private async void OnSettingsClick(object? sender, RoutedEventArgs e)
     {
-        _app.Services.DeviceUiProvider.OpenSettings(AppUiContext.RequiredContext);
+        try {
+            await AppData.Api.Intents.OpenSettings(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 }

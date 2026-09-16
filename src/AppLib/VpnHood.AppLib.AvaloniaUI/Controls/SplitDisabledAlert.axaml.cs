@@ -1,12 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using VpnHood.AppLib.AvaloniaUI.Helpers;
 
 namespace VpnHood.AppLib.AvaloniaUI.Controls;
 
 public partial class SplitDisabledAlert : UserControl
 {
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
-
     // raised after the master switch was turned on here, so the page re-reads what it gates
     public event EventHandler? TurnedOn;
 
@@ -18,14 +17,20 @@ public partial class SplitDisabledAlert : UserControl
 
     public void Refresh()
     {
-        IsVisible = !_app.UserSettings.SplitTunneling.Enabled;
+        IsVisible = !AppData.UserSettings.SplitTunneling.Enabled;
     }
 
-    private void OnTurnOnClick(object? sender, RoutedEventArgs e)
+    private async void OnTurnOnClick(object? sender, RoutedEventArgs e)
     {
-        _app.UserSettings.SplitTunneling.Enabled = true;
-        _app.SettingsService.Save();
-        Refresh();
-        TurnedOn?.Invoke(this, EventArgs.Empty);
+        try {
+            var settings = AppData.UserSettings;
+            settings.SplitTunneling.Enabled = true;
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            Refresh();
+            TurnedOn?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 }

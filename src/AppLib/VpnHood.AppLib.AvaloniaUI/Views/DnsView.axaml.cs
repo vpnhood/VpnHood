@@ -10,7 +10,6 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public partial class DnsView : UserControl, IPage, ILeaveGuard
 {
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private DnsMode _mode;
 
     private DnsView(MainView host)
@@ -18,8 +17,8 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         _host = host;
         InitializeComponent();
         var s = Strings.Current;
-        var state = _app.State;
-        var settings = _app.UserSettings;
+        var state = AppData.State;
+        var settings = AppData.UserSettings;
         _mode = settings.DnsMode;
 
         // the private DNS card: off, the device's automatic mode, or a provider the person chose
@@ -53,7 +52,7 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
 
     // connected to a server that overrides the person's DNS: the radios are read-only meanwhile
     private bool IsEnforcedByServer =>
-        AppData.IsConnected(_app.State) && _mode == DnsMode.AdapterDns && _app.State.SessionInfo?.DnsConfig.IsUserSuppressed == true;
+        AppData.IsConnected(AppData.State) && _mode == DnsMode.AdapterDns && AppData.State.SessionInfo?.DnsConfig.IsUserSuppressed == true;
 
     private void Show()
     {
@@ -64,7 +63,7 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         DefaultRow.IsDisabled = isEnforced;
         CustomRow.IsDisabled = isEnforced;
         EnforcedAlert.IsVisible = isEnforced;
-        PrivateDnsAlert.IsVisible = isCustom && AppData.IsPrivateDnsCustomized(_app.State);
+        PrivateDnsAlert.IsVisible = isCustom && AppData.IsPrivateDnsCustomized(AppData.State);
         CustomPanel.IsVisible = isCustom;
     }
 
@@ -125,13 +124,13 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         }
 
         try {
-            var settings = _app.UserSettings;
+            var settings = AppData.UserSettings;
             settings.DnsMode = _mode;
             settings.DnsServers = [.. new[] { Dns1Box.Text, Dns2Box.Text }
                 .Select(x => x?.Trim())
                 .Where(x => !string.IsNullOrEmpty(x))
                 .Select(x => IPAddress.Parse(x ?? ""))];
-            _app.SettingsService.Save();
+            await AppData.SaveUserSettings(settings, CancellationToken.None);
             _host.ViewModel.Refresh();
             return true;
         }

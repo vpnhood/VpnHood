@@ -71,7 +71,7 @@ public partial class CustomEndpointDialog : DialogBase
         _ = _host;
         var value = EndpointBox.Text?.Trim();
         try {
-            await VpnHoodApp.Instance.UpdateClientProfile(_clientProfileId, new ClientProfileUpdateParams {
+            await AppData.Api.ClientProfiles.Update(_clientProfileId, new ClientProfileUpdateParams {
                 CustomServerEndpoints = new Patch<string[]?>(string.IsNullOrEmpty(value) ? null : [value]),
                 IsCustomServerEndpointsEnabled = new Patch<bool>(EnabledSwitch.IsChecked == true)
             }, CancellationToken.None);

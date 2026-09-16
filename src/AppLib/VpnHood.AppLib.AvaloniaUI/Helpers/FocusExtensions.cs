@@ -11,7 +11,7 @@ internal static class FocusExtensions
 {
     public static void LandFocus(this Control control)
     {
-        var method = VpnHoodApp.Instance.Features.IsTv
+        var method = AppData.IsTvUi
             ? NavigationMethod.Directional
             : NavigationMethod.Unspecified;
         control.Focus(method);

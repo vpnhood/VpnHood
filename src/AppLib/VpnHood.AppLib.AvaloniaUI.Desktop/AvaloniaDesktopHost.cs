@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.UiContexts;
 
@@ -23,7 +22,10 @@ public static class AvaloniaDesktopHost
     // the window back until ShowMainWindow.
     public static void Run(string[] args, bool showWindow)
     {
-        AppAssets.FolderPath = VpnHoodAppWebServer.Instance.AssetsFolderPath;
+        // The UI reaches the app through its API - the same six interfaces a paired browser dials
+        // over HTTP, here the app's own controllers in process; in process both complete at once.
+        AppData.Init(InProcessAppApi.Create(VpnHoodApp.Instance), CancellationToken.None).GetAwaiter().GetResult();
+        AppData.Configure(VpnHoodAppWebServer.Instance.AssetsFolderPath, CancellationToken.None).GetAwaiter().GetResult();
 
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
             Args = args,

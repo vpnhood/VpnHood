@@ -1,15 +1,15 @@
+using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
-using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 
 // The web UI's feature pages, each a FeaturePageLayout with its own words and picture: the pages
 // under Settings that explain a device feature and open the device's settings for it
 // (settings/notifications.vue and friends), the premium pitch of a feature this session has not
-// bought, and the two with text of their own.
+// bought, and the two with text of their own. The device's settings open through the app's
+// intents, on the device that runs the app - a phone driving a TV opens them on the TV.
 public static class FeaturePages
 {
-    private static VpnHoodApp App => VpnHoodApp.Instance;
     private static Strings S => Strings.Current;
 
     public static FeaturePageView Notifications(MainView host)
@@ -20,10 +20,7 @@ public static class FeaturePages
             Image = "notifications.webp",
             Steps = [S.NotificationHowToTurnOnStep1, S.NotificationHowToTurnOnStep2],
             ButtonText = AppData.IsNotificationEnabled(AppData.State) ? S.TurnOffNotification : S.TurnOnNotification,
-            Action = () => {
-                App.Services.DeviceUiProvider.OpenAppNotificationSettings(AppUiContext.RequiredContext);
-                return Task.CompletedTask;
-            },
+            Action = () => AppData.Api.Intents.OpenAppNotificationSettings(CancellationToken.None),
             IsActionAvailable = AppData.Intents.IsAppNotificationSettingsSupported
         });
     }
@@ -31,14 +28,14 @@ public static class FeaturePages
     public static FeaturePageView QuickLaunch(MainView host)
     {
         // the prompt is answered by opening the page; a second visit is the person's own
-        var settings = App.UserSettings;
+        var settings = AppData.UserSettings;
         var showSkip = AppData.State.IsQuickLaunchRecommended;
         if (!settings.IsQuickLaunchPrompted) {
             settings.IsQuickLaunchPrompted = true;
-            App.SettingsService.Save();
+            AppData.SaveUserSettings(settings, CancellationToken.None).Forget("Could not save that quick launch was offered.");
         }
 
-        var appName = App.Features.AppName;
+        var appName = AppData.Features.AppName;
         var isRequestSupported = AppData.Intents.IsRequestQuickLaunchSupported;
         return new FeaturePageView(host, new FeaturePageOptions {
             Title = S.QuickLaunchColored,
@@ -53,7 +50,7 @@ public static class FeaturePages
                 ],
             ButtonText = S.QuickLaunchTurnOn,
             Action = async () => {
-                var added = await App.Services.DeviceUiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
+                var added = await AppData.Api.Intents.RequestQuickLaunch(CancellationToken.None);
                 if (added)
                     host.GoBack();
             },
@@ -69,12 +66,9 @@ public static class FeaturePages
             Title = S.KillSwitchColored,
             Description = S.KillSwitchDesc,
             Image = "kill-switch.webp",
-            Steps = [S.KillSwitchHowToTurnOnStep1, S.KillSwitchHowToTurnOnStep2(App.Features.AppName, "⚙️"), S.KillSwitchHowToTurnOnStep3],
+            Steps = [S.KillSwitchHowToTurnOnStep1, S.KillSwitchHowToTurnOnStep2(AppData.Features.AppName, "⚙️"), S.KillSwitchHowToTurnOnStep3],
             ButtonText = S.OpenVpnSettings,
-            Action = () => {
-                App.Services.DeviceUiProvider.OpenKillSwitchSettings(AppUiContext.RequiredContext);
-                return Task.CompletedTask;
-            },
+            Action = () => AppData.Api.Intents.OpenKillSwitchSettings(CancellationToken.None),
             IsActionAvailable = AppData.Intents.IsKillSwitchSettingsSupported
         });
     }
@@ -85,12 +79,9 @@ public static class FeaturePages
             Title = S.AlwaysOnColored,
             Description = S.AlwaysOnDesc,
             Image = "always-on.webp",
-            Steps = [S.AlwaysOnHowToTurnOnStep1, S.AlwaysOnHowToTurnOnStep2(App.Features.AppName, "⚙️"), S.AlwaysOnHowToTurnOnStep3],
+            Steps = [S.AlwaysOnHowToTurnOnStep1, S.AlwaysOnHowToTurnOnStep2(AppData.Features.AppName, "⚙️"), S.AlwaysOnHowToTurnOnStep3],
             ButtonText = S.OpenVpnSettings,
-            Action = () => {
-                App.Services.DeviceUiProvider.OpenAlwaysOnSettings(AppUiContext.RequiredContext);
-                return Task.CompletedTask;
-            },
+            Action = () => AppData.Api.Intents.OpenAlwaysOnSettings(CancellationToken.None),
             IsPremium = AppData.IsPremiumFeature(AppFeature.AlwaysOn),
             IsActionAvailable = AppData.Intents.IsAlwaysOnSettingsSupported
         });
@@ -104,10 +95,7 @@ public static class FeaturePages
             Image = "private-dns.webp",
             Steps = [S.PrivateDnsTurnOnStep1, S.PrivateDnsTurnOnStep2, S.PrivateDnsTurnOnStep3, S.PrivateDnsTurnOnStep4, S.PrivateDnsTurnOnStep5],
             ButtonText = S.OpenSystemSettings,
-            Action = () => {
-                App.Services.DeviceUiProvider.OpenSettings(AppUiContext.RequiredContext);
-                return Task.CompletedTask;
-            },
+            Action = () => AppData.Api.Intents.OpenSettings(CancellationToken.None),
             IsPremium = AppData.IsPremiumFeature(AppFeature.CustomDns),
             IsActionAvailable = AppData.Intents.IsPrivateDnsSettingsSupported
         });
@@ -125,10 +113,10 @@ public static class FeaturePages
 
     public static FeaturePageView CloakMode(MainView host)
     {
-        var settings = App.UserSettings;
+        var settings = AppData.UserSettings;
         if (!settings.IsTcpProxyPrompted) {
             settings.IsTcpProxyPrompted = true;
-            App.SettingsService.Save();
+            AppData.SaveUserSettings(settings, CancellationToken.None).Forget("Could not save that cloak mode was offered.");
         }
 
         return new FeaturePageView(host, new FeaturePageOptions {

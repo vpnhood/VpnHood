@@ -16,15 +16,14 @@ public partial class DrawerView : UserControl
     private const string XUrl = "https://x.com/vpnhood";
 
     private readonly MainView _host;
-    private readonly VpnHoodApp _app = VpnHoodApp.Instance;
 
     public DrawerView(MainView host)
     {
         _host = host;
         InitializeComponent();
 
-        var features = _app.Features;
-        var state = _app.State;
+        var features = AppData.Features;
+        var state = AppData.State;
         var logo = AppData.IsConnectApp ? "VpnHoodConnect-logo.png" : "VpnHoodClient-logo.png";
         Logo.Source = AppAssets.Image(logo);
         AppNameText.Text = features.AppName;
@@ -109,8 +108,7 @@ public partial class DrawerView : UserControl
             UpdateIcon.Classes.Add("spinner");
             UpdateItem.IsEnabled = false;
             try {
-                var updater = _app.Services.UpdaterService ?? throw new NotSupportedException("App Updater is not supported.");
-                await updater.CheckForUpdate(true, CancellationToken.None);
+                await AppData.Api.App.VersionCheck(CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);
@@ -167,7 +165,7 @@ public partial class DrawerView : UserControl
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (_app.Features.PrivacyPolicyUrl is { } url)
+            if (AppData.Features.PrivacyPolicyUrl is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

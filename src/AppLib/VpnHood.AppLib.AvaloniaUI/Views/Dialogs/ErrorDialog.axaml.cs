@@ -33,15 +33,20 @@ public partial class ErrorDialog : DialogBase
         CloseButton.LandFocus();
     }
 
-    private void CloseAndClear()
+    private async Task CloseAndClear()
     {
-        VpnHoodApp.Instance.ClearLastError();
+        await AppData.Api.App.ClearLastError(CancellationToken.None);
         Close();
     }
 
-    private void OnCloseClick(object? sender, RoutedEventArgs e)
+    private async void OnCloseClick(object? sender, RoutedEventArgs e)
     {
-        CloseAndClear();
+        try {
+            await CloseAndClear();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     // the automatic location, then a connect on it (ErrorDialog.changeLocationToAuto)
@@ -50,7 +55,7 @@ public partial class ErrorDialog : DialogBase
         try {
             if (AppData.ClientProfileId is not { } profileId)
                 return;
-            CloseAndClear();
+            await CloseAndClear();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: false, ConnectPlanId.Normal));
         }
         catch (Exception ex) {
@@ -63,7 +68,7 @@ public partial class ErrorDialog : DialogBase
         try {
             if (AppData.ClientProfileId is not { } profileId)
                 return;
-            CloseAndClear();
+            await CloseAndClear();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: true, ConnectPlanId.PremiumByTrial));
         }
         catch (Exception ex) {
@@ -74,7 +79,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnDiagnoseClick(object? sender, RoutedEventArgs e)
     {
         try {
-            CloseAndClear();
+            await CloseAndClear();
             await _host.ViewModel.Diagnose();
         }
         catch (Exception ex) {
@@ -82,22 +87,32 @@ public partial class ErrorDialog : DialogBase
         }
     }
 
-    private void OnReportClick(object? sender, RoutedEventArgs e)
+    private async void OnReportClick(object? sender, RoutedEventArgs e)
     {
-        CloseAndClear();
-        _host.Navigate(new LogView());
+        try {
+            await CloseAndClear();
+            _host.Navigate(new LogView());
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
-    private void OnRestoreClick(object? sender, RoutedEventArgs e)
+    private async void OnRestoreClick(object? sender, RoutedEventArgs e)
     {
-        CloseAndClear();
-        _host.Replace(new PurchaseSubscriptionView(_host, null));
+        try {
+            await CloseAndClear();
+            _host.Replace(new PurchaseSubscriptionView(_host, null));
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnChangeCodeClick(object? sender, RoutedEventArgs e)
     {
         try {
-            CloseAndClear();
+            await CloseAndClear();
             await _host.ShowDialog(new PremiumCodeDialog(_host));
         }
         catch (Exception ex) {
@@ -105,9 +120,14 @@ public partial class ErrorDialog : DialogBase
         }
     }
 
-    private void OnLearnMoreClick(object? sender, RoutedEventArgs e)
+    private async void OnLearnMoreClick(object? sender, RoutedEventArgs e)
     {
-        CloseAndClear();
-        _host.Replace(new LearnMoreView(_host));
+        try {
+            await CloseAndClear();
+            _host.Replace(new LearnMoreView(_host));
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 }

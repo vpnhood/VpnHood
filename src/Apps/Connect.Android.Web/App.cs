@@ -6,6 +6,7 @@ using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.AvaloniaUI;
+using VpnHood.AppLib.Droid.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Portal;
@@ -113,6 +114,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         // initialize the app
         VpnHoodAndroidApp.Init(() => CreateAppOptions(appConfigs));
+        AndroidAvaloniaUi.Init();
 
         base.OnCreate();
     }

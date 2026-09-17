@@ -57,7 +57,7 @@ public static class AppCountryInfo
         }
     }
 
-    public static CountryInfo[] GetAll(CultureInfo? cultureInfo = null)
+    public static IReadOnlyList<CountryInfo> GetAll(CultureInfo? cultureInfo = null)
     {
         // region may return 001 for world, but it is not a valid country code, so filter it out,
         // and also filter out any region with numeric name, just in case

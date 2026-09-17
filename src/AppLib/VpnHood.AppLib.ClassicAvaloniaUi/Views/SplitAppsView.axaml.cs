@@ -91,7 +91,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
 
     // Include with nothing in it is the one state that cannot be saved: the app would tunnel
     // nothing. It is held until the person leaves, and refused then (ALL_APPS_EXCLUDED_ERROR_MSG).
-    private static bool IsSaveRejected => Split is { AppMode: SplitAppMode.Include, Apps.Length: 0 };
+    private static bool IsSaveRejected => Split is { AppMode: SplitAppMode.Include, Apps.Count: 0 };
 
     private async void OnSelectionChanged(object? sender, EventArgs e)
     {

@@ -472,7 +472,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // ReSharper disable once UseCollectionExpression
         return infos
             .Select(x => {
-                var isSingleLocation = x.LocationInfos.Length < 2;
+                var isSingleLocation = x.LocationInfos.Count < 2;
                 var isActive = x.ClientProfileId == currentId;
                 return new ProfileItem {
                     ClientProfileId = x.ClientProfileId,
@@ -745,7 +745,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (profiles.Count == 0)
             return Strings.Current.NoClientProfileAvailable;
 
-        return profiles is [{ LocationInfos.Length: < 2 }]
+        return profiles is [{ LocationInfos.Count: < 2 }]
             ? Strings.Current.NoAdditionalLocationAvailable
             : null;
     }

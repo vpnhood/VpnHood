@@ -43,7 +43,7 @@ public class IosAppCultureProvider : IAppCultureProvider
     }
 
     // no OS-level override on iOS; the value is supplied by the app/SPA and kept in memory
-    public string[] AvailableCultures { get; set; } = [];
+    public IReadOnlyList<string> AvailableCultures { get; set; } = [];
 
     public string[] SelectedCultures {
         get {

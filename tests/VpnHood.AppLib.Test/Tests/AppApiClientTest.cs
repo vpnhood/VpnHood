@@ -67,7 +67,7 @@ public class AppApiClientTest : TestAppBase
         var config = await api.App.Configure(new ConfigParams { AvailableCultures = ["en", "fa"] }, CancellationToken.None);
         Assert.AreEqual(app.Features.AppId, config.Features.AppId);
         Assert.IsFalse(config.IsRemote, "loopback is the app's own web view");
-        Assert.AreEqual(1, config.ClientProfileInfos.Length);
+        Assert.AreEqual(1, config.ClientProfileInfos.Count);
         Assert.AreEqual(token.TokenId, config.ClientProfileInfos[0].TokenId);
         CollectionAssert.AreEqual(new[] { "en", "fa" }, config.AvailableCultureInfos.Select(x => x.Code).ToArray());
         Assert.AreEqual(app.State.ConnectionState, config.State.ConnectionState);

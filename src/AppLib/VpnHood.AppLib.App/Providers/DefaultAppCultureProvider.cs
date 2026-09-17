@@ -7,7 +7,7 @@ internal class DefaultAppCultureProvider(VpnHoodApp vpnHoodApp)
     : IAppCultureProvider
 {
     public string[] SystemCultures => [CultureInfo.InstalledUICulture.Name];
-    public string[] AvailableCultures { get; set; } = [];
+    public IReadOnlyList<string> AvailableCultures { get; set; } = [];
 
     public string[] SelectedCultures {
         get => vpnHoodApp.UserSettings.CultureCode != null ? [vpnHoodApp.UserSettings.CultureCode] : [];

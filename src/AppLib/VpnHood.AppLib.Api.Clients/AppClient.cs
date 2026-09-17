@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Api.App;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Api.Ads;
 using VpnHood.AppLib.Api.Countries;
@@ -138,14 +139,14 @@ internal sealed class AppClient(HttpClient httpClient) : AppApiClientBase(httpCl
         return HttpPostAsync(BaseUrl + "user-review", null, userReview, cancellationToken);
     }
 
-    public Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<CountryInfo>> GetCountries(CancellationToken cancellationToken)
     {
-        return HttpGetAsync<CountryInfo[]>(BaseUrl + "countries", null, cancellationToken);
+        return await HttpGetAsync<CountryInfo[]>(BaseUrl + "countries", null, cancellationToken).Vhc();
     }
 
-    public Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
-        return HttpGetAsync<CountryInfo[]>(BaseUrl + "supported-split-by-countries", null, cancellationToken);
+        return await HttpGetAsync<CountryInfo[]>(BaseUrl + "supported-split-by-countries", null, cancellationToken).Vhc();
     }
 
     public Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken)

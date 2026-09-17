@@ -371,15 +371,15 @@ public class ClientProfileTest : TestAppBase
             new ClientProfileUpdateParams { SelectedLocation = "US/*" });
         Assert.AreEqual("US/*", app.State.ClientProfile?.SelectedLocationInfo?.ServerLocation);
         CollectionAssert.AreEquivalent(new[] { "#tag1", "~#tag2" },
-            app.State.ClientProfile?.SelectedLocationInfo?.Tags);
+            app.State.ClientProfile?.SelectedLocationInfo?.Tags.ToArray());
 
         app.ClientProfileService.Update(clientProfile.ClientProfileId,
             new ClientProfileUpdateParams { SelectedLocation = "US/california" });
-        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags.ToArray());
 
         app.ClientProfileService.Update(clientProfile.ClientProfileId,
             new ClientProfileUpdateParams { SelectedLocation = "US/texas" });
-        CollectionAssert.AreEquivalent(new[] { "#tag1" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "#tag1" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags.ToArray());
 
         // test three regin
         token = CreateToken();
@@ -388,13 +388,13 @@ public class ClientProfileTest : TestAppBase
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
         app.ClientProfileService.Update(clientProfile.ClientProfileId,
             new ClientProfileUpdateParams { SelectedLocation = "FR/paris" });
-        CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags);
+        CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.ClientProfile?.SelectedLocationInfo?.Tags.ToArray());
 
         app.ClientProfileService.Update(clientProfile.ClientProfileId,
             new ClientProfileUpdateParams { SelectedLocation = "*/*" });
         app.Settings.Save();
         CollectionAssert.AreEquivalent(new[] { "~#p1", "~#p2", "~#z1", "~#z2" },
-            app.State.ClientProfile?.SelectedLocationInfo?.Tags);
+            app.State.ClientProfile?.SelectedLocationInfo?.Tags.ToArray());
     }
 
     [TestMethod]

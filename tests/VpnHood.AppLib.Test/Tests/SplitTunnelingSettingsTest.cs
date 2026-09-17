@@ -52,7 +52,7 @@ public class SplitTunnelingSettingsTest
         // the two exempt splits: neither can expose the IP of the traffic that stays in the tunnel
         Assert.IsTrue(effective.UseLocalNetwork, "LAN traffic never reaches the internet");
         Assert.AreEqual(SplitAppMode.Exclude, effective.AppMode, "a per-app opt-out survives the toggle");
-        CollectionAssert.AreEqual(settings.Apps, effective.Apps.ToArray());
+        CollectionAssert.AreEqual(settings.Apps.ToArray(), effective.Apps.ToArray());
 
         // the stored values must survive untouched for re-enabling
         Assert.AreEqual(SplitCountryMode.ExcludeMyCountry, settings.CountryMode);
@@ -123,7 +123,7 @@ public class SplitTunnelingSettingsTest
         Assert.AreEqual(CoreSplit.SplitUnsupportedIpMode.Exclude, effective.UnsupportedIpV6Mode);
         Assert.AreEqual(SplitAppMode.Exclude, effective.AppMode);
         Assert.AreEqual(CoreSplit.SplitDnsMode.DefaultRoute, effective.DnsMode);
-        CollectionAssert.AreEqual(settings.Apps, effective.Apps.ToArray());
+        CollectionAssert.AreEqual(settings.Apps.ToArray(), effective.Apps.ToArray());
     }
 
     // the plan's answer, without the app: allowed everywhere, or refused everywhere

@@ -9,10 +9,10 @@ namespace VpnHood.AppLib.Api.ClientProfiles;
 public class ClientPolicy
 {
     [JsonPropertyName("ccs")]
-    public required string[] ClientCountries { get; init; }
+    public required IReadOnlyList<string> ClientCountries { get; init; }
 
     [JsonPropertyName("free")]
-    public string[]? FreeLocations { get; init; }
+    public IReadOnlyList<string>? FreeLocations { get; init; }
 
     [JsonPropertyName("ao")]
     public bool AutoLocationOnly { get; init; }

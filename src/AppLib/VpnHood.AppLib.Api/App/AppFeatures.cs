@@ -55,7 +55,7 @@ public class AppFeatures
     public required string? GaMeasurementId { get; init; }
     public required string ClientId { get; init; }
     public required bool IsDebugMode { get; init; }
-    public required string[] DebugCommands { get; init; }
+    public required IReadOnlyList<string> DebugCommands { get; init; }
     public required bool IsProxySupported { get; init; }
 
     // Whether this head runs a listener a phone can pair with. False means the three remote-access

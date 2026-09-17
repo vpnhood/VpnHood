@@ -15,8 +15,8 @@ public class AppInfo
     public required DeviceIntentFeatures IntentFeatures { get; init; }
     public required AppState State { get; init; }
     public required UserSettings UserSettings { get; init; }
-    public required ClientProfileInfo[] ClientProfileInfos { get; init; }
-    public required UiCultureInfo[] AvailableCultureInfos { get; init; }
+    public required IReadOnlyList<ClientProfileInfo> ClientProfileInfos { get; init; }
+    public required IReadOnlyList<UiCultureInfo> AvailableCultureInfos { get; init; }
 
     // Whether this client is another device on the LAN rather than the app's own web view. Set by
     // the route, not the controller: only the request knows where it came from. The SPA renders the

@@ -13,9 +13,9 @@ public class SplitTunnelingSettings
     // user picked exactly which apps opt out, and the rest of the device is unaffected).
     public bool Enabled { get; set; } = true;
     public SplitAppMode AppMode { get; set; } = SplitAppMode.All;
-    public string[] Apps { get; set; } = [];
+    public IReadOnlyList<string> Apps { get; set; } = [];
     public SplitCountryMode CountryMode { get; set; } = SplitCountryMode.IncludeAll;
-    public string[] Countries { get; set; } = [];
+    public IReadOnlyList<string> Countries { get; set; } = [];
     public bool UseIpViaApp { get; set; }
     public bool UseIpViaDevice { get; set; }
     public bool UseDomain { get; set; }

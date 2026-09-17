@@ -47,8 +47,8 @@ public static class AppText
     {
         var split = AppModel.UserSettings.SplitTunneling;
         return split.AppMode switch {
-            SplitAppMode.Exclude => split.Apps.Length > 0 ? Strings.Current.AllExceptX(split.Apps.Length) : Strings.Current.Off,
-            SplitAppMode.Include => Strings.Current.OnlyX(split.Apps.Length),
+            SplitAppMode.Exclude => split.Apps.Count > 0 ? Strings.Current.AllExceptX(split.Apps.Count) : Strings.Current.Off,
+            SplitAppMode.Include => Strings.Current.OnlyX(split.Apps.Count),
             _ => Strings.Current.Off
         };
     }

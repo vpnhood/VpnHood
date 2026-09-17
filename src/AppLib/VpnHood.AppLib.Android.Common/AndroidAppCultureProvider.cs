@@ -37,7 +37,7 @@ public class AndroidAppCultureProvider : IAppCultureProvider
         }
     }
 
-    public string[] AvailableCultures {
+    public IReadOnlyList<string> AvailableCultures {
         get {
             var localeManager = GetLocalManager();
             var languageTags = localeManager.OverrideLocaleConfig?.SupportedLocales?.ToLanguageTags() ?? string.Empty;
@@ -45,7 +45,7 @@ public class AndroidAppCultureProvider : IAppCultureProvider
         }
         set {
             var localeManager = GetLocalManager();
-            localeManager.OverrideLocaleConfig = value.Length > 0
+            localeManager.OverrideLocaleConfig = value.Count > 0
                 ? new LocaleConfig(LocaleList.ForLanguageTags(string.Join(",", value)))
                 : null;
         }

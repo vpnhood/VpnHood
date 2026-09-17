@@ -18,7 +18,7 @@ public class ServerLocationItem
     // else a token carries). Neither of our UIs reads it - Options below is the digested answer they
     // do read - but it is the token's own extension point, and a country head carries "~#tag" when
     // only some of its regions have one.
-    public string[]? Tags { get; set; }
+    public IReadOnlyList<string>? Tags { get; set; }
     public required string ServerLocation { get; init; }
     public required string CountryName { get; init; }
     public required bool IsAuto { get; init; }

@@ -35,8 +35,8 @@ public interface IAppApi
     Task VersionCheckPostpone(CancellationToken cancellationToken);
     Task ExtendByRewardedAd(CancellationToken cancellationToken);
     Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken);
-    Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken);
-    Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken);
+    Task<IReadOnlyList<CountryInfo>> GetCountries(CancellationToken cancellationToken);
+    Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken);
     Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken);
     Task InternalAdError(string errorMessage, CancellationToken cancellationToken);
     Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken);

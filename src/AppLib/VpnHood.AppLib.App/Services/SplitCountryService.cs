@@ -31,7 +31,7 @@ public class SplitCountryService(
 
     public bool IsBusy { get; private set; }
 
-    public async Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
         if (ipRangeLocationProvider is null)
             return [];
@@ -72,7 +72,7 @@ public class SplitCountryService(
                 throw new InvalidOperationException("Could not split by country because the ip-location asset is not provided.");
 
             // resolve the selected countries
-            string[] countryCodes = splitCountryMode is SplitCountryMode.ExcludeMyCountry
+            IReadOnlyList<string> countryCodes = splitCountryMode is SplitCountryMode.ExcludeMyCountry
                 ? [GetSplitMyCountryCode()]
                 : settingsService.UserSettings.SplitTunneling.Countries;
 
@@ -122,7 +122,7 @@ public class SplitCountryService(
     // constraint" (tunnel everything), the opposite of "exclude every known country".
     // Selected codes unknown to the asset contribute no ranges and are dropped before comparing.
     internal static (string[] StoredCodes, FilterAction Action) ResolveSplitIpDbSelection(
-        string[] availableCodes, string[] selectedCodes, FilterAction action)
+        IReadOnlyList<string> availableCodes, IReadOnlyList<string> selectedCodes, FilterAction action)
     {
         var available = availableCodes
             .Select(x => x.ToUpperInvariant())

@@ -197,13 +197,13 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
         return Task.CompletedTask;
     }
 
-    public Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<CountryInfo>> GetCountries(CancellationToken cancellationToken)
     {
         _ = cancellationToken;
         return Task.FromResult(AppCountryInfo.GetAll());
     }
 
-    public Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
         return app.Services.SplitCountryService.GetSupportedSplitCountries(cancellationToken);
     }

@@ -17,12 +17,12 @@ public class ClientProfileInfo
     public required bool IsPremiumLocationSelected { get; init; }
     public required bool IsPremium { get; init; }
     public required string TokenId { get; init; }
-    public required string[] HostNames { get; init; }
+    public required IReadOnlyList<string> HostNames { get; init; }
     public required bool IsValidHostName { get; init; }
     public required bool IsBuiltIn { get; init; }
     public required string? AccessCode { get; init; }
     public required AccessCodeRefusal? AccessCodeRefusal { get; init; }
-    public required ServerLocationItem[] LocationInfos { get; init; }
+    public required IReadOnlyList<ServerLocationItem> LocationInfos { get; init; }
     public required bool CanGoPremium { get; init; }
     public required bool CanTryPremium { get; init; }
 

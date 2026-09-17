@@ -110,7 +110,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
 
     public async Task<bool> CanLeave()
     {
-        if (IsListMode && Split.Countries.Length >= AppText.AllCountriesCount) {
+        if (IsListMode && Split.Countries.Count >= AppText.AllCountriesCount) {
             await _host.ShowError(Strings.Current.AllCountriesExcludedErrorMsg);
             return false;
         }

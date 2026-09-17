@@ -163,13 +163,13 @@ public class AppController : ControllerBase, IAppApi
     }
 
     [HttpGet("countries")]
-    public Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<CountryInfo>> GetCountries(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpGet("supported-split-by-countries")]
-    public Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

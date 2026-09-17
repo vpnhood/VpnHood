@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Client.Devices.UiContexts;
+﻿using VpnHood.AppLib.Contracts.Device;
+using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Abstractions.Device;
 

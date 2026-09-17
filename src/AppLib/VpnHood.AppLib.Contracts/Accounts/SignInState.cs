@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace VpnHood.AppLib.Abstractions.Accounts;
+namespace VpnHood.AppLib.Contracts.Accounts;
 
 /// <summary>
 /// What a SignIn call accomplished. Anything but <see cref="SignedIn"/> means NOTHING is signed in

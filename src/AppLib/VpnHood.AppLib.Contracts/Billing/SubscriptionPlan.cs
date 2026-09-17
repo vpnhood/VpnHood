@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Abstractions.Billing;
+namespace VpnHood.AppLib.Contracts.Billing;
 
 public class SubscriptionPlan
 {

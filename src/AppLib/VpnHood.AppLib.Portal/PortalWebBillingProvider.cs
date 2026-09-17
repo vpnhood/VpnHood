@@ -1,5 +1,6 @@
 using System.Globalization;
 using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.Contracts.Billing;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;

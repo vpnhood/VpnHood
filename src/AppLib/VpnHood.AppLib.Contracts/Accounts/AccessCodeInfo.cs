@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Abstractions.Accounts;
+namespace VpnHood.AppLib.Contracts.Accounts;
 
 /// <summary>
 /// THE one access code serving an account, whichever channel delivered it. The backend ranks

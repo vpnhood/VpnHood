@@ -3,6 +3,7 @@ using Android.Runtime;
 using Avalonia.Android;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
+using VpnHood.AppLib.Contracts.Accounts;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.ClassicAvaloniaUi;

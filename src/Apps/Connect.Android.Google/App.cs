@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.App.Connect.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib.ClassicAvaloniaUi;
+using VpnHood.AppLib.Contracts.Accounts;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;

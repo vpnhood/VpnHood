@@ -1,10 +1,10 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
+using VpnHood.AppLib.Contracts.Ads;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

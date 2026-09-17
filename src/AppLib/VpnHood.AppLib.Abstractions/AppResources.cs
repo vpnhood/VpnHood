@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.Contracts.App;
 using VpnHood.Core.Toolkit.Graphics;
 
 namespace VpnHood.AppLib.Abstractions;
@@ -13,23 +14,27 @@ public class AppResources
 
     public VhSize WindowSize { get; set; } = new(400, 700);
 
-    public AppStrings Strings { get; set; } = new();
+    public AppStrings Strings { get; set; } = CreateDefaultStrings();
     public AppColors Colors { get; set; } = new();
     public AppIcons Icons { get; set; } = new();
 
-    public class AppStrings
+    // The shape is the contract's (a UI replaces these at configure time); the words are this
+    // library's, from its own resources, so a head that ships no UI still has them.
+    private static AppStrings CreateDefaultStrings()
     {
-        public string Disconnect { get; set; } = Resources.Disconnect;
-        public string Connect { get; set; } = Resources.Connect;
-        public string Disconnected { get; set; } = Resources.Disconnected;
-        public string Exit { get; set; } = Resources.Exit;
-        public string Manage { get; set; } = Resources.Manage;
-        public string MsgAccessKeyAdded { get; set; } = Resources.MsgAccessKeyAdded;
-        public string MsgAccessKeyUpdated { get; set; } = Resources.MsgAccessKeyUpdated;
-        public string MsgCantReadAccessKey { get; set; } = Resources.MsgCantReadAccessKey;
-        public string MsgUnsupportedContent { get; set; } = Resources.MsgUnsupportedContent;
-        public string Open { get; set; } = Resources.Open;
-        public string OpenInBrowser { get; set; } = Resources.OpenInBrowser;
+        return new AppStrings {
+            Disconnect = Resources.Disconnect,
+            Connect = Resources.Connect,
+            Disconnected = Resources.Disconnected,
+            Exit = Resources.Exit,
+            Manage = Resources.Manage,
+            MsgAccessKeyAdded = Resources.MsgAccessKeyAdded,
+            MsgAccessKeyUpdated = Resources.MsgAccessKeyUpdated,
+            MsgCantReadAccessKey = Resources.MsgCantReadAccessKey,
+            MsgUnsupportedContent = Resources.MsgUnsupportedContent,
+            Open = Resources.Open,
+            OpenInBrowser = Resources.OpenInBrowser
+        };
     }
 
     public class AppColors

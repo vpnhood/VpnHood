@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Permission = Android.Content.PM.Permission;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Api.Exceptions;
+using VpnHood.AppLib.Contracts.Device;
 using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;

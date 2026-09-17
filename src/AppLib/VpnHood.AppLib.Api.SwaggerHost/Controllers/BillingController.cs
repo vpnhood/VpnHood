@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.SwaggerHost.Exceptions;
+using VpnHood.AppLib.Contracts.Billing;
 using VpnHood.AppLib.Contracts.Premium;
 
 namespace VpnHood.AppLib.Api.SwaggerHost.Controllers;

@@ -12,6 +12,7 @@ using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.Device;
 using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.AppLib.Contracts.Settings;
 using VpnHood.AppLib.Diagnosing;

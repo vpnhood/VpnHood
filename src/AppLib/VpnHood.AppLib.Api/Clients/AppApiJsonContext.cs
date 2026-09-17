@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.Accounts;
 using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.Billing;
 using VpnHood.AppLib.Contracts.ClientProfiles;
 using VpnHood.AppLib.Contracts.Countries;
 using VpnHood.AppLib.Contracts.Premium;

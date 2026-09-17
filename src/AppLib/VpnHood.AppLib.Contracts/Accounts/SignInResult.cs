@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Abstractions.Accounts;
+namespace VpnHood.AppLib.Contracts.Accounts;
 
 /// <summary>
 /// What a SignIn call accomplished. See <see cref="SignInState"/>: anything but SignedIn means

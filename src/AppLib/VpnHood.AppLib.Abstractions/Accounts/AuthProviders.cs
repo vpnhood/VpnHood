@@ -1,3 +1,4 @@
+﻿
 namespace VpnHood.AppLib.Abstractions.Accounts;
 
 /// <summary>

@@ -1,4 +1,5 @@
 using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.Contracts.Billing;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;

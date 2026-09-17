@@ -1,6 +1,6 @@
-﻿using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.Api;
+﻿using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.Accounts;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.ClientProfiles;
 using VpnHood.AppLib.Contracts.Settings;

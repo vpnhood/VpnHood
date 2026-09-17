@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Abstractions.Accounts;
+namespace VpnHood.AppLib.Contracts.Accounts;
 
 public record SignInOptions
 {

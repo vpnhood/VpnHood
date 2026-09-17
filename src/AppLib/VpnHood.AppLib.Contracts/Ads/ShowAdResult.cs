@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.AppLib.Abstractions.Ads;
+namespace VpnHood.AppLib.Contracts.Ads;
 
 [JsonConverter(typeof(JsonStringEnumConverter<ShowAdResult>))]
 public enum ShowAdResult

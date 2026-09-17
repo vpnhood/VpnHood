@@ -4,11 +4,11 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
-using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
+using VpnHood.AppLib.Contracts.Accounts;
 using VpnHood.AppLib.Contracts.ClientProfiles;
 using VpnHood.Core.Common.Messaging;
 

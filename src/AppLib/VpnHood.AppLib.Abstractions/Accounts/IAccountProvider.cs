@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.Contracts.Accounts;
 
 namespace VpnHood.AppLib.Abstractions.Accounts;
 

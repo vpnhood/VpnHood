@@ -1,15 +1,15 @@
 ﻿using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.AppLib.Api.Exceptions;
 
-// The values are the wire's, not a C# reference: five of these name exception classes that live in
-// the app (VpnHood.AppLib.Exceptions), which the contract deliberately cannot see. They are written
-// as literals for that reason - renaming the class must NOT silently change what goes over the wire.
+// The values are the wire's, not a C# reference: ten of these name exception classes the contract
+// deliberately cannot see - five in the app (VpnHood.AppLib.Exceptions) and five in the provider
+// surface (VpnHood.AppLib.Abstractions.AdExceptions). They are written as literals for that reason -
+// renaming the class must NOT silently change what goes over the wire.
 [JsonConverter(typeof(JsonStringEnumConverter<ExceptionType>))]
 public enum ExceptionType
 {
@@ -22,16 +22,16 @@ public enum ExceptionType
     [EnumMember(Value = nameof(SessionException))]
     Session,
 
-    [EnumMember(Value = nameof(AdException))]
+    [EnumMember(Value = "AdException")]
     Ad,
 
-    [EnumMember(Value = nameof(ShowAdException))]
+    [EnumMember(Value = "ShowAdException")]
     ShowAd,
 
-    [EnumMember(Value = nameof(ShowAdNoUiException))]
+    [EnumMember(Value = "ShowAdNoUiException")]
     ShowAdNoUi,
 
-    [EnumMember(Value = nameof(LoadAdException))]
+    [EnumMember(Value = "LoadAdException")]
     LoadAd,
 
     [EnumMember(Value = "NoInternetException")]
@@ -49,7 +49,7 @@ public enum ExceptionType
     [EnumMember(Value = nameof(UnreachableServerLocationException))]
     UnreachableServerLocation,
 
-    [EnumMember(Value = nameof(RewardNotEarnedException))]
+    [EnumMember(Value = "RewardNotEarnedException")]
     RewardNotEarned,
 
     [EnumMember(Value = nameof(VpnServiceNotReadyException))]

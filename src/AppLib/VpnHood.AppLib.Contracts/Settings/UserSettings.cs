@@ -38,14 +38,4 @@ public class UserSettings
         // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
         set => field = value ?? [];
     } = [];
-
-    [Obsolete("Compatibility for version <= 759; Use ChannelProtocol.")]
-    public bool? UseUdpChannel {
-        // ReSharper disable once ValueParameterNotUsed
-        init {
-            if (value == true)
-                ChannelProtocol = ChannelProtocol.Udp;
-        }
-    }
-
 }

@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.Contracts.Billing;
 using VpnHood.AppLib.Ios.AppStore.Exceptions;
 using VpnHood.AppLib.Ios.StoreKitNative;
 using VpnHood.Core.Client.Devices.UiContexts;

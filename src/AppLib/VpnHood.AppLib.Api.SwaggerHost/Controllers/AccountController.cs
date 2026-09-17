@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.SwaggerHost.Exceptions;
-using SignInResult = VpnHood.AppLib.Abstractions.Accounts.SignInResult;
+using SignInResult = VpnHood.AppLib.Contracts.Accounts.SignInResult;
+using VpnHood.AppLib.Contracts.Accounts;
 
 namespace VpnHood.AppLib.Api.SwaggerHost.Controllers;
 

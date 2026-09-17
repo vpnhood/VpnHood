@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.AppLib.Abstractions.Billing;
+namespace VpnHood.AppLib.Contracts.Billing;
 
 [JsonConverter(typeof(JsonStringEnumConverter<PurchaseState>))]
 public enum PurchaseState

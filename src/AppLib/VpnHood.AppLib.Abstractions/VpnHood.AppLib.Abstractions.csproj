@@ -7,6 +7,7 @@
 
 	<ItemGroup>
 		<!-- The OS-chrome icons are files in the content package, not bytes in this assembly. -->
+		<ProjectReference Include="..\VpnHood.AppLib.Contracts\VpnHood.AppLib.Contracts.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 	</ItemGroup>

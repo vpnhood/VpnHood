@@ -1,5 +1,5 @@
-﻿using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Abstractions.Device;
+﻿using VpnHood.AppLib.Contracts.Billing;
+using VpnHood.AppLib.Contracts.Device;
 using VpnHood.AppLib.Contracts.ClientProfiles;
 using VpnHood.AppLib.Contracts.Countries;
 using VpnHood.AppLib.Contracts.Proxies;

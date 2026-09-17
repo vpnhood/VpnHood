@@ -1,5 +1,5 @@
-﻿using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Api;
+﻿using VpnHood.AppLib.Api;
+using VpnHood.AppLib.Contracts.Billing;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.Core.Client.Devices.UiContexts;
 

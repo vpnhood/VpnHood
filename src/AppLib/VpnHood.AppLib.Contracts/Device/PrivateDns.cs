@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.Abstractions.Device;
+﻿namespace VpnHood.AppLib.Contracts.Device;
 
 public class PrivateDns
 {

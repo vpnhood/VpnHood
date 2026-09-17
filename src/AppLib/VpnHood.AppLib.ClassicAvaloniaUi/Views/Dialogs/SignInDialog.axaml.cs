@@ -2,11 +2,11 @@
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.Resources;
+using VpnHood.AppLib.Contracts.Accounts;
 using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;

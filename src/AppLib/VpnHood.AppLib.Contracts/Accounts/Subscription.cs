@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Abstractions.Accounts;
+namespace VpnHood.AppLib.Contracts.Accounts;
 
 /// <summary>
 /// The store subscription serving an account. Its very presence is the answer to "is this account

@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions.Billing;
+﻿using VpnHood.AppLib.Contracts.Billing;
 
 // ReSharper disable UnusedMemberInSuper.Global
 

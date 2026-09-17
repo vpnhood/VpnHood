@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Abstractions.Accounts;
+namespace VpnHood.AppLib.Contracts.Accounts;
 
 /// <summary>
 /// Where a subscription can be managed from here — cancel, change plan, change payment method.

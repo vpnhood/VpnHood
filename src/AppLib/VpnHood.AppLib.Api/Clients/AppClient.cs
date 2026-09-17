@@ -1,6 +1,6 @@
-﻿using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.Api.App;
+﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
+using VpnHood.AppLib.Contracts.Ads;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.Countries;
 using VpnHood.AppLib.Contracts.Settings;

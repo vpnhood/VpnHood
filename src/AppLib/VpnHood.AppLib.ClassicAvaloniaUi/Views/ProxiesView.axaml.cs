@@ -4,10 +4,10 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Controls;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
-using AppData = VpnHood.AppLib.AvaloniaUI.AppData;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.Proxies;
 using VpnHood.AppLib.Contracts.Settings;
@@ -32,7 +32,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     private bool _isBusy;
     private bool _disposed;
 
-    private static AppProxySettings ProxySettings => AppData.UserSettings.ProxySettings;
+    private static AppProxySettings ProxySettings => AppModel.UserSettings.ProxySettings;
 
     public ProxiesView(MainView host)
     {
@@ -51,14 +51,14 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
 
         // the list's menu
         ListMenu.Children.Add(MenuItem(s.AutoRefresh, Mdi.RefreshAuto, ToggleAutoRefresh));
-        ListMenu.Children.Add(MenuItem(s.ProxyResetStates, Mdi.Refresh, () => RunListAction(() => AppData.Api.ProxyEndPoints.ResetStates(CancellationToken.None))));
-        ListMenu.Children.Add(MenuItem(s.DisableAllFailed, Mdi.Cancel, () => RunListAction(() => AppData.Api.ProxyEndPoints.DisableAllFailed(CancellationToken.None), s.DisableAllFailed, s.DisableAllFailedProxiesMsg)));
+        ListMenu.Children.Add(MenuItem(s.ProxyResetStates, Mdi.Refresh, () => RunListAction(() => AppModel.Api.ProxyEndPoints.ResetStates(CancellationToken.None))));
+        ListMenu.Children.Add(MenuItem(s.DisableAllFailed, Mdi.Cancel, () => RunListAction(() => AppModel.Api.ProxyEndPoints.DisableAllFailed(CancellationToken.None), s.DisableAllFailed, s.DisableAllFailedProxiesMsg)));
         ListMenu.Children.Add(MenuItem(s.RemoveAllFailed, Mdi.DeleteAlert,
-            () => RunListAction(() => AppData.Api.ProxyEndPoints.DeleteAll(deleteSucceeded: false, deleteFailed: true, deleteUnknown: false, deleteDisabled: false, CancellationToken.None), s.RemoveAllFailed, s.RemoveAllFailedMsg)));
+            () => RunListAction(() => AppModel.Api.ProxyEndPoints.DeleteAll(deleteSucceeded: false, deleteFailed: true, deleteUnknown: false, deleteDisabled: false, CancellationToken.None), s.RemoveAllFailed, s.RemoveAllFailedMsg)));
         ListMenu.Children.Add(MenuItem(s.RemoveAllDisabled, Mdi.DeleteForever,
-            () => RunListAction(() => AppData.Api.ProxyEndPoints.DeleteAll(deleteSucceeded: false, deleteFailed: false, deleteUnknown: false, deleteDisabled: true, CancellationToken.None), s.RemoveAllDisabled, s.RemoveAllDisabledMsg)));
+            () => RunListAction(() => AppModel.Api.ProxyEndPoints.DeleteAll(deleteSucceeded: false, deleteFailed: false, deleteUnknown: false, deleteDisabled: true, CancellationToken.None), s.RemoveAllDisabled, s.RemoveAllDisabledMsg)));
         ListMenu.Children.Add(MenuItem(s.RemoveAll, Mdi.Delete,
-            () => RunListAction(() => AppData.Api.ProxyEndPoints.DeleteAll(deleteSucceeded: true, deleteFailed: true, deleteUnknown: true, deleteDisabled: true, CancellationToken.None), s.RemoveAll, s.RemoveAllProxiesMsg), isError: true));
+            () => RunListAction(() => AppModel.Api.ProxyEndPoints.DeleteAll(deleteSucceeded: true, deleteFailed: true, deleteUnknown: true, deleteDisabled: true, CancellationToken.None), s.RemoveAll, s.RemoveAllProxiesMsg), isError: true));
 
         // the filter
         FilterMenu.Children.Add(MenuItem(s.All, () => ChooseFilter(null)));
@@ -155,13 +155,13 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     private async void ChooseMode(AppProxyMode mode)
     {
         try {
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             var previous = settings.ProxySettings.Mode;
             if (previous == mode)
                 return;
             settings.ProxySettings.Mode = mode;
             try {
-                await AppData.SaveUserSettings(settings, CancellationToken.None);
+                await AppModel.SaveUserSettings(settings, CancellationToken.None);
             }
             catch (Exception ex) {
                 settings.ProxySettings.Mode = previous;
@@ -181,7 +181,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     {
         try {
             DeviceList.Children.Clear();
-            var proxy = await AppData.Api.ProxyEndPoints.GetDevice(CancellationToken.None);
+            var proxy = await AppModel.Api.ProxyEndPoints.GetDevice(CancellationToken.None);
             NoDeviceProxy.IsVisible = proxy == null;
             if (proxy != null)
                 DeviceList.Children.Add(new ProxyListItem(proxy, isLast: true));
@@ -267,10 +267,10 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
 
     private async Task SaveAutoUpdateSettings()
     {
-        var settings = AppData.UserSettings;
+        var settings = AppModel.UserSettings;
         var text = UrlBox.Text?.Trim();
         settings.ProxySettings.AutoUpdateOptions.Url = string.IsNullOrEmpty(text) ? null : new Uri(text);
-        await AppData.SaveUserSettings(settings, CancellationToken.None);
+        await AppModel.SaveUserSettings(settings, CancellationToken.None);
     }
 
     private async Task ReloadFromUrl()
@@ -280,7 +280,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
         ShowUrlState();
         try {
             await SaveAutoUpdateSettings();
-            await AppData.Api.ProxyEndPoints.ReloadUrl(CancellationToken.None);
+            await AppModel.Api.ProxyEndPoints.ReloadUrl(CancellationToken.None);
             _oldUrl = UrlBox.Text;
             _page = 1;
             await LoadProxies(showLoading: true);
@@ -321,7 +321,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
                 ProxyList.IsVisible = false;
             }
             UpdateButtons();
-            var result = await AppData.Api.ProxyEndPoints.List(
+            var result = await AppModel.Api.ProxyEndPoints.List(
                 search: null,
                 includeSucceeded: filter is null or "succeeded",
                 includeFailed: filter is null or "failed",
@@ -372,7 +372,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
         PaginationText.Text = s.PaginationStatus(start, end, _totalCount);
 
         // ConnectionStatistics: worth a card once there is a list to speak of
-        var stats = AppData.State.ProxyConnectorStatus;
+        var stats = AppModel.State.ProxyConnectorStatus;
         StatsCard.IsVisible = _proxies.Count > 5 && stats != null;
         if (stats != null) {
             RecentSucceeded.Text = stats.SessionStatus.SucceededCount.ToString();
@@ -435,7 +435,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     // every few seconds while there is a session to learn from, without the loading skeleton
     private void StartPeriodicRefresh()
     {
-        if (_refreshTimer.IsEnabled || AppData.State.ConnectionState == AppConnectionState.None || !UserCustomData.GetBool(AutoRefreshKey))
+        if (_refreshTimer.IsEnabled || AppModel.State.ConnectionState == AppConnectionState.None || !UserCustomData.GetBool(AutoRefreshKey))
             return;
         _refreshTimer.Start();
     }

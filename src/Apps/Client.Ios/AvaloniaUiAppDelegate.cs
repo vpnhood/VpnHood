@@ -27,9 +27,9 @@ public class AvaloniaUiAppDelegate : AvaloniaAppDelegate<ClassicAvaloniaApp>
         if (!VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
         // in process both complete at once
-        AppData.Init(InProcessVpnHoodApi.Create(VpnHoodApp.Instance, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
+        AppModel.Init(InProcessVpnHoodApi.Create(VpnHoodApp.Instance, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
         ClassicAvaloniaApp.PrepareContent();
-        AppData.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+        AppModel.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
         AppUiContext.Context = new IosUiContext();
         return base.CreateAppBuilder();
     }

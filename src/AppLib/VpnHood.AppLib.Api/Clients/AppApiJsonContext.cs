@@ -19,7 +19,7 @@ namespace VpnHood.AppLib.Api.Clients;
 // Every type the HTTP clients read or write, generated ahead of time: the browser is published
 // trimmed, and a type the trimmer cannot see is a type it removes. camelCase, as the server speaks.
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-[JsonSerializable(typeof(AppData))]
+[JsonSerializable(typeof(AppInfo))]
 [JsonSerializable(typeof(ConfigParams))]
 [JsonSerializable(typeof(AppState))]
 [JsonSerializable(typeof(UserSettings))]

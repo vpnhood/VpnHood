@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Animation;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.ViewModels;
@@ -15,7 +16,6 @@ using VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.Updaters;
 using VpnHood.Core.Toolkit.Logging;
-using AppData = VpnHood.AppLib.AvaloniaUI.AppData;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 
@@ -64,8 +64,8 @@ public partial class MainView : UserControl
 
         // the consent a first run asks for, over everything until it is given (App.vue's
         // isShowPrivacyPolicyDialog)
-        var features = AppData.Features;
-        if (features.IsLicenseAgreementRequired && !AppData.UserSettings.IsLicenseAccepted)
+        var features = AppModel.Features;
+        if (features.IsLicenseAgreementRequired && !AppModel.UserSettings.IsLicenseAccepted)
             Navigate(new PrivacyPolicyView(this));
         // the account, once, for a build that has one (App.vue's onMounted); the pages that change
         // it read it again themselves
@@ -76,7 +76,7 @@ public partial class MainView : UserControl
     private async Task LoadAccount()
     {
         try {
-            await AppData.LoadAccount(false, CancellationToken.None);
+            await AppModel.LoadAccount(false, CancellationToken.None);
             ViewModel.Refresh();
         }
         catch (Exception ex) {
@@ -294,9 +294,9 @@ public partial class MainView : UserControl
         if (message.IsIgnored)
             return;
 
-        if (message.Actions?.IsPrivateDnsError == true && AppData.IsPremiumFeature(AppFeature.CustomDns)) {
+        if (message.Actions?.IsPrivateDnsError == true && AppModel.IsPremiumFeature(AppFeature.CustomDns)) {
             Navigate(FeaturePages.PrivateDnsError(this));
-            await AppData.Api.App.ClearLastError(CancellationToken.None);
+            await AppModel.Api.App.ClearLastError(CancellationToken.None);
             return;
         }
 
@@ -367,7 +367,7 @@ public partial class MainView : UserControl
         UpdateDirectButton.IsVisible = publish.GooglePlayUrl == null;
         UpdateNoStoreButton.IsVisible = publish.GooglePlayUrl != null;
         UpdateAlternative.IsVisible = false;
-        UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {AppData.Features.Version.ToString(3)}";
+        UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {AppModel.Features.Version.ToString(3)}";
         UpdateNewText.Text = $"{Strings.Current.NewVersion} {publish.Version}";
         UpdateNotice.IsVisible = true;
     }
@@ -375,7 +375,7 @@ public partial class MainView : UserControl
     private async void OnUpdateStoreClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.State.UpdaterStatus?.PublishInfo?.GooglePlayUrl is { } url)
+            if (AppModel.State.UpdaterStatus?.PublishInfo?.GooglePlayUrl is { } url)
                 await OpenLink(url, Strings.Current.UpdateFromGooglePlay);
         }
         catch (Exception ex) {
@@ -386,7 +386,7 @@ public partial class MainView : UserControl
     private async void OnUpdateDirectClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.State.UpdaterStatus?.PublishInfo?.InstallationPageUrl is { } url)
+            if (AppModel.State.UpdaterStatus?.PublishInfo?.InstallationPageUrl is { } url)
                 await OpenLink(url, Strings.Current.UpdateFromDirectLink);
         }
         catch (Exception ex) {
@@ -516,7 +516,7 @@ public partial class MainView : UserControl
     // becomes a code to scan; anywhere else the device's browser opens it.
     public async Task OpenLink(Uri url, string title)
     {
-        if (AppData.IsTvUi) {
+        if (AppModel.IsTvUi) {
             await ShowDialog(new OpenOnPhoneDialog(url, title));
             return;
         }
@@ -527,5 +527,5 @@ public partial class MainView : UserControl
     }
 
     // whether a link can get anywhere from this device (VpnHoodApp.isExternalLinkUsable)
-    public static bool IsExternalLinkUsable => AppData.Intents.IsWebBrowserSupported || AppData.IsTvUi;
+    public static bool IsExternalLinkUsable => AppModel.Intents.IsWebBrowserSupported || AppModel.IsTvUi;
 }

@@ -8,12 +8,12 @@ namespace VpnHood.AppLib.ClassicAvaloniaUi;
 public static class AppErrors
 {
     public static ErrorContext Context => new() {
-        HasDiagnoseRequested = AppData.State.HasDiagnoseRequested,
-        IsPremiumSupported = AppData.IsPremiumSupported,
-        IsPremiumUser = AppData.IsPremiumUser,
-        IsPremiumByAccount = AppData.IsPremiumByAccount,
-        CanTryPremium = AppData.CanTryPremium,
-        HasAccessCode = AppData.State.ClientProfile?.HasAccessCode == true,
-        CanImportAccessCode = AppData.CanImportAccessCode
+        HasDiagnoseRequested = AppModel.State.HasDiagnoseRequested,
+        IsPremiumSupported = AppModel.IsPremiumSupported,
+        IsPremiumUser = AppModel.IsPremiumUser,
+        IsPremiumByAccount = AppModel.IsPremiumByAccount,
+        CanTryPremium = AppModel.CanTryPremium,
+        HasAccessCode = AppModel.State.ClientProfile?.HasAccessCode == true,
+        CanImportAccessCode = AppModel.CanImportAccessCode
     };
 }

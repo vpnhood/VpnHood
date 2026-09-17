@@ -21,14 +21,14 @@ internal sealed class AppClient(HttpClient httpClient) : AppApiClientBase(httpCl
         throw new NotSupportedException("This method exists just to let swagger generate types.");
     }
 
-    public Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken)
+    public Task<AppInfo> Configure(ConfigParams configParams, CancellationToken cancellationToken)
     {
-        return HttpPatchAsync<AppData>(BaseUrl + "configure", null, configParams, cancellationToken);
+        return HttpPatchAsync<AppInfo>(BaseUrl + "configure", null, configParams, cancellationToken);
     }
 
-    public Task<AppData> GetConfig(CancellationToken cancellationToken)
+    public Task<AppInfo> GetInfo(CancellationToken cancellationToken)
     {
-        return HttpGetAsync<AppData>(BaseUrl + "config", null, cancellationToken);
+        return HttpGetAsync<AppInfo>(BaseUrl + "info", null, cancellationToken);
     }
 
     public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken)

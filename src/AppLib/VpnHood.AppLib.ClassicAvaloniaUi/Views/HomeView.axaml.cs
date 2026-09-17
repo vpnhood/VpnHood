@@ -116,17 +116,17 @@ public partial class HomeView : UserControl, IPage
     private async void OnAccountClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.Account != null) {
+            if (AppModel.Account != null) {
                 _host.Navigate(new AccountView(_host));
                 return;
             }
 
-            if (AppData.PrimaryProviderId == null) {
+            if (AppModel.PrimaryProviderId == null) {
                 _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintSignIn));
                 return;
             }
 
-            if (AppData.HasSignInChoice) {
+            if (AppModel.HasSignInChoice) {
                 await _host.ShowDialog(new SignInDialog(_host));
                 return;
             }

@@ -35,7 +35,7 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
     // build is let out
     public Task<bool> CanLeave()
     {
-        return Task.FromResult(_isDismissed || _remaining <= 0 || AppData.Features.IsDebugMode);
+        return Task.FromResult(_isDismissed || _remaining <= 0 || AppModel.Features.IsDebugMode);
     }
 
     private void Tick()
@@ -77,11 +77,11 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
 
     private async Task Dismiss(bool learnMore)
     {
-        if (_remaining > 0 && !AppData.Features.IsDebugMode)
+        if (_remaining > 0 && !AppModel.Features.IsDebugMode)
             return;
 
         _isDismissed = true;
-        await AppData.Api.App.InternalAdDismiss(learnMore ? ShowAdResult.Clicked : ShowAdResult.Closed, CancellationToken.None);
+        await AppModel.Api.App.InternalAdDismiss(learnMore ? ShowAdResult.Clicked : ShowAdResult.Closed, CancellationToken.None);
         if (learnMore)
             _host.Replace(new PurchaseSubscriptionView(_host, null));
         else

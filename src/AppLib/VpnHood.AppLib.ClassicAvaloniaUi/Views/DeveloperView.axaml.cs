@@ -22,14 +22,14 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         _host = host;
         InitializeComponent();
 
-        var current = (AppData.UserSettings.DebugData1 ?? "")
+        var current = (AppModel.UserSettings.DebugData1 ?? "")
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        _commands = [.. AppData.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })];
-        _unknown = [.. current.Except(AppData.Features.DebugCommands)];
+        _commands = [.. AppModel.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })];
+        _unknown = [.. current.Except(AppModel.Features.DebugCommands)];
 
-        SupportIdText.Text = $"Support ID: {AppData.State.ClientProfile?.SupportId}";
+        SupportIdText.Text = $"Support ID: {AppModel.State.ClientProfile?.SupportId}";
         CommandList.ItemsSource = _commands;
-        DebugData2Box.Text = AppData.UserSettings.DebugData2;
+        DebugData2Box.Text = AppModel.UserSettings.DebugData2;
 
         foreach (var command in _commands)
             command.PropertyChanged += (_, _) => ShowChosen();
@@ -93,12 +93,12 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
 
         var newData1 = debugData1.Length > 0 ? debugData1 : null;
         var newData2 = debugData2?.Length > 0 ? debugData2 : null;
-        var settings = AppData.UserSettings;
+        var settings = AppModel.UserSettings;
         if (newData1 == settings.DebugData1 && newData2 == settings.DebugData2)
             return;
 
         settings.DebugData1 = newData1;
         settings.DebugData2 = newData2;
-        await AppData.SaveUserSettings(settings, CancellationToken.None);
+        await AppModel.SaveUserSettings(settings, CancellationToken.None);
     }
 }

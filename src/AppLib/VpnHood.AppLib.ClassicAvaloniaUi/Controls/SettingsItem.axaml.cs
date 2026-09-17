@@ -30,7 +30,7 @@ public partial class SettingsItem : UserControl
     // the crown, when the feature is sold and this session has not bought it
     public bool IsPremium {
         get => Crown.IsVisible;
-        set => Crown.IsVisible = AppData.ShowCrown(value);
+        set => Crown.IsVisible = AppModel.ShowCrown(value);
     }
 
     // dims the card and blocks the tap; the stored values keep showing

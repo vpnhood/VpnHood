@@ -25,7 +25,7 @@ public partial class StarlinkToolsView : UserControl, IPage
         _host = host;
         InitializeComponent();
         var s = Strings.Current;
-        var profile = AppData.FindClientProfileInfo(clientProfileId);
+        var profile = AppModel.FindClientProfileInfo(clientProfileId);
         ScopeText.Text = profile != null ? s.StarlinkToolsProfileScope(profile.ClientProfileName) : null;
         ScopeText.IsVisible = profile != null;
 

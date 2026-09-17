@@ -24,8 +24,8 @@ internal class AppController(IAppApi api) : ControllerBase
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.GET, baseUrl + "config", async ctx => {
-            var res = await api.GetConfig(ctx.Token);
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "info", async ctx => {
+            var res = await api.GetInfo(ctx.Token);
             res.IsRemote = ctx.IsRemote();
             await ctx.SendJson(res);
         });

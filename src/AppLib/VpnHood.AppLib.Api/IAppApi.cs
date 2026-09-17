@@ -16,8 +16,8 @@ namespace VpnHood.AppLib.Api;
 public interface IAppApi
 {
     Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken);
-    Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken);
-    Task<AppData> GetConfig(CancellationToken cancellationToken);
+    Task<AppInfo> Configure(ConfigParams configParams, CancellationToken cancellationToken);
+    Task<AppInfo> GetInfo(CancellationToken cancellationToken);
     Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken);
     Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken);
     Task<SplitIpsViaDevice> GetSplitIpsViaDevice(CancellationToken cancellationToken);

@@ -38,7 +38,7 @@ public partial class AccountView : UserControl, IPage
     private async Task Refresh()
     {
         try {
-            await AppData.LoadAccount(true, CancellationToken.None);
+            await AppModel.LoadAccount(true, CancellationToken.None);
             _host.ViewModel.Refresh();
             Fill();
         }
@@ -50,11 +50,11 @@ public partial class AccountView : UserControl, IPage
     private void Fill()
     {
         var s = Strings.Current;
-        var state = AppData.State;
-        var account = AppData.Account;
+        var state = AppModel.State;
+        var account = AppModel.Account;
         var profile = state.ClientProfile;
-        var isPremiumUser = AppData.IsPremiumUser;
-        var isPremiumByAccount = AppData.IsPremiumByAccount;
+        var isPremiumUser = AppModel.IsPremiumUser;
+        var isPremiumByAccount = AppModel.IsPremiumByAccount;
         var hasCode = profile?.HasAccessCode == true;
 
         Sheet.Classes.Set("grad-sheet", isPremiumUser);
@@ -69,8 +69,8 @@ public partial class AccountView : UserControl, IPage
         RefusalAlert.IsVisible = !isPremiumByAccount && hasCode && profile?.AccessCodeRefusal != null;
         RefusalText.Text = RefusalNotice(profile?.AccessCodeRefusal);
 
-        SignOutForCodeCard.IsVisible = isPremiumByAccount && AppData.CanImportAccessCode;
-        ChangeCodeCard.IsVisible = !isPremiumByAccount && hasCode && AppData.CanImportAccessCode;
+        SignOutForCodeCard.IsVisible = isPremiumByAccount && AppModel.CanImportAccessCode;
+        ChangeCodeCard.IsVisible = !isPremiumByAccount && hasCode && AppModel.CanImportAccessCode;
         RemoveCodeCard.IsVisible = !isPremiumByAccount && hasCode && account == null;
         SubscriptionCard.IsVisible = isPremiumByAccount;
         CodeCard.IsVisible = isPremiumByAccount || hasCode;
@@ -131,7 +131,7 @@ public partial class AccountView : UserControl, IPage
     {
         var s = Strings.Current;
         CodeRows.Children.Clear();
-        var canShowCode = AppData.CanViewAccessCode && AppData.State.ClientProfile?.HasAccessCode == true;
+        var canShowCode = AppModel.CanViewAccessCode && AppModel.State.ClientProfile?.HasAccessCode == true;
         if (canShowCode)
             AddCodeRow();
 
@@ -206,13 +206,13 @@ public partial class AccountView : UserControl, IPage
         if (_premiumCode != null)
             return _premiumCode;
 
-        var profileId = AppData.ClientProfileId;
+        var profileId = AppModel.ClientProfileId;
         if (profileId == null) {
             _premiumCode = Strings.Current.CouldNotGetClientProfileId;
             return null;
         }
 
-        var code = await AppData.Api.ClientProfiles.GetAccessCode(profileId.Value, CancellationToken.None);
+        var code = await AppModel.Api.ClientProfiles.GetAccessCode(profileId.Value, CancellationToken.None);
         _premiumCode = string.IsNullOrEmpty(code) ? Strings.Current.CouldNotGetPremiumCode : Format.CodeGroups(code);
         return _premiumCode;
     }
@@ -312,11 +312,11 @@ public partial class AccountView : UserControl, IPage
     private async void OnManageClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (!AppData.Features.IsBillingSupported)
+            if (!AppModel.Features.IsBillingSupported)
                 return;
             ManageButton.IsEnabled = false;
             try {
-                await AppData.Api.Billing.OpenSubscriptionManagement(CancellationToken.None);
+                await AppModel.Api.Billing.OpenSubscriptionManagement(CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);

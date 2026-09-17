@@ -55,7 +55,7 @@ public class AndroidAppAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivi
         if (!VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
         TUi.PrepareContent();
-        AppData.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+        AppModel.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });

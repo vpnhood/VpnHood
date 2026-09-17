@@ -18,15 +18,15 @@ public partial class SplitDisabledAlert : UserControl
 
     public void Refresh()
     {
-        IsVisible = !AppData.UserSettings.SplitTunneling.Enabled;
+        IsVisible = !AppModel.UserSettings.SplitTunneling.Enabled;
     }
 
     private async void OnTurnOnClick(object? sender, RoutedEventArgs e)
     {
         try {
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             settings.SplitTunneling.Enabled = true;
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
             Refresh();
             TurnedOn?.Invoke(this, EventArgs.Empty);
         }

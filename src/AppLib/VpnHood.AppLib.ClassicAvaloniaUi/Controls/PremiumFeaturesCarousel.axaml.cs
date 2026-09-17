@@ -17,13 +17,13 @@ public partial class PremiumFeaturesCarousel : UserControl
     {
         InitializeComponent();
         var s = Strings.Current;
-        var intents = AppData.Intents;
-        var features = AppData.Features;
+        var intents = AppModel.Intents;
+        var features = AppModel.Features;
 
         // PremiumFeaturesCarousel.vue's carouselItems: a feature the device cannot have is not
         // promised, and a build with no premium tier does not sell speed
         var slides = new List<(string? Image, string Title, string Description, bool IsSupported)> {
-            (null, s.UltraFastSpeed, s.UltraFastSpeedDesc, AppData.IsPremiumSupported),
+            (null, s.UltraFastSpeed, s.UltraFastSpeedDesc, AppModel.IsPremiumSupported),
             ("no-ads.webp", s.RemoveAd, s.RemoveAdDesc, features.IsAdSupported),
             ("more-location.webp", s.MoreLocations, s.MoreLocationsDesc, true),
             ("split-ip.webp", s.SplitIpAddresses, s.SplitIpAddressesPremiumDesc, true),

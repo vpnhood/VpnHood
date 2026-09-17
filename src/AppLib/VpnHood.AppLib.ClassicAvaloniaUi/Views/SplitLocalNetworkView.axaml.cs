@@ -12,11 +12,11 @@ public partial class SplitLocalNetworkView : UserControl, IPage
         _ = host;
         InitializeComponent();
         var s = Strings.Current;
-        var isAvailable = AppData.IsLocalNetworkAvailable(AppData.State);
+        var isAvailable = AppModel.IsLocalNetworkAvailable(AppModel.State);
         EnforcedAlert.IsVisible = !isAvailable;
         EnabledItem.Title = s.SplitLocalNetwork;
         EnabledItem.Description = s.SplitLocalNetworkDesc;
-        EnabledItem.IsOn = AppData.UserSettings.SplitTunneling.UseLocalNetwork;
+        EnabledItem.IsOn = AppModel.UserSettings.SplitTunneling.UseLocalNetwork;
         EnabledItem.IsDisabled = !isAvailable;
     }
 
@@ -29,9 +29,9 @@ public partial class SplitLocalNetworkView : UserControl, IPage
     private async void OnToggled(object? sender, EventArgs e)
     {
         try {
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             settings.SplitTunneling.UseLocalNetwork = EnabledItem.IsOn;
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

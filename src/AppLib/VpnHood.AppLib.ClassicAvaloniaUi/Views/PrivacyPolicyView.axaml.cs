@@ -18,18 +18,18 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     {
         _host = host;
         InitializeComponent();
-        var (title, markup) = LoadDocument(AppData.IsConnectApp ? "privacy-consent" : "privacy-consent-client");
+        var (title, markup) = LoadDocument(AppModel.IsConnectApp ? "privacy-consent" : "privacy-consent-client");
         TitleText.Text = title;
         RichText.Apply(DocumentText, markup);
-        TermsButton.IsVisible = AppData.Features.TermsOfUseUrl != null;
-        PrivacyButton.IsVisible = AppData.Features.PrivacyPolicyUrl != null;
+        TermsButton.IsVisible = AppModel.Features.TermsOfUseUrl != null;
+        PrivacyButton.IsVisible = AppModel.Features.PrivacyPolicyUrl != null;
     }
 
     // The document in the app's language, else in English: a language whose translation failed
     // verification ships no file, and the English text beats none - on a consent screen above all.
     private static (string Title, string Markup) LoadDocument(string name)
     {
-        var culture = AppData.State.CurrentUiCultureInfo.Code;
+        var culture = AppModel.State.CurrentUiCultureInfo.Code;
         foreach (var language in new[] { culture, culture.Split('-')[0], "en" }) {
             if (AppContent.ReadText($"content/{language}/{name}.md") is { } markdown)
                 return Markdown.Render(markdown);
@@ -50,9 +50,9 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     private async void OnAcceptClick(object? sender, RoutedEventArgs e)
     {
         try {
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             settings.IsLicenseAccepted = true;
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
             _host.GoHome();
         }
         catch (Exception ex) {
@@ -63,7 +63,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     private async void OnTermsClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.Features.TermsOfUseUrl is { } url)
+            if (AppModel.Features.TermsOfUseUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.TermsOfUse);
         }
         catch (Exception ex) {
@@ -74,7 +74,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.Features.PrivacyPolicyUrl is { } url)
+            if (AppModel.Features.PrivacyPolicyUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

@@ -26,11 +26,11 @@ public static class AvaloniaDesktopHost
     {
         // The UI reaches the app through its API - the same six interfaces a paired browser dials
         // over HTTP, here the app's own controllers in process; in process both complete at once.
-        AppData.Init(InProcessVpnHoodApi.Create(VpnHoodApp.Instance, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
+        AppModel.Init(InProcessVpnHoodApi.Create(VpnHoodApp.Instance, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
 
         // what this UI needs before its first view, and the languages it has words for
         TUi.PrepareContent();
-        AppData.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+        AppModel.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
             Args = args,

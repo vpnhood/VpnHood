@@ -25,7 +25,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         _ = Load();
     }
 
-    private static SplitTunnelingSettings Split => AppData.UserSettings.SplitTunneling;
+    private static SplitTunnelingSettings Split => AppModel.UserSettings.SplitTunneling;
 
     // the icons come as PNG bytes; decoding a few hundred of them is off the UI thread
     private async Task Load()
@@ -33,7 +33,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         try {
             var mode = Split.AppMode;
             var selected = Split.Apps;
-            var installed = await AppData.Api.App.GetInstalledApps(CancellationToken.None);
+            var installed = await AppModel.Api.App.GetInstalledApps(CancellationToken.None);
 
             var items = await Task.Run(() => installed.Select(app => new FilterItem {
                 Id = app.AppId,
@@ -86,7 +86,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
     // the web UI's UiConstants.futureAppsIcon*, one per product
     private static Bitmap FutureAppsIcon()
     {
-        return AppAssets.Image(AppData.IsConnectApp ? "future-apps-connect.png" : "future-apps-client.png");
+        return AppAssets.Image(AppModel.IsConnectApp ? "future-apps-connect.png" : "future-apps-client.png");
     }
 
     // Include with nothing in it is the one state that cannot be saved: the app would tunnel
@@ -100,21 +100,21 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
             if (items.All(x => x.IsSelected)) {
                 Split.AppMode = SplitAppMode.All;
                 Split.Apps = [];
-                await AppData.SaveUserSettings(AppData.UserSettings, CancellationToken.None);
+                await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
                 return;
             }
 
             if (items.Any(x => x is { Id: FutureAppsId, IsSelected: true })) {
                 Split.AppMode = SplitAppMode.Exclude;
                 Split.Apps = [.. items.Where(x => !x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id)];
-                await AppData.SaveUserSettings(AppData.UserSettings, CancellationToken.None);
+                await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
                 return;
             }
 
             Split.AppMode = SplitAppMode.Include;
             Split.Apps = [.. items.Where(x => x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id)];
             if (!IsSaveRejected)
-                await AppData.SaveUserSettings(AppData.UserSettings, CancellationToken.None);
+                await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);
@@ -129,7 +129,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         }
 
         try {
-            await AppData.SaveUserSettings(AppData.UserSettings, CancellationToken.None);
+            await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
             return true;
         }
         catch (Exception ex) {

@@ -20,13 +20,13 @@ namespace VpnHood.AppLib.Api.SwaggerHost.Controllers;
 public class AppController : ControllerBase, IAppApi
 {
     [HttpPatch("configure")]
-    public Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken)
+    public Task<AppInfo> Configure(ConfigParams configParams, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpGet("config")]
-    public Task<AppData> GetConfig(CancellationToken cancellationToken)
+    [HttpGet("info")]
+    public Task<AppInfo> GetInfo(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

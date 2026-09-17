@@ -19,9 +19,9 @@ public partial class LanguageView : UserControl, IPage
         InitializeComponent();
 
         var s = Strings.Current;
-        var state = AppData.State;
+        var state = AppModel.State;
         var systemCulture = state.SystemUiCultureInfo;
-        var cultures = AppData.AvailableCultureInfos
+        var cultures = AppModel.AvailableCultureInfos
             .OrderBy(x => x.NativeName, StringComparer.CurrentCulture)
             .ToArray();
 
@@ -56,7 +56,7 @@ public partial class LanguageView : UserControl, IPage
         Rows.Children.Add(row);
     }
 
-    private static string CurrentCode => AppData.UserSettings.CultureCode ?? SystemDefault;
+    private static string CurrentCode => AppModel.UserSettings.CultureCode ?? SystemDefault;
 
     private void ShowChoice()
     {
@@ -68,9 +68,9 @@ public partial class LanguageView : UserControl, IPage
     private async void Choose(string code)
     {
         try {
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             settings.CultureCode = code == SystemDefault ? null : code;
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
             ShowChoice();
             _host.ViewModel.Refresh();
             Header.Title = Strings.Current.Language;

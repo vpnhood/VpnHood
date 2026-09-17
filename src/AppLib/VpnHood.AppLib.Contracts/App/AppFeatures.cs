@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Converters;
@@ -62,7 +63,7 @@ public class AppFeatures
     public required bool IsRewardedAdSupported { get; init; }
     public required int? WebUiPort { get; set; }
     public required IReadOnlyList<ChannelProtocol> ChannelProtocols { get; init; }
-    public required object? CustomData { get; init; }
+    public required JsonElement? CustomData { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]
     public required Version Version { get; init; }

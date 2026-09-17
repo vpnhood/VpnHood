@@ -15,7 +15,7 @@ public partial class PremiumCodeCompleteDialog : DialogBase
         _host = host;
         InitializeComponent();
         var s = Strings.Current;
-        var state = AppData.State;
+        var state = AppModel.State;
         var access = state.SessionInfo?.AccessInfo;
         var deviceCount = access?.DevicesSummary?.DeviceCount ?? 0;
         var isShared = deviceCount > 1;
@@ -29,7 +29,7 @@ public partial class PremiumCodeCompleteDialog : DialogBase
             if (isShared)
                 AddRow(s.UsedDevice, deviceCount.ToString(), valueClass);
         }
-        StatisticsButton.IsVisible = AppData.IsConnected(state);
+        StatisticsButton.IsVisible = AppModel.IsConnected(state);
     }
 
     private void AddRow(string label, string value, string valueClass)

@@ -8,7 +8,7 @@ namespace VpnHood.AppLib.AvaloniaUI;
 // Avalonia makes the Application itself, after the app has been configured with the answers.
 public interface IAvaloniaUi
 {
-    // The languages this UI has words for, declared to the app as it is configured (AppData.Configure)
+    // The languages this UI has words for, declared to the app as it is configured (AppModel.Configure)
     // - so the app's language list and its best-culture choice are made from the words that exist.
     static abstract IReadOnlyList<string> AvailableCultures { get; }
 

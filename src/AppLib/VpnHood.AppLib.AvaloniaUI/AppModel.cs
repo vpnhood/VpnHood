@@ -5,7 +5,6 @@ using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.ClientProfiles;
 using VpnHood.AppLib.Contracts.Settings;
 using VpnHood.Core.Common.Messaging;
-using AppConfig = VpnHood.AppLib.Api.App.AppData;
 
 namespace VpnHood.AppLib.AvaloniaUI;
 
@@ -16,25 +15,25 @@ namespace VpnHood.AppLib.AvaloniaUI;
 // The values are read again through the API: the state every second by the home's clock and after
 // every action, the rest when the state says the configuration moved (AppState.ConfigTime, the
 // web UI's own signal) or a page saved. The web UI's VpnHoodAppData, question for question.
-public static class AppData
+public static class AppModel
 {
     private static VpnHoodApi? _api;
-    private static AppConfig? _config;
+    private static AppInfo? _info;
     private static AppState? _state;
 
     public static VpnHoodApi Api => _api ?? throw new InvalidOperationException(
-        $"The UI has not been given the app's API. A head must call {nameof(AppData)}.{nameof(Init)} before the UI starts.");
+        $"The UI has not been given the app's API. A head must call {nameof(AppModel)}.{nameof(Init)} before the UI starts.");
 
     public static bool IsInit => _api != null;
     public static bool IsConfigured { get; private set; }
 
-    // The head's first step, before Avalonia starts: the API, and the configuration read through
+    // The head's first step, before Avalonia starts: the API, and the app's info read through
     // it - the features decide the theme, which is applied as the application initializes. In
     // process the read completes at once.
     public static async Task Init(VpnHoodApi api, CancellationToken cancellationToken)
     {
         _api = api;
-        await ReloadConfig(cancellationToken);
+        await ReloadInfo(cancellationToken);
     }
 
     // The head's second step, once the UI can say which languages it has: they are declared to
@@ -43,25 +42,25 @@ public static class AppData
     // must first place has placed them by now - that moment is the head's, not a page's.
     public static async Task Configure(IReadOnlyList<string> availableCultures, CancellationToken cancellationToken)
     {
-        _config = await Api.App.Configure(new ConfigParams { AvailableCultures = [.. availableCultures] }, cancellationToken);
-        _state = _config.State;
+        _info = await Api.App.Configure(new ConfigParams { AvailableCultures = [.. availableCultures] }, cancellationToken);
+        _state = _info.State;
         IsConfigured = true;
     }
 
-    private static AppConfig Config => _config ?? throw new InvalidOperationException(
-        $"The app's configuration has not been read. {nameof(AppData)}.{nameof(Init)} reads it.");
+    private static AppInfo Info => _info ?? throw new InvalidOperationException(
+        $"The app's info has not been read. {nameof(AppModel)}.{nameof(Init)} reads it.");
 
-    public static AppFeatures Features => Config.Features;
-    public static DeviceIntentFeatures Intents => Config.IntentFeatures;
-    public static UserSettings UserSettings => Config.UserSettings;
-    public static IReadOnlyList<ClientProfileInfo> ClientProfileInfos => Config.ClientProfileInfos;
-    public static IReadOnlyList<UiCultureInfo> AvailableCultureInfos => Config.AvailableCultureInfos;
-    public static AppState State => _state ?? Config.State;
+    public static AppFeatures Features => Info.Features;
+    public static DeviceIntentFeatures Intents => Info.IntentFeatures;
+    public static UserSettings UserSettings => Info.UserSettings;
+    public static IReadOnlyList<ClientProfileInfo> ClientProfileInfos => Info.ClientProfileInfos;
+    public static IReadOnlyList<UiCultureInfo> AvailableCultureInfos => Info.AvailableCultureInfos;
+    public static AppState State => _state ?? Info.State;
 
     // Whether this UI is the remote: served by the app to a browser on another device, which is
     // what the API says of the request that read the configuration (the web UI's isRemote). Never
     // on the device itself.
-    public static bool IsRemote => Config.IsRemote;
+    public static bool IsRemote => Info.IsRemote;
 
     // The profile the app is set to, whole (its locations), off the last configuration read; the
     // state carries its base info.
@@ -80,13 +79,13 @@ public static class AppData
         var configMoved = _state != null && state.ConfigTime != _state.ConfigTime;
         _state = state;
         if (configMoved)
-            await ReloadConfig(cancellationToken);
+            await ReloadInfo(cancellationToken);
     }
 
-    public static async Task ReloadConfig(CancellationToken cancellationToken)
+    public static async Task ReloadInfo(CancellationToken cancellationToken)
     {
-        _config = await Api.App.GetConfig(cancellationToken);
-        _state = _config.State;
+        _info = await Api.App.GetInfo(cancellationToken);
+        _state = _info.State;
     }
 
     // The settings, written as one and read again: the app applies them as it saves, and may have
@@ -95,7 +94,7 @@ public static class AppData
     public static async Task SaveUserSettings(UserSettings userSettings, CancellationToken cancellationToken)
     {
         await Api.App.SetUserSettings(userSettings, cancellationToken);
-        await ReloadConfig(cancellationToken);
+        await ReloadInfo(cancellationToken);
     }
 
     // The account, as the web UI keeps it in UserState: read once at start and after a sign-in,

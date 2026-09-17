@@ -18,13 +18,13 @@ public partial class FeaturePageView : UserControl, IPage
         _action = options.Action;
         InitializeComponent();
 
-        BackButton.IsVisible = !AppData.IsTvUi;
+        BackButton.IsVisible = !AppModel.IsTvUi;
         RichText.Apply(TitleText, options.Title);
         DescriptionText.Text = options.Description;
         DescriptionText.IsVisible = options.Description != null;
         FeatureImage.Source = AppAssets.Image(options.Image);
         // shorter on a TV: 240px of art above the controls is a third of a 720 panel
-        FeatureImage.MaxHeight = AppData.IsTvUi ? 140 : 240;
+        FeatureImage.MaxHeight = AppModel.IsTvUi ? 140 : 240;
 
         switch (options.Kind) {
             case FeaturePageKind.CloakMode:
@@ -32,15 +32,15 @@ public partial class FeaturePageView : UserControl, IPage
                 RichText.Apply(CloakText1, Strings.Current.CloakModeDesc1);
                 break;
 
-            case FeaturePageKind.PrivateDnsError when !AppData.IsPremiumUser:
+            case FeaturePageKind.PrivateDnsError when !AppModel.IsPremiumUser:
                 PrivateDnsCard.IsVisible = true;
-                var isCustomized = AppData.IsPrivateDnsCustomized(AppData.State);
+                var isCustomized = AppModel.IsPrivateDnsCustomized(AppModel.State);
                 TurnOffButton.IsVisible = isCustomized;
                 OrRow.IsVisible = isCustomized;
                 break;
 
             default:
-                if (!options.IsPremium || AppData.IsPremiumUser) {
+                if (!options.IsPremium || AppModel.IsPremiumUser) {
                     StepsCard.IsVisible = options.Steps.Count > 0 || options.IsActionAvailable || options.ShowSkip;
                     var number = 1;
                     foreach (var step in options.Steps) {

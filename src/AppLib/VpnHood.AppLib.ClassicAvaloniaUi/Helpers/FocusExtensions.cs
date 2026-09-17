@@ -12,7 +12,7 @@ internal static class FocusExtensions
 {
     public static void LandFocus(this Control control)
     {
-        var method = AppData.IsTvUi
+        var method = AppModel.IsTvUi
             ? NavigationMethod.Directional
             : NavigationMethod.Unspecified;
         control.Focus(method);

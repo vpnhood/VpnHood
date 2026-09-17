@@ -17,10 +17,10 @@ public partial class ExtendSessionView : UserControl, IPage
         InitializeComponent();
 
         var s = Strings.Current;
-        BackButton.IsVisible = !AppData.IsTvUi;
+        BackButton.IsVisible = !AppModel.IsTvUi;
         RichText.Apply(TitleText, s.ExtendPremiumSession);
 
-        var state = AppData.State;
+        var state = AppModel.State;
         var options = state.ClientProfile?.SelectedLocationInfo?.Options;
         if (state.SessionStatus?.CanExtendByRewardedAd == true)
             Rows.Children.Add(new PromoteRow(Mdi.PlayBoxLockOpenOutline, s.WatchRewardedAd,
@@ -42,7 +42,7 @@ public partial class ExtendSessionView : UserControl, IPage
     private async Task ShowRewardedAd()
     {
         using (_host.Loading(Strings.Current.ExtendByRewardedAdNote))
-            await AppData.Api.App.ExtendByRewardedAd(CancellationToken.None);
+            await AppModel.Api.App.ExtendByRewardedAd(CancellationToken.None);
         _host.ShowSnackbar(Strings.Current.ExtendByRewardedAdConfirmMsg, SnackbarKind.Active);
         _host.GoHome();
     }

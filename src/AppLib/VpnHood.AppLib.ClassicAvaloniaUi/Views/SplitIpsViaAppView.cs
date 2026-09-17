@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Controls;
-using AppData = VpnHood.AppLib.AvaloniaUI.AppData;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.SplitTunneling;
 
@@ -18,7 +18,7 @@ public sealed class SplitIpsViaAppView : SplitListView
 
     public static IPage Create(MainView host)
     {
-        return AppData.IsPremiumFeatureAllowed(AppFeature.SplitIpViaApp)
+        return AppModel.IsPremiumFeatureAllowed(AppFeature.SplitIpViaApp)
             ? new SplitIpsViaAppView(host)
             : FeaturePages.PremiumPitch(host, Strings.Current.SplitIpsViaApp, Strings.Current.SplitIpsViaAppDesc, "split-ip.webp", AppFeature.SplitIpViaApp);
     }
@@ -33,14 +33,14 @@ public sealed class SplitIpsViaAppView : SplitListView
 
     protected override async Task<(string Excludes, string Includes, string Blocks)> Load(CancellationToken cancellationToken)
     {
-        var ips = await AppData.Api.App.GetSplitIpsViaApp(cancellationToken);
+        var ips = await AppModel.Api.App.GetSplitIpsViaApp(cancellationToken);
         return (ips.Excludes, ips.Includes, ips.Blocks);
     }
 
     // no disconnect: the app applies the new list to a running session
     protected override Task Save(string excludes, string includes, string blocks, CancellationToken cancellationToken)
     {
-        return AppData.Api.App.SetSplitIpsViaApp(new SplitIpsViaApp { Excludes = excludes, Includes = includes, Blocks = blocks }, cancellationToken);
+        return AppModel.Api.App.SetSplitIpsViaApp(new SplitIpsViaApp { Excludes = excludes, Includes = includes, Blocks = blocks }, cancellationToken);
     }
 
     protected override void ConfigureInput(SplitListInput input)

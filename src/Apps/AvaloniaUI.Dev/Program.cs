@@ -70,9 +70,9 @@ internal static class Program
             // dials over HTTP, here the app's own controllers in process - and draws from the
             // assets folder beside this executable, which the build placed there (the same files
             // the web server serves at /assets/). In process both complete at once.
-            AppData.Init(InProcessVpnHoodApi.Create(app, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
+            AppModel.Init(InProcessVpnHoodApi.Create(app, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
             ClassicAvaloniaApp.PrepareContent();
-            AppData.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+            AppModel.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         finally {

@@ -36,7 +36,7 @@ public partial class BadgeDialog : DialogBase
             return;
         Close();
 
-        if (AppData.IsTvUi) {
+        if (AppModel.IsTvUi) {
             _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintSettings));
             return;
         }

@@ -31,9 +31,9 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         _host = host;
         _clientProfileId = clientProfileId;
         InitializeComponent();
-        BackButton.IsVisible = !AppData.IsTvUi;
-        TermsLink.IsVisible = AppData.Features.TermsOfUseUrl != null;
-        PrivacyLink.IsVisible = AppData.Features.PrivacyPolicyUrl != null;
+        BackButton.IsVisible = !AppModel.IsTvUi;
+        TermsLink.IsVisible = AppModel.Features.TermsOfUseUrl != null;
+        PrivacyLink.IsVisible = AppModel.Features.PrivacyPolicyUrl != null;
         LinksDot.IsVisible = TermsLink.IsVisible && PrivacyLink.IsVisible;
         LinksRow.IsVisible = TermsLink.IsVisible || PrivacyLink.IsVisible;
         _ = LoadOptions();
@@ -57,8 +57,8 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         LoadingPanel.IsVisible = true;
         OptionsPanel.IsVisible = false;
         try {
-            var profileId = _clientProfileId ?? AppData.ClientProfileId ?? throw new InvalidOperationException("Client profile id is required.");
-            _options = await AppData.Api.ClientProfiles.GetPurchaseOptions(profileId, CancellationToken.None);
+            var profileId = _clientProfileId ?? AppModel.ClientProfileId ?? throw new InvalidOperationException("Client profile id is required.");
+            _options = await AppModel.Api.ClientProfiles.GetPurchaseOptions(profileId, CancellationToken.None);
             ShowOptions(_options);
         }
         catch (Exception ex) {
@@ -76,8 +76,8 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         StoreErrorCard.IsVisible = options is { IsStoreAvailable: false, StoreError: not null };
         WebButton.IsVisible = options.PurchaseUrl != null && MainView.IsExternalLinkUsable;
         CodeButton.IsVisible = options.CanGoPremiumByCode;
-        RestoreButton.IsVisible = AppData.Features.IsAccountSupported;
-        RestoreText.Text = AppData.Account != null ? Strings.Current.RestorePurchase : Strings.Current.AlreadyPremium;
+        RestoreButton.IsVisible = AppModel.Features.IsAccountSupported;
+        RestoreText.Text = AppModel.Account != null ? Strings.Current.RestorePurchase : Strings.Current.AlreadyPremium;
         if (options.IsStoreAvailable)
             ShowPlans(options.SubscriptionPlans);
         FocusDefault();
@@ -205,7 +205,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     // for it? Asked after signing in, before the store's sheet: after it the money has moved.
     private static bool IsAccountServed()
     {
-        var account = AppData.Account;
+        var account = AppModel.Account;
         return account?.Subscription != null || account?.AccessCodeInfo != null;
     }
 
@@ -216,7 +216,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
                 return;
 
             try {
-                if (AppData.Account == null) {
+                if (AppModel.Account == null) {
                     await _host.ViewModel.SignIn(onPurchase: true);
                     if (IsAccountServed()) {
                         _host.Replace(new AccountView(_host));
@@ -237,14 +237,14 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
     private async Task Purchase(PurchaseParams purchaseParams)
     {
-        if (!AppData.Features.IsBillingSupported)
+        if (!AppModel.Features.IsBillingSupported)
             throw new InvalidOperationException("Billing service is not available.");
         var pending = new PendingDialog();
         _ = _host.ShowDialog(pending);
         try {
-            await AppData.Api.Billing.Purchase(purchaseParams, CancellationToken.None);
-            await AppData.LoadAccount(false, CancellationToken.None);
-            await _host.ViewModel.ReloadConfig();
+            await AppModel.Api.Billing.Purchase(purchaseParams, CancellationToken.None);
+            await AppModel.LoadAccount(false, CancellationToken.None);
+            await _host.ViewModel.ReloadInfo();
             pending.Close();
 
             // Congratulate only what the refreshed account confirms: the store can answer with a
@@ -269,10 +269,10 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     private async void OnRestoreClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.Account == null && AppData.HasSignInChoice) {
+            if (AppModel.Account == null && AppModel.HasSignInChoice) {
                 // the dialog owns the sign-in; the restore goes on once there is an account
                 await _host.ShowDialog(new SignInDialog(_host));
-                if (AppData.Account == null)
+                if (AppModel.Account == null)
                     return;
             }
             await Restore();
@@ -287,7 +287,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         var pending = new PendingDialog();
         _ = _host.ShowDialog(pending);
         try {
-            if (AppData.Account == null) {
+            if (AppModel.Account == null) {
                 try {
                     await _host.ViewModel.SignIn(onPurchase: true);
                 }
@@ -298,10 +298,10 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
             // a build with no store has nothing to ask; signing in and reading the account is the
             // whole of the restore there
-            var restored = AppData.Features.IsBillingSupported
-                && await AppData.Api.Billing.RestorePurchase(CancellationToken.None);
-            await AppData.LoadAccount(false, CancellationToken.None);
-            await _host.ViewModel.ReloadConfig();
+            var restored = AppModel.Features.IsBillingSupported
+                && await AppModel.Api.Billing.RestorePurchase(CancellationToken.None);
+            await AppModel.LoadAccount(false, CancellationToken.None);
+            await _host.ViewModel.ReloadInfo();
 
             // "am I premium again?" is the question, and the refreshed account the only witness;
             // the wait is over before the answer is shown
@@ -366,7 +366,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     private async void OnTermsClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.Features.TermsOfUseUrl is { } url)
+            if (AppModel.Features.TermsOfUseUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.TermsOfUse);
         }
         catch (Exception ex) {
@@ -377,7 +377,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.Features.PrivacyPolicyUrl is { } url)
+            if (AppModel.Features.PrivacyPolicyUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

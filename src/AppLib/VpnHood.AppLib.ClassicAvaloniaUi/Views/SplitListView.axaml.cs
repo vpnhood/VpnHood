@@ -22,8 +22,8 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
 
     protected MainView Host => _host;
 
-    // the settings the switch is in, saved as one (AppData.SaveUserSettings) once the switch moved
-    protected static UserSettings Settings => AppData.UserSettings;
+    // the settings the switch is in, saved as one (AppModel.SaveUserSettings) once the switch moved
+    protected static UserSettings Settings => AppModel.UserSettings;
 
     protected abstract string Title { get; }
     protected abstract string? SwitchDescription { get; }
@@ -81,7 +81,7 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
         try {
             var settings = Settings;
             IsSwitchOn = EnabledItem.IsOn;
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
             ShowGate();
             _host.ViewModel.Refresh();
         }
@@ -118,7 +118,7 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
 
         try {
             await Save(Input.Excludes, Input.Includes, Input.Blocks, CancellationToken.None);
-            await AppData.SaveUserSettings(Settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(Settings, CancellationToken.None);
             _host.ViewModel.Refresh();
             return true;
         }

@@ -16,8 +16,8 @@ public partial class ErrorDialog : DialogBase
         InitializeComponent();
         MessageText.Text = message;
 
-        var state = AppData.State;
-        var hasProfile = AppData.ClientProfileId != null;
+        var state = AppModel.State;
+        var hasProfile = AppModel.ClientProfileId != null;
         AutoButton.IsVisible = actions?.ShowChangeServerToAuto == true && hasProfile;
         TryPremiumButton.IsVisible = actions?.ShowTryPremium == true && hasProfile;
         LearnMoreButton.IsVisible = TryPremiumButton.IsVisible;
@@ -37,7 +37,7 @@ public partial class ErrorDialog : DialogBase
 
     private async Task CloseAndClear()
     {
-        await AppData.Api.App.ClearLastError(CancellationToken.None);
+        await AppModel.Api.App.ClearLastError(CancellationToken.None);
         Close();
     }
 
@@ -55,7 +55,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnAutoClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.ClientProfileId is not { } profileId)
+            if (AppModel.ClientProfileId is not { } profileId)
                 return;
             await CloseAndClear();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: false, ConnectPlanId.Normal));
@@ -68,7 +68,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnTryPremiumClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.ClientProfileId is not { } profileId)
+            if (AppModel.ClientProfileId is not { } profileId)
                 return;
             await CloseAndClear();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: true, ConnectPlanId.PremiumByTrial));

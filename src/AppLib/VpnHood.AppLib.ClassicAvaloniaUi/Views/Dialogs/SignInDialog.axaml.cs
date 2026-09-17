@@ -14,7 +14,7 @@ namespace VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
 public partial class SignInDialog : DialogBase
 {
     private readonly MainView _host;
-    private readonly string? _primaryProviderId = AppData.PrimaryProviderId;
+    private readonly string? _primaryProviderId = AppModel.PrimaryProviderId;
     private bool _isWorking;
 
     public SignInDialog(MainView host)
@@ -42,8 +42,8 @@ public partial class SignInDialog : DialogBase
 
         // on a TV the email form is not offered - there is nothing to type on - and the phone stands
         // in for it; elsewhere the form is a step away
-        var hasPassword = AppData.HasPasswordSignIn;
-        var isPhoneForEmail = AppData.IsTvUi && hasPassword;
+        var hasPassword = AppModel.HasPasswordSignIn;
+        var isPhoneForEmail = AppModel.IsTvUi && hasPassword;
         OrRow.IsVisible = _primaryProviderId != null && hasPassword;
         PhoneButton.IsVisible = isPhoneForEmail;
         EmailButton.IsVisible = hasPassword && !isPhoneForEmail;
@@ -55,7 +55,7 @@ public partial class SignInDialog : DialogBase
         ProviderHint.IsVisible = _primaryProviderId != null;
         ProviderHint.Text = s.SignInProviderHint(PrimaryProviderName());
         // the one place the account website appears - where a browser can open it
-        ForgotButton.IsVisible = MainView.IsExternalLinkUsable && AppData.Features.AccountWebsiteUrl != null;
+        ForgotButton.IsVisible = MainView.IsExternalLinkUsable && AppModel.Features.AccountWebsiteUrl != null;
         BackButton.IsVisible = _primaryProviderId != null;
 
         // with no identity provider to choose, the dialog opens on the form itself
@@ -220,7 +220,7 @@ public partial class SignInDialog : DialogBase
     private async void OnForgotClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.Features.AccountWebsiteUrl is { } url)
+            if (AppModel.Features.AccountWebsiteUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.ForgotPassword);
         }
         catch (Exception ex) {

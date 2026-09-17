@@ -21,11 +21,11 @@ internal static class Program
         var pageUrl = new Uri(args.Length > 0 ? args[0] : "http://localhost:9090/");
         var http = new HttpClient { BaseAddress = new Uri(pageUrl.GetLeftPart(UriPartial.Authority) + "/") };
 
-        await AppData.Init(HttpVpnHoodApi.Create(http), CancellationToken.None);
+        await AppModel.Init(HttpVpnHoodApi.Create(http), CancellationToken.None);
         var assetsFolderPath = await BrowserAssets.Download(http, CancellationToken.None);
         AppContent.FolderResolver = () => assetsFolderPath;
         ClassicAvaloniaApp.PrepareContent();
-        await AppData.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None);
+        await AppModel.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None);
         await BuildAvaloniaApp().StartBrowserAppAsync("out");
     }
 

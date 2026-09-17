@@ -18,8 +18,8 @@ public partial class FilterList : UserControl
     {
         InitializeComponent();
         // a remote types nothing until asked: the field is behind its button on a TV, in view elsewhere
-        SearchBox.IsVisible = !AppData.IsTvUi;
-        SearchButton.IsVisible = AppData.IsTvUi;
+        SearchBox.IsVisible = !AppModel.IsTvUi;
+        SearchButton.IsVisible = AppModel.IsTvUi;
         SearchBox.PlaceholderText = Strings.Current.Search;
     }
 

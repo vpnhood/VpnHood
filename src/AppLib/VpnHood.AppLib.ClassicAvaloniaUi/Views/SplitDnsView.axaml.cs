@@ -23,7 +23,7 @@ public partial class SplitDnsView : UserControl, IPage
 
     private void Show()
     {
-        var split = AppData.UserSettings.SplitTunneling;
+        var split = AppModel.UserSettings.SplitTunneling;
         IncludeAllRow.IsChecked = split.DnsMode == SplitDnsMode.IncludeAll;
         DefaultRouteRow.IsChecked = split.DnsMode == SplitDnsMode.DefaultRoute;
         IncludeAllRow.IsDisabled = !split.Enabled;
@@ -34,16 +34,16 @@ public partial class SplitDnsView : UserControl, IPage
 
     public void FocusDefault()
     {
-        if (AppData.UserSettings.SplitTunneling.Enabled) (IncludeAllRow.IsChecked ? IncludeAllRow : DefaultRouteRow).LandFocus();
+        if (AppModel.UserSettings.SplitTunneling.Enabled) (IncludeAllRow.IsChecked ? IncludeAllRow : DefaultRouteRow).LandFocus();
         else Header.FocusBack();
     }
 
     private async void Choose(SplitDnsMode mode)
     {
         try {
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             settings.SplitTunneling.DnsMode = mode;
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
             Show();
         }
         catch (Exception ex) {

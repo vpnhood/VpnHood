@@ -38,11 +38,11 @@ public sealed class ProfileItem : INotifyPropertyChanged
     // is a poor fit for a D-pad. Its items follow the web UI's ExpansionPanel: a built-in server
     // keeps its name, a head that takes no keys removes none, the mock tools stay behind their
     // debug command, and Diagnose waits for the app to be able to.
-    public bool ShowMenu => !AppData.IsTvUi;
+    public bool ShowMenu => !AppModel.IsTvUi;
     public bool CanRename => !IsBuiltIn;
-    public bool CanRemove => AppData.Features.IsAddAccessKeySupported;
-    public bool ShowStarlinkTools => AppData.IsStarlinkToolsEnabled;
-    public bool CanDiagnose => AppData.State.CanDiagnose;
+    public bool CanRemove => AppModel.Features.IsAddAccessKeySupported;
+    public bool ShowStarlinkTools => AppModel.IsStarlinkToolsEnabled;
+    public bool CanDiagnose => AppModel.State.CanDiagnose;
 
     // Open when the app is set to this server, or when it has one location and so nothing to
     // open - the state the web UI's panel is mounted in.

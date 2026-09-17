@@ -65,14 +65,14 @@ public partial class PremiumCodeDialog : DialogBase
     private async Task Activate()
     {
         var code = CodeBox.Text?.Trim() ?? "";
-        var profileId = AppData.State.ClientProfile?.ClientProfileId;
+        var profileId = AppModel.State.ClientProfile?.ClientProfileId;
         if (profileId == null) {
             await _host.ShowError(Strings.Current.ProfileIdNotFoundDuringValidationMsg);
             return;
         }
 
         try {
-            await AppData.Api.ClientProfiles.Update(profileId.Value, new ClientProfileUpdateParams {
+            await AppModel.Api.ClientProfiles.Update(profileId.Value, new ClientProfileUpdateParams {
                 AccessCode = new Patch<string?>(code)
             }, CancellationToken.None);
         }
@@ -82,10 +82,10 @@ public partial class PremiumCodeDialog : DialogBase
             return;
         }
 
-        if (AppData.IsPremiumByAccount) {
+        if (AppModel.IsPremiumByAccount) {
             Close(true);
-            await AppData.LoadAccount(true, CancellationToken.None);
-            await _host.ViewModel.ReloadConfig();
+            await AppModel.LoadAccount(true, CancellationToken.None);
+            await _host.ViewModel.ReloadInfo();
             _host.ShowSnackbar(Strings.Current.PremiumCodeSavedForLaterMsg);
             return;
         }
@@ -97,7 +97,7 @@ public partial class PremiumCodeDialog : DialogBase
         try {
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId.Value, null, IsPremium: true, ConnectPlanId.Normal, GoToHome: false));
             pending.Close();
-            if (AppData.IsConnected() && AppData.IsPremiumUser)
+            if (AppModel.IsConnected() && AppModel.IsPremiumUser)
                 await _host.ShowDialog(new PremiumCodeCompleteDialog(_host));
         }
         finally {

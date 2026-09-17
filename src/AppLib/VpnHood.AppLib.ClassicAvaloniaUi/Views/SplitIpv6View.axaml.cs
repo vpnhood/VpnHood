@@ -24,7 +24,7 @@ public partial class SplitIpv6View : UserControl, IPage
 
     private void Show()
     {
-        var split = AppData.UserSettings.SplitTunneling;
+        var split = AppModel.UserSettings.SplitTunneling;
         BlockRow.IsChecked = split.UnsupportedIpV6Mode == SplitUnsupportedIpMode.Block;
         ExcludeRow.IsChecked = split.UnsupportedIpV6Mode == SplitUnsupportedIpMode.Exclude;
         BlockRow.IsDisabled = !split.Enabled;
@@ -35,16 +35,16 @@ public partial class SplitIpv6View : UserControl, IPage
 
     public void FocusDefault()
     {
-        if (AppData.UserSettings.SplitTunneling.Enabled) (BlockRow.IsChecked ? BlockRow : ExcludeRow).LandFocus();
+        if (AppModel.UserSettings.SplitTunneling.Enabled) (BlockRow.IsChecked ? BlockRow : ExcludeRow).LandFocus();
         else Header.FocusBack();
     }
 
     private async void Choose(SplitUnsupportedIpMode mode)
     {
         try {
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             settings.SplitTunneling.UnsupportedIpV6Mode = mode;
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
             Show();
         }
         catch (Exception ex) {

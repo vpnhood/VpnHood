@@ -1,4 +1,5 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using System.Text.Json;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Contracts.Premium;
@@ -82,7 +83,12 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public LogServiceOptions LogServiceOptions { get; set; } = new();
     public bool AdjustForSystemBars { get; set; } = true;
     public bool AllowEndPointStrategy { get; set; }
-    public object? CustomData { get; set; }
+    // JSON the head hands the UI, uninterpreted: the product's own settings (firebaseOptions and
+    // friends) straight out of its appsettings. JsonElement, not object - the contract is serialized
+    // through a source-generated context on trimmed heads, and "object" means "whatever the head
+    // happened to put here", which is how one head ended up passing a JsonObject and another a
+    // JsonElement for the same field.
+    public JsonElement? CustomData { get; set; }
     public bool AllowRecommendUserReviewByServer { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
 

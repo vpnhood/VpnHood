@@ -124,8 +124,8 @@ public class WebServerTest : TestAppBase
 
         // the phone knows it is remote, the web view knows it is not, and only the web view may
         // touch the pairing
-        StringAssert.Contains(await http.GetStringAsync(new Uri(root, "api/app/config")), "\"isRemote\":true");
-        StringAssert.Contains(await http.GetStringAsync(new Uri(webServer.Url, "api/app/config")), "\"isRemote\":false");
+        StringAssert.Contains(await http.GetStringAsync(new Uri(root, "api/app/info")), "\"isRemote\":true");
+        StringAssert.Contains(await http.GetStringAsync(new Uri(webServer.Url, "api/app/info")), "\"isRemote\":false");
 
         // the web view's own listener is gated too. CORS hides a reply from another site but does
         // not stop the request arriving, and these routes take their parameters in the query string,

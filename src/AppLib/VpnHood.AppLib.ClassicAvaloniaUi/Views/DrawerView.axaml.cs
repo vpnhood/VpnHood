@@ -24,33 +24,33 @@ public partial class DrawerView : UserControl
         _host = host;
         InitializeComponent();
 
-        var features = AppData.Features;
-        var state = AppData.State;
-        var logo = AppData.IsConnectApp ? "VpnHoodConnect-logo.png" : "VpnHoodClient-logo.png";
+        var features = AppModel.Features;
+        var state = AppModel.State;
+        var logo = AppModel.IsConnectApp ? "VpnHoodConnect-logo.png" : "VpnHoodClient-logo.png";
         Logo.Source = AppAssets.Image(logo);
         AppNameText.Text = features.AppName;
         // app.major.minor.build; the web UI adds its own bundle's build as a fourth segment, which
         // this UI has none of
         VersionText.Text = features.Version.ToString(3);
 
-        PremiumItem.IsVisible = !AppData.IsPremiumUser && AppData.IsPremiumSupported && AppData.CanGoPremium;
+        PremiumItem.IsVisible = !AppModel.IsPremiumUser && AppModel.IsPremiumSupported && AppModel.CanGoPremium;
         AccountItem.IsVisible = features.IsAccountSupported;
-        var account = AppData.Account;
+        var account = AppModel.Account;
         AccountTitle.Text = account != null ? Strings.Current.Account : SignInLabel();
         AccountEmail.Text = account?.Email;
         AccountEmail.IsVisible = account?.Email != null;
         DiagnoseItem.IsEnabled = state.CanDiagnose;
         // the updater is the capability signal: null exactly when no updater was configured
         UpdateItem.IsVisible = state.UpdaterStatus != null;
-        PersonalServerItem.IsVisible = !AppData.IsConnectApp;
+        PersonalServerItem.IsVisible = !AppModel.IsConnectApp;
         PrivacyItem.IsVisible = features.PrivacyPolicyUrl != null;
     }
 
     // "Sign in with Google" for the one store method, plain "Sign in" with a chooser or none
     private static string SignInLabel()
     {
-        var providerId = AppData.PrimaryProviderId;
-        if (providerId == null || AppData.HasSignInChoice)
+        var providerId = AppModel.PrimaryProviderId;
+        if (providerId == null || AppModel.HasSignInChoice)
             return Strings.Current.SignIn;
         return providerId.ToLowerInvariant() switch {
             "google" => Strings.Current.SignInWithGoogle,
@@ -75,7 +75,7 @@ public partial class DrawerView : UserControl
     {
         try {
             _host.CloseDrawer();
-            if (AppData.Account != null) {
+            if (AppModel.Account != null) {
                 _host.Replace(new AccountView(_host));
                 return;
             }
@@ -110,7 +110,7 @@ public partial class DrawerView : UserControl
             UpdateIcon.Classes.Add("spinner");
             UpdateItem.IsEnabled = false;
             try {
-                await AppData.Api.App.VersionCheck(CancellationToken.None);
+                await AppModel.Api.App.VersionCheck(CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);
@@ -167,7 +167,7 @@ public partial class DrawerView : UserControl
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.Features.PrivacyPolicyUrl is { } url)
+            if (AppModel.Features.PrivacyPolicyUrl is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

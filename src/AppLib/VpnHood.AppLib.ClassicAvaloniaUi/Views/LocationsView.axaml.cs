@@ -194,10 +194,10 @@ public partial class LocationsView : UserControl, IPage
             try {
                 // an empty name gives the server its default name back (SAVE_EMPTY_TO_DISPLAY_DEFAULT_NAME)
                 var name = string.IsNullOrWhiteSpace(dialog.NewName) ? null : dialog.NewName.Trim();
-                await AppData.Api.ClientProfiles.Update(profile.ClientProfileId, new ClientProfileUpdateParams {
+                await AppModel.Api.ClientProfiles.Update(profile.ClientProfileId, new ClientProfileUpdateParams {
                     ClientProfileName = new Patch<string?>(name)
                 }, CancellationToken.None);
-                await _viewModel.ReloadConfig();
+                await _viewModel.ReloadInfo();
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);
@@ -226,10 +226,10 @@ public partial class LocationsView : UserControl, IPage
     {
         try {
             CloseMenu(sender);
-            if (ProfileOf(sender) is not { } profile || AppData.FindClientProfileInfo(profile.ClientProfileId) is not { } info)
+            if (ProfileOf(sender) is not { } profile || AppModel.FindClientProfileInfo(profile.ClientProfileId) is not { } info)
                 return;
             if (await _host.ShowDialog(new CustomEndpointDialog(_host, info)))
-                await _viewModel.ReloadConfig();
+                await _viewModel.ReloadInfo();
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -254,8 +254,8 @@ public partial class LocationsView : UserControl, IPage
             if (!await _host.Confirm(s.Warning, $"{s.ConfirmRemoveServer}\n\n{profile.Name}"))
                 return;
             try {
-                await AppData.Api.ClientProfiles.Delete(profile.ClientProfileId, CancellationToken.None);
-                await _viewModel.ReloadConfig();
+                await AppModel.Api.ClientProfiles.Delete(profile.ClientProfileId, CancellationToken.None);
+                await _viewModel.ReloadInfo();
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);

@@ -28,16 +28,16 @@ public partial class PromoteView : UserControl, IPage
         InitializeComponent();
 
         var s = Strings.Current;
-        BackButton.IsVisible = !AppData.IsTvUi;
+        BackButton.IsVisible = !AppModel.IsTvUi;
         RichText.Apply(TitleText, isPremiumLocation ? s.SelectedLocationIsPremium : s.SelectedLocationIsFree);
 
         // the location's options, read again so the page is driven by current server data
-        var info = AppData.FindClientProfileInfo(clientProfileId);
+        var info = AppModel.FindClientProfileInfo(clientProfileId);
         var options = info?.LocationInfos.FirstOrDefault(x => x.ServerLocation == serverLocation)?.Options;
 
         // the picture of the case, and over it the operator's own promotion when the app holds one
         PromoImage.Source = AppAssets.Image(isPremiumLocation ? "premium-servers.webp" : "free-to-premium-servers.webp");
-        if (AppData.State.PromotionExists)
+        if (AppModel.State.PromotionExists)
             _ = LoadPromotionImage();
 
         var isFree = !isPremiumLocation && options?.Normal != null;
@@ -68,7 +68,7 @@ public partial class PromoteView : UserControl, IPage
     private async Task LoadPromotionImage()
     {
         try {
-            var bytes = await AppData.Api.App.PromotionImage(CancellationToken.None);
+            var bytes = await AppModel.Api.App.PromotionImage(CancellationToken.None);
             PromoImage.Source = new Bitmap(new MemoryStream(bytes));
         }
         catch (Exception ex) {

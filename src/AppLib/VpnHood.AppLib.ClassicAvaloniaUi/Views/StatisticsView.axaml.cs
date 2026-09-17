@@ -20,22 +20,22 @@ public partial class StatisticsView : UserControl, IPage
     private void Fill()
     {
         var s = Strings.Current;
-        var state = AppData.State;
+        var state = AppModel.State;
         var session = state.SessionInfo;
         var status = state.SessionStatus;
         if (session == null)
             return;
 
         var access = session.AccessInfo;
-        var isPremiumUser = AppData.IsPremiumUser;
-        var isConnected = AppData.IsConnected(state);
+        var isPremiumUser = AppModel.IsPremiumUser;
+        var isConnected = AppModel.IsConnected(state);
         // no traffic figures for a person in China (statistics.vue's isChinaCountry)
         var isChina = string.Equals(state.ClientCountryInfo?.CountryCode, "CN", StringComparison.OrdinalIgnoreCase);
 
         if (isPremiumUser && access != null) {
             var card = AddCard(s.PremiumInfo, Mdi.Crown, s.StatisticsDateCardDesc);
-            if (AppData.IsPremiumSupported)
-                AddRow(card, s.PremiumBy, AppData.IsPremiumByAccount ? s.PurchaseSubscription : s.PremiumCode, "active");
+            if (AppModel.IsPremiumSupported)
+                AddRow(card, s.PremiumBy, AppModel.IsPremiumByAccount ? s.PurchaseSubscription : s.PremiumCode, "active");
             AddRow(card, s.ActivatedOn, Format.ShortDate(access.CreatedTime), "active");
             AddRow(card, s.ExpirationDate, access.ExpirationTime is { } expire ? Format.ShortDate(expire) : s.Never, access.ExpirationTime != null ? "error" : "active");
             AddRow(card, s.LastUsed, Format.ShortDate(access.LastUsedTime), "highlight", isLast: true);
@@ -44,7 +44,7 @@ public partial class StatisticsView : UserControl, IPage
         if (access != null) {
             var card = AddCard(s.ServerAndIp, Mdi.ServerOutline, s.StatisticsServerCardDesc);
             if (isConnected) {
-                var isUdp = AppData.IsProtocolEnabled(state, ChannelProtocol.Udp);
+                var isUdp = AppModel.IsProtocolEnabled(state, ChannelProtocol.Udp);
                 AddRow(card, s.YourProtectedIp, session.ClientPublicIpAddress.ToString(), "highlight");
                 AddRow(card, s.Country, session.ServerLocationInfo?.TranslatedCountryName ?? "", "active");
                 AddRow(card, s.Region, session.ServerLocationInfo?.RegionName ?? "", "active");

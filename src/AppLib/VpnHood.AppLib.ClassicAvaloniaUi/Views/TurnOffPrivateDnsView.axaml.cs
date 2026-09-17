@@ -26,7 +26,7 @@ public partial class TurnOffPrivateDnsView : UserControl, IPage
             row.Children.Add(text);
             Steps.Children.Add(row);
         }
-        SettingsButton.IsVisible = AppData.Intents.IsSettingsSupported;
+        SettingsButton.IsVisible = AppModel.Intents.IsSettingsSupported;
     }
 
     public void FocusDefault()
@@ -38,7 +38,7 @@ public partial class TurnOffPrivateDnsView : UserControl, IPage
     private async void OnSettingsClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await AppData.Api.Intents.OpenSettings(CancellationToken.None);
+            await AppModel.Api.Intents.OpenSettings(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

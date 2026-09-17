@@ -15,7 +15,7 @@ namespace VpnHood.AppLib.ClassicAvaloniaUi;
 // two palettes; a head that names another gets that one instead, and none of this is in its build.
 public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
 {
-    // The words this UI has, which the head declares to the app (AppData.Configure).
+    // The words this UI has, which the head declares to the app (AppModel.Configure).
     public static IReadOnlyList<string> AvailableCultures => Strings.AvailableCultures;
 
     // The pictures: the folder of the content package, which on Android is a copy this call makes
@@ -45,7 +45,7 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
         // The product's palette over the client's the XAML merged, before any style is applied: the
         // head hands the UI the app's API first, except in the processes that get no view, which
         // keep the default.
-        var themeOverride = AppTheme.OverrideFor(AppData.IsInit ? AppData.Features.UiName : null);
+        var themeOverride = AppTheme.OverrideFor(AppModel.IsInit ? AppModel.Features.UiName : null);
         if (themeOverride != null)
             Resources.MergedDictionaries.Add(themeOverride);
     }

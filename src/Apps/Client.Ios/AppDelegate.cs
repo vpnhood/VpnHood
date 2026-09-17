@@ -128,13 +128,13 @@ public class AppDelegate : UIApplicationDelegate
         };
     }
 
-    private static object? WithoutFirebaseOptions(JsonElement? customData)
+    private static JsonElement? WithoutFirebaseOptions(JsonElement? customData)
     {
         if (customData is not { ValueKind: JsonValueKind.Object })
             return customData?.Clone();
 
         var result = JsonNode.Parse(customData.Value.GetRawText()) as JsonObject;
         result?.Remove("firebaseOptions");
-        return result;
+        return result is null ? null : JsonSerializer.SerializeToElement(result);
     }
 }

@@ -3,8 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
-using AppData = VpnHood.AppLib.AvaloniaUI.AppData;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.Settings;
 
@@ -20,22 +20,22 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         _host = host;
         InitializeComponent();
         var s = Strings.Current;
-        var state = AppData.State;
-        var settings = AppData.UserSettings;
+        var state = AppModel.State;
+        var settings = AppModel.UserSettings;
         _mode = settings.DnsMode;
 
         // the private DNS card: off, the device's automatic mode, or a provider the person chose
-        var isActive = AppData.IsPrivateDnsActive(state);
-        var isCustomized = AppData.IsPrivateDnsCustomized(state);
-        PrivateDnsCard.IsVisible = AppData.Intents.IsPrivateDnsSettingsSupported;
+        var isActive = AppModel.IsPrivateDnsActive(state);
+        var isCustomized = AppModel.IsPrivateDnsCustomized(state);
+        PrivateDnsCard.IsVisible = AppModel.Intents.IsPrivateDnsSettingsSupported;
         PrivateDnsStatus.Text = !isActive ? s.Off : isCustomized ? s.On : s.Auto;
         PrivateDnsChip.Classes.Set("status-on", isCustomized);
         PrivateDnsChip.Classes.Set("status-off", !isActive);
-        PrivateDnsCrown.IsVisible = AppData.ShowCrown(AppFeature.CustomDns);
+        PrivateDnsCrown.IsVisible = AppModel.ShowCrown(AppFeature.CustomDns);
         ProviderText.Text = state.SystemPrivateDns?.Provider;
         ProviderText.IsVisible = !string.IsNullOrEmpty(state.SystemPrivateDns?.Provider);
 
-        AdapterCrown.IsVisible = AppData.ShowCrown(AppFeature.CustomDns);
+        AdapterCrown.IsVisible = AppModel.ShowCrown(AppFeature.CustomDns);
         DefaultRow.Title = s.Default;
         DefaultRow.Description = s.AdapterDnsAutoDesc;
         CustomRow.Title = s.Custom;
@@ -48,14 +48,14 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
     // the pitch while the feature is sold and this session has not bought it (dns/index.vue)
     public static IPage Create(MainView host)
     {
-        return AppData.IsPremiumFeatureAllowed(AppFeature.CustomDns)
+        return AppModel.IsPremiumFeatureAllowed(AppFeature.CustomDns)
             ? new DnsView(host)
             : FeaturePages.PremiumPitch(host, Strings.Current.Dns, Strings.Current.DnsDesc, "private-dns.webp", AppFeature.CustomDns);
     }
 
     // connected to a server that overrides the person's DNS: the radios are read-only meanwhile
     private bool IsEnforcedByServer =>
-        AppData.IsConnected(AppData.State) && _mode == DnsMode.AdapterDns && AppData.State.SessionInfo?.DnsConfig.IsUserSuppressed == true;
+        AppModel.IsConnected(AppModel.State) && _mode == DnsMode.AdapterDns && AppModel.State.SessionInfo?.DnsConfig.IsUserSuppressed == true;
 
     private void Show()
     {
@@ -66,7 +66,7 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         DefaultRow.IsDisabled = isEnforced;
         CustomRow.IsDisabled = isEnforced;
         EnforcedAlert.IsVisible = isEnforced;
-        PrivateDnsAlert.IsVisible = isCustom && AppData.IsPrivateDnsCustomized(AppData.State);
+        PrivateDnsAlert.IsVisible = isCustom && AppModel.IsPrivateDnsCustomized(AppModel.State);
         CustomPanel.IsVisible = isCustom;
     }
 
@@ -127,13 +127,13 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         }
 
         try {
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             settings.DnsMode = _mode;
             settings.DnsServers = [.. new[] { Dns1Box.Text, Dns2Box.Text }
                 .Select(x => x?.Trim())
                 .Where(x => !string.IsNullOrEmpty(x))
                 .Select(x => IPAddress.Parse(x ?? ""))];
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
             _host.ViewModel.Refresh();
             return true;
         }

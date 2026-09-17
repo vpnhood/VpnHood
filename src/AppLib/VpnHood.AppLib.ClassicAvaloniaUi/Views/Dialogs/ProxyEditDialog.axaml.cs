@@ -148,7 +148,7 @@ public partial class ProxyEditDialog : DialogBase
             if (string.IsNullOrEmpty(text) || PortRule != null || _isProcessing)
                 return;
             try {
-                var info = await AppData.Api.ProxyEndPoints.Parse(text, new ProxyEndPointDefaults {
+                var info = await AppModel.Api.ProxyEndPoints.Parse(text, new ProxyEndPointDefaults {
                     IsEnabled = EnabledSwitch.IsChecked,
                     Protocol = _protocol,
                     Port = int.Parse(PortBox.Text ?? "0"),
@@ -219,13 +219,13 @@ public partial class ProxyEditDialog : DialogBase
             try {
                 switch (_kind) {
                     case ProxySheetKind.Add:
-                        await AppData.Api.ProxyEndPoints.Add(BuildEndPoint(), CancellationToken.None);
+                        await AppModel.Api.ProxyEndPoints.Add(BuildEndPoint(), CancellationToken.None);
                         break;
                     case ProxySheetKind.AddList:
-                        await AppData.Api.ProxyEndPoints.Import(ListBox.Text ?? "", CancellationToken.None);
+                        await AppModel.Api.ProxyEndPoints.Import(ListBox.Text ?? "", CancellationToken.None);
                         break;
                     default:
-                        await AppData.Api.ProxyEndPoints.Update(_oldId ?? throw new InvalidOperationException("The proxy to update has no id."), BuildEndPoint(), CancellationToken.None);
+                        await AppModel.Api.ProxyEndPoints.Update(_oldId ?? throw new InvalidOperationException("The proxy to update has no id."), BuildEndPoint(), CancellationToken.None);
                         break;
                 }
                 Close(true);
@@ -251,7 +251,7 @@ public partial class ProxyEditDialog : DialogBase
             _isProcessing = true;
             UpdateSaveButton();
             try {
-                await AppData.Api.ProxyEndPoints.Delete(_oldId, CancellationToken.None);
+                await AppModel.Api.ProxyEndPoints.Delete(_oldId, CancellationToken.None);
                 Close(true);
             }
             catch (Exception ex) {

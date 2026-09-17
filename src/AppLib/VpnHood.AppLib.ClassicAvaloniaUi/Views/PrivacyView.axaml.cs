@@ -17,13 +17,13 @@ public partial class PrivacyView : UserControl, IPage
 
         var s = Strings.Current;
         // a build that collects nothing offers no consent and makes no claim about data
-        var isTrackerSupported = AppData.IsAnonymousTrackerSupported;
+        var isTrackerSupported = AppModel.IsAnonymousTrackerSupported;
         TrackerItem.Title = s.AllowAnonymousTracker;
         TrackerItem.Description = s.AllowAnonymousTrackerDesc;
-        TrackerItem.IsOn = AppData.UserSettings.AllowAnonymousTracker;
+        TrackerItem.IsOn = AppModel.UserSettings.AllowAnonymousTracker;
         TrackerItem.IsVisible = isTrackerSupported;
         NoticeText.IsVisible = isTrackerSupported;
-        PolicyButton.IsVisible = AppData.Features.PrivacyPolicyUrl != null;
+        PolicyButton.IsVisible = AppModel.Features.PrivacyPolicyUrl != null;
         PolicyCard.IsVisible = NoticeText.IsVisible || PolicyButton.IsVisible;
     }
 
@@ -37,9 +37,9 @@ public partial class PrivacyView : UserControl, IPage
     private async void OnTrackerToggled(object? sender, EventArgs e)
     {
         try {
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             settings.AllowAnonymousTracker = TrackerItem.IsOn;
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -49,7 +49,7 @@ public partial class PrivacyView : UserControl, IPage
     private async void OnPolicyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppData.Features.PrivacyPolicyUrl is { } url)
+            if (AppModel.Features.PrivacyPolicyUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

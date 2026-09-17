@@ -24,19 +24,19 @@ internal class AppApi(VpnHoodApp app, Func<IRemoteAccessHost>? remoteAccessHostP
     private IRemoteAccessHost RemoteAccessHost => remoteAccessHostProvider?.Invoke() ??
         throw new NotSupportedException("Remote access needs a web host, and this app was given none.");
 
-    public async Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken)
+    public async Task<AppInfo> Configure(ConfigParams configParams, CancellationToken cancellationToken)
     {
         app.Services.CultureProvider.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null)
             app.Resources.Strings = configParams.Strings;
 
         app.UpdateUi();
-        return await GetConfig(cancellationToken).Vhc();
+        return await GetInfo(cancellationToken).Vhc();
     }
 
-    public Task<AppData> GetConfig(CancellationToken cancellationToken)
+    public Task<AppInfo> GetInfo(CancellationToken cancellationToken)
     {
-        var ret = new AppData {
+        var ret = new AppInfo {
             Features = app.Features,
             IntentFeatures = app.Services.DeviceUiProvider.ToIntentFeatures(app.Services.UserReviewProvider),
             UserSettings = app.UserSettings,

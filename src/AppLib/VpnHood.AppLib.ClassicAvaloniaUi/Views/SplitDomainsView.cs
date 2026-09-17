@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Controls;
-using AppData = VpnHood.AppLib.AvaloniaUI.AppData;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.Proxies;
 using VpnHood.AppLib.Contracts.SplitTunneling;
@@ -19,7 +19,7 @@ public sealed class SplitDomainsView : SplitListView
 
     public static IPage Create(MainView host)
     {
-        return AppData.IsPremiumFeatureAllowed(AppFeature.SplitDomain)
+        return AppModel.IsPremiumFeatureAllowed(AppFeature.SplitDomain)
             ? new SplitDomainsView(host)
             : FeaturePages.PremiumPitch(host, Strings.Current.SplitDomains, Strings.Current.SplitDomainsDesc, "split-ip.webp", AppFeature.SplitDomain);
     }
@@ -34,17 +34,17 @@ public sealed class SplitDomainsView : SplitListView
 
     // the server that runs no cloak undoes a domain filter; the switch says so under itself
     protected override string? SwitchWarning =>
-        AppData.State.TcpProxyUsageReason == TcpProxyUsageReason.ServerRequiredOff ? Strings.Current.DomainFilterServerNoCloak : null;
+        AppModel.State.TcpProxyUsageReason == TcpProxyUsageReason.ServerRequiredOff ? Strings.Current.DomainFilterServerNoCloak : null;
 
     protected override async Task<(string Excludes, string Includes, string Blocks)> Load(CancellationToken cancellationToken)
     {
-        var domains = await AppData.Api.App.GetSplitDomains(cancellationToken);
+        var domains = await AppModel.Api.App.GetSplitDomains(cancellationToken);
         return (domains.Excludes, domains.Includes, domains.Blocks);
     }
 
     protected override Task Save(string excludes, string includes, string blocks, CancellationToken cancellationToken)
     {
-        return AppData.Api.App.SetSplitDomains(new SplitDomains { Excludes = excludes, Includes = includes, Blocks = blocks }, cancellationToken);
+        return AppModel.Api.App.SetSplitDomains(new SplitDomains { Excludes = excludes, Includes = includes, Blocks = blocks }, cancellationToken);
     }
 
     protected override void ConfigureInput(SplitListInput input)

@@ -2,10 +2,10 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.Core.Toolkit.Logging;
-using AppData = VpnHood.AppLib.AvaloniaUI.AppData;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
 
@@ -22,7 +22,7 @@ public partial class UserReviewDialog : DialogBase
         _host = host;
         _recommendation = recommendation;
         InitializeComponent();
-        var isIos = AppData.Features.OsType == AppOsType.Ios;
+        var isIos = AppModel.Features.OsType == AppOsType.Ios;
         LaterButton.IsVisible = isIos;
         LaterButton.Content = Strings.Current.Later;
         CloseButton.IsVisible = recommendation != 2;
@@ -101,10 +101,10 @@ public partial class UserReviewDialog : DialogBase
     {
         Close();
         try {
-            await AppData.Api.App.SetUserReview(new AppUserReview { Rating = _rate, ReviewText = text ?? "" }, CancellationToken.None);
+            await AppModel.Api.App.SetUserReview(new AppUserReview { Rating = _rate, ReviewText = text ?? "" }, CancellationToken.None);
             // the store's own prompt, for a happy face
-            if (_rate == 3 && AppData.Intents.IsUserReviewSupported)
-                await AppData.Api.Intents.RequestUserReview(CancellationToken.None);
+            if (_rate == 3 && AppModel.Intents.IsUserReviewSupported)
+                await AppModel.Api.Intents.RequestUserReview(CancellationToken.None);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not submit the user review.");

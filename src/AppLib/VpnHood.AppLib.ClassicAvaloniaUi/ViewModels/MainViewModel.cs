@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.Resources;
 using VpnHood.AppLib.ClassicAvaloniaUi.Views;
@@ -19,11 +20,10 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using AppData = VpnHood.AppLib.AvaloniaUI.AppData;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.ViewModels;
 
-// What the home shows, read off the app through its API (AppData) - the same values the web UI
+// What the home shows, read off the app through its API (AppModel) - the same values the web UI
 // reads, shaped the way its home and servers pages shape them. Read again once a second, because
 // the state's progress values and speeds move without an event and a paired browser has no other
 // way to hear of a change, and after every action; always on the UI thread. The connect flows of
@@ -52,8 +52,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // the page host: where a prompt raised by a state change is shown
     public MainView? Host { get; set; }
 
-    public string AppName => AppData.Features.AppName;
-    public string VersionText => $"v{AppData.Features.Version.Build}";
+    public string AppName => AppModel.Features.AppName;
+    public string VersionText => $"v{AppModel.Features.Version.Build}";
     public string SettingsTitle => Strings.Current.Settings.ToUpperInvariant();
     public string AutoChipText => Strings.Current.Auto.ToUpperInvariant();
     public string SplitCountriesTitle => Strings.Current.SplitCountries.ToUpperInvariant();
@@ -66,25 +66,25 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // servers, each with locations of its own. That one difference names the home row, fills it,
     // and decides whether the page behind it is a list of servers or of locations - the web UI's
     // isSingleProfileMode, everywhere it reads it.
-    public bool IsSingleProfileMode => AppData.IsSingleProfileMode;
+    public bool IsSingleProfileMode => AppModel.IsSingleProfileMode;
     public string ServersRowTitle => (IsSingleProfileMode ? Strings.Current.Location : Strings.Current.Server).ToUpperInvariant();
     public string ServersPageTitle => IsSingleProfileMode ? Strings.Current.Location : Strings.Current.Servers;
 
     // A server is added by its access key, which only a client head takes (IsAddAccessKeySupported).
     // A remote cannot type a vh:// key, so on a TV the button says so and leads to the phone -
     // exactly what the web UI's servers page does with it.
-    public bool CanAddServer => AppData.Features.IsAddAccessKeySupported;
+    public bool CanAddServer => AppModel.Features.IsAddAccessKeySupported;
     public string AddServerText => IsTv ? Strings.Current.AddOrRemoveServers : Strings.Current.AddServer;
     public string AddServerGlyph => IsTv ? Mdi.Cellphone : Mdi.PlusCircle;
 
     // A TV hands everything but connecting to a phone (TV plan §3.1); the row that does so shows
     // only there. The app's word, not the UI's - unless this UI is the phone's, driving the TV.
-    public bool IsTv => AppData.IsTvUi;
+    public bool IsTv => AppModel.IsTvUi;
     public bool IsNotTv => !IsTv;
 
     // the drawer's door, off the TV; the account row, on it
-    public bool HasAccountRow => IsTv && AppData.Features.IsAccountSupported;
-    public bool HasSplitAppsRow => AppData.Features.IsExcludeAppsSupported || AppData.Features.IsIncludeAppsSupported;
+    public bool HasAccountRow => IsTv && AppModel.Features.IsAccountSupported;
+    public bool HasSplitAppsRow => AppModel.Features.IsExcludeAppsSupported || AppModel.Features.IsIncludeAppsSupported;
 
     // A debug field that is set shows on the version chip, and opens the developer page on the
     // first tap rather than the fifth - the web UI's isDebugDataHasValue.
@@ -92,9 +92,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The person's choice when there is one, the device's language otherwise - the pair
     // VpnHoodApp itself resolves at every settings change.
-    private static CultureInfo AppCulture => AppData.UserSettings.CultureCode is { } code
+    private static CultureInfo AppCulture => AppModel.UserSettings.CultureCode is { } code
         ? CultureInfo.GetCultureInfo(code)
-        : CultureInfo.GetCultureInfo(AppData.State.SystemUiCultureInfo.Code);
+        : CultureInfo.GetCultureInfo(AppModel.State.SystemUiCultureInfo.Code);
 
     // the connection, as the circle and the button show it
     public string Phase { get; private set => Set(ref field, value); } = "none";
@@ -171,7 +171,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         _isReloading = true;
         try {
-            await AppData.ReloadState(CancellationToken.None);
+            await AppModel.ReloadState(CancellationToken.None);
             if (!_disposed)
                 Refresh();
         }
@@ -185,9 +185,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The configuration - the features, the settings, the profiles - read again after an action
     // that moved it, then shown.
-    public async Task ReloadConfig()
+    public async Task ReloadInfo()
     {
-        await AppData.ReloadConfig(CancellationToken.None);
+        await AppModel.ReloadInfo(CancellationToken.None);
         Refresh();
     }
 
@@ -204,13 +204,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (cultureChanged)
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty)); // the titles
 
-        var state = AppData.State;
-        var profile = AppData.CurrentClientProfileInfo;
+        var state = AppModel.State;
+        var profile = AppModel.CurrentClientProfileInfo;
         var connectionState = state.ConnectionState;
 
         // HomeConnectionInfo
-        IsConnected = AppData.IsConnected(state);
-        IsPremiumSession = (AppData.IsPremiumSupported && AppData.IsPremiumUser) ||
+        IsConnected = AppModel.IsConnected(state);
+        IsPremiumSession = (AppModel.IsPremiumSupported && AppModel.IsPremiumUser) ||
                            (state.SessionInfo?.IsPremiumSession == true && IsConnected);
         Phase = connectionState switch {
             AppConnectionState.None => "none",
@@ -264,7 +264,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         IsConnectEnabled = connectionState == AppConnectionState.None || state.CanDisconnect;
         IsReconnectRequired = state.IsReconnectRequired && IsConnected;
 
-        HasDebugData = AppData.UserSettings.DebugData1 != null || AppData.UserSettings.DebugData2 != null;
+        HasDebugData = AppModel.UserSettings.DebugData1 != null || AppModel.UserSettings.DebugData2 != null;
 
         RefreshPremiumButton(state);
         RefreshBadges(state);
@@ -300,7 +300,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private void RefreshExpiry(AppState state)
     {
         var expiration = state.SessionInfo?.AccessInfo?.ExpirationTime;
-        if ((!AppData.IsPremiumUser && !AppData.IsPremiumSupported) || !IsConnected || expiration == null) {
+        if ((!AppModel.IsPremiumUser && !AppModel.IsPremiumSupported) || !IsConnected || expiration == null) {
             ExpireText = "";
             return;
         }
@@ -313,15 +313,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private void RefreshPremiumButton(AppState state)
     {
         var expiration = state.SessionStatus?.SessionExpirationTime;
-        ShowCountdown = !AppData.IsPremiumUser && expiration != null && IsConnected;
+        ShowCountdown = !AppModel.IsPremiumUser && expiration != null && IsConnected;
         if (ShowCountdown && expiration != null) {
             var remaining = expiration.Value - DateTime.UtcNow;
             CountdownText = Format.Countdown(remaining);
             CountdownKind = remaining < FiveMinutes ? "warning" : remaining < FifteenMinutes ? "alert" : "normal";
             CanExtendByRewardedAd = state.SessionStatus?.CanExtendByRewardedAd == true;
         }
-        ShowYouArePremium = !ShowCountdown && AppData.IsPremiumSupported && AppData.IsPremiumUser;
-        ShowGoPremium = !ShowCountdown && !ShowYouArePremium && AppData.IsPremiumSupported && state.ClientProfile?.CanGoPremium == true;
+        ShowYouArePremium = !ShowCountdown && AppModel.IsPremiumSupported && AppModel.IsPremiumUser;
+        ShowGoPremium = !ShowCountdown && !ShowYouArePremium && AppModel.IsPremiumSupported && state.ClientProfile?.CanGoPremium == true;
     }
 
     // HomeBadge: one badge per feature in use (FeatureIcons.ts)
@@ -330,9 +330,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var badges = new List<FeatureBadge>();
         if (state.SplitTunnelingState.IsSplittingTraffic)
             badges.Add(new FeatureBadge(Mdi.CallSplit, Mdi.Web, Strings.Current.SplitTunneling, FeaturePage.SplitTunneling));
-        if (AppData.IsCustomEndpointActive(state))
+        if (AppModel.IsCustomEndpointActive(state))
             badges.Add(new FeatureBadge(Mdi.IpNetwork, null, Strings.Current.CustomEndpoint, FeaturePage.Servers));
-        if (AppData.IsDnsCustomized(state))
+        if (AppModel.IsDnsCustomized(state))
             badges.Add(new FeatureBadge(Mdi.Dns, null, Strings.Current.Dns, FeaturePage.Dns));
         if (state.IsProxyEndPointActive)
             badges.Add(new FeatureBadge(Mdi.Diversify, null, Strings.Current.Proxies, FeaturePage.Proxies));
@@ -361,9 +361,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         HasSplitCountryFlags = SplitCountryFlags.Count > 0;
 
         SplitAppsText = AppText.SplitAppsStatusText();
-        ProtocolText = AppText.ProtocolTitle(AppData.ActiveProtocol(state));
-        IsCloakOn = AppData.UserSettings.UseTcpProxy;
-        AccountRowValue = AppData.Account?.Email ?? Strings.Current.SignIn;
+        ProtocolText = AppText.ProtocolTitle(AppModel.ActiveProtocol(state));
+        IsCloakOn = AppModel.UserSettings.UseTcpProxy;
+        AccountRowValue = AppModel.Account?.Email ?? Strings.Current.SignIn;
     }
 
     private string[]? _flagCodes;
@@ -414,13 +414,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public void IgnoreSuppressNotice()
     {
-        _ignoredSuppressTime = AppData.State.ConnectRequestTime;
+        _ignoredSuppressTime = AppModel.State.ConnectRequestTime;
     }
 
     public void PostponeUpdate()
     {
         _isUpdatePostponed = true;
-        AppData.Api.App.VersionCheckPostpone(CancellationToken.None).Forget("Could not postpone the update notice.");
+        AppModel.Api.App.VersionCheckPostpone(CancellationToken.None).Forget("Could not postpone the update notice.");
     }
 
     public void ReviewShown()
@@ -463,14 +463,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public IReadOnlyList<ClientProfileInfo> ProfileInfos()
     {
-        return AppData.ClientProfileInfos;
+        return AppModel.ClientProfileInfos;
     }
 
     // The web UI's ExpansionPanel: every server the app holds, the one it is set to marked, each
     // opened when it is that one or has a single location - nothing to open.
     private static IReadOnlyList<ProfileItem> BuildProfiles(IReadOnlyList<ClientProfileInfo> infos)
     {
-        var currentId = AppData.CurrentClientProfileInfo?.ClientProfileId;
+        var currentId = AppModel.CurrentClientProfileInfo?.ClientProfileId;
         // ReSharper disable once UseCollectionExpression
         return infos
             .Select(x => {
@@ -499,7 +499,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         return [.. profile.LocationInfos
             .Take(ProfileItem.CollapsedFlagCount + 1)
             .Where(x => !x.IsNestedCountry)
-            .Select(x => new CollapsedFlag(AppData.IsLocationAutoSelected(x.CountryCode) ? null : x.CountryCode))];
+            .Select(x => new CollapsedFlag(AppModel.IsLocationAutoSelected(x.CountryCode) ? null : x.CountryCode))];
     }
 
     // Util.calcLocationCount: the countries, without the automatic choice and the regions
@@ -538,7 +538,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (profile == null)
             return [];
 
-        var isPremiumSupported = AppData.Features.Premium != null;
+        var isPremiumSupported = AppModel.Features.Premium != null;
         var isPremiumUser = profile.IsPremium;
         var all = profile.LocationInfos;
         var free = all.Where(x => x.Options.HasFree).ToArray();
@@ -590,7 +590,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         _lastConnectPress = Environment.TickCount64;
 
-        var state = AppData.State;
+        var state = AppModel.State;
         if (state.CanDisconnect) {
             await Disconnect();
             return;
@@ -602,7 +602,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public async Task Disconnect()
     {
         try {
-            await AppData.Api.App.Disconnect(CancellationToken.None);
+            await AppModel.Api.App.Disconnect(CancellationToken.None);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not disconnect.");
@@ -615,7 +615,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ConnectManager.connectWithCurrentProfile: no server chosen yet opens the servers page
     public async Task ConnectWithCurrentProfile(bool isDiagnose = false)
     {
-        if (AppData.ClientProfileId is not { } profileId) {
+        if (AppModel.ClientProfileId is not { } profileId) {
             Host?.Navigate(new LocationsView(this, Host));
             return;
         }
@@ -626,12 +626,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // person always on the premium side of the automatic choice
     public async Task ConnectWithProfile(Guid clientProfileId, bool isDiagnose = false)
     {
-        var info = AppData.FindClientProfileInfo(clientProfileId);
+        var info = AppModel.FindClientProfileInfo(clientProfileId);
         var selected = info?.SelectedLocationInfo;
         var serverLocation = selected?.ServerLocation;
         var isPremium = (info?.IsPremiumLocationSelected ?? false) || selected?.Options is { HasPremium: true, HasFree: false };
         if (selected?.Options is { HasPremium: false, HasFree: true }) isPremium = false;
-        if (AppData.IsPremiumUser && !isPremium) {
+        if (AppModel.IsPremiumUser && !isPremium) {
             isPremium = true;
             serverLocation = null;
         }
@@ -650,7 +650,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             Host?.GoHome();
 
         try {
-            var api = AppData.Api;
+            var api = AppModel.Api;
             var connect = request.IsDiagnose
                 ? api.App.Diagnose(request.ClientProfileId, request.ServerLocation, request.PlanId, CancellationToken.None)
                 : api.App.Connect(request.ClientProfileId, request.ServerLocation, request.PlanId, CancellationToken.None);
@@ -660,9 +660,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 IsPremiumLocationSelected = new Patch<bool>(request.IsPremium),
                 SelectedLocation = new Patch<string?>(request.ServerLocation)
             }, CancellationToken.None);
-            var settings = AppData.UserSettings;
+            var settings = AppModel.UserSettings;
             settings.ClientProfileId = request.ClientProfileId;
-            await AppData.SaveUserSettings(settings, CancellationToken.None);
+            await AppModel.SaveUserSettings(settings, CancellationToken.None);
 
             await connect;
         }
@@ -681,7 +681,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var host = Host;
         if (host == null)
             return false;
-        var info = AppData.FindClientProfileInfo(request.ClientProfileId);
+        var info = AppModel.FindClientProfileInfo(request.ClientProfileId);
         var options = info?.LocationInfos.FirstOrDefault(x => x.ServerLocation == request.ServerLocation)?.Options;
         if (options?.Prompt != true)
             return false;
@@ -704,7 +704,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public async Task Diagnose()
     {
         try {
-            await AppData.Api.App.Diagnose(AppData.UserSettings.ClientProfileId, null, ConnectPlanId.Normal, CancellationToken.None);
+            await AppModel.Api.App.Diagnose(AppModel.UserSettings.ClientProfileId, null, ConnectPlanId.Normal, CancellationToken.None);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "The diagnosis failed.");
@@ -723,7 +723,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task ClearReconnectRequired()
     {
-        await AppData.Api.App.ClearReconnectRequired(CancellationToken.None);
+        await AppModel.Api.App.ClearReconnectRequired(CancellationToken.None);
         IsReconnectRequired = false;
     }
 
@@ -731,8 +731,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // and the page that called this says so (INVALID_ACCESS_KEY_FORMAT), as the web UI's dialog does.
     public async Task<Guid> AddAccessKey(string accessKey)
     {
-        var profile = await AppData.Api.ClientProfiles.AddByAccessKey(accessKey, CancellationToken.None);
-        await ReloadConfig();
+        var profile = await AppModel.Api.ClientProfiles.AddByAccessKey(accessKey, CancellationToken.None);
+        await ReloadInfo();
         return profile.ClientProfileId;
     }
 
@@ -743,7 +743,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (CanAddServer)
             return null;
 
-        var profiles = AppData.ClientProfileInfos;
+        var profiles = AppModel.ClientProfileInfos;
         if (profiles.Count == 0)
             return Strings.Current.NoClientProfileAvailable;
 
@@ -766,13 +766,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public async Task SignIn(bool onPurchase = false)
     {
         var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
-        if (!AppData.Features.IsAccountSupported)
+        if (!AppModel.Features.IsAccountSupported)
             throw new InvalidOperationException("Account service is not available.");
-        var providerId = AppData.PrimaryProviderId ?? throw new InvalidOperationException("This build reports no sign-in method.");
+        var providerId = AppModel.PrimaryProviderId ?? throw new InvalidOperationException("This build reports no sign-in method.");
 
         using var loading = host.Loading();
         try {
-            await AppData.Api.Account.SignIn(new SignInOptions { ProviderId = providerId }, CancellationToken.None);
+            await AppModel.Api.Account.SignIn(new SignInOptions { ProviderId = providerId }, CancellationToken.None);
             await AfterSignedIn(onPurchase);
         }
         catch (Exception ex) {
@@ -794,7 +794,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // the portal's own email and password; a second factor comes back as a challenge
     public async Task<SignInResult> SignInWithPassword(string email, string password)
     {
-        var result = await AppData.Api.Account.SignIn(
+        var result = await AppModel.Api.Account.SignIn(
             new SignInOptions { ProviderId = "password", UserName = email, Password = password }, CancellationToken.None);
         if (result.State == SignInState.SignedIn)
             await AfterSignedIn(false);
@@ -803,7 +803,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task<SignInResult> CompleteSignInChallenge(string code)
     {
-        var result = await AppData.Api.Account.SignIn(
+        var result = await AppModel.Api.Account.SignIn(
             new SignInOptions { ProviderId = "password", TwoFactorCode = code }, CancellationToken.None);
         if (result.State == SignInState.SignedIn)
             await AfterSignedIn(false);
@@ -812,10 +812,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task AfterSignedIn(bool onPurchase)
     {
-        await AppData.LoadAccount(false, CancellationToken.None);
-        await ReloadConfig();
+        await AppModel.LoadAccount(false, CancellationToken.None);
+        await ReloadInfo();
         // sign-in is otherwise silent; a purchase confirms itself
-        if (!onPurchase && AppData.Account?.Email is { } email)
+        if (!onPurchase && AppModel.Account?.Email is { } email)
             Host?.ShowSnackbar(Strings.Current.SignedInAsX(email));
     }
 
@@ -826,9 +826,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         using var loading = host.Loading();
-        await AppData.Api.Account.SignOut(CancellationToken.None);
-        await AppData.LoadAccount(false, CancellationToken.None);
-        await ReloadConfig();
+        await AppModel.Api.Account.SignOut(CancellationToken.None);
+        await AppModel.LoadAccount(false, CancellationToken.None);
+        await ReloadInfo();
         host.GoHome();
     }
 
@@ -837,11 +837,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
         using var loading = host.Loading();
-        await AppData.Api.Account.Delete(CancellationToken.None);
+        await AppModel.Api.Account.Delete(CancellationToken.None);
         if (IsConnected)
-            await AppData.Api.App.Disconnect(CancellationToken.None);
-        await AppData.LoadAccount(false, CancellationToken.None);
-        await ReloadConfig();
+            await AppModel.Api.App.Disconnect(CancellationToken.None);
+        await AppModel.LoadAccount(false, CancellationToken.None);
+        await ReloadInfo();
         host.GoHome();
     }
 
@@ -849,17 +849,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public async Task RemovePremiumCode()
     {
         var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
-        var profile = AppData.State.ClientProfile ?? throw new InvalidOperationException("Could not find the profile in the state for remove premium code.");
+        var profile = AppModel.State.ClientProfile ?? throw new InvalidOperationException("Could not find the profile in the state for remove premium code.");
         if (!profile.HasAccessCode)
             throw new InvalidOperationException("The profile does not have a premium code.");
 
         using var loading = host.Loading();
         if (IsConnected)
-            await AppData.Api.App.Disconnect(CancellationToken.None);
-        await AppData.Api.ClientProfiles.Update(profile.ClientProfileId, new ClientProfileUpdateParams {
+            await AppModel.Api.App.Disconnect(CancellationToken.None);
+        await AppModel.Api.ClientProfiles.Update(profile.ClientProfileId, new ClientProfileUpdateParams {
             AccessCode = new Patch<string?>(null)
         }, CancellationToken.None);
-        await ReloadConfig();
+        await ReloadInfo();
     }
 
     private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)

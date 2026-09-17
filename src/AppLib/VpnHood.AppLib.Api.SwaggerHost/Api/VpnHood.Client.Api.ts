@@ -269,7 +269,7 @@ export class AppClient {
 
     }
 
-    configure(configParams: ConfigParams, cancelToken?: CancelToken): Promise<AppData> {
+    configure(configParams: ConfigParams, cancelToken?: CancelToken): Promise<AppInfo> {
         let url_ = this.baseUrl + "/api/app/configure";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -297,7 +297,7 @@ export class AppClient {
         });
     }
 
-    protected processConfigure(response: AxiosResponse): Promise<AppData> {
+    protected processConfigure(response: AxiosResponse): Promise<AppInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -311,18 +311,18 @@ export class AppClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppData.fromJS(resultData200);
-            return Promise.resolve<AppData>(result200);
+            result200 = AppInfo.fromJS(resultData200);
+            return Promise.resolve<AppInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppData>(null as any);
+        return Promise.resolve<AppInfo>(null as any);
     }
 
-    getConfig( cancelToken?: CancelToken): Promise<AppData> {
-        let url_ = this.baseUrl + "/api/app/config";
+    getInfo( cancelToken?: CancelToken): Promise<AppInfo> {
+        let url_ = this.baseUrl + "/api/app/info";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -341,11 +341,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetConfig(_response);
+            return this.processGetInfo(_response);
         });
     }
 
-    protected processGetConfig(response: AxiosResponse): Promise<AppData> {
+    protected processGetInfo(response: AxiosResponse): Promise<AppInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -359,14 +359,14 @@ export class AppClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppData.fromJS(resultData200);
-            return Promise.resolve<AppData>(result200);
+            result200 = AppInfo.fromJS(resultData200);
+            return Promise.resolve<AppInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppData>(null as any);
+        return Promise.resolve<AppInfo>(null as any);
     }
 
     getSplitIpsViaApp( cancelToken?: CancelToken): Promise<SplitIpsViaApp> {
@@ -3569,7 +3569,7 @@ export interface ISignInOptions {
     twoFactorCode?: string | null;
 }
 
-export class AppData implements IAppData {
+export class AppInfo implements IAppInfo {
     features!: AppFeatures;
     intentFeatures!: DeviceIntentFeatures;
     state!: AppState;
@@ -3578,7 +3578,7 @@ export class AppData implements IAppData {
     availableCultureInfos!: UiCultureInfo[];
     isRemote!: boolean;
 
-    constructor(data?: IAppData) {
+    constructor(data?: IAppInfo) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -3621,9 +3621,9 @@ export class AppData implements IAppData {
         }
     }
 
-    static fromJS(data: any): AppData {
+    static fromJS(data: any): AppInfo {
         data = typeof data === 'object' ? data : {};
-        let result = new AppData();
+        let result = new AppInfo();
         result.init(data);
         return result;
     }
@@ -3649,7 +3649,7 @@ export class AppData implements IAppData {
     }
 }
 
-export interface IAppData {
+export interface IAppInfo {
     features: AppFeatures;
     intentFeatures: DeviceIntentFeatures;
     state: AppState;

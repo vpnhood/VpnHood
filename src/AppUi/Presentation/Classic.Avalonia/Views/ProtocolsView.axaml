@@ -1,0 +1,44 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.ProtocolsView">
+  <!-- The web UI's protocols page: the cloak switch with its reasons and, while cloaked, the QUIC
+       block under it; then the transports as radios, the one the server cannot carry marked. -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Protocols, Source={x:Static res:Strings.Current}}" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel MaxWidth="720" Spacing="16">
+        <TextBlock Classes="card-subtitle" Text="{Binding ProtocolDesc, Source={x:Static res:Strings.Current}}" />
+
+        <Border x:Name="CloakCard" Classes="config-card" Padding="0,4,0,12">
+          <StackPanel>
+            <controls:SettingsToggleItem x:Name="CloakItem" Margin="0" Toggled="OnCloakToggled" />
+            <StackPanel Margin="16,0,16,0" Spacing="8">
+              <Border x:Name="ServerEnforcedAlert" Classes="alert-warning" IsVisible="False">
+                <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding EnforcedByServer, Source={x:Static res:Strings.Current}}" />
+              </Border>
+              <Border x:Name="DomainEnforcedAlert" Classes="alert-warning" IsVisible="False">
+                <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding EnforcedByDomainFilter, Source={x:Static res:Strings.Current}}" />
+              </Border>
+              <Button x:Name="LearnMoreButton" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnLearnMoreClick">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <TextBlock Classes="body-small highlight" Text="{Binding LearnMore, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+                  <TextBlock Classes="mdi highlight" FontSize="18" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+            <StackPanel x:Name="QuicPanel" IsVisible="False">
+              <Border Classes="divider" Margin="16,8,16,4" />
+              <controls:SettingsToggleItem x:Name="DropQuicItem" Margin="0" Toggled="OnDropQuicToggled" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="config-card" Padding="4,8">
+          <StackPanel x:Name="ProtocolRows" />
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

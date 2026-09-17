@@ -1,5 +1,5 @@
-﻿using VpnHood.AppLib.ClassicAvaloniaUi;
-using VpnHood.AppLib.Droid.AvaloniaUI;
+﻿using VpnHood.AppUi.Presentation.Classic.Avalonia;
+using VpnHood.AppUi.Hosting.Avalonia.Droid;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib.Droid.Common.Constants;
 

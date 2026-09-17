@@ -1,0 +1,17 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.LearnMoreView">
+  <!-- The web UI's learn-more/free-servers-disruptions: the book, then the questions with their
+       answers, a rule between them, and the four bullets at the end. -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding LearnMore, Source={x:Static res:Strings.Current}}" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel MaxWidth="720" Spacing="8">
+        <TextBlock Classes="mdi" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,24" Text="{x:Static res:Mdi.BookOpenPageVariantOutline}" />
+        <StackPanel x:Name="Sections" Spacing="8" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

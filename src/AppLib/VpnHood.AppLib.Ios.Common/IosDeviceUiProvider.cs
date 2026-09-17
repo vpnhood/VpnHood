@@ -1,5 +1,4 @@
 using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Api.Device;
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 
@@ -10,7 +9,7 @@ namespace VpnHood.AppLib.Ios.Common;
 // fall back to the Null implementation. We only wire up opening the iOS Settings app.
 public class IosDeviceUiProvider : NullDeviceUiProvider
 {
-    // The iOS WebView renders edge-to-edge (see IosSpaWebViewController), so the SPA needs the
+    // The iOS WebView renders edge-to-edge (see IosWebViewController), so the SPA needs the
     // status-bar / home-indicator inset sizes to pad itself. Mirrors AndroidDeviceUiProvider.GetBarsInfo.
     // Heights are reported in PHYSICAL PIXELS (points * screen scale) because the SPA divides by
     // window.devicePixelRatio (== UIScreen.Scale) to convert back to CSS points.

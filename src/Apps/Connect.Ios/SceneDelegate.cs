@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Ios.Common.SpaWebView;
+using VpnHood.AppUi.Hosting.WebView.Ios;
 
 namespace VpnHood.App.Connect.Ios;
 
@@ -17,7 +17,7 @@ public class SceneDelegate : UIResponder, IUIWindowSceneDelegate
         var window = new UIWindow(windowScene) {
             // Host the VpnHood SPA (the same web UI used by the Android client) in a WKWebView.
             // The controller starts the in-process web server and loads it.
-            RootViewController = new IosSpaWebViewController()
+            RootViewController = new IosWebViewController()
         };
         window.MakeKeyAndVisible();
         Window = window;

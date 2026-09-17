@@ -1,0 +1,80 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.DeveloperView">
+  <!-- The web UI's developer dialog (components/Home/DeveloperDialog.vue) as a page: the support
+       id, the debug commands, the free debug field, the log, and a Close that saves - as does
+       Back, since leaving is the only other way out. DebugData1 is that dialog's combobox: the
+       chosen commands as chips in a field, and the list behind the chevron, scrolling on its own so
+       the page never does. The items are the app's own (AppFeatures.DebugCommands); a chip is
+       dropped by unticking it in the list, not by a close button on the chip, which a remote could
+       not aim at. The words here are English literals, as they are in that dialog - a developers'
+       screen has no locale keys. -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="Only developers" />
+
+    <StackPanel MaxWidth="720" Spacing="14" VerticalAlignment="Top">
+
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Classes="mdi" FontSize="20" Foreground="{StaticResource PremiumFeaturesIconBrush}"
+                   Text="{x:Static res:Mdi.BugOutline}" VerticalAlignment="Center" />
+        <TextBlock x:Name="SupportIdText" Classes="body-small disabled" VerticalAlignment="Center" />
+      </StackPanel>
+
+      <!-- DebugData1: what is on, as chips; the list is the drop-down -->
+      <TextBlock Classes="body-small muted40" Text="DebugData1" />
+      <Button x:Name="CommandsField" Classes="combo-field">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock x:Name="NoCommandText" Classes="body-small disabled" Text="None" VerticalAlignment="Center" />
+          <ItemsControl x:Name="ChosenList" Grid.Column="0">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:DebugCommandItem">
+                <Border Classes="chip chip-auto" Margin="0,2,6,2">
+                  <TextBlock Text="{Binding Command}" />
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Grid.Column="1" Classes="mdi" FontSize="20" Margin="8,0,0,0"
+                     Text="{x:Static res:Mdi.ChevronDown}" VerticalAlignment="Center" />
+        </Grid>
+        <Button.Flyout>
+          <Flyout Placement="Bottom" FlyoutPresenterClasses="commands">
+            <ScrollViewer MaxHeight="320" HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl x:Name="CommandList">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:DebugCommandItem">
+                    <ToggleButton Classes="debug-item" IsChecked="{Binding IsOn, Mode=TwoWay}">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="body-small" Text="{Binding Command}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Classes="mdi check" FontSize="18" Margin="16,0,0,0"
+                                   Foreground="{StaticResource ActiveServerBrush}" Text="{x:Static res:Mdi.Check}" />
+                      </Grid>
+                    </ToggleButton>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+
+      <!-- DebugData2: free text, as the dialog's second field -->
+      <TextBlock Classes="body-small muted40" Text="DebugData2" />
+      <TextBox x:Name="DebugData2Box" />
+
+      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" Margin="0,6,0,0">
+        <Button x:Name="LogButton" Classes="action" Content="Open log" Click="OnLogClick" />
+        <Button x:Name="CloseButton" Classes="action" Content="Close" Click="OnCloseClick" />
+      </StackPanel>
+
+    </StackPanel>
+  </DockPanel>
+</UserControl>

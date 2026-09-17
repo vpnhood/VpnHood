@@ -3,7 +3,7 @@ using Android.Service.QuickSettings;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib.Droid.Common.Constants;
-using VpnHood.AppLib.Droid.Common.SpaWebView;
+using VpnHood.AppUi.Hosting.WebView.Droid;
 using VpnHood.AppLib.Utils;
 
 namespace VpnHood.App.Client.Droid.Web;
@@ -44,7 +44,7 @@ public class MainActivity : AndroidAppMainActivity
 
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
-        return new AndroidSpaWebViewMainActivityHandler(this, new AndroidSpaWebViewMainActivityOptions {
+        return new AndroidWebViewMainActivityHandler(this, new AndroidWebViewMainActivityOptions {
             AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2],
             AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3]
         });

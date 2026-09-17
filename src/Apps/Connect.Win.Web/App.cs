@@ -1,16 +1,16 @@
 ﻿using System.Windows;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
-using VpnHood.AppLib.ClassicAvaloniaUi;
+using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.AvaloniaUI.Desktop;
+using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.Win.Common;
-using VpnHood.AppLib.Win.Common.WpfSpa;
+using VpnHood.AppUi.Hosting.WebView.Windows;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppLib.Api.WebHost;
 
@@ -96,7 +96,7 @@ public class App : Application
         base.OnStartup(e);
 
         // the web UI, in this application's window
-        VpnHoodAppWpfSpa.Init();
+        VpnHoodAppWpf.Init();
     }
 
     [STAThread]

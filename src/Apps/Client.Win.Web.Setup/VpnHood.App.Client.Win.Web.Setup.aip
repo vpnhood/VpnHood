@@ -475,7 +475,7 @@
     <ROW Component="VpnHood.AppLib.Assets.ClassicSpa.dll" ComponentId="{AE068DE1-9971-4AB8-BD89-36C03D8708C9}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Assets.ClassicSpa.dll"/>
     <ROW Component="VpnHood.AppLib.Assets.Ip2LocationLite.dll" ComponentId="{CE9DDDE2-AB2D-4A25-9BC9-9F37BB7B8DE3}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Assets.Ip2LocationLite.dll"/>
     <ROW Component="VpnHood.AppLib.WebServer.dll" ComponentId="{6D3A501D-5EA5-4780-91EE-895CAD0D3F77}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.WebServer.dll"/>
-    <ROW Component="VpnHood.AppLib.Win.Common.WpfSpa.dll" ComponentId="{C0B2A62D-348E-4A0F-9143-2AC52A29F88B}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Win.Common.WpfSpa.dll"/>
+    <ROW Component="VpnHood.AppUi.Hosting.WebView.Windows.dll" ComponentId="{C0B2A62D-348E-4A0F-9143-2AC52A29F88B}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppUi.Hosting.WebView.Windows.dll"/>
     <ROW Component="VpnHood.AppLib.Win.Common.dll" ComponentId="{3A9BDD71-5951-4C64-B2A0-0D9D9C9D96ED}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Win.Common.dll"/>
     <ROW Component="VpnHood.Core.Client.Abstractions.dll" ComponentId="{956AD9A9-B7F1-44B9-9ACC-3954282331F1}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Abstractions.dll"/>
     <ROW Component="VpnHood.Core.Client.Devices.Win.dll" ComponentId="{FF6E5DD7-1898-42D0-BBFB-DB3FD1766199}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Devices.Win.dll"/>
@@ -966,8 +966,8 @@
     <ROW File="VpnHood.AppLib.WebServer.pdb" Component_="VpnHood.AppLib.WebServer.dll" FileName="VPNHO~16.PDB|VpnHood.AppLib.WebServer.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.AppLib.WebServer.pdb" SelfReg="false"/>
     <ROW File="VpnHood.AppLib.Win.Common.dll" Component_="VpnHood.AppLib.Win.Common.dll" FileName="VPNHO~17.DLL|VpnHood.AppLib.Win.Common.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.AppLib.Win.Common.dll" SelfReg="false"/>
     <ROW File="VpnHood.AppLib.Win.Common.pdb" Component_="VpnHood.AppLib.Win.Common.dll" FileName="VPNHO~17.PDB|VpnHood.AppLib.Win.Common.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.AppLib.Win.Common.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.AppLib.Win.Common.WpfSpa.dll" Component_="VpnHood.AppLib.Win.Common.WpfSpa.dll" FileName="VPNHO~18.DLL|VpnHood.AppLib.Win.Common.WpfSpa.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.AppLib.Win.Common.WpfSpa.dll" SelfReg="false"/>
-    <ROW File="VpnHood.AppLib.Win.Common.WpfSpa.pdb" Component_="VpnHood.AppLib.Win.Common.WpfSpa.dll" FileName="VPNHO~18.PDB|VpnHood.AppLib.Win.Common.WpfSpa.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.AppLib.Win.Common.WpfSpa.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.AppUi.Hosting.WebView.Windows.dll" Component_="VpnHood.AppUi.Hosting.WebView.Windows.dll" FileName="VPNHO~18.DLL|VpnHood.AppUi.Hosting.WebView.Windows.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.AppUi.Hosting.WebView.Windows.dll" SelfReg="false"/>
+    <ROW File="VpnHood.AppUi.Hosting.WebView.Windows.pdb" Component_="VpnHood.AppUi.Hosting.WebView.Windows.dll" FileName="VPNHO~18.PDB|VpnHood.AppUi.Hosting.WebView.Windows.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.AppUi.Hosting.WebView.Windows.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.Devices.Abstractions.dll" Component_="VpnHood.Core.Client.Devices.Abstractions.dll" FileName="VPNHO~19.DLL|VpnHood.Core.Client.Devices.Abstractions.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.Client.Devices.Abstractions.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.Devices.Abstractions.pdb" Component_="VpnHood.Core.Client.Devices.Abstractions.dll" FileName="VPNHO~19.PDB|VpnHood.Core.Client.Devices.Abstractions.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.Client.Devices.Abstractions.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.dll" Component_="VpnHood.Core.Client.dll" FileName="VPNHO~21.DLL|VpnHood.Core.Client.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.Client.dll" SelfReg="false"/>
@@ -1638,7 +1638,7 @@
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.App.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.WebServer.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Win.Common.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Win.Common.WpfSpa.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.AppUi.Hosting.WebView.Windows.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Devices.Abstractions.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Common.dll"/>

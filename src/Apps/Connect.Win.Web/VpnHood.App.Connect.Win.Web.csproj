@@ -52,11 +52,11 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Win.Common.WpfSpa\VpnHood.AppLib.Win.Common.WpfSpa.csproj" />
+		<ProjectReference Include="..\..\AppUi\Hosting\WebView\WebView.Windows\VpnHood.AppUi.Hosting.WebView.Windows.csproj" />
 		<!-- The Avalonia UI beside the web UI, run in place of it when the app asks (DebugCommands.AvaloniaUi). -->
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI.Desktop\VpnHood.AppLib.AvaloniaUI.Desktop.csproj" />
+		<ProjectReference Include="..\..\AppUi\Hosting\Avalonia\Avalonia.Desktop\VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.ClassicAvaloniaUi\VpnHood.AppLib.ClassicAvaloniaUi.csproj" />
+		<ProjectReference Include="..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 

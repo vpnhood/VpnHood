@@ -1,0 +1,31 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.SplitListInput">
+  <!-- The web UI's SplitIpInput and SplitDomainInput: a card of format hints with a sample chip
+       each, then a card per list - exclude, include and, where the split has one, block - each a
+       text area, one entry per line. -->
+  <StackPanel Spacing="16">
+    <Border Classes="config-card" Padding="16">
+      <StackPanel x:Name="Hints" Spacing="8" />
+    </Border>
+    <Border Classes="config-card" Padding="16,12,16,12">
+      <StackPanel Spacing="8">
+        <TextBlock x:Name="ExcludeTitle" Classes="body-medium" />
+        <!-- the lists read left to right in every language, as the web UI's locale provider keeps them -->
+        <TextBox x:Name="ExcludeBox" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" />
+      </StackPanel>
+    </Border>
+    <Border Classes="config-card" Padding="16,12,16,12">
+      <StackPanel Spacing="8">
+        <TextBlock x:Name="IncludeTitle" Classes="body-medium" />
+        <TextBox x:Name="IncludeBox" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" />
+      </StackPanel>
+    </Border>
+    <Border x:Name="BlockCard" Classes="config-card" Padding="16,12,16,12">
+      <StackPanel Spacing="8">
+        <TextBlock x:Name="BlockTitle" Classes="body-medium" />
+        <TextBox x:Name="BlockBox" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

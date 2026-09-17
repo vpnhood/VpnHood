@@ -1,6 +1,5 @@
 ﻿using VpnHood.AppLib;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
-using VpnHood.AppLib.SpaWebView;
 
 namespace VpnHood.App.Client;
 

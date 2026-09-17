@@ -1,8 +1,8 @@
 ﻿using Avalonia;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
-using VpnHood.AppLib.AvaloniaUI;
-using VpnHood.AppLib.ClassicAvaloniaUi;
+using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;

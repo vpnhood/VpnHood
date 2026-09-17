@@ -1,0 +1,17 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SplitAppsView">
+  <!-- The web UI's split-apps: every installed app with a switch, plus "All future apps"; the three
+       modes fall out of the switches - all on is All, future on is Exclude, future off is Include. -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding SplitApps, Source={x:Static res:Strings.Current}}" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel MaxWidth="720">
+        <TextBlock Classes="card-subtitle" Margin="0,0,0,16" Text="{Binding SplitAppsDesc, Source={x:Static res:Strings.Current}}" />
+        <controls:FilterList x:Name="List" SelectionChanged="OnSelectionChanged" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

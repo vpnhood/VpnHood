@@ -1,0 +1,18 @@
+﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:res="using:VpnHood.AppLib.Assets"
+                    xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.RenameServerDialog">
+  <!-- The web UI's rename dialog: the name, with the word that an empty one restores the default. -->
+  <Border Classes="dialog" MaxWidth="480">
+    <StackPanel Spacing="12">
+      <TextBlock Classes="dialog-title" Text="{Binding Rename, Source={x:Static res:Strings.Current}}" />
+      <TextBox x:Name="NameBox" Classes="outlined" KeyDown="OnNameKeyDown" />
+      <TextBlock Classes="body-small disabled" TextWrapping="Wrap" Text="{Binding SaveEmptyToDisplayDefaultName, Source={x:Static res:Strings.Current}}" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button Classes="dialog-btn" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="SaveButton" Classes="dialog-btn plain" Click="OnSaveClick" Content="{Binding Save, Source={x:Static res:Strings.Current}}" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</dialogs:DialogBase>

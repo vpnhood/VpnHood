@@ -13,9 +13,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI\VpnHood.AppLib.AvaloniaUI.csproj" />
+		<ProjectReference Include="..\..\AppUi\Hosting\Avalonia\Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.ClassicAvaloniaUi\VpnHood.AppLib.ClassicAvaloniaUi.csproj" />
+		<ProjectReference Include="..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
 		<!-- Shared client resources: the SPA the pairing hands to the phone, the IP-location db. -->
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />

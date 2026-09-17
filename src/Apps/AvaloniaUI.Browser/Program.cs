@@ -2,8 +2,8 @@
 using Avalonia.Browser;
 using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppLib.Assets;
-using VpnHood.AppLib.AvaloniaUI;
-using VpnHood.AppLib.ClassicAvaloniaUi;
+using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Presentation.Classic.Avalonia;
 
 namespace VpnHood.App.AvaloniaUI.Browser;
 

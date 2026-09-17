@@ -1,8 +1,8 @@
 ﻿using Android.Runtime;
 using Avalonia.Android;
 using VpnHood.AppLib;
-using VpnHood.AppLib.ClassicAvaloniaUi;
-using VpnHood.AppLib.Droid.AvaloniaUI;
+using VpnHood.AppUi.Presentation.Classic.Avalonia;
+using VpnHood.AppUi.Hosting.Avalonia.Droid;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Services.Updaters;

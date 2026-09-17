@@ -1,0 +1,41 @@
+﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- VpnHood! Client, the default product. The keys are the web UI's client theme, key for key
+       (ClientTheme.g.axaml, generated from theme/themes.ts by _sync-theme.ps1); below them, what
+       the web UI writes as CSS rather than as a key - a gradient, a colour at an alpha - so a page
+       ported here paints what it painted there. This file and ConnectTheme.axaml carry the same
+       keys and nothing else: a key added to one belongs in the other the same day. -->
+
+  <ResourceDictionary.MergedDictionaries>
+    <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/Colors.axaml" />
+    <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/ClientTheme.g.axaml" />
+  </ResourceDictionary.MergedDictionaries>
+
+  <!-- #connectBtn.client-app: left to right, the second tone landing at 90%; connected, flat -->
+  <LinearGradientBrush x:Key="ConnectBtnBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Offset="0" Color="{StaticResource Blue100}" />
+    <GradientStop Offset="0.9" Color="{StaticResource Green100}" />
+  </LinearGradientBrush>
+
+  <!-- #homeContainer: home-bg-grad-1 over home-bg-grad-2, top to bottom -->
+  <LinearGradientBrush x:Key="HomeBgBrush" StartPoint="50%,0%" EndPoint="50%,100%">
+    <GradientStop Offset="0" Color="{StaticResource Blue200}" />
+    <GradientStop Offset="1" Color="{StaticResource Blue300}" />
+  </LinearGradientBrush>
+
+  <!-- .primary-bg-grad: colored-bg-dark up to 60%, then to colored-bg-light at the top -->
+  <LinearGradientBrush x:Key="PrimaryBgGradBrush" StartPoint="50%,100%" EndPoint="50%,0%">
+    <GradientStop Offset="0" Color="{StaticResource Blue500}" />
+    <GradientStop Offset="0.6" Color="{StaticResource Blue500}" />
+    <GradientStop Offset="1" Color="{StaticResource Blue330}" />
+  </LinearGradientBrush>
+
+  <!-- .config-item: config-btn-bg at 70%, its border on-config-btn-bg at 30% -->
+  <SolidColorBrush x:Key="HomeConfigBtnBgBrush" Color="#B3122272" />
+  <SolidColorBrush x:Key="HomeConfigBtnBorderBrush" Color="#4D16A3FE" />
+
+  <!-- .card-on-grad-bg: card-on-grad-bg at 30% -->
+  <SolidColorBrush x:Key="CardOnGradBgAlphaBrush" Color="#4D0E1C5F" />
+
+</ResourceDictionary>

@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
-using VpnHood.AppLib.ClassicAvaloniaUi;
+using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.AvaloniaUI.Desktop;
+using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Linux.Common;
 using VpnHood.AppLib.Portal;

@@ -1,0 +1,88 @@
+﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:res="using:VpnHood.AppLib.Assets"
+                    xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.SignInDialog">
+  <!-- The web UI's SignInDialog: the store's sign-in as the one prominent button, the portal's own
+       email and password beneath it - on a TV, the phone stands in for the form - then the second
+       factor in here, and the new backup code shown exactly once. -->
+  <Border Classes="dialog" MaxWidth="420">
+    <StackPanel Spacing="12">
+
+      <!-- step 1: the chooser -->
+      <StackPanel x:Name="StartStep" Spacing="12">
+        <TextBlock Classes="dialog-title" Text="{Binding SignIn, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="PrimaryButton" Classes="pill block" Height="44" Click="OnPrimaryClick">
+          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+            <Viewbox x:Name="BrandMark" Width="18" Height="18" IsVisible="False" VerticalAlignment="Center">
+              <Canvas x:Name="BrandCanvas" />
+            </Viewbox>
+            <TextBlock x:Name="PrimaryText" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Grid x:Name="OrRow" ColumnDefinitions="*,Auto,*" IsVisible="False">
+          <Border Classes="divider" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Classes="body-small disabled" Margin="12,0" Text="{Binding Or, Source={x:Static res:Strings.Current}}" />
+          <Border Grid.Column="2" Classes="divider" VerticalAlignment="Center" />
+        </Grid>
+        <Button x:Name="PhoneButton" Classes="outlined pill block" Height="44" Click="OnPhoneClick" IsVisible="False">
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.CellphoneArrowDown}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding SignInOnYourPhone, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button x:Name="EmailButton" Classes="outlined pill block" Height="44" Click="OnEmailClick" IsVisible="False">
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.EmailOutline}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding SignInWithEmail, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <TextBlock x:Name="EmailScopeHint" Classes="body-small disabled" TextWrapping="Wrap" TextAlignment="Center" IsVisible="False"
+                   Text="{Binding SignInEmailScopeHint, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="StartCancelButton" Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick"
+                Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+      </StackPanel>
+
+      <!-- step 2: the account website's own email and password -->
+      <StackPanel x:Name="PasswordStep" Spacing="10" IsVisible="False">
+        <TextBlock Classes="dialog-title" Text="{Binding SignInWithEmail, Source={x:Static res:Strings.Current}}" />
+        <TextBlock Classes="dialog-text" Text="{Binding SignInWithEmailDesc, Source={x:Static res:Strings.Current}}" />
+        <TextBlock x:Name="ProviderHint" Classes="body-small disabled" TextWrapping="Wrap" IsVisible="False" />
+        <TextBox x:Name="EmailBox" Classes="outlined" TextChanged="OnFieldChanged" />
+        <TextBox x:Name="PasswordBox" Classes="outlined" PasswordChar="•" TextChanged="OnFieldChanged" KeyDown="OnPasswordKeyDown" />
+        <Button x:Name="SubmitPasswordButton" Classes="pill block" Height="44" Background="{StaticResource HighlightBrush}" IsEnabled="False"
+                Click="OnSubmitPasswordClick" Content="{Binding SignIn, Source={x:Static res:Strings.Current}}" />
+        <TextBlock x:Name="PasswordError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />
+        <Button x:Name="ForgotButton" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnForgotClick" IsVisible="False">
+          <TextBlock Classes="body-small highlight" Text="{Binding ForgotPassword, Source={x:Static res:Strings.Current}}" />
+        </Button>
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Button x:Name="BackButton" Classes="dialog-btn" Click="OnBackClick" Content="{Binding Back, Source={x:Static res:Strings.Current}}" />
+          <Button Grid.Column="2" Classes="dialog-btn" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+        </Grid>
+      </StackPanel>
+
+      <!-- step 3: the second factor -->
+      <StackPanel x:Name="ChallengeStep" Spacing="10" IsVisible="False">
+        <TextBlock Classes="dialog-title" Text="{Binding TwoFactorTitle, Source={x:Static res:Strings.Current}}" />
+        <TextBlock Classes="dialog-text" Text="{Binding TwoFactorDesc, Source={x:Static res:Strings.Current}}" />
+        <TextBox x:Name="CodeBox" Classes="outlined" TextChanged="OnFieldChanged" KeyDown="OnCodeKeyDown" />
+        <Button x:Name="SubmitCodeButton" Classes="pill block" Height="44" Background="{StaticResource HighlightBrush}" IsEnabled="False"
+                Click="OnSubmitCodeClick" Content="{Binding Confirm, Source={x:Static res:Strings.Current}}" />
+        <TextBlock x:Name="CodeError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />
+        <TextBlock Classes="body-small disabled" TextWrapping="Wrap" Text="{Binding TwoFactorBackupHint, Source={x:Static res:Strings.Current}}" />
+        <Button Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+      </StackPanel>
+
+      <!-- step 4: the replacement backup code, shown once -->
+      <StackPanel x:Name="BackupStep" Spacing="10" IsVisible="False">
+        <TextBlock Classes="dialog-title" Text="{Binding NewBackupCodeTitle, Source={x:Static res:Strings.Current}}" />
+        <TextBlock Classes="dialog-text" Text="{Binding NewBackupCodeDesc, Source={x:Static res:Strings.Current}}" />
+        <TextBlock x:Name="BackupCodeText" Classes="h3" TextAlignment="Center" Margin="0,8" />
+        <Button x:Name="SavedButton" Classes="dialog-btn plain" HorizontalAlignment="Right" Click="OnSavedClick"
+                Content="{Binding ISavedIt, Source={x:Static res:Strings.Current}}" />
+      </StackPanel>
+
+    </StackPanel>
+  </Border>
+</dialogs:DialogBase>

@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Tokens;
+﻿using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.Sessions;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

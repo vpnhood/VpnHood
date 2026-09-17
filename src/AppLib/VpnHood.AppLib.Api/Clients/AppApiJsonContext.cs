@@ -9,8 +9,7 @@ using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.AppLib.Contracts.Proxies;
 using VpnHood.AppLib.Contracts.Settings;
 using VpnHood.AppLib.Contracts.SplitTunneling;
-using VpnHood.Core.Client.Devices;
-using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.AppLib.Contracts.Device;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Generics;
 

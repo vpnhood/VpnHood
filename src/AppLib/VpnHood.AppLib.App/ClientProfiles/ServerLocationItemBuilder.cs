@@ -68,7 +68,7 @@ internal static class ServerLocationItemBuilder
         };
     }
 
-    private static void RecalculateOptions(LocationDraft draft, ClientPolicy? policy,
+    private static void RecalculateOptions(LocationDraft draft, Core.Common.Tokens.ClientPolicy? policy,
         bool isPremium, AppFeatures appFeatures)
     {
         var tags = draft.Tags;

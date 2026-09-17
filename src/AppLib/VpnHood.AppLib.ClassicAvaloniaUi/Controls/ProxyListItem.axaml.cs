@@ -35,10 +35,10 @@ public partial class ProxyListItem : UserControl
         FailedIcon.Classes.Set("disabled", status.FailedCount == 0);
         if (status.FailedCount > 0) FailedIcon.Foreground = Brush("ErrorBrush");
 
-        var (qualityText, qualityBrush) = ProxyQuality.Display(status.HasUsed ? status.Quality : null);
+        var (qualityText, qualityBrush) = ProxyQuality.Display(status.HasUsed() ? status.Quality : null);
         QualityText.Text = qualityText;
-        QualityText.IsVisible = status.HasUsed;
-        QualityDivider.IsVisible = status.HasUsed;
+        QualityText.IsVisible = status.HasUsed();
+        QualityDivider.IsVisible = status.HasUsed();
         if (qualityBrush != null) QualityText.Foreground = Brush(qualityBrush);
 
         ErrorText.Text = status.ErrorMessage;

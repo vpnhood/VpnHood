@@ -9,8 +9,9 @@ using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
 using VpnHood.AppLib.Contracts.Accounts;
+using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.Core.Common.Messaging;
+using VpnHood.AppLib.Contracts.Sessions;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

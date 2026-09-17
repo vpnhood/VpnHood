@@ -4,8 +4,9 @@ using Avalonia.Interactivity;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
+using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.Core.Common.Tokens;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;

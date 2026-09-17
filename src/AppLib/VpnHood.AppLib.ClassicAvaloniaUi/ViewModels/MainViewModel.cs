@@ -14,9 +14,8 @@ using VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
 using VpnHood.AppLib.Contracts.Accounts;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.AppLib.Contracts.Settings;
-using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -559,7 +558,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                     CountryCode: x.CountryCode,
                     Name: x.IsAuto ? Strings.Current.Fastest : x.IsNestedCountry ? x.RegionName : x.TranslatedCountryName,
                     IsNested: x.IsNestedCountry,
-                    IsAuto: x.CountryCode == ServerLocationInfo.AutoCountryCode,
+                    IsAuto: x.IsAuto,
                     // only under the server the app is set to: another server's own choice is not
                     // where this app is going (the web UI's isActiveItem, which returns false for
                     // any profile but the active one)

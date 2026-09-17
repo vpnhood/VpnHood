@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.AppLib.Contracts.Sessions;
 
 namespace VpnHood.AppLib.Contracts.ClientProfiles;
 

@@ -7,6 +7,9 @@ using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
+using CoreSplit = VpnHood.Core.Client.Abstractions;
+using SplitDnsMode = VpnHood.AppLib.Contracts.SplitTunneling.SplitDnsMode;
+using SplitUnsupportedIpMode = VpnHood.AppLib.Contracts.SplitTunneling.SplitUnsupportedIpMode;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -39,13 +42,13 @@ public class SplitTunnelingSettingsTest
         var settings = CreateFullySplitSettings(enabled: false);
         var effective = settings.ToEffective(PremiumFeatureChecker.AllowAll);
 
-        Assert.AreEqual(SplitUnsupportedIpMode.Block, effective.UnroutedIpMode, "server misses fail closed");
-        Assert.AreEqual(SplitUnsupportedIpMode.Block, effective.UnsupportedIpV6Mode, "IPv6 fails closed too");
+        Assert.AreEqual(CoreSplit.SplitUnsupportedIpMode.Block, effective.UnroutedIpMode, "server misses fail closed");
+        Assert.AreEqual(CoreSplit.SplitUnsupportedIpMode.Block, effective.UnsupportedIpV6Mode, "IPv6 fails closed too");
         Assert.AreEqual(SplitCountryMode.IncludeAll, effective.CountryMode);
         Assert.IsFalse(effective.UseIpViaApp);
         Assert.IsFalse(effective.UseIpViaDevice);
         Assert.IsFalse(effective.UseDomain);
-        Assert.AreEqual(SplitDnsMode.IncludeAll, effective.DnsMode);
+        Assert.AreEqual(CoreSplit.SplitDnsMode.IncludeAll, effective.DnsMode);
 
         // the two exempt splits: neither can expose the IP of the traffic that stays in the tunnel
         Assert.IsTrue(effective.UseLocalNetwork, "LAN traffic never reaches the internet");
@@ -75,8 +78,8 @@ public class SplitTunnelingSettingsTest
         // features no plan can withhold (they have no AppFeature of their own) are untouched
         Assert.AreEqual(SplitAppMode.Exclude, effective.AppMode);
         Assert.IsTrue(effective.UseLocalNetwork);
-        Assert.AreEqual(SplitDnsMode.DefaultRoute, effective.DnsMode);
-        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, effective.UnroutedIpMode);
+        Assert.AreEqual(CoreSplit.SplitDnsMode.DefaultRoute, effective.DnsMode);
+        Assert.AreEqual(CoreSplit.SplitUnsupportedIpMode.Exclude, effective.UnroutedIpMode);
 
         // and the stored values survive for the day the plan allows them again
         Assert.IsTrue(settings.UseDomain);
@@ -117,10 +120,10 @@ public class SplitTunnelingSettingsTest
         var settings = CreateFullySplitSettings(enabled: true);
         var effective = settings.ToEffective(PremiumFeatureChecker.AllowAll);
 
-        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, effective.UnroutedIpMode);
-        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, effective.UnsupportedIpV6Mode);
+        Assert.AreEqual(CoreSplit.SplitUnsupportedIpMode.Exclude, effective.UnroutedIpMode);
+        Assert.AreEqual(CoreSplit.SplitUnsupportedIpMode.Exclude, effective.UnsupportedIpV6Mode);
         Assert.AreEqual(SplitAppMode.Exclude, effective.AppMode);
-        Assert.AreEqual(SplitDnsMode.DefaultRoute, effective.DnsMode);
+        Assert.AreEqual(CoreSplit.SplitDnsMode.DefaultRoute, effective.DnsMode);
         CollectionAssert.AreEqual(settings.Apps, effective.Apps.ToArray());
     }
 
@@ -217,7 +220,7 @@ public class SplitTunnelingSettingsTest
         };
 
         var effective = settings.ToEffective(PremiumFeatureChecker.AllowAll);
-        Assert.AreEqual(SplitUnsupportedIpMode.Block, effective.UnsupportedIpV6Mode,
+        Assert.AreEqual(CoreSplit.SplitUnsupportedIpMode.Block, effective.UnsupportedIpV6Mode,
             "the general Block overrides the stored bypass");
         Assert.AreEqual(SplitUnsupportedIpMode.Exclude, settings.UnsupportedIpV6Mode,
             "the stored value survives for the day the general mode relaxes");

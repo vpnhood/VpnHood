@@ -1,8 +1,11 @@
 ﻿using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Services.Proxies;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Generics;
+using ProxyEndPoint = VpnHood.AppLib.Contracts.Proxies.ProxyEndPoint;
+using ProxyEndPointDefaults = VpnHood.AppLib.Contracts.Proxies.ProxyEndPointDefaults;
 
 namespace VpnHood.AppLib.Api.InProcessHost;
 
@@ -49,10 +52,10 @@ internal class ProxyEndPointsApi(VpnHoodApp app) : IProxyEndPointsApi
 
     public Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults, CancellationToken cancellationToken)
     {
-        var parsed = ProxyEndPointParser.ParseHostToUrl(text, defaults);
+        var parsed = ProxyEndPointParser.ParseHostToUrl(text, defaults.ToEngine());
         var endpoint = ProxyEndPointParser.FromUrl(parsed);
         var info = new AppProxyEndPointInfo {
-            EndPoint = endpoint,
+            EndPoint = endpoint.ToAppDto(),
             CountryCode = null
         };
 

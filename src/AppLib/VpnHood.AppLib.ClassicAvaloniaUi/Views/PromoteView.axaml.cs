@@ -7,7 +7,8 @@ using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Controls;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.Resources;
-using VpnHood.Core.Common.Tokens;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;

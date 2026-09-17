@@ -13,9 +13,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppLib.Contracts\VpnHood.AppLib.Contracts.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Proxies.Management.Abstractions\VpnHood.Core.Proxies.Management.Abstractions.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
 	</ItemGroup>
 </Project>

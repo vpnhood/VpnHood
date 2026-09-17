@@ -3,11 +3,10 @@ using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Contracts.Ads;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.Countries;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.AppLib.Contracts.Settings;
 using VpnHood.AppLib.Contracts.SplitTunneling;
-using VpnHood.Core.Client.Devices;
-using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Tokens;
+using VpnHood.AppLib.Contracts.Device;
 
 // ReSharper disable UnusedMemberInSuper.Global
 

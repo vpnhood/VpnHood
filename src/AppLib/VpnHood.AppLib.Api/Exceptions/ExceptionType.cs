@@ -1,25 +1,23 @@
 ﻿using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Client.Abstractions.Exceptions;
-using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
-using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.AppLib.Api.Exceptions;
 
-// The values are the wire's, not a C# reference: ten of these name exception classes the contract
-// deliberately cannot see - five in the app (VpnHood.AppLib.Exceptions) and five in the provider
-// surface (VpnHood.AppLib.Abstractions.AdExceptions). They are written as literals for that reason -
-// renaming the class must NOT silently change what goes over the wire.
+// The values are the wire's, not a C# reference. Every one is a literal, and none of the classes
+// they name is visible from here - they live in the app, in the provider surface, and in the engine,
+// none of which the contract may see. Written this way for the reason the arrangement demands:
+// renaming a class must NOT silently change what goes over the wire. Changing a value here is a
+// breaking change for every UI that reads it.
 [JsonConverter(typeof(JsonStringEnumConverter<ExceptionType>))]
 public enum ExceptionType
 {
     [EnumMember(Value = "NoErrorFoundException")]
     NoErrorFound,
 
-    [EnumMember(Value = nameof(MaintenanceException))]
+    [EnumMember(Value = "MaintenanceException")]
     Maintenance,
 
-    [EnumMember(Value = nameof(SessionException))]
+    [EnumMember(Value = "SessionException")]
     Session,
 
     [EnumMember(Value = "AdException")]
@@ -40,37 +38,37 @@ public enum ExceptionType
     [EnumMember(Value = "NoStableVpnException")]
     NoStableVpn,
 
-    [EnumMember(Value = nameof(UnreachableServerException))]
+    [EnumMember(Value = "UnreachableServerException")]
     UnreachableServer,
 
-    [EnumMember(Value = nameof(UnreachableProxyServerException))]
+    [EnumMember(Value = "UnreachableProxyServerException")]
     UnreachableProxyServer,
 
-    [EnumMember(Value = nameof(UnreachableServerLocationException))]
+    [EnumMember(Value = "UnreachableServerLocationException")]
     UnreachableServerLocation,
 
     [EnumMember(Value = "RewardNotEarnedException")]
     RewardNotEarned,
 
-    [EnumMember(Value = nameof(VpnServiceNotReadyException))]
+    [EnumMember(Value = "VpnServiceNotReadyException")]
     VpnServiceNotReady,
 
-    [EnumMember(Value = nameof(VpnServiceUnreachableException))]
+    [EnumMember(Value = "VpnServiceUnreachableException")]
     VpnServiceUnreachable,
 
-    [EnumMember(Value = nameof(VpnServiceTimeoutException))]
+    [EnumMember(Value = "VpnServiceTimeoutException")]
     VpnServiceTimeout,
 
-    [EnumMember(Value = nameof(VpnServiceNotReadyException))]
+    [EnumMember(Value = "VpnServiceNotReadyException")]
     VpnService,
 
-    [EnumMember(Value = nameof(UserCanceledException))]
+    [EnumMember(Value = "UserCanceledException")]
     UserCanceled,
 
-    [EnumMember(Value = nameof(ConnectionTimeoutException))]
+    [EnumMember(Value = "ConnectionTimeoutException")]
     ConnectionTimeout,
 
-    [EnumMember(Value = nameof(EndPointDiscoveryException))]
+    [EnumMember(Value = "EndPointDiscoveryException")]
     EndPointDiscovery,
 
     [EnumMember(Value = "PremiumOnlyException")]
@@ -79,9 +77,9 @@ public enum ExceptionType
     [EnumMember(Value = "AdBlockerException")]
     AdBlocker,
 
-    [EnumMember(Value = nameof(RequestQuickLaunchException))]
+    [EnumMember(Value = "RequestQuickLaunchException")]
     RequestQuickLaunch,
 
-    [EnumMember(Value = nameof(VpnServiceRevokedException))]
+    [EnumMember(Value = "VpnServiceRevokedException")]
     VpnServiceRevoked
 }

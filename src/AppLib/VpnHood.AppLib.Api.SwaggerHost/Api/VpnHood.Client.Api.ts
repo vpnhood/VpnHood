@@ -6015,10 +6015,8 @@ export enum EndPointStrategy {
     Auto = 0,
     DnsFirst = 1,
     IpFirst = 2,
-    TokenFirst = 2,
     DnsOnly = 3,
     IpOnly = 4,
-    TokenOnly = 4,
 }
 
 export enum DnsMode {
@@ -7190,11 +7188,12 @@ export interface IPatchOfStringOf {
     value?: string[] | null;
 }
 
-export class ProxyEndPointInfo implements IProxyEndPointInfo {
+export class AppProxyEndPointInfo implements IAppProxyEndPointInfo {
     endPoint!: ProxyEndPoint;
     status!: ProxyEndPointStatus;
+    countryCode!: string | null;
 
-    constructor(data?: IProxyEndPointInfo) {
+    constructor(data?: IAppProxyEndPointInfo) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -7211,12 +7210,13 @@ export class ProxyEndPointInfo implements IProxyEndPointInfo {
         if (_data) {
             this.endPoint = _data["endPoint"] ? ProxyEndPoint.fromJS(_data["endPoint"]) : new ProxyEndPoint();
             this.status = _data["status"] ? ProxyEndPointStatus.fromJS(_data["status"]) : new ProxyEndPointStatus();
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : null as any;
         }
     }
 
-    static fromJS(data: any): ProxyEndPointInfo {
+    static fromJS(data: any): AppProxyEndPointInfo {
         data = typeof data === 'object' ? data : {};
-        let result = new ProxyEndPointInfo();
+        let result = new AppProxyEndPointInfo();
         result.init(data);
         return result;
     }
@@ -7225,45 +7225,14 @@ export class ProxyEndPointInfo implements IProxyEndPointInfo {
         data = typeof data === 'object' ? data : {};
         data["endPoint"] = this.endPoint ? this.endPoint.toJSON() : null as any;
         data["status"] = this.status ? this.status.toJSON() : null as any;
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : null as any;
         return data;
     }
 }
 
-export interface IProxyEndPointInfo {
+export interface IAppProxyEndPointInfo {
     endPoint: ProxyEndPoint;
     status: ProxyEndPointStatus;
-}
-
-export class AppProxyEndPointInfo extends ProxyEndPointInfo implements IAppProxyEndPointInfo {
-    countryCode!: string | null;
-
-    constructor(data?: IAppProxyEndPointInfo) {
-        super(data);
-    }
-
-    override init(_data?: any) {
-        super.init(_data);
-        if (_data) {
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : null as any;
-        }
-    }
-
-    static override fromJS(data: any): AppProxyEndPointInfo {
-        data = typeof data === 'object' ? data : {};
-        let result = new AppProxyEndPointInfo();
-        result.init(data);
-        return result;
-    }
-
-    override toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : null as any;
-        super.toJSON(data);
-        return data;
-    }
-}
-
-export interface IAppProxyEndPointInfo extends IProxyEndPointInfo {
     countryCode: string | null;
 }
 

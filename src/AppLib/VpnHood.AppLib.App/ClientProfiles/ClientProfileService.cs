@@ -11,6 +11,8 @@ using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
+using VpnHood.AppLib.DtoConverters;
+
 namespace VpnHood.AppLib.ClientProfiles;
 
 public class ClientProfileService
@@ -241,7 +243,7 @@ public class ClientProfileService
             if (item?.AccessCode == null || item.AccessCodeRefusal != null)
                 return;
 
-            item.AccessCodeRefusal = new AccessCodeRefusal { ErrorCode = errorCode, RefusedTime = FastDateTime.UtcNow };
+            item.AccessCodeRefusal = new AccessCodeRefusal { ErrorCode = errorCode.ToAppDto(), RefusedTime = FastDateTime.UtcNow };
             Save();
         }
     }

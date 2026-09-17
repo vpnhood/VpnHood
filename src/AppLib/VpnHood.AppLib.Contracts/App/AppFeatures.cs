@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.AppLib.Contracts.Premium;
-using VpnHood.Core.Common.Messaging;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.AppLib.Contracts.App;

@@ -385,7 +385,8 @@ public class BillingServiceTest : TestAppBase
 
         profile = app.CurrentClientProfileInfo;
         Assert.IsNotNull(profile);
-        Assert.AreEqual(SessionErrorCode.AccessExpired, profile.AccessCodeRefusal?.ErrorCode,
+        Assert.AreEqual(VpnHood.AppLib.Contracts.Sessions.SessionErrorCode.AccessExpired,
+            profile.AccessCodeRefusal?.ErrorCode,
             "the refusal is the record that premium ended; no second flag carries the same news");
     }
 

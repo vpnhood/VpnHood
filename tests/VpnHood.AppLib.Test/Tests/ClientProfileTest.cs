@@ -5,6 +5,7 @@ using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Common.Tokens;
+using ClientPolicy = VpnHood.Core.Common.Tokens.ClientPolicy;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Utils;
 

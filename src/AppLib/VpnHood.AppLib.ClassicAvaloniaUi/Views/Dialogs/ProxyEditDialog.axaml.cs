@@ -7,7 +7,6 @@ using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.Contracts.Proxies;
-using VpnHood.Core.Proxies.Management.Abstractions;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
 
@@ -77,7 +76,7 @@ public partial class ProxyEditDialog : DialogBase
     {
         var s = Strings.Current;
         StatusRows.Children.Clear();
-        if (status == null || !status.HasUsed) {
+        if (status == null || !status.HasUsed()) {
             var none = new TextBlock { Text = s.NoData, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 24) };
             none.Classes.Add("body-medium");
             none.Classes.Add("disabled");

@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Common.Tokens;
+﻿using VpnHood.AppLib.Contracts.App;
 
 namespace VpnHood.AppLib;
 

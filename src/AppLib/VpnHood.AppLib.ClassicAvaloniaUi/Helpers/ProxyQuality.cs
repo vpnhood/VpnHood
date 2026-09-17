@@ -1,5 +1,7 @@
 ﻿using VpnHood.AppLib.Assets;
-using VpnHood.Core.Proxies.Management.Abstractions;
+
+using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.AppLib.Contracts.Sessions;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 
@@ -7,6 +9,18 @@ namespace VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 // shown in; no brush for a quality nothing is known about.
 internal static class ProxyQuality
 {
+    // Traffic carries the two counts; the sum is the UI's arithmetic, not the contract's.
+    public static long Total(this Traffic traffic)
+    {
+        return traffic.Sent + traffic.Received;
+    }
+
+    // The contract carries the counts; whether that means "tried yet" is this UI's reading of them.
+    public static bool HasUsed(this ProxyEndPointStatus status)
+    {
+        return status.SucceededCount > 0 || status.FailedCount > 0;
+    }
+
     public static (string Text, string? BrushKey) Display(StatusQuality? quality)
     {
         var s = Strings.Current;

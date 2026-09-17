@@ -67,7 +67,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CancellationTokenSource _showAdCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
     private CultureInfo? _systemUiCulture;
-    private IReadOnlyList<DeviceAppInfo>? _installedApps;
+    private IReadOnlyList<Core.Client.Devices.DeviceAppInfo>? _installedApps;
     private bool _isConnecting;
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
@@ -90,7 +90,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // Building this list is expensive (on Android it loads and png encodes an icon for every
     // installed app), so it is cached until the app returns to the foreground, which is the only
     // moment the user could have installed or removed an app.
-    public IReadOnlyList<DeviceAppInfo> InstalledApps => _installedApps ??= _device.InstalledApps;
+    public IReadOnlyList<Core.Client.Devices.DeviceAppInfo> InstalledApps =>
+        _installedApps ??= _device.InstalledApps;
 
 
     public AppAdManager AdManager { get; }
@@ -200,7 +201,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAdSupported = options.AdProviderItems.Any(),
             IsRewardedAdSupported = options.AdProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd),
             IsProxySupported = true,
-            ChannelProtocols = [.. protocols]
+            ChannelProtocols = [.. protocols.Select(x => x.ToAppDto())]
         };
 
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles), Features);
@@ -404,7 +405,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
         var reconfigureParams = new ClientReconfigureParams {
-            ChannelProtocol = UserSettings.ChannelProtocol,
+            ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
             DropQuic = UserSettings.DropQuic,
             UseTcpProxy = UserSettings.UseTcpProxy,
             DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
@@ -497,7 +498,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UpdaterStatus = Services.UpdaterService?.Status,
                 LastError = LastError?.ToAppDto(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
-                ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol ?? UserSettings.ChannelProtocol,
+                ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol.ToAppDto() ??
+                                  UserSettings.ChannelProtocol,
                 IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
                 SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()),
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
@@ -793,7 +795,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent,
-        ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
+        Contracts.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
         CancellationToken cancellationToken)
     {
         var profileInfo = CurrentClientProfileInfo ?? throw new NotExistsException("ClientProfile is not set.");
@@ -846,9 +848,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UseTcpProxy = UserSettings.UseTcpProxy,
                 DropQuic = UserSettings.DropQuic,
                 DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                ChannelProtocol = UserSettings.ChannelProtocol,
+                ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
                 ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
-                PlanId = planId,
+                PlanId = planId.ToEngine(),
                 AccessCode = accessCode,
                 IsTcpProxySupported = Features.IsTcpProxySupported,
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
@@ -863,8 +865,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 TrackerFactoryAssemblyQualifiedName = Config.TrackerFactoryAssemblyQualifiedName,
                 UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
                 EndPointStrategy = Features.AllowEndPointStrategy
-                    ? UserSettings.EndPointStrategy
-                    : EndPointStrategy.Auto,
+                    ? UserSettings.EndPointStrategy.ToEngine()
+                    : Core.Common.Tokens.EndPointStrategy.Auto,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2,
                 SessionName = profileInfo.ClientProfileName,
@@ -887,7 +889,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // start to diagnose if requested
             if (_appPersistState.HasDiagnoseRequested) {
                 var hostEndPoints = await EndPointResolver
-                    .ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy, cancellationToken).Vhc();
+                    .ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy.ToEngine(), cancellationToken).Vhc();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).Vhc();
                 await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
                 await _vpnServiceManager.Start(serviceOptions, cancellationToken).Vhc();
@@ -1246,7 +1248,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // save SuccessfulConnectionsCount
             if (FastDateTime.UtcNow > state.SessionInfo?.CreatedTime.AddMinutes(15) && // 15 minutes
-                state.SessionStatus?.SessionTraffic.Total > 5_000_000) // 5MB
+                state.SessionStatus?.SessionTraffic is { } traffic && traffic.Sent + traffic.Received > 5_000_000) // 5MB
                 _appPersistState.SuccessfulConnectionsCount++;
 
             // set review needed after disconnecting. It must be in connected state

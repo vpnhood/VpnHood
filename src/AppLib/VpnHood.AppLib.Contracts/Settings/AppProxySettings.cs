@@ -1,6 +1,4 @@
-﻿using VpnHood.Core.Proxies.Management.Abstractions.Options;
-
-namespace VpnHood.AppLib.Contracts.Settings;
+﻿namespace VpnHood.AppLib.Contracts.Settings;
 
 public class AppProxySettings
 {

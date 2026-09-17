@@ -6,7 +6,6 @@ using VpnHood.AppLib.Contracts.Proxies;
 using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.AppLib.Contracts.SplitTunneling;
 using VpnHood.AppLib.Contracts.Updaters;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.Contracts.App;

@@ -5,13 +5,12 @@ using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Contracts.Ads;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.Countries;
+using VpnHood.AppLib.Contracts.Device;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.AppLib.Contracts.Settings;
 using VpnHood.AppLib.Contracts.SplitTunneling;
 using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Services.Countries;
-using VpnHood.Core.Client.Devices;
-using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
 
@@ -178,7 +177,8 @@ internal class AppApi(VpnHoodApp app, Func<IRemoteAccessHost>? remoteAccessHostP
 
     public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
     {
-        return Task.FromResult(app.InstalledApps);
+        return Task.FromResult<IReadOnlyList<DeviceAppInfo>>(
+            [.. app.InstalledApps.Select(x => x.ToAppDto())]);
     }
 
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken)

@@ -1,5 +1,4 @@
 ﻿using VpnHood.AppLib.Contracts.Proxies;
-using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.AppLib.Contracts.Sessions;
 

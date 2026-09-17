@@ -3,8 +3,8 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Contracts.Accounts;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.AppLib.Contracts.Settings;
-using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.AppLib.AvaloniaUI;
 

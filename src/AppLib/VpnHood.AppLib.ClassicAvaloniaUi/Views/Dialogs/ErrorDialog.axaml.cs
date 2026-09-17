@@ -2,7 +2,8 @@
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
-using VpnHood.Core.Common.Tokens;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.Sessions;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
 

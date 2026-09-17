@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Client.Abstractions;
+﻿
+using VpnHood.AppLib.Contracts.SplitTunneling;
 
 namespace VpnHood.AppLib.Contracts.Settings;
 

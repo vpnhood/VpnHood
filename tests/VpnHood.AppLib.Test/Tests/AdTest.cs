@@ -15,6 +15,7 @@ using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using ConnectPlanId = VpnHood.AppLib.Contracts.App.ConnectPlanId;
 
 namespace VpnHood.AppLib.Test.Tests;
 

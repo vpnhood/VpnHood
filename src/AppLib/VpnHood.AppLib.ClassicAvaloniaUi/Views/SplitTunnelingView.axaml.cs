@@ -6,7 +6,8 @@ using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Controls;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.Contracts.App;
-using VpnHood.Core.Client.Abstractions;
+
+using VpnHood.AppLib.Contracts.SplitTunneling;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

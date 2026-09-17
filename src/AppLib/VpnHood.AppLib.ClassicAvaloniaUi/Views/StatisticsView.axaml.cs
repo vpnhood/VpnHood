@@ -4,7 +4,10 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
-using VpnHood.Core.Common.Messaging;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.Sessions;
+
+using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 
@@ -66,21 +69,21 @@ public partial class StatisticsView : UserControl, IPage
 
         if (!isChina) {
             var card = AddCard(s.SessionTraffic, Mdi.ChartTimelineVariant, s.StatisticsSessionTrafficCardDesc);
-            AddRow(card, s.Used, Format.Traffic(status?.SessionTraffic.Total ?? 0), "highlight", isLtr: true);
+            AddRow(card, s.Used, Format.Traffic(status?.SessionTraffic.Total() ?? 0), "highlight", isLtr: true);
             var max = status?.SessionMaxTraffic ?? 0;
             AddRow(card, s.MaxTraffic, max > 0 ? Format.Traffic(max) : s.Unlimited, max > 0 ? "error" : "active", isLast: true, isLtr: true);
         }
 
         if (!isChina) {
             var card = AddCard(s.MonthlyTraffic, Mdi.ChartTimelineVariant, s.StatisticsMonthlyTrafficCardDesc);
-            AddRow(card, s.Used, Format.Traffic(status?.CycleTraffic.Total ?? 0), "highlight", isLtr: true);
+            AddRow(card, s.Used, Format.Traffic(status?.CycleTraffic.Total() ?? 0), "highlight", isLtr: true);
             var max = access?.MaxCycleTraffic ?? 0;
             AddRow(card, s.MaxTraffic, max > 0 ? Format.Traffic(max) : s.Unlimited, max > 0 ? "error" : "active", isLast: true, isLtr: true);
         }
 
         if (isPremiumUser && !isChina) {
             var card = AddCard(s.TotalTraffic, Mdi.ChartTimelineVariant, s.StatisticsTotalTrafficCardDesc);
-            AddRow(card, s.Used, Format.Traffic(status?.TotalTraffic.Total ?? 0), "highlight", isLtr: true);
+            AddRow(card, s.Used, Format.Traffic(status?.TotalTraffic.Total() ?? 0), "highlight", isLtr: true);
             var max = access?.MaxTotalTraffic ?? 0;
             AddRow(card, s.MaxTraffic, max > 0 ? Format.Traffic(max) : s.Unlimited, max > 0 ? "error" : "active", isLast: true, isLtr: true);
         }

@@ -2,7 +2,8 @@
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
-using VpnHood.Core.Client.Abstractions;
+
+using VpnHood.AppLib.Contracts.SplitTunneling;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

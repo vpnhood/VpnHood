@@ -146,12 +146,12 @@ internal static class StateHelper
             _ => false
         };
 
-        var isIpV6Split = splitTunneling.UnsupportedIpV6Mode is SplitUnsupportedIpMode.Exclude &&
+        var isIpV6Split = splitTunneling.UnsupportedIpV6Mode is Core.Client.Abstractions.SplitUnsupportedIpMode.Exclude &&
                           sessionInfo?.IsIpV6SupportedByServer == false;
 
         // the server's word only splits while the effective mode lets unsupported destinations out —
         // the toggle forces Block, and a power user may have chosen Block even while splitting is allowed
-        var isSplitByServer = splitTunneling.UnroutedIpMode is SplitUnsupportedIpMode.Exclude &&
+        var isSplitByServer = splitTunneling.UnroutedIpMode is Core.Client.Abstractions.SplitUnsupportedIpMode.Exclude &&
                               sessionInfo?.IsTrafficSplitByServer == true;
 
         // SplitDnsMode is deliberately not a split of its own: DefaultRoute only lets DNS follow the
@@ -172,8 +172,8 @@ internal static class StateHelper
             IsSplitByServer = isSplitByServer,
             CountryMode = splitTunneling.CountryMode,
             Countries = splitTunneling.Countries,
-            DnsMode = splitTunneling.DnsMode,
-            UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
+            DnsMode = splitTunneling.DnsMode.ToAppDto(),
+            UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode.ToAppDto(),
             IsSplittingTraffic = isCountrySplit ||
                                  splitTunneling.UseIpViaApp || splitTunneling.UseIpViaDevice ||
                                  splitTunneling.UseDomain || isIpV6Split || isSplitByServer

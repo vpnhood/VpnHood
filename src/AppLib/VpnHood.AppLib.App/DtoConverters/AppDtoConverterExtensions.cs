@@ -2,6 +2,7 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.Device;
 using VpnHood.AppLib.Contracts.Proxies;
 using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.Core.Client.Abstractions;
@@ -10,6 +11,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
+using CoreDeviceAppInfo = VpnHood.Core.Client.Devices.DeviceAppInfo;
 
 using VpnHood.AppLib.Services.Countries;
 
@@ -17,6 +19,15 @@ namespace VpnHood.AppLib.DtoConverters;
 
 public static class AppDtoConverterExtensions
 {
+    public static DeviceAppInfo ToAppDto(this CoreDeviceAppInfo deviceAppInfo)
+    {
+        return new DeviceAppInfo {
+            AppId = deviceAppInfo.AppId,
+            AppName = deviceAppInfo.AppName,
+            IconPng = deviceAppInfo.IconPng
+        };
+    }
+
     public static AppConnectorStat ToAppDto(this ConnectorStatus connectorStatus)
     {
         return new AppConnectorStat {
@@ -31,18 +42,18 @@ public static class AppDtoConverterExtensions
     public static AppSessionInfo ToAppDto(this SessionInfo sessionInfo)
     {
         return new AppSessionInfo {
-            AccessInfo = sessionInfo.AccessInfo,
-            DnsConfig = sessionInfo.DnsConfig,
+            AccessInfo = sessionInfo.AccessInfo?.ToAppDto(),
+            DnsConfig = sessionInfo.DnsConfig.ToAppDto(),
             IsLocalNetworkAllowed = sessionInfo.IsLocalNetworkAllowed,
             IsTrafficSplitByServer = sessionInfo.IsTrafficSplitByServer,
             IsIpV6SupportedByServer = sessionInfo.IsIpV6SupportedByServer,
             ServerLocationInfo = sessionInfo.ServerLocationInfo?.ToAppDto(),
             ServerVersion = sessionInfo.ServerVersion,
             IsPremiumSession = sessionInfo.IsPremiumSession,
-            SuppressedTo = sessionInfo.SuppressedTo,
+            SuppressedTo = sessionInfo.SuppressedTo.ToAppDto(),
             ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress,
             CreatedTime = sessionInfo.CreatedTime,
-            ChannelProtocols = sessionInfo.ChannelProtocols,
+            ChannelProtocols = [.. sessionInfo.ChannelProtocols.Select(x => x.ToAppDto())],
             IsTcpProxySupported = sessionInfo.IsTcpProxySupported,
             IsTcpPacketSupported = sessionInfo.IsTcpPacketSupported
         };
@@ -52,11 +63,11 @@ public static class AppDtoConverterExtensions
     {
         return new AppSessionStatus {
             ConnectorStat = sessionStatus.ConnectorStatus.ToAppDto(),
-            Speed = sessionStatus.Speed,
-            SessionTraffic = sessionStatus.SessionTraffic,
-            SessionSplitTraffic = sessionStatus.SessionSplitTraffic,
-            CycleTraffic = sessionStatus.CycleTraffic,
-            TotalTraffic = sessionStatus.TotalTraffic,
+            Speed = sessionStatus.Speed.ToAppDto(),
+            SessionTraffic = sessionStatus.SessionTraffic.ToAppDto(),
+            SessionSplitTraffic = sessionStatus.SessionSplitTraffic.ToAppDto(),
+            CycleTraffic = sessionStatus.CycleTraffic.ToAppDto(),
+            TotalTraffic = sessionStatus.TotalTraffic.ToAppDto(),
             StreamTunnelledCount = sessionStatus.StreamTunnelledCount,
             StreamPassthruCount = sessionStatus.StreamPassthruCount,
             PacketChannelCount = sessionStatus.PacketChannelCount,
@@ -66,7 +77,7 @@ public static class AppDtoConverterExtensions
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
             ActiveClientCount = sessionStatus.ActiveClientCount,
-            ChannelProtocol = sessionStatus.ChannelProtocol,
+            ChannelProtocol = sessionStatus.ChannelProtocol.ToAppDto(),
             IsTcpProxy = sessionStatus.IsTcpProxy,
             CanChangeTcpProxy = sessionStatus.CanChangeTcpProxy,
             IsDropQuic = sessionStatus.IsDropQuic
@@ -86,7 +97,7 @@ public static class AppDtoConverterExtensions
     public static AppProxyConnectorStatus ToAppDto(this ProxyConnectorStatus status)
     {
         return new AppProxyConnectorStatus {
-            SessionStatus = status.SessionStatus,
+            SessionStatus = status.SessionStatus.ToAppDto(),
             SucceededServerCount = status.SucceededServerCount,
             FailedServerCount = status.FailedServerCount,
             UnknownServerCount = status.UnknownServerCount,

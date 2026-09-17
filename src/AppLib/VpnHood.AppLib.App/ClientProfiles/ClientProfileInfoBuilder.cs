@@ -4,6 +4,8 @@ using VpnHood.AppLib.Contracts.ClientProfiles;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
 
+using VpnHood.AppLib.DtoConverters;
+
 namespace VpnHood.AppLib.ClientProfiles;
 
 // A profile as the UIs read it: plain values taken off the stored profile once, so the same object
@@ -56,12 +58,12 @@ internal static class ClientProfileInfoBuilder
             CustomServerEndpoints = clientProfile.CustomServerEndpoints,
             IsCustomServerEndpointsEnabled = clientProfile.IsCustomServerEndpointsEnabled,
             SelectedLocationInfo = selectedLocationInfo,
-            ClientPolicy = clientPolicy
+            ClientPolicy = clientPolicy?.ToAppDto()
         };
     }
 
     // the policy for the client's country, else the one for any country
-    private static ClientPolicy? FindClientPolicy(Token token)
+    private static Core.Common.Tokens.ClientPolicy? FindClientPolicy(Token token)
     {
         var countryCode = AppRegionInfo.CurrentRegion.Name;
         return token.ClientPolicies?.FirstOrDefault(x =>

@@ -1,9 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Tokens;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.AppLib.Contracts.Settings;
@@ -18,10 +16,12 @@ public class UserSettings
     public Guid? ClientProfileId { get; set; }
     public SplitTunnelingSettings SplitTunneling { get; set; } = new();
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
-    public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;
+    public bool DropUdp { get; set; }
     public bool UseTcpProxy { get; set; }
     public bool DropQuic { get; set; }
-    public bool AllowAnonymousTracker { get; set; } = ClientOptions.Default.AllowAnonymousTracker;
+    // the engine's own default for this, stated rather than borrowed: the contract does not
+    // reach into ClientOptions to find out what it should say
+    public bool AllowAnonymousTracker { get; set; } = true;
     public string? DebugData1 { get; set; }
     public string? DebugData2 { get; set; }
     public bool LogAnonymous { get; set; } = true;

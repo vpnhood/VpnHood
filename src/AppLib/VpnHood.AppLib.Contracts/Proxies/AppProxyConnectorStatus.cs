@@ -1,6 +1,4 @@
-﻿using VpnHood.Core.Proxies.Management.Abstractions;
-
-namespace VpnHood.AppLib.Contracts.Proxies;
+﻿namespace VpnHood.AppLib.Contracts.Proxies;
 
 public class AppProxyConnectorStatus
 {

@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using VpnHood.Core.Toolkit.ApiClients;
 
-namespace VpnHood.AppLib.Api.Clients;
+namespace VpnHood.AppLib.Api.HttpClients;
 
 // The six HTTP clients call the toolkit's ApiClientBase directly - it owns the request, the url and
 // its query, the logging and the failure. All this adds is the two ends that are the app's own: the

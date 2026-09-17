@@ -12,7 +12,7 @@ using VpnHood.AppLib.Api.Device;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Generics;
 
-namespace VpnHood.AppLib.Api.Clients;
+namespace VpnHood.AppLib.Api.HttpClients;
 
 // Every type the HTTP clients read or write, generated ahead of time: the browser is published
 // trimmed, and a type the trimmer cannot see is a type it removes. camelCase, as the server speaks.

@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Api.Accounts;
 
-namespace VpnHood.AppLib.Api.Clients;
+namespace VpnHood.AppLib.Api.HttpClients;
 
 // IAccountApi over HTTP: the routes of AccountController, one for one.
 internal sealed class AccountClient(HttpClient httpClient) : AppApiClientBase(httpClient), IAccountApi

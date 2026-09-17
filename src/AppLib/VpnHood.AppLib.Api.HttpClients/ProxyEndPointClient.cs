@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Api.Proxies;
 using VpnHood.Core.Toolkit.Generics;
 
-namespace VpnHood.AppLib.Api.Clients;
+namespace VpnHood.AppLib.Api.HttpClients;
 
 // IProxyEndPointsApi over HTTP: the routes of ProxyEndPointController, one for one.
 internal sealed class ProxyEndPointClient(HttpClient httpClient) : AppApiClientBase(httpClient), IProxyEndPointsApi

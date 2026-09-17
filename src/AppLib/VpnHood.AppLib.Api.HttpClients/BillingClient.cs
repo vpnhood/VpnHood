@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Api.Billing;
 
-namespace VpnHood.AppLib.Api.Clients;
+namespace VpnHood.AppLib.Api.HttpClients;
 
 // IBillingApi over HTTP: the routes of BillingController, one for one.
 internal sealed class BillingClient(HttpClient httpClient) : AppApiClientBase(httpClient), IBillingApi

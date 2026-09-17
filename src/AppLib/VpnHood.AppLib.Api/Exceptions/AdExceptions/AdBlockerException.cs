@@ -1,6 +1,6 @@
-﻿using VpnHood.AppLib.Abstractions.AdExceptions;
+﻿using VpnHood.AppLib.Api.Exceptions;
 
-namespace VpnHood.AppLib.Exceptions;
+namespace VpnHood.AppLib.Api.Exceptions.AdExceptions;
 
 public class AdBlockerException(string message) : AdException(message)
 {

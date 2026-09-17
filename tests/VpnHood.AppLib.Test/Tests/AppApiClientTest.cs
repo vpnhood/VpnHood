@@ -2,7 +2,7 @@
 using System.Net;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost;
-using VpnHood.AppLib.Api.Clients;
+using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.Core.Common.Tokens;

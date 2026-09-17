@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Api.Ads;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.AccessManagers;
+using VpnHood.AppLib.Api.Exceptions.AdExceptions;
 
 namespace VpnHood.AppLib.Test.Providers;
 

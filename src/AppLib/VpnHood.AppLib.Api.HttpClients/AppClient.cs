@@ -8,7 +8,7 @@ using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.Api.Device;
 
-namespace VpnHood.AppLib.Api.Clients;
+namespace VpnHood.AppLib.Api.HttpClients;
 
 // IAppApi over HTTP: the routes of AppController, one for one.
 internal sealed class AppClient(HttpClient httpClient) : AppApiClientBase(httpClient), IAppApi

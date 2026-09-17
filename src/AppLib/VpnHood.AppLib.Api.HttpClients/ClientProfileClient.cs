@@ -2,7 +2,7 @@
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Premium;
 
-namespace VpnHood.AppLib.Api.Clients;
+namespace VpnHood.AppLib.Api.HttpClients;
 
 // IClientProfilesApi over HTTP: the routes of ClientProfileController, one for one.
 internal sealed class ClientProfileClient(HttpClient httpClient) : AppApiClientBase(httpClient), IClientProfilesApi

@@ -1,7 +1,7 @@
 ﻿
 using VpnHood.AppLib.Api.App;
 
-namespace VpnHood.AppLib.Exceptions;
+namespace VpnHood.AppLib.Api.Exceptions;
 
 public class PremiumOnlyException : UnauthorizedAccessException
 {

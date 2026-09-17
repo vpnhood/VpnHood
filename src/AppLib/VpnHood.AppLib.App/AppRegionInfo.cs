@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace VpnHood.AppLib.Abstractions;
+namespace VpnHood.AppLib;
 
 /// <summary>
 /// Same as RegionInfo.CurrentRegion, but settable. The client country is never discovered

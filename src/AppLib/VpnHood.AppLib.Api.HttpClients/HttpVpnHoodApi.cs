@@ -1,5 +1,5 @@
 ﻿
-namespace VpnHood.AppLib.Api.Clients;
+namespace VpnHood.AppLib.Api.HttpClients;
 
 // The app's API for a UI that runs somewhere else than the app: a paired browser, dialing the web
 // server it was served by. The client's base address is that address, and its cookie jar - the

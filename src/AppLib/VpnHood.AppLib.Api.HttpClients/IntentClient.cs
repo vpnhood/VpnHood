@@ -1,5 +1,5 @@
 ﻿
-namespace VpnHood.AppLib.Api.Clients;
+namespace VpnHood.AppLib.Api.HttpClients;
 
 // IIntentsApi over HTTP: the routes of IntentsController, one for one. Every one of them
 // opens something on the device that runs the app, not on the one that asked.

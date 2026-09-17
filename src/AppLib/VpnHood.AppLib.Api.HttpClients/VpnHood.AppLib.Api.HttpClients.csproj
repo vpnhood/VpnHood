@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppLib.Api.Clients</RootNamespace>
+		<RootNamespace>VpnHood.AppLib.Api.HttpClients</RootNamespace>
 		<IsPackable>false</IsPackable>
 		<Description>The app's API reached from somewhere else: the six interfaces answered by HTTP calls to a VpnHoodAppWebServer. A UI links this instead of the app and runs unchanged - a paired browser, a WASM head, another app, or a second VpnHood client driving one on the network.</Description>
 	</PropertyGroup>

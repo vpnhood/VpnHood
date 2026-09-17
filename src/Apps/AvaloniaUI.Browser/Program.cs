@@ -1,6 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Browser;
-using VpnHood.AppLib.Api.Clients;
+using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi;

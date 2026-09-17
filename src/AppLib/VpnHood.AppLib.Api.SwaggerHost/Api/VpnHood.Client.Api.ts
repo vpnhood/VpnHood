@@ -6718,7 +6718,6 @@ export enum ExceptionType {
     VpnServiceNotReady = "VpnServiceNotReadyException",
     VpnServiceUnreachable = "VpnServiceUnreachableException",
     VpnServiceTimeout = "VpnServiceTimeoutException",
-    VpnService = "VpnServiceNotReadyException",
     UserCanceled = "UserCanceledException",
     ConnectionTimeout = "ConnectionTimeoutException",
     EndPointDiscovery = "EndPointDiscoveryException",

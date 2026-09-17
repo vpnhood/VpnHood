@@ -1,12 +1,10 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Api.Ads;
 using VpnHood.AppLib.Api.Device;
-using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
@@ -15,6 +13,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using ConnectPlanId = VpnHood.AppLib.Api.App.ConnectPlanId;
+using VpnHood.AppLib.Api.Exceptions.AdExceptions;
 
 namespace VpnHood.AppLib.Test.Tests;
 

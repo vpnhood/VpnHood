@@ -18,7 +18,7 @@ using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
-using VpnHood.AppLib.Exceptions;
+using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Premium;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services.Countries;

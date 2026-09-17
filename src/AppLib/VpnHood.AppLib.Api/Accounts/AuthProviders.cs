@@ -1,5 +1,5 @@
 ﻿
-namespace VpnHood.AppLib.Abstractions.Accounts;
+namespace VpnHood.AppLib.Api.Accounts;
 
 /// <summary>
 /// Well-known sign-in method ids. A sign-in method is a free-form STRING self-declared by the app's

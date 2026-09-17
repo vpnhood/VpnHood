@@ -23,7 +23,6 @@
 		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
 		<!-- The shapes and the six interfaces this app fills: the contract, which knows nothing of it. -->
 		<ProjectReference Include="..\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
-		<ProjectReference Include="..\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
 	</ItemGroup>
 
 

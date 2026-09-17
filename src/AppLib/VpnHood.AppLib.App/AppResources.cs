@@ -1,5 +1,4 @@
-﻿using VpnHood.AppLib.Assets;
-using VpnHood.AppLib.Api.App;
+﻿using VpnHood.AppLib.Api.App;
 using VpnHood.Core.Toolkit.Graphics;
 
 namespace VpnHood.AppLib;
@@ -44,32 +43,18 @@ public class AppResources
         public VhColor? ProgressBarColor { get; set; }
     }
 
+    // The OS chrome the app draws for itself: a tray icon, a taskbar badge. Every one always has an
+    // answer - what the head assigned, or this library's own copy - so an app that supplies nothing
+    // still draws something rather than nothing. A product replaces any of them at configure time by
+    // assigning; setting null re-arms the default on the next read. Nothing here reads a file or
+    // knows where a product keeps its artwork: that is the head's business, and this library must
+    // not reach out for it.
     public class AppIcons
     {
-        // Files, not bytes in an assembly. These are OS-chrome icons - a tray, a taskbar badge - so
-        // they belong with the app's other content (VpnHood.AppLib.Assets), which every head's build
-        // places the way its platform reads files. Keeping them embedded cost 612 KB in a library
-        // every UI links, and Android packs each assembly once per CPU architecture, so the same
-        // bytes shipped three times. Read lazily: a head that never draws a tray pays nothing, and a
-        // build with no content folder - a test, or the browser head, which has no chrome to draw -
-        // reads null, which is what every caller already checks for. A caller-assigned value wins
-        // (SpaResourcesFactory hands over the branded icons from spa.zip); setting null re-arms the
-        // default on the next read.
-        public byte[]? BadgeConnectedIconData { get => field ??= ReadIcon("BadgeConnected.ico"); set; }
-        public byte[]? BadgeConnectingIconData { get => field ??= ReadIcon("BadgeConnecting.ico"); set; }
-        public byte[]? SystemTrayConnectedIconData { get => field ??= ReadIcon("VpnConnected.ico"); set; }
-        public byte[]? SystemTrayConnectingIconData { get => field ??= ReadIcon("VpnConnecting.ico"); set; }
-        public byte[]? SystemTrayDisconnectedIconData { get => field ??= ReadIcon("VpnDisconnected.ico"); set; }
-
-        private static byte[]? ReadIcon(string fileName)
-        {
-            if (!AppContent.TryGetFolderPath(out var folderPath))
-                return null;
-
-            var filePath = Path.Combine(folderPath, IconsFolderName, fileName);
-            return File.Exists(filePath) ? File.ReadAllBytes(filePath) : null;
-        }
-
-        private const string IconsFolderName = "icons";
+        public ReadOnlyMemory<byte>? BadgeConnectedIconData { get => field ??= Resources.BadgeConnectedIcon; set; }
+        public ReadOnlyMemory<byte>? BadgeConnectingIconData { get => field ??= Resources.BadgeConnectingIcon; set; }
+        public ReadOnlyMemory<byte>? SystemTrayConnectedIconData { get => field ??= Resources.VpnConnectedIcon; set; }
+        public ReadOnlyMemory<byte>? SystemTrayConnectingIconData { get => field ??= Resources.VpnConnectingIcon; set; }
+        public ReadOnlyMemory<byte>? SystemTrayDisconnectedIconData { get => field ??= Resources.VpnDisconnectedIcon; set; }
     }
 }

@@ -176,5 +176,55 @@ namespace VpnHood.AppLib {
                 return ResourceManager.GetString("OpenInBrowser", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] BadgeConnectedIcon {
+            get {
+                object obj = ResourceManager.GetObject("BadgeConnectedIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] BadgeConnectingIcon {
+            get {
+                object obj = ResourceManager.GetObject("BadgeConnectingIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] VpnConnectedIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnConnectedIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] VpnConnectingIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnConnectingIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] VpnDisconnectedIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnDisconnectedIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }

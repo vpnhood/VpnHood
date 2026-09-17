@@ -123,7 +123,7 @@ public partial class VpnHoodWpfMainWindow : Window
         }
 
         // set overlay
-        using var memStream = new MemoryStream(icon);
+        using var memStream = new MemoryStream(icon.Value.ToArray());
         var bitmapImage = new BitmapImage();
         bitmapImage.BeginInit();
         bitmapImage.StreamSource = memStream;

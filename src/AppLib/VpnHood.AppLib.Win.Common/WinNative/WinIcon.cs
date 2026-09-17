@@ -31,13 +31,13 @@ public static class WinIcon
     public static extern IntPtr LoadImage(IntPtr hInst, string lpszName, uint uType, int cxDesired, int cyDesired,
         uint fuLoad);
 
-    public static IntPtr LoadIconFromBytes(byte[] icoBytes)
+    public static IntPtr LoadIconFromBytes(ReadOnlySpan<byte> iconBytes)
     {
         // 1. Create a temp .ico file
         var tempIco = Path.GetTempFileName();
 
         File.Move(tempIco, tempIco);
-        File.WriteAllBytes(tempIco, icoBytes);
+        File.WriteAllBytes(tempIco, iconBytes);
 
         // 2. Load the icon using Win32
         var hIcon = LoadImage(

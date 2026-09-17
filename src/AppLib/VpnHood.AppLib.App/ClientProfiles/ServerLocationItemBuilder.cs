@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Services.Countries;
 using VpnHood.Core.Common.Tokens;
 

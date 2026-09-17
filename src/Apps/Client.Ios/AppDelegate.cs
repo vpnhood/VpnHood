@@ -11,6 +11,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Ios;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.AppLib.Api.WebHost;
 
 namespace VpnHood.App.Client.Ios;
 
@@ -68,6 +69,8 @@ public class AppDelegate : UIApplicationDelegate
         return new AppOptions(appId: appConfigs.AppId, storageFolderName: AppConfigs.StorageFolderName,
             isDebugMode: AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
+            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
+            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             StorageFolderPath = storageFolderPath,
             // Product settings sourced from the embedded ".user" appsettings (parity with Client.Android.Web).

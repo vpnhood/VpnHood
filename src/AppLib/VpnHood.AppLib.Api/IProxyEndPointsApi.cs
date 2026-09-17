@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Contracts.Proxies;
+﻿using VpnHood.AppLib.Api.Proxies;
 using VpnHood.Core.Toolkit.Generics;
 
 namespace VpnHood.AppLib.Api;

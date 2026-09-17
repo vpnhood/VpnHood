@@ -2,7 +2,6 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
-using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.SpaWebView;
 
 namespace VpnHood.App.Client;

@@ -1,5 +1,5 @@
 ﻿
-using VpnHood.AppLib.Contracts.Updaters;
+using VpnHood.AppLib.Api.Updaters;
 
 namespace VpnHood.AppLib.Services.Updaters;
 

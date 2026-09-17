@@ -3,7 +3,6 @@ using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi;
-using VpnHood.AppLib.Api.InProcessHost;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
@@ -40,6 +39,8 @@ internal static class Program
 
         var appOptions = new AppOptions(appId: "com.vpnhood.avalonia.dev", "VpnHood! Avalonia Dev", isDebugMode: true) {
             AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
+            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
+            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             StorageFolderPath = storageFolderPath,
             Resources = resources,
@@ -70,7 +71,7 @@ internal static class Program
             // dials over HTTP, here the app's own controllers in process - and draws from the
             // assets folder beside this executable, which the build placed there (the same files
             // the web server serves at /assets/). In process both complete at once.
-            AppModel.Init(InProcessVpnHoodApi.Create(app, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
+            AppModel.Init(app.Api, CancellationToken.None).GetAwaiter().GetResult();
             ClassicAvaloniaApp.PrepareContent();
             AppModel.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

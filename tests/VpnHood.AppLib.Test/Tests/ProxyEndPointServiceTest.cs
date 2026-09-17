@@ -1,9 +1,8 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Proxies;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Utils;
@@ -13,9 +12,9 @@ using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Socks5ProxyServers;
 using VpnHood.Core.Toolkit.Utils;
-using ProxyEndPoint = VpnHood.AppLib.Contracts.Proxies.ProxyEndPoint;
-using ProxyProtocol = VpnHood.AppLib.Contracts.Proxies.ProxyProtocol;
-using ProxyAutoUpdateOptions = VpnHood.AppLib.Contracts.Settings.ProxyAutoUpdateOptions;
+using ProxyEndPoint = VpnHood.AppLib.Api.Proxies.ProxyEndPoint;
+using ProxyProtocol = VpnHood.AppLib.Api.Proxies.ProxyProtocol;
+using ProxyAutoUpdateOptions = VpnHood.AppLib.Api.Settings.ProxyAutoUpdateOptions;
 using VpnHood.Test;
 // ReSharper disable AccessToModifiedClosure
 

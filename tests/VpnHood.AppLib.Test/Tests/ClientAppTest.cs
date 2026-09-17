@@ -2,8 +2,7 @@
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Api.WebHost.Helpers;

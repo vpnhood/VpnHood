@@ -8,10 +8,10 @@ using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
-using VpnHood.AppLib.Contracts.Accounts;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Sessions;
+using VpnHood.AppLib.Api.Accounts;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Sessions;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

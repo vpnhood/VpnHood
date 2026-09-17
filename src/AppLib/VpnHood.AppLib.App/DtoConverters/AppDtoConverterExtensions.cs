@@ -1,10 +1,10 @@
 ﻿using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Device;
-using VpnHood.AppLib.Contracts.Proxies;
-using VpnHood.AppLib.Contracts.Sessions;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Device;
+using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLib.Api.Sessions;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.Messaging;

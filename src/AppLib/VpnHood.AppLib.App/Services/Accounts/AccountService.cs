@@ -2,8 +2,8 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Contracts.Accounts;
-using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Api.Accounts;
+using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;

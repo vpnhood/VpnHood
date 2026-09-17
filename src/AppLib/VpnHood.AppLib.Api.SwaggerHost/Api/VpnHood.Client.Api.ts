@@ -3686,6 +3686,7 @@ export class AppFeatures implements IAppFeatures {
     isDebugMode!: boolean;
     debugCommands!: string[];
     isProxySupported!: boolean;
+    isRemoteAccessSupported!: boolean;
     adjustForSystemBars!: boolean;
     allowEndPointStrategy!: boolean;
     isAdSupported!: boolean;
@@ -3751,6 +3752,7 @@ export class AppFeatures implements IAppFeatures {
                 this.debugCommands = null as any;
             }
             this.isProxySupported = _data["isProxySupported"] !== undefined ? _data["isProxySupported"] : null as any;
+            this.isRemoteAccessSupported = _data["isRemoteAccessSupported"] !== undefined ? _data["isRemoteAccessSupported"] : null as any;
             this.adjustForSystemBars = _data["adjustForSystemBars"] !== undefined ? _data["adjustForSystemBars"] : null as any;
             this.allowEndPointStrategy = _data["allowEndPointStrategy"] !== undefined ? _data["allowEndPointStrategy"] : null as any;
             this.isAdSupported = _data["isAdSupported"] !== undefined ? _data["isAdSupported"] : null as any;
@@ -3812,6 +3814,7 @@ export class AppFeatures implements IAppFeatures {
                 data["debugCommands"].push(item);
         }
         data["isProxySupported"] = this.isProxySupported !== undefined ? this.isProxySupported : null as any;
+        data["isRemoteAccessSupported"] = this.isRemoteAccessSupported !== undefined ? this.isRemoteAccessSupported : null as any;
         data["adjustForSystemBars"] = this.adjustForSystemBars !== undefined ? this.adjustForSystemBars : null as any;
         data["allowEndPointStrategy"] = this.allowEndPointStrategy !== undefined ? this.allowEndPointStrategy : null as any;
         data["isAdSupported"] = this.isAdSupported !== undefined ? this.isAdSupported : null as any;
@@ -3855,6 +3858,7 @@ export interface IAppFeatures {
     isDebugMode: boolean;
     debugCommands: string[];
     isProxySupported: boolean;
+    isRemoteAccessSupported: boolean;
     adjustForSystemBars: boolean;
     allowEndPointStrategy: boolean;
     isAdSupported: boolean;

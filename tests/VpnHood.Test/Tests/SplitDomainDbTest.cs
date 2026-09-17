@@ -1,7 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Premium;
 using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Settings;

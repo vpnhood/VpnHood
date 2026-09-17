@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.DtoConverters;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.IpLocations;
@@ -13,8 +13,8 @@ using VpnHood.Core.Toolkit.Generics;
 using VpnHood.Core.Toolkit.Utils;
 using CoreProxy = VpnHood.Core.Proxies.Management.Abstractions;
 // the store and the parser are the engine's; what this service hands out is the contract's
-using ProxyEndPoint = VpnHood.AppLib.Contracts.Proxies.ProxyEndPoint;
-using ProxyEndPointStatus = VpnHood.AppLib.Contracts.Proxies.ProxyEndPointStatus;
+using ProxyEndPoint = VpnHood.AppLib.Api.Proxies.ProxyEndPoint;
+using ProxyEndPointStatus = VpnHood.AppLib.Api.Proxies.ProxyEndPointStatus;
 
 namespace VpnHood.AppLib.Services.Proxies;
 

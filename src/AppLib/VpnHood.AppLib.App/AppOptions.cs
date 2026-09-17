@@ -2,7 +2,8 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
@@ -67,6 +68,12 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IAppUserReviewProvider? UserReviewProvider { get; set; }
     public IReadOnlyList<AppAdProviderItem> AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
+
+    // The listener a phone pairs with, resolved on demand because it cannot exist yet: a web host
+    // is built on the app, so the app must come first. Null means this head runs none, and
+    // AppFeatures.IsRemoteAccessSupported says so before a UI offers the pairing screen. Heads that
+    // bring up VpnHoodAppWebServer set this to () => VpnHoodAppWebServer.Instance.
+    public Func<IRemoteAccessHost>? RemoteAccessHostProvider { get; set; }
 
     public bool? LogAnonymous { get; set; } =
         isDebugMode ? false : null; // it follows user's settings if it set to null

@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Contracts.Accounts;
+﻿using VpnHood.AppLib.Api.Accounts;
 
 namespace VpnHood.AppLib.Api;
 

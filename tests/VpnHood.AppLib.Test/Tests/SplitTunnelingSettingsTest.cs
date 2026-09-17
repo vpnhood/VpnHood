@@ -1,15 +1,14 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Premium;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using CoreSplit = VpnHood.Core.Client.Abstractions;
-using SplitDnsMode = VpnHood.AppLib.Contracts.SplitTunneling.SplitDnsMode;
-using SplitUnsupportedIpMode = VpnHood.AppLib.Contracts.SplitTunneling.SplitUnsupportedIpMode;
+using SplitDnsMode = VpnHood.AppLib.Api.SplitTunneling.SplitDnsMode;
+using SplitUnsupportedIpMode = VpnHood.AppLib.Api.SplitTunneling.SplitUnsupportedIpMode;
 
 namespace VpnHood.AppLib.Test.Tests;
 

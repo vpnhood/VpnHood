@@ -2,11 +2,11 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib.ClassicAvaloniaUi;
-using VpnHood.AppLib.Contracts.Accounts;
+using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.AvaloniaUI.Desktop;
-using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Linux.Common;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Updaters;
@@ -28,6 +28,8 @@ internal static class App
         var resources = ConnectAppResources.Resources;
         var appOptions = new AppOptions(appId: appConfigs.AppId, Path.GetDirectoryName(StoragePath)!, AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
+            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
+            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
             IpLocationZipData = ConnectAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             UiName = "VpnHoodConnect",

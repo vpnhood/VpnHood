@@ -3,7 +3,7 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Nager.Country;
 using Nager.Country.Translation;
-using VpnHood.AppLib.Contracts.Countries;
+using VpnHood.AppLib.Api.Countries;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Services.Countries;

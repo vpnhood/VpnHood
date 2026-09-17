@@ -6,7 +6,6 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.InProcessHost;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.Api.WebHost.Helpers;
@@ -110,15 +109,14 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
 
     private readonly VpnHoodApp _app;
 
-    // The same API a UI on this device calls directly, put on HTTP by the route table: one object,
-    // two transports, so a paired browser and the device's own UI cannot drift apart. Remote access
-    // is the one call that comes back here, and it arrives as IRemoteAccessHost.
-    private readonly VpnHoodApi _api;
+    // The app's own API object, put on HTTP by the route table: one instance, two transports, so a
+    // paired browser and the device's own UI cannot drift apart. Remote access is the one call that
+    // comes back here, and it arrives as IRemoteAccessHost - the head wires that up in AppOptions.
+    private VpnHoodApi Api => _app.Api;
 
     private VpnHoodAppWebServer(VpnHoodApp app, WebServerOptions options)
     {
         _app = app;
-        _api = InProcessVpnHoodApi.Create(app, () => this);
         var defaultPort = app.Features.WebUiPort ?? 9090;
         var endPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, defaultPort);
         Url = options.Url ?? new Uri($"http://{endPoint}");
@@ -153,7 +151,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
     private void AppUiContextOnChanged(object? sender, EventArgs e)
     {
         if (AppUiContext.Context == null)
-            StopRemoteAccess();
+            StopRemoteAccessInternal();
     }
 
     protected override void Dispose(bool disposing)
@@ -188,7 +186,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
         if (ret._isDeveloperRemoteAccess)
             Task.Run(async () => {
                 try {
-                    await ret.StartRemoteAccess().Vhc();
+                    await ret.StartRemoteAccess(CancellationToken.None).Vhc();
                 }
                 catch (Exception ex) {
                     VhLogger.Instance.LogError(ex, "Could not open the developer's remote access listeners.");
@@ -233,7 +231,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
     // no listener. Raised outside any lock so UI subscribers can dispatch.
     private void OnPrimaryRestarted()
     {
-        StopRemoteAccess();
+        StopRemoteAccessInternal();
         Restarted?.Invoke(this, EventArgs.Empty);
     }
 
@@ -249,25 +247,26 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
     // For a developer (debug build or /remote-access) the same listeners come up at Init on the
     // primary's own port, stay for the life of the process, and ask for no pairing. The SPA learns
     // that from IsAlwaysOn, so it knows not to ask the user to keep the screen open.
-    public Task<RemoteAccessState> StartRemoteAccess()
+    public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken)
     {
-        return UpdateRemoteAccess(start: true);
+        return UpdateRemoteAccess(start: true, cancellationToken);
     }
 
     // The pairing screen's poll: a network can change under an open screen, so the address set is
     // read again and the listeners follow it. Starts nothing.
-    public Task<RemoteAccessState> RefreshRemoteAccess()
+    public Task<RemoteAccessState> RefreshRemoteAccess(CancellationToken cancellationToken)
     {
-        return UpdateRemoteAccess(start: false);
+        return UpdateRemoteAccess(start: false, cancellationToken);
     }
 
-    private async Task<RemoteAccessState> UpdateRemoteAccess(bool start)
+    private async Task<RemoteAccessState> UpdateRemoteAccess(bool start, CancellationToken cancellationToken)
     {
         if (!start && !IsRemoteAccessActive)
             return RemoteAccessState;
 
         // The QR code encodes the first; the rest are the plain-text fallback under it. Our own
         // adapter is "VpnHood.<name>" on Windows (WinTunVpnAdapter); the toolkit already skips tun*.
+        cancellationToken.ThrowIfCancellationRequested();
         var addresses = await IPAddressUtil.GetLanAddresses(AddressFamily.InterNetwork,
             [.. IPAddressUtil.VirtualAdapterMarkers, "VpnHood"]).Vhc();
 
@@ -337,7 +336,16 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
         return new string(RandomNumberGenerator.GetItems<char>(PairAlphabet, PairTokenLength));
     }
 
-    public void StopRemoteAccess()
+    // A remote caller stopping this is cutting its own line, and that is deliberate: it is the
+    // "unpair this device" button, and the phone finding the connection gone is the confirmation.
+    public Task StopRemoteAccess(CancellationToken cancellationToken)
+    {
+        _ = cancellationToken; // dropping listeners is synchronous and cannot be abandoned half-way
+        StopRemoteAccessInternal();
+        return Task.CompletedTask;
+    }
+
+    private void StopRemoteAccessInternal()
     {
         lock (_lock) {
             if (_isDeveloperRemoteAccess || _remoteListeners.Count == 0)
@@ -522,7 +530,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
         // Every path of the contract, through its controller - CORS is handled centrally in the route mapper
         server
             .AddRouteMapper(_isDeveloperRemoteAccess)
-            .AddApi(_api);
+            .AddApi(Api);
 
         return server;
     }

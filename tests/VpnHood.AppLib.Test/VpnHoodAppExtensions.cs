@@ -1,8 +1,7 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Sessions;
+using VpnHood.AppLib.Api.Sessions;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test;

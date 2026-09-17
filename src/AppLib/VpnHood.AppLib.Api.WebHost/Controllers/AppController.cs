@@ -1,10 +1,9 @@
 ﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost.Helpers;
-using VpnHood.AppLib.Contracts.Ads;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Sessions;
-using VpnHood.AppLib.Contracts.Settings;
-using VpnHood.AppLib.Contracts.SplitTunneling;
+using VpnHood.AppLib.Api.Ads;
+using VpnHood.AppLib.Api.Sessions;
+using VpnHood.AppLib.Api.Settings;
+using VpnHood.AppLib.Api.SplitTunneling;
 using WatsonWebserver.Core;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 

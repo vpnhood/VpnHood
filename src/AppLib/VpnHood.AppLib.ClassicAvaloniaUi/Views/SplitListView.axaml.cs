@@ -2,7 +2,7 @@
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Controls;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api.Settings;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

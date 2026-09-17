@@ -2,7 +2,6 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
-using VpnHood.AppLib.Api.InProcessHost;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.UiContexts;
 
@@ -26,7 +25,7 @@ public static class AvaloniaDesktopHost
     {
         // The UI reaches the app through its API - the same six interfaces a paired browser dials
         // over HTTP, here the app's own controllers in process; in process both complete at once.
-        AppModel.Init(InProcessVpnHoodApi.Create(VpnHoodApp.Instance, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
+        AppModel.Init(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
 
         // what this UI needs before its first view, and the languages it has words for
         TUi.PrepareContent();

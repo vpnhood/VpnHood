@@ -1,10 +1,9 @@
 ﻿using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Contracts.Accounts;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Sessions;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api.Accounts;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Sessions;
+using VpnHood.AppLib.Api.Settings;
 
 namespace VpnHood.AppLib.AvaloniaUI;
 

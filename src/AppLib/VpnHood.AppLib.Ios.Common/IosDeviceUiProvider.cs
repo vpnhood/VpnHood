@@ -1,5 +1,5 @@
 using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Contracts.Device;
+using VpnHood.AppLib.Api.Device;
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 

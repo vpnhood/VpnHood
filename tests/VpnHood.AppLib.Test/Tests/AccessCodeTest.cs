@@ -2,8 +2,8 @@
 using System.Net.Sockets;
 using System.Text;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Premium;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
@@ -85,7 +85,7 @@ public class AccessCodeTest : TestAppBase
         clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
         Assert.IsNotNull(clientProfile.AccessCode, "A refused access code must be kept on the profile.");
         Assert.IsNotNull(clientProfile.AccessCodeRefusal, "The refusal must be recorded on the profile.");
-        Assert.AreEqual(VpnHood.AppLib.Contracts.Sessions.SessionErrorCode.AccessCodeRejected,
+        Assert.AreEqual(VpnHood.AppLib.Api.Sessions.SessionErrorCode.AccessCodeRejected,
             clientProfile.AccessCodeRefusal.ErrorCode);
 
         // typing a different code is a new credential — the old refusal is not its story

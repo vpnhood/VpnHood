@@ -6,7 +6,6 @@ using System.Security.Principal;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost;
-using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Win.Common.WinNative;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Common;

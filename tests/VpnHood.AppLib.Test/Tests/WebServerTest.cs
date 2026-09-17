@@ -36,7 +36,7 @@ public class WebServerTest : TestAppBase
 
         // start: one listener per LAN address on one port beside the web view's own, every
         // address carrying the pairing token; the same answer reaches the SPA through the state it polls
-        var remoteAccess = await webServer.StartRemoteAccess();
+        var remoteAccess = await webServer.StartRemoteAccess(CancellationToken.None);
         var urls = remoteAccess.Urls;
         Assert.IsTrue(remoteAccess.IsActive);
         Assert.IsFalse(remoteAccess.IsAlwaysOn);
@@ -162,16 +162,16 @@ public class WebServerTest : TestAppBase
         CollectionAssert.Contains(webServer.RemoteAccessState.ConnectedDevices, IPAddress.Parse(root.Host));
 
         // a repeat start and a refresh keep the listeners, the port and the token where they are
-        Assert.AreEqual(pairUrl, (await webServer.StartRemoteAccess()).Urls[0]);
-        Assert.AreEqual(pairUrl, (await webServer.RefreshRemoteAccess()).Urls[0]);
+        Assert.AreEqual(pairUrl, (await webServer.StartRemoteAccess(CancellationToken.None)).Urls[0]);
+        Assert.AreEqual(pairUrl, (await webServer.RefreshRemoteAccess(CancellationToken.None)).Urls[0]);
 
         // stop: the remote port is gone, the web view's own listener is not, and a refresh starts nothing
-        webServer.StopRemoteAccess();
+        await webServer.StopRemoteAccess(CancellationToken.None);
         Assert.IsFalse(webServer.IsRemoteAccessActive);
         Assert.AreEqual(0, webServer.RemoteAccessState.Urls.Count);
         await Assert.ThrowsExactlyAsync<HttpRequestException>(() => http.GetStringAsync(root));
         StringAssert.Contains(await http.GetStringAsync(webServer.Url), "spa-test");
-        Assert.IsFalse((await webServer.RefreshRemoteAccess()).IsActive);
+        Assert.IsFalse((await webServer.RefreshRemoteAccess(CancellationToken.None)).IsActive);
         Assert.IsFalse(webServer.IsRemoteAccessActive);
 
         // recovery heals only a listener that is held: the resume probe brings nothing back after a stop
@@ -181,7 +181,7 @@ public class WebServerTest : TestAppBase
 
         // a new start in the same run is the same pairing, address and token alike: the phone's
         // cookie from before the stop still opens it, so an accidental close costs no rescan
-        var second = await webServer.StartRemoteAccess();
+        var second = await webServer.StartRemoteAccess(CancellationToken.None);
         Assert.IsTrue(webServer.IsRemoteAccessActive);
         Assert.AreEqual(pairUrl, second.Urls[0]);
         using var keptCookie = await http.GetAsync(new Uri(root, "api/app/state"));
@@ -204,7 +204,7 @@ public class WebServerTest : TestAppBase
         using var http = new HttpClient();
         Assert.IsTrue(webServer.IsRemoteAccessActive);
 
-        var remoteAccess = await webServer.StartRemoteAccess();
+        var remoteAccess = await webServer.StartRemoteAccess(CancellationToken.None);
         Assert.IsTrue(remoteAccess.IsAlwaysOn);
         var urls = remoteAccess.Urls;
         Assert.AreNotEqual(0, urls.Count, "the machine running the test has no LAN address");
@@ -230,7 +230,7 @@ public class WebServerTest : TestAppBase
         using var reboundResponse = await http.SendAsync(rebound);
         Assert.AreEqual(HttpStatusCode.Forbidden, reboundResponse.StatusCode);
 
-        webServer.StopRemoteAccess();
+        await webServer.StopRemoteAccess(CancellationToken.None);
         Assert.IsTrue(webServer.IsRemoteAccessActive);
         Assert.IsTrue(webServer.RemoteAccessState.IsAlwaysOn);
         StringAssert.Contains(await http.GetStringAsync(urls[0]), "spa-test");

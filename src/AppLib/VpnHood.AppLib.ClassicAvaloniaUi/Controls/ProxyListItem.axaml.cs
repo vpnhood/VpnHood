@@ -3,7 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
-using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.AppLib.Api.Proxies;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Controls;
 

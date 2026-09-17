@@ -7,6 +7,7 @@ using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
 using VpnHood.AppLib.Services.Updaters;
+using VpnHood.AppLib.Api.WebHost;
 
 namespace VpnHood.App.Client.Droid.Google;
 
@@ -30,6 +31,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         return new AppOptions(appId: appConfigs.AppId, "VpnHood", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
+            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
+            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             Resources = resources,

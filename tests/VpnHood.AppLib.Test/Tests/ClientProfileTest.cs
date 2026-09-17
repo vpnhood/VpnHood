@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Common.Tokens;

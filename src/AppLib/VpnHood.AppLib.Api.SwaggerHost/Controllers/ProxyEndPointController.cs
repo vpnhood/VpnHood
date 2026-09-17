@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.SwaggerHost.Exceptions;
-using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.AppLib.Api.Proxies;
 using VpnHood.Core.Toolkit.Generics;
 
 // ReSharper disable InvalidXmlDocComment

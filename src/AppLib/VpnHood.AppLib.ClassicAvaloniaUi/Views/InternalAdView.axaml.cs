@@ -4,7 +4,7 @@ using Avalonia.Threading;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
-using VpnHood.AppLib.Contracts.Ads;
+using VpnHood.AppLib.Api.Ads;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

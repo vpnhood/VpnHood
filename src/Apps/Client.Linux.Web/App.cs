@@ -25,6 +25,8 @@ internal static class App
         var resources = ClientAppResources.Resources;
         var appOptions = new AppOptions(appConfigs.AppId, "storage", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
+            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
+            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,

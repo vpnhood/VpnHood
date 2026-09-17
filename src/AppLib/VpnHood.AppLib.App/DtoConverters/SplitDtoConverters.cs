@@ -1,5 +1,5 @@
-using VpnHood.AppLib.Contracts.Sessions;
-using VpnHood.AppLib.Contracts.SplitTunneling;
+using VpnHood.AppLib.Api.Sessions;
+using VpnHood.AppLib.Api.SplitTunneling;
 using CoreClient = VpnHood.Core.Client.Abstractions;
 
 namespace VpnHood.AppLib.DtoConverters;

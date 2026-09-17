@@ -1,5 +1,5 @@
 ﻿
-using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Api.App;
 
 namespace VpnHood.AppLib.Premium;
 

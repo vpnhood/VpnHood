@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Contracts.Accounts;
+using VpnHood.AppLib.Api.Accounts;
 
 namespace VpnHood.AppLib.Test.Providers;
 

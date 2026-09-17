@@ -1,5 +1,5 @@
-using VpnHood.AppLib.Contracts.Proxies;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLib.Api.Settings;
 using CoreOptions = VpnHood.Core.Proxies.Management.Abstractions.Options;
 using CoreProxy = VpnHood.Core.Proxies.Management.Abstractions;
 

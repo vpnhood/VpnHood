@@ -10,11 +10,12 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Device;
-using VpnHood.AppLib.Contracts.Premium;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Device;
+using VpnHood.AppLib.Api.Premium;
+using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Exceptions;
@@ -61,6 +62,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly IDevice _device;
     private readonly IIpRangeLocationProvider? _ipRangeLocationProvider;
+    private readonly Func<IRemoteAccessHost>? _remoteAccessHostProvider;
     private bool _isDisconnecting;
     private AppConnectionState? _lastConnectionState;
     private CancellationTokenSource _connectCts = new();
@@ -96,6 +98,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public AppAdManager AdManager { get; }
 
+    // What a UI reads this app through - the same six interfaces a browser reaches over HTTP, here
+    // answered in process with no listener and no JSON. The implementations are internal: a head
+    // holds this object and the contract's interfaces, never their classes.
+    public VpnHoodApi Api { get; }
+
+    // Resolved per call, never cached: a web host is a singleton a head can dispose and rebuild,
+    // and a held reference would outlive it. Null when this head runs no listener.
+    internal IRemoteAccessHost? RemoteAccessHost => _remoteAccessHostProvider?.Invoke();
+
     private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options)
         : base(register: options.IsSingleton)
     {
@@ -105,6 +116,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                             throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = settingsService;
         SettingsService.BeforeSave += SettingsBeforeSave;
+        _remoteAccessHostProvider = options.RemoteAccessHostProvider;
         _device = device;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _logService = logService;
@@ -201,6 +213,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAdSupported = options.AdProviderItems.Any(),
             IsRewardedAdSupported = options.AdProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd),
             IsProxySupported = true,
+            IsRemoteAccessSupported = options.RemoteAccessHostProvider != null,
             ChannelProtocols = [.. protocols.Select(x => x.ToAppDto())]
         };
 
@@ -274,6 +287,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // temporary, enable internal ad provider if exists and setting is enabled
         if (options.AdProviderItems.Any(x => x.Name == "InternalAd"))
             AdManager.AdService.EnableAdProvider("InternalAd", SettingsService.RemoteSettings?.ShowInternalAd == true);
+
+        // The API over this app, built last: every service it reaches through must already exist.
+        Api = new VpnHoodApi(
+            app: new AppApi(this),
+            clientProfiles: new ClientProfilesApi(this),
+            account: new AccountApi(this),
+            billing: new BillingApi(this),
+            intents: new IntentsApi(this),
+            proxyEndPoints: new ProxyEndPointsApi(this));
 
         // Apply settings but no error on startup
         ApplySettings();
@@ -795,7 +817,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent,
-        Contracts.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
+        VpnHood.AppLib.Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
         CancellationToken cancellationToken)
     {
         var profileInfo = CurrentClientProfileInfo ?? throw new NotExistsException("ClientProfile is not set.");

@@ -1,7 +1,7 @@
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Sessions;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Sessions;
+using VpnHood.AppLib.Api.Settings;
 using CoreMsg = VpnHood.Core.Common.Messaging;
 using CoreTokens = VpnHood.Core.Common.Tokens;
 

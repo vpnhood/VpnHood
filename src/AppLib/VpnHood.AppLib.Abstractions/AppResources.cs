@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Assets;
-using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Api.App;
 using VpnHood.Core.Toolkit.Graphics;
 
 namespace VpnHood.AppLib.Abstractions;

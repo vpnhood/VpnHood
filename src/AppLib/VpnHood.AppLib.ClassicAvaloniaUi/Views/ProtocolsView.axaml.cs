@@ -4,9 +4,9 @@ using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Controls;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Proxies;
-using VpnHood.AppLib.Contracts.Sessions;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLib.Api.Sessions;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

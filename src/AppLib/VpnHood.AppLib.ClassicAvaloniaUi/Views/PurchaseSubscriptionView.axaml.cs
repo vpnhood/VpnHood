@@ -6,8 +6,8 @@ using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
-using VpnHood.AppLib.Contracts.Billing;
-using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Api.Billing;
+using VpnHood.AppLib.Api.Premium;
 using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;

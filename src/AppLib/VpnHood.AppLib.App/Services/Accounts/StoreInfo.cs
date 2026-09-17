@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Contracts.Billing;
+using VpnHood.AppLib.Api.Billing;
 using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.Services.Accounts;

@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.AppLib.Api.Clients</RootNamespace>
+		<IsPackable>false</IsPackable>
+		<Description>The app's API reached from somewhere else: the six interfaces answered by HTTP calls to a VpnHoodAppWebServer. A UI links this instead of the app and runs unchanged - a paired browser, a WASM head, another app, or a second VpnHood client driving one on the network.</Description>
+	</PropertyGroup>
+
+	<!-- The mirror of VpnHood.AppLib.Api.WebHost: that one puts the app's VpnHoodApi on HTTP, this
+	     one takes it off again. Neither references the app. Kept out of VpnHood.AppLib.Api so a UI
+	     that only ever runs in process - the Avalonia heads - carries no HTTP client, no JSON
+	     context and no serializer at all. -->
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
+	</ItemGroup>
+</Project>

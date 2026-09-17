@@ -9,6 +9,7 @@ using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.Win.Common;
 using VpnHood.AppLib.Win.Common.WpfSpa;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.AppLib.Api.WebHost;
 
 namespace VpnHood.App.Client.Win.Web;
 
@@ -21,6 +22,8 @@ public class App : Application
 
         return new AppOptions(appConfigs.AppId, appConfigs.StorageFolderName, AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
+            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
+            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resources = resources,

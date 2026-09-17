@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Api.WebHost.Helpers;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
-using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.AppLib.Api.Proxies;
 
 namespace VpnHood.AppLib.Api.WebHost.Controllers;
 

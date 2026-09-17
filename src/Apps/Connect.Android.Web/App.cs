@@ -3,11 +3,11 @@ using Android.Runtime;
 using Avalonia.Android;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
-using VpnHood.AppLib.Contracts.Accounts;
+using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.ClassicAvaloniaUi;
-using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Droid.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
@@ -16,6 +16,7 @@ using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.AppLib.Api.WebHost;
 
 namespace VpnHood.App.Connect.Droid.Web;
 
@@ -40,6 +41,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         var appOptions = new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
+            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
+            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
             IpLocationZipData = ConnectAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             DeviceId = AndroidUtils.GetDeviceId(this), //this will be hashed using AppId

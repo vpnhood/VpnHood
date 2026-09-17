@@ -2,8 +2,8 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Contracts.Countries;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api.Countries;
+using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Premium;
 using VpnHood.AppLib.Services.Countries;
 using VpnHood.AppLib.Settings;

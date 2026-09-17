@@ -4,11 +4,11 @@ using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.App.Connect.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib.ClassicAvaloniaUi;
-using VpnHood.AppLib.Contracts.Accounts;
+using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Droid.AvaloniaUI;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Common;
@@ -19,6 +19,7 @@ using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.AppLib.Api.WebHost;
 
 namespace VpnHood.App.Connect.Droid.Google;
 
@@ -48,6 +49,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         return new AppOptions(appId: appConfigs.AppId, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
+            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
+            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
             IpLocationZipData = ConnectAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             StorageFolderPath = storageFolderPath,

@@ -2,7 +2,7 @@ using Google.Android.Gms.Ads;
 using Google.Android.Gms.Ads.AppOpen;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.Contracts.Ads;
+using VpnHood.AppLib.Api.Ads;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;

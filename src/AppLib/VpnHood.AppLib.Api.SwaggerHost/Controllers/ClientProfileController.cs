@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.SwaggerHost.Exceptions;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Premium;
 
 namespace VpnHood.AppLib.Api.SwaggerHost.Controllers;
 

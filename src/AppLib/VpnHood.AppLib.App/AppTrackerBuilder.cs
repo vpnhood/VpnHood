@@ -1,5 +1,5 @@
 ﻿using Ga4.Trackers;
-using VpnHood.AppLib.Contracts.Ads;
+using VpnHood.AppLib.Api.Ads;
 
 namespace VpnHood.AppLib;
 

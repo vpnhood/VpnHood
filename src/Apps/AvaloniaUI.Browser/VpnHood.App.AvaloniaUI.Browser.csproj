@@ -26,6 +26,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api.Clients\VpnHood.AppLib.Api.Clients.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI\VpnHood.AppLib.AvaloniaUI.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.ClassicAvaloniaUi\VpnHood.AppLib.ClassicAvaloniaUi.csproj" />

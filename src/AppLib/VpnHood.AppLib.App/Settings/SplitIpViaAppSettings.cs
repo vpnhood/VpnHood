@@ -1,5 +1,5 @@
 ﻿
-using VpnHood.AppLib.Contracts.SplitTunneling;
+using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.Utils;
 
 namespace VpnHood.AppLib.Settings;

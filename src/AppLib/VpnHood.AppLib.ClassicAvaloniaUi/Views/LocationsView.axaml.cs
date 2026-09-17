@@ -10,7 +10,7 @@ using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.ViewModels;
 using VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
-using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;

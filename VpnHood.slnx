@@ -73,7 +73,7 @@
     <Project Path="src/AppLib/VpnHood.AppLib.Abstractions/VpnHood.AppLib.Abstractions.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Api/VpnHood.AppLib.Api.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Contracts/VpnHood.AppLib.Contracts.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Api.Clients/VpnHood.AppLib.Api.Clients.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Assets/VpnHood.AppLib.Assets.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.AvaloniaUI/VpnHood.AppLib.AvaloniaUI.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.AvaloniaUI.Desktop/VpnHood.AppLib.AvaloniaUI.Desktop.csproj" />
@@ -81,7 +81,6 @@
     <Project Path="src/AppLib/VpnHood.AppLib.Portal/VpnHood.AppLib.Portal.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.SpaWebView/VpnHood.AppLib.SpaWebView.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Api.SwaggerHost/VpnHood.AppLib.Api.SwaggerHost.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Api.InProcessHost/VpnHood.AppLib.Api.InProcessHost.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Api.WebHost/VpnHood.AppLib.Api.WebHost.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Android/">

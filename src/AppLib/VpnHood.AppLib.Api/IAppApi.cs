@@ -1,12 +1,11 @@
 ﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.AppLib.Contracts.Ads;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Countries;
-using VpnHood.AppLib.Contracts.Sessions;
-using VpnHood.AppLib.Contracts.Settings;
-using VpnHood.AppLib.Contracts.SplitTunneling;
-using VpnHood.AppLib.Contracts.Device;
+using VpnHood.AppLib.Api.Ads;
+using VpnHood.AppLib.Api.Countries;
+using VpnHood.AppLib.Api.Sessions;
+using VpnHood.AppLib.Api.Settings;
+using VpnHood.AppLib.Api.SplitTunneling;
+using VpnHood.AppLib.Api.Device;
 
 // ReSharper disable UnusedMemberInSuper.Global
 
@@ -14,7 +13,6 @@ namespace VpnHood.AppLib.Api;
 
 public interface IAppApi
 {
-    Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken);
     Task<AppInfo> Configure(ConfigParams configParams, CancellationToken cancellationToken);
     Task<AppInfo> GetInfo(CancellationToken cancellationToken);
     Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken);

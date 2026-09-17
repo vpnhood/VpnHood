@@ -2,7 +2,7 @@
 using System.Text;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
-using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices;

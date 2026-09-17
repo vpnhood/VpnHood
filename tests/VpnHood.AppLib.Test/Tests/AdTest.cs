@@ -4,9 +4,8 @@ using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.AppLib.Contracts.Ads;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Device;
+using VpnHood.AppLib.Api.Ads;
+using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Dom;
@@ -15,7 +14,7 @@ using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using ConnectPlanId = VpnHood.AppLib.Contracts.App.ConnectPlanId;
+using ConnectPlanId = VpnHood.AppLib.Api.App.ConnectPlanId;
 
 namespace VpnHood.AppLib.Test.Tests;
 

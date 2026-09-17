@@ -3,8 +3,7 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Api.Settings;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;
 

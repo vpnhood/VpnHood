@@ -1,5 +1,5 @@
-﻿using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Settings;
+﻿using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Premium;
 using VpnHood.Core.Client.Abstractions;
@@ -48,7 +48,7 @@ public static class SplitTunnelingSettingsExtensions
             // the general mode is superior: its Block kills unsupported IPv6 too, so the effective
             // copy never says "bypass IPv6" while the general mode fails closed — the state and the
             // reconnect diff read the resolved truth
-            UnsupportedIpV6Mode = settings.UnroutedIpMode is Contracts.SplitTunneling.SplitUnsupportedIpMode.Block
+            UnsupportedIpV6Mode = settings.UnroutedIpMode is VpnHood.AppLib.Api.SplitTunneling.SplitUnsupportedIpMode.Block
                 ? SplitUnsupportedIpMode.Block
                 : settings.UnsupportedIpV6Mode.ToEngine()
         };

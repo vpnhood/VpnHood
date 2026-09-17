@@ -13,8 +13,7 @@ using VpnHood.AppLib.ClassicAvaloniaUi.Animation;
 using VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 using VpnHood.AppLib.ClassicAvaloniaUi.ViewModels;
 using VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.Updaters;
+using VpnHood.AppLib.Api.Updaters;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Views;

@@ -1,6 +1,6 @@
-﻿using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Settings;
+﻿using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Settings;
 
 namespace VpnHood.AppLib.Api.App;
 

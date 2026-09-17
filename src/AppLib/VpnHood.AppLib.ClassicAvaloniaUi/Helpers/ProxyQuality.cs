@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Assets;
 
-using VpnHood.AppLib.Contracts.Proxies;
-using VpnHood.AppLib.Contracts.Sessions;
+using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLib.Api.Sessions;
 
 namespace VpnHood.AppLib.ClassicAvaloniaUi.Helpers;
 

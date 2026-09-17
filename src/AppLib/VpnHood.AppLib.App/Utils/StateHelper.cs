@@ -1,10 +1,10 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Contracts.App;
-using VpnHood.AppLib.Contracts.ClientProfiles;
-using VpnHood.AppLib.Contracts.Proxies;
-using VpnHood.AppLib.Contracts.Settings;
-using VpnHood.AppLib.Contracts.SplitTunneling;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLib.Api.Settings;
+using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Premium;
 using VpnHood.AppLib.Services.Ads;

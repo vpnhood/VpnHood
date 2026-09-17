@@ -1,12 +1,10 @@
 ﻿using Google.Android.Gms.Ads;
 using Google.Android.Gms.Ads.Interstitial;
-using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.Api.Ads;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
-using VpnHood.AppLib.Api.Exceptions.AdExceptions;
+using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob;
 

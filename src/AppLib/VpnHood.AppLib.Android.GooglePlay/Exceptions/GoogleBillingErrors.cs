@@ -1,7 +1,6 @@
 using Android.BillingClient.Api;
 using VpnHood.AppLib.Abstractions.Billing;
 using PurchaseState = Android.BillingClient.Api.PurchaseState;
-using VpnHood.AppLib.Api.Billing;
 
 namespace VpnHood.AppLib.Droid.GooglePlay.Exceptions;
 

@@ -187,7 +187,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
 
     public Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken)
     {
-        app.AdManager.AdService.InternalAdDismiss(result);
+        app.AdManager.AdService.InternalAdDismiss(result.ToProvider());
         return Task.CompletedTask;
     }
 

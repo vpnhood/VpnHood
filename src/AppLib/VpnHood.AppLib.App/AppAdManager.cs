@@ -11,7 +11,7 @@ using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.AppLib.Api.Exceptions.AdExceptions;
+using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib;
 

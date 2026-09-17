@@ -1,8 +1,6 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Api.Accounts;
-using VpnHood.AppLib.Api.Billing;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Test.Providers;

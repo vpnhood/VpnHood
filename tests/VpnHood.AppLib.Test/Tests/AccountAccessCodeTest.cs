@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Services.Accounts;

@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Api.Exceptions.AdExceptions;
+namespace VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 public class ShowAdNoUiException(string? message = null, Exception? innerException = null)
     : ShowAdException(message ?? DefaultMessage, innerException)

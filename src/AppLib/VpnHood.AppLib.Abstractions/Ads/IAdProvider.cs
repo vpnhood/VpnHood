@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Api.Ads;
+﻿using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Abstractions.Ads;

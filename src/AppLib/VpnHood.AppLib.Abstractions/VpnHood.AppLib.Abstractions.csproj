@@ -1,31 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood App Abstractions</Description>
+		<Description>What a head supplies to the app and the app consumes without knowing the implementation: the account, billing, ad, device-UI, culture, updater and user-review providers. Interfaces and the shapes they exchange - no app, no engine, no UI.</Description>
 		<TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>VpnHood.AppLib.Abstractions</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- The OS-chrome icons are files in the content package, not bytes in this assembly. -->
-		<ProjectReference Include="..\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
-		<ProjectReference Include="..\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Compile Update="Resources.Designer.cs">
-	    <DependentUpon>Resources.resx</DependentUpon>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	</ItemGroup>
 
-	<ItemGroup>
-	  <EmbeddedResource Update="Resources.resx">
-	    <SubType>Designer</SubType>
-	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-	    <Generator>ResXFileCodeGenerator</Generator>
-	  </EmbeddedResource>
-	</ItemGroup>
 
 </Project>

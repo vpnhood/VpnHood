@@ -1,20 +1,23 @@
 ﻿using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-using VpnHood.AppLib.Api.Exceptions.AdExceptions;
 
 namespace VpnHood.AppLib.Api.Exceptions;
 
 // The wire values are class names, because that is what an ApiError carries: ExceptionExtensions
-// fills TypeName from exceptionType.Name, so renaming a class changes the wire whatever is written
-// here. nameof is therefore used wherever the class is visible - the rename then travels through
-// this enum and into the generated client in one step, instead of leaving a literal that quietly
-// stops matching. The engine's exceptions stay literals for the one reason that applies: the
-// contract does not reference VpnHood.Core, so their names cannot be spelled here any other way,
-// and renaming one of those is a breaking change this file cannot catch.
+// fills TypeName from exceptionType.Name. Every one is written as a literal, including the few
+// whose class this project can see, so the table reads as one thing and a reader never has to ask
+// why a line differs. Most of them could not be anything else: the engine's exceptions live in
+// VpnHood.Core and the ad ones in VpnHood.AppLib.Abstractions, neither of which the contract may
+// reference.
+//
+// The cost of that symmetry, stated once: renaming any of these classes changes what an ApiError
+// carries and does NOT change the value here, so the two quietly stop matching and a UI falls back
+// to a generic error. Renaming an exception on this list means editing this list in the same
+// commit. Changing a value here is a breaking change for every UI that reads it.
 [JsonConverter(typeof(JsonStringEnumConverter<ExceptionType>))]
 public enum ExceptionType
 {
-    [EnumMember(Value = nameof(NoErrorFoundException))]
+    [EnumMember(Value = "NoErrorFoundException")]
     NoErrorFound,
 
     [EnumMember(Value = "MaintenanceException")]
@@ -23,22 +26,22 @@ public enum ExceptionType
     [EnumMember(Value = "SessionException")]
     Session,
 
-    [EnumMember(Value = nameof(AdException))]
+    [EnumMember(Value = "AdException")]
     Ad,
 
-    [EnumMember(Value = nameof(ShowAdException))]
+    [EnumMember(Value = "ShowAdException")]
     ShowAd,
 
-    [EnumMember(Value = nameof(ShowAdNoUiException))]
+    [EnumMember(Value = "ShowAdNoUiException")]
     ShowAdNoUi,
 
-    [EnumMember(Value = nameof(LoadAdException))]
+    [EnumMember(Value = "LoadAdException")]
     LoadAd,
 
-    [EnumMember(Value = nameof(NoInternetException))]
+    [EnumMember(Value = "NoInternetException")]
     NoInternet,
 
-    [EnumMember(Value = nameof(NoStableVpnException))]
+    [EnumMember(Value = "NoStableVpnException")]
     NoStableVpn,
 
     [EnumMember(Value = "UnreachableServerException")]
@@ -50,7 +53,7 @@ public enum ExceptionType
     [EnumMember(Value = "UnreachableServerLocationException")]
     UnreachableServerLocation,
 
-    [EnumMember(Value = nameof(RewardNotEarnedException))]
+    [EnumMember(Value = "RewardNotEarnedException")]
     RewardNotEarned,
 
     [EnumMember(Value = "VpnServiceNotReadyException")]
@@ -71,13 +74,13 @@ public enum ExceptionType
     [EnumMember(Value = "EndPointDiscoveryException")]
     EndPointDiscovery,
 
-    [EnumMember(Value = nameof(PremiumOnlyException))]
+    [EnumMember(Value = "PremiumOnlyException")]
     PremiumOnly,
 
-    [EnumMember(Value = nameof(AdBlockerException))]
+    [EnumMember(Value = "AdBlockerException")]
     AdBlocker,
 
-    [EnumMember(Value = nameof(RequestQuickLaunchException))]
+    [EnumMember(Value = "RequestQuickLaunchException")]
     RequestQuickLaunch,
 
     [EnumMember(Value = "VpnServiceRevokedException")]

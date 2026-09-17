@@ -516,22 +516,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ConnectRequestTime = _appPersistState.ConnectRequestTime,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
                 SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
-                PurchaseState = Services.AccountService?.BillingService?.PurchaseState,
+                PurchaseState = Services.AccountService?.BillingService?.PurchaseState.ToAppDto(),
                 UpdaterStatus = Services.UpdaterService?.Status,
                 LastError = LastError?.ToAppDto(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol.ToAppDto() ??
                                   UserSettings.ChannelProtocol,
                 IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
-                SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()),
+                SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()?.ToAppDto()),
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
                 PromotionExists = PromotionExists(),
                 TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo, this),
                 SplitTunnelingState = StateHelper.GetSplitTunnelingState(UserSettings, connectionInfo?.SessionInfo, this),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
-                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext)
-                    : SystemBarsInfo.Default
+                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext).ToAppDto()
+                    : VpnHood.AppLib.Api.Device.SystemBarsInfo.Default
             };
 
             return appState;
@@ -1377,7 +1377,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         var purchaseOptions = new AppPurchaseOptions {
             IsStoreAvailable = storeInfo.IsAvailable,
-            SubscriptionPlans = storeInfo.SubscriptionPlans,
+            SubscriptionPlans = [.. storeInfo.SubscriptionPlans.Select(x => x.ToAppDto())],
             StoreError = storeInfo.StoreError,
             PurchaseUrl = purchaseUrl,
             // the remote policy offers it; the BUILD must also be allowed to take a typed code at

@@ -5,7 +5,6 @@ using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.UiContexts;
 using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
-using VpnHood.AppLib.Api.Accounts;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 

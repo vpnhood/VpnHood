@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>VpnHood Android Client App Common Library for Google</Description>
 		<TargetFramework>net10.0-android36.1</TargetFramework>
@@ -18,7 +18,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+	  <ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
 	  <ProjectReference Include="..\VpnHood.AppLib.Android.GooglePlay.Core\VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
 	</ItemGroup>
 

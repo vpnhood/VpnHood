@@ -1,6 +1,6 @@
 using Android.Content;
 
-namespace VpnHood.AppLib.Droid.Common.Utils;
+namespace VpnHood.Core.Client.Devices.Droid.Utils;
 
 public static class AndroidBrowserUtils
 {

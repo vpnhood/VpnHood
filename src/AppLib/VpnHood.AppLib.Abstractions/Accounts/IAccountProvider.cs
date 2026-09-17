@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Api.Accounts;
+using VpnHood.AppLib.Abstractions.Accounts;
 
 namespace VpnHood.AppLib.Abstractions.Accounts;
 

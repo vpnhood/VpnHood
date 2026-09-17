@@ -1,14 +1,14 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.AppLib.Api.Ads;
+using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.AppLib.Api.Exceptions.AdExceptions;
+using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib.Services.Ads;
 

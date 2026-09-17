@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Api.Billing;
+using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Abstractions.Billing;

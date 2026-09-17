@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.SpaWebView;

@@ -2,7 +2,6 @@
 using System.Text.Json;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.UiContexts;

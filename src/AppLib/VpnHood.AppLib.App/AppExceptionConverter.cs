@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.AppLib.Api.Exceptions.AdExceptions;
+using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib;
 

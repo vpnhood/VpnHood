@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Api.Accounts;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Abstractions.Accounts;

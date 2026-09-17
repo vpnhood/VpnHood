@@ -4,15 +4,14 @@ using Android.Content;
 using Android.Gms.Common;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Api.Billing;
-using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.AppLib.Droid.GooglePlay.Exceptions;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using PurchaseState = VpnHood.AppLib.Api.Billing.PurchaseState;
+using PurchaseState = VpnHood.AppLib.Abstractions.Billing.PurchaseState;
+using VpnHood.Core.Client.Devices.Droid.Utils;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 

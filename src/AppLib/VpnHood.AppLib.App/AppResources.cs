@@ -2,7 +2,7 @@
 using VpnHood.AppLib.Api.App;
 using VpnHood.Core.Toolkit.Graphics;
 
-namespace VpnHood.AppLib.Abstractions;
+namespace VpnHood.AppLib;
 
 public class AppResources
 {

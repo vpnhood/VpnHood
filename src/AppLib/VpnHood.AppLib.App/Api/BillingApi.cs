@@ -1,6 +1,8 @@
 ﻿using VpnHood.AppLib.Api.Billing;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.AppLib.DtoConverters;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.Api;
 
@@ -10,14 +12,15 @@ internal sealed class BillingApi(VpnHoodApp app) : IBillingApi
         app.Services.AccountService?.BillingService ??
         throw new Exception("Billing service is not available at this moment.");
 
-    public Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
-        return BillingService.GetSubscriptionPlans(cancellationToken);
+        var plans = await BillingService.GetSubscriptionPlans(cancellationToken).Vhc();
+        return [.. plans.Select(x => x.ToAppDto())];
     }
 
     public Task Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
-        return BillingService.Purchase(AppUiContext.RequiredContext, purchaseParams, cancellationToken);
+        return BillingService.Purchase(AppUiContext.RequiredContext, purchaseParams.ToProvider(), cancellationToken);
     }
 
     public Task<bool> RestorePurchase(CancellationToken cancellationToken)

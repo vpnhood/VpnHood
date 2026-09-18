@@ -4,7 +4,6 @@ public static class DebugCommands
 {
     public const string CaptureContext = "/capture-context";
     public const string DropUdp = "/drop-udp";
-    public const string KillSpaServer = "/kill-spa-server";
     public const string LogDebug = "/log:debug";
     public const string LogTrace = "/log:trace";
     public const string NullCapture = "/null-capture";
@@ -37,7 +36,6 @@ public static class DebugCommands
         DropUdp,
         LogDebug,
         LogTrace,
-        KillSpaServer,
         NoChannelReuse,
         NullCapture,
         UserReview,

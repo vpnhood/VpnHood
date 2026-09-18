@@ -55,10 +55,9 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         _commandListener.CommandReceived += CommandListener_CommandReceived;
     }
 
-    // The app on Windows, before any UI: the single instance, the firewall, the device, the web
-    // server both UIs load from, the tray. Which UI shows it is the head's next step - the web UI
-    // in WPF, or the Avalonia UI when DebugCommands.AvaloniaUi asks - so nothing here belongs to a
-    // UI framework. Throws when another instance is running, after asking it for its window.
+    // The app on Windows, before any UI: the single instance, the device, the web server both UIs
+    // load from, the tray. Which UI shows it is the head's next step - the web UI in WPF, or the
+    // Avalonia UI when DebugCommands.AvaloniaUi asks - so nothing here belongs to a UI framework. Throws when another instance is running, after asking it for its window.
     public static VpnHoodAppWin Init(Func<AppOptions> optionsFactory, string[] args)
     {
         var appOptions = optionsFactory();

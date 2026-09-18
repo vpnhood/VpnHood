@@ -8,12 +8,14 @@ using WatsonWebserver.Lite;
 
 namespace VpnHood.AppLib.Api.WebHost;
 
-// One listener and its whole state machine. The web view's own listener and the remote-access ones
-// are the same thing bound to different places, so bind, stop and recovery exist once, here. The
-// factory makes a fresh instance for the address and port fixed per listener, and the probe
-// connects to that same address, so a listener bound to a LAN address is judged there and not on
-// loopback. What differs between the listeners lives in VpnHoodAppWebHost: who creates them,
-// when they go, and who is told they came back.
+// One listener bound to one address and port: start it, stop it, say whether it is up. The web view's
+// own listener and the remote-access ones are the same thing bound to different places, so binding and
+// stopping exist once, here. The factory makes a fresh instance for the address and port fixed per
+// listener, and the probe connects to that same address, so a listener bound to a LAN address is
+// judged there and not on loopback. It never recovers itself: a dead listener is replaced by a new one
+// through VpnHoodAppWebHost.BindListeners, which is the only thing that may pick a different port when
+// something took this one during the outage. Everything else about a listener - who creates them, when
+// they go, and who is told they came back - lives there too.
 internal class WebServerListener(string name, IPAddress address, int port, Func<WebserverLite> serverFactory) : IDisposable
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(2);
@@ -29,9 +31,8 @@ internal class WebServerListener(string name, IPAddress address, int port, Func<
     public bool IsListening => _server?.IsListening == true;
 
     // The lock serializes the state transitions: the initial start, the watchdog and a web view's
-    // recovery can all drive them from different threads. Monitor is
-    // re-entrant, so Restart()'s nested Stop()/Start() are fine. The listener socket is bound and
-    // listening before Start() returns, so a caller can point a web view at it immediately.
+    // recovery can all drive them from different threads. The listener socket is bound and listening
+    // before Start() returns, so a caller can point a web view at it immediately.
     public void Start()
     {
         lock (_lock) {
@@ -56,50 +57,11 @@ internal class WebServerListener(string name, IPAddress address, int port, Func<
         }
     }
 
-    public void Restart()
-    {
-        lock (_lock) {
-            Stop();
-            Start();
-        }
-    }
-
-    // Watchdog step: put the listener back when it has died. It only reads the listener's own
-    // state, so a healthy listener is never restarted. Returns whether it restarted.
-    public bool RestartIfDown()
-    {
-        lock (_lock) {
-            if (_disposed || _server == null || IsListening)
-                return false;
-
-            VhLogger.Instance.LogWarning("The {Name} web server listener is down; restarting it.", name);
-            Restart();
-            return true;
-        }
-    }
-
-    // Probe step, for concrete signals only (a resume, a web view that failed to connect), never
-    // periodically: a probe that times out on a busy system would restart a healthy listener. iOS
-    // can close a socket during a suspension while the accept loop still believes it is listening,
-    // so the flag alone is not enough there. The probe awaits, so it runs outside the lock; the
-    // instance it judged is compared under it, so two overlapping signals restart once, not twice.
-    public async Task<bool> RestartIfUnreachable()
-    {
-        var server = _server;
-        if (_disposed || server == null || await IsReachable().Vhc())
-            return false;
-
-        lock (_lock) {
-            if (_disposed || !ReferenceEquals(_server, server))
-                return false; // gone, or already restarted by the other signal
-
-            VhLogger.Instance.LogWarning("The {Name} web server listener is not reachable; restarting it.", name);
-            Restart();
-            return true;
-        }
-    }
-
-    private async Task<bool> IsReachable()
+    // One real connect, for concrete signals only (a resume, a web view that failed to connect), never
+    // periodically: a probe that times out on a busy system would condemn a healthy listener. iOS can
+    // close a socket during a suspension while the accept loop still believes it is listening, so
+    // IsListening alone is not enough there.
+    public async Task<bool> IsReachable()
     {
         try {
             using var client = new TcpClient();

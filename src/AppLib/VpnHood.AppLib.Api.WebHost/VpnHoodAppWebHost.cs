@@ -66,6 +66,12 @@ public class VpnHoodAppWebHost : IAppWebHost
     private readonly ConcurrentDictionary<IPAddress, DateTime> _clients = new();
 
     private IReadOnlyList<WebServerListener> _listeners = []; // replaced whole, never mutated
+
+    // What the last EnsureStarted asked for, which is not what _listeners holds: a listener can die or
+    // fail to bind. Recovery aims at this, so a listener that is gone is missed even when nothing is
+    // left to notice it. Empty until the first EnsureStarted and again after a Stop, which is what
+    // keeps the watchdog from reviving a host the screen let go of.
+    private IReadOnlyList<IPAddress> _addresses = [];
     private IReadOnlyList<Uri> _urls = [];
     private Timer? _watchdogTimer;
     private int _port;
@@ -156,6 +162,7 @@ public class VpnHoodAppWebHost : IAppWebHost
         lock (_lock) {
             ObjectDisposedException.ThrowIf(_disposed, this);
             wasBound = _listeners.Count > 0;
+            _addresses = addresses;
             if (!wasBound || !addresses.ToHashSet().SetEquals(_listeners.Select(x => x.Address)))
                 BindListeners(addresses);
 
@@ -289,14 +296,43 @@ public class VpnHoodAppWebHost : IAppWebHost
         }
     }
 
-    // Watchdog: put back any listener that has died. Tell the caller, so assets interrupted by the
-    // outage are loaded again even when the main document had already finished loading.
+    // The one recovery path. A listener that is gone is dropped and bound again through
+    // BindListeners, never restarted where it stood: whatever took it down may have taken its port
+    // with it, and BindListeners is the only thing allowed to pick another one - it is also what
+    // retries an address that failed to bind last time, since _addresses says what should be up.
+    // Returns whether anything was rebound. Under the lock.
+    private bool RebindListeners(IReadOnlyList<WebServerListener> lost)
+    {
+        if (_disposed || _addresses.Count == 0)
+            return false;
+
+        // the signal may have judged listeners this host has already replaced or let go of
+        var dead = _listeners.Where(lost.Contains).ToArray();
+        if (dead.Length == 0 && _listeners.Count == _addresses.Count)
+            return false;
+
+        VhLogger.Instance.LogWarning(
+            "The {Name} web host is short of listeners; binding again. Dead: {Dead}, Alive: {Alive}, Wanted: {Wanted}",
+            _isRemote ? "remote" : "local", dead.Length, _listeners.Count, _addresses.Count);
+
+        _listeners = [.. _listeners.Except(dead)];
+        foreach (var listener in dead)
+            listener.Dispose();
+
+        BindListeners(_addresses);
+        _urls = [.. _listeners.Select(x => BuildUrl(x.Address))];
+        return true;
+    }
+
+    // Watchdog: each listener's own state, which costs no network. Tell the caller, so assets
+    // interrupted by the outage are loaded again even when the main document had already finished
+    // loading - and so a web view asks for the address again, which is how it follows a moved port.
     private void RestartIfDown()
     {
         try {
-            var restarted = false;
-            foreach (var listener in GetListeners())
-                restarted |= listener.RestartIfDown();
+            bool restarted;
+            lock (_lock)
+                restarted = RebindListeners([.. _listeners.Where(x => !x.IsListening)]);
 
             if (restarted)
                 Restarted?.Invoke(this, EventArgs.Empty);
@@ -306,12 +342,22 @@ public class VpnHoodAppWebHost : IAppWebHost
         }
     }
 
-    // Only on concrete signals (a resume, a web view that failed to connect), never periodically.
+    // Only on concrete signals (a resume, a web view that failed to connect), never periodically. The
+    // probes await, so they run outside the lock and the listeners they judged are matched under it:
+    // two overlapping signals rebind once, not twice.
     private async Task RestartIfUnreachable()
     {
-        var restarted = false;
+        var unreachable = new List<WebServerListener>();
         foreach (var listener in GetListeners())
-            restarted |= await listener.RestartIfUnreachable().Vhc();
+            if (!await listener.IsReachable().Vhc())
+                unreachable.Add(listener);
+
+        if (unreachable.Count == 0)
+            return;
+
+        bool restarted;
+        lock (_lock)
+            restarted = RebindListeners(unreachable);
 
         if (restarted)
             Restarted?.Invoke(this, EventArgs.Empty);
@@ -327,16 +373,20 @@ public class VpnHoodAppWebHost : IAppWebHost
         return Task.CompletedTask;
     }
 
+    // No early-out on an empty listener list: a host whose last rebind bound nothing still wants its
+    // addresses, and it is exactly that intent Stop has to take away. Clearing _addresses is what ends
+    // recovery; disposing an empty list costs nothing.
     private void StopInternal()
     {
         lock (_lock) {
-            if (IsAlwaysOn || _listeners.Count == 0)
+            if (IsAlwaysOn)
                 return;
 
             foreach (var listener in _listeners)
                 listener.Dispose();
 
             _listeners = [];
+            _addresses = [];
             _urls = [];
         }
     }
@@ -358,6 +408,7 @@ public class VpnHoodAppWebHost : IAppWebHost
                 listener.Dispose();
 
             _listeners = [];
+            _addresses = [];
             _urls = [];
         }
     }

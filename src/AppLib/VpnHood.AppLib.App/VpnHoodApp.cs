@@ -6,7 +6,6 @@ using System.Text.Json;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using TaskExtensions = VpnHood.Core.Toolkit.Extensions.TaskExtensions;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.ClientProfiles;
@@ -14,7 +13,6 @@ using VpnHood.AppLib.Api;
 using VpnHood.AppLib.ApiImpl;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.ClientProfiles;
-using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Diagnosing;
@@ -314,6 +312,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task OnStartup()
     {
+        CleanupLegacyTempFolder();
+
         // track first launch with the locale-based country
         try {
             if (!SettingsService.Settings.IsStartupTrackerSent) {
@@ -335,6 +335,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // nobody was waiting for. The account is asked when something actually depends on it: an
         // expiry that has passed, a code typed in, a refusal from the access server, a purchase, or
         // the person pressing refresh.
+    }
+
+    // Where every build up to 8.1 extracted the SPA; 8.2 moved it under Temp/WebRoot/<hash>, and
+    // WebRoot cleans only that root, so on a machine that upgraded the old folder would sit there for
+    // good. Delete this method once DeprecatedVersion (pub/PubVersion.json) passes 8.2 - no install
+    // that old can still be upgrading. Temp itself stays: the WPF head keeps its web view's user data
+    // folder in it.
+    private void CleanupLegacyTempFolder()
+    {
+        var folderPath = Path.Combine(TempFolderPath, "SPA");
+        if (Directory.Exists(folderPath))
+            VhUtils.TryInvoke("Delete the legacy SPA temp folder", () => Directory.Delete(folderPath, true));
     }
 
     private void ApplySettings()
@@ -826,7 +838,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent,
-        VpnHood.AppLib.Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
+        Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
         CancellationToken cancellationToken)
     {
         var profileInfo = CurrentClientProfileInfo ?? throw new NotExistsException("ClientProfile is not set.");

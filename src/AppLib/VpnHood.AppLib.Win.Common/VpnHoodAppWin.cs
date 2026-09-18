@@ -3,9 +3,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
-using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.Win.Common.WinNative;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Common;
@@ -24,7 +22,6 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     private Mutex? _instanceMutex;
     private SystemTray? _sysTray;
     private readonly CommandListener _commandListener;
-    private readonly string _storageFolder;
     private readonly IntPtr _appIcon;
     private IntPtr _disconnectedIcon;
     private IntPtr _connectedIcon;
@@ -32,14 +29,11 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     private int _connectMenuItemId;
     private int _disconnectMenuItemId;
     private int _openMainWindowMenuItemId;
-    private int _openMainWindowInBrowserMenuItemId;
 
     public event EventHandler? OpenMainWindowRequested;
-    public event EventHandler? OpenMainWindowInBrowserRequested;
     public event EventHandler? ExitRequested;
     public bool ShowWindowAfterStart { get; private set; }
     public bool ConnectAfterStart { get; private set; }
-    public bool EnableOpenMainWindow { get; set; } = true;
 
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
@@ -48,7 +42,6 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     {
         VhLogger.Instance = new VhConsoleLogger();
         _appId = appId;
-        _storageFolder = storageFolder;
 
         // get app icon from executable
         var assemblyLocation = Assembly.GetEntryAssembly()?.Location ??
@@ -66,22 +59,14 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     // server both UIs load from, the tray. Which UI shows it is the head's next step - the web UI
     // in WPF, or the Avalonia UI when DebugCommands.AvaloniaUi asks - so nothing here belongs to a
     // UI framework. Throws when another instance is running, after asking it for its window.
-    public static VpnHoodAppWin Init(Func<AppOptions> optionsFactory, string[] args, Func<ReadOnlyMemory<byte>> webRootZipFactory)
+    public static VpnHoodAppWin Init(Func<AppOptions> optionsFactory, string[] args)
     {
         var appOptions = optionsFactory();
         appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
         appOptions.DeviceUiProvider = new WinDeviceUiProvider();
         appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
 
-        // register local domain if needed
-        var alternativeUrl = string.IsNullOrEmpty(appOptions.WebUiHostName)
-            ? null
-            : RegisterLocalDomain(IPEndPoint.Parse("127.10.10.10:80"), appOptions.WebUiHostName);
-
         var appWin = Init(appOptions, args);
-        // started now, not on first use: the tray can open the UI in a browser at any moment
-        VpnHoodAppWebHost.Init(VpnHoodApp.Instance, new WebHostOptions { Url = alternativeUrl, WebRootZip = webRootZipFactory() }).Start();
-        appWin.OpenMainWindowInBrowserRequested += (_, _) => OpenUrlInExternalBrowser(VpnHoodAppWebHost.Instance.Url);
         appWin.Start();
         return appWin;
     }
@@ -143,14 +128,6 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
                 _commandListener.TrySendCommand("/openWindow");
             throw new Exception("VpnHood client is already running.");
         }
-
-        // configuring Windows Firewall
-        try {
-            OpenLocalFirewall(_appId, _storageFolder);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not configure Windows Firewall.");
-        }
     }
 
     public bool Start()
@@ -176,9 +153,6 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         _sysTray.ContextMenu = new ContextMenu();
         _openMainWindowMenuItemId =
             _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Open, (_, _) => OpenMainWindow());
-        _openMainWindowInBrowserMenuItemId =
-            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.OpenInBrowser,
-                (_, _) => OpenMainWindowInBrowser());
         _sysTray.ContextMenu.AddMenuSeparator();
         _connectMenuItemId =
             _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Connect,
@@ -223,21 +197,14 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId,
             !VpnHoodApp.Instance.IsIdle &&
             VpnHoodApp.Instance.State.ConnectionState != AppConnectionState.Disconnecting);
-        _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowMenuItemId, EnableOpenMainWindow);
-        _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowInBrowserMenuItemId, true);
     }
 
+    // What a UI shows when the tray asks for the window is the UI's own business: a WPF head shows
+    // its window, an Avalonia head shows its own, and a head whose web view cannot draw falls back to
+    // the system browser. This only asks.
     private void OpenMainWindow()
     {
-        if (EnableOpenMainWindow)
-            OpenMainWindowRequested?.Invoke(this, EventArgs.Empty);
-        else
-            OpenMainWindowInBrowser();
-    }
-
-    public void OpenMainWindowInBrowser()
-    {
-        OpenMainWindowInBrowserRequested?.Invoke(this, EventArgs.Empty);
+        OpenMainWindowRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void Exit()
@@ -262,112 +229,12 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         }
     }
 
-    private static void OpenLocalFirewall(string appId, string appDataPath)
-    {
-        var lastFirewallConfig = Path.Combine(appDataPath, "lastFirewallConfig");
-        var lastExeMark = File.Exists(lastFirewallConfig) ? File.ReadAllText(lastFirewallConfig) : null;
-        var exePath = Process.GetCurrentProcess().MainModule?.FileName ??
-                      throw new FileNotFoundException("Could not find current module file.");
-        var exeMark = $"{exePath}\r\n{File.GetCreationTimeUtc(exePath)}\r\n{Assembly.GetExecutingAssembly().FullName}";
-        if (lastExeMark == exeMark)
-            return;
-
-        VhLogger.Instance.LogInformation("Configuring Windows Defender Firewall...");
-        var ruleName = appId;
-
-        //dotnet exe
-        VhUtils.TryInvoke("Delete old the firewall rules", () =>
-            OsUtils.ExecuteCommand("netsh", $"advfirewall firewall delete rule name=\"{ruleName}\" dir=in"));
-
-        VhUtils.TryInvoke("Add the TCP firewall rule", () =>
-            OsUtils.ExecuteCommand("netsh",
-                $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=any dir=in"));
-
-        VhUtils.TryInvoke("Add the UDP firewall rule", () =>
-            OsUtils.ExecuteCommand("netsh",
-                $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=any dir=in"));
-
-        // save firewall modified
-        File.WriteAllText(lastFirewallConfig, exeMark);
-    }
-
-    public static Uri? RegisterLocalDomain(IPEndPoint hostEndPoint, string localHost)
-    {
-        // check default ip
-        IPEndPoint? freeLocalEndPoint = null;
-        try {
-            freeLocalEndPoint = VhUtils.GetFreeTcpEndPoint(hostEndPoint.Address, hostEndPoint.Port);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",
-                hostEndPoint.Address, ex.Message);
-        }
-
-        // check 127.0.0.1
-        if (freeLocalEndPoint == null) {
-            try {
-                freeLocalEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, 9090);
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",
-                    IPAddress.Loopback, ex.Message);
-                return null;
-            }
-        }
-
-        try {
-            var hostsFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers",
-                "etc", "hosts");
-            var hostLines = File.ReadLines(hostsFilePath).ToList();
-
-            // remove wrong items
-            var newHostLines = hostLines
-                .Where(x => {
-                    var items = x.Split(" ");
-                    var isWrongVpnHoodLine =
-                        items.Length > 1 &&
-                        items[0].Trim() != freeLocalEndPoint.Address.ToString() &&
-                        items[1].Trim().Equals(localHost, StringComparison.OrdinalIgnoreCase);
-                    return !isWrongVpnHoodLine;
-                })
-                .ToList();
-
-            // add item if it does not exist
-            var isAlreadyAdded = newHostLines
-                .Any(x => {
-                    var items = x.Split(" ");
-                    var isVpnHoodLine =
-                        items.Length > 1 &&
-                        items[0].Trim() == freeLocalEndPoint.Address.ToString() &&
-                        items[1].Trim().Equals(localHost, StringComparison.OrdinalIgnoreCase);
-                    return isVpnHoodLine;
-                });
-
-            if (!isAlreadyAdded)
-                newHostLines.Add($"{freeLocalEndPoint.Address} {localHost} # Added by VpnHood!");
-
-            // update if changed
-            if (!hostLines.SequenceEqual(newHostLines))
-                File.WriteAllLines(hostsFilePath, [.. newHostLines]);
-
-            return new Uri($"http://{localHost}:{freeLocalEndPoint.Port}");
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not register local domain.");
-            return null;
-        }
-    }
-
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
             _commandListener.Dispose();
             _instanceMutex?.Dispose();
             _sysTray?.Dispose();
-
-            // the web server started with the app, then the app it serves
-            if (VpnHoodAppWebHost.IsInit)
-                VpnHoodAppWebHost.Instance.Dispose();
 
             // disconnect and dispose app
             if (VpnHoodApp.IsInit)

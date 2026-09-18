@@ -1,14 +1,10 @@
 ﻿using System.Collections.Concurrent;
-using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Assets;
-using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
@@ -17,23 +13,24 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
+using VpnHood.AppLib.WebHosting;
 
 namespace VpnHood.AppLib.Api.WebHost;
 
-// The web view's own listener and the remote-access listeners serve the same SPA and API and differ
-// in where they bind and who owns their life. The primary is loopback, alive from Start to Dispose.
-// The remote ones are one per advertised LAN address on one shared port, alive from
-// StartRemoteAccess to StopRemoteAccess, or for the whole process for a developer. The listener
-// state machine itself is WebServerListener, once; all of them get the same recovery from here.
-public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost, IDisposable
+// One host, made twice: the local one binds loopback for the app's own web view, the remote one binds
+// every advertised LAN address for a phone that paired. They serve the same UI and the same API and
+// differ only in where they bind, whether a pairing is asked, and who ends them - so what they share
+// is everything below, and what differs is the flag. The listener state machine itself is
+// WebServerListener, once. Nothing is bound, and nothing is unpacked, until EnsureStarted is called.
+public class VpnHoodAppWebHost : IAppWebHost
 {
     // The pairing: a short token in the QR's address that becomes a cookie on the first hit. Eight
-    // characters from an alphabet without 0/O/1/l, since someone may type it from the screen. One
-    // per run of the app, like the port: made at the first start and kept across stop and start,
-    // so a phone that paired earlier in this run gets back in without a scan when the screen is
-    // opened again (an accidental Back on the TV would otherwise cost a rescan). The screen still
-    // decides when anything is reachable at all; only a restart makes a new token, and nothing
-    // is persisted, so it never becomes a standing credential for the install.
+    // characters from an alphabet without 0/O/1/l, since someone may type it from the screen. One per
+    // run of the app, like the port: made at the first bind and kept across stop and start, so a phone
+    // that paired earlier in this run gets back in without a scan when the screen is opened again (an
+    // accidental Back on the TV would otherwise cost a rescan). The screen still decides when anything
+    // is reachable at all; only a restart makes a new token, and nothing is persisted, so it never
+    // becomes a standing credential for the install.
     private const string PairQueryName = "pair";
     private const string PairCookieName = "vh-pair";
     private const string BearerPrefix = "Bearer ";
@@ -41,103 +38,92 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
     private const int PairTokenLength = 8;
 
     private const string AssetsManifestName = "assets-manifest.json";
+
+    // What both listeners want when nothing else is configured.
+    private const int DefaultPort = 9090;
+
     // A file whose name carries a hash of its content: Vite's "name-<8>.ext", the .NET browser build's
     // "name.<10>.ext" (dotnet.native.<hash>.wasm). index.html, main.js and dotnet.js keep their names.
     private static readonly Regex FingerprintRegex = new(@"(-[a-z0-9_-]{8}|\.[a-z0-9]{10})\.[a-z0-9]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private readonly ReadOnlyMemory<byte> _webRootZip;
-    private string? _indexHtml;
-    private string? _webRootHash;
-    private string? _webRootPath;
-    private string[]? _assetNames;
-    private readonly bool _isDeveloperRemoteAccess;
-    private readonly WebServerListener _primary;
-    private IReadOnlyList<WebServerListener> _remoteListeners = []; // one per advertised address, replaced whole
-    private int _remotePort;
-    private string? _pairToken;
-    private IReadOnlyList<Uri> _remoteAccessUrls = [];
+    // assets/locales/<culture>.json, the one part of the assets folder that is not a file
+    private static readonly Regex LocalePathRegex = new(@"^assets/locales/([\w-]+)\.json$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    // Presence, not sessions: the remote SPA polls every second, so an address seen within the
-    // window is a device that is on, and a closed tab ages out. Keyed by address, so two browsers
-    // on one phone count once. Fed by every request that passed the pairing, on every listener.
-    private readonly ConcurrentDictionary<IPAddress, DateTime> _remoteClients = new();
-    private static readonly TimeSpan PresenceWindow = TimeSpan.FromSeconds(5);
-    private readonly Lock _lock = new(); // guards the remote listeners, their port and token, and _disposed; each listener locks itself
-    private Timer? _watchdogTimer;
-    private bool _disposed;
     private static readonly TimeSpan WatchdogInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan PresenceWindow = TimeSpan.FromSeconds(5);
 
-    // The address the app's own web view loads: always loopback. Whether other devices can reach
-    // the app is a property of the remote listeners, never of this address.
-    public Uri Url { get; }
+    private readonly WebHostCreateParams _createParams;
+    private readonly WebHostShared _shared;
+    private readonly bool _isRemote;
 
-    public string WebRootHash => _webRootHash ?? throw new InvalidOperationException($"{nameof(WebRootHash)} is not initialized");
+    // Guards the listeners, their port and token, the advertised addresses and _disposed; each
+    // listener locks itself.
+    private readonly Lock _lock = new();
 
-    // The bundle's assets folder: its images, country flags, fonts, locale files and content
-    // documents, each under its own name (the bundle's own code and styles are hashed and live
-    // beside it). The SPA loads them from here over this server; a head that shows the native UI
-    // instead hands this path to it, so one copy on the device serves both.
-    // The folder the UIs load their files from by name, which this server serves at /assets/: the
-    // content package's (VpnHood.AppLib.Assets), placed by the app's build.
-    public string AssetsFolderPath => AppContent.FolderPath;
-    public bool UseHostName { get; set; }
-    public bool IsListening => _primary.IsListening;
+    // Presence, not sessions: the remote SPA polls every second, so an address seen within the window
+    // is a device that is on, and a closed tab ages out. Keyed by address, so two browsers on one
+    // phone count once. Fed by every request that passed the pairing.
+    private readonly ConcurrentDictionary<IPAddress, DateTime> _clients = new();
 
-    // Held by a pairing screen, or permanent because a developer holds the port open.
-    public bool IsRemoteAccessActive => _isDeveloperRemoteAccess || _remoteListeners.Count > 0;
+    private IReadOnlyList<WebServerListener> _listeners = []; // replaced whole, never mutated
+    private IReadOnlyList<Uri> _urls = [];
+    private Timer? _watchdogTimer;
+    private int _port;
+    private string? _pairToken;
+    private bool _disposed;
 
-    // Read by the pairing screen while it is open; nothing here touches the network, the
-    // addresses are those of the last start or refresh.
-    public RemoteAccessState RemoteAccessState => new() {
-        IsActive = IsRemoteAccessActive,
-        IsAlwaysOn = _isDeveloperRemoteAccess,
-        Urls = _remoteAccessUrls,
-        ConnectedDevices = GetConnectedDevices()
-    };
+    // The app's own API object, put on HTTP by the route table: one instance, every transport, so a
+    // paired browser and the device's own UI cannot drift apart.
+    private VpnHoodApi Api => _createParams.Api;
 
-    private IPAddress[] GetConnectedDevices()
-    {
-        var threshold = DateTime.UtcNow - PresenceWindow;
-        foreach (var stale in _remoteClients.Where(x => x.Value < threshold).Select(x => x.Key).ToArray())
-            _remoteClients.TryRemove(stale, out _);
+    // Up for the life of the process whether or not anything asked, and refusing to stop because
+    // nothing holds it that could let go. The app decides which host gets it, and this one obeys.
+    public bool IsAlwaysOn { get; }
 
-        return [.. _remoteClients.Keys];
+    // Whether a remote caller must carry the pairing token. The app's rule, not this host's: false is
+    // the developer's open door, where no screen exists to read a token from. It never applies to the
+    // local listener - a loopback request is not remote, so it is never asked.
+    private bool IsPairingRequired => _createParams.IsPairingRequired;
+
+    // Only where a page may legitimately come from somewhere else: a developer's dev server talking to
+    // a device. A screen-held pairing keeps the Origin check, since the phone is served that page by
+    // this very address.
+    private bool AllowAnyOrigin => _isRemote && !IsPairingRequired;
+
+    public bool IsActive => IsAlwaysOn || _listeners.Count > 0;
+
+    // Those of the last EnsureStarted; nothing here touches the network.
+    public IReadOnlyList<Uri> Urls => _urls;
+
+    public IReadOnlyList<IPAddress> ConnectedDevices {
+        get {
+            var threshold = DateTime.UtcNow - PresenceWindow;
+            foreach (var stale in _clients.Where(x => x.Value < threshold).Select(x => x.Key).ToArray())
+                _clients.TryRemove(stale, out _);
+
+            return [.. _clients.Keys];
+        }
     }
 
-    // Raised after the primary came back, outside any lock so UI subscribers can dispatch. The
-    // hosts reload the SPA in the web view on it; a phone on a remote listener simply retries,
-    // so those are never announced.
+    // Raised after a listener came back, outside any lock so UI subscribers can dispatch. The web view
+    // reloads the UI on it; a phone on a remote listener simply retries.
     public event EventHandler? Restarted;
 
-    private readonly VpnHoodApp _app;
-
-    // The app's own API object, put on HTTP by the route table: one instance, two transports, so a
-    // paired browser and the device's own UI cannot drift apart. Remote access is the one call that
-    // comes back here, and it arrives as IRemoteAccessHost - the head wires that up in AppOptions.
-    private VpnHoodApi Api => _app.Api;
-
-    private VpnHoodAppWebHost(VpnHoodApp app, WebHostOptions options)
+    internal VpnHoodAppWebHost(WebHostCreateParams createParams, WebHostShared shared, bool isRemote)
     {
-        _app = app;
-        _webRootZip = options.WebRootZip;
-        var defaultPort = app.Features.WebUiPort ?? 9090;
-        var endPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, defaultPort);
-        Url = options.Url ?? new Uri($"http://{endPoint}");
+        _createParams = createParams;
+        _shared = shared;
+        _isRemote = isRemote;
 
-        // A developer can hold remote access open for the life of the process, with the API open
-        // to any origin and no pairing asked: /remote-access in the debug data, or any debug build.
-        // Read once here and applied at the next launch, never written back to the settings. The
-        // on-demand counterpart for everyone is StartRemoteAccess.
-        _isDeveloperRemoteAccess = app.Features.IsDebugMode || app.HasDebugCommand(DebugCommands.RemoteAccess);
-        var primaryAddress = IPAddress.TryParse(Url.Host, out var address) ? address : IPAddress.Loopback;
-        _primary = new WebServerListener("primary", primaryAddress, Url.Port, () => CreateWebServer(Url.Host, Url.Port));
+        IsAlwaysOn = createParams.IsAlwaysOn;
 
         AppUiContext.OnResumed += AppUiContextOnResumed;
-        AppUiContext.OnChanged += AppUiContextOnChanged;
+        if (isRemote)
+            AppUiContext.OnChanged += AppUiContextOnChanged;
     }
 
-    // One real connect per listener on every resume, off the UI thread: iOS suspends the process
-    // and can close a socket meanwhile. The host reloads the SPA if the primary restarts.
+    // One real connect per listener on every resume, off the UI thread: iOS suspends the process and
+    // can close a socket meanwhile.
     private void AppUiContextOnResumed(object? sender, EventArgs e)
     {
         Task.Run(async () => {
@@ -145,205 +131,138 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
                 await RestartIfUnreachable().Vhc();
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "SPA web server resume check failed.");
+                VhLogger.Instance.LogError(ex, "The web host's resume check failed.");
             }
         });
     }
 
-    // The activity or window that owned the pairing screen is gone, so the screen is too.
+    // The activity or window that owned the pairing screen is gone, so the screen is too. Remote only:
+    // the local host outlives every UI context, since the next one loads from it.
     private void AppUiContextOnChanged(object? sender, EventArgs e)
     {
         if (AppUiContext.Context == null)
-            StopRemoteAccessInternal();
+            StopInternal();
     }
 
-    protected override void Dispose(bool disposing)
+    // The address to load, bound and answering by the time it returns. The first call unpacks the UI
+    // and binds; a later one is the caller's own "unreachable" signal and costs one real connect. The
+    // remote host also follows its addresses, which can move under an open pairing screen.
+    public async Task<Uri> EnsureStarted(CancellationToken cancellationToken)
     {
-        if (disposing) {
-            AppUiContext.OnResumed -= AppUiContextOnResumed;
-            AppUiContext.OnChanged -= AppUiContextOnChanged;
-            // Under the lock so a watchdog tick that already fired can't restart a stopped listener.
-            lock (_lock) {
-                _disposed = true;
-                _watchdogTimer?.Dispose();
-                _watchdogTimer = null;
-                foreach (var listener in _remoteListeners)
-                    listener.Dispose();
-                _remoteListeners = [];
-                _primary.Dispose();
-            }
-        }
-
-        base.Dispose(disposing);
-    }
-
-    // Construction only, by the head at startup, which has the web root zip. Nothing is extracted or
-    // bound until Start, which whoever first needs the address calls - the web view, the Avalonia
-    // activity, the pairing screen - so a process that never shows a UI never runs a server.
-    public static VpnHoodAppWebHost Init(VpnHoodApp app, WebHostOptions options)
-    {
-        return new VpnHoodAppWebHost(app, options);
-    }
-
-    // Extracts the web root and binds the primary listener. Idempotent.
-    public void Start()
-    {
-        lock (_lock) {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            if (_watchdogTimer != null)
-                return;
-
-            _primary.Start();
-            VhLogger.Instance.LogInformation("Web server has been started on {Url}", Url);
-            _watchdogTimer = new Timer(_ => RestartIfDown(), null, WatchdogInterval, WatchdogInterval);
-        }
-
-        // The developer's listeners come up by themselves. Off this thread: the addresses take a
-        // route lookup, and Start is called from the hosts' startup path.
-        if (_isDeveloperRemoteAccess)
-            Task.Run(async () => {
-                try {
-                    await StartRemoteAccess(CancellationToken.None).Vhc();
-                }
-                catch (Exception ex) {
-                    VhLogger.Instance.LogError(ex, "Could not open the developer's remote access listeners.");
-                }
-            });
-    }
-
-    // The listeners alive right now. A listener that was released is not in it, which is what
-    // keeps recovery from reviving remote access after the screen let go of it.
-    private IReadOnlyList<WebServerListener> GetListeners()
-    {
-        lock (_lock) {
-            return [_primary, .. _remoteListeners];
-        }
-    }
-
-    // Watchdog: put back any listener that has died. Notify the host so assets interrupted by the
-    // outage are loaded again, even when the main document had already finished loading.
-    private void RestartIfDown()
-    {
-        try {
-            foreach (var listener in GetListeners())
-                if (listener.RestartIfDown() && listener == _primary)
-                    OnPrimaryRestarted();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "SPA web server watchdog failed.");
-        }
-    }
-
-    // Only on concrete signals (resume, a web view that failed to connect), never periodically.
-    public async Task RestartIfUnreachable()
-    {
-        foreach (var listener in GetListeners())
-            if (await listener.RestartIfUnreachable().Vhc() && listener == _primary)
-                OnPrimaryRestarted();
-    }
-
-    // The hosts reload the SPA on Restarted, and that takes the pairing screen with it: no screen,
-    // no listener. Raised outside any lock so UI subscribers can dispatch.
-    private void OnPrimaryRestarted()
-    {
-        StopRemoteAccessInternal();
-        Restarted?.Invoke(this, EventArgs.Empty);
-    }
-
-    // Remote access lives exactly as long as the caller keeps it: the pairing screen starts it when
-    // it opens, refreshes it while open, and stops it when it closes; the UI context going away
-    // stops it too. It is a set of listeners beside the primary rather than a rebind of it, so the
-    // web view sitting on Url is never reloaded out from under the screen that asked for this.
-    // One listener per advertised address, never 0.0.0.0: the printed address is the contract, and
-    // the VPN's own tunnel or a phone's cellular interface must not carry a control page. Nothing
-    // is persisted; an app restart comes up loopback-only. While held they recover like the
-    // primary does.
-    //
-    // For a developer (debug build or /remote-access) the same listeners come up at Init on the
-    // primary's own port, stay for the life of the process, and ask for no pairing. The SPA learns
-    // that from IsAlwaysOn, so it knows not to ask the user to keep the screen open.
-    public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken)
-    {
-        return UpdateRemoteAccess(start: true, cancellationToken);
-    }
-
-    // The pairing screen's poll: a network can change under an open screen, so the address set is
-    // read again and the listeners follow it. Starts nothing.
-    public Task<RemoteAccessState> RefreshRemoteAccess(CancellationToken cancellationToken)
-    {
-        return UpdateRemoteAccess(start: false, cancellationToken);
-    }
-
-    private async Task<RemoteAccessState> UpdateRemoteAccess(bool start, CancellationToken cancellationToken)
-    {
-        if (!start && !IsRemoteAccessActive)
-            return RemoteAccessState;
-
-        // The QR code encodes the first; the rest are the plain-text fallback under it. Our own
-        // adapter is "VpnHood.<name>" on Windows (WinTunVpnAdapter); the toolkit already skips tun*.
+        var addresses = await GetAddresses().Vhc();
         cancellationToken.ThrowIfCancellationRequested();
-        var addresses = await IPAddressUtil.GetLanAddresses(AddressFamily.InterNetwork,
-            [.. IPAddressUtil.VirtualAdapterMarkers, "VpnHood"]).Vhc();
 
+        bool wasBound;
         lock (_lock) {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            if (!start && _remoteListeners.Count == 0 && !_isDeveloperRemoteAccess)
-                return RemoteAccessState; // stopped while the addresses were being read
+            wasBound = _listeners.Count > 0;
+            if (!wasBound || !addresses.ToHashSet().SetEquals(_listeners.Select(x => x.Address)))
+                BindListeners(addresses);
 
-            if (_remoteListeners.Count == 0 || !addresses.ToHashSet().SetEquals(_remoteListeners.Select(x => x.Address)))
-                BindRemoteListeners(addresses);
-
-            var bound = _remoteListeners.Select(x => x.Address).ToHashSet();
-            _remoteAccessUrls = [.. addresses.Where(bound.Contains).Select(BuildRemoteUrl)];
-            return RemoteAccessState;
+            _urls = [.. _listeners.Select(x => BuildUrl(x.Address))];
         }
+
+        StartWatchdog();
+        if (wasBound)
+            await RestartIfUnreachable().Vhc();
+
+        return _urls[0];
     }
 
-    // Keeps a listener whose address is still advertised, drops the ones that are not, adds the
-    // rest. A phone paired before its address moved stays paired: the token and the port are the
-    // process's, not the listener's. Under the lock.
-    private void BindRemoteListeners(IReadOnlyList<IPAddress> addresses)
+    // The local host's address never moves, so it is read once. The remote one re-reads every time: a
+    // network can change under an open screen. Never 0.0.0.0 - the printed address is the contract, and
+    // the VPN's own tunnel or a phone's cellular interface must not carry a control page. Our own
+    // adapter is "VpnHood.<name>" on Windows (WinTunVpnAdapter); the toolkit already skips tun*.
+    private async Task<IReadOnlyList<IPAddress>> GetAddresses()
     {
-        // The developer's is the primary's own port. Otherwise beside the web view's port when
-        // that is a user port, so a typed address stays memorable; below 1024 a bind needs
-        // privileges the app does not have.
-        if (_remotePort == 0)
-            _remotePort = _isDeveloperRemoteAccess
-                ? Url.Port
-                : VhUtils.GetFreeTcpEndPoint(IPAddress.Any, Url.Port >= 1024 ? Url.Port + 1 : 0).Port;
-        _pairToken ??= CreatePairToken();
+        return _isRemote
+            ? await IPAddressUtil.GetLanAddresses(AddressFamily.InterNetwork,
+                [.. IPAddressUtil.VirtualAdapterMarkers, "VpnHood"]).Vhc()
+            : [IPAddress.Loopback];
+    }
 
-        var kept = _remoteListeners.Where(x => addresses.Contains(x.Address)).ToList();
-        foreach (var listener in _remoteListeners.Except(kept))
+    // Keeps a listener whose address is still advertised, drops the ones that are not, adds the rest. A
+    // phone paired before its address moved stays paired: the token and the port are the host's, not
+    // the listener's. Under the lock.
+    private void BindListeners(IReadOnlyList<IPAddress> addresses)
+    {
+        _port = ResolvePort();
+        if (_isRemote && IsPairingRequired)
+            _pairToken ??= CreatePairToken();
+
+        var kept = _listeners.Where(x => addresses.Contains(x.Address)).ToList();
+        foreach (var listener in _listeners.Except(kept))
             listener.Dispose();
 
-        // An address that vanished between the enumeration and the bind is logged and skipped; the
-        // others still serve. None at all is a failure the caller must see.
-        var added = new List<WebServerListener>();
-        foreach (var address in addresses.Where(x => kept.All(y => !y.Address.Equals(x)))) {
-            var port = _remotePort;
-            var listener = new WebServerListener("remote-access", address, port, () => CreateWebServer(address.ToString(), port));
+        var wanted = addresses.Where(x => kept.All(y => !y.Address.Equals(x))).ToArray();
+        var added = TryBind(wanted, _port, out var lastError);
+
+        // The configured port is a contract, but a port nothing can take is worse than one a developer
+        // has to look up: a TV that can print no address pairs with nobody. So when it is the whole
+        // remote side that could not come up, take a free port instead and keep the feature working.
+        // Only then - a listener already serving on the pinned port must not be moved under a screen
+        // that is showing its address.
+        if (_isRemote && kept.Count == 0 && added.Count == 0 && wanted.Length > 0) {
+            _port = VhUtils.GetFreeTcpEndPoint(wanted[0]).Port;
+            VhLogger.Instance.LogWarning("Remote access could not take port {ConfiguredPort}; using {Port} instead.",
+                _createParams.WebUiPort ?? DefaultPort, _port);
+            added = TryBind(wanted, _port, out lastError);
+        }
+
+        _listeners = [.. kept, .. added];
+        if (_listeners.Count == 0)
+            throw new InvalidOperationException("The web host could not be bound on any address.", lastError);
+    }
+
+    // An address that vanished between the enumeration and the bind is logged and skipped; the others
+    // still serve. None at all is the caller's problem, not this one's.
+    private List<WebServerListener> TryBind(IReadOnlyList<IPAddress> addresses, int port, out Exception? lastError)
+    {
+        lastError = null;
+        var bound = new List<WebServerListener>();
+        foreach (var address in addresses) {
+            var listener = new WebServerListener(_isRemote ? "remote" : "local", address, port,
+                () => CreateWebServer(address.ToString(), port));
             try {
                 listener.Start();
-                added.Add(listener);
+                bound.Add(listener);
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogWarning(ex, "Could not bind remote access on {EndPoint}.", new IPEndPoint(address, port));
+                lastError = ex;
+                VhLogger.Instance.LogWarning(ex, "Could not bind the web host on {EndPoint}.", new IPEndPoint(address, port));
                 listener.Dispose();
             }
         }
 
-        _remoteListeners = [.. kept, .. added];
-        if (_remoteListeners.Count == 0)
-            throw new InvalidOperationException("Remote access could not be bound on any LAN address.");
+        return bound;
     }
 
-    private Uri BuildRemoteUrl(IPAddress address)
+    // The port to bind on now. The local listener is nobody's contract - its address reaches the web
+    // view through EnsureStarted - so it asks again on every bind and takes the configured port when it
+    // is free, whatever the OS gives when it is not. The remote one is the opposite: the configured
+    // port is what a UI developer's dev-server config names, so it is chosen once and then never moves,
+    // and a screen showing an address keeps it. BindListeners is the only thing that may overrule that,
+    // and only when no address at all could take it.
+    private int ResolvePort()
     {
-        var endPoint = new IPEndPoint(address, _remotePort);
-        return _isDeveloperRemoteAccess
-            ? new Uri($"http://{endPoint}/")
-            : new Uri($"http://{endPoint}/?{PairQueryName}={_pairToken}");
+        var configuredPort = _createParams.WebUiPort ?? DefaultPort;
+        if (!_isRemote)
+            return VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, configuredPort).Port;
+
+        return _port == 0 ? configuredPort : _port;
+    }
+
+    // The web view caches by URL, so the web root's hash rides along on the local address and a build
+    // it cached earlier is never served again. A phone gets the pairing token instead, once, from the
+    // QR; a developer's listeners ask for none.
+    private Uri BuildUrl(IPAddress address)
+    {
+        var endPoint = new IPEndPoint(address, _port);
+        var query = _isRemote
+            ? IsPairingRequired ? $"?{PairQueryName}={_pairToken}" : ""
+            : $"?nocache={_shared.WebRoot.Hash}";
+
+        return new Uri($"http://{endPoint}/{query}");
     }
 
     private static string CreatePairToken()
@@ -351,52 +270,121 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
         return new string(RandomNumberGenerator.GetItems<char>(PairAlphabet, PairTokenLength));
     }
 
-    // A remote caller stopping this is cutting its own line, and that is deliberate: it is the
-    // "unpair this device" button, and the phone finding the connection gone is the confirmation.
-    public Task StopRemoteAccess(CancellationToken cancellationToken)
+    // Recovery for whichever listeners this host has. Armed at the first EnsureStarted and never
+    // disarmed: a host that was stopped has no listeners, so a tick does nothing.
+    private void StartWatchdog()
+    {
+        lock (_lock) {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _watchdogTimer ??= new Timer(_ => RestartIfDown(), null, WatchdogInterval, WatchdogInterval);
+        }
+    }
+
+    // The listeners alive right now. One that was released is not in it, which is what keeps recovery
+    // from reviving a host the screen let go of.
+    private IReadOnlyList<WebServerListener> GetListeners()
+    {
+        lock (_lock) {
+            return _listeners;
+        }
+    }
+
+    // Watchdog: put back any listener that has died. Tell the caller, so assets interrupted by the
+    // outage are loaded again even when the main document had already finished loading.
+    private void RestartIfDown()
+    {
+        try {
+            var restarted = false;
+            foreach (var listener in GetListeners())
+                restarted |= listener.RestartIfDown();
+
+            if (restarted)
+                Restarted?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "The web host's watchdog failed.");
+        }
+    }
+
+    // Only on concrete signals (a resume, a web view that failed to connect), never periodically.
+    private async Task RestartIfUnreachable()
+    {
+        var restarted = false;
+        foreach (var listener in GetListeners())
+            restarted |= await listener.RestartIfUnreachable().Vhc();
+
+        if (restarted)
+            Restarted?.Invoke(this, EventArgs.Empty);
+    }
+
+    // A remote caller stopping this is cutting its own line, and that is deliberate: it is the "unpair
+    // this device" button, and the phone finding the connection gone is the confirmation. A stopped
+    // host is not revived by a poll - the caller checks IsActive first - only by an explicit start.
+    public Task Stop(CancellationToken cancellationToken)
     {
         _ = cancellationToken; // dropping listeners is synchronous and cannot be abandoned half-way
-        StopRemoteAccessInternal();
+        StopInternal();
         return Task.CompletedTask;
     }
 
-    private void StopRemoteAccessInternal()
+    private void StopInternal()
     {
         lock (_lock) {
-            if (_isDeveloperRemoteAccess || _remoteListeners.Count == 0)
+            if (IsAlwaysOn || _listeners.Count == 0)
                 return;
 
-            foreach (var listener in _remoteListeners)
+            foreach (var listener in _listeners)
                 listener.Dispose();
-            _remoteListeners = [];
-            _remoteAccessUrls = [];
+
+            _listeners = [];
+            _urls = [];
+        }
+    }
+
+    public void Dispose()
+    {
+        AppUiContext.OnResumed -= AppUiContextOnResumed;
+        AppUiContext.OnChanged -= AppUiContextOnChanged;
+
+        // Under the lock so a watchdog tick that already fired can't restart a stopped listener.
+        lock (_lock) {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            _watchdogTimer?.Dispose();
+            _watchdogTimer = null;
+            foreach (var listener in _listeners)
+                listener.Dispose();
+
+            _listeners = [];
+            _urls = [];
         }
     }
 
     // Watson's pre-routing hook, on every listener. Two checks stand in front of every request, the
-    // app's own web view included, because CORS governs READING a reply and not sending one: a page
-    // on any site can post to an address it guesses, and without these the routes that take their
-    // parameters in the query string (connect, disconnect, the intents that open OS settings) would
-    // be obeyed while the browser merely hid the answer.
+    // app's own web view included, because CORS governs READING a reply and not sending one: a page on
+    // any site can post to an address it guesses, and without these the routes that take their
+    // parameters in the query string (connect, disconnect, the intents that open OS settings) would be
+    // obeyed while the browser merely hid the answer.
     //
     // 1. Host must name the address this listener bound to. DNS rebinding walks a real browser here
     //    under a stranger's name, and the page then reads replies as same-origin. "localhost" is
     //    allowed on a loopback listener, since the dev server dials it by that name and no one else
     //    can point that name at this machine.
-    // 2. An Origin, when it is there, must be one we allow — which includes the pages this server
+    // 2. An Origin, when it is there, must be one we allow - which includes the pages this server
     //    itself served. A cross-site request always carries its real Origin, so this is the line
-    //    between the app's own SPA and any other tab.
+    //    between the app's own UI and any other tab.
     //
-    // A remote request must also carry the pairing, unless a developer holds the port open. The
-    // same token, three ways: in the query once, from the QR, which becomes an HttpOnly cookie for
-    // a browser; that cookie afterwards; or a bearer header, for a native client that runs no cookie
-    // jar and wants no redirect. The cookie is SameSite=Lax, not Strict: the phone arrives by a
-    // navigation from a camera or scanner app, and Strict can be withheld on the redirect that
-    // follows, which would hand the hint page to someone who just scanned correctly. Lax still
-    // withholds the cookie from a cross-site POST or XHR, and the Origin gate above covers the rest.
-    // A header cannot be sent cross-site without a preflight this server refuses, so it needs no
-    // such care. Only a request that passed all of it counts as presence, so a scanner is never
-    // "connected".
+    // A remote request must also carry the pairing, unless a developer holds the port open. The same
+    // token, three ways: in the query once, from the QR, which becomes an HttpOnly cookie for a
+    // browser; that cookie afterwards; or a bearer header, for a native client that runs no cookie jar
+    // and wants no redirect. The cookie is SameSite=Lax, not Strict: the phone arrives by a navigation
+    // from a camera or scanner app, and Strict can be withheld on the redirect that follows, which
+    // would hand the hint page to someone who just scanned correctly. Lax still withholds the cookie
+    // from a cross-site POST or XHR, and the Origin gate above covers the rest. A header cannot be sent
+    // cross-site without a preflight this server refuses, so it needs no such care. Only a request that
+    // passed all of it counts as presence, so a scanner is never "connected".
     private async Task<bool> OnPreRouting(HttpContextBase ctx, string boundHost)
     {
         var hostHeader = ctx.Request.RetrieveHeaderValue("Host");
@@ -406,7 +394,7 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
         }
 
         var origin = ctx.Request.Headers.Get("Origin");
-        if (!string.IsNullOrEmpty(origin) && !CorsMiddleware.IsAllowedOrigin(origin, hostHeader, _isDeveloperRemoteAccess)) {
+        if (!string.IsNullOrEmpty(origin) && !CorsMiddleware.IsAllowedOrigin(origin, hostHeader, AllowAnyOrigin)) {
             await ctx.SendPlainText("A page on another site cannot use this API.", (int)HttpStatusCode.Forbidden).Vhc();
             return true;
         }
@@ -414,7 +402,7 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
         if (!ctx.IsRemote())
             return false;
 
-        if (!_isDeveloperRemoteAccess) {
+        if (IsPairingRequired) {
             var pairToken = _pairToken;
             if (ctx.Request.QuerystringExists(PairQueryName) && TokenEquals(ctx.Request.RetrieveQueryValue(PairQueryName), pairToken)) {
                 ctx.Response.StatusCode = (int)HttpStatusCode.Found;
@@ -431,7 +419,7 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
         }
 
         if (IPAddress.TryParse(ctx.Request.Source.IpAddress, out var ipAddress))
-            _remoteClients[ipAddress] = DateTime.UtcNow;
+            _clients[ipAddress] = DateTime.UtcNow;
 
         return false;
     }
@@ -480,54 +468,26 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
                CryptographicOperations.FixedTimeEquals(System.Text.Encoding.UTF8.GetBytes(presented), System.Text.Encoding.UTF8.GetBytes(expected));
     }
 
-    // The web root under Temp/WebRoot/<hash of its zip>, extracted once per version: a folder whose
-    // index.html exists is complete, and an older version's folder goes on the way.
-    private string GetWebRootPath()
-    {
-        if (_webRootPath != null)
-            return _webRootPath; // do not extract in same instance
-
-        var hash = Convert.ToHexString(MD5.HashData(_webRootZip.Span));
-        var webRootsFolderPath = Path.Combine(_app.StorageFolderPath, "Temp", "WebRoot");
-        var webRootPath = Path.Combine(webRootsFolderPath, hash);
-        if (!File.Exists(Path.Combine(webRootPath, "index.html"))) {
-            if (Directory.Exists(webRootsFolderPath))
-                VhUtils.TryInvoke("Delete old WebRoot folder", () => Directory.Delete(webRootsFolderPath, true));
-            using var zipArchive = new ZipArchive(OpenZipStream(_webRootZip));
-            zipArchive.ExtractToDirectory(webRootPath, true);
-        }
-
-        _webRootHash = hash;
-        _webRootPath = webRootPath;
-        return webRootPath;
-    }
-
-    // The zip's own array when it has one; a copy only when it is some other memory.
-    private static MemoryStream OpenZipStream(ReadOnlyMemory<byte> zip)
-    {
-        return MemoryMarshal.TryGetArray(zip, out var segment) && segment.Array != null
-            ? new MemoryStream(segment.Array, segment.Offset, segment.Count, writable: false)
-            : new MemoryStream(zip.ToArray());
-    }
-
     private WebserverLite CreateWebServer(string host, int port)
     {
-        var webRootPath = GetWebRootPath();
-        _indexHtml = File.ReadAllText(Path.Combine(webRootPath, "index.html"));
+        // Unpack before the socket is bound, not on the first request: a listener that answers must
+        // have something to answer with, and an unpacking that fails belongs to whoever called
+        // EnsureStarted rather than to whichever request happened to arrive first.
+        _ = _shared.WebRoot.FolderPath;
 
         var settings = new WebserverSettings(host, port);
 
-        // Watson adds "Access-Control-Allow-Origin: *" and friends to every response that did not
-        // set them itself. CorsMiddleware decides per origin, and "no header" is one of its answers.
+        // Watson adds "Access-Control-Allow-Origin: *" and friends to every response that did not set
+        // them itself. CorsMiddleware decides per origin, and "no header" is one of its answers.
         foreach (var header in new[] { "Access-Control-Allow-Origin", "Access-Control-Allow-Methods", "Access-Control-Allow-Headers" })
             settings.Headers.DefaultHeaders.Remove(header);
 
-        var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, webRootPath));
+        var server = new WebserverLite(settings, DefaultRoute);
         server.Routes.PreRouting = ctx => OnPreRouting(ctx, host);
 
         // Every path of the contract, through its controller - CORS is handled centrally in the route mapper
         server
-            .AddRouteMapper(_isDeveloperRemoteAccess)
+            .AddRouteMapper(AllowAnyOrigin)
             .AddApi(Api);
 
         return server;
@@ -537,19 +497,13 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
     {
         var contentType = MimeTypeUtils.GetContentType(fullPath);
         context.Response.ContentType = contentType;
-        // A file whose name carries a hash of its content is a version and can be kept for good;
-        // any other name is stable across versions and must be asked for again each time.
+        // A file whose name carries a hash of its content is a version and can be kept for good; any
+        // other name is stable across versions and must be asked for again each time.
         context.Response.Headers["Cache-Control"] = isFingerprinted
             ? "public, max-age=31536000, immutable"
             : "no-cache";
         return context.Response.Send(File.ReadAllBytes(fullPath));
     }
-
-    // The SPA's own files carry a hash in the name (Vite); the assets folder's names are stable
-    // across versions - the native UI reads the same files by name.
-    // assets/locales/<culture>.json, the one part of the assets folder that is not a file
-    private static readonly Regex LocalePathRegex =
-        new(@"^assets/locales/([\w-]+)\.json$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static bool IsAssetPath(string localPath)
     {
@@ -561,13 +515,10 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
         return FingerprintRegex.IsMatch(Path.GetFileName(localPath));
     }
 
-    private async Task DefaultRoute(HttpContextBase context, string webRootPath)
+    private async Task DefaultRoute(HttpContextBase context)
     {
-        if (_indexHtml == null)
-            throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
-
         // Add CORS centrally for default route
-        CorsMiddleware.AddCors(context, _isDeveloperRemoteAccess);
+        CorsMiddleware.AddCors(context, AllowAnyOrigin);
 
         if (context.Request.Url.RawWithoutQuery.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)) {
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -578,15 +529,14 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
         // use LocalPath for security reasons (Url.PathAndQuery can contain double dots)
         var localPath = context.Request.Url.Uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
 
-        // the names under the assets folder, for a UI that has to fetch them (the browser build)
+        // the names under the assets folder, for the one UI that cannot read it: the browser build
         if (string.Equals(localPath, AssetsManifestName, StringComparison.OrdinalIgnoreCase)) {
             await SendAssetsManifest(context);
             return;
         }
 
-        // The words, which the content package carries as resources rather than files: the web UI
-        // fetches its own locale file from the same /assets/ path as everything else, and gets it
-        // from there (loadLocale in i18n.ts), so the package holds one copy for every UI.
+        // The words, which the content package carries as resources rather than files: the web UI asks
+        // for its locale on the same /assets/ path as everything else (loadLocale in i18n.ts).
         if (LocalePathRegex.Match(localPath.Replace(Path.DirectorySeparatorChar, '/')) is { Success: true } locale) {
             await using var localeStream = Strings.OpenLocaleFile(locale.Groups[1].Value);
             if (localeStream != null) {
@@ -597,9 +547,9 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
             }
         }
 
-        // The assets folder - the images, flags, fonts and documents both UIs load by name - is the
-        // content package's, one folder for every UI this server serves. Named by a path a browser
-        // caches by, never fingerprinted.
+        // The content package's assets - images, flags, fonts, documents - loaded by name. They are a
+        // folder rather than embedded resources because Android's assembly store is per-ABI, and a few
+        // hundred files inside a DLL would ship once per architecture. Never fingerprinted.
         if (IsAssetPath(localPath) && AppContent.TryGetFolderPath(out var assetsFolderPath)) {
             var assetPath = Path.GetFullPath(Path.Combine(assetsFolderPath, localPath[(AppContent.FolderName.Length + 1)..]));
             if (assetPath.StartsWith(assetsFolderPath, StringComparison.Ordinal) && File.Exists(assetPath)) {
@@ -608,31 +558,25 @@ public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost
             }
         }
 
-        // The web root's own file, for the app's web view and a paired device alike; any other path
-        // is the UI's to route, and gets index.html.
-        var fullPath = Path.Combine(webRootPath, localPath);
+        // The web root's own file, for the app's web view and a paired device alike; any other path is
+        // the UI's to route, and gets index.html.
+        var fullPath = Path.Combine(_shared.WebRoot.FolderPath, localPath);
         if (File.Exists(fullPath)) {
             await ServeFile(context, fullPath, IsFingerprinted(localPath));
             return;
         }
 
         context.Response.ContentType = "text/html";
-        await context.Response.Send(_indexHtml);
+        await context.Response.Send(_shared.WebRoot.IndexHtml);
     }
 
-    // Every file under the assets folder by its name relative to it, the folder's separators as
-    // URL segments: what a UI on the other side of the API fetches before it starts. Read once.
+    // Only the browser build asks: the assets are a folder (see above), WASM has none, so it copies them
+    // into the runtime's own file system at startup - and HTTP gives it no way to enumerate. The list is
+    // fixed when the package is built, so it could be generated into the folder and served as a plain
+    // file instead, and this route would go.
     private async Task SendAssetsManifest(HttpContextBase context)
     {
-        _assetNames ??= AppContent.TryGetFolderPath(out var assetsPath)
-            ? [
-                .. Directory.EnumerateFiles(assetsPath, "*", SearchOption.AllDirectories)
-                    .Select(x => Path.GetRelativePath(assetsPath, x).Replace(Path.DirectorySeparatorChar, '/'))
-                    .Order(StringComparer.Ordinal)
-            ]
-            : [];
-
         context.Response.Headers["Cache-Control"] = "no-cache";
-        await context.SendJson(_assetNames);
+        await context.SendJson(_shared.AssetNames);
     }
 }

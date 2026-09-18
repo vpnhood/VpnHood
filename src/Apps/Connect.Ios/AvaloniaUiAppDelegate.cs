@@ -23,7 +23,6 @@ public class AvaloniaUiAppDelegate : AvaloniaAppDelegate<ClassicAvaloniaApp>
     protected override AppBuilder CreateAppBuilder()
     {
         AppDelegate.StartApp();
-        VpnHoodAppWebHost.Instance.Start();
         // in process both complete at once
         AppModel.Init(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
         ClassicAvaloniaApp.PrepareContent();

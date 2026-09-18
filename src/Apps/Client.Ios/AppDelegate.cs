@@ -57,11 +57,6 @@ public class AppDelegate : UIApplicationDelegate
             localizedDescription: AppConfigs.AppName);
 
         VpnHoodIosApp.Init(device, BuildAppOptions(appConfigs));
-        // the web host a phone pairs with and the web view loads from: built here, started by
-        // whoever first needs its address
-        VpnHoodAppWebHost.Init(VpnHoodApp.Instance, new WebHostOptions {
-            WebRootZip = ClientAppResources.GetWebRootZip(VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
-        });
     }
 
     private static AppOptions BuildAppOptions(AppConfigs appConfigs)
@@ -73,8 +68,8 @@ public class AppDelegate : UIApplicationDelegate
         return new AppOptions(appId: appConfigs.AppId, storageFolderName: AppConfigs.StorageFolderName,
             isDebugMode: AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
-            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
-            RemoteAccessHostProvider = () => VpnHoodAppWebHost.Instance,
+            // what this head serves: the SPA, or the Avalonia UI's browser build for a paired phone
+            WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ClientAppResources.WebRootZip }),
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             StorageFolderPath = storageFolderPath,
             // Product settings sourced from the embedded ".user" appsettings (parity with Client.Android.Web).

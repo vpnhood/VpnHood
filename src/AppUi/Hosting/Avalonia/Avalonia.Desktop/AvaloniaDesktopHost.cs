@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using VpnHood.AppLib;
-using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
@@ -19,8 +18,8 @@ public static class AvaloniaDesktopHost
     private static ClassicDesktopStyleApplicationLifetime? _lifetime;
     private static Window? _window;
 
-    // VpnHoodApp and its web server must be up: the web server is what a phone pairs with. A run
-    // that starts in the background (the head's /nowindow) keeps the window back until ShowMainWindow.
+    // VpnHoodApp must be up; its web host comes up by itself when a phone pairs. A run that starts
+    // in the background (the head's /nowindow) keeps the window back until ShowMainWindow.
     public static void Run<TUi>(string[] args, bool showWindow)
         where TUi : Application, IAvaloniaUi, new()
     {

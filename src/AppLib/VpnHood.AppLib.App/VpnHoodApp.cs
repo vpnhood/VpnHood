@@ -11,6 +11,7 @@ using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Api;
+using VpnHood.AppLib.ApiImpl;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Device;
@@ -48,6 +49,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Trackers;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.AppLib.WebHosting;
 
 namespace VpnHood.AppLib;
 
@@ -62,7 +64,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly IDevice _device;
     private readonly IIpRangeLocationProvider? _ipRangeLocationProvider;
-    private readonly Func<IRemoteAccessHost>? _remoteAccessHostProvider;
     private bool _isDisconnecting;
     private AppConnectionState? _lastConnectionState;
     private CancellationTokenSource _connectCts = new();
@@ -73,6 +74,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isConnecting;
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
+    private readonly AppWebHostManager _webHostManager;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     internal IIpRangeLocationProvider? IpRangeLocationProvider => _ipRangeLocationProvider;
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -103,9 +105,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // holds this object and the contract's interfaces, never their classes.
     public VpnHoodApi Api { get; }
 
-    // Resolved per call, never cached: a web host is a singleton a head can dispose and rebuild,
-    // and a held reference would outlive it. Null when this head runs no listener.
-    internal IRemoteAccessHost? RemoteAccessHost => _remoteAccessHostProvider?.Invoke();
+    // The two hosts a head can ask for; null when this head runs no web host at all. Everything about
+    // them - what each is told, when they come up by themselves, what a settings change does to them -
+    // belongs to AppWebHostManager, so this is only the way in.
+    public IAppWebHost? LocalWebHost => _webHostManager.Local;
+    public IAppWebHost? RemoteWebHost => _webHostManager.Remote;
 
     private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options)
         : base(register: options.IsSingleton)
@@ -116,7 +120,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                             throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = settingsService;
         SettingsService.BeforeSave += SettingsBeforeSave;
-        _remoteAccessHostProvider = options.RemoteAccessHostProvider;
+        _webHostManager = new AppWebHostManager(this, options.WebHostFactory);
         _device = device;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _logService = logService;
@@ -213,7 +217,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAdSupported = options.AdProviderItems.Any(),
             IsRewardedAdSupported = options.AdProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd),
             IsProxySupported = true,
-            IsRemoteAccessSupported = options.RemoteAccessHostProvider != null,
+            IsRemoteAccessSupported = options.WebHostFactory != null,
             ChannelProtocols = [.. protocols.Select(x => x.ToAppDto())]
         };
 
@@ -323,6 +327,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
         }
 
+        await _webHostManager.StartAlwaysOn(CancellationToken.None).Vhc();
+
         // Deliberately NO account refresh here. Launching the app is not a reason to call the portal:
         // a credential that still works needs no permission to go on working, and the people with no
         // premium at all are the many — every one of their launches would be pure load for an answer
@@ -378,6 +384,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // set default ContinueOnCapturedContext
             TaskExtensions.DefaultContinueOnCapturedContext =
                 HasDebugCommand(DebugCommands.CaptureContext);
+
+            // the developer's open door, opened or shut from the running app
+            _webHostManager.ApplySettings();
 
             // apply the last known client country (reported by the server); fall back to the device region
             if (UserSettings.CountryCode != null)
@@ -1448,6 +1457,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
         Services.SplitCountryService.StateChanged -= LocationService_StateChanged;
         Services.SplitIpViaAppService.StateChanged -= LocationService_StateChanged;
+        _webHostManager.Dispose();
         _vpnServiceManager.Dispose();
         Services.UpdaterService?.Dispose();
         Services.Dispose();

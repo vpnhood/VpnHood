@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.AppLib.Api;
 
-namespace VpnHood.AppLib.Api;
+namespace VpnHood.AppLib.ApiImpl;
 
 internal sealed class IntentsApi(VpnHoodApp app) : IIntentsApi
 {

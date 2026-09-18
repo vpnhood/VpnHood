@@ -7,7 +7,6 @@ using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Wpf;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.AppLib;
@@ -97,13 +96,13 @@ public partial class VpnHoodWpfMainWindow : Window
         // the system browser instead. Invoked on the UI thread from WpfWebView.
         lock (MainWebView) {
             // This can be signalled more than once.
-            if (!VpnHoodAppWin.Instance.EnableOpenMainWindow)
+            if (VpnHoodAppWpf.IsWebViewUnavailable)
                 return;
 
             Visibility = Visibility.Hidden; // Hide() does not work properly in this state on sandbox
-            VpnHoodAppWin.Instance.EnableOpenMainWindow = false;
+            VpnHoodAppWpf.NotifyWebViewUnavailable();
             if (VpnHoodAppWin.Instance.ShowWindowAfterStart)
-                VpnHoodAppWin.OpenUrlInExternalBrowser(VpnHoodAppWebHost.Instance.Url);
+                _ = VpnHoodAppWpf.OpenMainWindowInBrowser();
         }
     }
 

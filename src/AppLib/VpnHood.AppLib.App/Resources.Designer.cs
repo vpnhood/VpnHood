@@ -169,15 +169,6 @@ namespace VpnHood.AppLib {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Open in Browser.
-        /// </summary>
-        internal static string OpenInBrowser {
-            get {
-                return ResourceManager.GetString("OpenInBrowser", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
         internal static byte[] BadgeConnectedIcon {

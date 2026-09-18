@@ -5,8 +5,9 @@ using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Generics;
 using ProxyEndPoint = VpnHood.AppLib.Api.Proxies.ProxyEndPoint;
 using ProxyEndPointDefaults = VpnHood.AppLib.Api.Proxies.ProxyEndPointDefaults;
+using VpnHood.AppLib.Api;
 
-namespace VpnHood.AppLib.Api;
+namespace VpnHood.AppLib.ApiImpl;
 
 internal sealed class ProxyEndPointsApi(VpnHoodApp app) : IProxyEndPointsApi
 {

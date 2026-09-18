@@ -3,7 +3,6 @@ using VpnHood.AppLib;
 using Android.Webkit;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using Uri = System.Uri;
@@ -140,7 +139,7 @@ public sealed class AndroidWebView : IWebView
                 VpnHoodApp.Instance.Resources.Colors.NavigationBarColor.Value.ToAndroidColor());
     }
 
-    // The bundled SPA is served from VpnHoodAppWebHost; if the installed system WebView is older
+    // The bundled SPA is served from the app's web host; if the installed system WebView is older
     // than the SPA needs, redirect to the upgrade page instead (mirrors the previous GetLaunchUrl).
     private Uri ResolveUrl(Uri mainUrl)
     {
@@ -155,7 +154,7 @@ public sealed class AndroidWebView : IWebView
 
         var upgradeUrl = _options.WebViewUpgradeUrl.IsAbsoluteUri
             ? _options.WebViewUpgradeUrl
-            : new Uri(VpnHoodAppWebHost.Instance.Url, _options.WebViewUpgradeUrl);
+            : new Uri(mainUrl, _options.WebViewUpgradeUrl);
 
         var uriBuilder = new UriBuilder(upgradeUrl);
         var query = HttpUtility.ParseQueryString(uriBuilder.Query);

@@ -696,7 +696,6 @@
   "EXIT": "Beenden",
   "MANAGE": "Verwalten",
   "OPEN": "Öffnen",
-  "OPEN_IN_BROWSER": "Im Browser öffnen",
   "MSG_ACCESS_KEY_ADDED": "Zugangsschlüssel „{0}“ hinzugefügt.",
   "MSG_ACCESS_KEY_UPDATED": "Zugangsschlüssel „{0}“ aktualisiert.",
   "MSG_CANT_READ_ACCESS_KEY": "Zugangsschlüssel konnte nicht gelesen werden.",

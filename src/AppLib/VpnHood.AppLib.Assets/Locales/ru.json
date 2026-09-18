@@ -696,7 +696,6 @@
   "EXIT": "Выход",
   "MANAGE": "Управление",
   "OPEN": "Открыть",
-  "OPEN_IN_BROWSER": "Открыть в браузере",
   "MSG_ACCESS_KEY_ADDED": "Ключ доступа {0} добавлен.",
   "MSG_ACCESS_KEY_UPDATED": "Ключ доступа {0} обновлен.",
   "MSG_CANT_READ_ACCESS_KEY": "Не удалось прочитать ключ доступа.",

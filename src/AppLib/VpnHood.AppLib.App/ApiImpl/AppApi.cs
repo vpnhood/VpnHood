@@ -11,14 +11,18 @@ using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Services.Countries;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.AppLib.WebHosting;
+using VpnHood.AppLib.Api;
 
-namespace VpnHood.AppLib.Api;
+namespace VpnHood.AppLib.ApiImpl;
 
 // The host is asked for, not held: this exists before any listener does - in process there may
-// never be one - and only the three remote-access calls, the pairing page's, need it.
+// never be one - and only the three remote-access calls, the pairing page's, need it. The one they
+// need is the remote host, never the web view's: a head that shows a native UI has no web view and
+// still pairs.
 internal sealed class AppApi(VpnHoodApp app) : IAppApi
 {
-    private IRemoteAccessHost RemoteAccessHost => app.RemoteAccessHost ??
+    private IAppWebHost RemoteWebHost => app.RemoteWebHost ??
         throw new NotSupportedException("Remote access needs a web host, and this app was given none.");
 
     public async Task<AppInfo> Configure(ConfigParams configParams, CancellationToken cancellationToken)
@@ -211,19 +215,37 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
     }
 
     // The pairing screen's poll: the network can change under an open screen, so this re-reads the
-    // addresses and rebinds when they moved, besides answering with the presence list.
-    public Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken)
+    // addresses and rebinds when they moved, besides answering with the presence list. It opens
+    // nothing that was closed - the screen goes on polling for a moment after an unpair, and starting
+    // there would hand the phone back the line it had just cut.
+    public async Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken)
     {
-        return RemoteAccessHost.RefreshRemoteAccess(cancellationToken);
+        var host = RemoteWebHost;
+        if (host.IsActive)
+            await host.EnsureStarted(cancellationToken).Vhc();
+
+        return BuildRemoteAccessState(host);
     }
 
-    public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken)
+    public async Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken)
     {
-        return RemoteAccessHost.StartRemoteAccess(cancellationToken);
+        var host = RemoteWebHost;
+        await host.EnsureStarted(cancellationToken).Vhc();
+        return BuildRemoteAccessState(host);
     }
 
     public Task StopRemoteAccess(CancellationToken cancellationToken)
     {
-        return RemoteAccessHost.StopRemoteAccess(cancellationToken);
+        return RemoteWebHost.Stop(cancellationToken);
+    }
+
+    private static RemoteAccessState BuildRemoteAccessState(IAppWebHost host)
+    {
+        return new RemoteAccessState {
+            IsActive = host.IsActive,
+            IsAlwaysOn = host.IsAlwaysOn,
+            Urls = host.Urls,
+            ConnectedDevices = [.. host.ConnectedDevices]
+        };
     }
 }

@@ -18,14 +18,13 @@ public static class ConnectAppResources
     // location lookups. Lazy, so a run that never asks for a country never materializes it.
     public static Lazy<byte[]> IpLocationZipData { get; } = new(() => Ip2LocationLiteDb.ZipData);
 
-    // The web root VpnHoodAppWebHost serves, one per head: the SPA; or, for the Avalonia UI, its
-    // browser build for a paired phone, when this build embeds one (see the project file).
-    public static ReadOnlyMemory<byte> GetWebRootZip(bool avaloniaUi)
-    {
-        return avaloniaUi
-            ? EmbeddedResource.TryRead(Assembly, AvaloniaBrowserZipName) ?? SpaZip
-            : SpaZip;
-    }
+    // The web root the app's web host serves - to its own web view and to a paired phone alike.
+    // Which UI that is, is settled by what this build embedded (see the project file): the Avalonia
+    // UI's browser build when it is there, otherwise the SPA.
+    public static ReadOnlyMemory<byte> WebRootZip => WebRootZipData;
+
+    private static byte[] WebRootZipData =>
+        field ??= EmbeddedResource.TryRead(Assembly, AvaloniaBrowserZipName) ?? SpaZip;
 
     private static byte[] SpaZip => field ??= EmbeddedResource.TryRead(Assembly, SpaZipName)
         ?? throw new InvalidOperationException($"The embedded SPA bundle '{SpaZipName}' was not found: neither the ClassicSpa package nor the use-local-spa embed supplied spa.zip.");

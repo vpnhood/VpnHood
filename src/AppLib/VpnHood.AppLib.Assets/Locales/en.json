@@ -696,7 +696,6 @@
   "EXIT": "Exit",
   "MANAGE": "Manage",
   "OPEN": "Open",
-  "OPEN_IN_BROWSER": "Open in Browser",
   "MSG_ACCESS_KEY_ADDED": "{0} Access key has been added.",
   "MSG_ACCESS_KEY_UPDATED": "{0} access key has been updated.",
   "MSG_CANT_READ_ACCESS_KEY": "Could not read the access key.",

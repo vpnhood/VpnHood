@@ -696,7 +696,6 @@
   "EXIT": "Çıkış",
   "MANAGE": "Yönet",
   "OPEN": "Aç",
-  "OPEN_IN_BROWSER": "Tarayıcıda Aç",
   "MSG_ACCESS_KEY_ADDED": "{0} erişim anahtarı eklendi.",
   "MSG_ACCESS_KEY_UPDATED": "{0} erişim anahtarı güncellendi.",
   "MSG_CANT_READ_ACCESS_KEY": "Erişim anahtarı okunamadı.",

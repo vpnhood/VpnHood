@@ -2098,9 +2098,6 @@ public sealed partial class Strings
     /// <summary>Open</summary>
     public string Open => Get("OPEN");
 
-    /// <summary>Open in Browser</summary>
-    public string OpenInBrowser => Get("OPEN_IN_BROWSER");
-
     /// <summary>{0} Access key has been added.</summary>
     public string MsgAccessKeyAdded => Get("MSG_ACCESS_KEY_ADDED");
 

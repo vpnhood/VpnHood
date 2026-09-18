@@ -32,8 +32,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         return new AppOptions(appId: appConfigs.AppId, "VpnHood", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
-            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
-            RemoteAccessHostProvider = () => VpnHoodAppWebHost.Instance,
+            // what this head serves: the SPA, or the Avalonia UI's browser build for a paired phone
+            WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ClientAppResources.WebRootZip }),
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             Resources = resources,
@@ -59,11 +59,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     public override void OnCreate()
     {
         VpnHoodAndroidApp.Init(CreateAppOptions);
-        // the web host a phone pairs with and the web view loads from: built here, started by
-        // whoever first needs its address
-        VpnHoodAppWebHost.Init(VpnHoodApp.Instance, new WebHostOptions {
-            WebRootZip = ClientAppResources.GetWebRootZip(VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
-        });
         AndroidAvaloniaUi.Init();
         base.OnCreate();
     }

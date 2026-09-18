@@ -696,7 +696,6 @@
   "EXIT": "خروج",
   "MANAGE": "مدیریت",
   "OPEN": "باز کردن",
-  "OPEN_IN_BROWSER": "باز کردن در مرورگر",
   "MSG_ACCESS_KEY_ADDED": "کلید دسترسی {0} اضافه شد.",
   "MSG_ACCESS_KEY_UPDATED": "کلید دسترسی {0} به‌روزرسانی شد.",
   "MSG_CANT_READ_ACCESS_KEY": "خواندن کلید دسترسی ناموفق بود.",

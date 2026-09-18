@@ -26,7 +26,6 @@ internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
         appOptions.DisconnectOnDispose = true;
         VpnHoodAppWin.Init(appOptions, args: Environment.GetCommandLineArgs());
         VpnHoodAppWin.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
-        VpnHoodAppWin.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
         VpnHoodAppWin.Instance.ExitRequested += ExitRequested;
         VpnHoodAppWin.Instance.Start();
 
@@ -72,12 +71,6 @@ internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
         var mainWindowHandle = Process.GetCurrentProcess().MainWindowHandle;
         if (mainWindowHandle != nint.Zero)
             SetForegroundWindow(mainWindowHandle);
-    }
-
-    protected virtual void OpenMainWindowInBrowserRequested(object? sender, EventArgs e)
-    {
-        //Browser.Default.OpenAsync(VpnHoodAppWebHost.Instance.Url, BrowserLaunchMode.External);
-        throw new NotSupportedException();
     }
 
     protected virtual void ExitRequested(object? sender, EventArgs e)

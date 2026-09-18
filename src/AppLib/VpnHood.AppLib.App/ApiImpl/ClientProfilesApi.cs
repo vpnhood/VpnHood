@@ -1,8 +1,9 @@
 ﻿using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Premium;
+using VpnHood.AppLib.Api;
 
-namespace VpnHood.AppLib.Api;
+namespace VpnHood.AppLib.ApiImpl;
 
 internal sealed class ClientProfilesApi(VpnHoodApp app) : IClientProfilesApi
 {

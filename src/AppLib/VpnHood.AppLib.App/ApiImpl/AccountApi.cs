@@ -3,8 +3,9 @@ using VpnHood.AppLib.Services.Accounts;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.AppLib.DtoConverters;
 using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.AppLib.Api;
 
-namespace VpnHood.AppLib.Api;
+namespace VpnHood.AppLib.ApiImpl;
 
 internal sealed class AccountApi(VpnHoodApp app) : IAccountApi
 {

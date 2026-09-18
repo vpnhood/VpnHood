@@ -696,7 +696,6 @@
   "EXIT": "Esci",
   "MANAGE": "Gestisci",
   "OPEN": "Apri",
-  "OPEN_IN_BROWSER": "Apri nel browser",
   "MSG_ACCESS_KEY_ADDED": "Chiave di accesso {0} aggiunta.",
   "MSG_ACCESS_KEY_UPDATED": "Chiave di accesso {0} aggiornata.",
   "MSG_CANT_READ_ACCESS_KEY": "Impossibile leggere la chiave di accesso.",

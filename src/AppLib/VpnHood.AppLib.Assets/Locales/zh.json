@@ -696,7 +696,6 @@
   "EXIT": "退出",
   "MANAGE": "管理",
   "OPEN": "打开",
-  "OPEN_IN_BROWSER": "在浏览器中打开",
   "MSG_ACCESS_KEY_ADDED": "已添加 {0} 访问密钥。",
   "MSG_ACCESS_KEY_UPDATED": "已更新 {0} 访问密钥。",
   "MSG_CANT_READ_ACCESS_KEY": "无法读取访问密钥。",

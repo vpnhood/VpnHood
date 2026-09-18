@@ -696,7 +696,6 @@
   "EXIT": "बाहर निकलें",
   "MANAGE": "प्रबंधित करें",
   "OPEN": "खोलें",
-  "OPEN_IN_BROWSER": "ब्राउज़र में खोलें",
   "MSG_ACCESS_KEY_ADDED": "{0} एक्सेस की जोड़ दी गई है।",
   "MSG_ACCESS_KEY_UPDATED": "{0} एक्सेस की अपडेट कर दी गई है।",
   "MSG_CANT_READ_ACCESS_KEY": "एक्सेस कुंजी नहीं पढ़ी जा सकी।",

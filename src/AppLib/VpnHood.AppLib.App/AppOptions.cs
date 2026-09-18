@@ -10,6 +10,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.AppLib.WebHosting;
 
 namespace VpnHood.AppLib;
 
@@ -69,11 +70,10 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IReadOnlyList<AppAdProviderItem> AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
 
-    // The listener a phone pairs with, resolved on demand because it cannot exist yet: a web host
-    // is built on the app, so the app must come first. Null means this head runs none, and
-    // AppFeatures.IsRemoteAccessSupported says so before a UI offers the pairing screen. Heads that
-    // bring up VpnHoodAppWebHost set this to () => VpnHoodAppWebHost.Instance.
-    public Func<IRemoteAccessHost>? RemoteAccessHostProvider { get; set; }
+    // What the app's web view loads and a phone pairs with, built on the app itself - so the head
+    // hands in a factory rather than an instance. Null means this head runs no web host, and
+    // AppFeatures.IsRemoteAccessSupported says so before a UI offers the pairing screen.
+    public IAppWebHostFactory? WebHostFactory { get; set; }
 
     public bool? LogAnonymous { get; set; } =
         isDebugMode ? false : null; // it follows user's settings if it set to null
@@ -124,5 +124,4 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // The user's answer is UserSettings.IsLicenseAccepted, asked once.
     public bool IsLicenseAgreementRequired { get; set; } = true;
     public int? WebUiPort { get; set; }
-    public string? WebUiHostName { get; set; }
 }

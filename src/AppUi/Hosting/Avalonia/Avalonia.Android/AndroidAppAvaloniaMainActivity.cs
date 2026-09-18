@@ -9,7 +9,6 @@ using AvaloniaApplication = Avalonia.Application;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib;
-using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Droid;
@@ -55,7 +54,6 @@ public class AndroidAppAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivi
         // before the folder could be read. Then the app is told which languages the UI has; in
         // process that completes at once. The web server is what a phone pairs with, so it comes
         // up here rather than on the pairing screen.
-        VpnHoodAppWebHost.Instance.Start();
         TUi.PrepareContent();
         AppModel.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 

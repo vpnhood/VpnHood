@@ -13,6 +13,7 @@ using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Linux.Web;
@@ -28,8 +29,8 @@ internal static class App
         var resources = ConnectAppResources.Resources;
         var appOptions = new AppOptions(appId: appConfigs.AppId, Path.GetDirectoryName(StoragePath)!, AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
-            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
-            RemoteAccessHostProvider = () => VpnHoodAppWebHost.Instance,
+            // what this head serves: the SPA, or the Avalonia UI's browser build for a paired phone
+            WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ConnectAppResources.WebRootZip }),
             IpLocationZipData = ConnectAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             UiName = "VpnHoodConnect",
@@ -97,7 +98,7 @@ internal static class App
         }
     }
 
-    private static Task Main(string[] args)
+    private static async Task Main(string[] args)
     {
         Console.WriteLine($"Starting {AppConfigs.AppTitle} for linux (Beta).");
         Console.WriteLine("Only WebUI supported at this time.");
@@ -110,7 +111,7 @@ internal static class App
         }
         catch (GracefullyShutdownException) {
             VhLogger.Instance.LogInformation("Exit due to stop command.");
-            return Task.CompletedTask;
+            return;
         }
         catch (AnotherInstanceIsRunningException) {
             Console.WriteLine($"An instance of {AppConfigs.AppTitle} is running.");
@@ -122,24 +123,25 @@ internal static class App
                     OpenMainWindow(uri);
             }
 
-            return Task.CompletedTask;
+            return;
         }
 
-        // the web host, started now: the UI is a browser, and its address is written below
-        VpnHoodAppWebHost.Init(VpnHoodApp.Instance, new WebHostOptions {
-            WebRootZip = ConnectAppResources.GetWebRootZip(VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
-        }).Start();
-
-        // write service url
-        File.WriteAllText(serviceUrlPath, VpnHoodAppWebHost.Instance.Url.ToString());
+        // The UI here is a browser, so the host is wanted at once: its address goes in the service
+        // file, which is how a second launch finds the window to open.
+        var webHost = VpnHoodApp.Instance.LocalWebHost ??
+                      throw new InvalidOperationException("This app was given no web host.");
+        var webHostUrl = await webHost.EnsureStarted(CancellationToken.None);
+        File.WriteAllText(serviceUrlPath, webHostUrl.ToString());
 
         // run app: the Avalonia UI in a window on this thread when the debug command forces it,
         // otherwise the web UI, in the browser
-        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
-            return RunAvaloniaUi(args);
+        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi)) {
+            await RunAvaloniaUi(args).Vhc();
+            return;
+        }
 
-        VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow(VpnHoodAppWebHost.Instance.Url);
-        return VpnHoodAppLinux.Instance.Run();
+        VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow(webHostUrl);
+        await VpnHoodAppLinux.Instance.Run().Vhc();
     }
 
     // The Avalonia UI in a window: opened again by a second launch, as the browser is, and ended
@@ -168,7 +170,6 @@ internal static class App
 
     private static void InstanceOnExiting(object? sender, EventArgs e)
     {
-        if (VpnHoodAppWebHost.IsInit)
-            VpnHoodAppWebHost.Instance.Dispose();
+        // the app owns its web host and disposes it with itself
     }
 }

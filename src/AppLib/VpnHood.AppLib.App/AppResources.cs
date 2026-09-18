@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Api.App;
 using VpnHood.Core.Toolkit.Graphics;
 
 namespace VpnHood.AppLib;
@@ -44,7 +43,6 @@ public class AppResources
         public string MsgCantReadAccessKey => resources.GetString("MSG_CANT_READ_ACCESS_KEY") ?? Resources.MsgCantReadAccessKey;
         public string MsgUnsupportedContent => resources.GetString("MSG_UNSUPPORTED_CONTENT") ?? Resources.MsgUnsupportedContent;
         public string Open => resources.GetString("OPEN") ?? Resources.Open;
-        public string OpenInBrowser => resources.GetString("OPEN_IN_BROWSER") ?? Resources.OpenInBrowser;
     }
 
     public class AppColors

@@ -696,7 +696,6 @@
   "EXIT": "خروج",
   "MANAGE": "إدارة",
   "OPEN": "فتح",
-  "OPEN_IN_BROWSER": "فتح في المتصفح",
   "MSG_ACCESS_KEY_ADDED": "تمت إضافة مفتاح الوصول {0}.",
   "MSG_ACCESS_KEY_UPDATED": "تم تحديث مفتاح الوصول {0}.",
   "MSG_CANT_READ_ACCESS_KEY": "تعذّرت قراءة مفتاح الوصول.",

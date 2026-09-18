@@ -692,5 +692,14 @@
   "NOT_IMPLEMENTED_YET": "Henüz uygulanmadı.",
   "RESTORE_PREMIUM": "Aboneliği Geri Yükle",
   "CODE_REFUSED_EXPIRED_NOTICE": "Bu kodun süresi {date} tarihinde doldu. Saklanıyor; süresi uzatılırsa otomatik olarak tekrar çalışacaktır.",
-  "CODE_REFUSED_REJECTED_NOTICE": "Sunucu bu kodu {date} tarihinde reddetti. Saklanıyor, kodu veren taraf etkinleştirirse tekrar çalışacaktır."
+  "CODE_REFUSED_REJECTED_NOTICE": "Sunucu bu kodu {date} tarihinde reddetti. Saklanıyor, kodu veren taraf etkinleştirirse tekrar çalışacaktır.",
+  "EXIT": "Çıkış",
+  "MANAGE": "Yönet",
+  "OPEN": "Aç",
+  "OPEN_IN_BROWSER": "Tarayıcıda Aç",
+  "MSG_ACCESS_KEY_ADDED": "{0} erişim anahtarı eklendi.",
+  "MSG_ACCESS_KEY_UPDATED": "{0} erişim anahtarı güncellendi.",
+  "MSG_CANT_READ_ACCESS_KEY": "Erişim anahtarı okunamadı.",
+  "MSG_UNSUPPORTED_CONTENT": "Desteklenmeyen dosya türü.",
+  "MSG_CANT_SHOW_AD": "Bu sunucu reklam gösterimi gerektiriyor ancak reklam yüklenemedi."
 }

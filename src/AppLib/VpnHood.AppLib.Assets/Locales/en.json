@@ -692,5 +692,14 @@
   "NOT_IMPLEMENTED_YET": "Not implemented yet.",
   "RESTORE_PREMIUM": "Restore premium",
   "CODE_REFUSED_EXPIRED_NOTICE": "This code expired on {date}. It is kept — if it is extended, it will work again by itself.",
-  "CODE_REFUSED_REJECTED_NOTICE": "The server rejected this code on {date}. It is kept and will work again if its issuer restores it."
+  "CODE_REFUSED_REJECTED_NOTICE": "The server rejected this code on {date}. It is kept and will work again if its issuer restores it.",
+  "EXIT": "Exit",
+  "MANAGE": "Manage",
+  "OPEN": "Open",
+  "OPEN_IN_BROWSER": "Open in Browser",
+  "MSG_ACCESS_KEY_ADDED": "{0} Access key has been added.",
+  "MSG_ACCESS_KEY_UPDATED": "{0} access key has been updated.",
+  "MSG_CANT_READ_ACCESS_KEY": "Could not read the access key.",
+  "MSG_UNSUPPORTED_CONTENT": "Unsupported file type.",
+  "MSG_CANT_SHOW_AD": "This server requires a display Ad but could not display it."
 }

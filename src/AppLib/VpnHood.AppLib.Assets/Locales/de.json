@@ -692,5 +692,14 @@
   "NOT_IMPLEMENTED_YET": "Noch nicht verfügbar.",
   "RESTORE_PREMIUM": "Premium wiederherstellen",
   "CODE_REFUSED_EXPIRED_NOTICE": "Dieser Code ist am {date} abgelaufen. Er bleibt gespeichert – nach einer Verlängerung funktioniert er automatisch wieder.",
-  "CODE_REFUSED_REJECTED_NOTICE": "Der Server hat diesen Code am {date} abgelehnt. Er bleibt gespeichert und funktioniert wieder, sobald ihn der Aussteller freigibt."
+  "CODE_REFUSED_REJECTED_NOTICE": "Der Server hat diesen Code am {date} abgelehnt. Er bleibt gespeichert und funktioniert wieder, sobald ihn der Aussteller freigibt.",
+  "EXIT": "Beenden",
+  "MANAGE": "Verwalten",
+  "OPEN": "Öffnen",
+  "OPEN_IN_BROWSER": "Im Browser öffnen",
+  "MSG_ACCESS_KEY_ADDED": "Zugangsschlüssel „{0}“ hinzugefügt.",
+  "MSG_ACCESS_KEY_UPDATED": "Zugangsschlüssel „{0}“ aktualisiert.",
+  "MSG_CANT_READ_ACCESS_KEY": "Zugangsschlüssel konnte nicht gelesen werden.",
+  "MSG_UNSUPPORTED_CONTENT": "Dateityp nicht unterstützt.",
+  "MSG_CANT_SHOW_AD": "Dieser Server erfordert Werbung, sie konnte jedoch nicht geladen werden."
 }

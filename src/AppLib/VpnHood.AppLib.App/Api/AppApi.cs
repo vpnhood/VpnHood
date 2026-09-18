@@ -24,8 +24,10 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
     public async Task<AppInfo> Configure(ConfigParams configParams, CancellationToken cancellationToken)
     {
         app.Services.CultureProvider.AvailableCultures = configParams.AvailableCultures;
-        if (configParams.Strings != null)
-            app.Resources.Strings = configParams.Strings;
+
+        // the UI's words for the app's own text; a key it did not send keeps the resx's
+        if (configParams.Strings?.Count > 0)
+            app.Resources.StringProvider = new DictionaryStringProvider(configParams.Strings);
 
         app.UpdateUi();
         return await GetInfo(cancellationToken).Vhc();

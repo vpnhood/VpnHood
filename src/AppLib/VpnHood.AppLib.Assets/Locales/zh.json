@@ -692,5 +692,14 @@
   "NOT_IMPLEMENTED_YET": "功能开发中。",
   "RESTORE_PREMIUM": "恢复高级版",
   "CODE_REFUSED_EXPIRED_NOTICE": "此激活码已于 {date} 过期。已为您保留——若后续延长有效期，将自动恢复使用。",
-  "CODE_REFUSED_REJECTED_NOTICE": "服务器已于 {date} 拒绝此激活码。已为您保留，若发行方恢复其权限，将自动恢复使用。"
+  "CODE_REFUSED_REJECTED_NOTICE": "服务器已于 {date} 拒绝此激活码。已为您保留，若发行方恢复其权限，将自动恢复使用。",
+  "EXIT": "退出",
+  "MANAGE": "管理",
+  "OPEN": "打开",
+  "OPEN_IN_BROWSER": "在浏览器中打开",
+  "MSG_ACCESS_KEY_ADDED": "已添加 {0} 访问密钥。",
+  "MSG_ACCESS_KEY_UPDATED": "已更新 {0} 访问密钥。",
+  "MSG_CANT_READ_ACCESS_KEY": "无法读取访问密钥。",
+  "MSG_UNSUPPORTED_CONTENT": "不支持的文件类型。",
+  "MSG_CANT_SHOW_AD": "该服务器需要展示广告，但无法加载。"
 }

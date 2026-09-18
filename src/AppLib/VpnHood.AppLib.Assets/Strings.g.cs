@@ -2088,4 +2088,31 @@ public sealed partial class Strings
 
     /// <summary>The server rejected this code on {date}. It is kept and will work again if its issuer restores it.</summary>
     public string CodeRefusedRejectedNotice(object date) => Get("CODE_REFUSED_REJECTED_NOTICE", ("date", date));
+
+    /// <summary>Exit</summary>
+    public string Exit => Get("EXIT");
+
+    /// <summary>Manage</summary>
+    public string Manage => Get("MANAGE");
+
+    /// <summary>Open</summary>
+    public string Open => Get("OPEN");
+
+    /// <summary>Open in Browser</summary>
+    public string OpenInBrowser => Get("OPEN_IN_BROWSER");
+
+    /// <summary>{0} Access key has been added.</summary>
+    public string MsgAccessKeyAdded => Get("MSG_ACCESS_KEY_ADDED");
+
+    /// <summary>{0} access key has been updated.</summary>
+    public string MsgAccessKeyUpdated => Get("MSG_ACCESS_KEY_UPDATED");
+
+    /// <summary>Could not read the access key.</summary>
+    public string MsgCantReadAccessKey => Get("MSG_CANT_READ_ACCESS_KEY");
+
+    /// <summary>Unsupported file type.</summary>
+    public string MsgUnsupportedContent => Get("MSG_UNSUPPORTED_CONTENT");
+
+    /// <summary>This server requires a display Ad but could not display it.</summary>
+    public string MsgCantShowAd => Get("MSG_CANT_SHOW_AD");
 }

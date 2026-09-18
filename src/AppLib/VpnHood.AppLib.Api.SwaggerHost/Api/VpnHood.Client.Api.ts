@@ -6393,7 +6393,7 @@ export interface IClientPolicy {
 
 export class ConfigParams implements IConfigParams {
     availableCultures!: string[];
-    strings?: AppStrings | null;
+    strings?: { [key: string]: string; } | null;
 
     constructor(data?: IConfigParams) {
         if (data) {
@@ -6417,7 +6417,16 @@ export class ConfigParams implements IConfigParams {
             else {
                 this.availableCultures = null as any;
             }
-            this.strings = _data["strings"] ? AppStrings.fromJS(_data["strings"]) : null as any;
+            if (_data["strings"]) {
+                this.strings = {} as any;
+                for (let key in _data["strings"]) {
+                    if (_data["strings"].hasOwnProperty(key))
+                        (this.strings as any)![key] = _data["strings"][key] !== undefined ? _data["strings"][key] : null as any;
+                }
+            }
+            else {
+                this.strings = null as any;
+            }
         }
     }
 
@@ -6435,90 +6444,20 @@ export class ConfigParams implements IConfigParams {
             for (let item of this.availableCultures)
                 data["availableCultures"].push(item);
         }
-        data["strings"] = this.strings ? this.strings.toJSON() : null as any;
+        if (this.strings) {
+            data["strings"] = {};
+            for (let key in this.strings) {
+                if (this.strings.hasOwnProperty(key))
+                    (data["strings"] as any)[key] = this.strings[key] !== undefined ? this.strings[key] : null as any;
+            }
+        }
         return data;
     }
 }
 
 export interface IConfigParams {
     availableCultures: string[];
-    strings?: AppStrings | null;
-}
-
-export class AppStrings implements IAppStrings {
-    disconnect!: string;
-    connect!: string;
-    disconnected!: string;
-    exit!: string;
-    manage!: string;
-    msgAccessKeyAdded!: string;
-    msgAccessKeyUpdated!: string;
-    msgCantReadAccessKey!: string;
-    msgUnsupportedContent!: string;
-    open!: string;
-    openInBrowser!: string;
-
-    constructor(data?: IAppStrings) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.disconnect = _data["disconnect"] !== undefined ? _data["disconnect"] : null as any;
-            this.connect = _data["connect"] !== undefined ? _data["connect"] : null as any;
-            this.disconnected = _data["disconnected"] !== undefined ? _data["disconnected"] : null as any;
-            this.exit = _data["exit"] !== undefined ? _data["exit"] : null as any;
-            this.manage = _data["manage"] !== undefined ? _data["manage"] : null as any;
-            this.msgAccessKeyAdded = _data["msgAccessKeyAdded"] !== undefined ? _data["msgAccessKeyAdded"] : null as any;
-            this.msgAccessKeyUpdated = _data["msgAccessKeyUpdated"] !== undefined ? _data["msgAccessKeyUpdated"] : null as any;
-            this.msgCantReadAccessKey = _data["msgCantReadAccessKey"] !== undefined ? _data["msgCantReadAccessKey"] : null as any;
-            this.msgUnsupportedContent = _data["msgUnsupportedContent"] !== undefined ? _data["msgUnsupportedContent"] : null as any;
-            this.open = _data["open"] !== undefined ? _data["open"] : null as any;
-            this.openInBrowser = _data["openInBrowser"] !== undefined ? _data["openInBrowser"] : null as any;
-        }
-    }
-
-    static fromJS(data: any): AppStrings {
-        data = typeof data === 'object' ? data : {};
-        let result = new AppStrings();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["disconnect"] = this.disconnect !== undefined ? this.disconnect : null as any;
-        data["connect"] = this.connect !== undefined ? this.connect : null as any;
-        data["disconnected"] = this.disconnected !== undefined ? this.disconnected : null as any;
-        data["exit"] = this.exit !== undefined ? this.exit : null as any;
-        data["manage"] = this.manage !== undefined ? this.manage : null as any;
-        data["msgAccessKeyAdded"] = this.msgAccessKeyAdded !== undefined ? this.msgAccessKeyAdded : null as any;
-        data["msgAccessKeyUpdated"] = this.msgAccessKeyUpdated !== undefined ? this.msgAccessKeyUpdated : null as any;
-        data["msgCantReadAccessKey"] = this.msgCantReadAccessKey !== undefined ? this.msgCantReadAccessKey : null as any;
-        data["msgUnsupportedContent"] = this.msgUnsupportedContent !== undefined ? this.msgUnsupportedContent : null as any;
-        data["open"] = this.open !== undefined ? this.open : null as any;
-        data["openInBrowser"] = this.openInBrowser !== undefined ? this.openInBrowser : null as any;
-        return data;
-    }
-}
-
-export interface IAppStrings {
-    disconnect: string;
-    connect: string;
-    disconnected: string;
-    exit: string;
-    manage: string;
-    msgAccessKeyAdded: string;
-    msgAccessKeyUpdated: string;
-    msgCantReadAccessKey: string;
-    msgUnsupportedContent: string;
-    open: string;
-    openInBrowser: string;
+    strings?: { [key: string]: string; } | null;
 }
 
 export class SplitIpsViaApp implements ISplitIpsViaApp {

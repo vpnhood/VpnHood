@@ -1,4 +1,6 @@
-﻿using VpnHood.AppLib.Api.App;
+﻿using System.Globalization;
+using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Api.App;
 using VpnHood.Core.Toolkit.Graphics;
 
 namespace VpnHood.AppLib;
@@ -13,27 +15,42 @@ public class AppResources
 
     public VhSize WindowSize { get; set; } = new(400, 700);
 
-    public AppStrings Strings { get; set; } = CreateDefaultStrings();
+    // Each word is resolved on read - the provider, or this library's own English - so a language
+    // chosen while the app runs is the one shown.
+    public IAppStrings Strings { get; }
+
+    // The UI's words, pushed through ConfigParams.Strings; null, and every word is the resx's.
+    public IStringProvider? StringProvider { get; set; }
+
     public AppColors Colors { get; set; } = new();
     public AppIcons Icons { get; set; } = new();
 
-    // The shape is the contract's (a UI replaces these at configure time); the words are this
-    // library's, from its own resources, so a head that ships no UI still has them.
-    private static AppStrings CreateDefaultStrings()
+    public AppResources()
     {
-        return new AppStrings {
-            Disconnect = Resources.Disconnect,
-            Connect = Resources.Connect,
-            Disconnected = Resources.Disconnected,
-            Exit = Resources.Exit,
-            Manage = Resources.Manage,
-            MsgAccessKeyAdded = Resources.MsgAccessKeyAdded,
-            MsgAccessKeyUpdated = Resources.MsgAccessKeyUpdated,
-            MsgCantReadAccessKey = Resources.MsgCantReadAccessKey,
-            MsgUnsupportedContent = Resources.MsgUnsupportedContent,
-            Open = Resources.Open,
-            OpenInBrowser = Resources.OpenInBrowser
-        };
+        Strings = new AppStrings(this);
+    }
+
+    private string? GetString(string key)
+    {
+        // the app's language, not this thread's: VpnHoodApp writes it on the thread that initializes it
+        var culture = CultureInfo.DefaultThreadCurrentUICulture ?? CultureInfo.CurrentUICulture;
+        return StringProvider?.GetString(culture, key);
+    }
+
+    // Each word is looked up when read: the provider, then Resources.resx.
+    internal class AppStrings(AppResources resources) : IAppStrings
+    {
+        public string Disconnect => resources.GetString("DISCONNECT") ?? Resources.Disconnect;
+        public string Connect => resources.GetString("CONNECT") ?? Resources.Connect;
+        public string Disconnected => resources.GetString("DISCONNECTED") ?? Resources.Disconnected;
+        public string Exit => resources.GetString("EXIT") ?? Resources.Exit;
+        public string Manage => resources.GetString("MANAGE") ?? Resources.Manage;
+        public string MsgAccessKeyAdded => resources.GetString("MSG_ACCESS_KEY_ADDED") ?? Resources.MsgAccessKeyAdded;
+        public string MsgAccessKeyUpdated => resources.GetString("MSG_ACCESS_KEY_UPDATED") ?? Resources.MsgAccessKeyUpdated;
+        public string MsgCantReadAccessKey => resources.GetString("MSG_CANT_READ_ACCESS_KEY") ?? Resources.MsgCantReadAccessKey;
+        public string MsgUnsupportedContent => resources.GetString("MSG_UNSUPPORTED_CONTENT") ?? Resources.MsgUnsupportedContent;
+        public string Open => resources.GetString("OPEN") ?? Resources.Open;
+        public string OpenInBrowser => resources.GetString("OPEN_IN_BROWSER") ?? Resources.OpenInBrowser;
     }
 
     public class AppColors

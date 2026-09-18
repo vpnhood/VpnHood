@@ -692,5 +692,14 @@
   "NOT_IMPLEMENTED_YET": "Non ancora disponibile.",
   "RESTORE_PREMIUM": "Ripristina Premium",
   "CODE_REFUSED_EXPIRED_NOTICE": "Codice scaduto il {date}. Salvato: tornerà attivo se rinnovato.",
-  "CODE_REFUSED_REJECTED_NOTICE": "Codice rifiutato dal server il {date}. Salvato: funzionerà se riattivato dall'emittente."
+  "CODE_REFUSED_REJECTED_NOTICE": "Codice rifiutato dal server il {date}. Salvato: funzionerà se riattivato dall'emittente.",
+  "EXIT": "Esci",
+  "MANAGE": "Gestisci",
+  "OPEN": "Apri",
+  "OPEN_IN_BROWSER": "Apri nel browser",
+  "MSG_ACCESS_KEY_ADDED": "Chiave di accesso {0} aggiunta.",
+  "MSG_ACCESS_KEY_UPDATED": "Chiave di accesso {0} aggiornata.",
+  "MSG_CANT_READ_ACCESS_KEY": "Impossibile leggere la chiave di accesso.",
+  "MSG_UNSUPPORTED_CONTENT": "Tipo di file non supportato.",
+  "MSG_CANT_SHOW_AD": "Questo server richiede la visione di un annuncio, ma non è stato possibile mostrarlo."
 }

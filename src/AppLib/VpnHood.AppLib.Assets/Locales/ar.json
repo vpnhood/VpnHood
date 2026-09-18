@@ -692,5 +692,14 @@
   "NOT_IMPLEMENTED_YET": "غير متوفر حالياً.",
   "RESTORE_PREMIUM": "استعادة النسخة المدفوعة",
   "CODE_REFUSED_EXPIRED_NOTICE": "انتهت صلاحية هذا الرمز في {date}. تم الاحتفاظ به — إذا تم تمديده، فسيعمل تلقائياً مرة أخرى.",
-  "CODE_REFUSED_REJECTED_NOTICE": "رفض الخادم هذا الرمز في {date}. تم الاحتفاظ به وسيعمل مرة أخرى إذا قام مانحه بتفعيله."
+  "CODE_REFUSED_REJECTED_NOTICE": "رفض الخادم هذا الرمز في {date}. تم الاحتفاظ به وسيعمل مرة أخرى إذا قام مانحه بتفعيله.",
+  "EXIT": "خروج",
+  "MANAGE": "إدارة",
+  "OPEN": "فتح",
+  "OPEN_IN_BROWSER": "فتح في المتصفح",
+  "MSG_ACCESS_KEY_ADDED": "تمت إضافة مفتاح الوصول {0}.",
+  "MSG_ACCESS_KEY_UPDATED": "تم تحديث مفتاح الوصول {0}.",
+  "MSG_CANT_READ_ACCESS_KEY": "تعذّرت قراءة مفتاح الوصول.",
+  "MSG_UNSUPPORTED_CONTENT": "نوع الملف غير مدعوم.",
+  "MSG_CANT_SHOW_AD": "يتطلب هذا الخادم عرض إعلان، ولكن تعذّر عرضه."
 }

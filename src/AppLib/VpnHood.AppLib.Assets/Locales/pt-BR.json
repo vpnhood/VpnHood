@@ -692,5 +692,14 @@
   "NOT_IMPLEMENTED_YET": "Em breve.",
   "RESTORE_PREMIUM": "Restaurar premium",
   "CODE_REFUSED_EXPIRED_NOTICE": "Este código expirou em {date}. Ele foi salvo; se for renovado, voltará a funcionar sozinho.",
-  "CODE_REFUSED_REJECTED_NOTICE": "O servidor rejeitou este código em {date}. Ele foi salvo e funcionará novamente se o emissor o reativar."
+  "CODE_REFUSED_REJECTED_NOTICE": "O servidor rejeitou este código em {date}. Ele foi salvo e funcionará novamente se o emissor o reativar.",
+  "EXIT": "Sair",
+  "MANAGE": "Gerenciar",
+  "OPEN": "Abrir",
+  "OPEN_IN_BROWSER": "Abrir no navegador",
+  "MSG_ACCESS_KEY_ADDED": "Chave de acesso {0} adicionada.",
+  "MSG_ACCESS_KEY_UPDATED": "Chave de acesso {0} atualizada.",
+  "MSG_CANT_READ_ACCESS_KEY": "Não foi possível ler a chave de acesso.",
+  "MSG_UNSUPPORTED_CONTENT": "Tipo de arquivo não suportado.",
+  "MSG_CANT_SHOW_AD": "Este servidor requer a exibição de um anúncio, mas não foi possível carregá-lo."
 }

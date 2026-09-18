@@ -1,4 +1,6 @@
-﻿using Foundation;
+﻿using VpnHood.AppLib.Api.Premium;
+using VpnHood.AppLib.Utils;
+using Foundation;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -60,20 +62,23 @@ public class AppDelegate : UIApplicationDelegate
             localizedDescription: AppConfigs.AppName);
 
         VpnHoodIosApp.Init(device, BuildAppOptions(appConfigs));
+        // the web host a phone pairs with and the web view loads from: built here, started by
+        // whoever first needs its address
+        VpnHoodAppWebHost.Init(VpnHoodApp.Instance, new WebHostOptions {
+            WebRootZip = ConnectAppResources.GetWebRootZip(VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
+        });
     }
 
     private static AppOptions BuildAppOptions(AppConfigs appConfigs)
     {
         var storageFolderPath = AppOptions.BuildStorageFolderPath(AppConfigs.AppName);
 
-        // Shared client resources bundle the SPA (SpaZipData) served by VpnHoodAppWebServer and
-        // shown in the WKWebView. Without SpaZipData the web server cannot start.
         var resources = AppConfigs.Resources;
 
         return new AppOptions(appId: appConfigs.AppId, AppConfigs.AppName, isDebugMode: AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
             // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
-            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
+            RemoteAccessHostProvider = () => VpnHoodAppWebHost.Instance,
             IpLocationZipData = ConnectAppResources.IpLocationZipData,
             StorageFolderPath = storageFolderPath,
             // Product settings sourced from the embedded ".user" appsettings (parity with Connect.Android.Web).

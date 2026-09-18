@@ -1,5 +1,6 @@
 using System.Text.Json;
 using VpnHood.App.Client;
+using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Utils;
 

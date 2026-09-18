@@ -26,7 +26,7 @@ internal static class App
         var appOptions = new AppOptions(appConfigs.AppId, "storage", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
             // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
-            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
+            RemoteAccessHostProvider = () => VpnHoodAppWebHost.Instance,
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
@@ -83,18 +83,20 @@ internal static class App
             return Task.CompletedTask;
         }
 
-        // init webserver
-        VpnHoodAppWebServer.Init(VpnHoodApp.Instance, new WebServerOptions());
+        // the web host, started now: the UI is a browser, and its address is written below
+        VpnHoodAppWebHost.Init(VpnHoodApp.Instance, new WebHostOptions {
+            WebRootZip = ClientAppResources.GetWebRootZip(VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
+        }).Start();
 
         // write service url
-        File.WriteAllText(serviceUrlPath, VpnHoodAppWebServer.Instance.Url.ToString());
+        File.WriteAllText(serviceUrlPath, VpnHoodAppWebHost.Instance.Url.ToString());
 
         // run app: the Avalonia UI in a window on this thread when the debug command forces it,
         // otherwise the web UI, in the browser
         if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
             return RunAvaloniaUi(args);
 
-        VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow(VpnHoodAppWebServer.Instance.Url);
+        VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow(VpnHoodAppWebHost.Instance.Url);
         return VpnHoodAppLinux.Instance.Run();
     }
 
@@ -123,7 +125,7 @@ internal static class App
 
     private static void InstanceOnExiting(object? sender, EventArgs e)
     {
-        if (VpnHoodAppWebServer.IsInit)
-            VpnHoodAppWebServer.Instance.Dispose();
+        if (VpnHoodAppWebHost.IsInit)
+            VpnHoodAppWebHost.Instance.Dispose();
     }
 }

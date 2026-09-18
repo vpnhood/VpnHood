@@ -12,7 +12,7 @@ namespace VpnHood.AppLib.Api.WebHost;
 // are the same thing bound to different places, so bind, stop and recovery exist once, here. The
 // factory makes a fresh instance for the address and port fixed per listener, and the probe
 // connects to that same address, so a listener bound to a LAN address is judged there and not on
-// loopback. What differs between the listeners lives in VpnHoodAppWebServer: who creates them,
+// loopback. What differs between the listeners lives in VpnHoodAppWebHost: who creates them,
 // when they go, and who is told they came back.
 internal class WebServerListener(string name, IPAddress address, int port, Func<WebserverLite> serverFactory) : IDisposable
 {

@@ -5,7 +5,7 @@ namespace VpnHood.AppLib.Api.WebHost.Helpers;
 internal static class CorsMiddleware
 {
     // The SPA's own dev servers. Any other origin needs a debug build or the developer's
-    // /remote-access command, both read once at launch (VpnHoodAppWebServer).
+    // /remote-access command, both read once at launch (VpnHoodAppWebHost).
     private static readonly string[] AllowedOrigins = [
         "https://localhost:8080",
         "http://localhost:8080",

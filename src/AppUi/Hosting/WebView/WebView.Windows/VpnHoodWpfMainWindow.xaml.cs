@@ -103,7 +103,7 @@ public partial class VpnHoodWpfMainWindow : Window
             Visibility = Visibility.Hidden; // Hide() does not work properly in this state on sandbox
             VpnHoodAppWin.Instance.EnableOpenMainWindow = false;
             if (VpnHoodAppWin.Instance.ShowWindowAfterStart)
-                VpnHoodAppWin.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
+                VpnHoodAppWin.OpenUrlInExternalBrowser(VpnHoodAppWebHost.Instance.Url);
         }
     }
 

@@ -76,7 +76,7 @@ internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
 
     protected virtual void OpenMainWindowInBrowserRequested(object? sender, EventArgs e)
     {
-        //Browser.Default.OpenAsync(VpnHoodAppWebServer.Instance.Url, BrowserLaunchMode.External);
+        //Browser.Default.OpenAsync(VpnHoodAppWebHost.Instance.Url, BrowserLaunchMode.External);
         throw new NotSupportedException();
     }
 

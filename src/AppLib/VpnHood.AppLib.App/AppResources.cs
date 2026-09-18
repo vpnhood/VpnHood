@@ -7,12 +7,6 @@ namespace VpnHood.AppLib;
 
 public class AppResources
 {
-    public byte[]? SpaZipData { get; set; }
-
-    // The Avalonia UI's browser build (VpnHood.App.AvaloniaUI.Browser), which the web server hands a
-    // paired device in place of the SPA; null when the head ships none, and the SPA serves everyone.
-    public byte[]? AvaloniaBrowserZipData { get; set; }
-
     public VhSize WindowSize { get; set; } = new(400, 700);
 
     // Each word is resolved on read - the provider, or this library's own English - so a language

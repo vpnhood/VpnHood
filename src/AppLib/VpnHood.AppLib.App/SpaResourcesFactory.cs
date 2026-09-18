@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Reflection;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Graphics;
@@ -21,24 +20,9 @@ public static class SpaResourcesFactory
 {
     private const string DefaultTheme = "default";
 
-    // Overload for the usual delivery: spa.zip is embedded in the app's own assembly (in production by
-    // the VpnHood.AppLib.Assets.ClassicSpa package's build targets, locally by the use-local-spa embed).
-    // The caller passes its OWN assembly because that is where the zip lives — not this one.
-    public static AppResources FromSpaZip(Assembly assembly, string resourceName, string theme = DefaultTheme)
-    {
-        using var stream = assembly.GetManifestResourceStream(resourceName)
-            ?? throw new InvalidOperationException(
-                $"The embedded SPA bundle '{resourceName}' was not found in {assembly.GetName().Name}. " +
-                "The VpnHood.AppLib.Assets.ClassicSpa package (production) or the use-local-spa embed " +
-                "(local) did not supply spa.zip.");
-        using var ms = new MemoryStream();
-        stream.CopyTo(ms);
-        return FromSpaZip(ms.ToArray(), theme);
-    }
-
     public static AppResources FromSpaZip(byte[] spaZipData, string theme = DefaultTheme)
     {
-        var resources = new AppResources { SpaZipData = spaZipData };
+        var resources = new AppResources();
 
         using var zip = new ZipArchive(new MemoryStream(spaZipData), ZipArchiveMode.Read);
 

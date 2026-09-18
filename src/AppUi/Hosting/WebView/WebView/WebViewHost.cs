@@ -10,7 +10,7 @@ namespace VpnHood.AppUi.Hosting.WebView;
 // Platform-neutral controller that hosts the VpnHood SPA in a web view: starts the loopback web
 // server, computes the launch URL, drives the loading/error state and loads the SPA again after
 // the web view reports a failure. Only the native web-view mechanics live in the per-platform
-// IWebView; the server keeps itself alive (see VpnHoodAppWebServer).
+// IWebView; the server keeps itself alive (see VpnHoodAppWebHost).
 //
 // Lifecycle from the OS host: construct one per web view, call Start() when the host UI is created,
 // OnResume() from the platform's foreground/resume hook, and Dispose() when it is torn down.
@@ -19,7 +19,7 @@ public sealed class WebViewHost : IDisposable
     private static readonly TimeSpan ReloadDelay = TimeSpan.FromSeconds(1);
     private readonly IWebView _view;
     private readonly WebViewHostOptions _options;
-    private VpnHoodAppWebServer? _server;
+    private VpnHoodAppWebHost? _server;
     private bool _viewInitialized;
     private bool _reloadPending;
     private bool _disposed;
@@ -34,14 +34,13 @@ public sealed class WebViewHost : IDisposable
         _view.ContentProcessGone += OnContentProcessGone;
     }
 
-    // Bring up the web server off the UI thread (it extracts the SPA zip and binds a socket), then
+    // Start the web host off the UI thread (it extracts the web root and binds a socket), then
     // build the web view and load the SPA back on the UI thread.
     public void Start()
     {
         Task.Run(() => {
             try {
-                if (!VpnHoodAppWebServer.IsInit)
-                    VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
+                VpnHoodAppWebHost.Instance.Start();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to start the SPA web server.");
@@ -66,7 +65,7 @@ public sealed class WebViewHost : IDisposable
 
         try {
             if (_server == null) {
-                _server = VpnHoodAppWebServer.Instance;
+                _server = VpnHoodAppWebHost.Instance;
                 _server.Restarted += OnServerRestarted;
             }
 
@@ -92,7 +91,7 @@ public sealed class WebViewHost : IDisposable
     private Uri GetLaunchUrl()
     {
         // nocache busts the web-view cache whenever the bundled SPA changes.
-        var url = new Uri($"{VpnHoodAppWebServer.Instance.Url}?nocache={VpnHoodAppWebServer.Instance.SpaHash}");
+        var url = new Uri($"{VpnHoodAppWebHost.Instance.Url}?nocache={VpnHoodAppWebHost.Instance.WebRootHash}");
         return _options.LaunchUrlBuilder?.Invoke(url) ?? url;
     }
 
@@ -135,8 +134,8 @@ public sealed class WebViewHost : IDisposable
         _view.SetLoading(true);
         Task.Run(async () => {
             try {
-                if (VpnHoodAppWebServer.IsInit)
-                    await VpnHoodAppWebServer.Instance.RestartIfUnreachable().Vhc();
+                if (VpnHoodAppWebHost.IsInit)
+                    await VpnHoodAppWebHost.Instance.RestartIfUnreachable().Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to check the SPA web server after a failed load.");

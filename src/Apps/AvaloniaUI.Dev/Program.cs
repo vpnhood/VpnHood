@@ -40,7 +40,7 @@ internal static class Program
         var appOptions = new AppOptions(appId: "com.vpnhood.avalonia.dev", "VpnHood! Avalonia Dev", isDebugMode: true) {
             AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
             // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
-            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
+            RemoteAccessHostProvider = () => VpnHoodAppWebHost.Instance,
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             StorageFolderPath = storageFolderPath,
             Resources = resources,
@@ -65,7 +65,8 @@ internal static class Program
             // the phone's half of the pairing: the server the pairing page hands out the address of,
             // and - a debug build - the address a browser on this PC can open to see the same UI
             // served as a page (http://<lan-ip>:9090/)
-            using var webServer = VpnHoodAppWebServer.Init(app);
+            using var webServer = VpnHoodAppWebHost.Init(app, new WebHostOptions { WebRootZip = ClientAppResources.GetWebRootZip(avaloniaUi: true) });
+            webServer.Start();
 
             // The UI reaches the app through its API - the same six interfaces a paired browser
             // dials over HTTP, here the app's own controllers in process - and draws from the

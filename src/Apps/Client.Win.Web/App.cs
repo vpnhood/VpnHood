@@ -23,7 +23,7 @@ public class App : Application
         return new AppOptions(appConfigs.AppId, appConfigs.StorageFolderName, AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
             // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
-            RemoteAccessHostProvider = () => VpnHoodAppWebServer.Instance,
+            RemoteAccessHostProvider = () => VpnHoodAppWebHost.Instance,
             IpLocationZipData = ClientAppResources.IpLocationZipData,
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resources = resources,
@@ -63,7 +63,7 @@ public class App : Application
         // The app first, on its own; then the UI framework by the app's own setting: WPF hosts the
         // web UI, Avalonia the native one when the debug command forces it.
         try {
-            VpnHoodAppWin.Init(CreateAppOptions, args);
+            VpnHoodAppWin.Init(CreateAppOptions, args, () => ClientAppResources.GetWebRootZip(VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi)));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not run the app.");

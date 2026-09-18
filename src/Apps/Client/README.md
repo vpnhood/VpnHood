@@ -33,10 +33,14 @@ over its own resources. That is the whole integration surface, and it is the rea
 libraries never reach for them:
 
 ```csharp
-var assembly = typeof(ClientAppResources).Assembly;
-var resources = SpaResourcesFactory.FromSpaZip(assembly, "VpnHood.App.Client.spa.zip");
-resources.AvaloniaBrowserZipData = EmbeddedResource.TryRead(assembly, "VpnHood.App.Client.avalonia-browser.zip");
+public static AppResources Resources => field ??= SpaResourcesFactory.FromSpaZip(SpaZip);
+public static ReadOnlyMemory<byte> GetWebRootZip(bool avaloniaUi) => ...; // the SPA, or the Avalonia browser build
 ```
+
+The same zip serves twice: its branding manifest becomes `AppResources` (colours, tray icons), and its
+files are the web root the head hands to `VpnHoodAppWebHost.Init(app, new WebHostOptions { WebRootZip = ... })`
+at startup. The host is only constructed there; whoever first needs its address - the web view, the
+Avalonia activity, the pairing screen - calls `Start()`. The app library never sees the zip.
 
 The SPA zip is embedded into *this* assembly — in production by the `VpnHood.AppLib.Assets.ClassicSpa`
 package's build targets, locally by the `use-local-spa.txt` switch — and its branding manifest carries

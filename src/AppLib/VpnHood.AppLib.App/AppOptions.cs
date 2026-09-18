@@ -72,7 +72,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // The listener a phone pairs with, resolved on demand because it cannot exist yet: a web host
     // is built on the app, so the app must come first. Null means this head runs none, and
     // AppFeatures.IsRemoteAccessSupported says so before a UI offers the pairing screen. Heads that
-    // bring up VpnHoodAppWebServer set this to () => VpnHoodAppWebServer.Instance.
+    // bring up VpnHoodAppWebHost set this to () => VpnHoodAppWebHost.Instance.
     public Func<IRemoteAccessHost>? RemoteAccessHostProvider { get; set; }
 
     public bool? LogAnonymous { get; set; } =

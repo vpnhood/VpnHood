@@ -66,7 +66,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     // server both UIs load from, the tray. Which UI shows it is the head's next step - the web UI
     // in WPF, or the Avalonia UI when DebugCommands.AvaloniaUi asks - so nothing here belongs to a
     // UI framework. Throws when another instance is running, after asking it for its window.
-    public static VpnHoodAppWin Init(Func<AppOptions> optionsFactory, string[] args)
+    public static VpnHoodAppWin Init(Func<AppOptions> optionsFactory, string[] args, Func<ReadOnlyMemory<byte>> webRootZipFactory)
     {
         var appOptions = optionsFactory();
         appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
@@ -79,8 +79,9 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
             : RegisterLocalDomain(IPEndPoint.Parse("127.10.10.10:80"), appOptions.WebUiHostName);
 
         var appWin = Init(appOptions, args);
-        VpnHoodAppWebServer.Init(VpnHoodApp.Instance, new WebServerOptions { Url = alternativeUrl });
-        appWin.OpenMainWindowInBrowserRequested += (_, _) => OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
+        // started now, not on first use: the tray can open the UI in a browser at any moment
+        VpnHoodAppWebHost.Init(VpnHoodApp.Instance, new WebHostOptions { Url = alternativeUrl, WebRootZip = webRootZipFactory() }).Start();
+        appWin.OpenMainWindowInBrowserRequested += (_, _) => OpenUrlInExternalBrowser(VpnHoodAppWebHost.Instance.Url);
         appWin.Start();
         return appWin;
     }
@@ -365,8 +366,8 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
             _sysTray?.Dispose();
 
             // the web server started with the app, then the app it serves
-            if (VpnHoodAppWebServer.IsInit)
-                VpnHoodAppWebServer.Instance.Dispose();
+            if (VpnHoodAppWebHost.IsInit)
+                VpnHoodAppWebHost.Instance.Dispose();
 
             // disconnect and dispose app
             if (VpnHoodApp.IsInit)

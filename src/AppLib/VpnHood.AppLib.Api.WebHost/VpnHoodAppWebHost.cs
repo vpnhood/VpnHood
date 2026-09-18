@@ -2,6 +2,7 @@
 using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
@@ -20,11 +21,11 @@ using WatsonWebserver.Lite;
 namespace VpnHood.AppLib.Api.WebHost;
 
 // The web view's own listener and the remote-access listeners serve the same SPA and API and differ
-// in where they bind and who owns their life. The primary is loopback, alive from Init to Dispose.
+// in where they bind and who owns their life. The primary is loopback, alive from Start to Dispose.
 // The remote ones are one per advertised LAN address on one shared port, alive from
 // StartRemoteAccess to StopRemoteAccess, or for the whole process for a developer. The listener
 // state machine itself is WebServerListener, once; all of them get the same recovery from here.
-public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccessHost, IDisposable
+public class VpnHoodAppWebHost : Singleton<VpnHoodAppWebHost>, IRemoteAccessHost, IDisposable
 {
     // The pairing: a short token in the QR's address that becomes a cookie on the first hit. Eight
     // characters from an alphabet without 0/O/1/l, since someone may type it from the screen. One
@@ -40,13 +41,14 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
     private const int PairTokenLength = 8;
 
     private const string AssetsManifestName = "assets-manifest.json";
-    private static readonly Regex BrowserUiFingerprintRegex = new(@"\.[a-z0-9]{10}\.[a-z]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    // A file whose name carries a hash of its content: Vite's "name-<8>.ext", the .NET browser build's
+    // "name.<10>.ext" (dotnet.native.<hash>.wasm). index.html, main.js and dotnet.js keep their names.
+    private static readonly Regex FingerprintRegex = new(@"(-[a-z0-9_-]{8}|\.[a-z0-9]{10})\.[a-z0-9]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private readonly ReadOnlyMemory<byte> _webRootZip;
     private string? _indexHtml;
-    private string? _spaHash;
-    private string? _spaPath;
-    private string? _browserUiPath;
-    private string? _browserUiIndexHtml;
+    private string? _webRootHash;
+    private string? _webRootPath;
     private string[]? _assetNames;
     private readonly bool _isDeveloperRemoteAccess;
     private readonly WebServerListener _primary;
@@ -69,7 +71,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
     // the app is a property of the remote listeners, never of this address.
     public Uri Url { get; }
 
-    public string SpaHash => _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
+    public string WebRootHash => _webRootHash ?? throw new InvalidOperationException($"{nameof(WebRootHash)} is not initialized");
 
     // The bundle's assets folder: its images, country flags, fonts, locale files and content
     // documents, each under its own name (the bundle's own code and styles are hashed and live
@@ -114,9 +116,10 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
     // comes back here, and it arrives as IRemoteAccessHost - the head wires that up in AppOptions.
     private VpnHoodApi Api => _app.Api;
 
-    private VpnHoodAppWebServer(VpnHoodApp app, WebServerOptions options)
+    private VpnHoodAppWebHost(VpnHoodApp app, WebHostOptions options)
     {
         _app = app;
+        _webRootZip = options.WebRootZip;
         var defaultPort = app.Features.WebUiPort ?? 9090;
         var endPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, defaultPort);
         Url = options.Url ?? new Uri($"http://{endPoint}");
@@ -174,26 +177,38 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
         base.Dispose(disposing);
     }
 
-    public static VpnHoodAppWebServer Init(VpnHoodApp app, WebServerOptions? options = null)
+    // Construction only, by the head at startup, which has the web root zip. Nothing is extracted or
+    // bound until Start, which whoever first needs the address calls - the web view, the Avalonia
+    // activity, the pairing screen - so a process that never shows a UI never runs a server.
+    public static VpnHoodAppWebHost Init(VpnHoodApp app, WebHostOptions options)
     {
-        var ret = new VpnHoodAppWebServer(app, options ?? new WebServerOptions());
-        ret._primary.Start();
-        VhLogger.Instance.LogInformation("Web server has been started on {Url}", ret.Url);
-        ret._watchdogTimer = new Timer(_ => ret.RestartIfDown(), null, WatchdogInterval, WatchdogInterval);
+        return new VpnHoodAppWebHost(app, options);
+    }
+
+    // Extracts the web root and binds the primary listener. Idempotent.
+    public void Start()
+    {
+        lock (_lock) {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_watchdogTimer != null)
+                return;
+
+            _primary.Start();
+            VhLogger.Instance.LogInformation("Web server has been started on {Url}", Url);
+            _watchdogTimer = new Timer(_ => RestartIfDown(), null, WatchdogInterval, WatchdogInterval);
+        }
 
         // The developer's listeners come up by themselves. Off this thread: the addresses take a
-        // route lookup, and Init is called from the hosts' startup path.
-        if (ret._isDeveloperRemoteAccess)
+        // route lookup, and Start is called from the hosts' startup path.
+        if (_isDeveloperRemoteAccess)
             Task.Run(async () => {
                 try {
-                    await ret.StartRemoteAccess(CancellationToken.None).Vhc();
+                    await StartRemoteAccess(CancellationToken.None).Vhc();
                 }
                 catch (Exception ex) {
                     VhLogger.Instance.LogError(ex, "Could not open the developer's remote access listeners.");
                 }
             });
-
-        return ret;
     }
 
     // The listeners alive right now. A listener that was released is not in it, which is what
@@ -465,57 +480,40 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
                CryptographicOperations.FixedTimeEquals(System.Text.Encoding.UTF8.GetBytes(presented), System.Text.Encoding.UTF8.GetBytes(expected));
     }
 
-    private string GetSpaPath()
-    {
-        if (_spaPath != null)
-            return _spaPath; // do not extract in same instance
-
-        if (_app.Resources.SpaZipData is null)
-            throw new InvalidOperationException("SpaZipData resource is required to run web server for SPA.");
-
-        _spaPath = ExtractBundle(_app.Resources.SpaZipData, "SPA", out _spaHash);
-        return _spaPath;
-    }
-
-    // The Avalonia UI's browser build, when the head ships one (AppResources.AvaloniaBrowserZipData):
-    // extracted beside the SPA under its own hash, and served to a remote device in place of the
-    // SPA. Null when the head ships none, and the SPA serves everyone as before.
-    private string? GetBrowserUiPath()
-    {
-        if (_browserUiPath != null)
-            return _browserUiPath;
-
-        if (_app.Resources.AvaloniaBrowserZipData is null)
-            return null;
-
-        _browserUiPath = ExtractBundle(_app.Resources.AvaloniaBrowserZipData, "AvaloniaBrowser", out _);
-        return _browserUiPath;
-    }
-
-    // A bundle under Temp/<name>/<hash of its zip>, extracted once per version: a folder whose
+    // The web root under Temp/WebRoot/<hash of its zip>, extracted once per version: a folder whose
     // index.html exists is complete, and an older version's folder goes on the way.
-    private string ExtractBundle(byte[] zipData, string bundleName, out string hash)
+    private string GetWebRootPath()
     {
-        hash = Convert.ToHexString(MD5.HashData(zipData));
-        var bundlesFolderPath = Path.Combine(_app.StorageFolderPath, "Temp", bundleName);
-        var bundlePath = Path.Combine(bundlesFolderPath, hash);
-        var htmlPath = Path.Combine(bundlePath, "index.html");
-        if (!File.Exists(htmlPath)) {
-            if (Directory.Exists(bundlesFolderPath))
-                VhUtils.TryInvoke($"Delete old {bundleName} folder", () => Directory.Delete(bundlesFolderPath, true));
-            using var zipArchive = new ZipArchive(new MemoryStream(zipData));
-            zipArchive.ExtractToDirectory(bundlePath, true);
+        if (_webRootPath != null)
+            return _webRootPath; // do not extract in same instance
+
+        var hash = Convert.ToHexString(MD5.HashData(_webRootZip.Span));
+        var webRootsFolderPath = Path.Combine(_app.StorageFolderPath, "Temp", "WebRoot");
+        var webRootPath = Path.Combine(webRootsFolderPath, hash);
+        if (!File.Exists(Path.Combine(webRootPath, "index.html"))) {
+            if (Directory.Exists(webRootsFolderPath))
+                VhUtils.TryInvoke("Delete old WebRoot folder", () => Directory.Delete(webRootsFolderPath, true));
+            using var zipArchive = new ZipArchive(OpenZipStream(_webRootZip));
+            zipArchive.ExtractToDirectory(webRootPath, true);
         }
 
-        return bundlePath;
+        _webRootHash = hash;
+        _webRootPath = webRootPath;
+        return webRootPath;
+    }
+
+    // The zip's own array when it has one; a copy only when it is some other memory.
+    private static MemoryStream OpenZipStream(ReadOnlyMemory<byte> zip)
+    {
+        return MemoryMarshal.TryGetArray(zip, out var segment) && segment.Array != null
+            ? new MemoryStream(segment.Array, segment.Offset, segment.Count, writable: false)
+            : new MemoryStream(zip.ToArray());
     }
 
     private WebserverLite CreateWebServer(string host, int port)
     {
-        var spaPath = GetSpaPath();
-        _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
-        var browserUiPath = GetBrowserUiPath();
-        _browserUiIndexHtml = browserUiPath != null ? File.ReadAllText(Path.Combine(browserUiPath, "index.html")) : null;
+        var webRootPath = GetWebRootPath();
+        _indexHtml = File.ReadAllText(Path.Combine(webRootPath, "index.html"));
 
         var settings = new WebserverSettings(host, port);
 
@@ -524,7 +522,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
         foreach (var header in new[] { "Access-Control-Allow-Origin", "Access-Control-Allow-Methods", "Access-Control-Allow-Headers" })
             settings.Headers.DefaultHeaders.Remove(header);
 
-        var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath, browserUiPath));
+        var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, webRootPath));
         server.Routes.PreRouting = ctx => OnPreRouting(ctx, host);
 
         // Every path of the contract, through its controller - CORS is handled centrally in the route mapper
@@ -558,14 +556,12 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
         return localPath.StartsWith($"assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
     }
 
-    // .NET's browser build names the runtime and every assembly with a hash of its content
-    // (dotnet.native.<hash>.wasm); index.html, main.js and dotnet.js itself keep their names.
-    private static bool IsBrowserUiFileFingerprinted(string localPath)
+    private static bool IsFingerprinted(string localPath)
     {
-        return BrowserUiFingerprintRegex.IsMatch(Path.GetFileName(localPath));
+        return FingerprintRegex.IsMatch(Path.GetFileName(localPath));
     }
 
-    private async Task DefaultRoute(HttpContextBase context, string spaPath, string? browserUiPath)
+    private async Task DefaultRoute(HttpContextBase context, string webRootPath)
     {
         if (_indexHtml == null)
             throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
@@ -612,18 +608,16 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IRemoteAccess
             }
         }
 
-        // A remote device gets the Avalonia UI's browser build when the head ships one; the app's
-        // own web view - and every device, when it ships none - gets the SPA.
-        var remoteUiPath = context.IsRemote() ? browserUiPath : null;
-        var isBrowserUi = remoteUiPath != null;
-        var fullPath = Path.Combine(remoteUiPath ?? spaPath, localPath);
+        // The web root's own file, for the app's web view and a paired device alike; any other path
+        // is the UI's to route, and gets index.html.
+        var fullPath = Path.Combine(webRootPath, localPath);
         if (File.Exists(fullPath)) {
-            await ServeFile(context, fullPath, isBrowserUi ? IsBrowserUiFileFingerprinted(localPath) : !IsAssetPath(localPath));
+            await ServeFile(context, fullPath, IsFingerprinted(localPath));
             return;
         }
 
         context.Response.ContentType = "text/html";
-        await context.Response.Send(isBrowserUi ? _browserUiIndexHtml ?? _indexHtml : _indexHtml);
+        await context.Response.Send(_indexHtml);
     }
 
     // Every file under the assets folder by its name relative to it, the folder's separators as

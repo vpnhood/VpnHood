@@ -55,8 +55,7 @@ public class AndroidAppAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivi
         // before the folder could be read. Then the app is told which languages the UI has; in
         // process that completes at once. The web server is what a phone pairs with, so it comes
         // up here rather than on the pairing screen.
-        if (!VpnHoodAppWebServer.IsInit)
-            VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
+        VpnHoodAppWebHost.Instance.Start();
         TUi.PrepareContent();
         AppModel.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 

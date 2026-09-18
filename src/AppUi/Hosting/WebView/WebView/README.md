@@ -1,7 +1,7 @@
 # VpnHood.AppUi.Hosting.WebView
 
 Shared, platform-neutral hosting for the VpnHood SPA (the web UI served by
-`VpnHoodAppWebServer` and shown in a native web view). One controller holds **all** the
+`VpnHoodAppWebHost` and shown in a native web view). One controller holds **all** the
 hosting business logic; each OS supplies only a thin adapter for the native web-view mechanics.
 
 ## Why
@@ -36,7 +36,7 @@ the shared logic is a **controller** (`WebViewHost`) that talks to a per-OS **ad
   failure or server restart.
 - **`WebViewHostOptions`** — `LaunchUrlBuilder`.
 
-## Keeping the server up (in `VpnHoodAppWebServer`)
+## Keeping the server up (in `VpnHoodAppWebHost`)
 
 Three small mechanisms, each tied to a concrete signal. There is deliberately no periodic connect
 probe: one that times out on a busy or dozing device restarts a healthy server, and every restart

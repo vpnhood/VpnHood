@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Assets.Ip2LocationLite;
+using VpnHood.Core.Toolkit.Assets;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
@@ -19,13 +19,21 @@ namespace VpnHood.AppLib.Test;
 
 public class TestAppHelper : TestHelper
 {
+    // The asset folder the VpnHood.Core.IpLocations.Assets.Ip2LocationLite package's build places
+    // assembly. The package ships no code, so the name is the contract - named here for the tests
+    // the way each head names it for itself.
+    public const string IpLocationAssetPath = "iplocations/IpLocations.zip";
+
+    // the tests run beside their own files, so the plain provider is the right one
+    public static readonly IAssetProvider AssetProvider = new FolderAssetProvider(AppContext.BaseDirectory);
+
     // isDebugMode: false stands for a release build where the test needs the difference, e.g. the web
     // server's remote access. The tracker and log options below are explicit, so the flag changes nothing else.
     public AppOptions CreateAppOptions(bool isDebugMode = true)
     {
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode) {
             AppName = "VpnHood! Test",
-            IpLocationZipData = new Lazy<byte[]>(() => Ip2LocationLiteDb.ZipData),
+            IpLocationZipAsset = new Asset(AssetProvider, IpLocationAssetPath),
             IsSingleton = false, // tests run many concurrent apps in one process
             // the test app stands for a CONNECT-like head no store forbids anything to; store-build
             // restrictions and the premium-less CLIENT shape are exercised by the tests that

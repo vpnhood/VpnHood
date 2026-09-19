@@ -136,16 +136,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Transport = options.Transport
         };
 
-        _ipRangeLocationProvider = options.IpLocationZipData is { } ipLocationZipData
+        _ipRangeLocationProvider = options.IpLocationZipAsset is { } ipLocationZipAsset
             ? new LocalIpRangeLocationProvider(
-                () => new ZipArchive(new MemoryStream(ipLocationZipData.Value)),
+                () => new ZipArchive(ipLocationZipAsset.OpenRead(), ZipArchiveMode.Read),
                 () => AppRegionInfo.CurrentRegion.Name)
             : null;
 
         // each split service owns its whole activity decision: its settings gate + the premium plan
         // (this app implements IPremiumFeatureChecker)
         var splitCountryService = new SplitCountryService(settingsService, this, _ipRangeLocationProvider,
-            ipLocationZipData: options.IpLocationZipData);
+            ipLocationZipAsset: options.IpLocationZipAsset);
         splitCountryService.StateChanged += LocationService_StateChanged;
 
         var splitIpViaAppService = new SplitIpViaAppService(settingsService, this);

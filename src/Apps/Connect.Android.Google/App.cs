@@ -21,6 +21,7 @@ using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppLib.Api.WebHost;
+using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.App.Connect.Droid.Google;
 
@@ -52,7 +53,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AppName = AppConfigs.AppName,
             // what this head serves: the SPA, or the Avalonia UI's browser build for a paired phone
             WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ConnectAppResources.WebRootZip }),
-            IpLocationZipData = ConnectAppResources.IpLocationZipData,
+            IpLocationZipAsset = new Asset(new AndroidAssetProvider(Application.Context), "iplocations/IpLocations.zip"),
             CustomData = appConfigs.CustomData,
             StorageFolderPath = storageFolderPath,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],

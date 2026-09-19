@@ -10,6 +10,7 @@ using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.IpLocations;
+using VpnHood.Core.Toolkit.Assets;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -24,8 +25,9 @@ public class SplitCountryService(
     AppSettingsService settingsService,
     IPremiumFeatureChecker premiumFeatureChecker,
     IIpRangeLocationProvider? ipRangeLocationProvider,
-    Lazy<byte[]>? ipLocationZipData)
+    Asset? ipLocationZipAsset)
 {
+    private const string IpLocationChecksumEntryName = "_checksum.txt";
     private string? _ipLocationAssetHash;
     public event EventHandler? StateChanged;
 
@@ -68,7 +70,7 @@ public class SplitCountryService(
             IsBusy = true;
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            if (ipRangeLocationProvider is null || ipLocationZipData is null)
+            if (ipRangeLocationProvider is null || ipLocationZipAsset is null)
                 throw new InvalidOperationException("Could not split by country because the ip-location asset is not provided.");
 
             // resolve the selected countries
@@ -92,7 +94,7 @@ public class SplitCountryService(
                 splitCountryMode, action, string.Join(',', storedCodes));
 
             var dbBuilder = new SplitCountryDbBuilder(
-                () => new ZipArchive(new MemoryStream(ipLocationZipData.Value)),
+                () => new ZipArchive(ipLocationZipAsset.OpenRead(), ZipArchiveMode.Read),
                 storedCodes, GetIpLocationAssetHash(), action);
 
             var dbPath = Path.Combine(dbFolder,
@@ -148,25 +150,25 @@ public class SplitCountryService(
         return (complement, action is FilterAction.Include ? FilterAction.Exclude : FilterAction.Include);
     }
 
-    // Identifies the ip-location asset build so SplitCountryDbBuilder can detect a changed asset. Prefer the
-    // zip's own _checksum.txt (stamped at asset build time); fall back to hashing the zip bytes.
+    // Identifies the ip-location asset build so SplitCountryDbBuilder can detect a changed asset: the
+    // zip's own _checksum.txt, stamped when the asset is built. The old fallback hashed the whole zip,
+    // which meant holding all 14 MB of it in memory; the asset is read as a stream now, and an asset
+    // that names no build is a broken asset rather than one to hash around.
     private string GetIpLocationAssetHash()
     {
         if (_ipLocationAssetHash != null)
             return _ipLocationAssetHash;
 
-        var ipLocationData = ipLocationZipData?.Value
+        var assetFile = ipLocationZipAsset
             ?? throw new InvalidOperationException("The ip-location asset is not provided.");
-        using var zip = new ZipArchive(new MemoryStream(ipLocationData));
-        var entry = zip.GetEntry("_checksum.txt");
-        if (entry != null) {
-            using var reader = new StreamReader(entry.Open());
-            _ipLocationAssetHash = reader.ReadToEnd().Trim();
-        }
-        else {
-            _ipLocationAssetHash = Convert.ToHexString(MD5.HashData(ipLocationData));
-        }
 
+        using var zip = new ZipArchive(assetFile.OpenRead(), ZipArchiveMode.Read);
+        var entry = zip.GetEntry(IpLocationChecksumEntryName)
+            ?? throw new InvalidOperationException(
+                $"The ip-location asset names no build: it has no {IpLocationChecksumEntryName}.");
+
+        using var reader = new StreamReader(entry.Open());
+        _ipLocationAssetHash = reader.ReadToEnd().Trim();
         return _ipLocationAssetHash;
     }
 

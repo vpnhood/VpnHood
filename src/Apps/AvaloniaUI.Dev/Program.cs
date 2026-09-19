@@ -6,6 +6,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.App.AvaloniaUI.Dev;
 
@@ -41,7 +42,7 @@ internal static class Program
             AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
             // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
             WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ClientAppResources.WebRootZip }),
-            IpLocationZipData = ClientAppResources.IpLocationZipData,
+            IpLocationZipAsset = new Asset(new FolderAssetProvider(AppContext.BaseDirectory), "iplocations/IpLocations.zip"),
             StorageFolderPath = storageFolderPath,
             Resources = resources,
             // the documents the product links to, which every head takes from its appsettings.json:

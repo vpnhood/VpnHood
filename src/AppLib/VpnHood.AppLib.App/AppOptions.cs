@@ -8,6 +8,7 @@ using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
+using VpnHood.Core.Toolkit.Assets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.AppLib.WebHosting;
@@ -47,9 +48,10 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // which this class carries for them and never reads itself.
     public required string AppName { get; init; }
 
-    // Lazy: the ~14 MB IP-location db is materialized only on first .Value - when a country split or
-    // a location lookup actually runs - not at startup. Null means the head shipped none.
-    public Lazy<byte[]>? IpLocationZipData { get; set; }
+    // The ~14 MB IP-location db the head ships, wherever its platform placed it. Opened only when a
+    // country split or a location lookup actually runs, never at startup, and opened afresh each
+    // time - the readers dispose what they are given. Null means the head shipped no database.
+    public Asset? IpLocationZipAsset { get; set; }
 
     public AppResources Resources { get; set; } = new();
 

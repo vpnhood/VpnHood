@@ -48,7 +48,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.745" />
+		<PackageReference Include="VpnHood.Core.IpLocations.Assets.Ip2LocationLite" Version="8.2.852" />
 	</ItemGroup>
 
 	<!-- The assets folder - the images, flags, fonts and documents every UI draws from - placed the way

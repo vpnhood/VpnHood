@@ -10,6 +10,7 @@ using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Assets;
 
 // ReSharper disable LocalizableElement
 
@@ -28,7 +29,7 @@ internal static class App
             AppName = AppConfigs.AppName,
             // what this head serves: the SPA, or the Avalonia UI's browser build for a paired phone
             WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ClientAppResources.WebRootZip }),
-            IpLocationZipData = ClientAppResources.IpLocationZipData,
+            IpLocationZipAsset = new Asset(new FolderAssetProvider(AppContext.BaseDirectory), "iplocations/IpLocations.zip"),
             Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,

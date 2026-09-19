@@ -18,6 +18,7 @@ using VpnHood.Core.Client.Devices.Ios;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppLib.Api.WebHost;
+using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.App.Connect.Ios;
 
@@ -74,7 +75,7 @@ public class AppDelegate : UIApplicationDelegate
             AppName = AppConfigs.AppName,
             // what this head serves: the SPA, or the Avalonia UI's browser build for a paired phone
             WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ConnectAppResources.WebRootZip }),
-            IpLocationZipData = ConnectAppResources.IpLocationZipData,
+            IpLocationZipAsset = new Asset(new FolderAssetProvider(AppContext.BaseDirectory), "iplocations/IpLocations.zip"),
             StorageFolderPath = storageFolderPath,
             // Product settings sourced from the embedded ".user" appsettings (parity with Connect.Android.Web).
             // Apple applies an additional privacy rule to VPN apps: the iOS build does not send

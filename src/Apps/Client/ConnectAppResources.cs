@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using VpnHood.AppLib;
-using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Api.App;
 
 namespace VpnHood.App.Client;
@@ -13,10 +12,6 @@ public static class ConnectAppResources
 
     // Same SPA zip as Client, but the 'connect' branding theme (see SpaResourcesFactory).
     public static AppResources Resources => field ??= SpaResourcesFactory.FromSpaZip(SpaZip, "connect");
-
-    // Not a UI resource: the ~14 MB IP-location database the engine reads for country splits and
-    // location lookups. Lazy, so a run that never asks for a country never materializes it.
-    public static Lazy<byte[]> IpLocationZipData { get; } = new(() => Ip2LocationLiteDb.ZipData);
 
     // The web root the app's web host serves - to its own web view and to a paired phone alike.
     // Which UI that is, is settled by what this build embedded (see the project file): the Avalonia

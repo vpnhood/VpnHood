@@ -1,0 +1,7 @@
+<Project>
+	<!-- NuGet imports this file for a DIRECT PackageReference and buildTransitive/<PackageId>.targets
+	     for one reached through another package or project. Both paths must place the same folder,
+	     so this one only forwards: the placement lives next door, once. The heads of this repo import
+	     this file too, so what they test is what a package consumer gets. -->
+	<Import Project="$(MSBuildThisFileDirectory)..\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
+</Project>

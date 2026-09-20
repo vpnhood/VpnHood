@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;
 

@@ -2,7 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Sessions;

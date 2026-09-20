@@ -1,5 +1,5 @@
 ﻿using Avalonia.Controls;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
@@ -56,12 +56,13 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         try {
             var excluded = Split.Countries;
             var countries = await AppModel.Api.App.GetSupportedSplitCountries(CancellationToken.None);
-            var mapped = countries.Select(x => new FilterItem {
+            // the flags together: at once from a folder, in one round from a web server
+            var mapped = await Task.WhenAll(countries.Select(async x => new FilterItem {
                 Id = x.CountryCode,
                 Name = x.TranslatedName,
-                Icon = AppAssets.Flag(x.CountryCode),
+                Icon = AppAssets.FlagPath(x.CountryCode) is { } flagPath ? await AppAssets.LoadBitmapAsync(flagPath) : null,
                 IsSelected = !excluded.Contains(x.CountryCode, StringComparer.OrdinalIgnoreCase)
-            }).ToArray();
+            }));
 
             var onCount = mapped.Count(x => x.IsSelected);
             var isOnMinority = onCount < mapped.Length - onCount;

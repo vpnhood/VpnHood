@@ -1,5 +1,5 @@
 ﻿using Avalonia.Interactivity;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;

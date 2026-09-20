@@ -1,11 +1,22 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Api.App;
+using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.AppLib.Utils;
 
 public static class AppUtils
 {
+    // A zip a head named, as assets: extracted once into a folder the APP chooses, named for what
+    // it holds rather than for the zip it came from, so no head can put two of them in one.
+    internal static IAssetProvider? CreateZipAssetProvider(IAsset? zipAsset, string storageFolderPath,
+        string folderName)
+    {
+        return zipAsset is null
+            ? null
+            : new ZipAssetProvider(zipAsset, Path.Combine(storageFolderPath, "assets", folderName));
+    }
+
     // Mac Catalyst is checked BEFORE iOS on purpose: OperatingSystem.IsIOS() reports true for Catalyst
     // too, so testing iOS first would label a Mac build as an iPhone and hide/show the wrong content.
     public static AppOsType GetOsType()

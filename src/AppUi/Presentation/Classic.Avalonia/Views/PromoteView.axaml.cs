@@ -2,7 +2,7 @@
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -37,7 +37,7 @@ public partial class PromoteView : UserControl, IPage
         var options = info?.LocationInfos.FirstOrDefault(x => x.ServerLocation == serverLocation)?.Options;
 
         // the picture of the case, and over it the operator's own promotion when the app holds one
-        PromoImage.Source = AppAssets.Image(isPremiumLocation ? "premium-servers.webp" : "free-to-premium-servers.webp");
+        AppImage.SetSource(PromoImage, AppAssets.ImagePath(isPremiumLocation ? "premium-servers.webp" : "free-to-premium-servers.webp"));
         if (AppModel.State.PromotionExists)
             _ = LoadPromotionImage();
 
@@ -70,6 +70,8 @@ public partial class PromoteView : UserControl, IPage
     {
         try {
             var bytes = await AppModel.Api.App.PromotionImage(CancellationToken.None);
+            // the case's picture, if still on its way, must not land over the promotion
+            AppImage.SetSource(PromoImage, null);
             PromoImage.Source = new Bitmap(new MemoryStream(bytes));
         }
         catch (Exception ex) {

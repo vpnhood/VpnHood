@@ -1,6 +1,6 @@
 ﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:res="using:VpnHood.AppLib.Assets"
+                    xmlns:res="using:VpnHood.AppUi.Services"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.ConfirmDialog">
   <!-- The web UI's ConfirmDialog: a title with the alert mark, the question, No and Yes. No is

@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using VpnHood.AppLib;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
@@ -28,7 +29,7 @@ public static class AvaloniaDesktopHost
         AppModel.Init(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
 
         // what this UI needs before its first view, and the languages it has words for
-        TUi.PrepareContent();
+        AvaloniaUiHosting.PrepareContent<TUi>(VpnHoodApp.Instance.UiAssetProvider);
         AppModel.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 
         var lifetime = new ClassicDesktopStyleApplicationLifetime {

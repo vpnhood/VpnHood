@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Assets;
+using VpnHood.Core.Toolkit.Assets;
 using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
@@ -37,7 +37,8 @@ public class VpnHoodAppWebHost : IAppWebHost
     private const string PairAlphabet = "abcdefghjkmnpqrstuvwxyz23456789";
     private const int PairTokenLength = 8;
 
-    private const string AssetsManifestName = "assets-manifest.json";
+    // Where the UI's files are served, by name, out of the same provider the app's own UI reads.
+    private const string AssetsPrefix = "assets/";
 
     // What both listeners want when nothing else is configured.
     private const int DefaultPort = 9090;
@@ -46,15 +47,15 @@ public class VpnHoodAppWebHost : IAppWebHost
     // "name.<10>.ext" (dotnet.native.<hash>.wasm). index.html, main.js and dotnet.js keep their names.
     private static readonly Regex FingerprintRegex = new(@"(-[a-z0-9_-]{8}|\.[a-z0-9]{10})\.[a-z0-9]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    // assets/locales/<culture>.json, the one part of the assets folder that is not a file
-    private static readonly Regex LocalePathRegex = new(@"^assets/locales/([\w-]+)\.json$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
     private static readonly TimeSpan WatchdogInterval = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan PresenceWindow = TimeSpan.FromSeconds(5);
 
     private readonly WebHostCreateParams _createParams;
-    private readonly WebHostShared _shared;
+    private readonly IAssetProvider _webRoot;
+    private readonly IAssetProvider? _uiAssetProvider;
     private readonly bool _isRemote;
+    private readonly string _nocache = Environment.TickCount64.ToString();
+    private string? _indexHtml;
 
     // Guards the listeners, their port and token, the advertised addresses and _disposed; each
     // listener locks itself.
@@ -115,10 +116,11 @@ public class VpnHoodAppWebHost : IAppWebHost
     // reloads the UI on it; a phone on a remote listener simply retries.
     public event EventHandler? Restarted;
 
-    internal VpnHoodAppWebHost(WebHostCreateParams createParams, WebHostShared shared, bool isRemote)
+    internal VpnHoodAppWebHost(WebHostCreateParams createParams, bool isRemote)
     {
         _createParams = createParams;
-        _shared = shared;
+        _webRoot = createParams.WebRoot;
+        _uiAssetProvider = createParams.UiAssetProvider;
         _isRemote = isRemote;
 
         IsAlwaysOn = createParams.IsAlwaysOn;
@@ -157,6 +159,11 @@ public class VpnHoodAppWebHost : IAppWebHost
     {
         var addresses = await GetAddresses().Vhc();
         cancellationToken.ThrowIfCancellationRequested();
+
+        // The page before the socket: a listener that answers must have something to answer with,
+        // and an unpacking that fails belongs to whoever called EnsureStarted rather than to whichever
+        // request happened to arrive first. The first read of index.html is what extracts the page.
+        _indexHtml ??= await ReadIndexHtml(cancellationToken).Vhc();
 
         bool wasBound;
         lock (_lock) {
@@ -259,15 +266,15 @@ public class VpnHoodAppWebHost : IAppWebHost
         return _port == 0 ? configuredPort : _port;
     }
 
-    // The web view caches by URL, so the web root's hash rides along on the local address and a build
-    // it cached earlier is never served again. A phone gets the pairing token instead, once, from the
-    // QR; a developer's listeners ask for none.
+    // The web view caches by URL, so a value of this run rides along on the local address and a page
+    // it cached in an earlier run is never served again. A phone gets the pairing token instead, once,
+    // from the QR; a developer's listeners ask for none.
     private Uri BuildUrl(IPAddress address)
     {
         var endPoint = new IPEndPoint(address, _port);
         var query = _isRemote
             ? IsPairingRequired ? $"?{PairQueryName}={_pairToken}" : ""
-            : $"?nocache={_shared.WebRoot.Hash}";
+            : $"?nocache={_nocache}";
 
         return new Uri($"http://{endPoint}/{query}");
     }
@@ -521,11 +528,6 @@ public class VpnHoodAppWebHost : IAppWebHost
 
     private WebserverLite CreateWebServer(string host, int port)
     {
-        // Unpack before the socket is bound, not on the first request: a listener that answers must
-        // have something to answer with, and an unpacking that fails belongs to whoever called
-        // EnsureStarted rather than to whichever request happened to arrive first.
-        _ = _shared.WebRoot.FolderPath;
-
         var settings = new WebserverSettings(host, port);
 
         // Watson adds "Access-Control-Allow-Origin: *" and friends to every response that did not set
@@ -544,23 +546,6 @@ public class VpnHoodAppWebHost : IAppWebHost
         return server;
     }
 
-    private static Task ServeFile(HttpContextBase context, string fullPath, bool isFingerprinted)
-    {
-        var contentType = MimeTypeUtils.GetContentType(fullPath);
-        context.Response.ContentType = contentType;
-        // A file whose name carries a hash of its content is a version and can be kept for good; any
-        // other name is stable across versions and must be asked for again each time.
-        context.Response.Headers["Cache-Control"] = isFingerprinted
-            ? "public, max-age=31536000, immutable"
-            : "no-cache";
-        return context.Response.Send(File.ReadAllBytes(fullPath));
-    }
-
-    private static bool IsAssetPath(string localPath)
-    {
-        return localPath.StartsWith($"assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static bool IsFingerprinted(string localPath)
     {
         return FingerprintRegex.IsMatch(Path.GetFileName(localPath));
@@ -577,57 +562,57 @@ public class VpnHoodAppWebHost : IAppWebHost
             return;
         }
 
-        // use LocalPath for security reasons (Url.PathAndQuery can contain double dots)
-        var localPath = context.Request.Url.Uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        // LocalPath is unescaped and normalized (no ".."), and a provider takes it as an asset path
+        var localPath = context.Request.Url.Uri.LocalPath.TrimStart('/');
 
-        // the names under the assets folder, for the one UI that cannot read it: the browser build
-        if (string.Equals(localPath, AssetsManifestName, StringComparison.OrdinalIgnoreCase)) {
-            await SendAssetsManifest(context);
+        // The UI's files - images, flags, fonts, documents, the words as locales/<culture>.json - by
+        // name, out of the same provider the app's own UI reads; a paired phone's page has nothing
+        // placed and fetches them from here. A miss is a miss, never the page: the page's own asset
+        // provider takes 404 as "no such asset", which is how it asks for a fallback.
+        if (localPath.StartsWith(AssetsPrefix, StringComparison.OrdinalIgnoreCase)) {
+            await using var asset = _uiAssetProvider != null
+                ? await _uiAssetProvider.TryOpenReadAsync(localPath[AssetsPrefix.Length..], CancellationToken.None).Vhc()
+                : null;
+            if (asset == null) {
+                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                await context.Response.Send();
+                return;
+            }
+
+            await Send(context, localPath, asset, isFingerprinted: false).Vhc();
             return;
         }
 
-        // The words, which the content package carries as resources rather than files: the web UI asks
-        // for its locale on the same /assets/ path as everything else (loadLocale in i18n.ts).
-        if (LocalePathRegex.Match(localPath.Replace(Path.DirectorySeparatorChar, '/')) is { Success: true } locale) {
-            await using var localeStream = Strings.OpenLocaleFile(locale.Groups[1].Value);
-            if (localeStream != null) {
-                context.Response.ContentType = "application/json";
-                context.Response.Headers["Cache-Control"] = "no-cache";
-                await context.Response.Send(localeStream.Length, localeStream);
-                return;
-            }
-        }
-
-        // The content package's assets - images, flags, fonts, documents - loaded by name. They are a
-        // folder rather than embedded resources because Android's assembly store is per-ABI, and a few
-        // hundred files inside a DLL would ship once per architecture. Never fingerprinted.
-        if (IsAssetPath(localPath) && AppContent.TryGetFolderPath(out var assetsFolderPath)) {
-            var assetPath = Path.GetFullPath(Path.Combine(assetsFolderPath, localPath[(AppContent.FolderName.Length + 1)..]));
-            if (assetPath.StartsWith(assetsFolderPath, StringComparison.Ordinal) && File.Exists(assetPath)) {
-                await ServeFile(context, assetPath, isFingerprinted: false);
-                return;
-            }
-        }
-
-        // The web root's own file, for the app's web view and a paired device alike; any other path is
+        // The page's own file, for the app's web view and a paired device alike; any other path is
         // the UI's to route, and gets index.html.
-        var fullPath = Path.Combine(_shared.WebRoot.FolderPath, localPath);
-        if (File.Exists(fullPath)) {
-            await ServeFile(context, fullPath, IsFingerprinted(localPath));
+        await using var file = await _webRoot.TryOpenReadAsync(localPath, CancellationToken.None).Vhc();
+        if (file != null) {
+            await Send(context, localPath, file, IsFingerprinted(localPath)).Vhc();
             return;
         }
 
         context.Response.ContentType = "text/html";
-        await context.Response.Send(_shared.WebRoot.IndexHtml);
+        await context.Response.Send(_indexHtml ?? await ReadIndexHtml(CancellationToken.None).Vhc());
     }
 
-    // Only the browser build asks: the assets are a folder (see above), WASM has none, so it copies them
-    // into the runtime's own file system at startup - and HTTP gives it no way to enumerate. The list is
-    // fixed when the package is built, so it could be generated into the folder and served as a plain
-    // file instead, and this route would go.
-    private async Task SendAssetsManifest(HttpContextBase context)
+    private static async Task Send(HttpContextBase context, string name, Stream stream, bool isFingerprinted)
     {
-        context.Response.Headers["Cache-Control"] = "no-cache";
-        await context.SendJson(_shared.AssetNames);
+        context.Response.ContentType = MimeTypeUtils.GetContentType(name);
+        // A file whose name carries a hash of its content is a version and can be kept for good; any
+        // other name is stable across versions and must be asked for again each time.
+        context.Response.Headers["Cache-Control"] = isFingerprinted
+            ? "public, max-age=31536000, immutable"
+            : "no-cache";
+        var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream).Vhc();
+        await context.Response.Send(memoryStream.ToArray()).Vhc();
+    }
+
+    // The one file every unmatched path falls back to, so the UI can route itself.
+    private async Task<string> ReadIndexHtml(CancellationToken cancellationToken)
+    {
+        await using var stream = await _webRoot.OpenReadAsync("index.html", cancellationToken).Vhc();
+        using var reader = new StreamReader(stream);
+        return await reader.ReadToEndAsync(cancellationToken).Vhc();
     }
 }

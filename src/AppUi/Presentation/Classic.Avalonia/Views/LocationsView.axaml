@@ -1,7 +1,8 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              xmlns:vm="using:VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels"
-             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:res="using:VpnHood.AppUi.Services"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.LocationsView"
              x:DataType="vm:MainViewModel">
@@ -35,7 +36,7 @@
                   <TextBlock Classes="mdi bolt" Classes.active="{Binding IsActive}" FontSize="31" Margin="0,0,8,0"
                              Text="{x:Static res:Mdi.LightningBoltOutline}" IsVisible="{Binding IsAuto}" />
                   <Border Grid.Column="0" Classes="flag" Classes.small="{Binding IsNested}" Margin="0,0,8,0" IsVisible="{Binding !IsAuto}">
-                    <Image Source="{Binding Flag}" />
+                    <Image ui:AppImage.Source="{Binding FlagPath}" />
                   </Border>
                   <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <TextBlock Classes="location-name" Classes.nested="{Binding IsNested}" Classes.active="{Binding IsActive}" Text="{Binding Name}" />
@@ -163,7 +164,7 @@
                                 <TextBlock Classes="mdi" FontSize="24" Foreground="{StaticResource FastestServerBrush}"
                                            Text="{x:Static res:Mdi.Earth}" IsVisible="{Binding IsAuto}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                <Image Source="{Binding Flag}" IsVisible="{Binding !IsAuto}" />
+                                <Image ui:AppImage.Source="{Binding FlagPath}" IsVisible="{Binding !IsAuto}" />
                               </Panel>
                             </Border>
                           </DataTemplate>

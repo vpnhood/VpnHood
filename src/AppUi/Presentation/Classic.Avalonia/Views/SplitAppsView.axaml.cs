@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Media.Imaging;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -47,7 +47,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
             items.Add(new FilterItem {
                 Id = FutureAppsId,
                 Name = Strings.Current.AllFutureApps,
-                Icon = FutureAppsIcon(),
+                Icon = await FutureAppsIcon(),
                 IsSelected = mode is SplitAppMode.All or SplitAppMode.Exclude
             });
 
@@ -84,9 +84,9 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
     }
 
     // the web UI's UiConstants.futureAppsIcon*, one per product
-    private static Bitmap FutureAppsIcon()
+    private static Task<Bitmap?> FutureAppsIcon()
     {
-        return AppAssets.Image(AppModel.IsConnectApp ? "future-apps-connect.png" : "future-apps-client.png");
+        return AppAssets.LoadBitmapAsync(AppAssets.ImagePath(AppModel.IsConnectApp ? "future-apps-connect.png" : "future-apps-client.png"));
     }
 
     // Include with nothing in it is the one state that cannot be saved: the app would tunnel

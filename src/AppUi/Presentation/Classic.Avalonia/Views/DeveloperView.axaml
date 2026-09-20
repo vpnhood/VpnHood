@@ -1,7 +1,7 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels"
-             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:res="using:VpnHood.AppUi.Services"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.DeveloperView">
   <!-- The web UI's developer dialog (components/Home/DeveloperDialog.vue) as a page: the support

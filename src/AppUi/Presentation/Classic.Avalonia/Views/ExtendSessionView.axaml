@@ -1,6 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:res="using:VpnHood.AppUi.Services"
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.ExtendSessionView">
   <!-- The web UI's servers/extend-session: more time on a premium session, by an ad while the
@@ -15,7 +15,7 @@
         </Grid>
         <StackPanel MaxWidth="720" Spacing="12">
           <TextBlock x:Name="TitleText" Classes="h3" TextAlignment="Center" Margin="0,16,0,0" />
-          <Image Source="{ui:AppImage extend-session.webp}" MaxWidth="400" MaxHeight="220" Stretch="Uniform" Margin="0,8" />
+          <Image ui:AppImage.Source="images/extend-session.webp" MaxWidth="400" MaxHeight="220" Stretch="Uniform" Margin="0,8" />
           <StackPanel x:Name="Rows" Spacing="12" />
         </StackPanel>
       </DockPanel>

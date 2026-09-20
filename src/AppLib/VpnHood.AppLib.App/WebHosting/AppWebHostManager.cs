@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Utils;
+using VpnHood.Core.Toolkit.Assets;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -14,7 +15,7 @@ namespace VpnHood.AppLib.WebHosting;
 // asks from its own thread while the API answers on another, one host built twice would leave the
 // loser bound and unreachable, and Dispose reads the fields - building a host in order to dispose it
 // would be absurd on a head that never opened one.
-internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory) : IDisposable
+internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IAssetProvider? webRoot) : IDisposable
 {
     private readonly Lock _lock = new();
     private IAppWebHost? _local;
@@ -28,7 +29,8 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory) : 
             lock (_lock)
                 return _local ??= factory?.CreateLocal(new WebHostCreateParams {
                     Api = app.Api,
-                    StorageFolderPath = app.StorageFolderPath,
+                    WebRoot = WebRoot,
+                    UiAssetProvider = app.UiAssetProvider,
                     WebUiPort = app.Features.WebUiPort,
                     IsAlwaysOn = true, // the app's own UI loads it; nothing ever stops it
                     IsPairingRequired = true // never asked of it: a loopback caller is not a remote one
@@ -46,7 +48,8 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory) : 
                 _remoteIsDeveloperAccess = IsDeveloperRemoteAccess;
                 return _remote = factory?.CreateRemote(new WebHostCreateParams {
                     Api = app.Api,
-                    StorageFolderPath = app.StorageFolderPath,
+                    WebRoot = WebRoot,
+                    UiAssetProvider = app.UiAssetProvider,
                     WebUiPort = app.Features.WebUiPort,
                     IsAlwaysOn = _remoteIsDeveloperAccess, // otherwise a pairing screen holds it
                     IsPairingRequired = !_remoteIsDeveloperAccess
@@ -54,6 +57,12 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory) : 
             }
         }
     }
+
+    // The page both hosts serve, which the head chose (AppOptions.WebRootZipAsset). A head that names a web
+    // host and no page has forgotten half of it, and says so here rather than on the first request.
+    private IAssetProvider WebRoot => webRoot ?? throw new InvalidOperationException(
+        $"The head has set {nameof(AppOptions)}.{nameof(AppOptions.WebHostFactory)} but no " +
+        $"{nameof(AppOptions.WebRootZipAsset)}: a web host has no page to serve.");
 
     // The developer's open door: remote access comes up without a screen and asks for no pairing, so a
     // UI developer can reach a device from their own machine. A host keeps what it was told when it was

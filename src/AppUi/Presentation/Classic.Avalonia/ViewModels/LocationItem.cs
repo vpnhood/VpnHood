@@ -1,6 +1,5 @@
 ﻿using Avalonia;
-using Avalonia.Media.Imaging;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
@@ -20,7 +19,7 @@ public sealed record LocationItem(
     bool HasUnblockable,
     bool ShowCrown)
 {
-    public Bitmap? Flag => IsAuto ? null : AppAssets.Flag(CountryCode);
+    public string? FlagPath => IsAuto ? null : AppAssets.FlagPath(CountryCode);
     public Thickness Indent => IsNested ? new Thickness(16, 0, 0, 0) : default;
     public string RecommendedText => $"({Strings.Current.Recommended})";
     public string ActiveChipText => Strings.Current.Active.ToUpperInvariant();

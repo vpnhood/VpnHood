@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- The classic look of the VpnHood app as an inert asset package: the images, the country flags,
+	     the fonts, the content documents and the words of every language, as one zip, plus the
+	     MSBuild XML that places it where the consuming app's platform reads files. No source, no
+	     assembly (IncludeBuildOutput=false), no dependencies: a store of bytes, not a library, so
+	     nothing in a codebase can take a reference on it by accident. Reading it is the consumer's:
+	     the Toolkit's ZipAssetProvider extracts "assets/ui.zip" once and serves its entries by
+	     name, to the app's own UI and to its web host.
+
+	     What it carries:
+	       ui.zip                          the files, mirrored from the web UI's build into assets/
+	                                            and zipped by _sync-assets.ps1 - not in this repo
+	                                            (.gitignored, ~5 MB, versioned where they are authored;
+	                                            a submodule later)
+	       buildTransitive/<PackageId>.targets  places the zip, at any reference depth
+	       build/<PackageId>.targets            forwards to the above for a direct PackageReference
+
+	     A head of this repo imports build/<PackageId>.targets directly - a project reference carries
+	     no targets - so what our heads test is what a package consumer gets. Another brand is another
+	     package of this shape with its own bytes. Not packed yet: a package built where the web UI is
+	     not built beside it would ship no zip, which is what the submodule is for. -->
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<PackageId>VpnHood.AppUi.Assets.Classic</PackageId>
+		<Description>The classic look of the VpnHood app as an inert asset package: the images, flags, fonts, documents and the words of every language as files, plus MSBuild targets that place them beside the consuming app. No compiled code, so Android carries them once rather than once per CPU architecture.</Description>
+		<IsPackable>false</IsPackable>
+
+		<!-- Emit no assembly into the package and nothing to symbolize; compile no stray files; and do
+		     not fabricate a dependencies group (there are none). -->
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<IncludeSymbols>false</IncludeSymbols>
+		<EnableDefaultItems>false</EnableDefaultItems>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+		<!-- Content-only package: silence the "no lib/ assemblies" advisory, and the compiler's own
+		     complaint that a project with no source has no source. -->
+		<NoWarn>$(NoWarn);NU5128;CS2008</NoWarn>
+	</PropertyGroup>
+
+	<!-- The entire payload, as an explicit allowlist of exactly what ships. -->
+	<ItemGroup>
+		<None Include="ui.zip" Pack="true" PackagePath="ui.zip" />
+		<None Include="buildTransitive\VpnHood.AppUi.Assets.Classic.targets" Pack="true" PackagePath="buildTransitive\" />
+		<None Include="build\VpnHood.AppUi.Assets.Classic.targets" Pack="true" PackagePath="build\" />
+	</ItemGroup>
+</Project>

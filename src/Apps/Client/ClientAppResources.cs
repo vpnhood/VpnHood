@@ -5,24 +5,16 @@ namespace VpnHood.App.Client;
 
 public static class ClientAppResources
 {
-    private const string SpaZipName = "VpnHood.App.Client.spa.zip";
-    private const string AvaloniaBrowserZipName = "VpnHood.App.Client.avalonia-browser.zip";
+    private const string ResourcePrefix = "VpnHood.App.Client.";
+    private const string SpaZipName = "spa.zip";
     private static readonly Assembly Assembly = typeof(ClientAppResources).Assembly;
 
     // Colors + system-tray icons come from the SPA zip's branding/default manifest (see
     // SpaResourcesFactory) — the SPA package owns the whole visual identity.
     public static AppResources Resources => field ??= SpaResourcesFactory.FromSpaZip(SpaZip);
 
-    // The web root the app's web host serves - to its own web view and to a paired phone alike.
-    // Which UI that is, is settled by what this build embedded (see the project file): the Avalonia
-    // UI's browser build when it is there, otherwise the SPA.
-    public static ReadOnlyMemory<byte> WebRootZip => WebRootZipData;
-
-    private static byte[] WebRootZipData =>
-        field ??= EmbeddedResource.TryRead(Assembly, AvaloniaBrowserZipName) ?? SpaZip;
-
     // In production embedded by the VpnHood.AppLib.Assets.ClassicSpa package's build targets,
     // locally by the use-local-spa embed.
-    private static byte[] SpaZip => field ??= EmbeddedResource.TryRead(Assembly, SpaZipName)
+    private static byte[] SpaZip => field ??= EmbeddedResource.TryRead(Assembly, ResourcePrefix + SpaZipName)
         ?? throw new InvalidOperationException($"The embedded SPA bundle '{SpaZipName}' was not found: neither the ClassicSpa package nor the use-local-spa embed supplied spa.zip.");
 }

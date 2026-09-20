@@ -1,11 +1,13 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Styles;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
+using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
 
@@ -18,26 +20,24 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
     // The words this UI has, which the head declares to the app (AppModel.Configure).
     public static IReadOnlyList<string> AvailableCultures => Strings.AvailableCultures;
 
-    // The pictures: the folder of the content package, which on Android is a copy this call makes
-    // (AndroidAppContent) - here, where a head chooses the moment, rather than under the first
-    // page that asks for a picture. The fonts follow it, where Avalonia is already up; where it is
-    // not, Initialize registers them as the styles that name them are read.
-    public static void PrepareContent()
+    // What this UI needs before its first view, out of the store the head hands in: the words, and
+    // the fonts. The head calls it, so the moment is the head's - on Android before the activity's
+    // view, from a browser page once the API is up - and the fonts are registered as soon as
+    // Avalonia can take them (AppAssets.PrepareAsync).
+    public static async Task PrepareContentAsync(IAssetProvider assets, CancellationToken cancellationToken)
     {
-        _ = AppContent.FolderPath;
-        if (Application.Current != null)
-            AppAssets.RegisterFonts();
+        await Strings.InitAsync(assets, cancellationToken).Vhc();
+        await AppAssets.PrepareAsync(assets, cancellationToken).Vhc();
     }
 
     public override void Initialize()
     {
-        // The fonts of the assets folder, before the styles that name them are read with the XAML
-        // below - where the head has made the folder ready by now (PrepareContent). A desktop
-        // host, iOS and a browser have; Android's Application starts Avalonia before its activity
-        // prepares the content - and in processes that never get one - so there the activity
-        // registers them, before its view. Asked, never resolved: the resolving is a copy on
-        // Android, and its moment is the head's.
-        if (AppContent.IsResolved)
+        // The fonts of the store, before the styles that name them are read with the XAML below -
+        // where the head has prepared the content by now (a desktop host, iOS, a browser).
+        // Android's Application starts Avalonia before its activity prepares the content - and in
+        // processes that never get one - so there the preparing registers them itself, before the
+        // activity's view.
+        if (AppAssets.IsPrepared)
             AppAssets.RegisterFonts();
 
         AvaloniaXamlLoader.Load(this);

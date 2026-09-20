@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -27,7 +27,7 @@ public partial class DrawerView : UserControl
         var features = AppModel.Features;
         var state = AppModel.State;
         var logo = AppModel.IsConnectApp ? "VpnHoodConnect-logo.png" : "VpnHoodClient-logo.png";
-        Logo.Source = AppAssets.Image(logo);
+        AppImage.SetSource(Logo, AppAssets.ImagePath(logo));
         AppNameText.Text = features.AppName;
         // app.major.minor.build; the web UI adds its own bundle's build as a fourth segment, which
         // this UI has none of

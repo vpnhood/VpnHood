@@ -34,12 +34,12 @@ libraries never reach for them:
 
 ```csharp
 public static AppResources Resources => field ??= SpaResourcesFactory.FromSpaZip(SpaZip);
-public static ReadOnlyMemory<byte> WebRootZip => ...; // the Avalonia browser build if this build embeds one, else the SPA
+public static IAsset CreateWebRootZip(); // the Avalonia browser build if this build embeds one, else the SPA
 ```
 
 The same zip serves twice: its branding manifest becomes `AppResources` (colours, tray icons), and its
-files are the web root, handed to the app as `AppOptions.WebHostFactory`. Nothing is built, extracted or
-bound until something asks the app for `WebHost` and calls `EnsureStarted`.
+files are the web root, handed to the app as `AppOptions.WebRootZipAsset` for it to extract. Nothing is
+built, extracted or bound until something asks the app for `WebHost` and calls `EnsureStarted`.
 
 The SPA zip is embedded into *this* assembly — in production by the `VpnHood.AppLib.Assets.ClassicSpa`
 package's build targets, locally by the `use-local-spa.txt` switch — and its branding manifest carries

@@ -1,6 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:res="using:VpnHood.AppUi.Services"
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.InternalAdView">
   <!-- The web UI's internal-ad page: the app's own promotion, held for a moment before it can be
@@ -17,7 +17,7 @@
         <Button x:Name="LearnMoreButton" Grid.Column="2" Classes="pill btn1 block" IsEnabled="False" Click="OnLearnMoreClick"
                 Content="{Binding LearnMore, Source={x:Static res:Strings.Current}}" />
       </Grid>
-      <Image Source="{ui:AppImage premium-servers.webp}" Stretch="Uniform" MaxWidth="600" />
+      <Image ui:AppImage.Source="images/premium-servers.webp" Stretch="Uniform" MaxWidth="600" />
     </DockPanel>
   </Border>
 </UserControl>

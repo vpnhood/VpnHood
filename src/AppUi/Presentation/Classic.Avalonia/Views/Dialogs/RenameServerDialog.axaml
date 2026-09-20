@@ -1,6 +1,6 @@
 ﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:res="using:VpnHood.AppLib.Assets"
+                    xmlns:res="using:VpnHood.AppUi.Services"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.RenameServerDialog">
   <!-- The web UI's rename dialog: the name, with the word that an empty one restores the default. -->

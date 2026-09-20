@@ -6,6 +6,7 @@ using VpnHood.AppLib.Api.Settings;
 using Avalonia;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 

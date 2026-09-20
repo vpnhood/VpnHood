@@ -1,6 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:res="using:VpnHood.AppUi.Services"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.SplitDisabledAlert">
   <!-- The web UI's SplitTunnelingDisabledAlert: a split page reached while splitting is off says
        why its edits have no effect, and repairs it in one press. -->

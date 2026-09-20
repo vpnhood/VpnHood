@@ -71,11 +71,14 @@ public class AppDelegate : UIApplicationDelegate
 
         var resources = AppConfigs.Resources;
 
-        return new AppOptions(appId: appConfigs.AppId, AppConfigs.AppName, isDebugMode: AppConfigs.IsDebugMode) {
+        // The files this build's asset packages placed beside the app, read the way this
+        // platform reads them: the IP-location database and the UI's store. The app extracts
+        // what it must under its storage - the store once, for the in-process UI and for the
+        // web host, which serves the same entries at /assets/ to a paired phone's page.
+        var platformAssets = new FolderAssetProvider(AppContext.BaseDirectory);
+
+        var options = new AppOptions(appId: appConfigs.AppId, AppConfigs.AppName, isDebugMode: AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
-            // what this head serves: the SPA, or the Avalonia UI's browser build for a paired phone
-            WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ConnectAppResources.WebRootZip }),
-            IpLocationZipAsset = new Asset(new FolderAssetProvider(AppContext.BaseDirectory), "iplocations/IpLocations.zip"),
             StorageFolderPath = storageFolderPath,
             // Product settings sourced from the embedded ".user" appsettings (parity with Connect.Android.Web).
             // Apple applies an additional privacy rule to VPN apps: the iOS build does not send
@@ -142,8 +145,14 @@ public class AppDelegate : UIApplicationDelegate
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 UpdaterProvider = new AppStoreAppUpdaterProvider()
-            }
+            },
+            IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
+            UiZipAsset = new Asset(platformAssets, "assets/ui.zip"),
+            // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
+            WebRootZipAsset = AppWebRoot.Zip,
+            WebHostFactory = new VpnHoodAppWebHostFactory()
         };
+        return options;
     }
 
     private static JsonElement? WithoutFirebaseOptions(JsonElement? customData)

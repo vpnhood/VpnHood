@@ -7,6 +7,7 @@ using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Assets;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.App.AvaloniaUI.Dev;
 
@@ -35,14 +36,16 @@ internal static class Program
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             ValueOf(args, "--storage") ?? "VpnHood.AvaloniaDev");
         var resources = ClientAppResources.Resources;
+        // The files this build's asset packages placed beside the app, read the way this
+        // platform reads them: the IP-location database and the UI's store. The app extracts
+        // what it must under its storage - the store once, for the in-process UI and for the
+        // web host, which serves the same entries at /assets/ to a paired phone's page.
+        var platformAssets = new FolderAssetProvider(AppContext.BaseDirectory);
+
         // the name the UI shows, as a head of that product would set it (AppFeatures.AppName is
         // this very string), so the window says which product it is running as
-
         var appOptions = new AppOptions(appId: "com.vpnhood.avalonia.dev", "VpnHood! Avalonia Dev", isDebugMode: true) {
             AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
-            // The listener a phone pairs with; without it IsRemoteAccessSupported is false.
-            WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ClientAppResources.WebRootZip }),
-            IpLocationZipAsset = new Asset(new FolderAssetProvider(AppContext.BaseDirectory), "iplocations/IpLocations.zip"),
             StorageFolderPath = storageFolderPath,
             Resources = resources,
             // the documents the product links to, which every head takes from its appsettings.json:
@@ -57,7 +60,12 @@ internal static class Program
             // left at the product default (on): the consent screen is part of what a client head
             // shows on a first run, and a run that skips it shows a build no one ships
             IsAddAccessKeySupported = !isConnect, // a connect head ships one built-in profile and takes no keys
-            UiName = isConnect ? AppProduct.ConnectUiName : null
+            UiName = isConnect ? AppProduct.ConnectUiName : null,
+            IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
+            UiZipAsset = new Asset(platformAssets, "assets/ui.zip"),
+            // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
+            WebRootZipAsset = AppWebRoot.Zip,
+            WebHostFactory = new VpnHoodAppWebHostFactory()
         };
 
         var device = new TvOverrideDevice(new WinDevice(storageFolderPath, appOptions.IsDebugMode), isTv);
@@ -68,10 +76,10 @@ internal static class Program
             // served as a page (http://<lan-ip>:9090/)
             // The UI reaches the app through its API - the same six interfaces a paired browser
             // dials over HTTP, here the app's own controllers in process - and draws from the
-            // assets folder beside this executable, which the build placed there (the same files
+            // store's zip beside this executable, which the build placed there (the same files
             // the web server serves at /assets/). In process both complete at once.
             AppModel.Init(app.Api, CancellationToken.None).GetAwaiter().GetResult();
-            ClassicAvaloniaApp.PrepareContent();
+            AvaloniaUiHosting.PrepareContent<ClassicAvaloniaApp>(app.UiAssetProvider);
             AppModel.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }

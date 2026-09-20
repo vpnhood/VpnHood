@@ -25,11 +25,15 @@ internal static class App
     {
         var appConfigs = AppConfigs.Load();
         var resources = ClientAppResources.Resources;
+
+        // The files this build's asset packages placed beside the app, read the way this
+        // platform reads them: the IP-location database and the UI's store. The app extracts
+        // what it must under its storage - the store once, for the in-process UI and for the
+        // web host, which serves the same entries at /assets/ to a paired phone's page.
+        var platformAssets = new FolderAssetProvider(AppContext.BaseDirectory);
+
         var appOptions = new AppOptions(appConfigs.AppId, "storage", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
-            // what this head serves: the SPA, or the Avalonia UI's browser build for a paired phone
-            WebHostFactory = new VpnHoodAppWebHostFactory(new WebHostOptions { WebRootZip = ClientAppResources.WebRootZip }),
-            IpLocationZipAsset = new Asset(new FolderAssetProvider(AppContext.BaseDirectory), "iplocations/IpLocations.zip"),
             Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
@@ -50,7 +54,12 @@ internal static class App
             LogServiceOptions = {
                 SingleLineConsole = false
             },
-            StorageFolderPath = StoragePath
+            StorageFolderPath = StoragePath,
+            IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
+            UiZipAsset = new Asset(platformAssets, "assets/ui.zip"),
+            // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
+            WebRootZipAsset = AppWebRoot.Zip,
+            WebHostFactory = new VpnHoodAppWebHostFactory()
         };
 
         return appOptions;

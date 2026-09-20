@@ -1,6 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:res="using:VpnHood.AppUi.Services"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.MainView"
              xmlns:animation="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Animation"
              xmlns:helpers="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers"

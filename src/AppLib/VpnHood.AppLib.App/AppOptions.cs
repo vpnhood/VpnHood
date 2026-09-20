@@ -51,7 +51,20 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // The ~14 MB IP-location db the head ships, wherever its platform placed it. Opened only when a
     // country split or a location lookup actually runs, never at startup, and opened afresh each
     // time - the readers dispose what they are given. Null means the head shipped no database.
-    public Asset? IpLocationZipAsset { get; set; }
+    public IAsset? IpLocationZipAsset { get; set; }
+
+    // The files the app's UI draws from - pictures, fonts, words - if the head has any: the asset
+    // package's zip, wherever its platform placed it. The app extracts it and shares ONE provider:
+    // the web host serves it at /assets/ to a paired phone's page, and the in-process UI reads it
+    // directly. Null for a head whose UI brings nothing of its own.
+    public IAsset? UiZipAsset { get; set; }
+
+    // The page the web host serves - the SPA, or the Avalonia UI's browser build - as the zip the
+    // head embedded; the app extracts it as it does the UI's. Carried here rather than configured
+    // on the factory, so both of the host's files travel one path and are named once; the app
+    // itself never reads it, as it never reads Resources. Required by a head that sets
+    // WebHostFactory.
+    public IAsset? WebRootZipAsset { get; set; }
 
     public AppResources Resources { get; set; } = new();
 

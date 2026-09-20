@@ -74,7 +74,6 @@
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Api/VpnHood.AppLib.Api.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Api.HttpClients/VpnHood.AppLib.Api.HttpClients.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Assets/VpnHood.AppLib.Assets.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Portal/VpnHood.AppLib.Portal.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Api.SwaggerHost/VpnHood.AppLib.Api.SwaggerHost.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Api.WebHost/VpnHood.AppLib.Api.WebHost.csproj" />
@@ -98,6 +97,12 @@
   </Folder>
   <Folder Name="/src/AppLib/Windows/">
     <Project Path="src/AppLib/VpnHood.AppLib.Win.Common/VpnHood.AppLib.Win.Common.csproj" />
+  </Folder>
+  <Folder Name="/src/AppUi/Assets/">
+    <Project Path="src/AppUi/Assets/Classic/VpnHood.AppUi.Assets.Classic.csproj" />
+  </Folder>
+  <Folder Name="/src/AppUi/Services/">
+    <Project Path="src/AppUi/Services/VpnHood.AppUi.Services.csproj" />
   </Folder>
   <Folder Name="/src/AppUi/Presentation/">
     <Project Path="src/AppUi/Presentation/Classic.Avalonia/VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />

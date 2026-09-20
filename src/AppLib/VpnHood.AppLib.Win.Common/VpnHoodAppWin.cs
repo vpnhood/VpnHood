@@ -3,6 +3,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Win.Common.WinNative;
 using VpnHood.Core.Client.Devices.Win;
@@ -135,14 +136,29 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         if (ConnectAfterStart && VpnHoodApp.Instance.CurrentClientProfileInfo != null)
             _ = VpnHoodApp.Instance.TryConnect();
 
-        // create notification icon
-        InitNotifyIcon();
+        // The tray comes up once the look it draws with is final - there is nothing to see before
+        // it, where an icon that changed under the user would be seen. Today that is this very
+        // moment; it becomes a wait when the look is read from the UI's store.
+        _ = InitNotifyIconWhenReady();
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => UpdateNotifyIcon();
-        UpdateNotifyIcon();
 
         // start command listener
         _commandListener.Start();
         return true;
+    }
+
+    private async Task InitNotifyIconWhenReady()
+    {
+        try {
+            // no ConfigureAwait(false): a tray icon is a window, and a window belongs to the thread
+            // that made it - this must come back to the one that started the app
+            await VpnHoodApp.Instance.ResourcesLoaded;
+            InitNotifyIcon();
+            UpdateNotifyIcon();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create the system tray icon.");
+        }
     }
 
     private void InitNotifyIcon()

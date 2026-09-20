@@ -1,5 +1,6 @@
 ﻿using Avalonia.Markup.Xaml.Styling;
 using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Styles;
 

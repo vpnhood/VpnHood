@@ -10,6 +10,7 @@ using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Droid;
 
@@ -47,14 +48,14 @@ public class AndroidAppAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivi
         MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions());
 
         // Also before base.OnCreate, which makes the view (the UI hands this activity its
-        // factory): a UI whose pictures are files reads them from a folder, which on Android is a
-        // copy out of the package (AndroidAppContent), made on the first run of a version - on
-        // this thread, deliberately, as every frame after this line depends on it. PrepareContent
-        // also registers the UI's fonts, Avalonia having started with the process's Application,
-        // before the folder could be read. Then the app is told which languages the UI has; in
-        // process that completes at once. The web server is what a phone pairs with, so it comes
-        // up here rather than on the pairing screen.
-        TUi.PrepareContent();
+        // factory): the UI's store, which on Android is the zip's extraction out of the package
+        // (ZipAssetProvider), made on the first run of a version - waited for here, deliberately,
+        // as every frame after this line depends on it. Preparing the content also registers the
+        // UI's fonts, Avalonia having started with the process's Application, before the store
+        // could be read. Then the app is told which languages the UI has; in process that
+        // completes at once. The web server is what a phone pairs with, so it comes up here rather
+        // than on the pairing screen.
+        AvaloniaUiHosting.PrepareContent<TUi>(VpnHoodApp.Instance.UiAssetProvider);
         AppModel.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 
         base.OnCreate(savedInstanceState);

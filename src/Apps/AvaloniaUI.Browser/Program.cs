@@ -1,18 +1,19 @@
 ﻿using Avalonia;
 using Avalonia.Browser;
 using VpnHood.AppLib.Api.HttpClients;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
+using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.App.AvaloniaUI.Browser;
 
 // The Avalonia UI in a browser: the page the app's web server hands a paired device, served by the
 // app itself. Nothing of the app runs here. The API is dialed over HTTP at the address the page
 // came from, the browser's own cookie carrying the pairing, and the files the UI draws from -
-// images, flags, fonts, documents - are fetched from the same server into the runtime's file
-// system before the UI starts, so the UI reads them as it does on a device: from a folder. The
-// words need no fetch: they are resources of the content assembly, which came with the page.
+// images, flags, fonts, words, documents - are fetched from the same server by name, as they are
+// asked for: the app's web host serves its own UI's store at /assets/, and this page reads it
+// through the same interface the app's own UI reads its folder through.
 internal static class Program
 {
     private static async Task Main(string[] args)
@@ -22,9 +23,7 @@ internal static class Program
         var http = new HttpClient { BaseAddress = new Uri(pageUrl.GetLeftPart(UriPartial.Authority) + "/") };
 
         await AppModel.Init(HttpVpnHoodApi.Create(http), CancellationToken.None);
-        var assetsFolderPath = await BrowserAssets.Download(http, CancellationToken.None);
-        AppContent.FolderResolver = () => assetsFolderPath;
-        ClassicAvaloniaApp.PrepareContent();
+        await ClassicAvaloniaApp.PrepareContentAsync(new HttpAssetProvider(http, "assets/"), CancellationToken.None);
         await AppModel.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None);
         await BuildAvaloniaApp().StartBrowserAppAsync("out");
     }

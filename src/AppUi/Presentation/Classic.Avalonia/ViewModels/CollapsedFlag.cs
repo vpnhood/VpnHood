@@ -1,5 +1,4 @@
-﻿using Avalonia.Media.Imaging;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
+﻿using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 
@@ -8,5 +7,5 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 public sealed record CollapsedFlag(string? CountryCode)
 {
     public bool IsAuto => CountryCode == null;
-    public Bitmap? Flag => CountryCode == null ? null : AppAssets.Flag(CountryCode);
+    public string? FlagPath => AppAssets.FlagPath(CountryCode);
 }

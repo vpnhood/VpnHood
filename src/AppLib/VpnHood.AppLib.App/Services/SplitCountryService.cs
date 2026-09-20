@@ -11,6 +11,7 @@ using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -25,7 +26,7 @@ public class SplitCountryService(
     AppSettingsService settingsService,
     IPremiumFeatureChecker premiumFeatureChecker,
     IIpRangeLocationProvider? ipRangeLocationProvider,
-    Asset? ipLocationZipAsset)
+    IAsset? ipLocationZipAsset)
 {
     private const string IpLocationChecksumEntryName = "_checksum.txt";
     private string? _ipLocationAssetHash;
@@ -94,8 +95,8 @@ public class SplitCountryService(
                 splitCountryMode, action, string.Join(',', storedCodes));
 
             var dbBuilder = new SplitCountryDbBuilder(
-                () => new ZipArchive(ipLocationZipAsset.OpenRead(), ZipArchiveMode.Read),
-                storedCodes, GetIpLocationAssetHash(), action);
+                ct => OpenIpLocationZip(ipLocationZipAsset, ct),
+                storedCodes, await GetIpLocationAssetHash(cancellationToken).Vhc(), action);
 
             var dbPath = Path.Combine(dbFolder,
                 $"split-country.{VhUtils.GetHexStringSha256(dbBuilder.GetSourceSignature(), 16)}.db");
@@ -150,11 +151,22 @@ public class SplitCountryService(
         return (complement, action is FilterAction.Include ? FilterAction.Exclude : FilterAction.Include);
     }
 
+    // The database as an archive the caller disposes, which closes the stream under it. An archive
+    // reads its directory from the end, so that stream must rewind: a placed file does it where it
+    // lies, and an Android asset cannot, so it is 14 MB in memory for as long as the archive is open
+    // - which ZipArchive would do itself, synchronously, if it were handed the raw stream.
+    private static async Task<ZipArchive> OpenIpLocationZip(IAsset asset, CancellationToken cancellationToken)
+    {
+        var stream = await asset.OpenReadAsync(cancellationToken).Vhc();
+        var seekable = await stream.ToMemoryStreamIfNotSeekableAsync(cancellationToken).Vhc();
+        return new ZipArchive(seekable, ZipArchiveMode.Read);
+    }
+
     // Identifies the ip-location asset build so SplitCountryDbBuilder can detect a changed asset: the
     // zip's own _checksum.txt, stamped when the asset is built. The old fallback hashed the whole zip,
     // which meant holding all 14 MB of it in memory; the asset is read as a stream now, and an asset
     // that names no build is a broken asset rather than one to hash around.
-    private string GetIpLocationAssetHash()
+    private async Task<string> GetIpLocationAssetHash(CancellationToken cancellationToken)
     {
         if (_ipLocationAssetHash != null)
             return _ipLocationAssetHash;
@@ -162,7 +174,7 @@ public class SplitCountryService(
         var assetFile = ipLocationZipAsset
             ?? throw new InvalidOperationException("The ip-location asset is not provided.");
 
-        using var zip = new ZipArchive(assetFile.OpenRead(), ZipArchiveMode.Read);
+        using var zip = await OpenIpLocationZip(assetFile, cancellationToken).Vhc();
         var entry = zip.GetEntry(IpLocationChecksumEntryName)
             ?? throw new InvalidOperationException(
                 $"The ip-location asset names no build: it has no {IpLocationChecksumEntryName}.");
@@ -179,7 +191,7 @@ public class SplitCountryService(
     // that owns them (internal: only this service constructs it; tests see it as a friend) — the
     // Filtering.Sqlite infrastructure stays context-agnostic.
     internal class SplitCountryDbBuilder(
-        Func<ZipArchive> zipArchiveFactory,
+        Func<CancellationToken, Task<ZipArchive>> zipArchiveFactory,
         IReadOnlyCollection<string> countryCodes,
         string assetHash,
         FilterAction action)
@@ -196,7 +208,7 @@ public class SplitCountryService(
         protected override async Task InsertRangesAsync(SplitIpDbInserter inserter, CancellationToken cancellationToken)
         {
             // the factory (not an open archive) keeps the zip unopened on the common ensure-up-to-date path
-            await using var zip = zipArchiveFactory();
+            await using var zip = await zipArchiveFactory(cancellationToken).Vhc();
             foreach (var countryCode in countryCodes) {
                 var entry = zip.GetEntry($"{countryCode.ToLowerInvariant()}.ips");
                 if (entry is null)

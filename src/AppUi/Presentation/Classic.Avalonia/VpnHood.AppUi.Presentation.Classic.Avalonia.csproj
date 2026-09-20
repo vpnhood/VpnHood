@@ -7,9 +7,10 @@
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>
 
-	<!-- This UI embeds no assets: its images, country flags, fonts and content documents are the
-	     files of VpnHood.AppLib.Assets, read at run time from the folder that package places
-	     (AppContent); its words are that package's resources. -->
+	<!-- This UI embeds no assets: its images, country flags, fonts, content documents and words are
+	     the files of VpnHood.AppUi.Assets.Classic, read at run time through the IAssetProvider the
+	     head hands in - the zip that package's targets placed, extracted; or the app's web host,
+	     from a browser page. -->
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="12.1.2" />
@@ -22,8 +23,12 @@
 	<ItemGroup>
 		<!-- Mounting Avalonia and the app's state as the pages read it, which any Avalonia UI needs. -->
 		<ProjectReference Include="..\..\Hosting\Avalonia\Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
-		<!-- The content this UI draws from - the files, the words, the messages - and the folder it finds them in. -->
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
+		<!-- The words, the error sentences, the formatting - what the pages say, for any toolkit. -->
+		<ProjectReference Include="..\..\Services\VpnHood.AppUi.Services.csproj" />
+		<!-- The look this UI draws: the store's files, which the head's build places by importing the
+		     store's targets (a project reference carries none; a package reference will). Declared, not
+		     compiled against - the store has no assembly. -->
+		<ProjectReference Include="..\..\Assets\Classic\VpnHood.AppUi.Assets.Classic.csproj" ReferenceOutputAssembly="false" />
 		<!-- The pairing page starts and stops the LAN listener the phone dials into. -->
 	</ItemGroup>
 </Project>

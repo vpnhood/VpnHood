@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -48,6 +47,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Trackers;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.AppLib.WebHosting;
+using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.AppLib;
 
@@ -87,6 +87,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public ClientProfileService ClientProfileService { get; }
     public Diagnoser Diagnoser { get; } = new();
     public AppResources Resources { get; }
+
+    // Completes when Resources are final: today at once, since the head hands them in, and the seam
+    // the UI's own store fills when the look is read from it instead. Anything the user would SEE
+    // change waits for this and draws once - a tray icon that appears a moment later goes unnoticed,
+    // one that switches under them does not.
+    public Task ResourcesLoaded { get; } = Task.CompletedTask;
+
+    public IAssetProvider? UiAssetProvider { get; }
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
     // Building this list is expensive (on Android it loads and png encodes an icon for every
@@ -118,7 +126,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                             throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = settingsService;
         SettingsService.BeforeSave += SettingsBeforeSave;
-        _webHostManager = new AppWebHostManager(this, options.WebHostFactory);
+
+        // The head names the zips; where they are unpacked is the app's own business - one fixed
+        // folder each under its storage, so no two of them can be handed the same one.
+        UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAsset, StorageFolderPath, "ui");
+        _webHostManager = new AppWebHostManager(this, options.WebHostFactory, 
+            AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, StorageFolderPath, "web-root"));
         _device = device;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _logService = logService;
@@ -138,7 +151,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         _ipRangeLocationProvider = options.IpLocationZipAsset is { } ipLocationZipAsset
             ? new LocalIpRangeLocationProvider(
-                () => new ZipArchive(ipLocationZipAsset.OpenRead(), ZipArchiveMode.Read),
+                ipLocationZipAsset,
                 () => AppRegionInfo.CurrentRegion.Name)
             : null;
 

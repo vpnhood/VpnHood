@@ -1,11 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -90,6 +89,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The person's choice when there is one, the device's language otherwise - the pair
     // VpnHoodApp itself resolves at every settings change.
+    private Task? _cultureSwitch;
+
     private static CultureInfo AppCulture => AppModel.UserSettings.CultureCode is { } code
         ? CultureInfo.GetCultureInfo(code)
         : CultureInfo.GetCultureInfo(AppModel.State.SystemUiCultureInfo.Code);
@@ -126,7 +127,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // the home row and the page behind it: the location in connect, the server in the client
     public string ServersRowValue { get; private set => Set(ref field, value); } = Strings.Current.NoLocationSelected;
-    public Bitmap? LocationFlag { get; private set => Set(ref field, value); }
+    public string? LocationFlagPath { get; private set => Set(ref field, value); }
     public bool HasLocationFlag { get; private set => Set(ref field, value); }
     public bool IsLocationAuto { get; private set => Set(ref field, value); } = true;
     public IReadOnlyList<LocationGroup> LocationGroups { get; private set => Set(ref field, value); } = [];
@@ -135,7 +136,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // the other rows: the countries split, the apps split, the protocol, the account
     public string SplitCountryText { get; private set => Set(ref field, value); } = "";
     public bool ShowSplitCountryText { get; private set => Set(ref field, value); } = true;
-    public IReadOnlyList<Bitmap> SplitCountryFlags { get; private set => Set(ref field, value); } = [];
+    public IReadOnlyList<string> SplitCountryFlags { get; private set => Set(ref field, value); } = [];
     public bool HasSplitCountryFlags { get; private set => Set(ref field, value); }
     public string SplitAppsText { get; private set => Set(ref field, value); } = "";
     public string ProtocolText { get; private set => Set(ref field, value); } = "";
@@ -197,8 +198,29 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // The language, asked of the app rather than of this thread: VpnHoodApp writes
         // CurrentUICulture on the thread that initializes it - here, the UI thread - so a language
         // chosen later, from the paired phone, would never reach a thread that already has its own.
-        // The words change with everything else this reads, at the same beat.
-        var cultureChanged = Strings.Current.SetCulture(AppCulture);
+        // The words come through the store's provider, which may be a web server, so a language the
+        // app switched to is fetched first, and the page refreshed again when the words are here;
+        // in process that is at once.
+        if (Strings.Current.CultureName != AppCulture.Name && _cultureSwitch?.IsCompleted != false)
+            _cultureSwitch = SwitchCulture(AppCulture);
+
+        Refresh(cultureChanged: false);
+    }
+
+    private async Task SwitchCulture(CultureInfo culture)
+    {
+        try {
+            if (await Strings.Current.SetCultureAsync(culture, CancellationToken.None) && !_disposed)
+                Refresh(cultureChanged: true);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not load the words of the language. Culture: {Culture}", culture.Name);
+        }
+    }
+
+    // Everything the pages show, read again; with the words too, when the language changed.
+    private void Refresh(bool cultureChanged)
+    {
         if (cultureChanged)
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty)); // the titles
 
@@ -276,7 +298,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             : profile?.ClientProfileName ?? Strings.Current.NoServerSelected;
         IsLocationAuto = location == null || location.IsAuto;
         HasLocationFlag = !IsLocationAuto;
-        LocationFlag = HasLocationFlag ? AppAssets.Flag(location?.CountryCode) : null;
+        LocationFlagPath = HasLocationFlag ? AppAssets.FlagPath(location?.CountryCode) : null;
 
         RefreshOtherRows(state);
 
@@ -302,7 +324,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             ExpireText = "";
             return;
         }
-        ExpireText = $"{Strings.Current.Expire}: {Format.ExpireDate(expiration.Value)}";
+        ExpireText = $"{Strings.Current.Expire}: {Format.ShortDate(expiration.Value)}";
         IsExpireWarning = (expiration.Value - DateTime.UtcNow).TotalDays <= 3;
     }
 
@@ -354,7 +376,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             : showMyFlag && state.ClientCountryInfo != null ? [state.ClientCountryInfo.CountryCode]
             : [];
         if (flagCodes.Length != SplitCountryFlags.Count || flagCodes.Length > 0 && !ReferenceEquals(_flagCodes, null) && !flagCodes.SequenceEqual(_flagCodes))
-            SplitCountryFlags = [.. flagCodes.Select(AppAssets.Flag).OfType<Bitmap>()];
+            SplitCountryFlags = [.. flagCodes.Select(AppAssets.FlagPath).OfType<string>()];
         _flagCodes = flagCodes;
         HasSplitCountryFlags = SplitCountryFlags.Count > 0;
 

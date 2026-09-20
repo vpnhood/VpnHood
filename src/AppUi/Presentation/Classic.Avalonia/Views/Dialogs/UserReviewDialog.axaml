@@ -1,6 +1,6 @@
 ﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:res="using:VpnHood.AppLib.Assets"
+                    xmlns:res="using:VpnHood.AppUi.Services"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.UserReviewDialog">
   <!-- The web UI's UserReviewDialog: three faces to pick from; the sad ones open a box for the

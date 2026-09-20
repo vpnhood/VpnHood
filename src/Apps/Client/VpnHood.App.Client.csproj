@@ -26,8 +26,8 @@
 	</ItemGroup>
 
 	<!-- The Avalonia UI's browser build, when it has been published (src/Apps/AvaloniaUI.Browser/_publish.ps1
-	     writes the zip): embedded beside the SPA under the name ClientAppResources reads, so the web server
-	     hands a paired device the native UI in place of the SPA. Absent, the SPA serves everyone as before. -->
+	     writes the zip): embedded under the name AppWebRoot reads, as the page every web host of this
+	     product serves. A build that has not published it embeds nothing and has no page to serve. -->
 	<ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\AvaloniaUI.Browser\bin\avalonia-browser.zip')">
 		<EmbeddedResource Include="$(MSBuildThisFileDirectory)..\AvaloniaUI.Browser\bin\avalonia-browser.zip">
 			<LogicalName>VpnHood.App.Client.avalonia-browser.zip</LogicalName>

@@ -1,0 +1,53 @@
+<Project>
+	<!-- The classic look as one file, ui.zip - images, flags, fonts, content documents, and the
+	     words as locales/<culture>.json - placed the way each platform reads files, so the app that
+	     references this package writes nothing to get it and reads it at the asset path
+	     "assets/ui.zip" through its platform's IAssetProvider, behind a ZipAssetProvider that
+	     extracts it once. That path is the whole contract between this file and the consumer; the
+	     package ships no code to hold it.
+
+	     This file lives in buildTransitive/, not build/, on purpose: NuGet imports build/<PackageId>
+	     .targets only for a DIRECT PackageReference, while buildTransitive/<PackageId>.targets reaches
+	     a consumer at any depth - an app that references a UI that references this package gets the
+	     zip without naming it. build/<PackageId>.targets imports this one, so a direct reference runs
+	     the same file; the heads of this repo import that one too, a project reference carrying no
+	     targets.
+
+	     Placed by an APP's build, never a library's: OutputType is the test below, because a library
+	     that merely passes the reference along has no use for a copy of the zip in bin.
+	     TargetFramework is the app's here, and it is the one property already set at this point of
+	     the build (TargetPlatformIdentifier is computed later, in the SDK's own targets). A browser
+	     build gets nothing: it fetches the files from the web server that served it. A build without
+	     the zip - CI checks out code only, until the store is a submodule - places nothing and does
+	     not fail; a UI that needs the store says so when it starts. -->
+	<PropertyGroup>
+		<VhAssetsZip>$(MSBuildThisFileDirectory)..\ui.zip</VhAssetsZip>
+		<!-- "Is this an app?" is not one property. A .NET for Android APP declares OutputType Exe and
+		     the Android SDK REWRITES it to Library - the app is a .dll packaged into an APK - so an
+		     OutputType test alone silently places nothing on the one platform that needs it most.
+		     AndroidApplication is the flag that actually separates an Android app (true) from an
+		     Android library (false); everywhere else, an app is Exe or WinExe. -->
+		<VhAssetsIsApp Condition="'$(OutputType)' == 'Exe' Or '$(OutputType)' == 'WinExe' Or '$(AndroidApplication)' == 'true'">true</VhAssetsIsApp>
+		<VhAssetsIsAndroidApp Condition="'$(VhAssetsIsApp)' == 'true'">$(TargetFramework.Contains('-android'))</VhAssetsIsAndroidApp>
+		<VhAssetsIsAppleApp Condition="'$(VhAssetsIsApp)' == 'true' And ($(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-tvos')) Or $(TargetFramework.Contains('-maccatalyst')))">true</VhAssetsIsAppleApp>
+		<VhAssetsIsBrowserApp Condition="'$(VhAssetsIsApp)' == 'true'">$(TargetFramework.Contains('-browser'))</VhAssetsIsBrowserApp>
+	</PropertyGroup>
+
+	<!-- Android: one entry in base/assets of the package, which is not split by CPU architecture.
+	     The folder's name twice on purpose: .NET for Android takes a leading assets\ in the link as
+	     the package's asset root and drops it, and the file must keep its folder under that root,
+	     so the asset is "assets/ui.zip" - the path the app asks for. -->
+	<ItemGroup Condition="'$(VhAssetsIsAndroidApp)' == 'true' And Exists('$(VhAssetsZip)')">
+		<AndroidAsset Include="$(VhAssetsZip)" Link="assets\assets\ui.zip" Visible="false" />
+	</ItemGroup>
+
+	<!-- iOS and tvOS: a file of the app bundle, read in place. -->
+	<ItemGroup Condition="'$(VhAssetsIsAppleApp)' == 'true' And Exists('$(VhAssetsZip)')">
+		<BundleResource Include="$(VhAssetsZip)" Link="assets\ui.zip" Visible="false" />
+	</ItemGroup>
+
+	<!-- Windows and Linux: a file beside the executable, read in place. -->
+	<ItemGroup Condition="'$(VhAssetsIsApp)' == 'true' And '$(TargetFramework)' != '' And '$(VhAssetsIsAndroidApp)' != 'true' And '$(VhAssetsIsAppleApp)' != 'true' And '$(VhAssetsIsBrowserApp)' != 'true' And Exists('$(VhAssetsZip)')">
+		<None Include="$(VhAssetsZip)" Link="assets\ui.zip" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+	</ItemGroup>
+</Project>

@@ -1,6 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Input;
 using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 

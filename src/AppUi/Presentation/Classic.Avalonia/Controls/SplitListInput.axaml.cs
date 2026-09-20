@@ -1,5 +1,5 @@
 ﻿using Avalonia.Controls;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using Avalonia;
 using Avalonia.Layout;
 

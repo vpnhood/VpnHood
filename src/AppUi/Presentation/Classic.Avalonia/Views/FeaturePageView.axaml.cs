@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -22,7 +22,7 @@ public partial class FeaturePageView : UserControl, IPage
         RichText.Apply(TitleText, options.Title);
         DescriptionText.Text = options.Description;
         DescriptionText.IsVisible = options.Description != null;
-        FeatureImage.Source = AppAssets.Image(options.Image);
+        AppImage.SetSource(FeatureImage, AppAssets.ImagePath(options.Image));
         // shorter on a TV: 240px of art above the controls is a third of a 720 panel
         FeatureImage.MaxHeight = AppModel.IsTvUi ? 140 : 240;
 

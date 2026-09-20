@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.IpLocations.Providers.Offlines;
 using VpnHood.Core.IpLocations.SqliteProvider;
 using VpnHood.Core.Toolkit.Logging;
@@ -26,14 +27,15 @@ public class IpLocationTest : TestAppBase
         await using var keepAliveConnection = new SqliteConnection(sqliteConnectionString);
         await keepAliveConnection.OpenAsync();
 
-        await using (var zipStream = TestAppHelper.AssetProvider.OpenRead(TestAppHelper.IpLocationAssetPath)) {
+        var ipLocationAsset = new Asset(TestAppHelper.AssetProvider, TestAppHelper.IpLocationAssetPath);
+        await using (var zipStream = await ipLocationAsset.OpenReadAsync(TestCt)) {
             await IpLocationSqliteBuilder.Build(zipStream, keepAliveConnection);
         }
 
         await using var ipLocationSqliteProvider =
             await IpLocationSqliteProvider.Open(keepAliveConnection, leaveOpen: true);
         using var localRangeProvider = new LocalIpRangeLocationProvider(
-            () => new ZipArchive(TestAppHelper.AssetProvider.OpenRead(TestAppHelper.IpLocationAssetPath), ZipArchiveMode.Read),
+            ipLocationAsset,
             () => null);
 
         // compare ip ranges for a country

@@ -1,6 +1,5 @@
 ﻿using Android.Runtime;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Assets;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Toolkit.Logging;
@@ -27,11 +26,6 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
 
         var vpnHoodDevice = AndroidDevice.Create();
         VpnHoodApp.Init(vpnHoodDevice, options);
-
-        // the UI's assets folder: a web server and a font collection are handed a FOLDER and read it
-        // themselves, so this one is copied out of the package, on first use. Single FILES are not -
-        // AndroidAssetProvider reads those where they lie, and each head builds its own.
-        AppContent.FolderResolver = () => AndroidAppContent.Extract(Application.Context, VpnHoodApp.Instance.StorageFolderPath);
         return new VpnHoodAndroidApp();
     }
 

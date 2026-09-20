@@ -1,6 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
@@ -18,23 +19,33 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     {
         _host = host;
         InitializeComponent();
-        var (title, markup) = LoadDocument(AppModel.IsConnectApp ? "privacy-consent" : "privacy-consent-client");
-        TitleText.Text = title;
-        RichText.Apply(DocumentText, markup);
+        _ = LoadDocument(AppModel.IsConnectApp ? "privacy-consent" : "privacy-consent-client");
         TermsButton.IsVisible = AppModel.Features.TermsOfUseUrl != null;
         PrivacyButton.IsVisible = AppModel.Features.PrivacyPolicyUrl != null;
     }
 
     // The document in the app's language, else in English: a language whose translation failed
     // verification ships no file, and the English text beats none - on a consent screen above all.
-    private static (string Title, string Markup) LoadDocument(string name)
+    // Read through the store's provider, which may be a web server, so it lands after the page shows.
+    private async Task LoadDocument(string name)
     {
-        var culture = AppModel.State.CurrentUiCultureInfo.Code;
-        foreach (var language in new[] { culture, culture.Split('-')[0], "en" }) {
-            if (AppContent.ReadText($"content/{language}/{name}.md") is { } markdown)
-                return Markdown.Render(markdown);
+        try {
+            var culture = AppModel.State.CurrentUiCultureInfo.Code;
+            foreach (var language in new[] { culture, culture.Split('-')[0], "en" }) {
+                if (await AppAssets.ReadTextAsync($"content/{language}/{name}.md", CancellationToken.None) is not { } markdown)
+                    continue;
+
+                var (title, markup) = Markdown.Render(markdown);
+                TitleText.Text = title;
+                RichText.Apply(DocumentText, markup);
+                return;
+            }
+
+            throw new InvalidOperationException($"The asset store has no content document '{name}' for 'en'.");
         }
-        throw new InvalidOperationException($"The assets folder has no content document '{name}' for 'en'.");
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     public void FocusDefault()

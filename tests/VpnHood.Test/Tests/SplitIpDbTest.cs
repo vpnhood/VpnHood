@@ -31,7 +31,7 @@ public class SplitIpDbTest : TestBase
 
     private static SplitCountryService.SplitCountryDbBuilder CreateCountryBuilder(byte[] zipBytes, string[] countryCodes,
         string assetHash, FilterAction action = FilterAction.Include) =>
-        new(() => new ZipArchive(new MemoryStream(zipBytes)), countryCodes, assetHash, action);
+        new(_ => Task.FromResult(new ZipArchive(new MemoryStream(zipBytes))), countryCodes, assetHash, action);
 
     private static long CountRows(string dbPath, string table)
     {

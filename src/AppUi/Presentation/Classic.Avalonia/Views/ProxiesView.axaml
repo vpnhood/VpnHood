@@ -1,6 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:res="using:VpnHood.AppUi.Services"
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.ProxiesView">
@@ -11,7 +11,7 @@
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Proxies, Source={x:Static res:Strings.Current}}" />
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel MaxWidth="720" Spacing="16">
-        <Image x:Name="ProxyImage" Source="{ui:AppImage proxy.webp}" MaxHeight="280" Stretch="Uniform" />
+        <Image x:Name="ProxyImage" ui:AppImage.Source="images/proxy.webp" MaxHeight="280" Stretch="Uniform" />
         <TextBlock Classes="card-subtitle" Margin="12,-8,12,4" Text="{Binding ProxyNote, Source={x:Static res:Strings.Current}}" />
 
         <!-- the mode -->

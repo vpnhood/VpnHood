@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 

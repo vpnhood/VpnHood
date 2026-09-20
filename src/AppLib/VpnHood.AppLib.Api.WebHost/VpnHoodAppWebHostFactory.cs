@@ -1,29 +1,20 @@
-﻿using VpnHood.AppLib.Api;
-using VpnHood.AppLib.WebHosting;
+﻿using VpnHood.AppLib.WebHosting;
 
 namespace VpnHood.AppLib.Api.WebHost;
 
-// The head's way in: it says what its product serves, and the app decides when each host is first
-// needed. Both hosts come from here so they share one unpacked web root and one loopback endpoint,
-// and can never race over either.
-public class VpnHoodAppWebHostFactory(WebHostOptions options) : IAppWebHostFactory
+// The head's way in: it names this factory in its AppOptions, and the app decides when each host is
+// first needed and tells it everything - what to serve and what to serve it for - in
+// WebHostCreateParams. Nothing is configured here, so a head that writes its own factory carries
+// its own settings in its own type rather than in one of ours.
+public class VpnHoodAppWebHostFactory : IAppWebHostFactory
 {
-    private readonly Lock _lock = new();
-    private WebHostShared? _shared;
-
     public IAppWebHost CreateLocal(WebHostCreateParams createParams)
     {
-        return new VpnHoodAppWebHost(createParams, GetShared(createParams), isRemote: false);
+        return new VpnHoodAppWebHost(createParams, isRemote: false);
     }
 
     public IAppWebHost CreateRemote(WebHostCreateParams createParams)
     {
-        return new VpnHoodAppWebHost(createParams, GetShared(createParams), isRemote: true);
-    }
-
-    private WebHostShared GetShared(WebHostCreateParams createParams)
-    {
-        lock (_lock)
-            return _shared ??= new WebHostShared(options, createParams);
+        return new VpnHoodAppWebHost(createParams, isRemote: true);
     }
 }

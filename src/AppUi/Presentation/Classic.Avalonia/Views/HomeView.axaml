@@ -1,7 +1,7 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels"
-             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:res="using:VpnHood.AppUi.Services"
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.HomeView"
@@ -40,15 +40,15 @@
          once the session is premium -->
     <Panel>
       <Panel.Background>
-        <ImageBrush Source="{ui:AppImage body-bg.png}" Stretch="UniformToFill" AlignmentY="Top" />
+        <ImageBrush ui:AppImage.Source="images/body-bg.png" Stretch="UniformToFill" AlignmentY="Top" />
       </Panel.Background>
     </Panel>
     <!-- on their own sides in every language: the web UI places them by background-position,
          which no direction moves -->
     <Panel FlowDirection="LeftToRight">
-      <Image Source="{ui:AppImage premium-bg-left.webp}" HorizontalAlignment="Left" VerticalAlignment="Top"
+      <Image ui:AppImage.Source="images/premium-bg-left.webp" HorizontalAlignment="Left" VerticalAlignment="Top"
              Stretch="Uniform" MaxWidth="260" IsVisible="{Binding IsPremiumSession}" />
-      <Image Source="{ui:AppImage premium-bg-right.webp}" HorizontalAlignment="Right" VerticalAlignment="Top"
+      <Image ui:AppImage.Source="images/premium-bg-right.webp" HorizontalAlignment="Right" VerticalAlignment="Top"
              Stretch="Uniform" MaxWidth="260" IsVisible="{Binding IsPremiumSession}" />
     </Panel>
 
@@ -185,7 +185,7 @@
             <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding ServersRowValue}" />
             <Border Grid.Column="4" Classes="flag" Width="23" Height="15" CornerRadius="3" Margin="8,0,0,0"
                     IsVisible="{Binding HasLocationFlag}">
-              <Image Source="{Binding LocationFlag}" />
+              <Image ui:AppImage.Source="{Binding LocationFlagPath}" />
             </Border>
             <Border Grid.Column="4" Classes="chip chip-auto" Margin="8,0,0,0" IsVisible="{Binding IsLocationAuto}">
               <TextBlock Text="{Binding AutoChipText}" />
@@ -209,7 +209,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <Border Classes="flag" Width="23" Height="15" CornerRadius="3">
-                    <Image Source="{Binding}" />
+                    <Image ui:AppImage.Source="{Binding}" />
                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>

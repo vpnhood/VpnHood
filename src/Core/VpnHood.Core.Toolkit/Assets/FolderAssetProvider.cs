@@ -1,21 +1,26 @@
 namespace VpnHood.Core.Toolkit.Assets;
 
-// Assets under a folder, read where they lie. Which folder is the caller's to say - an app passes
-// AppContext.BaseDirectory, which is the folder beside the executable on Windows and Linux and the
-// app bundle on iOS, tvOS and Mac Catalyst - so nothing here assumes anything about who is reading
-// or what the files are for.
-//
-// This is every platform whose placed assets are ordinary files. Android is not: its assets live
-// inside the package, and its own provider reads them there.
-public class FolderAssetProvider(string folderPath) : IAssetProvider
+// Assets under a folder, read where they lie: the directory beside an executable, an app bundle, a
+// folder something else unpacked. Which folder is the caller's to say, so nothing here assumes what
+// the files are for.
+public class FolderAssetProvider : IAssetProvider
 {
-    public Stream OpenRead(string assetPath)
+    private readonly string _folderPath;
+
+    public FolderAssetProvider(string folderPath)
     {
-        var path = Path.Combine(folderPath, assetPath.Replace('/', Path.DirectorySeparatorChar));
-        return File.Exists(path)
-            ? File.OpenRead(path)
-            : throw new FileNotFoundException(
-                $"There is no asset '{assetPath}' under '{folderPath}'. An asset package's build targets " +
-                "place its files; a build that excludes that package's build assets places nothing.", path);
+        _folderPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folderPath));
+    }
+
+    public Task<Stream> OpenReadAsync(string assetPath, CancellationToken cancellationToken)
+    {
+        // Under the folder or nothing: an asset path may come from outside, and ".." is not an
+        // asset. The folder itself is not a file either.
+        var path = Path.GetFullPath(Path.Combine(_folderPath, assetPath.Replace('/', Path.DirectorySeparatorChar)));
+        var isInside = path.StartsWith(_folderPath + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+        if (!isInside || !File.Exists(path))
+            throw new AssetNotFoundException(assetPath);
+
+        return Task.FromResult<Stream>(File.OpenRead(path));
     }
 }

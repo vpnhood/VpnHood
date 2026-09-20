@@ -1,5 +1,6 @@
 ﻿using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppLib;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Droid;
 

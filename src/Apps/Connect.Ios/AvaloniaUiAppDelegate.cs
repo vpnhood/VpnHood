@@ -7,6 +7,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Ios.Common;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.AppUi.Services;
 
 namespace VpnHood.App.Connect.Ios;
 
@@ -16,7 +17,7 @@ namespace VpnHood.App.Connect.Ios;
 // first, exactly as AppDelegate starts it, at the one step of that launch this class is asked
 // for - the app builder - and so is the web server, which a paired phone dials; then the UI is
 // given the app's API (its own controllers in process, the same six interfaces a paired browser
-// dials over HTTP). Its files are in the app bundle, where the build placed them.
+// dials over HTTP). Its files are the store's zip in the app bundle, where the build placed it.
 [Register("AvaloniaUiAppDelegate")]
 public class AvaloniaUiAppDelegate : AvaloniaAppDelegate<ClassicAvaloniaApp>
 {
@@ -25,7 +26,7 @@ public class AvaloniaUiAppDelegate : AvaloniaAppDelegate<ClassicAvaloniaApp>
         AppDelegate.StartApp();
         // in process both complete at once
         AppModel.Init(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
-        ClassicAvaloniaApp.PrepareContent();
+        AvaloniaUiHosting.PrepareContent<ClassicAvaloniaApp>(VpnHoodApp.Instance.UiAssetProvider);
         AppModel.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
         AppUiContext.Context = new IosUiContext();
         return base.CreateAppBuilder();

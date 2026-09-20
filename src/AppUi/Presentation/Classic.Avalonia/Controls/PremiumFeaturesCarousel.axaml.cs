@@ -2,7 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using VpnHood.AppLib.Assets;
+using VpnHood.AppUi.Services;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
@@ -58,7 +58,7 @@ public partial class PremiumFeaturesCarousel : UserControl
         RocketBox.IsVisible = image == null;
         SlideImage.IsVisible = image != null;
         if (image != null)
-            SlideImage.Source = AppAssets.Image(image);
+            AppImage.SetSource(SlideImage, AppAssets.ImagePath(image));
         TitleText.Text = title;
         DescriptionText.Text = description;
 

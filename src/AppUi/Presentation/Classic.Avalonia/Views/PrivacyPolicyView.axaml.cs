@@ -7,10 +7,11 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
-// Which text is shown depends on the product: CONNECT's summary describes our servers and their
-// logging, CLIENT's the bring-your-own-key reality. Whether it is shown is the head's word
-// (IsLicenseAgreementRequired) and the person's (IsLicenseAccepted); until they accept, Back goes
-// nowhere - the page holds the app, as the web UI's overlay does.
+// Which text is shown is the head's word (PrivacyConsentAssetName): CONNECT's summary describes
+// our servers and their logging, CLIENT's the bring-your-own-key reality, and a fork names its own.
+// Whether it is shown is the head's word too (IsLicenseAgreementRequired) and the person's
+// (IsLicenseAccepted); until they accept, Back goes nowhere - the page holds the app, as the web
+// UI's overlay does.
 public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
 {
     private readonly MainView _host;
@@ -19,9 +20,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     {
         _host = host;
         InitializeComponent();
-        // Provisional: which product's promises to show is not the look's to choose - an open
-        // question; until it is settled the violet look is the connect product.
-        _ = LoadDocument(AppModel.Features.UiTheme == "violet" ? "privacy-consent" : "privacy-consent-client");
+        _ = LoadDocument(AppModel.Features.PrivacyConsentAssetName);
         TermsButton.IsVisible = AppModel.Features.TermsOfUseUrl != null;
         PrivacyButton.IsVisible = AppModel.Features.PrivacyPolicyUrl != null;
     }

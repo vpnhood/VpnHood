@@ -35,6 +35,8 @@ internal static class App
             AppName = AppConfigs.AppName,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
+            LogoAssetPath = appConfigs.LogoAssetPath,
+            PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
             AllowEndPointStrategy = true,

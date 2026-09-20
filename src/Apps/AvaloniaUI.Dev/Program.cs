@@ -55,6 +55,10 @@ internal static class Program
             TermsOfUseUrl = new Uri(isConnect
                 ? "https://www.vpnhood.com/legal/vpnhood-connect-terms-of-use"
                 : "https://www.vpnhood.com/legal/vpnhood-client-terms-of-use"),
+            // the product's own word in the UI - its logo, its consent summary - as a head of that
+            // product names them in the store
+            LogoAssetPath = isConnect ? "images/VpnHoodConnect-logo.png" : "images/VpnHoodClient-logo.png",
+            PrivacyConsentAssetName = isConnect ? "privacy-consent-connect" : "privacy-consent-client",
             // left at the product default (on): the consent screen is part of what a client head
             // shows on a first run, and a run that skips it shows a build no one ships
             IsAddAccessKeySupported = !isConnect, // a connect head ships one built-in profile and takes no keys

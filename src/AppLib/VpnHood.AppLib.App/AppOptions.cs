@@ -126,6 +126,21 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public Uri? PrivacyPolicyUrl { get; set; }
     public Uri? TermsOfUseUrl { get; set; }
 
+    // The two things the UI shows that carry the product's own word, named by the head as the URLs
+    // above are, and neither the look's (UiTheme) to decide: a fork keeps our violet under its own
+    // name and its own promises.
+    //
+    // Both address the UI's store, and the suffix says how completely. PATH is the whole thing, the
+    // string a provider takes ("images/VpnHoodConnect-logo.png"), so a fork may keep its logo
+    // anywhere in the store. NAME is the part the head chooses ("privacy-consent-connect") and the
+    // UI completes: content/<lang>/<name>.md, because the consent summary is one asset per language
+    // and a language never translated has to fall back to English.
+    //
+    // Required here and again in each head's config (IRequiredAppConfigs): a connect head that
+    // forgot would show the client's promises on a consent screen, which no test finds.
+    public required string LogoAssetPath { get; init; }
+    public required string PrivacyConsentAssetName { get; init; }
+
     // Whether this build must have its licence agreement accepted before the app can be used. A
     // DISTRIBUTION decision, not a product one: a website download passed through nothing that put
     // our terms in front of the user, while a store build's user already accepted that store's own

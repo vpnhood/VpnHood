@@ -33,6 +33,8 @@ public class TestAppHelper : TestHelper
     {
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode) {
             AppName = "VpnHood! Test",
+            LogoAssetPath = "images/VpnHoodClient-logo.png",
+            PrivacyConsentAssetName = "privacy-consent-client",
             IpLocationZipAsset = new Asset(AssetProvider, IpLocationAssetPath),
             IsSingleton = false, // tests run many concurrent apps in one process
             // the test app stands for a CONNECT-like head no store forbids anything to; store-build

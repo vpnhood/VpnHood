@@ -39,6 +39,12 @@ public class AppFeatures
     public required Uri? PrivacyPolicyUrl { get; init; }
     public required Uri? TermsOfUseUrl { get; init; }
 
+    // See AppOptions.LogoAssetPath and PrivacyConsentAssetName: the head's word for whose logo and
+    // whose promises this build shows, both addressing the UI's store - a whole path for the one
+    // asset, a name the UI completes per language for the other. Never derived from UiTheme.
+    public required string LogoAssetPath { get; init; }
+    public required string PrivacyConsentAssetName { get; init; }
+
     public required bool IsTcpProxySupported { get; init; }
     public required bool IsQuicSupported { get; init; }
     public required bool IsSplitDomainSupported { get; init; }

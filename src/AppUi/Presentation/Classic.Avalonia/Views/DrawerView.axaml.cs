@@ -26,10 +26,8 @@ public partial class DrawerView : UserControl
 
         var features = AppModel.Features;
         var state = AppModel.State;
-        // Provisional: this carries the product's word, which the look should not choose for it;
-        // an open question, together with the privacy-consent document - the same case.
-        var logo = features.UiTheme == "violet" ? "VpnHoodConnect-logo.png" : "VpnHoodClient-logo.png";
-        AppImage.SetSource(Logo, AppAssets.ImagePath(logo));
+        // the product's logo, by the store path the head named; not the look's to choose
+        AppImage.SetSource(Logo, features.LogoAssetPath);
         AppNameText.Text = features.AppName;
         // app.major.minor.build; the web UI adds its own bundle's build as a fourth segment, which
         // this UI has none of

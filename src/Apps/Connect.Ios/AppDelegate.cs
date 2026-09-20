@@ -94,6 +94,8 @@ public class AppDelegate : UIApplicationDelegate
             // Not appConfigs.TermsOfUseUrl: a purchase here is governed by Apple's standard EULA while
             // no custom EULA is registered in App Store Connect. Delete this line once one is.
             TermsOfUseUrl = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"),
+            LogoAssetPath = appConfigs.LogoAssetPath,
+            PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
             // The store already took this acceptance at install - see AppOptions.
             IsLicenseAgreementRequired = false,
             UiTheme = "violet",

@@ -31,6 +31,8 @@ public class App : Application
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
+            LogoAssetPath = appConfigs.LogoAssetPath,
+            PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
             CustomData = appConfigs.CustomData,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,

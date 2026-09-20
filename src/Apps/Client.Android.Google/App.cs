@@ -41,6 +41,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             CustomData = appConfigs.CustomData,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
+            LogoAssetPath = appConfigs.LogoAssetPath,
+            PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
             // The store already took this acceptance at install - see AppOptions.
             IsLicenseAgreementRequired = false,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],

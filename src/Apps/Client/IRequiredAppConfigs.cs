@@ -16,4 +16,8 @@ public interface IRequiredAppConfigs
     // Copied onto AppOptions, which documents what these are and what null means.
     public Uri? PrivacyPolicyUrl { get; set; }
     public Uri? TermsOfUseUrl { get; set; }
+
+    // Copied onto AppOptions too: the product's own word in the UI, as paths into its store.
+    public string LogoAssetPath { get; set; }
+    public string PrivacyConsentAssetName { get; set; }
 }

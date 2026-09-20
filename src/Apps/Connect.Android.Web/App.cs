@@ -53,6 +53,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
+            LogoAssetPath = appConfigs.LogoAssetPath,
+            PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
             UiTheme = "violet",
             IsAddAccessKeySupported = false,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,

@@ -60,13 +60,14 @@ $iconsHeader = @"
 Write-Host "Wrote $($icons.Count) icon names to $iconsFile.";
 
 # ---- the images: every file name the UI asks the assets folder for ----
-# Both forms the UI writes: "{res:AppImage name.webp}" in XAML, and the plain string a page hands
-# to AppAssets.Image. Flags are not here - they are named by country code, never by file.
+# Both forms the UI writes are a quoted file name: ui:AppImage.Source="images/name.webp" in XAML,
+# and the string a page hands to AppAssets, with or without the store's images/ prefix. Flags are
+# not here - they are named by country code, never by file - and neither is a name built at run
+# time from the theme (future-apps-{UiTheme}.png), which this cannot see.
 $images = @();
 foreach ($file in Get-ChildItem $projectDir -Recurse -Include *.cs, *.axaml) {
     $text = [System.IO.File]::ReadAllText($file.FullName, $utf8);
-    foreach ($match in [regex]::Matches($text, '\{res:AppImage\s+([\w.-]+\.(?:webp|png|svg|mp4))\s*\}')) { $images += $match.Groups[1].Value; }
-    foreach ($match in [regex]::Matches($text, '"([\w.-]+\.(?:webp|png|svg|mp4))"')) { $images += $match.Groups[1].Value; }
+    foreach ($match in [regex]::Matches($text, '"(?:images/)?([\w.-]+\.(?:webp|png|svg|mp4))"')) { $images += $match.Groups[1].Value; }
 }
 $images = $images | Sort-Object -Unique;
 

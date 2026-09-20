@@ -35,6 +35,8 @@ public class App : Application
             CustomData = appConfigs.CustomData,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
+            LogoAssetPath = appConfigs.LogoAssetPath,
+            PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = false,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,

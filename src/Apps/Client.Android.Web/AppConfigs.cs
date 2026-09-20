@@ -23,6 +23,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public JsonElement? CustomData { get; set; }
     public Uri? PrivacyPolicyUrl { get; set; }
     public Uri? TermsOfUseUrl { get; set; }
+    public string LogoAssetPath { get; set; } = "images/VpnHoodClient-logo.png";
+    public string PrivacyConsentAssetName { get; set; } = "privacy-consent-client";
 
     public static AppConfigs Load()
     {

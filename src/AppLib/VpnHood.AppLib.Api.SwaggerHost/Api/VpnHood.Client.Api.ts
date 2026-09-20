@@ -3674,6 +3674,8 @@ export class AppFeatures implements IAppFeatures {
     isLicenseAgreementRequired!: boolean;
     privacyPolicyUrl!: string | null;
     termsOfUseUrl!: string | null;
+    logoAssetPath!: string;
+    privacyConsentAssetName!: string;
     isTcpProxySupported!: boolean;
     isQuicSupported!: boolean;
     isSplitDomainSupported!: boolean;
@@ -3733,6 +3735,8 @@ export class AppFeatures implements IAppFeatures {
             this.isLicenseAgreementRequired = _data["isLicenseAgreementRequired"] !== undefined ? _data["isLicenseAgreementRequired"] : null as any;
             this.privacyPolicyUrl = _data["privacyPolicyUrl"] !== undefined ? _data["privacyPolicyUrl"] : null as any;
             this.termsOfUseUrl = _data["termsOfUseUrl"] !== undefined ? _data["termsOfUseUrl"] : null as any;
+            this.logoAssetPath = _data["logoAssetPath"] !== undefined ? _data["logoAssetPath"] : null as any;
+            this.privacyConsentAssetName = _data["privacyConsentAssetName"] !== undefined ? _data["privacyConsentAssetName"] : null as any;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
             this.isQuicSupported = _data["isQuicSupported"] !== undefined ? _data["isQuicSupported"] : null as any;
             this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
@@ -3798,6 +3802,8 @@ export class AppFeatures implements IAppFeatures {
         data["isLicenseAgreementRequired"] = this.isLicenseAgreementRequired !== undefined ? this.isLicenseAgreementRequired : null as any;
         data["privacyPolicyUrl"] = this.privacyPolicyUrl !== undefined ? this.privacyPolicyUrl : null as any;
         data["termsOfUseUrl"] = this.termsOfUseUrl !== undefined ? this.termsOfUseUrl : null as any;
+        data["logoAssetPath"] = this.logoAssetPath !== undefined ? this.logoAssetPath : null as any;
+        data["privacyConsentAssetName"] = this.privacyConsentAssetName !== undefined ? this.privacyConsentAssetName : null as any;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
         data["isQuicSupported"] = this.isQuicSupported !== undefined ? this.isQuicSupported : null as any;
         data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
@@ -3846,6 +3852,8 @@ export interface IAppFeatures {
     isLicenseAgreementRequired: boolean;
     privacyPolicyUrl: string | null;
     termsOfUseUrl: string | null;
+    logoAssetPath: string;
+    privacyConsentAssetName: string;
     isTcpProxySupported: boolean;
     isQuicSupported: boolean;
     isSplitDomainSupported: boolean;

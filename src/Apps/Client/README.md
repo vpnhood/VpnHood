@@ -10,7 +10,7 @@ decisions that are the same for all of them live here, so they are made once and
 
 | File | What it decides |
 |---|---|
-| `IRequiredAppConfigs.cs` | the settings each product must state — `AppId`, `WebUiPort`, `UpdateInfoUrl`, `DefaultAccessKey`, `Ga4MeasurementId`, `RemoteSettingsUrl`, `PrivacyPolicyUrl`, `TermsOfUseUrl` … Each head implements it, so a new product cannot forget one. |
+| `IRequiredAppConfigs.cs` | the settings each product must state — `AppId`, `WebUiPort`, `UpdateInfoUrl`, `DefaultAccessKey`, `Ga4MeasurementId`, `RemoteSettingsUrl`, `PrivacyPolicyUrl`, `TermsOfUseUrl`, `LogoAssetPath`, `PrivacyConsentAssetName` … Each head implements it, so a new product cannot forget one. |
 | `AppWebRoot.cs` | the page every web host of both products serves: the Avalonia browser build this assembly embeds |
 | `ConnectAppResources.cs` | VpnHood Connect's premium feature list |
 | `EmbeddedResource.cs` | reads an optional embedded blob, returning null when the build did not embed one |

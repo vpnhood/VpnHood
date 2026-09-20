@@ -7,7 +7,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Animation;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -63,8 +63,8 @@ public partial class MainView : UserControl
 
         // the consent a first run asks for, over everything until it is given (App.vue's
         // isShowPrivacyPolicyDialog)
-        var features = AppModel.Features;
-        if (features.IsLicenseAgreementRequired && !AppModel.UserSettings.IsLicenseAccepted)
+        var features = VhApp.Features;
+        if (features.IsLicenseAgreementRequired && !VhApp.UserSettings.IsLicenseAccepted)
             Navigate(new PrivacyPolicyView(this));
         // the account, once, for a build that has one (App.vue's onMounted); the pages that change
         // it read it again themselves
@@ -75,7 +75,7 @@ public partial class MainView : UserControl
     private async Task LoadAccount()
     {
         try {
-            await AppModel.LoadAccount(false, CancellationToken.None);
+            await VhApp.LoadAccount(false, CancellationToken.None);
             ViewModel.Refresh();
         }
         catch (Exception ex) {
@@ -293,9 +293,9 @@ public partial class MainView : UserControl
         if (message.IsIgnored)
             return;
 
-        if (message.Actions?.IsPrivateDnsError == true && AppModel.IsPremiumFeature(AppFeature.CustomDns)) {
+        if (message.Actions?.IsPrivateDnsError == true && VhApp.IsPremiumFeature(AppFeature.CustomDns)) {
             Navigate(FeaturePages.PrivateDnsError(this));
-            await AppModel.Api.App.ClearLastError(CancellationToken.None);
+            await VhApp.Api.App.ClearLastError(CancellationToken.None);
             return;
         }
 
@@ -366,7 +366,7 @@ public partial class MainView : UserControl
         UpdateDirectButton.IsVisible = publish.GooglePlayUrl == null;
         UpdateNoStoreButton.IsVisible = publish.GooglePlayUrl != null;
         UpdateAlternative.IsVisible = false;
-        UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {AppModel.Features.Version.ToString(3)}";
+        UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {VhApp.Features.Version.ToString(3)}";
         UpdateNewText.Text = $"{Strings.Current.NewVersion} {publish.Version}";
         UpdateNotice.IsVisible = true;
     }
@@ -374,7 +374,7 @@ public partial class MainView : UserControl
     private async void OnUpdateStoreClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppModel.State.UpdaterStatus?.PublishInfo?.GooglePlayUrl is { } url)
+            if (VhApp.State.UpdaterStatus?.PublishInfo?.GooglePlayUrl is { } url)
                 await OpenLink(url, Strings.Current.UpdateFromGooglePlay);
         }
         catch (Exception ex) {
@@ -385,7 +385,7 @@ public partial class MainView : UserControl
     private async void OnUpdateDirectClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppModel.State.UpdaterStatus?.PublishInfo?.InstallationPageUrl is { } url)
+            if (VhApp.State.UpdaterStatus?.PublishInfo?.InstallationPageUrl is { } url)
                 await OpenLink(url, Strings.Current.UpdateFromDirectLink);
         }
         catch (Exception ex) {
@@ -515,7 +515,7 @@ public partial class MainView : UserControl
     // becomes a code to scan; anywhere else the device's browser opens it.
     public async Task OpenLink(Uri url, string title)
     {
-        if (AppModel.IsTvUi) {
+        if (VhApp.IsTvUi) {
             await ShowDialog(new OpenOnPhoneDialog(url, title));
             return;
         }
@@ -526,5 +526,5 @@ public partial class MainView : UserControl
     }
 
     // whether a link can get anywhere from this device (VpnHoodApp.isExternalLinkUsable)
-    public static bool IsExternalLinkUsable => AppModel.Intents.IsWebBrowserSupported || AppModel.IsTvUi;
+    public static bool IsExternalLinkUsable => VhApp.Intents.IsWebBrowserSupported || VhApp.IsTvUi;
 }

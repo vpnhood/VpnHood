@@ -2,7 +2,7 @@
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -29,16 +29,16 @@ public partial class PromoteView : UserControl, IPage
         InitializeComponent();
 
         var s = Strings.Current;
-        BackButton.IsVisible = !AppModel.IsTvUi;
+        BackButton.IsVisible = !VhApp.IsTvUi;
         RichText.Apply(TitleText, isPremiumLocation ? s.SelectedLocationIsPremium : s.SelectedLocationIsFree);
 
         // the location's options, read again so the page is driven by current server data
-        var info = AppModel.FindClientProfileInfo(clientProfileId);
+        var info = VhApp.FindClientProfileInfo(clientProfileId);
         var options = info?.LocationInfos.FirstOrDefault(x => x.ServerLocation == serverLocation)?.Options;
 
         // the picture of the case, and over it the operator's own promotion when the app holds one
         AppImage.SetSource(PromoImage, AppAssets.ImagePath(isPremiumLocation ? "premium-servers.webp" : "free-to-premium-servers.webp"));
-        if (AppModel.State.PromotionExists)
+        if (VhApp.State.PromotionExists)
             _ = LoadPromotionImage();
 
         var isFree = !isPremiumLocation && options?.Normal != null;
@@ -69,7 +69,7 @@ public partial class PromoteView : UserControl, IPage
     private async Task LoadPromotionImage()
     {
         try {
-            var bytes = await AppModel.Api.App.PromotionImage(CancellationToken.None);
+            var bytes = await VhApp.Api.App.PromotionImage(CancellationToken.None);
             // the case's picture, if still on its way, must not land over the promotion
             AppImage.SetSource(PromoImage, null);
             PromoImage.Source = new Bitmap(new MemoryStream(bytes));

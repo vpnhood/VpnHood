@@ -1,7 +1,7 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels"
-             xmlns:res="using:VpnHood.AppUi.Services"
+             xmlns:res="using:VpnHood.AppUi.Common"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.FilterList">
   <!-- The web UI's FilterList: Select all, Clear all and Search over a list of rows, each an icon
        or a flag, a name and a switch. A row is a button and its press flips its switch; on a TV

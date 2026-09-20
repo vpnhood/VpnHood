@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
@@ -116,17 +116,17 @@ public partial class HomeView : UserControl, IPage
     private async void OnAccountClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppModel.Account != null) {
+            if (VhApp.Account != null) {
                 _host.Navigate(new AccountView(_host));
                 return;
             }
 
-            if (AppModel.PrimaryProviderId == null) {
+            if (VhApp.PrimaryProviderId == null) {
                 _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintSignIn));
                 return;
             }
 
-            if (AppModel.HasSignInChoice) {
+            if (VhApp.HasSignInChoice) {
                 await _host.ShowDialog(new SignInDialog(_host));
                 return;
             }

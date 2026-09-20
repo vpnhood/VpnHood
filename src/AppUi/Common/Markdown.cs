@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // The web UI's content documents (src/content/<lang>/*.md) are markdown its build renders to HTML.
 // This renders the same subset - the front matter's title, paragraphs, headings, bullet and

@@ -4,7 +4,7 @@ using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
@@ -52,7 +52,7 @@ public partial class LogView : UserControl, IPage
     private async Task Load()
     {
         try {
-            LogText.Text = await AppModel.Api.App.Log(CancellationToken.None);
+            LogText.Text = await VhApp.Api.App.Log(CancellationToken.None);
 
             // the last lines are the ones being looked for, and they exist only once it is laid out
             Dispatcher.UIThread.Post(Scroller.ScrollToEnd, DispatcherPriority.Loaded);

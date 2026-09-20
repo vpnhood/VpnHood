@@ -2,7 +2,7 @@ using System.Text.Json;
 using VpnHood.Core.Toolkit.Assets;
 using VpnHood.Core.Toolkit.Extensions;
 
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // The names of the files in a folder of the store, as the store declares them (index.json, written
 // beside them by _sync-assets.ps1): the languages under locales/, the faces under fonts/. A list in

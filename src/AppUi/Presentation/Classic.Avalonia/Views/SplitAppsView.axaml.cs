@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Media.Imaging;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -25,7 +25,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         _ = Load();
     }
 
-    private static SplitTunnelingSettings Split => AppModel.UserSettings.SplitTunneling;
+    private static SplitTunnelingSettings Split => VhApp.UserSettings.SplitTunneling;
 
     // the icons come as PNG bytes; decoding a few hundred of them is off the UI thread
     private async Task Load()
@@ -33,7 +33,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         try {
             var mode = Split.AppMode;
             var selected = Split.Apps;
-            var installed = await AppModel.Api.App.GetInstalledApps(CancellationToken.None);
+            var installed = await VhApp.Api.App.GetInstalledApps(CancellationToken.None);
 
             var items = await Task.Run(() => installed.Select(app => new FilterItem {
                 Id = app.AppId,
@@ -86,7 +86,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
     // one per theme, as in the web UI's split-apps page
     private static Task<Bitmap?> FutureAppsIcon()
     {
-        return AppAssets.LoadBitmapAsync(AppAssets.ImagePath($"future-apps-{AppModel.Features.UiTheme}.png"));
+        return AppAssets.LoadBitmapAsync(AppAssets.ImagePath($"future-apps-{VhApp.Features.UiTheme}.png"));
     }
 
     // Include with nothing in it is the one state that cannot be saved: the app would tunnel
@@ -100,21 +100,21 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
             if (items.All(x => x.IsSelected)) {
                 Split.AppMode = SplitAppMode.All;
                 Split.Apps = [];
-                await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
+                await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
                 return;
             }
 
             if (items.Any(x => x is { Id: FutureAppsId, IsSelected: true })) {
                 Split.AppMode = SplitAppMode.Exclude;
                 Split.Apps = [.. items.Where(x => !x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id)];
-                await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
+                await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
                 return;
             }
 
             Split.AppMode = SplitAppMode.Include;
             Split.Apps = [.. items.Where(x => x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id)];
             if (!IsSaveRejected)
-                await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
+                await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);
@@ -129,7 +129,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         }
 
         try {
-            await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
+            await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
             return true;
         }
         catch (Exception ex) {

@@ -1,4 +1,4 @@
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;
@@ -11,7 +11,7 @@ namespace VpnHood.AppUi.Hosting.Avalonia;
 // Avalonia makes the Application itself, after the app has been configured with the answers.
 public interface IAvaloniaUi
 {
-    // The languages this UI has words for, declared to the app as it is configured (AppModel.Configure)
+    // The languages this UI has words for, declared to the app as it is configured (VhApp.Configure)
     // - so the app's language list and its best-culture choice are made from the words that exist.
     static abstract IReadOnlyList<string> AvailableCultures { get; }
 

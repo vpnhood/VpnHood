@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
@@ -21,24 +21,24 @@ public static class FeaturePages
             Description = S.NotificationsDesc,
             Image = "notifications.webp",
             Steps = [S.NotificationHowToTurnOnStep1, S.NotificationHowToTurnOnStep2],
-            ButtonText = AppModel.IsNotificationEnabled(AppModel.State) ? S.TurnOffNotification : S.TurnOnNotification,
-            Action = () => AppModel.Api.Intents.OpenAppNotificationSettings(CancellationToken.None),
-            IsActionAvailable = AppModel.Intents.IsAppNotificationSettingsSupported
+            ButtonText = VhApp.IsNotificationEnabled(VhApp.State) ? S.TurnOffNotification : S.TurnOnNotification,
+            Action = () => VhApp.Api.Intents.OpenAppNotificationSettings(CancellationToken.None),
+            IsActionAvailable = VhApp.Intents.IsAppNotificationSettingsSupported
         });
     }
 
     public static FeaturePageView QuickLaunch(MainView host)
     {
         // the prompt is answered by opening the page; a second visit is the person's own
-        var settings = AppModel.UserSettings;
-        var showSkip = AppModel.State.IsQuickLaunchRecommended;
+        var settings = VhApp.UserSettings;
+        var showSkip = VhApp.State.IsQuickLaunchRecommended;
         if (!settings.IsQuickLaunchPrompted) {
             settings.IsQuickLaunchPrompted = true;
-            AppModel.SaveUserSettings(settings, CancellationToken.None).Forget("Could not save that quick launch was offered.");
+            VhApp.SaveUserSettings(settings, CancellationToken.None).Forget("Could not save that quick launch was offered.");
         }
 
-        var appName = AppModel.Features.AppName;
-        var isRequestSupported = AppModel.Intents.IsRequestQuickLaunchSupported;
+        var appName = VhApp.Features.AppName;
+        var isRequestSupported = VhApp.Intents.IsRequestQuickLaunchSupported;
         return new FeaturePageView(host, new FeaturePageOptions {
             Title = S.QuickLaunchColored,
             Description = S.QuickLaunchDesc,
@@ -52,11 +52,11 @@ public static class FeaturePages
                 ],
             ButtonText = S.QuickLaunchTurnOn,
             Action = async () => {
-                var added = await AppModel.Api.Intents.RequestQuickLaunch(CancellationToken.None);
+                var added = await VhApp.Api.Intents.RequestQuickLaunch(CancellationToken.None);
                 if (added)
                     host.GoBack();
             },
-            IsPremium = AppModel.IsPremiumFeature(AppFeature.QuickLaunch),
+            IsPremium = VhApp.IsPremiumFeature(AppFeature.QuickLaunch),
             IsActionAvailable = isRequestSupported,
             ShowSkip = showSkip
         });
@@ -68,10 +68,10 @@ public static class FeaturePages
             Title = S.KillSwitchColored,
             Description = S.KillSwitchDesc,
             Image = "kill-switch.webp",
-            Steps = [S.KillSwitchHowToTurnOnStep1, S.KillSwitchHowToTurnOnStep2(AppModel.Features.AppName, "⚙️"), S.KillSwitchHowToTurnOnStep3],
+            Steps = [S.KillSwitchHowToTurnOnStep1, S.KillSwitchHowToTurnOnStep2(VhApp.Features.AppName, "⚙️"), S.KillSwitchHowToTurnOnStep3],
             ButtonText = S.OpenVpnSettings,
-            Action = () => AppModel.Api.Intents.OpenKillSwitchSettings(CancellationToken.None),
-            IsActionAvailable = AppModel.Intents.IsKillSwitchSettingsSupported
+            Action = () => VhApp.Api.Intents.OpenKillSwitchSettings(CancellationToken.None),
+            IsActionAvailable = VhApp.Intents.IsKillSwitchSettingsSupported
         });
     }
 
@@ -81,11 +81,11 @@ public static class FeaturePages
             Title = S.AlwaysOnColored,
             Description = S.AlwaysOnDesc,
             Image = "always-on.webp",
-            Steps = [S.AlwaysOnHowToTurnOnStep1, S.AlwaysOnHowToTurnOnStep2(AppModel.Features.AppName, "⚙️"), S.AlwaysOnHowToTurnOnStep3],
+            Steps = [S.AlwaysOnHowToTurnOnStep1, S.AlwaysOnHowToTurnOnStep2(VhApp.Features.AppName, "⚙️"), S.AlwaysOnHowToTurnOnStep3],
             ButtonText = S.OpenVpnSettings,
-            Action = () => AppModel.Api.Intents.OpenAlwaysOnSettings(CancellationToken.None),
-            IsPremium = AppModel.IsPremiumFeature(AppFeature.AlwaysOn),
-            IsActionAvailable = AppModel.Intents.IsAlwaysOnSettingsSupported
+            Action = () => VhApp.Api.Intents.OpenAlwaysOnSettings(CancellationToken.None),
+            IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn),
+            IsActionAvailable = VhApp.Intents.IsAlwaysOnSettingsSupported
         });
     }
 
@@ -97,9 +97,9 @@ public static class FeaturePages
             Image = "private-dns.webp",
             Steps = [S.PrivateDnsTurnOnStep1, S.PrivateDnsTurnOnStep2, S.PrivateDnsTurnOnStep3, S.PrivateDnsTurnOnStep4, S.PrivateDnsTurnOnStep5],
             ButtonText = S.OpenSystemSettings,
-            Action = () => AppModel.Api.Intents.OpenSettings(CancellationToken.None),
-            IsPremium = AppModel.IsPremiumFeature(AppFeature.CustomDns),
-            IsActionAvailable = AppModel.Intents.IsPrivateDnsSettingsSupported
+            Action = () => VhApp.Api.Intents.OpenSettings(CancellationToken.None),
+            IsPremium = VhApp.IsPremiumFeature(AppFeature.CustomDns),
+            IsActionAvailable = VhApp.Intents.IsPrivateDnsSettingsSupported
         });
     }
 
@@ -115,10 +115,10 @@ public static class FeaturePages
 
     public static FeaturePageView CloakMode(MainView host)
     {
-        var settings = AppModel.UserSettings;
+        var settings = VhApp.UserSettings;
         if (!settings.IsTcpProxyPrompted) {
             settings.IsTcpProxyPrompted = true;
-            AppModel.SaveUserSettings(settings, CancellationToken.None).Forget("Could not save that cloak mode was offered.");
+            VhApp.SaveUserSettings(settings, CancellationToken.None).Forget("Could not save that cloak mode was offered.");
         }
 
         return new FeaturePageView(host, new FeaturePageOptions {
@@ -135,7 +135,7 @@ public static class FeaturePages
             Title = title,
             Description = description,
             Image = image,
-            IsPremium = AppModel.IsPremiumFeature(feature)
+            IsPremium = VhApp.IsPremiumFeature(feature)
         });
     }
 }

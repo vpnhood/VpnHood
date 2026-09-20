@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;

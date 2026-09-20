@@ -2,7 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
@@ -17,13 +17,13 @@ public partial class PremiumFeaturesCarousel : UserControl
     {
         InitializeComponent();
         var s = Strings.Current;
-        var intents = AppModel.Intents;
-        var features = AppModel.Features;
+        var intents = VhApp.Intents;
+        var features = VhApp.Features;
 
         // PremiumFeaturesCarousel.vue's carouselItems: a feature the device cannot have is not
         // promised, and a build with no premium tier does not sell speed
         var slides = new List<(string? Image, string Title, string Description, bool IsSupported)> {
-            (null, s.UltraFastSpeed, s.UltraFastSpeedDesc, AppModel.IsPremiumSupported),
+            (null, s.UltraFastSpeed, s.UltraFastSpeedDesc, VhApp.IsPremiumSupported),
             ("no-ads.webp", s.RemoveAd, s.RemoveAdDesc, features.IsAdSupported),
             ("more-location.webp", s.MoreLocations, s.MoreLocationsDesc, true),
             ("split-ip.webp", s.SplitIpAddresses, s.SplitIpAddressesPremiumDesc, true),

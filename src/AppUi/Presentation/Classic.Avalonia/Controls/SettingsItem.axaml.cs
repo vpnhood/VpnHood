@@ -2,7 +2,7 @@
 using Avalonia.Interactivity;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
@@ -31,7 +31,7 @@ public partial class SettingsItem : UserControl
     // the crown, when the feature is sold and this session has not bought it
     public bool IsPremium {
         get => Crown.IsVisible;
-        set => Crown.IsVisible = AppModel.ShowCrown(value);
+        set => Crown.IsVisible = VhApp.ShowCrown(value);
     }
 
     // dims the card and blocks the tap; the stored values keep showing

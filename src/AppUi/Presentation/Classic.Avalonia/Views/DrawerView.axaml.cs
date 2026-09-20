@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -24,8 +24,8 @@ public partial class DrawerView : UserControl
         _host = host;
         InitializeComponent();
 
-        var features = AppModel.Features;
-        var state = AppModel.State;
+        var features = VhApp.Features;
+        var state = VhApp.State;
         // the product's logo, by the store path the head named; not the look's to choose
         AppImage.SetSource(Logo, features.LogoAssetPath);
         AppNameText.Text = features.AppName;
@@ -33,9 +33,9 @@ public partial class DrawerView : UserControl
         // this UI has none of
         VersionText.Text = features.Version.ToString(3);
 
-        PremiumItem.IsVisible = !AppModel.IsPremiumUser && AppModel.IsPremiumSupported && AppModel.CanGoPremium;
+        PremiumItem.IsVisible = !VhApp.IsPremiumUser && VhApp.IsPremiumSupported && VhApp.CanGoPremium;
         AccountItem.IsVisible = features.IsAccountSupported;
-        var account = AppModel.Account;
+        var account = VhApp.Account;
         AccountTitle.Text = account != null ? Strings.Current.Account : SignInLabel();
         AccountEmail.Text = account?.Email;
         AccountEmail.IsVisible = account?.Email != null;
@@ -49,8 +49,8 @@ public partial class DrawerView : UserControl
     // "Sign in with Google" for the one store method, plain "Sign in" with a chooser or none
     private static string SignInLabel()
     {
-        var providerId = AppModel.PrimaryProviderId;
-        if (providerId == null || AppModel.HasSignInChoice)
+        var providerId = VhApp.PrimaryProviderId;
+        if (providerId == null || VhApp.HasSignInChoice)
             return Strings.Current.SignIn;
         return providerId.ToLowerInvariant() switch {
             "google" => Strings.Current.SignInWithGoogle,
@@ -75,7 +75,7 @@ public partial class DrawerView : UserControl
     {
         try {
             _host.CloseDrawer();
-            if (AppModel.Account != null) {
+            if (VhApp.Account != null) {
                 _host.Replace(new AccountView(_host));
                 return;
             }
@@ -110,7 +110,7 @@ public partial class DrawerView : UserControl
             UpdateIcon.Classes.Add("spinner");
             UpdateItem.IsEnabled = false;
             try {
-                await AppModel.Api.App.VersionCheck(CancellationToken.None);
+                await VhApp.Api.App.VersionCheck(CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);
@@ -167,7 +167,7 @@ public partial class DrawerView : UserControl
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppModel.Features.PrivacyPolicyUrl is { } url)
+            if (VhApp.Features.PrivacyPolicyUrl is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

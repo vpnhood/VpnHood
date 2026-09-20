@@ -1,6 +1,6 @@
 ﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:res="using:VpnHood.AppUi.Services"
+                    xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.SignInDialog">
   <!-- The web UI's SignInDialog: the store's sign-in as the one prominent button, the portal's own

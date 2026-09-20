@@ -5,7 +5,7 @@ using System.Text.Json;
 using VpnHood.Core.Toolkit.Assets;
 using VpnHood.Core.Toolkit.Extensions;
 
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // The UI's words: the locale files of the asset store (locales/<culture>.json - en.json the source
 // a person edits, the rest vhtranslator's), read through the provider the head hands in - a folder

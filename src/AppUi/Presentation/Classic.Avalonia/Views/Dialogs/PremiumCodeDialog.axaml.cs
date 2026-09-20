@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppLib.Api.App;
@@ -66,14 +66,14 @@ public partial class PremiumCodeDialog : DialogBase
     private async Task Activate()
     {
         var code = CodeBox.Text?.Trim() ?? "";
-        var profileId = AppModel.State.ClientProfile?.ClientProfileId;
+        var profileId = VhApp.State.ClientProfile?.ClientProfileId;
         if (profileId == null) {
             await _host.ShowError(Strings.Current.ProfileIdNotFoundDuringValidationMsg);
             return;
         }
 
         try {
-            await AppModel.Api.ClientProfiles.Update(profileId.Value, new ClientProfileUpdateParams {
+            await VhApp.Api.ClientProfiles.Update(profileId.Value, new ClientProfileUpdateParams {
                 AccessCode = new Patch<string?>(code)
             }, CancellationToken.None);
         }
@@ -83,9 +83,9 @@ public partial class PremiumCodeDialog : DialogBase
             return;
         }
 
-        if (AppModel.IsPremiumByAccount) {
+        if (VhApp.IsPremiumByAccount) {
             Close(true);
-            await AppModel.LoadAccount(true, CancellationToken.None);
+            await VhApp.LoadAccount(true, CancellationToken.None);
             await _host.ViewModel.ReloadInfo();
             _host.ShowSnackbar(Strings.Current.PremiumCodeSavedForLaterMsg);
             return;
@@ -98,7 +98,7 @@ public partial class PremiumCodeDialog : DialogBase
         try {
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId.Value, null, IsPremium: true, ConnectPlanId.Normal, GoToHome: false));
             pending.Close();
-            if (AppModel.IsConnected() && AppModel.IsPremiumUser)
+            if (VhApp.IsConnected() && VhApp.IsPremiumUser)
                 await _host.ShowDialog(new PremiumCodeCompleteDialog(_host));
         }
         finally {

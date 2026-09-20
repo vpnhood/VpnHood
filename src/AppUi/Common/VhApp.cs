@@ -5,7 +5,7 @@ using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // What the pages read off the app, and the one way they reach it: the app's API (VpnHoodApi), the same
 // six interfaces in process - the web server's controllers, no listener - and over HTTP, from a
@@ -14,14 +14,14 @@ namespace VpnHood.AppUi.Services;
 // The values are read again through the API: the state every second by the home's clock and after
 // every action, the rest when the state says the configuration moved (AppState.ConfigTime, the
 // web UI's own signal) or a page saved. The web UI's VpnHoodAppData, question for question.
-public static class AppModel
+public static class VhApp
 {
     private static VpnHoodApi? _api;
     private static AppInfo? _info;
     private static AppState? _state;
 
     public static VpnHoodApi Api => _api ?? throw new InvalidOperationException(
-        $"The UI has not been given the app's API. A head must call {nameof(AppModel)}.{nameof(Init)} before the UI starts.");
+        $"The UI has not been given the app's API. A head must call {nameof(VhApp)}.{nameof(Init)} before the UI starts.");
 
     public static bool IsInit => _api != null;
     public static bool IsConfigured { get; private set; }
@@ -47,7 +47,7 @@ public static class AppModel
     }
 
     private static AppInfo Info => _info ?? throw new InvalidOperationException(
-        $"The app's info has not been read. {nameof(AppModel)}.{nameof(Init)} reads it.");
+        $"The app's info has not been read. {nameof(VhApp)}.{nameof(Init)} reads it.");
 
     public static AppFeatures Features => Info.Features;
     public static DeviceIntentFeatures Intents => Info.IntentFeatures;

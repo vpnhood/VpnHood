@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // Words from outside this assembly, laid over the ones it carries: an app built on these packages
 // adds a language they do not ship, or says a few lines its own way - its name in place of ours -

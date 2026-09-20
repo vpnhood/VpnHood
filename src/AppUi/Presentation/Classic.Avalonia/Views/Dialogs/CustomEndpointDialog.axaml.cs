@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppLib.Api.ClientProfiles;
@@ -72,7 +72,7 @@ public partial class CustomEndpointDialog : DialogBase
         _ = _host;
         var value = EndpointBox.Text?.Trim();
         try {
-            await AppModel.Api.ClientProfiles.Update(_clientProfileId, new ClientProfileUpdateParams {
+            await VhApp.Api.ClientProfiles.Update(_clientProfileId, new ClientProfileUpdateParams {
                 CustomServerEndpoints = new Patch<string[]?>(string.IsNullOrEmpty(value) ? null : [value]),
                 IsCustomServerEndpointsEnabled = new Patch<bool>(EnabledSwitch.IsChecked == true)
             }, CancellationToken.None);

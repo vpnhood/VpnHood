@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppLib.Api.Settings;
@@ -29,9 +29,9 @@ public partial class SettingsView : UserControl, IPage
     private void Fill()
     {
         var s = Strings.Current;
-        var state = AppModel.State;
-        var settings = AppModel.UserSettings;
-        var intents = AppModel.Intents;
+        var state = VhApp.State;
+        var settings = VhApp.UserSettings;
+        var intents = VhApp.Intents;
         var split = state.SplitTunnelingState;
 
         AppSection.Title = s.AppSettings;
@@ -43,12 +43,12 @@ public partial class SettingsView : UserControl, IPage
 
         NotificationsItem.Title = s.Notifications;
         NotificationsItem.Subtitle = s.NotificationsDesc;
-        NotificationsItem.SetStatus(AppModel.IsNotificationEnabled(state), s.On, s.Off);
+        NotificationsItem.SetStatus(VhApp.IsNotificationEnabled(state), s.On, s.Off);
         NotificationsItem.IsVisible = intents.IsAppNotificationSettingsSupported;
 
         QuickLaunchItem.Title = s.QuickLaunch;
         QuickLaunchItem.Subtitle = s.QuickLaunchDesc;
-        QuickLaunchItem.IsPremium = AppModel.IsPremiumFeature(AppFeature.QuickLaunch);
+        QuickLaunchItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.QuickLaunch);
         QuickLaunchItem.IsVisible = intents.IsQuickLaunchSupported;
         AppSection.IsVisible = true;
 
@@ -65,8 +65,8 @@ public partial class SettingsView : UserControl, IPage
 
         DnsItem.Title = s.Dns;
         DnsItem.Subtitle = s.DnsDesc;
-        DnsItem.SetStatus(AppModel.IsDnsCustomized(state), AppModel.IsPrivateDnsCustomized(state) ? s.PrivateDns : s.Custom, s.Default);
-        DnsItem.IsPremium = AppModel.IsPremiumFeature(AppFeature.CustomDns);
+        DnsItem.SetStatus(VhApp.IsDnsCustomized(state), VhApp.IsPrivateDnsCustomized(state) ? s.PrivateDns : s.Custom, s.Default);
+        DnsItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.CustomDns);
 
         PrivacySection.Title = s.PrivacyAndSecurity;
         PrivacyItem.Title = s.Privacy;
@@ -76,7 +76,7 @@ public partial class SettingsView : UserControl, IPage
         KillSwitchItem.IsVisible = intents.IsKillSwitchSettingsSupported;
         AlwaysOnItem.Title = s.AlwaysOn;
         AlwaysOnItem.Subtitle = s.AlwaysOnDesc;
-        AlwaysOnItem.IsPremium = AppModel.IsPremiumFeature(AppFeature.AlwaysOn);
+        AlwaysOnItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn);
         AlwaysOnItem.IsVisible = intents.IsAlwaysOnSettingsSupported;
     }
 

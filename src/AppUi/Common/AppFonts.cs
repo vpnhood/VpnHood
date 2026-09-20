@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // The names a UI gives the fonts of the asset store (fonts/, the faces listed in fonts/index.json):
 // the text face, Poppins, with the Persian and Arabic faces beside it, and the icon font, Material

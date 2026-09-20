@@ -3,7 +3,7 @@
 //     the words live in the web UI's locale files, and this file follows them.
 // </auto-generated>
 
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 public sealed partial class Strings
 {

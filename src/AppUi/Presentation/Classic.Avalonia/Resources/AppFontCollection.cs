@@ -1,6 +1,6 @@
 ﻿using Avalonia.Media;
 using Avalonia.Media.Fonts;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 

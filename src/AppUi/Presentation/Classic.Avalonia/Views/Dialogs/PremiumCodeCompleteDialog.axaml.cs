@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
@@ -15,7 +15,7 @@ public partial class PremiumCodeCompleteDialog : DialogBase
         _host = host;
         InitializeComponent();
         var s = Strings.Current;
-        var state = AppModel.State;
+        var state = VhApp.State;
         var access = state.SessionInfo?.AccessInfo;
         var deviceCount = access?.DevicesSummary?.DeviceCount ?? 0;
         var isShared = deviceCount > 1;
@@ -29,7 +29,7 @@ public partial class PremiumCodeCompleteDialog : DialogBase
             if (isShared)
                 AddRow(s.UsedDevice, deviceCount.ToString(), valueClass);
         }
-        StatisticsButton.IsVisible = AppModel.IsConnected(state);
+        StatisticsButton.IsVisible = VhApp.IsConnected(state);
     }
 
     private void AddRow(string label, string value, string valueClass)

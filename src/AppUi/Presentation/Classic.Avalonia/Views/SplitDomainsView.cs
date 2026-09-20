@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 using VpnHood.AppLib.Api.Proxies;
@@ -18,7 +18,7 @@ public sealed class SplitDomainsView : SplitListView
 
     public static IPage Create(MainView host)
     {
-        return AppModel.IsPremiumFeatureAllowed(AppFeature.SplitDomain)
+        return VhApp.IsPremiumFeatureAllowed(AppFeature.SplitDomain)
             ? new SplitDomainsView(host)
             : FeaturePages.PremiumPitch(host, Strings.Current.SplitDomains, Strings.Current.SplitDomainsDesc, "split-ip.webp", AppFeature.SplitDomain);
     }
@@ -33,17 +33,17 @@ public sealed class SplitDomainsView : SplitListView
 
     // the server that runs no cloak undoes a domain filter; the switch says so under itself
     protected override string? SwitchWarning =>
-        AppModel.State.TcpProxyUsageReason == TcpProxyUsageReason.ServerRequiredOff ? Strings.Current.DomainFilterServerNoCloak : null;
+        VhApp.State.TcpProxyUsageReason == TcpProxyUsageReason.ServerRequiredOff ? Strings.Current.DomainFilterServerNoCloak : null;
 
     protected override async Task<(string Excludes, string Includes, string Blocks)> Load(CancellationToken cancellationToken)
     {
-        var domains = await AppModel.Api.App.GetSplitDomains(cancellationToken);
+        var domains = await VhApp.Api.App.GetSplitDomains(cancellationToken);
         return (domains.Excludes, domains.Includes, domains.Blocks);
     }
 
     protected override Task Save(string excludes, string includes, string blocks, CancellationToken cancellationToken)
     {
-        return AppModel.Api.App.SetSplitDomains(new SplitDomains { Excludes = excludes, Includes = includes, Blocks = blocks }, cancellationToken);
+        return VhApp.Api.App.SetSplitDomains(new SplitDomains { Excludes = excludes, Includes = includes, Blocks = blocks }, cancellationToken);
     }
 
     protected override void ConfigureInput(SplitListInput input)

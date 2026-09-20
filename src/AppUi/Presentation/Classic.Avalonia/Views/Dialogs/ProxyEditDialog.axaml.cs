@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppLib.Api.Proxies;
@@ -147,7 +147,7 @@ public partial class ProxyEditDialog : DialogBase
             if (string.IsNullOrEmpty(text) || PortRule != null || _isProcessing)
                 return;
             try {
-                var info = await AppModel.Api.ProxyEndPoints.Parse(text, new ProxyEndPointDefaults {
+                var info = await VhApp.Api.ProxyEndPoints.Parse(text, new ProxyEndPointDefaults {
                     IsEnabled = EnabledSwitch.IsChecked,
                     Protocol = _protocol,
                     Port = int.Parse(PortBox.Text ?? "0"),
@@ -218,13 +218,13 @@ public partial class ProxyEditDialog : DialogBase
             try {
                 switch (_kind) {
                     case ProxySheetKind.Add:
-                        await AppModel.Api.ProxyEndPoints.Add(BuildEndPoint(), CancellationToken.None);
+                        await VhApp.Api.ProxyEndPoints.Add(BuildEndPoint(), CancellationToken.None);
                         break;
                     case ProxySheetKind.AddList:
-                        await AppModel.Api.ProxyEndPoints.Import(ListBox.Text ?? "", CancellationToken.None);
+                        await VhApp.Api.ProxyEndPoints.Import(ListBox.Text ?? "", CancellationToken.None);
                         break;
                     default:
-                        await AppModel.Api.ProxyEndPoints.Update(_oldId ?? throw new InvalidOperationException("The proxy to update has no id."), BuildEndPoint(), CancellationToken.None);
+                        await VhApp.Api.ProxyEndPoints.Update(_oldId ?? throw new InvalidOperationException("The proxy to update has no id."), BuildEndPoint(), CancellationToken.None);
                         break;
                 }
                 Close(true);
@@ -250,7 +250,7 @@ public partial class ProxyEditDialog : DialogBase
             _isProcessing = true;
             UpdateSaveButton();
             try {
-                await AppModel.Api.ProxyEndPoints.Delete(_oldId, CancellationToken.None);
+                await VhApp.Api.ProxyEndPoints.Delete(_oldId, CancellationToken.None);
                 Close(true);
             }
             catch (Exception ex) {

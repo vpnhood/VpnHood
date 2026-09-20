@@ -1,5 +1,5 @@
 ﻿using Avalonia.Controls;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
@@ -28,7 +28,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         Show();
     }
 
-    private static SplitTunnelingSettings Split => AppModel.UserSettings.SplitTunneling;
+    private static SplitTunnelingSettings Split => VhApp.UserSettings.SplitTunneling;
     private static bool IsListMode => Split.CountryMode == SplitCountryMode.ExcludeList;
 
     private void Show()
@@ -55,7 +55,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         List.IsLoading = true;
         try {
             var excluded = Split.Countries;
-            var countries = await AppModel.Api.App.GetSupportedSplitCountries(CancellationToken.None);
+            var countries = await VhApp.Api.App.GetSupportedSplitCountries(CancellationToken.None);
             // the flags together: at once from a folder, in one round from a web server
             var mapped = await Task.WhenAll(countries.Select(async x => new FilterItem {
                 Id = x.CountryCode,
@@ -85,7 +85,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
             if (mode == SplitCountryMode.ExcludeMyCountry)
                 Split.Countries = [];
             Split.CountryMode = mode;
-            await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
+            await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
             Show();
             _host.ViewModel.Refresh();
         }
@@ -117,7 +117,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         }
 
         try {
-            await AppModel.SaveUserSettings(AppModel.UserSettings, CancellationToken.None);
+            await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
             _host.ViewModel.Refresh();
             return true;
         }

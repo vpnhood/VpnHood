@@ -5,7 +5,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
@@ -194,7 +194,7 @@ public partial class LocationsView : UserControl, IPage
             try {
                 // an empty name gives the server its default name back (SAVE_EMPTY_TO_DISPLAY_DEFAULT_NAME)
                 var name = string.IsNullOrWhiteSpace(dialog.NewName) ? null : dialog.NewName.Trim();
-                await AppModel.Api.ClientProfiles.Update(profile.ClientProfileId, new ClientProfileUpdateParams {
+                await VhApp.Api.ClientProfiles.Update(profile.ClientProfileId, new ClientProfileUpdateParams {
                     ClientProfileName = new Patch<string?>(name)
                 }, CancellationToken.None);
                 await _viewModel.ReloadInfo();
@@ -226,7 +226,7 @@ public partial class LocationsView : UserControl, IPage
     {
         try {
             CloseMenu(sender);
-            if (ProfileOf(sender) is not { } profile || AppModel.FindClientProfileInfo(profile.ClientProfileId) is not { } info)
+            if (ProfileOf(sender) is not { } profile || VhApp.FindClientProfileInfo(profile.ClientProfileId) is not { } info)
                 return;
             if (await _host.ShowDialog(new CustomEndpointDialog(_host, info)))
                 await _viewModel.ReloadInfo();
@@ -254,7 +254,7 @@ public partial class LocationsView : UserControl, IPage
             if (!await _host.Confirm(s.Warning, $"{s.ConfirmRemoveServer}\n\n{profile.Name}"))
                 return;
             try {
-                await AppModel.Api.ClientProfiles.Delete(profile.ClientProfileId, CancellationToken.None);
+                await VhApp.Api.ClientProfiles.Delete(profile.ClientProfileId, CancellationToken.None);
                 await _viewModel.ReloadInfo();
             }
             catch (Exception ex) {

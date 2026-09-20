@@ -7,7 +7,7 @@ using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Assets;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.App.AvaloniaUI.Dev;
 
@@ -80,9 +80,9 @@ internal static class Program
             // dials over HTTP, here the app's own controllers in process - and draws from the
             // store's zip beside this executable, which the build placed there (the same files
             // the web server serves at /assets/). In process both complete at once.
-            AppModel.Init(app.Api, CancellationToken.None).GetAwaiter().GetResult();
+            VhApp.Init(app.Api, CancellationToken.None).GetAwaiter().GetResult();
             AvaloniaUiHosting.PrepareContent<ClassicAvaloniaApp>(app.UiAssetProvider);
-            AppModel.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+            VhApp.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         finally {

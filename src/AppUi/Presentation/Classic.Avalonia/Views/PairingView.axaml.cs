@@ -4,7 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.Core.Toolkit.Logging;
@@ -53,7 +53,7 @@ public partial class PairingView : UserControl, IPage, IDisposable
     private async Task Start()
     {
         try {
-            var state = await AppModel.Api.App.StartRemoteAccess(CancellationToken.None);
+            var state = await VhApp.Api.App.StartRemoteAccess(CancellationToken.None);
             Apply(state);
             _timer.Start();
         }
@@ -68,7 +68,7 @@ public partial class PairingView : UserControl, IPage, IDisposable
         if (_disposed)
             return;
         try {
-            Apply(await AppModel.Api.App.GetRemoteAccess(CancellationToken.None));
+            Apply(await VhApp.Api.App.GetRemoteAccess(CancellationToken.None));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not refresh remote access.");
@@ -103,7 +103,7 @@ public partial class PairingView : UserControl, IPage, IDisposable
         if (_isAlwaysOn)
             return;
         try {
-            AppModel.Api.App.StopRemoteAccess(CancellationToken.None).Forget("Could not stop remote access.");
+            VhApp.Api.App.StopRemoteAccess(CancellationToken.None).Forget("Could not stop remote access.");
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not stop remote access.");

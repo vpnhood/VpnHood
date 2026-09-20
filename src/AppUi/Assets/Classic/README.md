@@ -19,7 +19,7 @@ nothing can depend on it by accident; the rule is about the reference itself.
 | Part | What it is | Who reads it |
 |---|---|---|
 | `ui.zip` | the store: `images/`, `flags/`, `fonts/`, `content/`, `locales/`, `branding/` - mirrored from the web UI's build into `assets/` and zipped by `_sync-assets.ps1` | `ZipAssetProvider` in `VpnHood.Core.Toolkit`, which extracts it once per version (its hash) under the app's storage |
-| `locales/<culture>.json`, `locales/index.json` | the words, one file per language, and the list of languages | `Strings` in `VpnHood.AppUi.Services` |
+| `locales/<culture>.json`, `locales/index.json` | the words, one file per language, and the list of languages | `Strings` in `VpnHood.AppUi.Common` |
 | `fonts/*.ttf`, `fonts/index.json` | the faces, and the list of them | `AppFontCollection` in the Avalonia UI |
 | `branding/<theme>/manifest.json` and the tray icons it names | the look the OS chrome draws with - window and bar colours, tray icons - one per look (`blue`, `violet`) | `AppBranding` in `VpnHood.AppLib.App`, for the theme the head names (`AppOptions.UiTheme`) |
 | `buildTransitive/*.targets` | places the zip at `assets/ui.zip` where the consuming app's platform reads files, at any reference depth | the app's build |
@@ -28,7 +28,7 @@ nothing can depend on it by accident; the rule is about the reference itself.
 The indexes exist because nothing lists: a provider answers by name, and a page in a browser could
 not enumerate. Neither `assets/` nor the zip is in this repo - `.gitignored`, brought in by
 `_sync-assets.ps1` from the web UI built beside the repo, which is where it is authored; a git
-submodule of its own later. The same script writes `Strings.g.cs` in `VpnHood.AppUi.Services`, one
+submodule of its own later. The same script writes `Strings.g.cs` in `VpnHood.AppUi.Common`, one
 member per key of `en.json`: the keys, which every store must have words for, are the only thing the
 code side takes from this store.
 

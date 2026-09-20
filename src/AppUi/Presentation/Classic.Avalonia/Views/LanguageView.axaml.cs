@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Media;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
@@ -19,9 +19,9 @@ public partial class LanguageView : UserControl, IPage
         InitializeComponent();
 
         var s = Strings.Current;
-        var state = AppModel.State;
+        var state = VhApp.State;
         var systemCulture = state.SystemUiCultureInfo;
-        var cultures = AppModel.AvailableCultureInfos
+        var cultures = VhApp.AvailableCultureInfos
             .OrderBy(x => x.NativeName, StringComparer.CurrentCulture)
             .ToArray();
 
@@ -56,7 +56,7 @@ public partial class LanguageView : UserControl, IPage
         Rows.Children.Add(row);
     }
 
-    private static string CurrentCode => AppModel.UserSettings.CultureCode ?? SystemDefault;
+    private static string CurrentCode => VhApp.UserSettings.CultureCode ?? SystemDefault;
 
     private void ShowChoice()
     {
@@ -68,9 +68,9 @@ public partial class LanguageView : UserControl, IPage
     private async void Choose(string code)
     {
         try {
-            var settings = AppModel.UserSettings;
+            var settings = VhApp.UserSettings;
             settings.CultureCode = code == SystemDefault ? null : code;
-            await AppModel.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
             ShowChoice();
             _host.ViewModel.Refresh();
             Header.Title = Strings.Current.Language;

@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // Material Design Icons, the web UI's icon set, drawn by code point from the icon font in the
 // assets folder: the same glyph the web UI shows for the same name, and nothing to convert when a

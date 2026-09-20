@@ -2,7 +2,7 @@
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -15,7 +15,7 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 public partial class SignInDialog : DialogBase
 {
     private readonly MainView _host;
-    private readonly string? _primaryProviderId = AppModel.PrimaryProviderId;
+    private readonly string? _primaryProviderId = VhApp.PrimaryProviderId;
     private bool _isWorking;
 
     public SignInDialog(MainView host)
@@ -43,8 +43,8 @@ public partial class SignInDialog : DialogBase
 
         // on a TV the email form is not offered - there is nothing to type on - and the phone stands
         // in for it; elsewhere the form is a step away
-        var hasPassword = AppModel.HasPasswordSignIn;
-        var isPhoneForEmail = AppModel.IsTvUi && hasPassword;
+        var hasPassword = VhApp.HasPasswordSignIn;
+        var isPhoneForEmail = VhApp.IsTvUi && hasPassword;
         OrRow.IsVisible = _primaryProviderId != null && hasPassword;
         PhoneButton.IsVisible = isPhoneForEmail;
         EmailButton.IsVisible = hasPassword && !isPhoneForEmail;
@@ -56,7 +56,7 @@ public partial class SignInDialog : DialogBase
         ProviderHint.IsVisible = _primaryProviderId != null;
         ProviderHint.Text = s.SignInProviderHint(PrimaryProviderName());
         // the one place the account website appears - where a browser can open it
-        ForgotButton.IsVisible = MainView.IsExternalLinkUsable && AppModel.Features.AccountWebsiteUrl != null;
+        ForgotButton.IsVisible = MainView.IsExternalLinkUsable && VhApp.Features.AccountWebsiteUrl != null;
         BackButton.IsVisible = _primaryProviderId != null;
 
         // with no identity provider to choose, the dialog opens on the form itself
@@ -221,7 +221,7 @@ public partial class SignInDialog : DialogBase
     private async void OnForgotClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppModel.Features.AccountWebsiteUrl is { } url)
+            if (VhApp.Features.AccountWebsiteUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.ForgotPassword);
         }
         catch (Exception ex) {

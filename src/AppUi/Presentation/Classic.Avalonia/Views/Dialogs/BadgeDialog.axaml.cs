@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
@@ -36,7 +36,7 @@ public partial class BadgeDialog : DialogBase
             return;
         Close();
 
-        if (AppModel.IsTvUi) {
+        if (VhApp.IsTvUi) {
             _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintSettings));
             return;
         }

@@ -4,7 +4,7 @@ namespace VpnHood.AppUi.Hosting.Avalonia;
 
 // The step every in-process host takes between the app and its first view: the UI's content, out
 // of the store the head named (AppOptions.UiZipAsset) - the words, the fonts. Waited for on the
-// calling thread, beside the AppModel.Init and AppModel.Configure every host already waits for
+// calling thread, beside the VhApp.Init and VhApp.Configure every host already waits for
 // there, and for the same reason: every frame after it depends on it, and in process the reads
 // complete at once.
 //

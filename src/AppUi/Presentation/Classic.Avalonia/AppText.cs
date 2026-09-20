@@ -1,12 +1,12 @@
 ﻿using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
 
-// The app's state as a word on a row: what AppModel holds, said in the language showing. The words
+// The app's state as a word on a row: what VhApp holds, said in the language showing. The words
 // are this UI's, not the app's - another UI would say them its own way, or not at all - so they
 // live here rather than in the read model every Avalonia UI shares.
 public static class AppText
@@ -45,7 +45,7 @@ public static class AppText
 
     public static string SplitAppsStatusText()
     {
-        var split = AppModel.UserSettings.SplitTunneling;
+        var split = VhApp.UserSettings.SplitTunneling;
         return split.AppMode switch {
             SplitAppMode.Exclude => split.Apps.Count > 0 ? Strings.Current.AllExceptX(split.Apps.Count) : Strings.Current.Off,
             SplitAppMode.Include => Strings.Current.OnlyX(split.Apps.Count),

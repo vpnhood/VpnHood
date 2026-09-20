@@ -12,7 +12,7 @@
 #                         than a listing, because a provider answers by name and never enumerates
 #   ui.zip        <- assets/, the store as the package's targets place it (assets/ui.zip)
 #                         and ZipAssetProvider extracts it, its hash its version
-#   ../../Services/Strings.g.cs   one member per key of en.json - the C# side of the words, which
+#   ../../Common/Strings.g.cs   one member per key of en.json - the C# side of the words, which
 #                         belongs to the UI's services module, not to this store
 #
 # Everything is mirrored (a file gone there is gone here). Neither assets/ nor the zip is committed:
@@ -32,7 +32,7 @@ $localesDir = Join-Path $webUiDir "src\locales";
 $assetsDir = Join-Path $PSScriptRoot "assets";
 $assetLocalesDir = Join-Path $assetsDir "locales";
 $zipPath = Join-Path $PSScriptRoot "ui.zip";
-$stringsFile = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\Services\Strings.g.cs"));
+$stringsFile = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\Common\Strings.g.cs"));
 $utf8 = New-Object System.Text.UTF8Encoding($false);
 
 if (!(Test-Path $builtAssetsDir)) { throw "The web UI has not been built beside this repo (npm run build in $webUiDir). $builtAssetsDir"; }
@@ -118,7 +118,7 @@ $builder = New-Object System.Text.StringBuilder;
 [void]$builder.AppendLine("//     the words live in the web UI's locale files, and this file follows them.");
 [void]$builder.AppendLine("// </auto-generated>");
 [void]$builder.AppendLine("");
-[void]$builder.AppendLine("namespace VpnHood.AppUi.Services;");
+[void]$builder.AppendLine("namespace VpnHood.AppUi.Common;");
 [void]$builder.AppendLine("");
 [void]$builder.AppendLine("public sealed partial class Strings");
 [void]$builder.AppendLine("{");

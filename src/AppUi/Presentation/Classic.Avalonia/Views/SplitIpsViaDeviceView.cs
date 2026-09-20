@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 using VpnHood.AppLib.Api.SplitTunneling;
@@ -18,7 +18,7 @@ public sealed class SplitIpsViaDeviceView : SplitListView
 
     public static IPage Create(MainView host)
     {
-        return AppModel.IsPremiumFeatureAllowed(AppFeature.SplitIpViaDevice)
+        return VhApp.IsPremiumFeatureAllowed(AppFeature.SplitIpViaDevice)
             ? new SplitIpsViaDeviceView(host)
             : FeaturePages.PremiumPitch(host, Strings.Current.SplitIpsViaDevice, Strings.Current.SplitIpsViaDeviceDesc, "split-ip.webp", AppFeature.SplitIpViaDevice);
     }
@@ -33,13 +33,13 @@ public sealed class SplitIpsViaDeviceView : SplitListView
 
     protected override async Task<(string Excludes, string Includes, string Blocks)> Load(CancellationToken cancellationToken)
     {
-        var ips = await AppModel.Api.App.GetSplitIpsViaDevice(cancellationToken);
+        var ips = await VhApp.Api.App.GetSplitIpsViaDevice(cancellationToken);
         return (ips.Excludes, ips.Includes, "");
     }
 
     protected override Task Save(string excludes, string includes, string blocks, CancellationToken cancellationToken)
     {
-        return AppModel.Api.App.SetSplitIpsViaDevice(new SplitIpsViaDevice { Excludes = excludes, Includes = includes }, cancellationToken);
+        return VhApp.Api.App.SetSplitIpsViaDevice(new SplitIpsViaDevice { Excludes = excludes, Includes = includes }, cancellationToken);
     }
 
     protected override void ConfigureInput(SplitListInput input)

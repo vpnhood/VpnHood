@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // The heads publish trimmed, so the shapes the store's JSON files deserialize into are declared
 // rather than discovered: a language's words, and an index that names files.

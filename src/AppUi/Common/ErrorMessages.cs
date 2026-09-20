@@ -1,7 +1,7 @@
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.ApiClients;
 
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // The web UI's ErrorHandler: the sentence for a failure, and the buttons that go with it. The app
 // reports a failure as an ApiError - a type name and a bag of data - whether it happened behind an

@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -30,12 +30,12 @@ public partial class SplitTunnelingView : UserControl, IPage
     private void Fill()
     {
         var s = Strings.Current;
-        var state = AppModel.State;
+        var state = VhApp.State;
         var split = state.SplitTunnelingState;
-        var features = AppModel.Features;
+        var features = VhApp.Features;
 
         EnabledItem.Title = s.SplitTunnelingToggle;
-        EnabledItem.IsOn = AppModel.UserSettings.SplitTunneling.Enabled;
+        EnabledItem.IsOn = VhApp.UserSettings.SplitTunneling.Enabled;
         EnabledItem.Warning = split.IsEnabled ? s.LeakIp : null;
         EnabledItem.Description = split.IsEnabled ? s.SplitTunnelingToggleDesc : s.SplitTunnelingDisabledDesc;
         ServerSplitAlert.IsVisible = split.IsSplitByServer;
@@ -49,20 +49,20 @@ public partial class SplitTunnelingView : UserControl, IPage
 
         DomainsItem.Title = s.SplitDomains;
         DomainsItem.Subtitle = s.SplitDomainsShortDesc;
-        DomainsItem.IsPremium = AppModel.IsPremiumFeature(AppFeature.SplitDomain);
+        DomainsItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.SplitDomain);
         DomainsItem.SetStatus(split.IsDomainSplit, s.On, s.Off);
         DomainsItem.IsDisabled = !split.IsEnabled;
 
         IpSection.Title = s.IpAddresses;
         IpsViaDeviceItem.Title = s.SplitIpsViaDevice;
         IpsViaDeviceItem.Subtitle = s.SplitIpsViaDeviceShortDesc;
-        IpsViaDeviceItem.IsPremium = AppModel.IsPremiumFeature(AppFeature.SplitIpViaDevice);
+        IpsViaDeviceItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.SplitIpViaDevice);
         IpsViaDeviceItem.SetStatus(split.IsIpViaDeviceSplit, s.On, s.Off);
         IpsViaDeviceItem.IsDisabled = !split.IsEnabled;
 
         IpsViaAppItem.Title = s.SplitIpsViaApp;
         IpsViaAppItem.Subtitle = s.SplitIpsViaAppShortDesc;
-        IpsViaAppItem.IsPremium = AppModel.IsPremiumFeature(AppFeature.SplitIpViaApp);
+        IpsViaAppItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.SplitIpViaApp);
         IpsViaAppItem.SetStatus(split.IsIpViaAppSplit, s.On, s.Off);
         IpsViaAppItem.IsDisabled = !split.IsEnabled;
 
@@ -78,7 +78,7 @@ public partial class SplitTunnelingView : UserControl, IPage
 
         CountriesItem.Title = s.SplitCountries;
         CountriesItem.Subtitle = s.SplitCountriesShortDesc;
-        CountriesItem.IsPremium = AppModel.IsPremiumFeature(AppFeature.SplitCountry);
+        CountriesItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.SplitCountry);
         CountriesItem.SetStatus(split.IsCountrySplit, AppText.SplitCountryStatusText(state), s.Off, StatusColor.Switch);
         CountriesItem.IsDisabled = !split.IsEnabled;
 
@@ -97,9 +97,9 @@ public partial class SplitTunnelingView : UserControl, IPage
     private async void OnEnabledToggled(object? sender, EventArgs e)
     {
         try {
-            var settings = AppModel.UserSettings;
+            var settings = VhApp.UserSettings;
             settings.SplitTunneling.Enabled = EnabledItem.IsOn;
-            await AppModel.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
             Fill();
             _host.ViewModel.Refresh();
         }

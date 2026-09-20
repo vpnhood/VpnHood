@@ -1,6 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppUi.Services"
+             xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SplitListView">
   <!-- The shape the web UI's split-domains, split-ips-via-app and split-ips-via-device share: the

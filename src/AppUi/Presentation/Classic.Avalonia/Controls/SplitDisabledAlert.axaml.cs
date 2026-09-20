@@ -2,7 +2,7 @@
 using Avalonia.Interactivity;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
@@ -19,15 +19,15 @@ public partial class SplitDisabledAlert : UserControl
 
     public void Refresh()
     {
-        IsVisible = !AppModel.UserSettings.SplitTunneling.Enabled;
+        IsVisible = !VhApp.UserSettings.SplitTunneling.Enabled;
     }
 
     private async void OnTurnOnClick(object? sender, RoutedEventArgs e)
     {
         try {
-            var settings = AppModel.UserSettings;
+            var settings = VhApp.UserSettings;
             settings.SplitTunneling.Enabled = true;
-            await AppModel.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
             Refresh();
             TurnedOn?.Invoke(this, EventArgs.Empty);
         }

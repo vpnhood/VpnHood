@@ -7,7 +7,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Ios.Common;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.UiContexts;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.App.Client.Ios;
 
@@ -25,9 +25,9 @@ public class AvaloniaUiAppDelegate : AvaloniaAppDelegate<ClassicAvaloniaApp>
     {
         AppDelegate.StartApp();
         // in process both complete at once
-        AppModel.Init(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
+        VhApp.Init(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
         AvaloniaUiHosting.PrepareContent<ClassicAvaloniaApp>(VpnHoodApp.Instance.UiAssetProvider);
-        AppModel.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+        VhApp.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
         AppUiContext.Context = new IosUiContext();
         return base.CreateAppBuilder();
     }

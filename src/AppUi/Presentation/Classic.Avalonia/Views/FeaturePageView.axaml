@@ -1,6 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppUi.Services"
+             xmlns:res="using:VpnHood.AppUi.Common"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.FeaturePageView">
   <!-- The web UI's FeaturePageLayout: on the gradient sheet, a back button (not on a TV), the
        title with its coloured word, the description, the feature's picture, and a card - the

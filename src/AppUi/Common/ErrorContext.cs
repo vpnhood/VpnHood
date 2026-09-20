@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // What the sentence for a failure depends on besides the failure itself: the session's and the
 // profile's standing, which the UI holding the app's state reads off it and hands in - so the

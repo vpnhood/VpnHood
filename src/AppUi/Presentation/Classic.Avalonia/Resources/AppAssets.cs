@@ -2,7 +2,7 @@
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.Core.Toolkit.Assets;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Streams;

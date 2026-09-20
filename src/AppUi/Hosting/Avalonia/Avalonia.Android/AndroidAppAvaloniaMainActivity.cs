@@ -10,7 +10,7 @@ using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Droid;
 
@@ -56,7 +56,7 @@ public class AndroidAppAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivi
         // completes at once. The web server is what a phone pairs with, so it comes up here rather
         // than on the pairing screen.
         AvaloniaUiHosting.PrepareContent<TUi>(VpnHoodApp.Instance.UiAssetProvider);
-        AppModel.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+        VhApp.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });

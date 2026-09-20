@@ -1,5 +1,5 @@
 ﻿using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppLib.Api.App;
@@ -17,8 +17,8 @@ public partial class ErrorDialog : DialogBase
         InitializeComponent();
         MessageText.Text = message;
 
-        var state = AppModel.State;
-        var hasProfile = AppModel.ClientProfileId != null;
+        var state = VhApp.State;
+        var hasProfile = VhApp.ClientProfileId != null;
         AutoButton.IsVisible = actions?.ShowChangeServerToAuto == true && hasProfile;
         TryPremiumButton.IsVisible = actions?.ShowTryPremium == true && hasProfile;
         LearnMoreButton.IsVisible = TryPremiumButton.IsVisible;
@@ -38,7 +38,7 @@ public partial class ErrorDialog : DialogBase
 
     private async Task CloseAndClear()
     {
-        await AppModel.Api.App.ClearLastError(CancellationToken.None);
+        await VhApp.Api.App.ClearLastError(CancellationToken.None);
         Close();
     }
 
@@ -56,7 +56,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnAutoClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppModel.ClientProfileId is not { } profileId)
+            if (VhApp.ClientProfileId is not { } profileId)
                 return;
             await CloseAndClear();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: false, ConnectPlanId.Normal));
@@ -69,7 +69,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnTryPremiumClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppModel.ClientProfileId is not { } profileId)
+            if (VhApp.ClientProfileId is not { } profileId)
                 return;
             await CloseAndClear();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: true, ConnectPlanId.PremiumByTrial));

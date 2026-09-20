@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using VpnHood.AppUi.Hosting.Avalonia;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
@@ -10,7 +10,7 @@ internal static class UserCustomData
 {
     public static bool GetBool(string key)
     {
-        var data = AppModel.UserSettings.CustomData;
+        var data = VhApp.UserSettings.CustomData;
         return data is { ValueKind: JsonValueKind.Object } obj
                && obj.TryGetProperty(key, out var value)
                && value.ValueKind == JsonValueKind.True;
@@ -18,12 +18,12 @@ internal static class UserCustomData
 
     public static Task SetBool(string key, bool value, CancellationToken cancellationToken)
     {
-        var settings = AppModel.UserSettings;
+        var settings = VhApp.UserSettings;
         var bag = settings.CustomData is { ValueKind: JsonValueKind.Object } obj
             ? obj.EnumerateObject().ToDictionary(x => x.Name, x => x.Value)
             : new Dictionary<string, JsonElement>();
         bag[key] = JsonSerializer.SerializeToElement(value, CustomDataJsonContext.Default.Boolean);
         settings.CustomData = JsonSerializer.SerializeToElement(bag, CustomDataJsonContext.Default.DictionaryStringJsonElement);
-        return AppModel.SaveUserSettings(settings, cancellationToken);
+        return VhApp.SaveUserSettings(settings, cancellationToken);
     }
 }

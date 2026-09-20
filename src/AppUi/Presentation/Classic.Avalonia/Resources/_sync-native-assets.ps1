@@ -7,7 +7,7 @@
 # or an image added here reaches the folder only after this script has run and the SPA is rebuilt -
 # without that, the glyph is a blank box and the image throws when its page opens.
 #
-# The code points live in Mdi.cs (VpnHood.AppUi.Services) and the names in @mdi/font because that
+# The code points live in Mdi.cs (VpnHood.AppUi.Common) and the names in @mdi/font because that
 # is where each is used: a
 # C# page names a glyph by code point, a Vue page by name. @mdi/font's stylesheet is the one map
 # between them.
@@ -26,7 +26,7 @@ $webUiDir = Join-Path $vhFolder "VpnHood.Client.WebUI";
 $stylesheet = Join-Path $webUiDir "node_modules\@mdi\font\css\materialdesignicons.css";
 $iconsFile = Join-Path $webUiDir "build\native-ui-icons.txt";
 $imagesFile = Join-Path $webUiDir "build\native-ui-images.txt";
-$mdiFile = Join-Path $repoDir "src\AppUi\Services\Mdi.cs";
+$mdiFile = Join-Path $repoDir "src\AppUi\Common\Mdi.cs";
 
 if (!(Test-Path $stylesheet)) { throw "@mdi/font is not installed in the web UI. Run 'npm ci' in $webUiDir. ($stylesheet)"; }
 
@@ -52,7 +52,7 @@ $icons = $icons | Sort-Object -Unique;
 
 $iconsHeader = @"
 # Icons the native (Avalonia) UI draws, which the web UI's own pages may not: the code points of
-# Mdi.cs in VpnHood.AppUi.Services, as @mdi/font names. build/icon-font-plugin.ts subsets the
+# Mdi.cs in VpnHood.AppUi.Common, as @mdi/font names. build/icon-font-plugin.ts subsets the
 # icon font of the assets folder to the web UI's icons plus these, so both UIs draw from one file.
 # Written by _sync-native-assets.ps1 in that project - do not edit by hand.
 "@;

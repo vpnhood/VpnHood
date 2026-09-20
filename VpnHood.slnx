@@ -101,8 +101,8 @@
   <Folder Name="/src/AppUi/Assets/">
     <Project Path="src/AppUi/Assets/Classic/VpnHood.AppUi.Assets.Classic.csproj" />
   </Folder>
-  <Folder Name="/src/AppUi/Services/">
-    <Project Path="src/AppUi/Services/VpnHood.AppUi.Services.csproj" />
+  <Folder Name="/src/AppUi/Common/">
+    <Project Path="src/AppUi/Common/VpnHood.AppUi.Common.csproj" />
   </Folder>
   <Folder Name="/src/AppUi/Presentation/">
     <Project Path="src/AppUi/Presentation/Classic.Avalonia/VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />

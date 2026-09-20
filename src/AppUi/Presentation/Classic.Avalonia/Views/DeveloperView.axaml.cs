@@ -4,7 +4,7 @@ using Avalonia.Interactivity;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
@@ -23,14 +23,14 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         _host = host;
         InitializeComponent();
 
-        var current = (AppModel.UserSettings.DebugData1 ?? "")
+        var current = (VhApp.UserSettings.DebugData1 ?? "")
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        _commands = [.. AppModel.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })];
-        _unknown = [.. current.Except(AppModel.Features.DebugCommands)];
+        _commands = [.. VhApp.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })];
+        _unknown = [.. current.Except(VhApp.Features.DebugCommands)];
 
-        SupportIdText.Text = $"Support ID: {AppModel.State.ClientProfile?.SupportId}";
+        SupportIdText.Text = $"Support ID: {VhApp.State.ClientProfile?.SupportId}";
         CommandList.ItemsSource = _commands;
-        DebugData2Box.Text = AppModel.UserSettings.DebugData2;
+        DebugData2Box.Text = VhApp.UserSettings.DebugData2;
 
         foreach (var command in _commands)
             command.PropertyChanged += (_, _) => ShowChosen();
@@ -94,12 +94,12 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
 
         var newData1 = debugData1.Length > 0 ? debugData1 : null;
         var newData2 = debugData2?.Length > 0 ? debugData2 : null;
-        var settings = AppModel.UserSettings;
+        var settings = VhApp.UserSettings;
         if (newData1 == settings.DebugData1 && newData2 == settings.DebugData2)
             return;
 
         settings.DebugData1 = newData1;
         settings.DebugData2 = newData2;
-        await AppModel.SaveUserSettings(settings, CancellationToken.None);
+        await VhApp.SaveUserSettings(settings, CancellationToken.None);
     }
 }

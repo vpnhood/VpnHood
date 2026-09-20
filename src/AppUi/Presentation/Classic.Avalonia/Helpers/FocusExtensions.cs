@@ -1,7 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Input;
 using VpnHood.AppUi.Hosting.Avalonia;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
@@ -13,7 +13,7 @@ internal static class FocusExtensions
 {
     public static void LandFocus(this Control control)
     {
-        var method = AppModel.IsTvUi
+        var method = VhApp.IsTvUi
             ? NavigationMethod.Directional
             : NavigationMethod.Unspecified;
         control.Focus(method);

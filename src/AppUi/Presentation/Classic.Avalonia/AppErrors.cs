@@ -1,4 +1,4 @@
-﻿using VpnHood.AppUi.Services;
+﻿using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
@@ -8,12 +8,12 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
 public static class AppErrors
 {
     public static ErrorContext Context => new() {
-        HasDiagnoseRequested = AppModel.State.HasDiagnoseRequested,
-        IsPremiumSupported = AppModel.IsPremiumSupported,
-        IsPremiumUser = AppModel.IsPremiumUser,
-        IsPremiumByAccount = AppModel.IsPremiumByAccount,
-        CanTryPremium = AppModel.CanTryPremium,
-        HasAccessCode = AppModel.State.ClientProfile?.HasAccessCode == true,
-        CanImportAccessCode = AppModel.CanImportAccessCode
+        HasDiagnoseRequested = VhApp.State.HasDiagnoseRequested,
+        IsPremiumSupported = VhApp.IsPremiumSupported,
+        IsPremiumUser = VhApp.IsPremiumUser,
+        IsPremiumByAccount = VhApp.IsPremiumByAccount,
+        CanTryPremium = VhApp.CanTryPremium,
+        HasAccessCode = VhApp.State.ClientProfile?.HasAccessCode == true,
+        CanImportAccessCode = VhApp.CanImportAccessCode
     };
 }

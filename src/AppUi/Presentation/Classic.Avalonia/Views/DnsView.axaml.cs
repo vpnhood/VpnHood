@@ -2,7 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppLib.Api.Settings;
@@ -19,22 +19,22 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         _host = host;
         InitializeComponent();
         var s = Strings.Current;
-        var state = AppModel.State;
-        var settings = AppModel.UserSettings;
+        var state = VhApp.State;
+        var settings = VhApp.UserSettings;
         _mode = settings.DnsMode;
 
         // the private DNS card: off, the device's automatic mode, or a provider the person chose
-        var isActive = AppModel.IsPrivateDnsActive(state);
-        var isCustomized = AppModel.IsPrivateDnsCustomized(state);
-        PrivateDnsCard.IsVisible = AppModel.Intents.IsPrivateDnsSettingsSupported;
+        var isActive = VhApp.IsPrivateDnsActive(state);
+        var isCustomized = VhApp.IsPrivateDnsCustomized(state);
+        PrivateDnsCard.IsVisible = VhApp.Intents.IsPrivateDnsSettingsSupported;
         PrivateDnsStatus.Text = !isActive ? s.Off : isCustomized ? s.On : s.Auto;
         PrivateDnsChip.Classes.Set("status-on", isCustomized);
         PrivateDnsChip.Classes.Set("status-off", !isActive);
-        PrivateDnsCrown.IsVisible = AppModel.ShowCrown(AppFeature.CustomDns);
+        PrivateDnsCrown.IsVisible = VhApp.ShowCrown(AppFeature.CustomDns);
         ProviderText.Text = state.SystemPrivateDns?.Provider;
         ProviderText.IsVisible = !string.IsNullOrEmpty(state.SystemPrivateDns?.Provider);
 
-        AdapterCrown.IsVisible = AppModel.ShowCrown(AppFeature.CustomDns);
+        AdapterCrown.IsVisible = VhApp.ShowCrown(AppFeature.CustomDns);
         DefaultRow.Title = s.Default;
         DefaultRow.Description = s.AdapterDnsAutoDesc;
         CustomRow.Title = s.Custom;
@@ -47,14 +47,14 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
     // the pitch while the feature is sold and this session has not bought it (dns/index.vue)
     public static IPage Create(MainView host)
     {
-        return AppModel.IsPremiumFeatureAllowed(AppFeature.CustomDns)
+        return VhApp.IsPremiumFeatureAllowed(AppFeature.CustomDns)
             ? new DnsView(host)
             : FeaturePages.PremiumPitch(host, Strings.Current.Dns, Strings.Current.DnsDesc, "private-dns.webp", AppFeature.CustomDns);
     }
 
     // connected to a server that overrides the person's DNS: the radios are read-only meanwhile
     private bool IsEnforcedByServer =>
-        AppModel.IsConnected(AppModel.State) && _mode == DnsMode.AdapterDns && AppModel.State.SessionInfo?.DnsConfig.IsUserSuppressed == true;
+        VhApp.IsConnected(VhApp.State) && _mode == DnsMode.AdapterDns && VhApp.State.SessionInfo?.DnsConfig.IsUserSuppressed == true;
 
     private void Show()
     {
@@ -65,7 +65,7 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         DefaultRow.IsDisabled = isEnforced;
         CustomRow.IsDisabled = isEnforced;
         EnforcedAlert.IsVisible = isEnforced;
-        PrivateDnsAlert.IsVisible = isCustom && AppModel.IsPrivateDnsCustomized(AppModel.State);
+        PrivateDnsAlert.IsVisible = isCustom && VhApp.IsPrivateDnsCustomized(VhApp.State);
         CustomPanel.IsVisible = isCustom;
     }
 
@@ -126,13 +126,13 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         }
 
         try {
-            var settings = AppModel.UserSettings;
+            var settings = VhApp.UserSettings;
             settings.DnsMode = _mode;
             settings.DnsServers = [.. new[] { Dns1Box.Text, Dns2Box.Text }
                 .Select(x => x?.Trim())
                 .Where(x => !string.IsNullOrEmpty(x))
                 .Select(x => IPAddress.Parse(x ?? ""))];
-            await AppModel.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
             _host.ViewModel.Refresh();
             return true;
         }

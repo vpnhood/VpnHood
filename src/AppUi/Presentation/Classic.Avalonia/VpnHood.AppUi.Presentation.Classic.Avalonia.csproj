@@ -24,7 +24,7 @@
 		<!-- Mounting Avalonia and the app's state as the pages read it, which any Avalonia UI needs. -->
 		<ProjectReference Include="..\..\Hosting\Avalonia\Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
 		<!-- The words, the error sentences, the formatting - what the pages say, for any toolkit. -->
-		<ProjectReference Include="..\..\Services\VpnHood.AppUi.Services.csproj" />
+		<ProjectReference Include="..\..\Common\VpnHood.AppUi.Common.csproj" />
 		<!-- The look this UI draws: the store's files, which the head's build places by importing the
 		     store's targets (a project reference carries none; a package reference will). Declared, not
 		     compiled against - the store has no assembly. -->

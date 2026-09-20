@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -21,7 +21,7 @@ public partial class ProtocolsView : UserControl, IPage
         InitializeComponent();
         var s = Strings.Current;
 
-        CloakCard.IsVisible = AppModel.Features.IsTcpProxySupported;
+        CloakCard.IsVisible = VhApp.Features.IsTcpProxySupported;
         CloakItem.Title = s.CloakMode;
         CloakItem.Description = s.CloakModeShortDesc;
         DropQuicItem.Title = s.ProtocolBlockQuic;
@@ -36,7 +36,7 @@ public partial class ProtocolsView : UserControl, IPage
 
     private void AddRow(ChannelProtocol protocol, string description, bool isDefault)
     {
-        if (!AppModel.IsShowProtocol(protocol))
+        if (!VhApp.IsShowProtocol(protocol))
             return;
         var row = new OptionRow { Title = AppText.ProtocolTitle(protocol), Description = description };
         if (isDefault)
@@ -48,8 +48,8 @@ public partial class ProtocolsView : UserControl, IPage
 
     private void Show()
     {
-        var state = AppModel.State;
-        var settings = AppModel.UserSettings;
+        var state = VhApp.State;
+        var settings = VhApp.UserSettings;
         var reason = state.TcpProxyUsageReason;
 
         CloakItem.IsOn = state.SessionStatus?.IsTcpProxy ?? settings.UseTcpProxy;
@@ -59,9 +59,9 @@ public partial class ProtocolsView : UserControl, IPage
         QuicPanel.IsVisible = CloakItem.IsOn;
         DropQuicItem.IsOn = state.SessionStatus?.IsDropQuic ?? settings.DropQuic;
 
-        var active = AppModel.ActiveProtocol(state);
+        var active = VhApp.ActiveProtocol(state);
         foreach (var (protocol, row) in _rows) {
-            var isEnabled = AppModel.IsProtocolEnabled(state, protocol);
+            var isEnabled = VhApp.IsProtocolEnabled(state, protocol);
             row.IsChecked = protocol == active;
             row.IsDisabled = !isEnabled;
             if (!isEnabled)
@@ -88,9 +88,9 @@ public partial class ProtocolsView : UserControl, IPage
     private async void Choose(ChannelProtocol protocol)
     {
         try {
-            var settings = AppModel.UserSettings;
+            var settings = VhApp.UserSettings;
             settings.ChannelProtocol = protocol;
-            await AppModel.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
             Show();
             _host.ViewModel.Refresh();
         }
@@ -103,12 +103,12 @@ public partial class ProtocolsView : UserControl, IPage
     private async void OnCloakToggled(object? sender, EventArgs e)
     {
         try {
-            var settings = AppModel.UserSettings;
+            var settings = VhApp.UserSettings;
             if (!settings.IsTcpProxyPrompted)
                 _host.Navigate(FeaturePages.CloakMode(_host));
 
             settings.UseTcpProxy = CloakItem.IsOn;
-            await AppModel.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
             Show();
             _host.ViewModel.Refresh();
         }
@@ -120,9 +120,9 @@ public partial class ProtocolsView : UserControl, IPage
     private async void OnDropQuicToggled(object? sender, EventArgs e)
     {
         try {
-            var settings = AppModel.UserSettings;
+            var settings = VhApp.UserSettings;
             settings.DropQuic = DropQuicItem.IsOn;
-            await AppModel.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);

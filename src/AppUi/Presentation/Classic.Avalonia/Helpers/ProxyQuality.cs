@@ -1,4 +1,4 @@
-﻿using VpnHood.AppUi.Services;
+﻿using VpnHood.AppUi.Common;
 
 using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Sessions;

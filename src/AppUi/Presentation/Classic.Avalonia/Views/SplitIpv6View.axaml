@@ -1,6 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppUi.Services"
+             xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SplitIpv6View">
   <!-- The web UI's split-ipv6: what becomes of IPv6 on a server that cannot carry it - blocked,

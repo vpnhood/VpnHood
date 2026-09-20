@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -18,13 +18,13 @@ public partial class FeaturePageView : UserControl, IPage
         _action = options.Action;
         InitializeComponent();
 
-        BackButton.IsVisible = !AppModel.IsTvUi;
+        BackButton.IsVisible = !VhApp.IsTvUi;
         RichText.Apply(TitleText, options.Title);
         DescriptionText.Text = options.Description;
         DescriptionText.IsVisible = options.Description != null;
         AppImage.SetSource(FeatureImage, AppAssets.ImagePath(options.Image));
         // shorter on a TV: 240px of art above the controls is a third of a 720 panel
-        FeatureImage.MaxHeight = AppModel.IsTvUi ? 140 : 240;
+        FeatureImage.MaxHeight = VhApp.IsTvUi ? 140 : 240;
 
         switch (options.Kind) {
             case FeaturePageKind.CloakMode:
@@ -32,15 +32,15 @@ public partial class FeaturePageView : UserControl, IPage
                 RichText.Apply(CloakText1, Strings.Current.CloakModeDesc1);
                 break;
 
-            case FeaturePageKind.PrivateDnsError when !AppModel.IsPremiumUser:
+            case FeaturePageKind.PrivateDnsError when !VhApp.IsPremiumUser:
                 PrivateDnsCard.IsVisible = true;
-                var isCustomized = AppModel.IsPrivateDnsCustomized(AppModel.State);
+                var isCustomized = VhApp.IsPrivateDnsCustomized(VhApp.State);
                 TurnOffButton.IsVisible = isCustomized;
                 OrRow.IsVisible = isCustomized;
                 break;
 
             default:
-                if (!options.IsPremium || AppModel.IsPremiumUser) {
+                if (!options.IsPremium || VhApp.IsPremiumUser) {
                     StepsCard.IsVisible = options.Steps.Count > 0 || options.IsActionAvailable || options.ShowSkip;
                     var number = 1;
                     foreach (var step in options.Steps) {

@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
@@ -18,8 +18,8 @@ public partial class FilterList : UserControl
     {
         InitializeComponent();
         // a remote types nothing until asked: the field is behind its button on a TV, in view elsewhere
-        SearchBox.IsVisible = !AppModel.IsTvUi;
-        SearchButton.IsVisible = AppModel.IsTvUi;
+        SearchBox.IsVisible = !VhApp.IsTvUi;
+        SearchButton.IsVisible = VhApp.IsTvUi;
         SearchBox.PlaceholderText = Strings.Current.Search;
     }
 

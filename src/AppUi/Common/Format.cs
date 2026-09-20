@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace VpnHood.AppUi.Services;
+namespace VpnHood.AppUi.Common;
 
 // The words a page composes from numbers: dates, ages, latencies, traffic.
 //

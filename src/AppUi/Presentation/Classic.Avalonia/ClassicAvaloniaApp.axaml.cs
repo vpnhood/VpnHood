@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Styles;
@@ -17,7 +17,7 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
 // two palettes; a head that names another gets that one instead, and none of this is in its build.
 public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
 {
-    // The words this UI has, which the head declares to the app (AppModel.Configure).
+    // The words this UI has, which the head declares to the app (VhApp.Configure).
     public static IReadOnlyList<string> AvailableCultures => Strings.AvailableCultures;
 
     // What this UI needs before its first view, out of the store the head hands in: the words, and
@@ -45,7 +45,7 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
         // The look's palette over the blue the XAML merged, before any style is applied: the
         // head hands the UI the app's API first, except in the processes that get no view, which
         // keep the default.
-        var themeOverride = AppTheme.OverrideFor(AppModel.IsInit ? AppModel.Features.UiTheme : null);
+        var themeOverride = AppTheme.OverrideFor(VhApp.IsInit ? VhApp.Features.UiTheme : null);
         if (themeOverride != null)
             Resources.MergedDictionaries.Add(themeOverride);
     }

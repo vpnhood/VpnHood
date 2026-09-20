@@ -6,7 +6,7 @@ using VpnHood.AppLib.Api.Settings;
 using Avalonia;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
@@ -26,8 +26,8 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
 
     protected MainView Host => _host;
 
-    // the settings the switch is in, saved as one (AppModel.SaveUserSettings) once the switch moved
-    protected static UserSettings Settings => AppModel.UserSettings;
+    // the settings the switch is in, saved as one (VhApp.SaveUserSettings) once the switch moved
+    protected static UserSettings Settings => VhApp.UserSettings;
 
     protected abstract string Title { get; }
     protected abstract string? SwitchDescription { get; }
@@ -85,7 +85,7 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
         try {
             var settings = Settings;
             IsSwitchOn = EnabledItem.IsOn;
-            await AppModel.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
             ShowGate();
             _host.ViewModel.Refresh();
         }
@@ -122,7 +122,7 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
 
         try {
             await Save(Input.Excludes, Input.Includes, Input.Blocks, CancellationToken.None);
-            await AppModel.SaveUserSettings(Settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(Settings, CancellationToken.None);
             _host.ViewModel.Refresh();
             return true;
         }

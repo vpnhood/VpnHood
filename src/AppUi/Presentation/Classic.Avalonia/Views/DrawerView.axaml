@@ -1,6 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppUi.Services"
+             xmlns:res="using:VpnHood.AppUi.Common"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.DrawerView">
   <!-- The web UI's NavigationDrawer, off the TV UI: the logo, the name and the version, then the
        doors - Go premium, the account, Settings, Diagnose, Check for update - the outbound links,

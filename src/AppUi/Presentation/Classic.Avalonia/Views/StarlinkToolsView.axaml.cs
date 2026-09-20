@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
@@ -25,7 +25,7 @@ public partial class StarlinkToolsView : UserControl, IPage
         _host = host;
         InitializeComponent();
         var s = Strings.Current;
-        var profile = AppModel.FindClientProfileInfo(clientProfileId);
+        var profile = VhApp.FindClientProfileInfo(clientProfileId);
         ScopeText.Text = profile != null ? s.StarlinkToolsProfileScope(profile.ClientProfileName) : null;
         ScopeText.IsVisible = profile != null;
 

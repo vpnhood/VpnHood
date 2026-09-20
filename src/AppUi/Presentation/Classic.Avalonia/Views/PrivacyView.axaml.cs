@@ -1,6 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Services;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
@@ -17,13 +17,13 @@ public partial class PrivacyView : UserControl, IPage
 
         var s = Strings.Current;
         // a build that collects nothing offers no consent and makes no claim about data
-        var isTrackerSupported = AppModel.IsAnonymousTrackerSupported;
+        var isTrackerSupported = VhApp.IsAnonymousTrackerSupported;
         TrackerItem.Title = s.AllowAnonymousTracker;
         TrackerItem.Description = s.AllowAnonymousTrackerDesc;
-        TrackerItem.IsOn = AppModel.UserSettings.AllowAnonymousTracker;
+        TrackerItem.IsOn = VhApp.UserSettings.AllowAnonymousTracker;
         TrackerItem.IsVisible = isTrackerSupported;
         NoticeText.IsVisible = isTrackerSupported;
-        PolicyButton.IsVisible = AppModel.Features.PrivacyPolicyUrl != null;
+        PolicyButton.IsVisible = VhApp.Features.PrivacyPolicyUrl != null;
         PolicyCard.IsVisible = NoticeText.IsVisible || PolicyButton.IsVisible;
     }
 
@@ -37,9 +37,9 @@ public partial class PrivacyView : UserControl, IPage
     private async void OnTrackerToggled(object? sender, EventArgs e)
     {
         try {
-            var settings = AppModel.UserSettings;
+            var settings = VhApp.UserSettings;
             settings.AllowAnonymousTracker = TrackerItem.IsOn;
-            await AppModel.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -49,7 +49,7 @@ public partial class PrivacyView : UserControl, IPage
     private async void OnPolicyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (AppModel.Features.PrivacyPolicyUrl is { } url)
+            if (VhApp.Features.PrivacyPolicyUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

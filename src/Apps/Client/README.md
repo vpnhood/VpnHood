@@ -11,8 +11,8 @@ decisions that are the same for all of them live here, so they are made once and
 | File | What it decides |
 |---|---|
 | `IRequiredAppConfigs.cs` | the settings each product must state — `AppId`, `WebUiPort`, `UpdateInfoUrl`, `DefaultAccessKey`, `Ga4MeasurementId`, `RemoteSettingsUrl`, `PrivacyPolicyUrl`, `TermsOfUseUrl` … Each head implements it, so a new product cannot forget one. |
-| `ClientAppResources.cs` | VpnHood Client's `AppResources` — the SPA bundle and the branding read from it |
-| `ConnectAppResources.cs` | the same for VpnHood Connect: the same SPA bundle, the `connect` branding theme |
+| `AppWebRoot.cs` | the page every web host of both products serves: the Avalonia browser build this assembly embeds |
+| `ConnectAppResources.cs` | VpnHood Connect's premium feature list |
 | `EmbeddedResource.cs` | reads an optional embedded blob, returning null when the build did not embed one |
 | the project file | pins the SPA package (`VpnHood.AppLib.Assets.ClassicSpa`), the IP-location database, and the local-SPA switch |
 
@@ -27,24 +27,18 @@ So a fork writes its own equivalent of this folder: twenty lines that fill in `A
 over its own resources. That is the whole integration surface, and it is the reason nothing beneath
 `src/Apps/` may depend on anything here.
 
-## How the resources are built
+## Where the look comes from
 
-`ClientAppResources` is the worked example of the rule that the head supplies resources and the
-libraries never reach for them:
+Nothing here builds `AppResources` any more. The colours the OS chrome draws with and the tray icons
+live in the UI's store (`branding/<theme>/manifest.json` in `ui.zip`, written by the web UI's build);
+the app reads them through `AppBranding` once the store is in hand, and a head names its theme
+(`AppOptions.UiTheme`, `"violet"` for VpnHood Connect). What draws with them - the tray, the window -
+waits for `VpnHoodApp.ResourcesLoaded` and appears once, rather than changing under the user. Anything
+the manifest does not name falls back to `VpnHood.AppLib.App`'s own defaults.
 
-```csharp
-public static AppResources Resources => field ??= SpaResourcesFactory.FromSpaZip(SpaZip);
-public static IAsset CreateWebRootZip(); // the Avalonia browser build if this build embeds one, else the SPA
-```
+The page the web host serves is the Avalonia browser build, embedded into *this* assembly from
+`src/Apps/AvaloniaUI.Browser`'s publish and handed over as `AppWebRoot.Zip`; the app extracts it.
+Nothing is extracted or bound until something asks the app for a web host and calls `EnsureStarted`.
 
-The same zip serves twice: its branding manifest becomes `AppResources` (colours, tray icons), and its
-files are the web root, handed to the app as `AppOptions.WebRootZipAsset` for it to extract. Nothing is
-built, extracted or bound until something asks the app for `WebHost` and calls `EnsureStarted`.
-
-The SPA zip is embedded into *this* assembly — in production by the `VpnHood.AppLib.Assets.ClassicSpa`
-package's build targets, locally by the `use-local-spa.txt` switch — and its branding manifest carries
-the window and tray colours and the tray icons, so rebranding the SPA rebrands the native chrome with
-no .NET change. `ConnectAppResources` reads the same zip with the `connect` theme.
-
-Anything the head does not assign falls back to `VpnHood.AppLib.App`'s own defaults, so a build that
-embeds no SPA and no branding still runs.
+The SPA zip is still embedded - the `VpnHood.AppLib.Assets.ClassicSpa` package, or `use-local-spa.txt` -
+but nothing reads it any more.

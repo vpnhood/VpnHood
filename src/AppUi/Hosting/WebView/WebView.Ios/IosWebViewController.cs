@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Ios.Common;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.Core.Client.Devices.UiContexts;
 
@@ -33,19 +35,32 @@ public class IosWebViewController : UIViewController
     {
         base.ViewDidLoad();
 
-        View!.BackgroundColor = BackgroundColor;
-
         // Publish the UI context so the core/web-server can perform UI-bound operations.
         AppUiContext.Context = new IosUiContext();
+        _ = CreateContentWhenReady();
+    }
 
-        var webView = new IosWebView(this, BackgroundColor);
-        _host = new WebViewHost(webView);
-        _host.Start();
+    // The view is painted and the web view made once the look they draw with is final - nothing
+    // shows before, where a colour that changed under the user would be seen. The wait comes back
+    // to the main thread, where views are touched.
+    private async Task CreateContentWhenReady()
+    {
+        try {
+            await VpnHoodApp.Instance.ResourcesLoaded;
+            View!.BackgroundColor = BackgroundColor;
 
-        // iOS suspends the host app in the background and can close the loopback socket meanwhile;
-        // the web server re-checks itself on this signal.
-        _foregroundObserver = UIApplication.Notifications.ObserveWillEnterForeground(
-            (_, _) => _host?.OnResume());
+            var webView = new IosWebView(this, BackgroundColor);
+            _host = new WebViewHost(webView);
+            _host.Start();
+
+            // iOS suspends the host app in the background and can close the loopback socket meanwhile;
+            // the web server re-checks itself on this signal.
+            _foregroundObserver = UIApplication.Notifications.ObserveWillEnterForeground(
+                (_, _) => _host?.OnResume());
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create the app's web view.");
+        }
     }
 
     private static UIColor? GetWindowBackgroundColor()

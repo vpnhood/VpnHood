@@ -1,20 +1,20 @@
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.Branding;
 
-internal sealed class SpaBrandingManifest
+// branding/<theme>/manifest.json, as the UI's build writes it into the store.
+internal sealed class AppBrandingManifest
 {
     public int SchemaVersion { get; set; }
-    public SpaBrandingColors? Colors { get; set; }
-    public SpaBrandingIcons? Icons { get; set; }
+    public BrandingColors? Colors { get; set; }
+    public BrandingIcons? Icons { get; set; }
 
-
-    public sealed class SpaBrandingColors
+    public sealed class BrandingColors
     {
         public string? WindowBackground { get; set; }
         public string? NavigationBar { get; set; }
         public string? ProgressBar { get; set; }
     }
 
-    public sealed class SpaBrandingIcons
+    public sealed class BrandingIcons
     {
         public string? SystemTrayConnected { get; set; }
         public string? SystemTrayConnecting { get; set; }

@@ -56,7 +56,6 @@ public class TestAppHelper : TestHelper
                 ServerQueryTimeout = TimeSpan.FromSeconds(2),
                 TcpConnectTimeout = TimeSpan.FromSeconds(2).WhenNoDebugger()
             },
-            Resources = new AppResources(),
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,
                 LoadAdPostDelay = TimeSpan.Zero,

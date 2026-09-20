@@ -18,9 +18,10 @@ nothing can depend on it by accident; the rule is about the reference itself.
 
 | Part | What it is | Who reads it |
 |---|---|---|
-| `ui.zip` | the store: `images/`, `flags/`, `fonts/`, `content/`, `locales/` - mirrored from the web UI's build into `assets/` and zipped by `_sync-assets.ps1` | `ZipAssetProvider` in `VpnHood.Core.Toolkit`, which extracts it once per version (its hash) under the app's storage |
+| `ui.zip` | the store: `images/`, `flags/`, `fonts/`, `content/`, `locales/`, `branding/` - mirrored from the web UI's build into `assets/` and zipped by `_sync-assets.ps1` | `ZipAssetProvider` in `VpnHood.Core.Toolkit`, which extracts it once per version (its hash) under the app's storage |
 | `locales/<culture>.json`, `locales/index.json` | the words, one file per language, and the list of languages | `Strings` in `VpnHood.AppUi.Services` |
 | `fonts/*.ttf`, `fonts/index.json` | the faces, and the list of them | `AppFontCollection` in the Avalonia UI |
+| `branding/<theme>/manifest.json` and the tray icons it names | the look the OS chrome draws with - window and bar colours, tray icons - one per look (`blue`, `violet`) | `AppBranding` in `VpnHood.AppLib.App`, for the theme the head names (`AppOptions.UiTheme`) |
 | `buildTransitive/*.targets` | places the zip at `assets/ui.zip` where the consuming app's platform reads files, at any reference depth | the app's build |
 | `build/*.targets` | forwards to the above for a direct package reference; the heads of this repo import it | the app's build |
 

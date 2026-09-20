@@ -3664,7 +3664,7 @@ export class AppFeatures implements IAppFeatures {
     appName!: string;
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
-    uiName!: string | null;
+    uiTheme!: string;
     isAddAccessKeySupported!: boolean;
     premium!: AppPremiumOptions | null;
     isAccountSupported!: boolean;
@@ -3716,7 +3716,7 @@ export class AppFeatures implements IAppFeatures {
             this.appName = _data["appName"] !== undefined ? _data["appName"] : null as any;
             this.isExcludeAppsSupported = _data["isExcludeAppsSupported"] !== undefined ? _data["isExcludeAppsSupported"] : null as any;
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : null as any;
-            this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : null as any;
+            this.uiTheme = _data["uiTheme"] !== undefined ? _data["uiTheme"] : null as any;
             this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : null as any;
             this.premium = _data["premium"] ? AppPremiumOptions.fromJS(_data["premium"]) : null as any;
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : null as any;
@@ -3784,7 +3784,7 @@ export class AppFeatures implements IAppFeatures {
         data["appName"] = this.appName !== undefined ? this.appName : null as any;
         data["isExcludeAppsSupported"] = this.isExcludeAppsSupported !== undefined ? this.isExcludeAppsSupported : null as any;
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : null as any;
-        data["uiName"] = this.uiName !== undefined ? this.uiName : null as any;
+        data["uiTheme"] = this.uiTheme !== undefined ? this.uiTheme : null as any;
         data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : null as any;
         data["premium"] = this.premium ? this.premium.toJSON() : null as any;
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : null as any;
@@ -3836,7 +3836,7 @@ export interface IAppFeatures {
     appName: string;
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
-    uiName: string | null;
+    uiTheme: string;
     isAddAccessKeySupported: boolean;
     premium: AppPremiumOptions | null;
     isAccountSupported: boolean;

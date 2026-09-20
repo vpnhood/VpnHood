@@ -69,7 +69,6 @@ public class AppDelegate : UIApplicationDelegate
     {
         var storageFolderPath = AppOptions.BuildStorageFolderPath(AppConfigs.AppName);
 
-        var resources = AppConfigs.Resources;
 
         // The files this build's asset packages placed beside the app, read the way this
         // platform reads them: the IP-location database and the UI's store. The app extracts
@@ -91,14 +90,13 @@ public class AppDelegate : UIApplicationDelegate
             // Empty until a DefaultAccessKey is supplied (embedded secret, see AppConfigs.Load). An invalid
             // string here would throw inside VpnHoodApp.Init, so we pass an empty array instead of a placeholder.
             AccessKeys = string.IsNullOrEmpty(appConfigs.DefaultAccessKey) ? [] : [appConfigs.DefaultAccessKey],
-            Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             // Not appConfigs.TermsOfUseUrl: a purchase here is governed by Apple's standard EULA while
             // no custom EULA is registered in App Store Connect. Delete this line once one is.
             TermsOfUseUrl = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"),
             // The store already took this acceptance at install - see AppOptions.
             IsLicenseAgreementRequired = false,
-            UiName = "VpnHoodConnect",
+            UiTheme = "violet",
             // Loopback port for the in-process SPA web server (the WKWebView loads from here).
             WebUiPort = appConfigs.WebUiPort,
             IsAddAccessKeySupported = false,

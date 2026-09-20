@@ -6,6 +6,8 @@
 #                         icon font in it is cut to the icons both UIs name, by the web UI's own build
 #                         (build/icon-font-plugin.ts), so `npm run build` there comes first
 #   assets/locales/    <- <WebUI>/src/locales/*.json - the words, one file per language
+#   assets/branding/   <- <WebUI>/dist/branding - the look the OS chrome draws with: a manifest and
+#                         the tray icons per theme (default, connect), read by AppBranding in AppLib
 #   assets/locales/index.json, assets/fonts/index.json   the languages, the faces: a list rather
 #                         than a listing, because a provider answers by name and never enumerates
 #   ui.zip        <- assets/, the store as the package's targets place it (assets/ui.zip)
@@ -44,6 +46,11 @@ foreach ($folder in $folders) {
     if (!(Test-Path $source)) { throw "The built assets folder has no '$folder' folder. $source"; }
     Copy-Item $source (Join-Path $assetsDir $folder) -Recurse;
 }
+
+# ---- the look: one theme per product, beside the built assets rather than under them ----
+$brandingDir = Join-Path $webUiDir "dist\branding";
+if (!(Test-Path $brandingDir)) { throw "The web UI's build has no branding folder. $brandingDir"; }
+Copy-Item $brandingDir (Join-Path $assetsDir "branding") -Recurse;
 
 # Not the film: the internal ad is a fallback that exactly one head can show (Connect.Android.Google),
 # and that head carries it from the product's own repo (Vpnhood.App.Connect/promotions) as its own

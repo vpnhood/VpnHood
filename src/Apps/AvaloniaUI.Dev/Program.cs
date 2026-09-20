@@ -16,8 +16,8 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 // can pair with it exactly as with a TV, and the UI in a window that opens at a TV's size and
 // resizes down to a phone's. Never shipped; a head shows this UI with /avalonia-ui instead.
 // "--tv" runs it as a TV (AppFeatures.IsTv: the pairing row, the ring on arrival); without it, as
-// a phone or a desktop. "--connect" runs it as the Connect product, which is what picks the theme
-// (AppOptions.UiName); without it, as the client, as any head that names no product. Connecting
+// a phone or a desktop. "--connect" runs it as the Connect product - the violet look, no keys to
+// add (AppOptions.UiTheme, IsAddAccessKeySupported); without it, as the client. Connecting
 // needs the WinDivert driver, so a plain run shows the walk and the pairing; run elevated to
 // connect as well.
 internal static class Program
@@ -35,7 +35,6 @@ internal static class Program
         var storageFolderPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             ValueOf(args, "--storage") ?? "VpnHood.AvaloniaDev");
-        var resources = ClientAppResources.Resources;
         // The files this build's asset packages placed beside the app, read the way this
         // platform reads them: the IP-location database and the UI's store. The app extracts
         // what it must under its storage - the store once, for the in-process UI and for the
@@ -47,7 +46,6 @@ internal static class Program
         var appOptions = new AppOptions(appId: "com.vpnhood.avalonia.dev", "VpnHood! Avalonia Dev", isDebugMode: true) {
             AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
             StorageFolderPath = storageFolderPath,
-            Resources = resources,
             // the documents the product links to, which every head takes from its appsettings.json:
             // without them the pages that link to them - Settings > Privacy, the paywall, the
             // drawer - have nothing to show, which is a look at a build no one ships
@@ -60,7 +58,7 @@ internal static class Program
             // left at the product default (on): the consent screen is part of what a client head
             // shows on a first run, and a run that skips it shows a build no one ships
             IsAddAccessKeySupported = !isConnect, // a connect head ships one built-in profile and takes no keys
-            UiName = isConnect ? AppProduct.ConnectUiName : null,
+            UiTheme = isConnect ? "violet" : "blue",
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
             UiZipAsset = new Asset(platformAssets, "assets/ui.zip"),
             // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build

@@ -29,7 +29,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     private static AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
-        var resources = ClientAppResources.Resources;
 
         // The files this build's asset packages placed beside the app, read the way this
         // platform reads them: the IP-location database and the UI's store. The app extracts
@@ -40,7 +39,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var options = new AppOptions(appId: appConfigs.AppId, "VpnHood", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
             CustomData = appConfigs.CustomData,
-            Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             // The store already took this acceptance at install - see AppOptions.

@@ -35,8 +35,6 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public const string ProviderBundleId = "com.vpnhood.client.ios.networkextension";
 
     // Client SPA + colors/icons bundle (from the shared VpnHood.App.Client project).
-    public static AppResources Resources => ClientAppResources.Resources;
-
     // ---- IRequiredAppConfigs: overridable product settings (merged from embedded AppSettings.json) ----
 
     public string AppId { get; set; } = "com.vpnhood.client.ios";

@@ -42,10 +42,10 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
 
         AvaloniaXamlLoader.Load(this);
 
-        // The product's palette over the client's the XAML merged, before any style is applied: the
+        // The look's palette over the blue the XAML merged, before any style is applied: the
         // head hands the UI the app's API first, except in the processes that get no view, which
         // keep the default.
-        var themeOverride = AppTheme.OverrideFor(AppModel.IsInit ? AppModel.Features.UiName : null);
+        var themeOverride = AppTheme.OverrideFor(AppModel.IsInit ? AppModel.Features.UiTheme : null);
         if (themeOverride != null)
             Resources.MergedDictionaries.Add(themeOverride);
     }

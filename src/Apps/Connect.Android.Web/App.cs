@@ -39,7 +39,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     private AppOptions CreateAppOptions(AppConfigs appConfigs)
     {
         // load app settings and resources
-        var resources = ConnectAppResources.Resources;
 
         // The files this build's asset packages placed beside the app, read the way this
         // platform reads them: the IP-location database and the UI's store. The app extracts
@@ -52,10 +51,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             CustomData = appConfigs.CustomData,
             DeviceId = AndroidUtils.GetDeviceId(this), //this will be hashed using AppId
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
-            Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
-            UiName = "VpnHoodConnect",
+            UiTheme = "violet",
             IsAddAccessKeySupported = false,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,

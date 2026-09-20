@@ -26,7 +26,9 @@ public partial class DrawerView : UserControl
 
         var features = AppModel.Features;
         var state = AppModel.State;
-        var logo = AppModel.IsConnectApp ? "VpnHoodConnect-logo.png" : "VpnHoodClient-logo.png";
+        // Provisional: this carries the product's word, which the look should not choose for it;
+        // an open question, together with the privacy-consent document - the same case.
+        var logo = features.UiTheme == "violet" ? "VpnHoodConnect-logo.png" : "VpnHoodClient-logo.png";
         AppImage.SetSource(Logo, AppAssets.ImagePath(logo));
         AppNameText.Text = features.AppName;
         // app.major.minor.build; the web UI adds its own bundle's build as a fourth segment, which
@@ -42,7 +44,7 @@ public partial class DrawerView : UserControl
         DiagnoseItem.IsEnabled = state.CanDiagnose;
         // the updater is the capability signal: null exactly when no updater was configured
         UpdateItem.IsVisible = state.UpdaterStatus != null;
-        PersonalServerItem.IsVisible = !AppModel.IsConnectApp;
+        PersonalServerItem.IsVisible = features.IsAddAccessKeySupported; // one you add the key of
         PrivacyItem.IsVisible = features.PrivacyPolicyUrl != null;
     }
 

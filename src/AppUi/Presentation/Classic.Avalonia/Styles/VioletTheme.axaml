@@ -1,15 +1,15 @@
 ﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- VpnHood! Connect, the product a head names by setting AppOptions.UiName. The keys are the
-       web UI's connect theme, key for key (ConnectTheme.g.axaml, generated from theme/themes.ts by
+  <!-- Violet, the look a head names by setting AppOptions.UiTheme. The keys are the web UI's
+       violet theme, key for key (VioletTheme.g.axaml, generated from theme/themes.ts by
        _sync-theme.ps1); below them, what the web UI writes as CSS rather than as a key. This file
-       and ClientTheme.axaml carry the same keys and nothing else: a key added to one belongs in
+       and BlueTheme.axaml carry the same keys and nothing else: a key added to one belongs in
        the other the same day. -->
 
   <ResourceDictionary.MergedDictionaries>
     <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/Colors.axaml" />
-    <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/ConnectTheme.g.axaml" />
+    <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/VioletTheme.g.axaml" />
   </ResourceDictionary.MergedDictionaries>
 
   <!-- #connectBtn.connect-app: flat, where the client's is a gradient -->

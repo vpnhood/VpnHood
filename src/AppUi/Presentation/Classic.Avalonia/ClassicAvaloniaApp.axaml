@@ -10,7 +10,7 @@
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
-        <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/ClientTheme.axaml" />
+        <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/BlueTheme.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>

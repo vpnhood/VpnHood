@@ -27,7 +27,6 @@ internal static class App
     private static AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
-        var resources = ConnectAppResources.Resources;
 
         // The files this build's asset packages placed beside the app, read the way this
         // platform reads them: the IP-location database and the UI's store. The app extracts
@@ -38,8 +37,7 @@ internal static class App
         var appOptions = new AppOptions(appId: appConfigs.AppId, Path.GetDirectoryName(StoragePath)!, AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
             CustomData = appConfigs.CustomData,
-            UiName = "VpnHoodConnect",
-            Resources = resources,
+            UiTheme = "violet",
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],

@@ -11,6 +11,7 @@ using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.ApiImpl;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Branding;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Api.Settings;
@@ -88,11 +89,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public Diagnoser Diagnoser { get; } = new();
     public AppResources Resources { get; }
 
-    // Completes when Resources are final: today at once, since the head hands them in, and the seam
-    // the UI's own store fills when the look is read from it instead. Anything the user would SEE
-    // change waits for this and draws once - a tray icon that appears a moment later goes unnoticed,
-    // one that switches under them does not.
-    public Task ResourcesLoaded { get; } = Task.CompletedTask;
+    // Completes when Resources are final: the look read out of the UI's store, or the built-in one
+    // when there is no store or it could not be read. Anything the user would SEE change waits for
+    // this and draws once - a tray icon or a window that appears a moment later goes unnoticed, one
+    // that switches under them does not. Never faulted, so a waiter needs no catch for it.
+    public Task ResourcesLoaded { get; }
 
     public IAssetProvider? UiAssetProvider { get; }
     public AppServices Services { get; }
@@ -121,7 +122,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         : base(register: options.IsSingleton)
     {
         var appVersion = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version();
-        Resources = options.Resources;
+        Resources = new AppResources();
         StorageFolderPath = options.StorageFolderPath ??
                             throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = settingsService;
@@ -132,6 +133,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAsset, StorageFolderPath, "ui");
         _webHostManager = new AppWebHostManager(this, options.WebHostFactory, 
             AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, StorageFolderPath, "web-root"));
+
+        // The look the OS chrome draws with, out of the UI's store, read while the rest of the app
+        // comes up; whatever draws with it waits for ResourcesLoaded, not for this line.
+        ResourcesLoaded = AppBranding.LoadAsync(Resources, UiAssetProvider, options.UiTheme);
         _device = device;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _logService = logService;
@@ -204,7 +209,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsTv = device.IsTv || HasDebugCommand(DebugCommands.TvMode),
             OsType = AppUtils.GetOsType(),
             AdjustForSystemBars = options.AdjustForSystemBars,
-            UiName = options.UiName,
+            UiTheme = options.UiTheme,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.Billing != null,
             AuthProviderIds = options.AccountProvider?.AuthenticationProvider.ProviderIds ?? [],

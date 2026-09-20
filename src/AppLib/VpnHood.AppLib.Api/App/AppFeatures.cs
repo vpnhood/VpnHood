@@ -12,7 +12,7 @@ public class AppFeatures
     public required string AppName { get; init; }
     public required bool IsExcludeAppsSupported { get; init; }
     public required bool IsIncludeAppsSupported { get; init; }
-    public required string? UiName { get; init; }
+    public required string UiTheme { get; init; }
     public required bool IsAddAccessKeySupported { get; init; }
 
     // This build's premium tier, or null when the product has none. Null is not "premium locked" —

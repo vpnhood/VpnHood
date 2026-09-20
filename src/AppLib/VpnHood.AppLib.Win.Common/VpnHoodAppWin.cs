@@ -137,8 +137,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
             _ = VpnHoodApp.Instance.TryConnect();
 
         // The tray comes up once the look it draws with is final - there is nothing to see before
-        // it, where an icon that changed under the user would be seen. Today that is this very
-        // moment; it becomes a wait when the look is read from the UI's store.
+        // it, where an icon that changed under the user would be seen.
         _ = InitNotifyIconWhenReady();
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => UpdateNotifyIcon();
 

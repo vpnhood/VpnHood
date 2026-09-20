@@ -1,5 +1,8 @@
 using Android.Runtime;
 using Android.Views;
+using Microsoft.Extensions.Logging;
+using VpnHood.AppLib;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
@@ -22,7 +25,28 @@ public class AndroidWebViewMainActivityHandler(
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+        _ = CreateContentWhenReady();
+    }
 
+    // The loading screen and the web view draw with the app's look, so they are made once it is
+    // final - nothing shows before, where a colour that changed under the user would be seen. The
+    // wait comes back to the main looper, where views are made.
+    private async Task CreateContentWhenReady()
+    {
+        try {
+            await VpnHoodApp.Instance.ResourcesLoaded;
+            if (ActivityEvent.Activity.IsDestroyed)
+                return; // gone while the look was read
+
+            CreateContent();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create the app's web view.");
+        }
+    }
+
+    private void CreateContent()
+    {
         // Experimental. Fixing: Window couldn't find content container view.
         // Some OEMs are subject to this issue, so postpone the content setup.
         ActivityEvent.Activity.Window?.DecorView.Post(() => {

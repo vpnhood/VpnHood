@@ -122,8 +122,10 @@ public static class AppModel
     // The TV layout: the device's word, unless this UI is the remote - the web UI's isTvUi, which
     // asks the same two questions. A phone driving a TV gets the phone's layout.
     public static bool IsTvUi => Features.IsTv && !IsRemote;
-    public static bool IsConnectApp => AppProduct.IsConnect(Features.UiName);
-    public static bool IsSingleProfileMode => AppProduct.IsSingleProfileMode(Features.UiName);
+
+    // One built-in profile, called "location", against a list of servers the user adds keys for:
+    // the list is fixed exactly when no key can be added. The web UI's isSingleProfileMode.
+    public static bool IsSingleProfileMode => !Features.IsAddAccessKeySupported;
 
     public static bool IsConnected(AppState state)
     {

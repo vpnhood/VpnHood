@@ -2,9 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls">
 
-  <!-- The shapes, in the theme's keys: what a key is worth is the product's, and lives in
-       ClientTheme.axaml or ConnectTheme.axaml (the web UI's two themes, theme/themes.ts), so a
-       page ported here paints what it painted there in either product. Nothing below names a
+  <!-- The shapes, in the theme's keys: what a key is worth is the theme's, and lives in
+       BlueTheme.axaml or VioletTheme.axaml (the web UI's two themes, theme/themes.ts), so a
+       page ported here paints what it painted there in either theme. Nothing below names a
        colour of its own. Type and focus fit a TV first (TV plan §3.4): every control wears a ring
        while a remote or a keyboard has it (:focus-visible - a finger's focus shows nothing, as on
        the web UI), and the layouts query the page host's width (the "Page"

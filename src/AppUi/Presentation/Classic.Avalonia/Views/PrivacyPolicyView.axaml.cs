@@ -19,7 +19,9 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     {
         _host = host;
         InitializeComponent();
-        _ = LoadDocument(AppModel.IsConnectApp ? "privacy-consent" : "privacy-consent-client");
+        // Provisional: which product's promises to show is not the look's to choose - an open
+        // question; until it is settled the violet look is the connect product.
+        _ = LoadDocument(AppModel.Features.UiTheme == "violet" ? "privacy-consent" : "privacy-consent-client");
         TermsButton.IsVisible = AppModel.Features.TermsOfUseUrl != null;
         PrivacyButton.IsVisible = AppModel.Features.PrivacyPolicyUrl != null;
     }

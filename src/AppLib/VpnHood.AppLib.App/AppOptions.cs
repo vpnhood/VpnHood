@@ -43,9 +43,8 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // Starts at the preset for this platform, so a memory-capped head is safe without opting in.
     public ClientTransportOptions Transport { get; set; } = ClientTransportOptions.ForCurrentPlatform();
     public AppUpdaterOptions? UpdaterOptions { get; set; }
-    // The two the ENGINE reads. Everything else a head supplies - the tray icons, the colours, the
-    // OS strings, the browser bundles - is the head's and the web host's; it travels in Resources,
-    // which this class carries for them and never reads itself.
+    // What the ENGINE reads of a head's identity. The look the OS chrome draws with - the colours,
+    // the tray icons - is read out of the UI's store (AppBranding, under UiTheme), not handed in.
     public required string AppName { get; init; }
 
     // The ~14 MB IP-location db the head ships, wherever its platform placed it. Opened only when a
@@ -62,15 +61,15 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // The page the web host serves - the SPA, or the Avalonia UI's browser build - as the zip the
     // head embedded; the app extracts it as it does the UI's. Carried here rather than configured
     // on the factory, so both of the host's files travel one path and are named once; the app
-    // itself never reads it, as it never reads Resources. Required by a head that sets
-    // WebHostFactory.
+    // itself never reads it. Required by a head that sets WebHostFactory.
     public IAsset? WebRootZipAsset { get; set; }
-
-    public AppResources Resources { get; set; } = new();
 
     // ReSharper disable once StringLiteralTypo
     public string? Ga4MeasurementId { get; set; } = "G-4LE99XKZYE";
-    public string? UiName { get; set; }
+    // The look, as the UI's store and both UIs carry it: "blue" or "violet" - the theme's own
+    // name, never a product's, since what a product IS is the features above. It picks the palette
+    // in both UIs and branding/<theme>/ in the store for the OS chrome.
+    public string UiTheme { get; set; } = "blue";
     public bool IsAddAccessKeySupported { get; set; } = true;
 
     // This build's premium tier, or null when the product has none (the CLIENT apps): the app then

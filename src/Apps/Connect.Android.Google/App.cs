@@ -47,7 +47,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
 
         // load app settings and resources
-        var resources = ConnectAppResources.Resources;
 
         // The files this build's asset packages placed beside the app, read the way this
         // platform reads them: the IP-location database and the UI's store. The app extracts
@@ -60,13 +59,12 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             CustomData = appConfigs.CustomData,
             StorageFolderPath = storageFolderPath,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
-            Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             // The store already took this acceptance at install - see AppOptions.
             IsLicenseAgreementRequired = false,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
-            UiName = "VpnHoodConnect",
+            UiTheme = "violet",
             IsAddAccessKeySupported = false,
             UserReviewProvider = new GooglePlayInAppUserReviewProvider(),
             AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),

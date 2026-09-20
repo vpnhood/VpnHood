@@ -24,7 +24,6 @@ internal static class App
     private static AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
-        var resources = ClientAppResources.Resources;
 
         // The files this build's asset packages placed beside the app, read the way this
         // platform reads them: the IP-location database and the UI's store. The app extracts
@@ -34,7 +33,6 @@ internal static class App
 
         var appOptions = new AppOptions(appConfigs.AppId, "storage", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
-            Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],

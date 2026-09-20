@@ -16,23 +16,27 @@ public class VpnHoodAppWpf : Singleton<VpnHoodAppWpf>
 {
     public static VpnHoodAppWpf Init()
     {
-        try {
-            // create instance
-            var app = new VpnHoodAppWpf();
-            Application.Current.Exit += (_, _) => Exit();
-            VpnHoodAppWin.Instance.ExitRequested += (_, _) => Exit();
-            VpnHoodAppWin.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
+        var app = new VpnHoodAppWpf();
+        Application.Current.Exit += (_, _) => Exit();
+        VpnHoodAppWin.Instance.ExitRequested += (_, _) => Exit();
+        VpnHoodAppWin.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
+        _ = ShowMainWindowWhenReady();
+        return app;
+    }
 
-            // run the app
+    // The window is made once the look it draws with is final - nothing shows before it, where a
+    // window that changed colour under the user would be seen. No ConfigureAwait(false): a window
+    // is made on the thread that owns the windows, and this must come back to it.
+    private static async Task ShowMainWindowWhenReady()
+    {
+        try {
+            await VpnHoodApp.Instance.ResourcesLoaded;
             var mainWindow = new VpnHoodWpfMainWindow();
             mainWindow.Show();
-
-            return app;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not run the app.");
             Application.Current.Shutdown();
-            throw;
         }
     }
 

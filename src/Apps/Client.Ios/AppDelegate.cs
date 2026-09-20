@@ -64,7 +64,6 @@ public class AppDelegate : UIApplicationDelegate
     {
         var storageFolderPath = AppOptions.BuildStorageFolderPath(AppConfigs.StorageFolderName);
 
-        var resources = AppConfigs.Resources;
 
         // The files this build's asset packages placed beside the app, read the way this
         // platform reads them: the IP-location database and the UI's store. The app extracts
@@ -87,7 +86,6 @@ public class AppDelegate : UIApplicationDelegate
             // Empty until a DefaultAccessKey is supplied (see AppConfigs; Client is bring-your-own-key). An
             // invalid string here would throw inside VpnHoodApp.Init, so we pass an empty array otherwise.
             AccessKeys = string.IsNullOrEmpty(appConfigs.DefaultAccessKey) ? [] : [appConfigs.DefaultAccessKey],
-            Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             // Not appConfigs.TermsOfUseUrl: a purchase here is governed by Apple's standard EULA while
             // no custom EULA is registered in App Store Connect. Delete this line once one is.

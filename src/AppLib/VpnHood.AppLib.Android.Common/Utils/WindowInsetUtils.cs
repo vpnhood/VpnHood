@@ -29,6 +29,7 @@ public static class WindowInsetUtils
             var contentRoot = window.DecorView;
             contentRoot.SetOnApplyWindowInsetsListener(new WindowInsetsListener());
             contentRoot.RequestApplyInsets();
+            _ = ReapplyInsetsWhenReady(contentRoot);
         }
         // set window insets listener for API 30
         else if (OperatingSystem.IsAndroidVersionAtLeast(30)) {
@@ -40,18 +41,33 @@ public static class WindowInsetUtils
             var contentRoot = window.DecorView;
             contentRoot.SetOnApplyWindowInsetsListener(new WindowInsetsListener());
             contentRoot.RequestApplyInsets();
+            _ = ReapplyInsetsWhenReady(contentRoot);
         }
         else {
-            // set window colors such as status bar and navigation bar
-            var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
-            if (backgroundColor != null) {
-                VhUtils.TryInvoke("SetStatusBarColor", () =>
-                    window.SetStatusBarColor(backgroundColor.Value));
-
-                VhUtils.TryInvoke("SetNavigationBarColor", () =>
-                    window.SetNavigationBarColor(backgroundColor.Value));
-            }
+            // the bars are opaque on these versions and painted in the app's colour - once it is
+            // final, so they are painted once rather than in a colour that would change
+            _ = SetBarColorsWhenReady(window);
         }
+    }
+
+    // The look arrives a moment after the window. Until it has, the listener paints no background;
+    // then the decor is asked to apply its insets again and it paints the one it now knows - so
+    // the colour appears rather than changes. The waits come back to the main looper.
+    private static async Task ReapplyInsetsWhenReady(View contentRoot)
+    {
+        await VpnHoodApp.Instance.ResourcesLoaded;
+        contentRoot.RequestApplyInsets();
+    }
+
+    private static async Task SetBarColorsWhenReady(Window window)
+    {
+        await VpnHoodApp.Instance.ResourcesLoaded;
+        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
+        if (backgroundColor == null)
+            return;
+
+        VhUtils.TryInvoke("SetStatusBarColor", () => window.SetStatusBarColor(backgroundColor.Value));
+        VhUtils.TryInvoke("SetNavigationBarColor", () => window.SetNavigationBarColor(backgroundColor.Value));
     }
 
     private static void SetBarIconAppearance(Window window, bool lightStatusBars, bool lightNavBars)

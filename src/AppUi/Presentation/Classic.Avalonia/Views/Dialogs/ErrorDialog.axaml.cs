@@ -14,7 +14,7 @@ public partial class ErrorDialog : DialogBase
     // Draws what ErrorMessages decided: the sentence, and a button per action it named; the trial
     // brings its 'learn more' link along. The report opens the log page here, where the web UI
     // opens the log in a browser tab; there is no report upload in this head, so no Send report.
-    public ErrorDialog(MainView host, ErrorMessage message)
+    public ErrorDialog(MainView host, ErrorMessage.Dialog message)
     {
         _host = host;
         InitializeComponent();

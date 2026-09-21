@@ -53,10 +53,10 @@ public partial class PromoteView : UserControl, IPage
 
         if (options?.PremiumByRewardedAd is { } adMinutes)
             PremiumRows.Children.Add(new PromoteRow(Mdi.PlayBoxLockOpenOutline, s.WatchRewardedAd, s.WatchRewardedAdDesc(adMinutes), s.Connect,
-                () => ConnectWith(ConnectPlanId.PremiumByRewardedAd)));
+                () => Connect(ConnectPlanId.PremiumByRewardedAd)));
         if (options?.PremiumByTrial is { } trialMinutes)
             PremiumRows.Children.Add(new PromoteRow(Mdi.TimerLockOpenOutline, s.TryPremium, s.TryPremiumDesc(trialMinutes), s.Connect,
-                () => ConnectWith(ConnectPlanId.PremiumByTrial)));
+                () => Connect(ConnectPlanId.PremiumByTrial)));
         if (options?.PremiumByPurchase == true || options?.PremiumByCode == true)
             PremiumRows.Children.Add(new PromoteRow(Mdi.CrownCircleOutline, s.GoPremium, s.GoPremiumDesc, s.Upgrade, () => {
                 _host.Navigate(new PurchaseSubscriptionView(_host, clientProfileId));
@@ -87,15 +87,17 @@ public partial class PromoteView : UserControl, IPage
         else if (BackButton.IsVisible) BackButton.LandFocus();
     }
 
-    private async Task ConnectWith(ConnectPlanId planId)
+    // The connect itself, never the asking: this page IS the asking, so going back through
+    // ConnectWith would send the person to a fresh copy of this page instead of a server.
+    private async Task Connect(ConnectPlanId planId)
     {
-        await _host.ViewModel.ConnectWith(new ConnectRequest(_clientProfileId, _serverLocation, _isPremiumLocation, planId));
+        await _host.ViewModel.Connect(new ConnectRequest(_clientProfileId, _serverLocation, _isPremiumLocation, planId));
     }
 
     private async void OnFreeClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await ConnectWith(ConnectPlanId.Normal);
+            await Connect(ConnectPlanId.Normal);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -105,7 +107,7 @@ public partial class PromoteView : UserControl, IPage
     private async void OnFreeAdClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await ConnectWith(ConnectPlanId.NormalByRewardedAd);
+            await Connect(ConnectPlanId.NormalByRewardedAd);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

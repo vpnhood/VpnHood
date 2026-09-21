@@ -72,9 +72,8 @@ public class UiPageWalkTest
             Assert.IsNotNull(Session.Driver.TryFind(name, TimeSpan.FromSeconds(5)), $"The home lost '{name}'.");
     }
 
-    // The location row is missing on purpose: with no server profile it raises a notice instead of
-    // opening a page, so a fresh install cannot reach it. See README.md.
     [DataTestMethod]
+    [DataRow("ServersButton", "Location")]
     [DataRow("SplitCountriesButton", "Split Countries")]
     [DataRow("SplitAppsButton", "Split Apps")]
     [DataRow("ProtocolButton", "Protocols")]

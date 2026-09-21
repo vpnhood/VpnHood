@@ -290,16 +290,23 @@ public partial class MainView : UserControl
 
     public async Task ShowErrorMessage(ErrorMessage message)
     {
-        if (message.IsIgnored)
-            return;
+        switch (message) {
+            case ErrorMessage.Ignored:
+                return;
 
-        if (message.Page == ErrorPage.PrivateDns) {
-            Navigate(FeaturePages.PrivateDnsError(this));
-            await VhApp.Api.App.ClearLastError(CancellationToken.None);
-            return;
+            case ErrorMessage.Page { Target: ErrorPage.PrivateDns }:
+                Navigate(FeaturePages.PrivateDnsError(this));
+                await VhApp.Api.App.ClearLastError(CancellationToken.None);
+                return;
+
+            case ErrorMessage.Dialog dialog:
+                await ShowDialog(new ErrorDialog(this, dialog));
+                return;
+
+            default:
+                // a page this UI cannot draw is a gap in this UI, said out loud rather than swallowed
+                throw new NotSupportedException($"This UI cannot show '{message}'.");
         }
-
-        await ShowDialog(new ErrorDialog(this, message));
     }
 
     // a wait the app is in: shown until the scope is disposed

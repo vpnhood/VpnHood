@@ -1,4 +1,4 @@
-# UI smoke test
+﻿# UI smoke test
 
 A vibe check on the Avalonia UI. It opens every page a fresh install can reach and fails when one
 does not open, opens the wrong thing, or brings an error dialog with it. It is a smoke test, not a
@@ -8,13 +8,13 @@ unit test: it launches a real window and drives it the way a person would.
 
 It is kept out of the normal run by its category, so nothing you already run changes.
 
-```
+```powershell
 dotnet test tests/VpnHood.AppUi.SmokeTest --filter TestCategory=Ui
 ```
 
-It takes about 40 seconds. It needs an interactive desktop to draw on; without one every case
-reports inconclusive rather than failing. It does not need elevation and never connects, so no
-WinDivert driver and no access key are involved.
+It takes about 45 seconds. It needs an interactive desktop to draw on; without one every case
+reports inconclusive rather than failing. It never connects, so it needs no elevation, no WinDivert
+driver and none of your own keys.
 
 Pictures of every page land in `bin/<config>/net10.0-windows/ui-walk/`, one per control, plus the
 terms page and the home. They are artifacts for you to look at, never assertions: nothing here
@@ -26,6 +26,10 @@ It runs `VpnHoodAvaloniaDev`, the developer tool under `src/Apps/Tools/AvaloniaU
 `--connect` for the Connect product's look and `--storage VpnHood.UiSmokeTest` for a folder of its
 own. Your installed client is never read, changed or deleted. The folder is removed before and
 after each run, so every run is a first run and the terms page is part of what gets checked.
+
+`--sample-key` gives it the engine's own sample token, so there is a server profile and the
+location page has something to draw. The walk never connects, and that token reaches no server of
+ours.
 
 The project references that head only so building the test builds it too; no type of it is used.
 Where its build put it is written into this assembly at build time, so the test searches for
@@ -42,9 +46,9 @@ what `MainView.ProcessError` writes whenever a page hands it an exception it did
 
 ## What it does not cover, and why
 
-- **The location page and every connected screen.** A fresh install has no server profile, so the
-  location row raises a notice instead of opening a page. Covering these means giving the head a
-  profile, which it has no switch for yet.
+- **Every connected screen**, which is statistics, the extend-session page and the connected home.
+  Reaching them means actually connecting, which needs a live server and burns real session quota,
+  so the walk stops at the door.
 - **The premium and account screens.** This head configures no premium tier and no account
   provider, so those pages and the paywall do not exist in it.
 - **What's New, Send Feedback, the site and the privacy policy.** They open a browser, not a page.

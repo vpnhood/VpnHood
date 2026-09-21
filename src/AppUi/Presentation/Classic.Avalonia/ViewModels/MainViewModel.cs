@@ -659,13 +659,22 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         await ConnectWith(new ConnectRequest(clientProfileId, serverLocation, isPremium, ConnectPlanId.Normal, isDiagnose));
     }
 
-    // ConnectManager.connectWithLocation, then VpnHoodApp.connect: the promote page first when the
-    // location asks to be asked, then the connect, the profile's choice written and saved.
+    // ConnectManager.connectWithLocation: the promote page first when the location asks to be
+    // asked, and the connect only when it does not.
     public async Task ConnectWith(ConnectRequest request)
     {
         if (request is { ServerLocation: not null, IsDiagnose: false } && ShowPromoteIfNeeded(request))
             return;
 
+        await Connect(request);
+    }
+
+    // VpnHoodApp.connect: the connect itself, with nobody asked anything, and the profile's choice
+    // written and saved. The promote page calls THIS and not ConnectWith, exactly as the web UI's
+    // promote page calls vhApp.connect: the person standing on that page has just answered the
+    // question, so asking it again would put the same page in front of them for ever.
+    public async Task Connect(ConnectRequest request)
+    {
         if (request.GoToHome)
             Host?.GoHome();
 

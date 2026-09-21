@@ -33,8 +33,10 @@ internal sealed class DevHeadSession : IDisposable
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StorageFolderName);
 
         DeleteStorageFolder(storageFolderPath);
+        // --sample-key gives the run a server profile, without which the location row raises a
+        // notice instead of opening a page. It reaches no server; the walk never connects.
         var driver = UiDriver.Start(executablePath,
-            ["--connect", "--storage", StorageFolderName], TimeSpan.FromSeconds(90));
+            ["--connect", "--sample-key", "--storage", StorageFolderName], TimeSpan.FromSeconds(90));
 
         return new DevHeadSession(driver, storageFolderPath);
     }

@@ -8,8 +8,11 @@
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="Log" />
     <ScrollViewer x:Name="Scroller">
+      <!-- Wrapped, not cut: a log line is a stack trace or a path, and the end of it is the part
+           worth reading. There is no sideways scroll on a remote, so a line that runs off the
+           edge is a line nobody can read. -->
       <SelectableTextBlock x:Name="LogText" FontFamily="Consolas,Menlo,Droid Sans Mono,monospace" FontSize="12"
-                           Foreground="{StaticResource AppText50Brush}" TextWrapping="NoWrap" />
+                           Foreground="{StaticResource AppText50Brush}" TextWrapping="Wrap" />
     </ScrollViewer>
   </DockPanel>
 </UserControl>

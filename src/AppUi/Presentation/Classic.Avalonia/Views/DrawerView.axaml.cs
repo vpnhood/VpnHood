@@ -4,6 +4,7 @@ using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
@@ -79,6 +80,16 @@ public partial class DrawerView : UserControl
                 _host.Replace(new AccountView(_host));
                 return;
             }
+
+            // The same rule the home and the paywall follow: where there is a choice of methods -
+            // or only the portal's password, which is a choice of one - the dialog owns the sign
+            // in. ViewModel.SignIn is the store's own method, and asking it of a build that has
+            // none only ever produced "This build reports no sign-in method".
+            if (VhApp.HasSignInChoice) {
+                await _host.ShowDialog(new SignInDialog(_host));
+                return;
+            }
+
             await _host.ViewModel.SignIn();
         }
         catch (Exception ex) {

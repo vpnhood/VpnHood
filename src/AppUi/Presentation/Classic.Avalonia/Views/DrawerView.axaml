@@ -8,16 +8,19 @@
   <Border Classes="drawer">
     <DockPanel>
       <Border DockPanel.Dock="Top" Classes="drawer-header">
-        <StackPanel Orientation="Horizontal" Spacing="12">
+        <!-- A Grid and not a horizontal StackPanel: a stack offers its children all the width they
+             ask for, so a long product name ran under the drawer's edge and was cut. The star
+             column bounds the name, which then wraps. -->
+        <Grid ColumnDefinitions="Auto,*">
           <Image x:Name="Logo" Width="50" Height="50" />
-          <StackPanel VerticalAlignment="Center">
-            <TextBlock x:Name="AppNameText" Classes="h4" FontSize="16" FlowDirection="LeftToRight" />
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
+            <TextBlock x:Name="AppNameText" Classes="h4" FontSize="16" FlowDirection="LeftToRight" TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Classes="drawer-version" Text="{Binding Version, Source={x:Static res:Strings.Current}}" />
               <TextBlock x:Name="VersionText" Classes="drawer-version" />
             </StackPanel>
           </StackPanel>
-        </StackPanel>
+        </Grid>
       </Border>
 
       <!-- the foot: the socials and the credit -->

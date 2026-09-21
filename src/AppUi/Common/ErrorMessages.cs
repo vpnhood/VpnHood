@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Api.App;
+﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -25,16 +25,20 @@ public static class ErrorMessages
     // a sentence of the UI's own, shown the way a failure is
     public static ErrorMessage ForText(string text, ErrorContext context)
     {
-        return WithReport(new ErrorMessage(text), context);
+        return WithReport(new ErrorMessage.Dialog(text), context);
     }
 
-    // the report is offered on every dialog while the app asks for one
+    // The report is offered on every dialog while the app asks for one - and only on a dialog,
+    // which is the one outcome that has buttons at all.
     private static ErrorMessage WithReport(ErrorMessage message, ErrorContext context)
     {
-        if (message.IsIgnored || message.Page != ErrorPage.None || !context.PromptForLog)
+        if (!context.PromptForLog || message is not ErrorMessage.Dialog dialog)
             return message;
 
-        return message with { Actions = message.Actions.Append(ErrorAction.OpenReport).ToArray() };
+        if (dialog.Actions.Contains(ErrorAction.OpenReport))
+            return dialog;
+
+        return dialog with { Actions = dialog.Actions.Append(ErrorAction.OpenReport).ToArray() };
     }
 
     private static ErrorMessage Map(ApiError error, ErrorContext context)
@@ -44,73 +48,73 @@ public static class ErrorMessages
 
         // a cancellation is the person's own doing, whichever class carried it
         if (error.TypeName is nameof(OperationCanceledException) or nameof(TaskCanceledException))
-            return ErrorMessage.Ignored;
+            return new ErrorMessage.Ignored();
 
         switch (error.GetExceptionType()) {
             case ExceptionType.UserCanceled:
-                return ErrorMessage.Ignored;
+                return new ErrorMessage.Ignored();
 
             case ExceptionType.UnreachableServer:
-                return new ErrorMessage(strings.UnreachableServerMessage, Diagnose(context));
+                return new ErrorMessage.Dialog(strings.UnreachableServerMessage, Diagnose(context));
 
             case ExceptionType.UnreachableServerLocation: {
                 // after a diagnosis the sentence is all there is: no retry, trial or diagnosis helps
                 if (context.HasDiagnoseRequested)
-                    return new ErrorMessage(strings.UnreachableServerLocationMessage);
+                    return new ErrorMessage.Dialog(strings.UnreachableServerLocationMessage);
 
                 // the retry and the trial connect on the profile, so they need one
                 var isAutoLocation = data.TryGetValue("IsAutoLocation", out var auto) && ToBoolean(auto);
                 if (!isAutoLocation && context.HasClientProfile)
-                    return new ErrorMessage(strings.UnreachableServerLocationMessageWithChangeToAuto,
+                    return new ErrorMessage.Dialog(strings.UnreachableServerLocationMessageWithChangeToAuto,
                         ErrorAction.ChangeServerToAuto);
 
                 if (context is { HasClientProfile: true, IsPremiumUser: false, CanTryPremium: true })
-                    return new ErrorMessage(strings.UnreachableServerLocationMessageWithTryPremium,
+                    return new ErrorMessage.Dialog(strings.UnreachableServerLocationMessageWithTryPremium,
                         ErrorAction.TryPremium);
 
-                return new ErrorMessage(strings.UnreachableServerLocationMessage, ErrorAction.Diagnose);
+                return new ErrorMessage.Dialog(strings.UnreachableServerLocationMessage, ErrorAction.Diagnose);
             }
 
             case ExceptionType.RequestQuickLaunch:
-                return new ErrorMessage(strings.QuickLaunchTurnOnError);
+                return new ErrorMessage.Dialog(strings.QuickLaunchTurnOnError);
             case ExceptionType.NoInternet:
-                return new ErrorMessage(strings.NoInternetMsg, Diagnose(context));
+                return new ErrorMessage.Dialog(strings.NoInternetMsg, Diagnose(context));
             case ExceptionType.ShowAdNoUi:
-                return new ErrorMessage(strings.ShowAdNoUiMsg);
+                return new ErrorMessage.Dialog(strings.ShowAdNoUiMsg);
             case ExceptionType.VpnServiceUnreachable:
-                return new ErrorMessage(strings.VpnServiceUnreachableMsg);
+                return new ErrorMessage.Dialog(strings.VpnServiceUnreachableMsg);
             case ExceptionType.VpnServiceTimeout:
-                return new ErrorMessage(strings.VpnServiceTimeoutMsg);
+                return new ErrorMessage.Dialog(strings.VpnServiceTimeoutMsg);
             case ExceptionType.VpnServiceNotReady:
-                return new ErrorMessage(strings.VpnServiceNotReadyMsg);
+                return new ErrorMessage.Dialog(strings.VpnServiceNotReadyMsg);
             case ExceptionType.NoStableVpn:
-                return new ErrorMessage(strings.NoStableVpnMsg);
+                return new ErrorMessage.Dialog(strings.NoStableVpnMsg);
             case ExceptionType.RewardNotEarned:
-                return new ErrorMessage(strings.RewardNotEarnedMsg);
+                return new ErrorMessage.Dialog(strings.RewardNotEarnedMsg);
             case ExceptionType.NoErrorFound:
-                return new ErrorMessage(strings.DiagnoseFinishedNoErrorMsg);
+                return new ErrorMessage.Dialog(strings.DiagnoseFinishedNoErrorMsg);
             case ExceptionType.Maintenance:
-                return new ErrorMessage(strings.MaintenanceModeMsg);
+                return new ErrorMessage.Dialog(strings.MaintenanceModeMsg);
             case ExceptionType.VpnServiceRevoked:
-                return new ErrorMessage(strings.VpnServiceRevokedMsg);
+                return new ErrorMessage.Dialog(strings.VpnServiceRevokedMsg);
             case ExceptionType.PremiumOnly:
                 return PremiumOnly(data, error.Message);
             case ExceptionType.LoadAd:
-                return new ErrorMessage(strings.RewardedAdLoadErrorMsg);
+                return new ErrorMessage.Dialog(strings.RewardedAdLoadErrorMsg);
             case ExceptionType.ShowAd:
-                return new ErrorMessage(strings.RewardedAdShowErrorMsg);
+                return new ErrorMessage.Dialog(strings.RewardedAdShowErrorMsg);
             case ExceptionType.AdBlocker:
                 return AdBlocker(data, error.Message, context);
             case ExceptionType.ConnectionTimeout:
-                return new ErrorMessage(strings.ConnectionTimeoutMsg, Diagnose(context));
+                return new ErrorMessage.Dialog(strings.ConnectionTimeoutMsg, Diagnose(context));
             case ExceptionType.Session:
                 return Session(data, error.Message, context);
             case ExceptionType.UnreachableProxyServer:
-                return new ErrorMessage(strings.UnreachableProxiesMessage);
+                return new ErrorMessage.Dialog(strings.UnreachableProxiesMessage);
             case ExceptionType.Billing:
                 return Billing(data);
             default:
-                return new ErrorMessage(error.Message);
+                return new ErrorMessage.Dialog(error.Message);
         }
     }
 
@@ -126,49 +130,49 @@ public static class ErrorMessages
     {
         var isPrivateDns = data.TryGetValue("IsPrivateDns", out var privateDns) && ToBoolean(privateDns);
         return isPrivateDns && context.IsCustomDnsPremiumFeature
-            ? ErrorMessage.OnPage(ErrorPage.PrivateDns)
-            : new ErrorMessage(message);
+            ? new ErrorMessage.Page(ErrorPage.PrivateDns)
+            : new ErrorMessage.Dialog(message);
     }
 
     private static ErrorMessage Session(IReadOnlyDictionary<string, string?> data, string message, ErrorContext context)
     {
         var strings = Strings.Current;
         if (!data.TryGetValue("ErrorCode", out var codeText) || !Enum.TryParse<SessionErrorCode>(codeText, true, out var code))
-            return new ErrorMessage(message);
+            return new ErrorMessage.Dialog(message);
 
         switch (code) {
             case SessionErrorCode.SessionSuppressedBy:
-                return new ErrorMessage(strings.SessionSuppressedByOther);
+                return new ErrorMessage.Dialog(strings.SessionSuppressedByOther);
 
             case SessionErrorCode.AccessExpired:
                 if (!context.IsPremiumSupported)
-                    return new ErrorMessage(strings.ServerKeyExpired);
+                    return new ErrorMessage.Dialog(strings.ServerKeyExpired);
                 if (context.IsPremiumByAccount)
-                    return new ErrorMessage(strings.SubscriptionNotProvisionedMsg);
-                return new ErrorMessage(strings.PremiumAccessExpiredMsg, CodeActions(context));
+                    return new ErrorMessage.Dialog(strings.SubscriptionNotProvisionedMsg);
+                return new ErrorMessage.Dialog(strings.PremiumAccessExpiredMsg, CodeActions(context));
 
             case SessionErrorCode.SessionExpired:
-                return new ErrorMessage(strings.PremiumConnectionExpiredMsg);
+                return new ErrorMessage.Dialog(strings.PremiumConnectionExpiredMsg);
             case SessionErrorCode.DailyLimitExceeded:
-                return new ErrorMessage(strings.DailyLimitExceededMsg);
+                return new ErrorMessage.Dialog(strings.DailyLimitExceededMsg);
 
             case SessionErrorCode.AccessCodeRejected:
                 if (context.IsPremiumByAccount)
-                    return new ErrorMessage(strings.SubscriptionNotProvisionedMsg);
-                return new ErrorMessage(strings.InvalidAccessCode, CodeActions(context));
+                    return new ErrorMessage.Dialog(strings.SubscriptionNotProvisionedMsg);
+                return new ErrorMessage.Dialog(strings.InvalidAccessCode, CodeActions(context));
 
             case SessionErrorCode.PlanRejected:
-                return new ErrorMessage(strings.PlanRejectedMsg);
+                return new ErrorMessage.Dialog(strings.PlanRejectedMsg);
             case SessionErrorCode.Maintenance:
-                return new ErrorMessage(strings.MaintenanceModeMsg);
+                return new ErrorMessage.Dialog(strings.MaintenanceModeMsg);
             case SessionErrorCode.NoServerAvailable:
-                return new ErrorMessage(strings.NoServerAvailableMsg);
+                return new ErrorMessage.Dialog(strings.NoServerAvailableMsg);
             case SessionErrorCode.PremiumLocation:
-                return new ErrorMessage(strings.PremiumLocationMsg);
+                return new ErrorMessage.Dialog(strings.PremiumLocationMsg);
             case SessionErrorCode.RewardedAdRejected:
-                return new ErrorMessage(strings.RewardNotEarnedMsg);
+                return new ErrorMessage.Dialog(strings.RewardNotEarnedMsg);
             default:
-                return new ErrorMessage(message);
+                return new ErrorMessage.Dialog(message);
         }
     }
 
@@ -191,9 +195,9 @@ public static class ErrorMessages
         data.TryGetValue("Feature", out var featureText);
         var feature = Enum.TryParse<AppFeature>(featureText, true, out var parsed) ? parsed : (AppFeature?)null;
         return feature switch {
-            AppFeature.QuickLaunch => new ErrorMessage(strings.QuickLaunchNotSupportedMsg),
-            AppFeature.AlwaysOn => new ErrorMessage(strings.AlwaysOnNotSupportedMsg),
-            _ => new ErrorMessage(message)
+            AppFeature.QuickLaunch => new ErrorMessage.Dialog(strings.QuickLaunchNotSupportedMsg),
+            AppFeature.AlwaysOn => new ErrorMessage.Dialog(strings.AlwaysOnNotSupportedMsg),
+            _ => new ErrorMessage.Dialog(message)
         };
     }
 
@@ -204,14 +208,14 @@ public static class ErrorMessages
         data.TryGetValue("BillingErrorCode", out var code);
         data.TryGetValue("StoreMessage", out var storeMessage);
         return code switch {
-            "Cancelled" => ErrorMessage.Ignored,
-            "Pending" => new ErrorMessage(strings.BillingPendingPurchase),
-            "Unavailable" => new ErrorMessage(strings.BillingUnavailable),
-            "NetworkError" => new ErrorMessage(strings.BillingNetworkError),
-            "ProductUnavailable" => new ErrorMessage(strings.BillingItemUnavailable),
-            "AlreadyOwned" => new ErrorMessage(strings.SelectedPlanAlreadySubscribed),
-            "NotOwned" => new ErrorMessage(strings.BillingItemNotOwned),
-            _ => new ErrorMessage(strings.OrderProcessingFailed +
+            "Cancelled" => new ErrorMessage.Ignored(),
+            "Pending" => new ErrorMessage.Dialog(strings.BillingPendingPurchase),
+            "Unavailable" => new ErrorMessage.Dialog(strings.BillingUnavailable),
+            "NetworkError" => new ErrorMessage.Dialog(strings.BillingNetworkError),
+            "ProductUnavailable" => new ErrorMessage.Dialog(strings.BillingItemUnavailable),
+            "AlreadyOwned" => new ErrorMessage.Dialog(strings.SelectedPlanAlreadySubscribed),
+            "NotOwned" => new ErrorMessage.Dialog(strings.BillingItemNotOwned),
+            _ => new ErrorMessage.Dialog(strings.OrderProcessingFailed +
                                   (string.IsNullOrEmpty(storeMessage) ? "" : $" {strings.StoreExceptionMessage} {storeMessage}"))
         };
     }

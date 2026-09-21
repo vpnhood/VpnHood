@@ -70,7 +70,10 @@ public partial class SettingsView : UserControl, IPage
 
         PrivacySection.Title = s.PrivacyAndSecurity;
         PrivacyItem.Title = s.Privacy;
-        PrivacyItem.Subtitle = s.PrivacyDesc;
+        // The description promises control over anonymous data, so it is only true where there is
+        // any to control: a build that collects nothing has one link behind this row, and claiming
+        // otherwise sends people looking for a switch that was never built.
+        PrivacyItem.Subtitle = VhApp.IsAnonymousTrackerSupported ? s.PrivacyDesc : "";
         KillSwitchItem.Title = s.KillSwitch;
         KillSwitchItem.Subtitle = s.KillSwitchDesc;
         KillSwitchItem.IsVisible = intents.IsKillSwitchSettingsSupported;

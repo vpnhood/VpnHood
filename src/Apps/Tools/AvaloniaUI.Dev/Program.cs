@@ -3,6 +3,7 @@ using VpnHood.AppLib;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.WebHost;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Assets;
@@ -14,6 +15,7 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 // its own storage and id so it never touches the installed client, the web server up so a phone
 // can pair with it exactly as with a TV, and the UI in a window that opens at a TV's size and
 // resizes down to a phone's. Never shipped; a head shows this UI with /avalonia-ui instead.
+// "--sample-key" starts it with a server profile, which the location pages need.
 // "--tv" runs it as a TV (AppFeatures.IsTv: the pairing row, the ring on arrival); without it, as
 // a phone or a desktop. "--connect" runs it as the Connect product - the violet look, no keys to
 // add (AppOptions.UiTheme, IsAddAccessKeySupported); without it, as the client. Connecting
@@ -63,6 +65,11 @@ internal static class Program
             // shows on a first run, and a run that skips it shows a build no one ships
             IsAddAccessKeySupported = !isConnect, // a connect head ships one built-in profile and takes no keys
             UiTheme = isConnect ? "violet" : "blue",
+            // "--sample-key" starts with the engine's own sample token, so the run has a server
+            // profile: without one the app has no location to show and no page behind the location
+            // row, which is a walk through a build no one ships. It reaches no server of ours, and
+            // it is the key the debug heads already embed.
+            AccessKeys = args.Contains("--sample-key") ? [ClientOptions.SampleAccessKey] : [],
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
             // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build

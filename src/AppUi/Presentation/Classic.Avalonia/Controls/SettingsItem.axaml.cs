@@ -23,9 +23,13 @@ public partial class SettingsItem : UserControl
         set => TitleText.Text = value;
     }
 
+    // A row with nothing to add says nothing rather than leaving a blank line under its title.
     public string Subtitle {
         get => SubtitleText.Text ?? "";
-        set => SubtitleText.Text = value;
+        set {
+            SubtitleText.Text = value;
+            SubtitleText.IsVisible = !string.IsNullOrEmpty(value);
+        }
     }
 
     // the crown, when the feature is sold and this session has not bought it

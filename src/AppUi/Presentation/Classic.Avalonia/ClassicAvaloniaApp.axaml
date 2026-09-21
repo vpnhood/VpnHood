@@ -2,18 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.ClassicAvaloniaApp"
              RequestedThemeVariant="Dark">
-  <!-- The client's palette, merged here as the default: every key a style or a view names can
-       then be followed to its definition by the tooling. The other product's palette is merged
-       over it in code once this file is loaded (Initialize) - a dictionary merged later wins -
-       and the styles below read their keys when they are first applied, after both are in
-       place. Dark is what the Fluent controls take for the keys no theme of ours names. -->
-  <Application.Resources>
-    <ResourceDictionary>
-      <ResourceDictionary.MergedDictionaries>
-        <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/BlueTheme.axaml" />
-      </ResourceDictionary.MergedDictionaries>
-    </ResourceDictionary>
-  </Application.Resources>
+  <!-- No palette here: Initialize merges them - the client's blue as the default, the other
+       product's over it where a head asked for it - and it does so before it loads this file,
+       because the styles below name their keys with StaticResource, which is read once, as they
+       load. A palette merged after them is never looked at again, which is a violet head painted
+       blue. Dark is what the Fluent controls take for the keys no theme of ours names. -->
   <Application.Styles>
     <FluentTheme />
     <StyleInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/AppTheme.axaml" />

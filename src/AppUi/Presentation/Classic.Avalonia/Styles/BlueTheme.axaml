@@ -1,11 +1,16 @@
 ﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Styles.BlueTheme">
 
   <!-- Blue, the default look. The keys are the web UI's blue theme, key for key
        (BlueTheme.g.axaml, generated from theme/themes.ts by _sync-theme.ps1); below them, what
        the web UI writes as CSS rather than as a key - a gradient, a colour at an alpha - so a page
        ported here paints what it painted there. This file and VioletTheme.axaml carry the same
-       keys and nothing else: a key added to one belongs in the other the same day. -->
+       keys and nothing else: a key added to one belongs in the other the same day.
+
+       A class, like VioletTheme: the App merges the palettes before it loads its own XAML, since
+       the styles name their keys with StaticResource, which is read once - and a dictionary that
+       arrives after them is never looked at again. -->
 
   <ResourceDictionary.MergedDictionaries>
     <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/Colors.axaml" />

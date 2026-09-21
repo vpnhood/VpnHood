@@ -7,6 +7,13 @@
 $ErrorActionPreference = "Stop"
 Push-Location $PSScriptRoot
 try {
+    # Emptied first: publish writes over the folder without clearing it, and every assembly carries a
+    # hash of its content in its name, so a changed one lands beside its last version instead of
+    # replacing it. The loader asks for the names its config holds and never sees the leftovers -
+    # they would only ride along in the zip, a second copy of everything that changed.
+    $publishDir = Join-Path $PSScriptRoot "bin/Release/net10.0-browser/publish"
+    if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
+
     dotnet publish VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw "The browser publish failed." }
 

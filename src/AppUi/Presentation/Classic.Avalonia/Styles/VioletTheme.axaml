@@ -1,11 +1,17 @@
 ﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Styles.VioletTheme">
 
   <!-- Violet, the look a head names by setting AppOptions.UiTheme. The keys are the web UI's
        violet theme, key for key (VioletTheme.g.axaml, generated from theme/themes.ts by
        _sync-theme.ps1); below them, what the web UI writes as CSS rather than as a key. This file
        and BlueTheme.axaml carry the same keys and nothing else: a key added to one belongs in
-       the other the same day. -->
+       the other the same day.
+
+       A class, where BlueTheme.axaml is a file the App's XAML names: nothing but a run-time Uri
+       asked for this one, so the trimmer dropped its compiled XAML from the browser bundle and
+       the page died on the first violet head (the published bundle is trimmed to the full
+       extent). AppTheme constructs the type, which is a reference the trimmer follows. -->
 
   <ResourceDictionary.MergedDictionaries>
     <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/Colors.axaml" />

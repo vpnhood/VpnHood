@@ -1,4 +1,4 @@
-using Android.Content;
+﻿using Android.Content;
 using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.AppLib.Droid.Common;
@@ -14,21 +14,15 @@ namespace VpnHood.AppLib.Droid.Common;
 // but only while the entry is stored rather than deflated AND the offset belongs to the file we
 // think it does - and the second cannot be shown to hold for a split or an asset-pack delivery. It
 // would not fail if it were wrong; it would return whatever bytes lie at that offset.
-//
-// A root, when given, is the folder of the package's assets this provider reads under - "ui-overrides",
-// say, for the files a fork lays over the UI's store - so the paths asked of it stay the store's own.
-public class AndroidAssetProvider(Context context, string? rootPath = null) : IAssetProvider
+public class AndroidAssetProvider(Context context) : IAssetProvider
 {
-    private readonly string _rootPath = rootPath?.Trim('/') ?? "";
-
     public Task<Stream> OpenReadAsync(string assetPath, CancellationToken cancellationToken)
     {
         var assets = context.Assets
             ?? throw new InvalidOperationException("The Android context has no asset manager.");
 
-        var path = _rootPath.Length == 0 ? assetPath : $"{_rootPath}/{assetPath}";
         try {
-            return Task.FromResult<Stream>(assets.Open(path));
+            return Task.FromResult<Stream>(assets.Open(assetPath));
         }
         catch (Java.IO.FileNotFoundException ex) {
             throw new AssetNotFoundException(assetPath, ex);

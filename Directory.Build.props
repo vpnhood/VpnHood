@@ -28,7 +28,7 @@
 
   <PropertyGroup>
     <!-- The Vh checkout root (this repo's parent), defined ONCE for every project: the private
-         ".user" folder and the sibling repos (VpnHood.Client.WebUI, …) are all found from here,
+         ".user" folder and the sibling repos (VpnHood.AppUi.Spa, …) are all found from here,
          so no csproj ever counts "..\" again and a clone works wherever it lands. Anchored to
          THIS FILE, never to $(SolutionDir) — that property is empty when a project is built on
          its own (dotnet build <csproj>, an IDE single-project build), which silently embedded

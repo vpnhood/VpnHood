@@ -155,7 +155,7 @@ real work; this is only ergonomics. Copy `VpnHood.Core.Proxies/_publish.ps1` ver
 
 The checklist above assumes the package content is committed. Some modules generate it at publish
 time — `VpnHood.AppLib.Assets.ClassicSpa` builds its `Resources/spa.zip` from the
-`VpnHood.Client.WebUI` repo on every publish. Those repos **cannot use the reusable workflow**, for
+publish, until the SPA became a sample (`VpnHood.AppUi.Spa`, 2026-09-21) that ships no package. Those repos **cannot use the reusable workflow**, for
 two independent reasons:
 
 - A job that calls `uses:` cannot run steps before it, so there is no slot to build the payload in.

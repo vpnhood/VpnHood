@@ -1,4 +1,4 @@
-# Source layout — where an app's code lives
+﻿# Source layout — where an app's code lives
 
 How `src/` is organised, what a platform app is made of, and what a fork copies. Written for
 someone opening this repo for the first time.
@@ -89,8 +89,8 @@ via `buildTransitive/`.
 
 ## The browser page, end to end
 
-The app's web host serves a page to a phone paired with a TV, and to its own web view. That page is
-the Avalonia UI compiled to WebAssembly.
+The app's web host serves a page to a phone paired with a TV. That page is the Avalonia UI compiled
+to WebAssembly - the same UI the head itself runs in process, drawn by a browser instead.
 
 ```
 Presentation/Classic.Avalonia/            the UI itself: pages, controls, themes

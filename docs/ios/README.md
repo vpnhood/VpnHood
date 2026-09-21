@@ -1,4 +1,4 @@
-# VpnHood iOS — engineering notes
+﻿# VpnHood iOS — engineering notes
 
 Index for the iOS Client & Connect apps and their Network Extension. The apps are thin: they live in
 `src/Apps/{Client,Connect}/{Client,Connect}.Ios.Apple` (host) + `….Ios.Extension` (`.appex`), and the real
@@ -23,7 +23,7 @@ per-product values live in its `AppConfigs.cs`.
 - **Don't commit a test `AccessKey`** in any `AppConfigs.cs` — production defaults to `null` (key added via UI).
 
 ## Identity & provisioning
-Team `6KKW3MKLR7` (OmegaHood LLC). Namespaces `VpnHood.App.Client.Ios` / `VpnHood.App.Connect.Ios`.
+Team `6KKW3MKLR7` (OmegaHood LLC). Namespaces `VpnHood.App.Client.Ios.Apple` / `VpnHood.App.Connect.Ios.Apple`, each matching its project.
 
 | App | App bundle id | Extension bundle id | App Group | Dev profiles |
 |-----|---------------|---------------------|-----------|--------------|

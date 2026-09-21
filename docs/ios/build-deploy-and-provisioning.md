@@ -1,4 +1,4 @@
-# Build, Deploy & Provisioning — VpnHood iOS (Client & Connect)
+﻿# Build, Deploy & Provisioning — VpnHood iOS (Client & Connect)
 
 How to build the App + Network Extension, install/run on device, stream logs, and fix signing/provisioning.
 
@@ -73,7 +73,7 @@ APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHood.A
 WRAP=".working/mac-run/VpnHood Client.app"
 rm -rf .working/mac-run && mkdir -p "$WRAP/Wrapper"
 cp -R "$APP" "$WRAP/Wrapper/"
-ln -s "Wrapper/VpnHood.App.Client.Ios.app" "$WRAP/WrappedBundle"
+ln -s "Wrapper/VpnHood.App.Client.Ios.Apple.app" "$WRAP/WrappedBundle"
 open "$WRAP"
 ```
 - Verify first with the "Diagnose a stale profile" commands below — both `embedded.mobileprovision`

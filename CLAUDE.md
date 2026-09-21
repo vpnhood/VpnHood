@@ -21,7 +21,7 @@ truth — follow them, and when a new durable convention is agreed, update this 
   folder-scoped names (`pub/Client/Publish.ps1`, `src/Apps/*/*/_publish.ps1`).
 
 ## UI
-- The UI/front-end is a separate SPA project (VpnHood.Client.WebUI), located at `..\VpnHood.Client.WebUI\`
+- The products' UI is the Avalonia presentation under `src/AppUi`. The web UI is kept as a sample in the sibling repo `..\VpnHood.AppUi.Spa\` (its SPA at `src\VpnHood.AppUi.Presentation.Classic.Spa`), which still authors the assets `_sync-assets.ps1` brings in.
   relative to this repo. It consumes the generated TypeScript API stub.
 - Never manually edit the TypeScript API stub (the generated .ts file in the Swagger project, e.g.
   VpnHood.Client.Api.ts). It is auto-generated: build the Swagger project to (re)generate the stub, then

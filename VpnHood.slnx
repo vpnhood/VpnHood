@@ -75,7 +75,6 @@
     <Project Path="src/AppLib/VpnHood.AppLib.Api/VpnHood.AppLib.Api.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Api.HttpClients/VpnHood.AppLib.Api.HttpClients.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Portal/VpnHood.AppLib.Portal.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Api.SwaggerHost/VpnHood.AppLib.Api.SwaggerHost.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Api.WebHost/VpnHood.AppLib.Api.WebHost.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Android/">

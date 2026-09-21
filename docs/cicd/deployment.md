@@ -211,7 +211,7 @@ stub, which calls this repo's reusable workflow. It runs in the caller's context
 needs the credentials (`GOOGLE_PLAY_API_KEY`, `APPSTORE_CONNECT_*`) and gets the published-state
 commit — no PAT anywhere. The full maintainer's map for the listing pipeline (tools, invariants,
 verification commands, Apple failure lore) lives in
-`VpnHood.Client.WebUI/e2e/store/README.md` — read it before changing any of these workflows.
+`VpnHood.AppUi.Spa/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store/README.md` — read it before changing any of these workflows.
 
 ### Windows client — `publish_app.yml` (via `publish_client.yml` (in `Vpnhood.App.Client`))
 The MSI is built with **Advanced Installer** on a `windows-latest` runner.

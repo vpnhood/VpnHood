@@ -36,6 +36,38 @@ One file, never resources of an assembly: Android packs each assembly once per C
 the same bytes would ship three times; and one file is one item to place per platform and one
 request from a browser.
 
+## Making another package of this shape
+
+A brand that wants its own artwork ships its own package and the head references it instead. Four
+things decide whether it works, and all four fail silently when they are wrong.
+
+**The id is `<product>.Assets.<source>`** - the kind attaches to the product whose data it is, and
+where the data came from comes last (`VpnHood.AppUi.Assets.Classic`,
+`VpnHood.Core.IpLocations.Assets.Ip2LocationLite`). That last segment is provenance, not shape: the
+zip layout and the entry names are a fixed contract, so the vendor or look that supplied the bytes
+is the swappable part. It is the shape every payload package in .NET uses -
+`SkiaSharp.NativeAssets.Linux`, `Avalonia.Fonts.Inter`, `Microsoft.NETCore.App.Runtime.win-x64`. A
+trailing kind (`Foo.Abstractions`) is for packages with no variant, which is why `....Assets` last
+is wrong here.
+
+**Both targets files must be named exactly `<PackageId>.targets`.** NuGet imports
+`build/<PackageId>.targets` and `buildTransitive/<PackageId>.targets` by name and by name only.
+Rename the package without renaming both files and nothing is imported, nothing is placed, and the
+build is green. Verify inside the packed `.nupkg`, not in the source folder.
+
+**`build/` reaches only a direct `PackageReference`; `buildTransitive/` reaches any depth.** Put the
+placement in `buildTransitive/` and leave a `build/` file that imports it, as this package does, or
+an app that gets here through a library gets nothing. `PrivateAssets="all"` or
+`ExcludeAssets="build"` anywhere on the path stops the flow, and a `ProjectReference` never flows
+targets at all - which is why the heads in this repo import the targets directly.
+
+**"Is this an app?" is not one property.** The .NET for Android SDK rewrites an app's `OutputType`
+from `Exe` to `Library`, so an `OutputType` test alone places nothing on the one platform where the
+per-ABI cost matters most. `AndroidApplication == 'true'` is the real discriminator. This one is
+found by unzipping the APK, never by a build error.
+
+**Each package owns its own folder** in the consuming app - this one owns `assets/`, the
+IP-location package owns `iplocations/` - so two packages never overwrite each other.
 ## How it is read at run time
 
 Everything goes through `IAssetProvider` (`VpnHood.Core.Toolkit`): a stream by name, asynchronous.

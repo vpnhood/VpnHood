@@ -84,5 +84,9 @@ public enum ExceptionType
     RequestQuickLaunch,
 
     [EnumMember(Value = "VpnServiceRevokedException")]
-    VpnServiceRevoked
+    VpnServiceRevoked,
+
+    // a store failure in store-agnostic words; the BillingErrorCode rides in Data
+    [EnumMember(Value = "BillingException")]
+    Billing
 }

@@ -6,7 +6,6 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Animation;
@@ -274,9 +273,10 @@ public partial class MainView : UserControl
         return ShowDialog(new ConfirmDialog(title, message));
     }
 
-    public Task ShowError(string message, ErrorActions? actions = null)
+    // a sentence of the UI's own, shown the way a failure is
+    public Task ShowError(string message)
     {
-        return ShowDialog(new ErrorDialog(this, message, actions));
+        return ShowErrorMessage(ErrorMessages.ForText(message, AppErrors.Context));
     }
 
     // The web UI's processError: the sentence for the failure, with its buttons; a private DNS
@@ -293,13 +293,13 @@ public partial class MainView : UserControl
         if (message.IsIgnored)
             return;
 
-        if (message.Actions?.IsPrivateDnsError == true && VhApp.IsPremiumFeature(AppFeature.CustomDns)) {
+        if (message.Page == ErrorPage.PrivateDns) {
             Navigate(FeaturePages.PrivateDnsError(this));
             await VhApp.Api.App.ClearLastError(CancellationToken.None);
             return;
         }
 
-        await ShowError(message.Text, message.Actions);
+        await ShowDialog(new ErrorDialog(this, message));
     }
 
     // a wait the app is in: shown until the scope is disposed

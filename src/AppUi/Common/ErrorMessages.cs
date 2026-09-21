@@ -1,3 +1,5 @@
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.ApiClients;
 
@@ -7,6 +9,7 @@ namespace VpnHood.AppUi.Common;
 // reports a failure as an ApiError - a type name and a bag of data - whether it happened behind an
 // HTTP call there or a method call here, so the two read the same fields. What the sentence depends
 // on besides the failure comes in as the ErrorContext, read by the UI that holds the app's state.
+// Every button is decided here, so a dialog only draws what it is given.
 public static class ErrorMessages
 {
     public static ErrorMessage For(Exception exception, ErrorContext context)
@@ -16,76 +19,115 @@ public static class ErrorMessages
 
     public static ErrorMessage For(ApiError error, ErrorContext context)
     {
+        return WithReport(Map(error, context), context);
+    }
+
+    // a sentence of the UI's own, shown the way a failure is
+    public static ErrorMessage ForText(string text, ErrorContext context)
+    {
+        return WithReport(new ErrorMessage(text), context);
+    }
+
+    // the report is offered on every dialog while the app asks for one
+    private static ErrorMessage WithReport(ErrorMessage message, ErrorContext context)
+    {
+        if (message.IsIgnored || message.Page != ErrorPage.None || !context.PromptForLog)
+            return message;
+
+        return message with { Actions = message.Actions.Append(ErrorAction.OpenReport).ToArray() };
+    }
+
+    private static ErrorMessage Map(ApiError error, ErrorContext context)
+    {
         var strings = Strings.Current;
         var data = error.Data;
 
-        switch (error.TypeName) {
-            // silenced on purpose
-            case "UserCanceledException":
-            case "OperationCanceledException":
-            case "TaskCanceledException":
+        // a cancellation is the person's own doing, whichever class carried it
+        if (error.TypeName is nameof(OperationCanceledException) or nameof(TaskCanceledException))
+            return ErrorMessage.Ignored;
+
+        switch (error.GetExceptionType()) {
+            case ExceptionType.UserCanceled:
                 return ErrorMessage.Ignored;
 
-            case "UnreachableServerException":
-                return new ErrorMessage(strings.UnreachableServerMessage, new ErrorActions { ShowDiagnose = true });
+            case ExceptionType.UnreachableServer:
+                return new ErrorMessage(strings.UnreachableServerMessage, Diagnose(context));
 
-            case "UnreachableServerLocationException": {
+            case ExceptionType.UnreachableServerLocation: {
+                // after a diagnosis the sentence is all there is: no retry, trial or diagnosis helps
                 if (context.HasDiagnoseRequested)
                     return new ErrorMessage(strings.UnreachableServerLocationMessage);
 
+                // the retry and the trial connect on the profile, so they need one
                 var isAutoLocation = data.TryGetValue("IsAutoLocation", out var auto) && ToBoolean(auto);
-                if (!isAutoLocation)
+                if (!isAutoLocation && context.HasClientProfile)
                     return new ErrorMessage(strings.UnreachableServerLocationMessageWithChangeToAuto,
-                        new ErrorActions { ShowChangeServerToAuto = true });
+                        ErrorAction.ChangeServerToAuto);
 
-                if (context is { IsPremiumUser: false, CanTryPremium: true })
+                if (context is { HasClientProfile: true, IsPremiumUser: false, CanTryPremium: true })
                     return new ErrorMessage(strings.UnreachableServerLocationMessageWithTryPremium,
-                        new ErrorActions { ShowTryPremium = true });
+                        ErrorAction.TryPremium);
 
-                return new ErrorMessage(strings.UnreachableServerLocationMessage, new ErrorActions { ShowDiagnose = true });
+                return new ErrorMessage(strings.UnreachableServerLocationMessage, ErrorAction.Diagnose);
             }
 
-            case "RequestQuickLaunchException":
+            case ExceptionType.RequestQuickLaunch:
                 return new ErrorMessage(strings.QuickLaunchTurnOnError);
-            case "NoInternetException":
-                return new ErrorMessage(strings.NoInternetMsg, new ErrorActions { ShowDiagnose = true });
-            case "ShowAdNoUiException":
+            case ExceptionType.NoInternet:
+                return new ErrorMessage(strings.NoInternetMsg, Diagnose(context));
+            case ExceptionType.ShowAdNoUi:
                 return new ErrorMessage(strings.ShowAdNoUiMsg);
-            case "VpnServiceUnreachableException":
+            case ExceptionType.VpnServiceUnreachable:
                 return new ErrorMessage(strings.VpnServiceUnreachableMsg);
-            case "VpnServiceTimeoutException":
+            case ExceptionType.VpnServiceTimeout:
                 return new ErrorMessage(strings.VpnServiceTimeoutMsg);
-            case "VpnServiceNotReadyException":
+            case ExceptionType.VpnServiceNotReady:
                 return new ErrorMessage(strings.VpnServiceNotReadyMsg);
-            case "NoStableVpnException":
+            case ExceptionType.NoStableVpn:
                 return new ErrorMessage(strings.NoStableVpnMsg);
-            case "RewardNotEarnedException":
+            case ExceptionType.RewardNotEarned:
                 return new ErrorMessage(strings.RewardNotEarnedMsg);
-            case "NoErrorFoundException":
+            case ExceptionType.NoErrorFound:
                 return new ErrorMessage(strings.DiagnoseFinishedNoErrorMsg);
-            case "MaintenanceException":
+            case ExceptionType.Maintenance:
                 return new ErrorMessage(strings.MaintenanceModeMsg);
-            case "VpnServiceRevokedException":
+            case ExceptionType.VpnServiceRevoked:
                 return new ErrorMessage(strings.VpnServiceRevokedMsg);
-            case "PremiumOnlyException":
-                return PremiumOnly(data);
-            case "LoadAdException":
+            case ExceptionType.PremiumOnly:
+                return PremiumOnly(data, error.Message);
+            case ExceptionType.LoadAd:
                 return new ErrorMessage(strings.RewardedAdLoadErrorMsg);
-            case "ShowAdException":
+            case ExceptionType.ShowAd:
                 return new ErrorMessage(strings.RewardedAdShowErrorMsg);
-            case "AdBlockerException":
-                return new ErrorMessage("", new ErrorActions { IsPrivateDnsError = true });
-            case "ConnectionTimeoutException":
-                return new ErrorMessage(strings.ConnectionTimeoutMsg, new ErrorActions { ShowDiagnose = true });
-            case "SessionException":
+            case ExceptionType.AdBlocker:
+                return AdBlocker(data, error.Message, context);
+            case ExceptionType.ConnectionTimeout:
+                return new ErrorMessage(strings.ConnectionTimeoutMsg, Diagnose(context));
+            case ExceptionType.Session:
                 return Session(data, error.Message, context);
-            case "UnreachableProxyServerException":
+            case ExceptionType.UnreachableProxyServer:
                 return new ErrorMessage(strings.UnreachableProxiesMessage);
-            case "BillingException":
+            case ExceptionType.Billing:
                 return Billing(data);
             default:
                 return new ErrorMessage(error.Message);
         }
+    }
+
+    // a diagnosis is offered once: not on what the diagnosis itself reports
+    private static IReadOnlyList<ErrorAction> Diagnose(ErrorContext context)
+    {
+        return context.HasDiagnoseRequested ? [] : [ErrorAction.Diagnose];
+    }
+
+    // an ad blocked by a private DNS has a page of its own where custom DNS is sold as premium; any
+    // other blocker, or a build that sells no custom DNS, gets the sentence
+    private static ErrorMessage AdBlocker(IReadOnlyDictionary<string, string?> data, string message, ErrorContext context)
+    {
+        var isPrivateDns = data.TryGetValue("IsPrivateDns", out var privateDns) && ToBoolean(privateDns);
+        return isPrivateDns && context.IsCustomDnsPremiumFeature
+            ? ErrorMessage.OnPage(ErrorPage.PrivateDns)
+            : new ErrorMessage(message);
     }
 
     private static ErrorMessage Session(IReadOnlyDictionary<string, string?> data, string message, ErrorContext context)
@@ -130,24 +172,28 @@ public static class ErrorMessages
         }
     }
 
-    // a refused code is kept; what is offered is what exists (keyring plan §8)
-    private static ErrorActions CodeActions(ErrorContext context)
+    // a refused code is kept; what is offered is what exists (keyring plan §8): Restore Premium,
+    // plus Change code wherever this build takes a typed one
+    private static IReadOnlyList<ErrorAction> CodeActions(ErrorContext context)
     {
-        return new ErrorActions {
-            ShowAccessCodeActions = context.HasAccessCode,
-            ShowChangeAccessCode = context.CanImportAccessCode
-        };
+        if (!context.HasAccessCode)
+            return [];
+
+        return context.CanImportAccessCode
+            ? [ErrorAction.RestorePremium, ErrorAction.ChangeAccessCode]
+            : [ErrorAction.RestorePremium];
     }
 
-    private static ErrorMessage PremiumOnly(IReadOnlyDictionary<string, string?> data)
+    private static ErrorMessage PremiumOnly(IReadOnlyDictionary<string, string?> data, string message)
     {
         var strings = Strings.Current;
         // the feature by its name in AppFeature, as the app writes it into the error
-        data.TryGetValue("Feature", out var feature);
+        data.TryGetValue("Feature", out var featureText);
+        var feature = Enum.TryParse<AppFeature>(featureText, true, out var parsed) ? parsed : (AppFeature?)null;
         return feature switch {
-            "QuickLaunch" => new ErrorMessage(strings.QuickLaunchNotSupportedMsg),
-            "AlwaysOn" => new ErrorMessage(strings.AlwaysOnNotSupportedMsg),
-            _ => new ErrorMessage(data.TryGetValue("Message", out var message) && message != null ? message : strings.UnknownError)
+            AppFeature.QuickLaunch => new ErrorMessage(strings.QuickLaunchNotSupportedMsg),
+            AppFeature.AlwaysOn => new ErrorMessage(strings.AlwaysOnNotSupportedMsg),
+            _ => new ErrorMessage(message)
         };
     }
 

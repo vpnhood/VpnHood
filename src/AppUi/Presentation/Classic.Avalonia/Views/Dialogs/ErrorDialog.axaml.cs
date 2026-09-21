@@ -11,23 +11,23 @@ public partial class ErrorDialog : DialogBase
 {
     private readonly MainView _host;
 
-    public ErrorDialog(MainView host, string message, ErrorActions? actions)
+    // Draws what ErrorMessages decided: the sentence, and a button per action it named; the trial
+    // brings its 'learn more' link along. The report opens the log page here, where the web UI
+    // opens the log in a browser tab; there is no report upload in this head, so no Send report.
+    public ErrorDialog(MainView host, ErrorMessage message)
     {
         _host = host;
         InitializeComponent();
-        MessageText.Text = message;
+        MessageText.Text = message.Text;
 
-        var state = VhApp.State;
-        var hasProfile = VhApp.ClientProfileId != null;
-        AutoButton.IsVisible = actions?.ShowChangeServerToAuto == true && hasProfile;
-        TryPremiumButton.IsVisible = actions?.ShowTryPremium == true && hasProfile;
+        var actions = message.Actions;
+        AutoButton.IsVisible = actions.Contains(ErrorAction.ChangeServerToAuto);
+        TryPremiumButton.IsVisible = actions.Contains(ErrorAction.TryPremium);
         LearnMoreButton.IsVisible = TryPremiumButton.IsVisible;
-        RestoreButton.IsVisible = actions?.ShowAccessCodeActions == true;
-        ChangeCodeButton.IsVisible = actions is { ShowAccessCodeActions: true, ShowChangeAccessCode: true };
-        DiagnoseButton.IsVisible = actions?.ShowDiagnose == true && !state.HasDiagnoseRequested;
-        // the report: the log page here, where the web UI opens the log in a browser tab; there is
-        // no report upload in this head, so no Send report
-        ReportButton.IsVisible = state.PromptForLog;
+        RestoreButton.IsVisible = actions.Contains(ErrorAction.RestorePremium);
+        ChangeCodeButton.IsVisible = actions.Contains(ErrorAction.ChangeAccessCode);
+        DiagnoseButton.IsVisible = actions.Contains(ErrorAction.Diagnose);
+        ReportButton.IsVisible = actions.Contains(ErrorAction.OpenReport);
         Actions.IsVisible = Actions.Children.Any(x => x.IsVisible);
     }
 

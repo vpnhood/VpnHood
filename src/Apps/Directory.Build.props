@@ -1,0 +1,28 @@
+<Project>
+
+  <!--
+    MSBuild imports only the NEAREST Directory.Build.props walking up from a csproj, so this file
+    shadows the repo's root one. Import that first or every app in this folder silently loses
+    $(Version), $(VhDir) and $(VhUserDir) — and the heads embed their private appsettings and their
+    default access key from $(VhUserDir), so they would build green and ship with neither.
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!--
+    NO APP IS EVER A NUGET PACKAGE.
+
+    pub/lib/Publish-NugetPackages.ps1 discovers what to publish by packing every project under src/
+    that has not opted out, so a head that forgets the opt-out ships to nuget.org as a library. That
+    is not hypothetical: the iOS app and its network extension were missing it and were published as
+    vpnhood.app.client.ios, vpnhood.app.client.ios.extension and vpnhood.app.connect.ios, up to
+    8.1.845.8, each with a dependency on projects that are not packages at all.
+
+    Sixteen per-project copies of one line could not hold that rule, because the seventeenth head is
+    written by someone who did not know it existed. This covers the folder and everything added to
+    it. The per-project lines stay as the local statement of the same fact.
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

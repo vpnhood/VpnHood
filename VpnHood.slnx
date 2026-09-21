@@ -218,6 +218,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj" />
+    <Project Path="tests/VpnHood.AppUi.SmokeTest/VpnHood.AppUi.SmokeTest.csproj" />
     <Project Path="tests/VpnHood.Core.TcpStack.Test/VpnHood.Core.TcpStack.Test.csproj" />
     <Project Path="tests/VpnHood.Test/VpnHood.Test.csproj" />
   </Folder>

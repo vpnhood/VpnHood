@@ -67,7 +67,7 @@ $installAnyContent | Out-File -FilePath $module_installScriptFile -Encoding ASCI
 
 # copy install-msquic.sh to VpnHoodServer-linux-msquic.sh and remove \r
 Write-Host "Copying msquic installer..." -ForegroundColor Green
-$msquicSrc = "$solutionDir/src/Apps/Server.Net/pub/Linux/install-msquic.sh";
+$msquicSrc = "$solutionDir/src/Apps/Server/pub/Linux/install-msquic.sh";
 $msquicDst = "$moduleDir/VpnHoodServer-linux-msquic.sh";
 New-Item -ItemType Directory -Path (Split-Path $msquicDst -Parent) -Force | Out-Null
 (Get-Content $msquicSrc -Raw) -replace "`r", "" | Out-File -FilePath $msquicDst -Encoding ASCII -Force -NoNewline

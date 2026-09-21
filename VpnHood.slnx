@@ -106,10 +106,12 @@
   </Folder>
   <Folder Name="/src/AppUi/Presentation/">
     <Project Path="src/AppUi/Presentation/Classic.Avalonia/VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
+    <Project Path="src/AppUi/Presentation/Classic.Avalonia.Browser/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.csproj" />
   </Folder>
   <Folder Name="/src/AppUi/Hosting/">
     <Project Path="src/AppUi/Hosting/Avalonia/Avalonia/VpnHood.AppUi.Hosting.Avalonia.csproj" />
     <Project Path="src/AppUi/Hosting/Avalonia/Avalonia.Android/VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
+    <Project Path="src/AppUi/Hosting/Avalonia/Avalonia.Browser/VpnHood.AppUi.Hosting.Avalonia.Browser.csproj" />
     <Project Path="src/AppUi/Hosting/Avalonia/Avalonia.Desktop/VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
     <Project Path="src/AppUi/Hosting/WebView/WebView/VpnHood.AppUi.Hosting.WebView.csproj" />
     <Project Path="src/AppUi/Hosting/WebView/WebView.Android/VpnHood.AppUi.Hosting.WebView.Android.csproj" />
@@ -119,41 +121,48 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
   </Folder>
-  <Folder Name="/src/Apps/">
-    <Project Path="src/Apps/Client.Android.Google/VpnHood.App.Client.Android.Google.csproj">
+  <Folder Name="/src/Apps/" />
+  <Folder Name="/src/Apps/Client/">
+    <Project Path="src/Apps/Client/Client/VpnHood.App.Client.csproj" />
+    <Project Path="src/Apps/Client/Client.Android.Google/VpnHood.App.Client.Android.Google.csproj">
       <Deploy />
     </Project>
-    <Project Path="src/Apps/Client.Android.Web/VpnHood.App.Client.Android.Web.csproj">
+    <Project Path="src/Apps/Client/Client.Android.Web/VpnHood.App.Client.Android.Web.csproj">
       <Deploy />
     </Project>
-    <Project Path="src/Apps/Client.Linux.Web/VpnHood.App.Client.Linux.Web.csproj" />
-    <Project Path="src/Apps/Client.Win.Web/VpnHood.App.Client.Win.Web.csproj" />
-    <Project Path="src/Apps/Client.Ios/VpnHood.App.Client.Ios.csproj">
+    <Project Path="src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj">
       <Build Solution="Debug|*" Project="false" />
       <Deploy />
     </Project>
-    <Project Path="src/Apps/Client.Ios.Extension/VpnHood.App.Client.Ios.Extension.csproj">
+    <Project Path="src/Apps/Client/Client.Ios.Extension/VpnHood.App.Client.Ios.Extension.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/Apps/Client/VpnHood.App.Client.csproj" />
-    <Project Path="src/Apps/Connect.Android.Google/VpnHood.App.Connect.Android.Google.csproj">
+    <Project Path="src/Apps/Client/Client.Linux.Web/VpnHood.App.Client.Linux.Web.csproj" />
+    <Project Path="src/Apps/Client/Client.Win.Web/VpnHood.App.Client.Win.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/Apps/Connect/">
+    <Project Path="src/Apps/Connect/Connect/VpnHood.App.Connect.csproj" />
+    <Project Path="src/Apps/Connect/Connect.Android.Google/VpnHood.App.Connect.Android.Google.csproj">
       <Deploy />
     </Project>
-    <Project Path="src/Apps/Connect.Android.Web/VpnHood.App.Connect.Android.Web.csproj">
+    <Project Path="src/Apps/Connect/Connect.Android.Web/VpnHood.App.Connect.Android.Web.csproj">
       <Deploy />
     </Project>
-    <Project Path="src/Apps/Connect.Linux.Web/VpnHood.App.Connect.Linux.Web.csproj" />
-    <Project Path="src/Apps/Connect.Win.Web/VpnHood.App.Connect.Win.Web.csproj" />
-    <Project Path="src/Apps/Connect.Ios/VpnHood.App.Connect.Ios.csproj">
+    <Project Path="src/Apps/Connect/Connect.Ios.Apple/VpnHood.App.Connect.Ios.Apple.csproj">
       <Build Solution="Debug|*" Project="false" />
       <Deploy />
     </Project>
-    <Project Path="src/Apps/Connect.Ios.Extension/VpnHood.App.Connect.Ios.Extension.csproj">
+    <Project Path="src/Apps/Connect/Connect.Ios.Extension/VpnHood.App.Connect.Ios.Extension.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/Apps/Server.Net/VpnHood.App.Server.Net.csproj" />
-    <Project Path="src/Apps/AvaloniaUI.Dev/VpnHood.App.AvaloniaUI.Dev.csproj" />
-    <Project Path="src/Apps/AvaloniaUI.Browser/VpnHood.App.AvaloniaUI.Browser.csproj" />
+    <Project Path="src/Apps/Connect/Connect.Linux.Web/VpnHood.App.Connect.Linux.Web.csproj" />
+    <Project Path="src/Apps/Connect/Connect.Win.Web/VpnHood.App.Connect.Win.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/Apps/Server/">
+    <Project Path="src/Apps/Server/VpnHood.App.Server.Net.csproj" />
+  </Folder>
+  <Folder Name="/src/Apps/Tools/">
+    <Project Path="src/Apps/Tools/AvaloniaUI.Dev/VpnHood.App.AvaloniaUI.Dev.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/VpnHood.Core.Client.Abstractions/VpnHood.Core.Client.Abstractions.csproj" />

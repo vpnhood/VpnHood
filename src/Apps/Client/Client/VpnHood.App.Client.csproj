@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- the product, not a NuGet package -->
+		<Description>What every distribution of VpnHood Client shares: the packages it pins and the app framework and web host its heads build on</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+
+	<ItemGroup>
+		<PackageReference Include="VpnHood.Core.IpLocations.Assets.Ip2LocationLite" Version="8.2.852" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
+	</ItemGroup>
+
+
+</Project>

@@ -15,9 +15,9 @@ $docker = $docker -eq "1";
 Remove-Item "$packagesRootDir/$packageServerDirName/ReleaseNote.txt" -ErrorAction Ignore;
 
 # build the linux + windows-x64 server packages into pub/bin/<tag>/VpnHoodServer
-& "$solutionDir/src/Apps/Server.Net/_publish.ps1";
+& "$solutionDir/src/Apps/Server/_publish.ps1";
 
 # optional local docker smoke build (host arch only, --load, no push)
 if ($docker) {
-	& "$solutionDir/src/Apps/Server.Net/pub/publish_docker.ps1" -distribute 0;
+	& "$solutionDir/src/Apps/Server/pub/publish_docker.ps1" -distribute 0;
 }

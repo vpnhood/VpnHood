@@ -8,10 +8,17 @@ truth — follow them, and when a new durable convention is agreed, update this 
   script folders are lowercase too (`pub/lib`, `pub/lib/utils`, `pub/lib/vh-installer`); project
   folders keep their own casing (`src/Apps`, …). Module repos (e.g. VpnHood.Core.Proxies) follow
   the same convention (`pub/PubVersion.json`).
-- Shared PowerShell scripts under `pub/` are PascalCase Verb-Noun with approved verbs
+- `src/Apps/` holds only what ships, one folder per product (`Client/`, `Connect/`, `Server/`) plus
+  `Tools/` for what we run ourselves (the Avalonia dev head, MacShim). A head is
+  `<Product>/<Product>.<Platform>.<Channel>` (`Client/Client.Android.Google`, `Connect/Connect.Ios.Apple`);
+  the product's own project, what every distribution of it shares, is `<Product>/<Product>`. A fork
+  copies one product folder as its template. The browser page every head serves lives with the UI it
+  compiles (`src/AppUi/Presentation/Classic.Avalonia.Browser`), placed beside each head as
+  `assets/web-root.zip` by its targets; CI builds it once (`build-browser` in `publish_app.yml`) and
+  hands it to every platform build.- Shared PowerShell scripts under `pub/` are PascalCase Verb-Noun with approved verbs
   (`Invoke-VersionBump.ps1`, `pub/lib/Publish-NugetPackages.ps1`). Dot-sourced libraries/config
   keep noun names (`Common.ps1`, `AppPublishConfig.ps1`); per-app entry scripts keep their
-  folder-scoped names (`pub/Client/Publish.ps1`, `src/Apps/*/_publish.ps1`).
+  folder-scoped names (`pub/Client/Publish.ps1`, `src/Apps/*/*/_publish.ps1`).
 
 ## UI
 - The UI/front-end is a separate SPA project (VpnHood.Client.WebUI), located at `..\VpnHood.Client.WebUI\`
@@ -43,7 +50,7 @@ truth — follow them, and when a new durable convention is agreed, update this 
   the same as HTTP2, so we treat it the same as TCP.
 
 ## iOS (Client & Connect apps)
-- The iOS apps live in `src/Apps/{Client,Connect}.Ios` (host) + `…{Client,Connect}.Ios.Extension` (Network
+- The iOS apps live in `src/Apps/{Client,Connect}/{Client,Connect}.Ios.Apple` (host) + `….Ios.Extension` (Network
   Extension `.appex`); the real device/extension/TUN/TCP-stack code is in `src/Core/*` (`Devices.Ios`,
   `VpnAdapters.IosTun`, `TcpStack`, `Quic.Ios`). The extension projects are one-file `[Register]` shims.
 - **Read [`docs/ios/`](docs/ios/) before working on anything iOS** — especially
@@ -52,7 +59,7 @@ truth — follow them, and when a new durable convention is agreed, update this 
 - Build **Release** for device with `~/.dotnet11/dotnet` (TFM `net11.0-ios` / CoreCLR — the system `dotnet`
   can't target it). Don't commit a test `AccessKey` in `AppConfigs.cs` (production defaults to `null`).
 - When asked to build/run/launch an app without naming the product, use the **Client** app
-  (`src/Apps/Client.Ios`), not Connect.
+  (`src/Apps/Client/Client.Ios.Apple`), not Connect.
 - Updates come from the **App Store only**: wire `AppStoreAppUpdaterProvider`, and keep `UpdateInfoUrl`
   **null in the iOS config** (`AppConfigs`) rather than dropping it from the wiring — options still read
   it from config, as on every other platform. That feed describes downloadable packages, so a non-null

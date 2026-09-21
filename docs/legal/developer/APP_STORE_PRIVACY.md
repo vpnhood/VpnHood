@@ -40,7 +40,7 @@ outside the app and is not data the iOS binary collects.
 
 ## The privacy manifest is the contract
 
-[`Client.Ios/PrivacyInfo.xcprivacy`](../../../src/Apps/Client.Ios/PrivacyInfo.xcprivacy) declares no
+[`Client.Ios.Apple/PrivacyInfo.xcprivacy`](../../../src/Apps/Client/Client.Ios.Apple/PrivacyInfo.xcprivacy) declares no
 collected data types and sets `NSPrivacyTracking = false`. The Network Extension's manifest also
 declares no collection (packet data never leaves the tunnel process).
 
@@ -170,7 +170,7 @@ three types below and nothing else.
 > **pricing**: a free app still needs Free explicitly set on Pricing and Availability.
 
 **One row per *Set Up* screen**, in the order App Store Connect presents them. Every value matches
-[`Connect.Ios/PrivacyInfo.xcprivacy`](../../../src/Apps/Connect.Ios/PrivacyInfo.xcprivacy), which
+[`Connect.Ios.Apple/PrivacyInfo.xcprivacy`](../../../src/Apps/Connect/Connect.Ios.Apple/PrivacyInfo.xcprivacy), which
 Apple cross-checks against these answers — if the two ever disagree, the manifest wins and the panel
 alone cannot fix it (that takes a new build).
 
@@ -218,7 +218,7 @@ prevent, so do not reintroduce it in a fork. The shipped behaviour is described 
 [CONNECT privacy policy](../end-user/vpnhood-connect-privacy-policy.md) and specified in
 [account-lifecycle.md](../../accounts/account-lifecycle.md).
 
-**Manifest status.** `Connect.Ios/PrivacyInfo.xcprivacy` and
+**Manifest status.** `Connect.Ios.Apple/PrivacyInfo.xcprivacy` and
 `Connect.Ios.Extension/PrivacyInfo.xcprivacy` now exist (the extension stays collection-free). The
 host app's manifest declares **three** collected types: User ID, Email Address, and Purchase History,
 all for App Functionality and all with `Linked = true`. Manifest and panel must ship together: Apple

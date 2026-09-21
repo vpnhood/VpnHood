@@ -103,24 +103,56 @@ jobs:
           fi
           echo "✅ release_type='$DECLARED' matches pub/PubVersion.json (v$VERSION, Prerelease=$PRERELEASE)."
 
+  # The browser page every head embeds (assets/web-root.zip): built ONCE here and handed to every
+  # platform build as the `browser-page` artifact. Built under the .NET 10 SDK the page's own
+  # global.json names, with the wasm-tools workload - the .NET 11 preview's Emscripten cannot link
+  # SkiaSharp's WebAssembly libraries, and the iOS runner has only 11. A head build that finds no
+  # page warns and ships a web host with nothing to serve, so the platform builds `need` this job.
+  build-browser:
+    needs: [verify-release-type]
+    runs-on: ubuntu-latest
+    env:
+      PAGE_DIR: code/src/AppUi/Presentation/Classic.Avalonia.Browser
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: code/src/AppUi/Presentation/Classic.Avalonia.Browser/global.json }
+      - name: Install .NET WebAssembly workload (for the SDK the page's global.json names)
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE/$env:PAGE_DIR"
+          dotnet workload install wasm-tools
+      - name: Publish the browser page
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/$env:PAGE_DIR/_publish.ps1"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: browser-page
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ env.PAGE_DIR }}/bin/avalonia-browser.zip
+
   # --- Per-platform builds: each is a small standalone reusable module (single source of truth). ---
   build-linux:
     # TEMP/opt: skipped when only_aab is set so the Android/Play path can be iterated quickly.
-    needs: [verify-release-type]
+    needs: [verify-release-type, build-browser]
     if: ${{ inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_linux.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
     secrets: inherit
 
   build-windows:
-    needs: [verify-release-type]
+    needs: [verify-release-type, build-browser]
     if: ${{ inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_windows.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
     secrets: inherit
 
   build-android:
-    needs: [verify-release-type]
+    needs: [verify-release-type, build-browser]
     if: ${{ inputs.build_android == true }}
     uses: ./.github/workflows/_build_app_android.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
@@ -128,7 +160,7 @@ jobs:
 
   # iOS build (client and connect). Off for connect unless the caller passes build_ios=true.
   build-ios:
-    needs: [verify-release-type]
+    needs: [verify-release-type, build-browser]
     if: ${{ inputs.build_ios != false && inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_ios.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }

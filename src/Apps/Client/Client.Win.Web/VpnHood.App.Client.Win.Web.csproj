@@ -1,0 +1,52 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
+		<Product>VpnHood! CLIENT</Product>
+		<Description>VpnHood Windows Client App</Description>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<UseWindowsForms>False</UseWindowsForms>
+		<AssemblyName>VpnHoodClient</AssemblyName>
+		<ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
+		<EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+		<ApplicationManifest>Properties/app.manifest</ApplicationManifest>
+	</PropertyGroup>
+
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    </PropertyGroup>
+
+	<PropertyGroup>
+		<AssemblyVersion></AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.
+	     Conditional so a fork without them still builds; AppConfigs reads them at startup. -->
+	<ItemGroup>
+		<EmbeddedResource Include="$(VhUserDir)\VpnHoodClient\appsettings.json"
+			LogicalName="AppSettings.json"
+			Condition="Exists('$(VhUserDir)\VpnHoodClient\appsettings.json')" />
+		<EmbeddedResource Include="$(VhUserDir)\VpnHoodClient\appsettings.$(Configuration).json"
+			LogicalName="AppSettings_Environment.json"
+			Condition="Exists('$(VhUserDir)\VpnHoodClient\appsettings.$(Configuration).json')" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
+		<ProjectReference Include="..\..\..\AppUi\Hosting\WebView\WebView.Windows\VpnHood.AppUi.Hosting.WebView.Windows.csproj" />
+		<!-- The Avalonia UI beside the web UI, run in place of it when the app asks (DebugCommands.AvaloniaUi). -->
+		<ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia.Desktop\VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
+		<!-- The UI itself: the pages, the controls, the themes. -->
+		<ProjectReference Include="..\..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
+	</ItemGroup>
+
+	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
+	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
+	<Import Project="..\..\..\AppUi\Assets\Classic\build\VpnHood.AppUi.Assets.Classic.targets" />
+	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way, from
+	     Classic.Avalonia.Browser's publish; the head reads it at "assets/web-root.zip". -->
+	<Import Project="..\..\..\AppUi\Presentation\Classic.Avalonia.Browser\build\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.targets" />
+</Project>

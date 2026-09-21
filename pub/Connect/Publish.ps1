@@ -23,15 +23,15 @@ if ($cleanall) {
 Remove-Item "$packagesRootDir/$packageConnectDirName/ReleaseNote.txt" -ErrorAction Ignore;
 
 if ($windows) {
-	& "$solutionDir/src/Apps/Connect.Win.Web/_publish.ps1";
+	& "$solutionDir/src/Apps/Connect/Connect.Win.Web/_publish.ps1";
 }
 
 if ($linux) {
-	& "$solutionDir/src/Apps/Connect.Linux.Web/_publish.ps1";
+	& "$solutionDir/src/Apps/Connect/Connect.Linux.Web/_publish.ps1";
 }
 
 if ($android) {
-	& "$solutionDir/src/Apps/Connect.Android.Google/_publish.ps1";
-	& "$solutionDir/src/Apps/Connect.Android.Web/_publish.ps1";
-	& "$solutionDir/src/Apps/Connect.Android.Web/_publish-arm64.ps1";
+	& "$solutionDir/src/Apps/Connect/Connect.Android.Google/_publish.ps1";
+	& "$solutionDir/src/Apps/Connect/Connect.Android.Web/_publish.ps1";
+	& "$solutionDir/src/Apps/Connect/Connect.Android.Web/_publish-arm64.ps1";
 }

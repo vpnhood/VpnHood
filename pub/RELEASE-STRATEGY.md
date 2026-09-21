@@ -107,12 +107,12 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
 ## How to release (current flow)
 
 1. **Refresh our own package pins.** A few of our libraries live in their own repos and reach the
-   apps as `PackageReference`, not `ProjectReference` — today `VpnHood.AppLib.Assets.ClassicSpa`
-   (the SPA, published from `VpnHood.Client.WebUI`), `VpnHood.Core.Quic.MsQuic.AndroidNative` (the
-   prebuilt `libmsquic.so`, published from the msquic fork on every push to its `main`), and the
-   `Assets.*` data packages. They are **pinned to an exact version**, so a newly published one does
-   not reach a build until someone edits the pin. Publishing without that edit ships the *previous*
-   library with new app code, silently and successfully.
+   apps as `PackageReference`, not `ProjectReference` — today `VpnHood.Core.Quic.MsQuic.AndroidNative`
+   (the prebuilt `libmsquic.so`, published from the msquic fork on every push to its `main`) and the
+   `Assets.*` data packages (`VpnHood.Core.IpLocations.Assets.Ip2LocationLite`, pinned once per product
+   in `src/Apps/<Product>/<Product>/`). They are **pinned to an exact version**, so a newly published
+   one does not reach a build until someone edits the pin. Publishing without that edit ships the
+   *previous* library with new app code, silently and successfully.
 
    Check each against nuget.org before every release:
 
@@ -120,14 +120,11 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    curl -s https://api.nuget.org/v3-flatcontainer/<package-id-lowercased>/index.json
    ```
 
-   The SPA hides this better than the rest: a developer with `.user/use-local-spa.txt` builds
-   against the freshly built `spa.zip` and never restores the package at all, so a stale pin looks
-   correct locally and only reaches the real world through CI. Verify the way CI sees it, without
-   moving that file:
+   Verify the way CI sees it, with no `.user` overrides in play:
 
    ```bash
-   dotnet restore src/Apps/Client/VpnHood.App.Client.csproj --force -p:VhUserDir=<an empty dir>
-   grep -o '"VpnHood.AppLib.Assets.ClassicSpa/[0-9.]*"' src/Apps/Client/obj/project.assets.json
+   dotnet restore src/Apps/Client/Client/VpnHood.App.Client.csproj --force -p:VhUserDir=<an empty dir>
+   grep -o '"VpnHood.Core.IpLocations.Assets.Ip2LocationLite/[0-9.]*"' src/Apps/Client/Client/obj/project.assets.json
    ```
 
 2. Maintain the CHANGELOG **by hand**: put the next release's notes under a leading `# Latest`
@@ -244,7 +241,7 @@ This replaced ~48 identical per-project `_publish.ps1` forwarder scripts and the
 lived in `Publish-NugetPackages.ps1`. That list had silently drifted (a trailing-dot path typo that only
 failed on Linux CI *after* real packages had been pushed, and two packable libraries —
 `VpnHood.AppLib.Linux.Common` and `VpnHood.AppLib.Ios.Common` — that were never being published);
-discovery makes that class of bug impossible. Per-app build scripts (`src/Apps/*/_publish.ps1`) are
+discovery makes that class of bug impossible. Per-app build scripts (`src/Apps/*/*/_publish.ps1`) are
 unrelated and remain — they are real build logic invoked directly by the app CI workflows.
 
 ### Build environment, speed, and the publishing gate

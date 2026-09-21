@@ -26,17 +26,17 @@ if ($cleanall) {
 Remove-Item "$packagesRootDir/$packageClientDirName/ReleaseNote.txt" -ErrorAction Ignore;
 
 if ($windows) {
-	& "$solutionDir/src/Apps/Client.Win.Web/_publish.ps1";
+	& "$solutionDir/src/Apps/Client/Client.Win.Web/_publish.ps1";
 }
 
 if ($linux) {
-	& "$solutionDir/src/Apps/Client.Linux.Web/_publish.ps1";
+	& "$solutionDir/src/Apps/Client/Client.Linux.Web/_publish.ps1";
 }
 
 if ($android) {
-	& "$solutionDir/src/Apps/Client.Android.Google/_publish.ps1";
-	& "$solutionDir/src/Apps/Client.Android.Web/_publish.ps1";
-	& "$solutionDir/src/Apps/Client.Android.Web/_publish-arm64.ps1";
+	& "$solutionDir/src/Apps/Client/Client.Android.Google/_publish.ps1";
+	& "$solutionDir/src/Apps/Client/Client.Android.Web/_publish.ps1";
+	& "$solutionDir/src/Apps/Client/Client.Android.Web/_publish-arm64.ps1";
 }
 
 # update and push samples nugets

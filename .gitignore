@@ -348,8 +348,8 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
-/src/Apps/Client.Win.Web.Setup/VpnHood.App.Client.Win.Web.Setup-cache
-/src/Apps/Connect.Win.Web.Setup/VpnHood.App.Connect.Win.Web.Setup-cache
+/src/Apps/Client/Client.Win.Web.Setup/VpnHood.App.Client.Win.Web.Setup-cache
+/src/Apps/Connect/Connect.Win.Web.Setup/VpnHood.App.Connect.Win.Web.Setup-cache
 
 #
 *.tmp.csproj.working/

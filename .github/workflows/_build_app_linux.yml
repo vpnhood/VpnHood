@@ -1,7 +1,7 @@
 name: _build_app_linux (reusable)
 
 # Builds the Linux client/connect package from the vpnhood/VpnHood monorepo (checked out into code/).
-# Called by publish_app.yml. Self-contained: derives the package dir + src/Apps prefix from `app`.
+# Called by publish_app.yml. Self-contained: derives the package dir + src/Apps/<Product> folder from `app`.
 # Uploads the `<app>-linux` artifact.
 
 on:
@@ -89,10 +89,15 @@ jobs:
           $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+      - name: Place the browser page (built once by publish_app's build-browser job)
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-page
+          path: code/src/AppUi/Presentation/Classic.Avalonia.Browser/bin
       - name: Build Linux
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Linux.Web/_publish.ps1"
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Linux.Web/_publish.ps1"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.app }}-linux

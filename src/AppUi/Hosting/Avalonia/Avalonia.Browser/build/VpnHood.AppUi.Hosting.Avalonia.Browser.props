@@ -1,0 +1,22 @@
+<Project>
+	<!-- The WebAssembly settings every Avalonia page project shares. A page project (one per UI:
+	     src/AppUi/Presentation/Classic.Avalonia.Browser is ours) is a Microsoft.NET.Sdk.WebAssembly
+	     executable that imports this file, references the host and its UI, and keeps its own
+	     wwwroot/ (index.html, main.js) - the page's title and splash are the page's. -->
+	<PropertyGroup>
+		<RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+		<WasmMainJSPath>wwwroot/main.js</WasmMainJSPath>
+
+		<!-- Interpreted, not AOT: the bundle is served over the LAN to a phone for a few minutes of
+		     settings, and AOT would double it. Trimmed to the full extent: the app's own assemblies are
+		     referenced for their DTOs alone, and the API client's JSON is generated ahead of time; the
+		     reflection path stays on for the few places the shared code still uses it. -->
+		<PublishTrimmed>true</PublishTrimmed>
+		<TrimMode>full</TrimMode>
+		<JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+	</PropertyGroup>
+
+	<!-- Published under the .NET 10 SDK, named by a global.json in the page project's folder: SkiaSharp's
+	     WebAssembly libraries are built for its Emscripten (3.1.56), which the .NET 11 preview's (6.x)
+	     cannot link. A plain build works under either; only the publish relinks. -->
+</Project>

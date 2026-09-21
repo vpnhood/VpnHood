@@ -1,5 +1,5 @@
 # Materializes the iOS App Store signing secrets so Publish-IosApp.ps1 can produce a signed .ipa in CI.
-# macOS ONLY (uses `security` + PlistBuddy). Run on the iOS build runner BEFORE Client.Ios/_publish.ps1.
+# macOS ONLY (uses `security` + PlistBuddy). Run on the iOS build runner BEFORE Client.Ios.Apple/_publish.ps1.
 #
 # Secrets (each independent; ALL three of the first group are needed for real signing):
 #   APPLE_DISTRIBUTION_CERT_BASE64      base64 of the Apple Distribution certificate .p12

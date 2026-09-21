@@ -9,7 +9,7 @@ so treat them as the preview.5 baseline).
 
 > This file merges the three working docs (`ios-memory-jetsam-investigation`, `ios-net11-coreclr-proxy-speed`,
 > and Gemini's `upload-speed-and-memory-stabilization`) into one accurate record. Code changes live in the
-> core projects under `src/Core`; the app glue is under `src/Apps/{Client,Connect}.Ios[.Extension]`. The
+> core projects under `src/Core`; the app glue is under `src/Apps/{Client,Connect}/{Client,Connect}.Ios.{Apple,Extension}`. The
 > **batched native tun write** (Part 4) has since merged; everything described here is on `develop`.
 
 ---
@@ -54,7 +54,7 @@ so treat them as the preview.5 baseline).
 - **CoreCLR boot fix (required):** under CoreCLR's managed-static registrar, pointing
   `NSExtensionPrincipalClass` at the core `IosVpnService` crashes on launch:
   `ObjCRuntime.RuntimeException: Could not find the assembly VpnHood.Core.Client.Devices.Ios`. Fix = a thin
-  local **`src/Apps/Client.Ios.Extension/PacketTunnelProvider.cs`** subclass of `IosVpnService` (roots the core assembly), with
+  local **`src/Apps/Client/Client.Ios.Extension/PacketTunnelProvider.cs`** subclass of `IosVpnService` (roots the core assembly), with
   `Info.plist NSExtensionPrincipalClass = PacketTunnelProvider`. (Mono tolerated its absence.)
 
 | | Mono (net10) | **CoreCLR (net11)** |

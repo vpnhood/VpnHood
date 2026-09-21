@@ -1,0 +1,78 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0-ios</TargetFramework>
+    <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
+    <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
+    <UseMaui>false</UseMaui>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
+    <RootNamespace>VpnHood.App.Client.Ios</RootNamespace>
+    <!-- The project is named for its channel (the App Store); the bundle's executable keeps the platform name. -->
+    <AssemblyName>VpnHood.App.Client.Ios</AssemblyName>
+    <BundleIdentifier>com.vpnhood.client.ios</BundleIdentifier>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+
+    <!-- Automatic signing: Xcode picks the cert/profile for the team (6KKW3MKLR7, OmegaHood LLC). -->
+    <AutomaticProvisioning>true</AutomaticProvisioning>
+    <CodesignKey>Apple Development</CodesignKey>
+
+  </PropertyGroup>
+
+
+  <!-- Apple's privacy manifest. MUST sit at the ROOT of the .app bundle for App Store Connect's scanner
+       to find it, hence the explicit LogicalName; without it the file would be nested under its source
+       path and the upload still fails ITMS-91053. The .appex carries its own copy (see that csproj). -->
+  <ItemGroup>
+    <BundleResource Include="PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+  </ItemGroup>
+
+  <!-- Optional private app settings (from the external ".user" folder, sibling to the solution) embedded as
+       resources. Mirrors Client.Android.Web. Conditional so a fork without them still builds; AppConfigs
+       reads them at startup via AppConfigsBase.LoadConfig(). Client is bring-your-own-key, so unlike Connect
+       there is no embedded default access key. Forward slashes: this builds on macOS. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(VhUserDir)/VpnHoodClient/appsettings.json"
+        LogicalName="AppSettings.json"
+        Condition="Exists('$(VhUserDir)/VpnHoodClient/appsettings.json')" />
+    <EmbeddedResource Include="$(VhUserDir)/VpnHoodClient/appsettings.$(Configuration).json"
+        LogicalName="AppSettings_Environment.json"
+        Condition="Exists('$(VhUserDir)/VpnHoodClient/appsettings.$(Configuration).json')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- App framework + iOS device abstraction. -->
+    <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+    <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
+    <!-- Concrete iOS IDevice (IosDevice) + IPC message client live in the core Device.iOS project. -->
+    <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+    <!-- iOS shared app code: VpnHoodIosApp bootstrap + the WKWebView SPA host. -->
+    <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Ios.Common\VpnHood.AppLib.Ios.Common.csproj" />
+    <ProjectReference Include="..\..\..\AppUi\Hosting\WebView\WebView.Ios\VpnHood.AppUi.Hosting.WebView.Ios.csproj" />
+    <!-- The Avalonia UI beside the web view: AvaloniaUiAppDelegate shows it when the app asks for that
+         UI (DebugCommands.AvaloniaUi), which Main.cs decides before UIKit starts. -->
+    <ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
+    <!-- The UI itself: the pages, the controls, the themes. -->
+    <ProjectReference Include="..\..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
+    <PackageReference Include="Avalonia.iOS" Version="12.1.2" />
+    <!-- Shared client resources: embedded SPA (SpaZipData) + IP-location db + ClientAppResources. -->
+    <ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Bundle the Network Extension as a PlugIn (.appex) inside the host app. UndefineProperties drops
+         the app's global /p:CodesignProvision (the App Store publish passes the *app* profile) when
+         building this reference, so the .appex resolves its OWN App Store profile from its csproj
+         instead of being signed with the app profile (App-ID mismatch -> codesign failure). -->
+    <ProjectReference Include="..\Client.Ios.Extension\VpnHood.App.Client.Ios.Extension.csproj">
+      <IsAppExtension>true</IsAppExtension>
+      <UndefineProperties>CodesignProvision</UndefineProperties>
+    </ProjectReference>
+  </ItemGroup>
+
+	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
+	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
+	<Import Project="..\..\..\AppUi\Assets\Classic\build\VpnHood.AppUi.Assets.Classic.targets" />
+	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way, from
+	     Classic.Avalonia.Browser's publish; the head reads it at "assets/web-root.zip". -->
+	<Import Project="..\..\..\AppUi\Presentation\Classic.Avalonia.Browser\build\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.targets" />
+</Project>

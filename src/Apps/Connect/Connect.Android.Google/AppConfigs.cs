@@ -1,0 +1,104 @@
+using System.Text.Json;
+using VpnHood.AppLib.Utils;
+using VpnHood.Core.Client.Abstractions;
+
+// ReSharper disable StringLiteralTypo
+// ReSharper disable CommentTypo
+// ReSharper disable HeuristicUnreachableCode
+namespace VpnHood.App.Connect.Droid.Google;
+
+internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
+{
+    public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
+    public string AppId { get; set; } = Application.Context.PackageName!;
+
+    public Uri? UpdateInfoUrl { get; set; } =
+        new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
+
+    public int? WebUiPort { get; set; } = IsDebugMode ? 7701 : 7770;
+    public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
+    public string? Ga4MeasurementId { get; set; }
+    public Uri? RemoteSettingsUrl { get; set; }
+    public bool AllowEndPointTracker { get; set; }
+    public JsonElement? CustomData { get; set; }
+    public Uri? PrivacyPolicyUrl { get; set; }
+    public Uri? TermsOfUseUrl { get; set; }
+    public string LogoAssetPath { get; set; } = "images/VpnHoodConnect-logo.png";
+    public string PrivacyConsentAssetName { get; set; } = "privacy-consent-connect";
+    public string CompanyName { get; set; } = "VpnHood";
+
+    // This is a test access key, you should replace it with your own access key.
+    // It is limited and can not be used in production.
+
+    // Google sign-in (It is created through Firebase)
+    public string GoogleSignInClientId { get; set; } =
+        "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
+
+    // VpnHood Portal (the WHMCS vpnhoodiap backend) — accounts, purchases, entitlements.
+    // Unset = account features off (sign-in/purchase hidden; the VPN itself still works).
+    // Production value: https://<whmcs host>/modules/addons/vpnhoodiap/api.php
+    public Uri? PortalBaseUri { get; set; }
+
+    public bool PortalIgnoreSslVerification { get; set; } = IsDebugMode;
+
+    // AdMob
+    // Default value is AdMob test AdUnit id, References: https://developers.google.com/admob/android/test-ads
+    // NOTE: AdMobApplicationId MUST BE SET
+    public const string AdMobApplicationId = "ca-app-pub-8662231806304184~1740102860"; //YOUR_ADMOB_APP_ID
+    public string AdMobInterstitialAdUnitId { get; set; } = "ca-app-pub-3940256099942544/8691691433";
+    public string AdMobInterstitialNoVideoAdUnitId { get; set; } = "ca-app-pub-3940256099942544/1033173712";
+    public string AdMobRewardedAdUnitId { get; set; } = "ca-app-pub-3940256099942544/5224354917";
+
+    // Chartboost
+    public string ChartboostAppId { get; set; } = "000000000000000000000000"; //YOUR_CHATBOOST_APP_ID
+
+    public string ChartboostAppSignature { get; set; } =
+        "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
+
+    public string ChartboostAdLocation { get; set; } = "YOUR_CHARTBOOST_AD_LOCATION";
+
+    // Inmobi
+    public string InmobiAccountId { get; set; } = "000000000000000000000000"; //YOUR_INMMOBI_ACCOUNT_ID
+    public string InmobiPlacementId { get; set; } = "000000000000"; //YOUR_INMOBI_PLACEMENT_ID
+    public bool InmobiIsDebugMode { get; set; } = IsDebugMode;
+
+    public string[]? AllowedPrivateDnsProviders { get; set; } = [
+        "one.one.one.one",
+        "family.cloudflare-dns.com",
+        "adult-filter-dns.cleanbrowsing.org",
+        "family-filter-dns.cleanbrowsing.org",
+        "family.dot.dns.yandex.net",
+        "dns.google",
+        "dns.quad9.net",
+        "common.dot.dns.yandex.net",
+        "unfiltered.adguard-dns.com",
+        "dot.sb",
+        "dns.sb",
+        "anycast.uncensoreddns.org",
+        "unicast.uncensoreddns.org",
+        "dot.libredns.gr"
+    ];
+
+    public static AppConfigs Load()
+    {
+        var appConfigs = new AppConfigs();
+        appConfigs.LoadConfig();
+
+        // The default access key is embedded as its own resource (per configuration) so it can be
+        // sourced from a GitHub secret. When present it overrides the in-code/json default.
+        var accessKey = appConfigs.ReadResourceText("access_key_default.txt");
+        if (!string.IsNullOrWhiteSpace(accessKey))
+            appConfigs.DefaultAccessKey = accessKey.Trim();
+
+        return appConfigs;
+    }
+
+    // make dynamic to prevent warning of unreachable code in Release mode
+    public static bool IsDebug => IsDebugMode;
+
+#if DEBUG
+    public const bool IsDebugMode = true;
+#else
+    public const bool IsDebugMode = false;
+#endif
+}

@@ -39,7 +39,7 @@ release in itself.
 Docker is built with `docker/build-push-action` (multi-arch natively — no QEMU juggling) and gated on
 both the `DOCKERHUB_*` secrets and the `push_docker` input; absent secrets **skip with a warning** and
 the release still ships the Linux/Windows assets, the same fork-friendly rule as every store leg.
-`src/Apps/Server.Net/pub/publish_docker.ps1 -generateOnly` emits the compose files in CI without
+`src/Apps/Server/pub/publish_docker.ps1 -generateOnly` emits the compose files in CI without
 building an image.
 
 All three products create their GitHub release through the **one shared**

@@ -1,13 +1,16 @@
 # The Avalonia UI on Android
 
 The activity that hosts `VpnHood.AppUi.Hosting.Avalonia` on Android with the app's activity-event
-contract, so the app can ask for VPN permission and take access-key intents exactly as it does
-behind the web UI. Every head ships it beside the web view, and the app chooses between the two
-at launch - today only by the debug command `/avalonia-ui` (`DebugCommands.AvaloniaUi`), which
-is also where a device's web-view version would be judged too old for the web UI, when that
-check is written.
+contract, so the app can ask for VPN permission and take access-key intents. A head's launcher
+activity IS this one: it derives from `AndroidAvaloniaMainActivity<TUi>` and gets these pages.
 
-A head declares three things:
+The theme comes with this package (`Resources/values/themes.xml`, `Theme.VpnHood.Avalonia`) and a
+head names it. Its parent is `Theme.AppCompat.NoActionBar` for one reason: Avalonia's own
+`AvaloniaActivity` derives from `AppCompatActivity`, which refuses to start under a theme from any
+other family. Nothing of AppCompat is asked for beyond that parent, and a head that wants a
+cold-start background sets it there, since the launcher wears this theme until the first frame.
+
+A head declares two things:
 
 ```csharp
 // Avalonia 12 starts from the process's Application, so the head's is Avalonia's
@@ -23,20 +26,12 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     }
 }
 
-// the Avalonia UI's activity: no launcher entry, not exported, AppCompat's theme
-[Activity(Theme = "@style/Theme.AppCompat.NoActionBar", Exported = false, ...)]
-public class AvaloniaActivity : AndroidAppAvaloniaMainActivity
+// the launcher, and this UI's activity: one class, wearing this package's theme
+[Activity(MainLauncher = true, Theme = "@style/Theme.VpnHood.Avalonia", ...)]
+public class MainActivity : AndroidAvaloniaMainActivity<VpnHoodAvaloniaApp>
 {
     // the head's access keys, when it takes any
     protected override AndroidMainActivityOptions CreateActivityOptions() => new() { ... };
-}
-
-// the web view's launcher activity hands the launch over when the app asks
-public class MainActivity : AndroidAppMainActivity
-{
-    protected override Type? RedirectActivityType =>
-        VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi) ? typeof(AvaloniaActivity) : null;
-    ...
 }
 ```
 

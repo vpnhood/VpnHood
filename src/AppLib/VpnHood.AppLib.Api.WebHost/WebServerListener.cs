@@ -8,7 +8,7 @@ using WatsonWebserver.Lite;
 
 namespace VpnHood.AppLib.Api.WebHost;
 
-// One listener bound to one address and port: start it, stop it, say whether it is up. The web view's
+// One listener bound to one address and port: start it, stop it, say whether it is up. This device's
 // own listener and the remote-access ones are the same thing bound to different places, so binding and
 // stopping exist once, here. The factory makes a fresh instance for the address and port fixed per
 // listener, and the probe connects to that same address, so a listener bound to a LAN address is
@@ -30,9 +30,9 @@ internal class WebServerListener(string name, IPAddress address, int port, Func<
     // the listener is gone (or was never started).
     public bool IsListening => _server?.IsListening == true;
 
-    // The lock serializes the state transitions: the initial start, the watchdog and a web view's
+    // The lock serializes the state transitions: the initial start, the watchdog and a caller's
     // recovery can all drive them from different threads. The listener socket is bound and listening
-    // before Start() returns, so a caller can point a web view at it immediately.
+    // before Start() returns, so a caller can point a browser at it immediately.
     public void Start()
     {
         lock (_lock) {
@@ -57,7 +57,7 @@ internal class WebServerListener(string name, IPAddress address, int port, Func<
         }
     }
 
-    // One real connect, for concrete signals only (a resume, a web view that failed to connect), never
+    // One real connect, for concrete signals only (a resume, a page that failed to connect), never
     // periodically: a probe that times out on a busy system would condemn a healthy listener. iOS can
     // close a socket during a suspension while the accept loop still believes it is listening, so
     // IsListening alone is not enough there.

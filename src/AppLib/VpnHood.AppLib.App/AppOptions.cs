@@ -65,7 +65,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // summary, a picture, without a UI build. Ours name one, the UI's store.
     public IReadOnlyList<IAsset> UiZipAssets { get; set; } = [];
 
-    // The page the web host serves - the Avalonia UI's browser build - as the zip the head's
+    // The page the web host serves - the UI's browser build - as the zip the head's
     // platform placed beside it, wherever that is; the app extracts it as it does the UI's. Carried
     // here rather than configured on the factory, so both of the host's files travel one path and
     // are named once; the app itself never reads it. Required by a head that sets WebHostFactory.
@@ -73,9 +73,9 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
 
     // ReSharper disable once StringLiteralTypo
     public string? Ga4MeasurementId { get; set; } = "G-4LE99XKZYE";
-    // The look, as the UI's store and both UIs carry it: "blue" or "violet" - the theme's own
-    // name, never a product's, since what a product IS is the features above. It picks the palette
-    // in both UIs and branding/<theme>/ in the store for the OS chrome.
+    // The look, as the UI's store carries it: "blue" or "violet" - the theme's own name, never a
+    // product's, since what a product IS is the features above. It picks the palette the UI draws
+    // and branding/<theme>/ in the store for the OS chrome.
     public string UiTheme { get; set; } = "blue";
     public bool IsAddAccessKeySupported { get; set; } = true;
 
@@ -91,7 +91,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IReadOnlyList<AppAdProviderItem> AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
 
-    // What the app's web view loads and a phone pairs with, built on the app itself - so the head
+    // What a paired phone loads, built on the app itself - so the head
     // hands in a factory rather than an instance. Null means this head runs no web host, and
     // AppFeatures.IsRemoteAccessSupported says so before a UI offers the pairing screen.
     public IAppWebHostFactory? WebHostFactory { get; set; }

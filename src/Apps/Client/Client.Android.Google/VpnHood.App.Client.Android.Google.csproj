@@ -54,9 +54,7 @@
 	
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
-		<ProjectReference Include="..\..\..\AppUi\Hosting\WebView\WebView.Android\VpnHood.AppUi.Hosting.WebView.Android.csproj" />
-		<!-- The Avalonia UI beside the web view: AvaloniaActivity, which MainActivity hands the launch
-		     to when the app asks for that UI (DebugCommands.AvaloniaUi). -->
+		<!-- The UI this head runs, which MainActivity is the activity of. -->
 		<ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia.Android\VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->
 		<ProjectReference Include="..\..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />

@@ -74,7 +74,7 @@ public class AppSettingsService
         BeforeSave?.Invoke(this, EventArgs.Empty);
         OldUserSettings = JsonUtils.JsonClone(UserSettings);
         lock (_saveLock) {
-            Settings.ConfigTime = DateTime.UtcNow; // full precision: the SPA's change detection (see AppSettings)
+            Settings.ConfigTime = DateTime.UtcNow; // full precision: the change detection above (see AppSettings)
             var json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(AppSettingsFilePath, json, Encoding.UTF8);
         }

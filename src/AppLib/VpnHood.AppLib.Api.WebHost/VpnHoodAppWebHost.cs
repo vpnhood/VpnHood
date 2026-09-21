@@ -17,7 +17,7 @@ using VpnHood.AppLib.WebHosting;
 
 namespace VpnHood.AppLib.Api.WebHost;
 
-// One host, made twice: the local one binds loopback for the app's own web view, the remote one binds
+// One host, made twice: the local one binds loopback for the app itself, the remote one binds
 // every advertised LAN address for a phone that paired. They serve the same UI and the same API and
 // differ only in where they bind, whether a pairing is asked, and who ends them - so what they share
 // is everything below, and what differs is the flag. The listener state machine itself is
@@ -61,7 +61,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     // listener locks itself.
     private readonly Lock _lock = new();
 
-    // Presence, not sessions: the remote SPA polls every second, so an address seen within the window
+    // Presence, not sessions: a paired page polls every second, so an address seen within the window
     // is a device that is on, and a closed tab ages out. Keyed by address, so two browsers on one
     // phone count once. Fed by every request that passed the pairing.
     private readonly ConcurrentDictionary<IPAddress, DateTime> _clients = new();
@@ -112,8 +112,8 @@ public class VpnHoodAppWebHost : IAppWebHost
         }
     }
 
-    // Raised after a listener came back, outside any lock so UI subscribers can dispatch. The web view
-    // reloads the UI on it; a phone on a remote listener simply retries.
+    // Raised after a listener came back, outside any lock so UI subscribers can dispatch. A page
+    // loaded from it reloads on it; a phone on a remote listener simply retries.
     public event EventHandler? Restarted;
 
     internal VpnHoodAppWebHost(WebHostCreateParams createParams, bool isRemote)
@@ -266,7 +266,7 @@ public class VpnHoodAppWebHost : IAppWebHost
         return _port == 0 ? configuredPort : _port;
     }
 
-    // The web view caches by URL, so a value of this run rides along on the local address and a page
+    // A browser caches by URL, so a value of this run rides along on the local address and a page
     // it cached in an earlier run is never served again. A phone gets the pairing token instead, once,
     // from the QR; a developer's listeners ask for none.
     private Uri BuildUrl(IPAddress address)
@@ -333,7 +333,7 @@ public class VpnHoodAppWebHost : IAppWebHost
 
     // Watchdog: each listener's own state, which costs no network. Tell the caller, so assets
     // interrupted by the outage are loaded again even when the main document had already finished
-    // loading - and so a web view asks for the address again, which is how it follows a moved port.
+    // loading - and so a caller asks for the address again, which is how it follows a moved port.
     private void RestartIfDown()
     {
         try {
@@ -349,7 +349,7 @@ public class VpnHoodAppWebHost : IAppWebHost
         }
     }
 
-    // Only on concrete signals (a resume, a web view that failed to connect), never periodically. The
+    // Only on concrete signals (a resume, a page that failed to connect), never periodically. The
     // probes await, so they run outside the lock and the listeners they judged are matched under it:
     // two overlapping signals rebind once, not twice.
     private async Task RestartIfUnreachable()
@@ -421,7 +421,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     }
 
     // Watson's pre-routing hook, on every listener. Two checks stand in front of every request, the
-    // app's own web view included, because CORS governs READING a reply and not sending one: a page on
+    // app's own page included, because CORS governs READING a reply and not sending one: a page on
     // any site can post to an address it guesses, and without these the routes that take their
     // parameters in the query string (connect, disconnect, the intents that open OS settings) would be
     // obeyed while the browser merely hid the answer.
@@ -583,7 +583,7 @@ public class VpnHoodAppWebHost : IAppWebHost
             return;
         }
 
-        // The page's own file, for the app's web view and a paired device alike; any other path is
+        // The page's own file, for this device and a paired one alike; any other path is
         // the UI's to route, and gets index.html.
         await using var file = await _webRoot.TryOpenReadAsync(localPath, CancellationToken.None).Vhc();
         if (file != null) {

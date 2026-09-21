@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- The theme this UI's activity wears, named here because the requirement is this UI's: Avalonia
+       hands the head an activity that derives from AppCompatActivity, and such an activity refuses
+       to start under a theme from any other family. That parent is the whole reason for this file;
+       nothing of AppCompat is asked for beyond it. A head names this theme on its activity
+       (AndroidAvaloniaMainActivity), and what is set here is also the app's cold-start look, since
+       the launcher wears it until the first frame is drawn. -->
+  <style name="Theme.VpnHood.Avalonia" parent="Theme.AppCompat.NoActionBar" />
+</resources>

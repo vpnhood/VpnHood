@@ -18,8 +18,8 @@ public class AppInfo
     public required IReadOnlyList<ClientProfileInfo> ClientProfileInfos { get; init; }
     public required IReadOnlyList<UiCultureInfo> AvailableCultureInfos { get; init; }
 
-    // Whether this client is another device on the LAN rather than the app's own web view. Set by
-    // the route, not the controller: only the request knows where it came from. The SPA renders the
+    // Whether this client is another device on the LAN rather than the app itself. Set by
+    // the route, not the controller: only the request knows where it came from. The UI renders the
     // TV layout only for the TV itself, and hides the pairing entry from a phone.
     public bool IsRemote { get; set; }
 }

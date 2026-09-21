@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Abstractions.Device;
+﻿using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 
@@ -9,10 +9,9 @@ namespace VpnHood.AppLib.Ios.Common;
 // fall back to the Null implementation. We only wire up opening the iOS Settings app.
 public class IosDeviceUiProvider : NullDeviceUiProvider
 {
-    // The iOS WebView renders edge-to-edge (see IosWebViewController), so the SPA needs the
-    // status-bar / home-indicator inset sizes to pad itself. Mirrors AndroidDeviceUiProvider.GetBarsInfo.
-    // Heights are reported in PHYSICAL PIXELS (points * screen scale) because the SPA divides by
-    // window.devicePixelRatio (== UIScreen.Scale) to convert back to CSS points.
+    // The UI renders edge-to-edge, so it needs the status-bar / home-indicator inset sizes to pad
+    // itself. Mirrors AndroidDeviceUiProvider.GetBarsInfo. Heights are reported in PHYSICAL PIXELS
+    // (points * screen scale), which a UI converts back by the screen scale it draws at.
     public override SystemBarsInfo GetBarsInfo(IUiContext uiContext)
     {
         // BuildAppState may call this off the main thread; SafeAreaInsets must be read on the UI thread.
@@ -50,7 +49,7 @@ public class IosDeviceUiProvider : NullDeviceUiProvider
         UIApplication.SharedApplication.OpenUrl(url, new NSDictionary(), null);
     }
 
-    // The active foreground key window across the connected scenes (the SPA's window).
+    // The active foreground key window across the connected scenes (the UI's window).
     private static UIWindow? GetKeyWindow()
     {
         return UIApplication.SharedApplication.ConnectedScenes

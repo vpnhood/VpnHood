@@ -3,7 +3,7 @@
 namespace VpnHood.AppLib.WebHosting;
 
 // A place the app's own UI and API are served from. There are two, and they are the same thing bound
-// differently: the local one on loopback, which the app's web view loads, and the remote one on the
+// differently: the local one on loopback, which this device loads from, and the remote one on the
 // LAN addresses, which a phone pairs with. One shape for both, so the app asks the same questions of
 // either. A head hands in an IAppWebHostFactory through AppOptions; a head that hands in none has no
 // web host, AppFeatures.IsRemoteAccessSupported is false, and the pairing calls throw.
@@ -23,7 +23,7 @@ public interface IAppWebHost : IDisposable
     Task Stop(CancellationToken cancellationToken);
 
     // A listener was rebound under a caller that had already loaded from it, so what it loaded may be
-    // half fetched. The web view reloads on this; a phone simply retries.
+    // half fetched. A page loaded from it reloads on this; a phone simply retries.
     event EventHandler? Restarted;
 
     // Bound right now, or held open for the life of the process.
@@ -38,6 +38,6 @@ public interface IAppWebHost : IDisposable
     IReadOnlyList<Uri> Urls { get; }
 
     // Devices seen within the last few seconds - presence, not sessions. Always empty on the local
-    // host, which serves nothing but the device's own web view.
+    // host, which serves nothing but this device itself.
     IReadOnlyList<IPAddress> ConnectedDevices { get; }
 }

@@ -26,7 +26,7 @@ $ErrorActionPreference = "Stop";
 
 # <Vh>/VpnHood/src/AppUi/Assets/Classic -> <Vh>
 $vhFolder = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\..\..\.."));
-$webUiDir = Join-Path $vhFolder "VpnHood.Client.WebUI";
+$webUiDir = Join-Path $vhFolder "VpnHood.AppUi.Spa\src\VpnHood.AppUi.Presentation.Classic.Spa";
 $builtAssetsDir = Join-Path $webUiDir "dist\assets";
 $localesDir = Join-Path $webUiDir "src\locales";
 $assetsDir = Join-Path $PSScriptRoot "assets";

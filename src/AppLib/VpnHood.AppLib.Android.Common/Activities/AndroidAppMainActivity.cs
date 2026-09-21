@@ -1,4 +1,4 @@
-using Android.Content;
+﻿using Android.Content;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
@@ -19,8 +19,8 @@ public abstract class AndroidAppMainActivity : ActivityEvent
     // sends the launch to that UI's activity. Called from OnCreate in place of base.OnCreate,
     // which is why it takes the bundle - Android throws SuperNotCalledException for an OnCreate
     // that returns without its super call, and the one to reach is ActivityEvent's, above the
-    // handler this class builds: no main activity handler for an activity about to finish, so the
-    // web view is never mounted and the access key is imported once, by the activity that stays.
+    // handler this class builds: no main activity handler for an activity about to finish, so
+    // nothing is mounted and the access key is imported once, by the activity that stays.
     // The intent comes along, so that key arrives there all the same.
     protected void OnCreateRedirectingTo<TActivity>(Bundle? savedInstanceState)
         where TActivity : Activity

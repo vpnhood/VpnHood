@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- The theme this UI's activity wears, the platform's own: a web view asks for no theme family
+       of its own. A head names this theme on its activity (AndroidWebViewMainActivity), and what is
+       set here is also the app's cold-start look, since the launcher wears it until the first frame
+       is drawn. -->
+  <style name="Theme.VpnHood.WebView" parent="@android:style/Theme.DeviceDefault.NoActionBar" />
+</resources>

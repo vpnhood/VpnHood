@@ -1,5 +1,4 @@
 ﻿using System.Security.Principal;
-using System.Windows;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib;
@@ -7,14 +6,13 @@ using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.Win.Common;
-using VpnHood.AppUi.Hosting.WebView.Windows;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.App.Client.Win.Web;
 
-public class App : Application
+public static class App
 {
     private static AppOptions CreateAppOptions()
     {
@@ -52,27 +50,19 @@ public class App : Application
             },
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
-            // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
+            // the page a paired phone opens: this same UI, as its browser build
             WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };
         return options;
     }
 
-    protected override void OnStartup(StartupEventArgs e)
-    {
-        // call base first to init app resources
-        base.OnStartup(e);
-
-        // the web UI, in this application's window
-        VpnHoodAppWpf.Init();
-    }
-
     [STAThread]
     public static void Main(string[] args)
     {
-        // The app first, on its own; then the UI framework by the app's own setting: WPF hosts the
-        // web UI, Avalonia the native one when the debug command forces it.
+        // The app first, on its own; then its UI, which is Avalonia in this process. A window is
+        // all this head starts: the web host is the paired device's, and the pairing screen is
+        // what puts it up.
         try {
             VpnHoodAppWin.Init(CreateAppOptions, args);
         }
@@ -81,14 +71,10 @@ public class App : Application
             return;
         }
 
-        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
-            RunAvaloniaUi(args);
-        else
-            new App().Run();
+        RunAvaloniaUi(args);
     }
 
-    // The Avalonia UI in its own window, opened from the tray as the web UI's is; Exit there ends
-    // it, with the app.
+    // The Avalonia UI in its own window, opened from the tray; Exit there ends it, with the app.
     private static void RunAvaloniaUi(string[] args)
     {
         var appWin = VpnHoodAppWin.Instance;

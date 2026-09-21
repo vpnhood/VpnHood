@@ -6,9 +6,9 @@
     <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
-    <RootNamespace>VpnHood.App.Client.Ios</RootNamespace>
+    <RootNamespace>VpnHood.App.Client.Ios.Apple</RootNamespace>
     <!-- The project is named for its channel (the App Store); the bundle's executable keeps the platform name. -->
-    <AssemblyName>VpnHood.App.Client.Ios</AssemblyName>
+    <AssemblyName>VpnHood.App.Client.Ios.Apple</AssemblyName>
     <BundleIdentifier>com.vpnhood.client.ios</BundleIdentifier>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
 
@@ -45,16 +45,14 @@
     <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
     <!-- Concrete iOS IDevice (IosDevice) + IPC message client live in the core Device.iOS project. -->
     <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
-    <!-- iOS shared app code: VpnHoodIosApp bootstrap + the WKWebView SPA host. -->
+    <!-- iOS shared app code: the VpnHoodIosApp bootstrap and the UI context. -->
     <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Ios.Common\VpnHood.AppLib.Ios.Common.csproj" />
-    <ProjectReference Include="..\..\..\AppUi\Hosting\WebView\WebView.Ios\VpnHood.AppUi.Hosting.WebView.Ios.csproj" />
-    <!-- The Avalonia UI beside the web view: AvaloniaUiAppDelegate shows it when the app asks for that
-         UI (DebugCommands.AvaloniaUi), which Main.cs decides before UIKit starts. -->
+    <!-- The UI this head runs, mounted by AppDelegate as UIKit finishes launching. -->
     <ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
     <!-- The UI itself: the pages, the controls, the themes. -->
     <ProjectReference Include="..\..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
     <PackageReference Include="Avalonia.iOS" Version="12.1.2" />
-    <!-- Shared client resources: embedded SPA (SpaZipData) + IP-location db + ClientAppResources. -->
+    <!-- Shared client resources: the IP-location db and ClientAppResources. -->
     <ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
   </ItemGroup>
 

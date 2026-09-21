@@ -15,8 +15,8 @@ public class WebHostCreateParams
     // One instance, every transport, so a paired browser and the device's own UI cannot drift apart.
     public required VpnHoodApi Api { get; init; }
 
-    // The page this host serves - index.html at its root - to the app's own web view and to a paired
-    // device alike: the Avalonia UI's browser build, as the head shipped it (AppOptions.WebRootZipAsset).
+    // The page this host serves - index.html at its root - to this device and to a paired one
+    // alike: the UI's browser build, as the head shipped it (AppOptions.WebRootZipAsset).
     // One instance for both hosts, so the zip behind it is extracted once.
     public required IAssetProvider WebRoot { get; init; }
 

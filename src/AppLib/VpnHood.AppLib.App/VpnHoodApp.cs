@@ -359,16 +359,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // the person pressing refresh.
     }
 
-    // Where every build up to 8.1 extracted the SPA; 8.2 moved it under Temp/WebRoot/<hash>, and
-    // WebRoot cleans only that root, so on a machine that upgraded the old folder would sit there for
-    // good. Delete this method once DeprecatedVersion (pub/PubVersion.json) passes 8.2 - no install
-    // that old can still be upgrading. Temp itself stays: the WPF head keeps its web view's user data
-    // folder in it.
+    // Where every build up to 8.1 extracted the page's files, under the folder name of that era;
+    // 8.2 moved them under Temp/WebRoot/<hash>, and WebRoot cleans only that root, so on a machine
+    // that upgraded the old folder would sit there for good. Delete this method once
+    // DeprecatedVersion (pub/PubVersion.json) passes 8.2 - no install that old can still be
+    // upgrading. Temp itself stays: a head may keep data of its own in it.
     private void CleanupLegacyTempFolder()
     {
         var folderPath = Path.Combine(TempFolderPath, "SPA");
         if (Directory.Exists(folderPath))
-            VhUtils.TryInvoke("Delete the legacy SPA temp folder", () => Directory.Delete(folderPath, true));
+            VhUtils.TryInvoke("Delete the legacy page temp folder", () => Directory.Delete(folderPath, true));
     }
 
     private void ApplySettings()

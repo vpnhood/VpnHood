@@ -14,13 +14,14 @@ using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Droid;
 
-// The Avalonia UI's activity. Two base classes cannot be had at once, so this is Avalonia's main
-// activity speaking the app's activity-event contract itself - what ActivityEvent does for the web
-// UI's activity - and AndroidAppMainActivityHandler does the rest by composition: the UI context
+// The Avalonia UI's activity, as AndroidWebViewMainActivity is the web view UI's. Two base classes
+// cannot be had at once, so this is Avalonia's main activity speaking the app's activity-event
+// contract itself - what ActivityEvent does for an activity of the app's own base - and
+// AndroidAppMainActivityHandler does the rest by composition: the UI context
 // the app needs to ask for VPN permission, the access-key intents, the activity results. The Back
 // key, a remote's or a phone's, reaches Avalonia through AvaloniaActivity.OnBackPressed, which
 // MainView answers.
-public class AndroidAppAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityEvent
+public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityEvent
     where TUi : AvaloniaApplication, IAvaloniaUi
 {
     protected AndroidAppMainActivityHandler? MainActivityHandler { get; private set; }

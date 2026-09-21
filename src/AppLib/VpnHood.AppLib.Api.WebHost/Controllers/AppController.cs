@@ -168,7 +168,7 @@ internal class AppController(IAppApi api) : ControllerBase
         });
 
         // Pairing is the device's own business: a phone that reached the app through it can
-        // neither read, end nor start it, whatever the SPA it runs shows.
+        // neither read, end nor start it, whatever the page it runs shows.
         mapper.AddStatic(HttpMethod.GET, baseUrl + "remote-access", async ctx => {
             RequireLocal(ctx);
             var res = await api.GetRemoteAccess(ctx.Token);

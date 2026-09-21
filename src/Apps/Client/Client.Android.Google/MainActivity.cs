@@ -1,17 +1,19 @@
 ﻿using Android.Content;
 using Android.Service.QuickSettings;
-using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib.Droid.Common.Constants;
-using VpnHood.AppUi.Hosting.WebView.Droid;
-using VpnHood.AppLib.Utils;
+using VpnHood.AppUi.Hosting.Avalonia.Droid;
+using VpnHood.AppUi.Presentation.Classic.Avalonia;
 
 namespace VpnHood.App.Client.Droid.Google;
 
+// The launcher and the UI in one activity: Avalonia's. The theme above is the one that UI brings
+// (Avalonia.Android, Resources/values/themes.xml). The access keys a file or a link carries are
+// this activity's too, so the intent filters that take them are here.
 [Activity(
     MainLauncher = true,
     Label = AppConfigs.AppName,
-    Theme = AndroidMainActivityConstants.Theme,
+    Theme = "@style/Theme.VpnHood.Avalonia",
     LaunchMode = AndroidMainActivityConstants.LaunchMode,
     Exported = AndroidMainActivityConstants.Exported,
     WindowSoftInputMode = AndroidMainActivityConstants.WindowSoftInputMode,
@@ -23,7 +25,7 @@ namespace VpnHood.App.Client.Droid.Google;
     DataMimeTypes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3])]
 [IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable],
     DataSchemes = [AccessKeyScheme1, AccessKeyScheme2])]
-public class MainActivity : AndroidAppMainActivity
+public class MainActivity : AndroidAvaloniaMainActivity<ClassicAvaloniaApp>
 {
     // https://android.googlesource.com/platform/libcore/+/android-5.0.2_r1/luni/src/main/java/libcore/net/MimeUtils.java
     public const string AccessKeyScheme1 = "vh";
@@ -32,21 +34,11 @@ public class MainActivity : AndroidAppMainActivity
     public const string AccessKeyMime2 = "application/pgp-keys"; //.key
     public const string AccessKeyMime3 = "application/vnd.cinderella"; //.cdy
 
-    // the Avalonia UI in place of the web view, when the debug command forces it: the launch goes
-    // to that activity instead, because Avalonia's activity has a base class of its own
-    protected override void OnCreate(Bundle? savedInstanceState)
+    protected override AndroidMainActivityOptions CreateActivityOptions()
     {
-        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
-            OnCreateRedirectingTo<AvaloniaActivity>(savedInstanceState);
-        else
-            base.OnCreate(savedInstanceState);
-    }
-
-    protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
-    {
-        return new AndroidWebViewMainActivityHandler(this, new AndroidWebViewMainActivityOptions {
+        return new AndroidMainActivityOptions {
             AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2],
             AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3]
-        });
+        };
     }
 }

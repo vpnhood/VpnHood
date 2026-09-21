@@ -18,8 +18,8 @@ namespace VpnHood.AppLib.ApiImpl;
 
 // The host is asked for, not held: this exists before any listener does - in process there may
 // never be one - and only the three remote-access calls, the pairing page's, need it. The one they
-// need is the remote host, never the web view's: a head that shows a native UI has no web view and
-// still pairs.
+// need is the remote host, never the local one: a head that draws its own UI never opens a local
+// listener and still pairs.
 internal sealed class AppApi(VpnHoodApp app) : IAppApi
 {
     private IAppWebHost RemoteWebHost => app.RemoteWebHost ??

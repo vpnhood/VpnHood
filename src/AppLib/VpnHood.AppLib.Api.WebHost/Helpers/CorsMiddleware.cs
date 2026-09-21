@@ -4,7 +4,7 @@ namespace VpnHood.AppLib.Api.WebHost.Helpers;
 
 internal static class CorsMiddleware
 {
-    // The SPA's own dev servers. Any other origin needs a debug build or the developer's
+    // The UI's own dev servers. Any other origin needs a debug build or the developer's
     // /remote-access command, both read once at launch (VpnHoodAppWebHost).
     private static readonly string[] AllowedOrigins = [
         "https://localhost:8080",
@@ -16,7 +16,7 @@ internal static class CorsMiddleware
 
     // Where a request may claim to come from: one of the dev servers above, or the page this
     // server itself served. A browser sets Origin and a page cannot change it, so this is what
-    // separates the app's own SPA from any other tab that knows the address. The web server gates
+    // separates the app's own page from any other tab that knows the address. The web server gates
     // every request on the same answer, which is why it lives here and not inside AddCors.
     public static bool IsAllowedOrigin(string origin, string? hostHeader, bool allowAnyOrigin)
     {

@@ -8,10 +8,10 @@ namespace VpnHood.AppLib.WebHosting;
 // Everything the app knows about its web hosts: which two exist, what each is told, when they come up
 // by themselves, and what happens when the answer changes under a running app. The app keeps two
 // properties that forward here, because a head holds the app and asks it for a host - it does not hold
-// this. Null everywhere when the head handed in no factory: such a head has no web UI at all.
+// this. Null everywhere when the head handed in no factory: such a head serves no page at all.
 //
 // Two hosts, one implementation bound differently. Each is built the first time anything asks for it
-// and owned from then on. Under a lock, and in named fields rather than the compiler's: the web view
+// and owned from then on. Under a lock, and in named fields rather than the compiler's: a caller
 // asks from its own thread while the API answers on another, one host built twice would leave the
 // loser bound and unreachable, and Dispose reads the fields - building a host in order to dispose it
 // would be absurd on a head that never opened one.

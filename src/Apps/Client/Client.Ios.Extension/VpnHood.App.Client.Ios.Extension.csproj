@@ -6,7 +6,7 @@
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <!-- Match the namespace used by PacketTunnelProvider.cs (the only source file here). -->
-    <RootNamespace>VpnHood.App.Client.Ios</RootNamespace>
+    <RootNamespace>VpnHood.App.Client.Ios.Extension</RootNamespace>
     <BundleIdentifier>com.vpnhood.client.ios.networkextension</BundleIdentifier>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
 

@@ -1,4 +1,4 @@
-using StoreKit;
+﻿using StoreKit;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.Ios.Utils;
@@ -12,7 +12,7 @@ namespace VpnHood.AppLib.Ios.Common;
 // dialog via SKStoreReviewController. The OS decides whether the dialog actually appears — it is
 // throttled (at most a few prompts per year per app) and never shows for TestFlight/dev builds —
 // and gives no completion signal, so this returns once the request is made, not when the user is
-// done. That is the platform contract; the SPA's own rating dialog runs first (UserReviewDialog)
+// done. That is the platform contract; the app's own rating dialog runs first (UserReviewDialog)
 // and this native prompt is only requested after a top rating, matching the Android flow.
 public class AppStoreInAppUserReviewProvider : IAppUserReviewProvider
 {

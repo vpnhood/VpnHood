@@ -1,5 +1,5 @@
 # Brings the web UI's palette here: reads theme/colors.ts (the tones) and theme/themes.ts (the two
-# themes, the same keys with two sets of values) from VpnHood.Client.WebUI and writes
+# themes, the same keys with two sets of values) from VpnHood.AppUi.Spa and writes
 # Colors.axaml, BlueTheme.g.axaml and VioletTheme.g.axaml - one Color per tone, one brush per
 # theme key, named by the key in PascalCase plus "Brush": 'on-config-btn-bg' is
 # OnConfigBtnBgBrush. A page ported from the web UI names the key it named there, and a key added
@@ -14,14 +14,14 @@
 $ErrorActionPreference = "Stop";
 
 # This repo's root is the folder holding VpnHood.slnx, and <Vh> - where VpnHood and
-# VpnHood.Client.WebUI sit side by side - is its parent. Found, not counted, so moving this
+# VpnHood.AppUi.Spa sit side by side - is its parent. Found, not counted, so moving this
 # project does not silently point the lookup at the wrong folder.
 $projectDir = Split-Path -Parent $PSScriptRoot;
 $repoDir = $PSScriptRoot;
 while ($repoDir -and -not (Test-Path (Join-Path $repoDir "VpnHood.slnx"))) { $repoDir = Split-Path -Parent $repoDir; }
 if (-not $repoDir) { throw "Could not find VpnHood.slnx above $PSScriptRoot"; }
 $vhFolder = Split-Path -Parent $repoDir;
-$themeDir = Join-Path $vhFolder "VpnHood.Client.WebUI\src\theme";
+$themeDir = Join-Path $vhFolder "VpnHood.AppUi.Spa\src\VpnHood.AppUi.Presentation.Classic.Spa\src\theme";
 if (!(Test-Path $themeDir)) { throw "The web UI's theme is not beside this repo. $themeDir"; }
 
 $utf8 = New-Object System.Text.UTF8Encoding($false);

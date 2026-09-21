@@ -10,7 +10,7 @@ public class AppSettings
     public bool IsNotificationRequested { get; set; }
     public UserReview? UserReview { get; set; }
     public bool IsStartupTrackerSent { get; set; }
-    // The SPA detects a settings change by comparing ConfigTime between polls, so it needs the full
+    // A UI detects a settings change by comparing ConfigTime between polls, so it needs the full
     // clock precision: FastDateTime's one-second grain would hide two saves in the same second.
     public DateTime ConfigTime { get; set; } = DateTime.UtcNow;
     public UserSettings UserSettings { get; set; } = new();

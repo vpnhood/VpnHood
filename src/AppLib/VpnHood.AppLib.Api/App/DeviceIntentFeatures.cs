@@ -8,11 +8,10 @@ public class DeviceIntentFeatures
 {
     public required bool IsUserReviewSupported { get; init; }
 
-    // Whether a link may be handed to an external browser. The SPA can always render a page inside
+    // Whether a link may be handed to an external browser. The UI can always render a page inside
     // itself, so this gates only what LEAVES the app — the account website, the web purchase page.
     // Not the same question as IsTv: a television with a browser installed can open both.
     public required bool IsWebBrowserSupported { get; init; }
-
     public required bool IsQuickLaunchSupported { get; init; }
     public required bool IsRequestQuickLaunchSupported { get; init; }
     public required bool IsRequestNotificationSupported { get; init; }

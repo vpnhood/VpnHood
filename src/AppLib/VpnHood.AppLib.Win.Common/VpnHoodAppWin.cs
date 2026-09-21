@@ -56,9 +56,10 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         _commandListener.CommandReceived += CommandListener_CommandReceived;
     }
 
-    // The app on Windows, before any UI: the single instance, the device, the web server both UIs
-    // load from, the tray. Which UI shows it is the head's next step - the web UI in WPF, or the
-    // Avalonia UI when DebugCommands.AvaloniaUi asks - so nothing here belongs to a UI framework. Throws when another instance is running, after asking it for its window.
+    // The app on Windows, before any UI: the single instance, the device, the web server a paired
+    // device dials, the tray. Which UI shows it, and how it draws one, is the head's next step - so
+    // nothing here belongs to a UI framework. Throws when another instance is running, after asking
+    // it for its window.
     public static VpnHoodAppWin Init(Func<AppOptions> optionsFactory, string[] args)
     {
         var appOptions = optionsFactory();
@@ -213,9 +214,8 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
             VpnHoodApp.Instance.State.ConnectionState != AppConnectionState.Disconnecting);
     }
 
-    // What a UI shows when the tray asks for the window is the UI's own business: a WPF head shows
-    // its window, an Avalonia head shows its own, and a head whose web view cannot draw falls back to
-    // the system browser. This only asks.
+    // What a head shows when the tray asks for the window is the head's own business - its window,
+    // or whatever stands in for one. This only asks.
     private void OpenMainWindow()
     {
         OpenMainWindowRequested?.Invoke(this, EventArgs.Empty);

@@ -1,15 +1,15 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 
-namespace VpnHood.App.Client.Ios;
+namespace VpnHood.App.Client.Ios.Apple;
 
 // Per-product configuration for the iOS Client app. Mirrors the Android Client app's AppConfigs
 // (Client.Android.Web): the overridable product settings implement IRequiredAppConfigs and are populated at
 // startup from the private ".user" folder (embedded by the csproj as AppSettings.json), while the iOS-only
-// platform constants stay as static members referenced by the bootstrap (AppDelegate/SceneDelegate). The
+// platform constants stay as static members referenced by the bootstrap (AppDelegate). The
 // Connect app (Connect.Ios) keeps a parallel copy with its own ids and a built-in default access key.
 internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {

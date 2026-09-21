@@ -15,14 +15,14 @@
 $ErrorActionPreference = "Stop";
 
 # This repo's root is the folder holding VpnHood.slnx, and <Vh> - where VpnHood and
-# VpnHood.Client.WebUI sit side by side - is its parent. Found, not counted, so moving this
+# VpnHood.AppUi.Spa sit side by side - is its parent. Found, not counted, so moving this
 # project does not silently point the lookup at the wrong folder.
 $projectDir = Split-Path -Parent $PSScriptRoot;
 $repoDir = $PSScriptRoot;
 while ($repoDir -and -not (Test-Path (Join-Path $repoDir "VpnHood.slnx"))) { $repoDir = Split-Path -Parent $repoDir; }
 if (-not $repoDir) { throw "Could not find VpnHood.slnx above $PSScriptRoot"; }
 $vhFolder = Split-Path -Parent $repoDir;
-$webUiDir = Join-Path $vhFolder "VpnHood.Client.WebUI";
+$webUiDir = Join-Path $vhFolder "VpnHood.AppUi.Spa\src\VpnHood.AppUi.Presentation.Classic.Spa";
 $stylesheet = Join-Path $webUiDir "node_modules\@mdi\font\css\materialdesignicons.css";
 $iconsFile = Join-Path $webUiDir "build\native-ui-icons.txt";
 $imagesFile = Join-Path $webUiDir "build\native-ui-images.txt";

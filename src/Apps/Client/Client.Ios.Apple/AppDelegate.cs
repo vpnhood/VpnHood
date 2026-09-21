@@ -1,4 +1,10 @@
-﻿using VpnHood.AppLib.Utils;
+﻿using Avalonia;
+using Avalonia.iOS;
+using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Presentation.Classic.Avalonia;
+using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.AppLib.Utils;
 using Foundation;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -14,20 +20,30 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Toolkit.Assets;
 
-namespace VpnHood.App.Client.Ios;
+namespace VpnHood.App.Client.Ios.Apple;
 
+// UIKit's delegate and the UI's: Avalonia's own, which builds the UI as launching finishes and
+// gives each scene its AvaloniaSceneDelegate - which is why Info.plist names no scene delegate of
+// ours. The app is started at the one step of that launch this class is asked for, the app
+// builder; then the UI is given the app's API (its own controllers in process, the same six
+// interfaces a paired browser dials over HTTP). Its files are the store's zip in the app bundle,
+// where the build placed it.
 [Register("AppDelegate")]
-public class AppDelegate : UIApplicationDelegate
+public class AppDelegate : AvaloniaAppDelegate<ClassicAvaloniaApp>
 {
-    public override bool FinishedLaunching(UIApplication application, NSDictionary? launchOptions)
+    protected override AppBuilder CreateAppBuilder()
     {
         StartApp();
-        return true;
+        // in process both complete at once
+        VhApp.Init(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
+        AvaloniaUiHosting.PrepareContent<ClassicAvaloniaApp>(VpnHoodApp.Instance.UiAssetProvider);
+        VhApp.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+        AppUiContext.Context = new IosUiContext();
+        return base.CreateAppBuilder();
     }
 
-    // The app as this head configures it, started as launching finishes. AvaloniaUiAppDelegate
-    // starts the same app under the other UI.
-    internal static void StartApp()
+    // The app as this head configures it, started as launching finishes.
+    private static void StartApp()
     {
         if (VpnHoodApp.IsInit)
             return;
@@ -94,7 +110,7 @@ public class AppDelegate : UIApplicationDelegate
             CompanyName = appConfigs.CompanyName,
             // The store already took this acceptance at install - see AppOptions.
             IsLicenseAgreementRequired = false,
-            // Loopback port for the in-process SPA web server (the WKWebView loads from here).
+            // Loopback port for the web host a paired device dials.
             WebUiPort = appConfigs.WebUiPort,
             IsAddAccessKeySupported = true,
             // Native in-app rating dialog (parity with Client.Android.Google's Google Play provider).
@@ -133,7 +149,7 @@ public class AppDelegate : UIApplicationDelegate
             },
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
-            // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
+            // the page a paired phone opens: this same UI, as its browser build
             WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };

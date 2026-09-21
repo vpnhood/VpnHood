@@ -13,7 +13,7 @@ public static class HttpContextBaseExtensions
 
     extension(HttpContextBase ctx)
     {
-        // Whether the requestor is another device. Loopback is the app's own web view; anything
+        // Whether the requestor is another device. Loopback is the app itself; anything
         // else came over the LAN, whichever listener it hit. Unparsable counts as remote.
         public bool IsRemote()
         {

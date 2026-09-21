@@ -4,7 +4,7 @@
 // construction whether pairing is supported. A head hands in a factory; the app calls it once per
 // host, the first time anything asks for that one, and owns what comes back.
 //
-// Two hosts, one implementation bound differently: the local one is what this device's web view loads,
+// Two hosts, one implementation bound differently: the local one is what this device loads from,
 // the remote one is what a phone pairs with. A head that shows a native UI never asks for the first.
 //
 // Everything it hands over is in WebHostCreateParams, so an implementation needs nothing of the engine -

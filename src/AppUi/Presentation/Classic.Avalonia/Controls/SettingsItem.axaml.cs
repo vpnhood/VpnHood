@@ -8,7 +8,7 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
 public partial class SettingsItem : UserControl
 {
-    private const string LanguagesUrl = "https://github.com/vpnhood/VpnHood.Client.WebUI/tree/main/src/locales";
+    private const string LanguagesUrl = "https://github.com/vpnhood/VpnHood.AppUi.Spa/tree/main/src/VpnHood.AppUi.Presentation.Classic.Spa/src/locales";
 
     public event EventHandler? Clicked;
     public event EventHandler? WarningClicked;

@@ -1,7 +1,7 @@
 using ObjCRuntime;
 using VpnHood.Core.Client.Devices.Ios;
 
-namespace VpnHood.App.Client.Ios;
+namespace VpnHood.App.Client.Ios.Extension;
 
 // .NET 11 / CoreCLR fix: under the managed-static registrar (the CoreCLR default), pointing
 // NSExtensionPrincipalClass straight at the core `IosVpnService` crashes the extension on launch with

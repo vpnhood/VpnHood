@@ -66,7 +66,7 @@ internal static class App
             StorageFolderPath = StoragePath,
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
-            // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
+            // the page a paired phone opens: this same UI, as its browser build
             WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };
@@ -111,8 +111,6 @@ internal static class App
     private static async Task Main(string[] args)
     {
         Console.WriteLine($"Starting {AppConfigs.AppTitle} for linux (Beta).");
-        Console.WriteLine("Only WebUI supported at this time.");
-        var serviceUrlPath = Path.Combine(StoragePath, "service_url.txt");
 
         // init VpnHood app
         try {
@@ -126,36 +124,18 @@ internal static class App
         catch (AnotherInstanceIsRunningException) {
             Console.WriteLine($"An instance of {AppConfigs.AppTitle} is running.");
 
-            // load existing url
-            if (File.Exists(serviceUrlPath)) {
-                var url = File.ReadAllText(serviceUrlPath);
-                if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-                    OpenMainWindow(uri);
-            }
+            // the running instance was handed the open-window command on the way here, and
+            // its window is what a second launch is for
 
             return;
         }
 
-        // The UI here is a browser, so the host is wanted at once: its address goes in the service
-        // file, which is how a second launch finds the window to open.
-        var webHost = VpnHoodApp.Instance.LocalWebHost ??
-                      throw new InvalidOperationException("This app was given no web host.");
-        var webHostUrl = await webHost.EnsureStarted(CancellationToken.None);
-        File.WriteAllText(serviceUrlPath, webHostUrl.ToString());
-
-        // run app: the Avalonia UI in a window on this thread when the debug command forces it,
-        // otherwise the web UI, in the browser
-        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi)) {
-            await RunAvaloniaUi(args).Vhc();
-            return;
-        }
-
-        VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow(webHostUrl);
-        await VpnHoodAppLinux.Instance.Run().Vhc();
+        // the UI, in a window on this thread
+        await RunAvaloniaUi(args).Vhc();
     }
 
-    // The Avalonia UI in a window: opened again by a second launch, as the browser is, and ended
-    // by the stop command, with the app.
+    // The UI in a window: opened again by a second launch, and ended by the stop command,
+    // with the app.
     private static Task RunAvaloniaUi(string[] args)
     {
         var appLinux = VpnHoodAppLinux.Instance;
@@ -164,18 +144,6 @@ internal static class App
         appLinux.PrepareAsync().GetAwaiter().GetResult();
         AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, appLinux.ShowWindowAfterStart);
         return Task.CompletedTask;
-    }
-
-    private static void OpenMainWindow(Uri url)
-    {
-        VhLogger.Instance.LogInformation("Running the default browser...");
-        Process.Start(new ProcessStartInfo {
-            FileName = url.AbsoluteUri,
-            UseShellExecute = true
-        });
-
-        VhLogger.Instance.LogInformation("To open VpnHood UI navigate to {0}",
-            url);
     }
 
     private static void InstanceOnExiting(object? sender, EventArgs e)

@@ -3,7 +3,7 @@ using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Utils;
 
-namespace VpnHood.App.Connect.Ios;
+namespace VpnHood.App.Connect.Ios.Apple;
 
 // Per-product configuration for the iOS Connect app. Mirrors the Android Connect app's AppConfigs
 // (Connect.Android.Web): the overridable product settings implement IRequiredAppConfigs and are populated

@@ -1,4 +1,4 @@
-using Android.Content.PM;
+﻿using Android.Content.PM;
 using Android.Views;
 
 namespace VpnHood.AppLib.Droid.Common.Constants;
@@ -7,6 +7,8 @@ public static class AndroidMainActivityConstants
 {
     public const string? Label = "@string/app_name";
 
+    // The platform's own, for an activity that asks for nothing else. The UI a head runs brings the
+    // theme its activity needs, and a head names that one instead.
     public const string? Theme = "@android:style/Theme.DeviceDefault.NoActionBar";
 
     public const bool Exported = true;

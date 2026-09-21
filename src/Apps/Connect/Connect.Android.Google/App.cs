@@ -33,9 +33,8 @@ namespace VpnHood.App.Connect.Droid.Google;
     Debuggable = AppConfigs.IsDebugMode,
     AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppConfigs.AdMobApplicationId)]
-// Avalonia's application base: the Avalonia UI ships beside the web view, and Avalonia 12 starts
-// from the process's Application (its OnCreate, after the app below). AvaloniaActivity shows it,
-// when MainActivity hands the launch over (DebugCommands.AvaloniaUi).
+// Avalonia's application base: this head's UI is Avalonia, and Avalonia 12 starts from the
+// process's Application (its OnCreate, after the app below). MainActivity shows it.
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : AvaloniaAndroidApplication<ClassicAvaloniaApp>(javaReference, transfer)
 {
@@ -95,7 +94,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             },
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
-            // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
+            // the page a paired phone opens: this same UI, as its browser build
             WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };

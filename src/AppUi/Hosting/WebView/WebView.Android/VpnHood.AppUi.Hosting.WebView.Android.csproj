@@ -4,7 +4,6 @@
 		<TargetFramework>net10.0-android36.1</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.AppUi.Hosting.WebView.Droid</RootNamespace>
-		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<PropertyGroup>

@@ -45,6 +45,7 @@ internal static class Program
         // this very string), so the window says which product it is running as
         var appOptions = new AppOptions(appId: "com.vpnhood.avalonia.dev", "VpnHood! Avalonia Dev", isDebugMode: true) {
             AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
+            CompanyName = "VpnHood",
             StorageFolderPath = storageFolderPath,
             // the documents the product links to, which every head takes from its appsettings.json:
             // without them the pages that link to them - Settings > Privacy, the paywall, the
@@ -64,9 +65,9 @@ internal static class Program
             IsAddAccessKeySupported = !isConnect, // a connect head ships one built-in profile and takes no keys
             UiTheme = isConnect ? "violet" : "blue",
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
-            UiZipAsset = new Asset(platformAssets, "assets/ui.zip"),
+            UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
             // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
-            WebRootZipAsset = AppWebRoot.Zip,
+            WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };
 

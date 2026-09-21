@@ -17,6 +17,22 @@ public static class AppUtils
             : new ZipAssetProvider(zipAsset, Path.Combine(storageFolderPath, "assets", folderName));
     }
 
+    // The same for zips a head named more than one of, as ONE provider joined here rather than at
+    // every read: searched in the order given, and the first zip that has the file wins. Each gets a
+    // folder of its own - a ZipAssetProvider owns its folder and clears what is not the version in
+    // hand - and the first keeps the plain name, so adding a zip does not re-extract the one that
+    // was always there. Null when the head named none.
+    internal static IAssetProvider? CreateZipAssetProvider(IReadOnlyList<IAsset> zipAssets,
+        string storageFolderPath, string folderName)
+    {
+        return zipAssets.Count == 0
+            ? null
+            : new CompositeAssetProvider(zipAssets
+                .Select((asset, index) => (IAssetProvider)new ZipAssetProvider(asset,
+                    Path.Combine(storageFolderPath, "assets", index == 0 ? folderName : $"{folderName}-{index}")))
+                .ToArray());
+    }
+
     // Mac Catalyst is checked BEFORE iOS on purpose: OperatingSystem.IsIOS() reports true for Catalyst
     // too, so testing iOS first would label a Mac build as an iPhone and hide/show the wrong content.
     public static AppOsType GetOsType()

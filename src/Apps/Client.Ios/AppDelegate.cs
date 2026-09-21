@@ -92,6 +92,7 @@ public class AppDelegate : UIApplicationDelegate
             TermsOfUseUrl = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"),
             LogoAssetPath = appConfigs.LogoAssetPath,
             PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
+            CompanyName = appConfigs.CompanyName,
             // The store already took this acceptance at install - see AppOptions.
             IsLicenseAgreementRequired = false,
             // Loopback port for the in-process SPA web server (the WKWebView loads from here).
@@ -132,9 +133,9 @@ public class AppDelegate : UIApplicationDelegate
                 UpdaterProvider = new AppStoreAppUpdaterProvider()
             },
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
-            UiZipAsset = new Asset(platformAssets, "assets/ui.zip"),
+            UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
             // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
-            WebRootZipAsset = AppWebRoot.Zip,
+            WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };
         return options;

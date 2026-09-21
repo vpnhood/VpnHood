@@ -25,24 +25,16 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
         PrivacyButton.IsVisible = VhApp.Features.PrivacyPolicyUrl != null;
     }
 
-    // The document in the app's language, else in English: a language whose translation failed
-    // verification ships no file, and the English text beats none - on a consent screen above all.
-    // Read through the store's provider, which may be a web server, so it lands after the page shows.
+    // The document as the store hands it over - in the app's language, with the product's own
+    // names already in it - rendered to the markup RichText draws. Read through the store's
+    // provider, which may be a web server, so it lands after the page shows.
     private async Task LoadDocument(string name)
     {
         try {
-            var culture = VhApp.State.CurrentUiCultureInfo.Code;
-            foreach (var language in new[] { culture, culture.Split('-')[0], "en" }) {
-                if (await AppAssets.ReadTextAsync($"content/{language}/{name}.md", CancellationToken.None) is not { } markdown)
-                    continue;
-
-                var (title, markup) = Markdown.Render(markdown);
-                TitleText.Text = title;
-                RichText.Apply(DocumentText, markup);
-                return;
-            }
-
-            throw new InvalidOperationException($"The asset store has no content document '{name}' for 'en'.");
+            var markdown = await AppAssets.LoadDocumentAsync(name, CancellationToken.None);
+            var (title, markup) = Markdown.Render(markdown);
+            TitleText.Text = title;
+            RichText.Apply(DocumentText, markup);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

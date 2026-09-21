@@ -24,6 +24,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public Uri? TermsOfUseUrl { get; set; }
     public string LogoAssetPath { get; set; } = "images/VpnHoodClient-logo.png";
     public string PrivacyConsentAssetName { get; set; } = "privacy-consent-client";
+    public string CompanyName { get; set; } = "VpnHood";
 
     public static AppConfigs Load()
     {

@@ -26,6 +26,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public Uri? TermsOfUseUrl { get; set; }
     public string LogoAssetPath { get; set; } = "images/VpnHoodConnect-logo.png";
     public string PrivacyConsentAssetName { get; set; } = "privacy-consent-connect";
+    public string CompanyName { get; set; } = "VpnHood";
 
     // This is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.

@@ -1,4 +1,4 @@
-# VpnHood.AppUi.Assets.Classic
+﻿# VpnHood.AppUi.Assets.Classic
 
 The classic look of the VpnHood app as an inert asset package: the images, country flags, fonts and
 content documents a UI draws, and the words of every language, as **one zip** placed beside the
@@ -43,8 +43,10 @@ Everything goes through `IAssetProvider` (`VpnHood.Core.Toolkit`): a stream by n
 - Windows, Linux, iOS, tvOS: `FolderAssetProvider` over the placed files opens `assets/ui.zip`;
   Android: `AndroidAssetProvider` copies it out of the package.
 - `ZipAssetProvider` extracts it under `<storage>/assets/ui/<hash>/` on the first read and serves its
-  entries as files. The head names the zip (`AppOptions.UiZipAsset`); the app makes ONE provider from
-  it, which both the app's own UI and its web host read - a second would extract the same zip twice.
+  entries as files. The head names the zips (`AppOptions.UiZipAssets`, ours one); the app makes ONE
+  provider over all of them, which both the app's own UI and its web host read - a second would
+  extract the same zip twice. More than one is how a fork replaces single files: they are searched
+  in the order given, first hit wins, and each gets its own folder (`ui`, `ui-1`, ...).
 - A paired phone's page has nothing placed: the app's web host serves the same entries at `/assets/`,
   and the page reads them through `HttpAssetProvider`, by name, as they are asked for.
 

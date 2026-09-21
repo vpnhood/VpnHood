@@ -3662,6 +3662,7 @@ export interface IAppInfo {
 export class AppFeatures implements IAppFeatures {
     appId!: string;
     appName!: string;
+    companyName!: string;
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
     uiTheme!: string;
@@ -3716,6 +3717,7 @@ export class AppFeatures implements IAppFeatures {
         if (_data) {
             this.appId = _data["appId"] !== undefined ? _data["appId"] : null as any;
             this.appName = _data["appName"] !== undefined ? _data["appName"] : null as any;
+            this.companyName = _data["companyName"] !== undefined ? _data["companyName"] : null as any;
             this.isExcludeAppsSupported = _data["isExcludeAppsSupported"] !== undefined ? _data["isExcludeAppsSupported"] : null as any;
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : null as any;
             this.uiTheme = _data["uiTheme"] !== undefined ? _data["uiTheme"] : null as any;
@@ -3786,6 +3788,7 @@ export class AppFeatures implements IAppFeatures {
         data = typeof data === 'object' ? data : {};
         data["appId"] = this.appId !== undefined ? this.appId : null as any;
         data["appName"] = this.appName !== undefined ? this.appName : null as any;
+        data["companyName"] = this.companyName !== undefined ? this.companyName : null as any;
         data["isExcludeAppsSupported"] = this.isExcludeAppsSupported !== undefined ? this.isExcludeAppsSupported : null as any;
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : null as any;
         data["uiTheme"] = this.uiTheme !== undefined ? this.uiTheme : null as any;
@@ -3840,6 +3843,7 @@ export class AppFeatures implements IAppFeatures {
 export interface IAppFeatures {
     appId: string;
     appName: string;
+    companyName: string;
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
     uiTheme: string;

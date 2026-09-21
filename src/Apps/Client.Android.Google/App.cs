@@ -43,6 +43,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             LogoAssetPath = appConfigs.LogoAssetPath,
             PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
+            CompanyName = appConfigs.CompanyName,
             // The store already took this acceptance at install - see AppOptions.
             IsLicenseAgreementRequired = false,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
@@ -58,9 +59,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 PromptDelay = TimeSpan.FromDays(3)
             },
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
-            UiZipAsset = new Asset(platformAssets, "assets/ui.zip"),
+            UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
             // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build
-            WebRootZipAsset = AppWebRoot.Zip,
+            WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };
         return options;

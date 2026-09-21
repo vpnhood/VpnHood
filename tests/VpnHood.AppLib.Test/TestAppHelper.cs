@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Toolkit.Assets;
@@ -33,6 +34,7 @@ public class TestAppHelper : TestHelper
     {
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode) {
             AppName = "VpnHood! Test",
+            CompanyName = "VpnHood",
             LogoAssetPath = "images/VpnHoodClient-logo.png",
             PrivacyConsentAssetName = "privacy-consent-client",
             IpLocationZipAsset = new Asset(AssetProvider, IpLocationAssetPath),
@@ -72,6 +74,20 @@ public class TestAppHelper : TestHelper
         };
 
         return appOptions;
+    }
+
+    // The smallest page a web host will serve - an index.html - as the zip a head ships, so a test
+    // can tell the page from the API's replies by its title.
+    public IAsset CreateWebRootZip(string title)
+    {
+        Directory.CreateDirectory(WorkingPath);
+        var path = Path.Combine(WorkingPath, $"web-root_{Guid.CreateVersion7()}.zip");
+        using (var archive = ZipFile.Open(path, ZipArchiveMode.Create)) {
+            using var writer = new StreamWriter(archive.CreateEntry("index.html").Open());
+            writer.Write($"<html><title>{title}</title></html>");
+        }
+
+        return new FileAsset(path);
     }
 
     public VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)

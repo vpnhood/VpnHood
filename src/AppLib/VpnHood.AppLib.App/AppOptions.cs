@@ -47,21 +47,28 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // the tray icons - is read out of the UI's store (AppBranding, under UiTheme), not handed in.
     public required string AppName { get; init; }
 
+    // Whose app this is: the maker's name, for the words that name it - {companyName} in a consent
+    // summary or any content document - as AppName is {appName}. Ours say VpnHood; a fork says itself.
+    public required string CompanyName { get; init; }
+
     // The ~14 MB IP-location db the head ships, wherever its platform placed it. Opened only when a
     // country split or a location lookup actually runs, never at startup, and opened afresh each
     // time - the readers dispose what they are given. Null means the head shipped no database.
     public IAsset? IpLocationZipAsset { get; set; }
 
     // The files the app's UI draws from - pictures, fonts, words - if the head has any: the asset
-    // package's zip, wherever its platform placed it. The app extracts it and shares ONE provider:
-    // the web host serves it at /assets/ to a paired phone's page, and the in-process UI reads it
-    // directly. Null for a head whose UI brings nothing of its own.
-    public IAsset? UiZipAsset { get; set; }
+    // package's zips, wherever its platform placed them. The app extracts each and shares ONE
+    // provider over all of them: the web host serves it at /assets/ to a paired phone's page, and
+    // the in-process UI reads it directly. Empty for a head whose UI brings nothing of its own.
+    // Searched in the order given, and the first zip that has the file wins - so a head that ships
+    // a zip of its own BEFORE the UI's replaces single files of it: a fork's logo, its consent
+    // summary, a picture, without a UI build. Ours name one, the UI's store.
+    public IReadOnlyList<IAsset> UiZipAssets { get; set; } = [];
 
-    // The page the web host serves - the SPA, or the Avalonia UI's browser build - as the zip the
-    // head embedded; the app extracts it as it does the UI's. Carried here rather than configured
-    // on the factory, so both of the host's files travel one path and are named once; the app
-    // itself never reads it. Required by a head that sets WebHostFactory.
+    // The page the web host serves - the Avalonia UI's browser build - as the zip the head's
+    // platform placed beside it, wherever that is; the app extracts it as it does the UI's. Carried
+    // here rather than configured on the factory, so both of the host's files travel one path and
+    // are named once; the app itself never reads it. Required by a head that sets WebHostFactory.
     public IAsset? WebRootZipAsset { get; set; }
 
     // ReSharper disable once StringLiteralTypo

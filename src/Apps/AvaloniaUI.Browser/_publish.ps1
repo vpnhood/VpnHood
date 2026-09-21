@@ -1,5 +1,6 @@
-# Publishes the Avalonia UI's browser build and zips it for the heads to embed beside the SPA
-# (VpnHood.App.Client.csproj picks bin/avalonia-browser.zip up when it exists). Runs under the .NET
+# Publishes the Avalonia UI's browser build and zips it as the page every head's web host serves:
+# build/VpnHood.App.AvaloniaUI.Browser.targets places bin/avalonia-browser.zip beside each head as
+# assets/web-root.zip, when it exists. Runs under the .NET
 # 10 SDK named by global.json in this folder: SkiaSharp's WebAssembly libraries are built for its
 # Emscripten, which the .NET 11 preview's cannot link.
 $ErrorActionPreference = "Stop"

@@ -10,30 +10,6 @@
 	<ItemGroup>
 		<PackageReference Include="VpnHood.Core.IpLocations.Assets.Ip2LocationLite" Version="8.2.852" />
 	</ItemGroup>
-	<!-- Production: reference the zip-only package. It ships no DLL — its build/*.targets embeds
-	     spa.zip into THIS assembly as 'VpnHood.App.Client.spa.zip' (see SpaAsset). -->
-	<ItemGroup Condition="Exists('$(VhUserDir)\use-local-spa.txt')==false">
-		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="8.1.852" />
-	</ItemGroup>
-	<!-- Local dev: embed the freshly built zip directly, under the same LogicalName the package uses,
-	     so SpaAsset reads it identically. No DLL to build — run _build-local.ps1 then create the
-	     switch file <Vh>/.user/use-local-spa.txt. -->
-	<ItemGroup Condition="Exists('$(VhUserDir)\use-local-spa.txt')==true">
-		<EmbeddedResource Include="$(VhDir)\VpnHood.Client.WebUI\nuget\VpnHood.AppLib.Assets.ClassicSpa\Resources\spa.zip">
-			<LogicalName>VpnHood.App.Client.spa.zip</LogicalName>
-			<Visible>false</Visible>
-		</EmbeddedResource>
-	</ItemGroup>
-
-	<!-- The Avalonia UI's browser build, when it has been published (src/Apps/AvaloniaUI.Browser/_publish.ps1
-	     writes the zip): embedded under the name AppWebRoot reads, as the page every web host of this
-	     product serves. A build that has not published it embeds nothing and has no page to serve. -->
-	<ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\AvaloniaUI.Browser\bin\avalonia-browser.zip')">
-		<EmbeddedResource Include="$(MSBuildThisFileDirectory)..\AvaloniaUI.Browser\bin\avalonia-browser.zip">
-			<LogicalName>VpnHood.App.Client.avalonia-browser.zip</LogicalName>
-			<Visible>false</Visible>
-		</EmbeddedResource>
-	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />

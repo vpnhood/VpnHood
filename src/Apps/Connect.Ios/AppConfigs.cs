@@ -54,6 +54,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public Uri? TermsOfUseUrl { get; set; }
     public string LogoAssetPath { get; set; } = "images/VpnHoodConnect-logo.png";
     public string PrivacyConsentAssetName { get; set; } = "privacy-consent-connect";
+    public string CompanyName { get; set; } = "VpnHood";
 
     // Portal (account/billing) backend. Null disables account features entirely — the app builds and
     // runs sign-in-less (fail-soft, matching Connect.Android.Google's CreateAppAccountProvider) until

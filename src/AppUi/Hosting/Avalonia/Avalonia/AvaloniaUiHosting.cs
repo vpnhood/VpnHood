@@ -1,9 +1,9 @@
-using VpnHood.Core.Toolkit.Assets;
+﻿using VpnHood.Core.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;
 
 // The step every in-process host takes between the app and its first view: the UI's content, out
-// of the store the head named (AppOptions.UiZipAsset) - the words, the fonts. Waited for on the
+// of the stores the head named (AppOptions.UiZipAssets) - the words, the fonts. Waited for on the
 // calling thread, beside the VhApp.Init and VhApp.Configure every host already waits for
 // there, and for the same reason: every frame after it depends on it, and in process the reads
 // complete at once.
@@ -18,7 +18,7 @@ public static class AvaloniaUiHosting
     public static void PrepareContent<TUi>(IAssetProvider? uiAssetProvider) where TUi : IAvaloniaUi
     {
         var assets = uiAssetProvider ?? throw new InvalidOperationException(
-            "The head has named no AppOptions.UiZipAsset, and this UI reads its pictures and its words from it.");
+            "The head has named no AppOptions.UiZipAssets, and this UI reads its pictures and its words from them.");
 
         TUi.PrepareContentAsync(assets, CancellationToken.None).GetAwaiter().GetResult();
     }

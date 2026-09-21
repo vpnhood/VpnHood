@@ -76,16 +76,11 @@ public static class AppAssets
         return new Bitmap(seekable);
     }
 
-    // A text file of the store (a content document); null when it is not there, which is how it is
-    // asked for: a document this build did not ship in a language falls back to English.
-    public static async Task<string?> ReadTextAsync(string assetPath, CancellationToken cancellationToken)
+    // A content document of the store, finished: this class owns the provider, and
+    // ContentDocuments picks the language and fills the product's names as it reads the file.
+    public static Task<string> LoadDocumentAsync(string name, CancellationToken cancellationToken)
     {
-        await using var stream = await Assets.TryOpenReadAsync(assetPath, cancellationToken).Vhc();
-        if (stream == null)
-            return null;
-
-        using var reader = new StreamReader(stream);
-        return await reader.ReadToEndAsync(cancellationToken).Vhc();
+        return ContentDocuments.LoadAsync(Assets, name, cancellationToken);
     }
 
     // An image of the store, by its name there (images/rocket.webp is "rocket.webp").

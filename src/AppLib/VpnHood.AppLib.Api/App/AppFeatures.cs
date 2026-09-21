@@ -10,6 +10,9 @@ public class AppFeatures
 {
     public required string AppId { get; init; }
     public required string AppName { get; init; }
+    // Whose app: the maker's name, for a document that names it ({companyName}) as AppName is for
+    // {appName}. See AppOptions.CompanyName.
+    public required string CompanyName { get; init; }
     public required bool IsExcludeAppsSupported { get; init; }
     public required bool IsIncludeAppsSupported { get; init; }
     public required string UiTheme { get; init; }

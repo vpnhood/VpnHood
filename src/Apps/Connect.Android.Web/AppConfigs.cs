@@ -33,6 +33,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public Uri? TermsOfUseUrl { get; set; }
     public string LogoAssetPath { get; set; } = "images/VpnHoodConnect-logo.png";
     public string PrivacyConsentAssetName { get; set; } = "privacy-consent-connect";
+    public string CompanyName { get; set; } = "VpnHood";
 
     public string? AppsFlyerDevKey { get; set; }
 

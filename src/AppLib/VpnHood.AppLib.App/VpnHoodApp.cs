@@ -129,8 +129,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         SettingsService.BeforeSave += SettingsBeforeSave;
 
         // The head names the zips; where they are unpacked is the app's own business - one fixed
-        // folder each under its storage, so no two of them can be handed the same one.
-        UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAsset, StorageFolderPath, "ui");
+        // folder each under its storage, so no two of them can be handed the same one. The UI's are
+        // one provider over all the head named, in the order it named them.
+        UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAssets, StorageFolderPath, "ui");
         _webHostManager = new AppWebHostManager(this, options.WebHostFactory, 
             AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, StorageFolderPath, "web-root"));
 
@@ -224,6 +225,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClientId = clientId,
             AppId = options.AppId,
             AppName = options.AppName,
+            CompanyName = options.CompanyName,
             IsLicenseAgreementRequired = options.IsLicenseAgreementRequired,
             PrivacyPolicyUrl = options.PrivacyPolicyUrl,
             TermsOfUseUrl = options.TermsOfUseUrl,

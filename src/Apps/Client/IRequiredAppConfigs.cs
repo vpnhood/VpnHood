@@ -20,4 +20,5 @@ public interface IRequiredAppConfigs
     // Copied onto AppOptions too: the product's own word in the UI, as paths into its store.
     public string LogoAssetPath { get; set; }
     public string PrivacyConsentAssetName { get; set; }
+    public string CompanyName { get; set; }
 }

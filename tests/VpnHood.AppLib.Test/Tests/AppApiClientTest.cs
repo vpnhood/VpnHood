@@ -1,4 +1,3 @@
-﻿using System.IO.Compression;
 using System.Net;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost;
@@ -12,24 +11,12 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
 
-// The HTTP client of the web server's API, against the web server itself: what a paired browser
+// The HTTP client of the web host's API, against the local web host itself: what a paired browser
 // dials, read back into the same DTOs the in-process controllers hand a UI on the device.
 [TestClass]
-[DoNotParallelize] // the web server registers as the process-wide singleton
+[DoNotParallelize] // the web hosts follow the process-wide AppUiContext
 public class AppApiClientTest : TestAppBase
 {
-    // The smallest SPA the server will serve.
-    private static byte[] BuildSpaZip()
-    {
-        using var memoryStream = new MemoryStream();
-        using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true)) {
-            using var writer = new StreamWriter(archive.CreateEntry("index.html").Open());
-            writer.Write("<html><title>spa-test</title></html>");
-        }
-
-        return memoryStream.ToArray();
-    }
-
     private static Token CreateToken()
     {
         var randomId = Guid.NewGuid();
@@ -52,15 +39,18 @@ public class AppApiClientTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task Http_client_reads_and_writes_through_the_web_server()
+    public async Task Http_client_reads_and_writes_through_the_web_host()
     {
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.Resources.SpaZipData = BuildSpaZip();
+        appOptions.WebHostFactory = new VpnHoodAppWebHostFactory();
+        appOptions.WebRootZipAsset = TestAppHelper.CreateWebRootZip("web-root-test");
         var token = CreateToken();
         appOptions.AccessKeys = [token.ToAccessKey()];
         await using var app = TestAppHelper.CreateClientApp(appOptions);
-        using var webServer = VpnHoodAppWebServer.Init(app);
-        using var http = new HttpClient { BaseAddress = webServer.Url };
+        var localHost = app.LocalWebHost ?? throw new InvalidOperationException("The app has no local web host.");
+        var localUrl = await localHost.EnsureStarted(CancellationToken.None);
+        // the address without the web view's cache-buster: the client builds its own paths on it
+        using var http = new HttpClient { BaseAddress = new Uri(localUrl.GetLeftPart(UriPartial.Authority) + "/") };
         var api = HttpVpnHoodApi.Create(http);
 
         // the configuration, whole: the features, the state, the settings, the profiles, the languages

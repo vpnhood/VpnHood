@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>VpnHood.AppUi.Presentation.Classic.Avalonia</RootNamespace>
-		<IsPackable>false</IsPackable>
 		<Description>VpnHood's own Avalonia UI: the web UI's pages, page for page, in one responsive layout - the views, the controls and the two products' themes</Description>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>
@@ -28,7 +27,11 @@
 		<!-- The look this UI draws: the store's files, which the head's build places by importing the
 		     store's targets (a project reference carries none; a package reference will). Declared, not
 		     compiled against - the store has no assembly. -->
-		<ProjectReference Include="..\..\Assets\Classic\VpnHood.AppUi.Assets.Classic.csproj" ReferenceOutputAssembly="false" />
+		<!-- PrivateAssets: packed, this declaration would become a dependency on a package that is
+		     not published - the store's zip is gitignored and built from the web UI - so every
+		     restore of THIS package would fail. A consumer names its own store, which is the rule
+		     anyway: the look belongs to the head, not to the UI. -->
+		<ProjectReference Include="..\..\Assets\Classic\VpnHood.AppUi.Assets.Classic.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
 		<!-- The pairing page starts and stops the LAN listener the phone dials into. -->
 	</ItemGroup>
 </Project>

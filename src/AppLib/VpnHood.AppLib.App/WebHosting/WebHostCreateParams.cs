@@ -16,8 +16,8 @@ public class WebHostCreateParams
     public required VpnHoodApi Api { get; init; }
 
     // The page this host serves - index.html at its root - to the app's own web view and to a paired
-    // device alike: the SPA, or the Avalonia UI's browser build, whichever the head embedded. One
-    // instance for both hosts, so the zip behind it is extracted once.
+    // device alike: the Avalonia UI's browser build, as the head shipped it (AppOptions.WebRootZipAsset).
+    // One instance for both hosts, so the zip behind it is extracted once.
     public required IAssetProvider WebRoot { get; init; }
 
     // The files the app's UI draws from, which the host serves at /assets/ to a paired phone's page -

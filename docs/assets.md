@@ -1,4 +1,4 @@
-# Assets — how data files ship, and how code reads them
+﻿# Assets — how data files ship, and how code reads them
 
 Pictures, fonts, words, a country database and a whole web UI all reach the app the same way: as a
 zip placed beside it by MSBuild, read through one interface.
@@ -68,7 +68,7 @@ rather than requiring — a language falling back to another, a picture that may
 
 ```mermaid
 graph LR
-    W["web UI build<br/>+ _sync-assets"] --> UZ["ui.zip"]
+    W["the look, a submodule:<br/>src/AppUi/Assets/Classic"] --> UZ["ui.zip"]
     CA["Classic.Avalonia<br/>compiled to WebAssembly"] --> BZ["avalonia-browser.zip"]
     IP["Ip2Location package"] --> IZ["IpLocations.zip"]
 

@@ -1,4 +1,4 @@
-# The CLIENT's store listing — fastlane metadata, screenshots and store texts for 13 locales —
+﻿# The CLIENT's store listing — fastlane metadata, screenshots and store texts for 13 locales —
 # is generated content, not source, so it lives in its own repo (vpnhood/Vpnhood.App.Client) and
 # is regenerated wholesale by that repo's update-screenshots.yml.
 #
@@ -19,4 +19,19 @@
 [submodule "fastlane"]
 	path = fastlane
 	url = https://github.com/vpnhood/Vpnhood.App.Client.git
+	branch = main
+# The classic look the app's UI draws with - images, country flags, fonts, content documents and
+# the words of every language. Bytes, not code, versioned on their own: the look changes when the
+# look changes, not when the app does, and a fork that wants its own look points this submodule at
+# its own store. The package this builds (VpnHood.AppUi.Assets.Classic) is how a head outside this
+# repo gets it; the heads in here import its targets from the folder.
+#
+# A plain `git clone` does NOT fetch it, and a head built without it starts with no images and no
+# words - so clone with --recurse-submodules, or `git submodule update --init` after the fact.
+#
+#     git submodule update --remote src/AppUi/Assets/Classic && git commit -am "Bump the look"
+
+[submodule "src/AppUi/Assets/Classic"]
+	path = src/AppUi/Assets/Classic
+	url = https://github.com/vpnhood/VpnHood.AppUi.Assets.Classic.git
 	branch = main

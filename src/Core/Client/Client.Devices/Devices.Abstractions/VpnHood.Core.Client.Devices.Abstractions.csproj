@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<Description>VpnHood Device abstraction</Description>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.Core.Client.Devices</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

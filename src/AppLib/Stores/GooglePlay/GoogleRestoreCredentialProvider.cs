@@ -2,7 +2,7 @@ using AndroidX.Credentials;
 using AndroidX.Credentials.Exceptions;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Devices.Android;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 

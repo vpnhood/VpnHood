@@ -6,7 +6,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView.Android;
 

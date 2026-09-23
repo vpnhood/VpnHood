@@ -4,7 +4,7 @@ using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.App.ClientProfiles;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.App.Settings;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;

@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 

@@ -1,5 +1,5 @@
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;

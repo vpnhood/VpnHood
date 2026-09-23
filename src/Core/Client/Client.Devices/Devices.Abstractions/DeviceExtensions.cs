@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.Core.Client.Devices;
+namespace VpnHood.Core.Client.Devices.Abstractions;
 
 public static class DeviceExtensions
 {

@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Client.Devices;
+﻿namespace VpnHood.Core.Client.Devices.Abstractions;
 
 public class DeviceAppInfo
 {

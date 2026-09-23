@@ -30,8 +30,8 @@ using VpnHood.AppLib.App.Settings;
 using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
-using VpnHood.Core.Client.Devices;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Client.VpnServices.Manager;
@@ -69,7 +69,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CancellationTokenSource _showAdCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
     private CultureInfo? _systemUiCulture;
-    private IReadOnlyList<Core.Client.Devices.DeviceAppInfo>? _installedApps;
+    private IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>? _installedApps;
     private bool _isConnecting;
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
@@ -101,7 +101,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // Building this list is expensive (on Android it loads and png encodes an icon for every
     // installed app), so it is cached until the app returns to the foreground, which is the only
     // moment the user could have installed or removed an app.
-    public IReadOnlyList<Core.Client.Devices.DeviceAppInfo> InstalledApps =>
+    public IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo> InstalledApps =>
         _installedApps ??= _device.InstalledApps;
 
 

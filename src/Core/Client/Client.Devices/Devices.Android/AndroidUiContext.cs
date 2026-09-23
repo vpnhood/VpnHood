@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Android.Utils;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.Core.Client.Devices.Android;
 

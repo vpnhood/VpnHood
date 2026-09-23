@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Stores.AppStore.Exceptions;
 using VpnHood.AppLib.Stores.AppStore.Native;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.Stores.AppStore;

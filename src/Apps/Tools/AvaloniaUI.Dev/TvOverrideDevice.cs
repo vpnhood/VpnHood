@@ -1,5 +1,5 @@
-using VpnHood.Core.Client.Devices;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
 namespace VpnHood.App.AvaloniaUI.Dev;

@@ -1,4 +1,4 @@
-using VpnHood.Core.Client.Devices;
+using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Ios;

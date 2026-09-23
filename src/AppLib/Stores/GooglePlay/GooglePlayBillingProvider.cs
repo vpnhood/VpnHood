@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Stores.GooglePlay.Exceptions;
 using VpnHood.Core.Client.Devices.Android;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;

@@ -3,7 +3,7 @@ using Google.Android.Gms.Ads.Rewarded;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.Utils;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib.Ads.AdMob.Android;

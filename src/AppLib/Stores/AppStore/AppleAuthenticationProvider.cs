@@ -5,7 +5,7 @@ using UIKit;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Ios.Extensions;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Stores.AppStore;
 

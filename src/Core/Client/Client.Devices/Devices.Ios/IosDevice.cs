@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using VpnHood.Core.Client.Devices.Ios.Extensions;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Quic.Ios;
 using VpnHood.Core.Toolkit.Logging;

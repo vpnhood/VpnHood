@@ -3,7 +3,7 @@ using Avalonia.iOS;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.App.Utils;
 using Foundation;

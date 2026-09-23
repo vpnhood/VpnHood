@@ -1,7 +1,7 @@
-﻿using VpnHood.Core.Client.Devices.UiContexts;
+﻿using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
-namespace VpnHood.Core.Client.Devices;
+namespace VpnHood.Core.Client.Devices.Abstractions;
 
 public interface IDevice : IDisposable
 {

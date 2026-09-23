@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Filtering.Abstractions;

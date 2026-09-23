@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Client.Devices.UiContexts;
+﻿namespace VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 internal class PartialIntentScope : IDisposable
 {

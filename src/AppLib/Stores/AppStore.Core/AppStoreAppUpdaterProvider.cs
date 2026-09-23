@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.App.Ios;
+namespace VpnHood.AppLib.Stores.AppStore;
 
 // App Store counterpart of GooglePlayAppUpdaterProvider. iOS has no in-app update API, so
 // IsUpdateAvailable asks the iTunes Lookup API for the released store version (keyed by the bundle
@@ -35,10 +35,12 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
             _storeApp = storeApp;
 
             // Compare against the assembly version — the same source AppUpdaterService and the UI use.
+            // Every VpnHood assembly carries the one version from Directory.Build.props, so the
+            // abstractions' version is VpnHoodApp's, and this package needs no reference to the app.
             // NOT CFBundleShortVersionString: the .NET iOS SDK injects that from ApplicationDisplayVersion,
             // which only pub/lib/Publish-IosApp.ps1 sets, so every non-CI build reports the SDK default
             // "1.0" and would see the live store listing as an endless update.
-            var currentVersion = typeof(VpnHoodApp).Assembly.GetName().Version;
+            var currentVersion = typeof(IAppUpdaterProvider).Assembly.GetName().Version;
             if (!Version.TryParse(storeApp.Version, out var storeVersion) || currentVersion == null) {
                 VhLogger.Instance.LogDebug(
                     "App Store update is not available. Could not parse versions. Store: {Store}, Current: {Current}",

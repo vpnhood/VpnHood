@@ -6,7 +6,7 @@ using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.AppLib.App.Ios;
+namespace VpnHood.AppLib.Stores.AppStore;
 
 // App Store counterpart of GooglePlayInAppUserReviewProvider: presents the native in-app rating
 // dialog via SKStoreReviewController. The OS decides whether the dialog actually appears — it is

@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Ios;
+using VpnHood.AppLib.Stores.AppStore;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;

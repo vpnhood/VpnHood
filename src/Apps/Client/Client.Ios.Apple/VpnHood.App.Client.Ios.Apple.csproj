@@ -47,6 +47,8 @@
     <ProjectReference Include="..\..\..\Core\Client\Client.Devices\Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
     <!-- iOS shared app code: the VpnHoodIosApp bootstrap and the UI context. -->
     <ProjectReference Include="..\..\..\AppLib\App\App.Ios\VpnHood.AppLib.App.Ios.csproj" />
+    <!-- App Store updates and reviews (AppStoreAppUpdaterProvider / AppStoreInAppUserReviewProvider). -->
+    <ProjectReference Include="..\..\..\AppLib\Stores\AppStore.Core\VpnHood.AppLib.Stores.AppStore.Core.csproj" />
     <!-- The UI this head runs, mounted by AppDelegate as UIKit finishes launching. -->
     <ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
     <!-- The UI itself: the pages, the controls, the themes. -->

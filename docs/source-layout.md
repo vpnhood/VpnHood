@@ -110,6 +110,7 @@ src/AppLib/
 ├── Portal/                         accounts and purchases through the VpnHood Portal API
 └── Stores/
     ├── AppStore/                   App Store billing and Sign in with Apple
+    ├── AppStore.Core/              App Store updates and reviews
     ├── GooglePlay/                 Play Billing and Google sign-in
     └── GooglePlay.Core/            Play in-app updates and reviews
 ```

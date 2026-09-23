@@ -66,6 +66,8 @@
     <!-- The UI itself: the pages, the controls, the themes. -->
     <ProjectReference Include="..\..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
     <PackageReference Include="Avalonia.iOS" Version="12.1.2" />
+    <!-- App Store updates and reviews (AppStoreAppUpdaterProvider / AppStoreInAppUserReviewProvider). -->
+    <ProjectReference Include="..\..\..\AppLib\Stores\AppStore.Core\VpnHood.AppLib.Stores.AppStore.Core.csproj" />
     <!-- StoreKit 2 billing + Sign in with Apple (AppStoreBillingProvider / AppleAuthenticationProvider).
          The Swift facade + binding come from the VpnHood.AppLib.Stores.AppStore.Native NuGet it
          references; being a binding package, its xcframework links into the app automatically. -->

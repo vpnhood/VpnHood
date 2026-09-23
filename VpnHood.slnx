@@ -91,6 +91,9 @@
     <Project Path="src/AppLib/App/App/VpnHood.AppLib.App.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Stores/">
+    <Project Path="src/AppLib/Stores/AppStore.Core/VpnHood.AppLib.Stores.AppStore.Core.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
     <Project Path="src/AppLib/Stores/AppStore/VpnHood.AppLib.Stores.AppStore.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>

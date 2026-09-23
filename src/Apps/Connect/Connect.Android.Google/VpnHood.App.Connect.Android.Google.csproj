@@ -79,15 +79,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Android.Ads.AdMob\VpnHood.AppLib.Android.Ads.AdMob.csproj" />
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Android.GooglePlay.Core\VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Android.GooglePlay\VpnHood.AppLib.Android.GooglePlay.csproj" />
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\Ads\AdMob.Android\VpnHood.AppLib.Ads.AdMob.Android.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\Stores\GooglePlay.Core\VpnHood.AppLib.Stores.GooglePlay.Core.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\Stores\GooglePlay\VpnHood.AppLib.Stores.GooglePlay.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\App\App.Android\VpnHood.AppLib.App.Android.csproj" />
 		<!-- The UI this head runs, which MainActivity is the activity of. -->
 		<ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia.Android\VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->
 		<ProjectReference Include="..\..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\Portal\VpnHood.AppLib.Portal.csproj" />
 		<ProjectReference Include="..\Connect\VpnHood.App.Connect.csproj" />
 	</ItemGroup>
 

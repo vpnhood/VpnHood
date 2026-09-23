@@ -20,8 +20,8 @@
 		<ProjectReference Include="..\..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
 		<ProjectReference Include="..\..\..\Core\Client\Devices\Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
 		<!-- The app itself and its web host: a real VpnHoodApp runs here, and a phone pairs with it. -->
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\App\App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\Api\Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
 	</ItemGroup>
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
 	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->

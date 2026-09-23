@@ -15,7 +15,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
+		<ProjectReference Include="..\..\src\AppLib\Api\Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
 		<ProjectReference Include="..\..\src\Core\Client\Client\VpnHood.Core.Client.csproj" />
 		<ProjectReference Include="..\..\src\Core\Filtering\Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
 		<ProjectReference Include="..\..\src\Core\Quic\Quic.MsQuic\VpnHood.Core.Quic.MsQuic.csproj" />

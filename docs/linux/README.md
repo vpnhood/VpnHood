@@ -240,7 +240,7 @@ src/AppUi/Hosting/Cli/
 A head is then its `AppOptions` and one line naming its UI — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
 project reads a static or names a platform: every command is handed a `CliPlatform`, and the two
-interfaces on it are all a second platform has to write. `VpnHood.AppLib.Linux.Common` is back to
+interfaces on it are all a second platform has to write. `VpnHood.AppLib.App.Linux` is back to
 the one thing it always was, `VpnHoodAppLinux`.
 
 Two points that are easy to get wrong:

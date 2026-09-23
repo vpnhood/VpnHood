@@ -15,7 +15,7 @@
 		<ProjectReference Include="..\WebView\VpnHood.AppUi.Hosting.WebView.csproj" />
 		<!-- The app's Android lifecycle: AndroidAppMainActivityHandler, the activity options, the
 		     window-inset helpers. Not a UI - it stays in AppLib and this references it downward. -->
-		<ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+		<ProjectReference Include="..\..\..\..\AppLib\App\App.Android\VpnHood.AppLib.App.Android.csproj" />
 	</ItemGroup>
 
 </Project>

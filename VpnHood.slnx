@@ -70,32 +70,32 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/AppLib/">
-    <Project Path="src/AppLib/VpnHood.AppLib.Abstractions/VpnHood.AppLib.Abstractions.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Api/VpnHood.AppLib.Api.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Api.HttpClients/VpnHood.AppLib.Api.HttpClients.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Portal/VpnHood.AppLib.Portal.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Api.WebHost/VpnHood.AppLib.Api.WebHost.csproj" />
+    <Project Path="src/AppLib/Abstractions/VpnHood.AppLib.Abstractions.csproj" />
+    <Project Path="src/AppLib/Portal/VpnHood.AppLib.Portal.csproj" />
   </Folder>
-  <Folder Name="/src/AppLib/Android/">
-    <Project Path="src/AppLib/VpnHood.AppLib.Android.Ads.AdMob/VpnHood.AppLib.Android.Ads.AdMob.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Android.Common/VpnHood.AppLib.Android.Common.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Android.GooglePlay.Core/VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Android.GooglePlay/VpnHood.AppLib.Android.GooglePlay.csproj" />
+  <Folder Name="/src/AppLib/Ads/">
+    <Project Path="src/AppLib/Ads/AdMob.Android/VpnHood.AppLib.Ads.AdMob.Android.csproj" />
   </Folder>
-  <Folder Name="/src/AppLib/Ios/">
-    <Project Path="src/AppLib/VpnHood.AppLib.Ios.AppStore/VpnHood.AppLib.Ios.AppStore.csproj">
+  <Folder Name="/src/AppLib/Api/">
+    <Project Path="src/AppLib/Api/Api.HttpClients/VpnHood.AppLib.Api.HttpClients.csproj" />
+    <Project Path="src/AppLib/Api/Api.WebHost/VpnHood.AppLib.Api.WebHost.csproj" />
+    <Project Path="src/AppLib/Api/Api/VpnHood.AppLib.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/AppLib/App/">
+    <Project Path="src/AppLib/App/App.Android/VpnHood.AppLib.App.Android.csproj" />
+    <Project Path="src/AppLib/App/App.Ios/VpnHood.AppLib.App.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/AppLib/VpnHood.AppLib.Ios.Common/VpnHood.AppLib.Ios.Common.csproj">
+    <Project Path="src/AppLib/App/App.Linux/VpnHood.AppLib.App.Linux.csproj" />
+    <Project Path="src/AppLib/App/App.Win/VpnHood.AppLib.App.Win.csproj" />
+    <Project Path="src/AppLib/App/App/VpnHood.AppLib.App.csproj" />
+  </Folder>
+  <Folder Name="/src/AppLib/Stores/">
+    <Project Path="src/AppLib/Stores/AppStore/VpnHood.AppLib.Stores.AppStore.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-  </Folder>
-  <Folder Name="/src/AppLib/Linux/">
-    <Project Path="src/AppLib/VpnHood.AppLib.Linux.Common/VpnHood.AppLib.Linux.Common.csproj" />
-  </Folder>
-  <Folder Name="/src/AppLib/Windows/">
-    <Project Path="src/AppLib/VpnHood.AppLib.Win.Common/VpnHood.AppLib.Win.Common.csproj" />
+    <Project Path="src/AppLib/Stores/GooglePlay.Core/VpnHood.AppLib.Stores.GooglePlay.Core.csproj" />
+    <Project Path="src/AppLib/Stores/GooglePlay/VpnHood.AppLib.Stores.GooglePlay.csproj" />
   </Folder>
   <Folder Name="/src/AppUi/Assets/">
     <Project Path="src/AppUi/Assets/Classic/VpnHood.AppUi.Assets.Classic.csproj" />

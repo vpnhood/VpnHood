@@ -240,14 +240,15 @@ edit. To keep one out, set `IsPackable=false` on it.
 This replaced ~48 identical per-project `_publish.ps1` forwarder scripts and the explicit list that
 lived in `Publish-NugetPackages.ps1`. That list had silently drifted (a trailing-dot path typo that only
 failed on Linux CI *after* real packages had been pushed, and two packable libraries —
-`VpnHood.AppLib.Linux.Common` and `VpnHood.AppLib.Ios.Common` — that were never being published);
+`VpnHood.AppLib.Linux.Common` and `VpnHood.AppLib.Ios.Common`, today `VpnHood.AppLib.App.Linux` and
+`VpnHood.AppLib.App.Ios` — that were never being published);
 discovery makes that class of bug impossible. Per-app build scripts (`src/Apps/*/*/_publish.ps1`) are
 unrelated and remain — they are real build logic invoked directly by the app CI workflows.
 
 ### Build environment, speed, and the publishing gate
 
 - **Windows runner + workloads.** The packable suite spans `net10.0`, `net10.0-android`,
-  `net10.0-windows` (incl. the WPF library `VpnHood.AppLib.Win.Common.WpfSpa`) and `net11.0-ios`.
+  `net10.0-windows` (incl. the WPF library `VpnHood.AppUi.Hosting.WebView.Windows`) and `net11.0-ios`.
   Only a Windows host can build the Windows/WPF projects, so `publish_nugets.yml` runs on
   `windows-latest`, installs the `android`+`ios` workloads, and installs the **.NET 11 preview** SDK
   (the `net11.0-ios` libraries need it; `global.json` `rollForward=latestMajor` then selects it).

@@ -42,12 +42,12 @@
 
   <ItemGroup>
     <!-- App framework + iOS device abstraction. -->
-    <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+    <ProjectReference Include="..\..\..\AppLib\App\App\VpnHood.AppLib.App.csproj" />
     <ProjectReference Include="..\..\..\Core\Client\Devices\Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
     <!-- Concrete iOS IDevice (IosDevice) + IPC message client live in the core Device.iOS project. -->
     <ProjectReference Include="..\..\..\Core\Client\Devices\Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
     <!-- iOS shared app code: the VpnHoodIosApp bootstrap and the UI context. -->
-    <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Ios.Common\VpnHood.AppLib.Ios.Common.csproj" />
+    <ProjectReference Include="..\..\..\AppLib\App\App.Ios\VpnHood.AppLib.App.Ios.csproj" />
     <!-- The UI this head runs, mounted by AppDelegate as UIKit finishes launching. -->
     <ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
     <!-- The UI itself: the pages, the controls, the themes. -->

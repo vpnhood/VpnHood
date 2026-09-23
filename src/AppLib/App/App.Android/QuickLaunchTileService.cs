@@ -30,6 +30,10 @@ namespace VpnHood.AppLib.Droid.Common;
 // final nudge ever comes and the tile would show Connected until tapped. The passive cost — one
 // tile-process spawn per panel open — is acceptable and shrinks further with AOT.
 [Service(
+    // Android keeps a user's added tile by this Java name. The generated default hashes the namespace
+    // and the assembly name, so it is pinned to the name the tile shipped under: renaming the assembly
+    // (VpnHood.AppLib.Android.Common -> VpnHood.AppLib.App.Android) must never drop the tile.
+    Name = "crc64b220724eeef25bf1.QuickLaunchTileService",
 #if !DEBUG
     Process = ProcessName,
 #endif

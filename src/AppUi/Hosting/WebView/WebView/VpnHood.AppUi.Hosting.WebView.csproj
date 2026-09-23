@@ -6,7 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+	  <ProjectReference Include="..\..\..\..\AppLib\App\App\VpnHood.AppLib.App.csproj" />
 	</ItemGroup>
 
 </Project>

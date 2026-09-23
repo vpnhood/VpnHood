@@ -15,6 +15,6 @@
 		<!-- The app as a UI sees it (VhApp), configured here from the API dialed over HTTP. -->
 		<ProjectReference Include="..\..\..\Common\VpnHood.AppUi.Common.csproj" />
 		<!-- The API over HTTP: the page runs nothing of the app, it talks to the one that served it. -->
-		<ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
+		<ProjectReference Include="..\..\..\..\AppLib\Api\Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
 	</ItemGroup>
 </Project>

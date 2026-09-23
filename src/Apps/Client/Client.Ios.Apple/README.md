@@ -2,7 +2,7 @@
 
 Thin host shell for the iOS Client app: `AppConfigs.cs` (product config — bundle ids, App Group, web-UI port,
 resources) plus the `AppDelegate` / `SceneDelegate` / `Main` bootstrap. The shared iOS app code (the WKWebView
-SPA host, `VpnHoodIosApp`) lives in `src/AppLib/VpnHood.AppLib.Ios.Common`; shared client resources in
+SPA host, `VpnHoodIosApp`) lives in `src/AppLib/App/App.Ios`; shared client resources in
 `src/Apps/Client`. Building this project also builds and bundles the extension appex
 (`src/Apps/Client/Client.Ios.Extension`).
 

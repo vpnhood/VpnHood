@@ -26,12 +26,12 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+		<ProjectReference Include="..\..\..\..\AppLib\App\App.Android\VpnHood.AppLib.App.Android.csproj" />
 		<ProjectReference Include="..\..\..\..\Core\Client\Devices\Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-		<ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.Win.Common\VpnHood.AppLib.Win.Common.csproj" />
+		<ProjectReference Include="..\..\..\..\AppLib\App\App.Win\VpnHood.AppLib.App.Win.csproj" />
 		<ProjectReference Include="..\..\..\..\Core\Client\Devices\Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
 	</ItemGroup>
 

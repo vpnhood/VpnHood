@@ -10,6 +10,6 @@
 		<!-- The shared controller this adapter reports to. -->
 		<ProjectReference Include="..\WebView\VpnHood.AppUi.Hosting.WebView.csproj" />
 		<!-- The app's iOS bootstrap and UI context. Not a UI - it stays in AppLib. -->
-		<ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.Ios.Common\VpnHood.AppLib.Ios.Common.csproj" />
+		<ProjectReference Include="..\..\..\..\AppLib\App\App.Ios\VpnHood.AppLib.App.Ios.csproj" />
 	</ItemGroup>
 </Project>

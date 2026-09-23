@@ -6,7 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+	  <ProjectReference Include="..\Abstractions\VpnHood.AppLib.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

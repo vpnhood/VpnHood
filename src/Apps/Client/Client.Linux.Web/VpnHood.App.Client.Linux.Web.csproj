@@ -30,7 +30,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\App\App.Linux\VpnHood.AppLib.App.Linux.csproj" />
 		<!-- The command line, and the daemon and window it dispatches to: the same on every Linux head. -->
 		<ProjectReference Include="..\..\..\AppUi\Hosting\Cli\Cli.Linux\VpnHood.AppUi.Hosting.Cli.Linux.csproj" />
 		<!-- The UI this head runs, in its own window. -->

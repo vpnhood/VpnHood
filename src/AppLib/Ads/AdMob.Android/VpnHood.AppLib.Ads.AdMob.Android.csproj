@@ -11,8 +11,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
-	  <ProjectReference Include="..\..\Core\Client\Devices\Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
+	  <ProjectReference Include="..\..\Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+	  <ProjectReference Include="..\..\..\Core\Client\Devices\Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

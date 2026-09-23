@@ -11,7 +11,7 @@ this table.
 | Folder | What it is | Ships as |
 | --- | --- | --- |
 | `src/Core/` | the VPN engine: the tunnel, the adapters, the protocols, the server | NuGet |
-| `src/AppLib/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, and the per-platform glue (Android, iOS, Linux, Windows) | NuGet |
+| `src/AppLib/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.Win`), and the store and ad providers | NuGet |
 | `src/AppUi/` | the user interface: the app's state as a UI sees it, the look, and the hosts that mount a UI on a platform | NuGet |
 | `src/Apps/` | the apps we ship, and the tools we run ourselves | the stores, our site |
 
@@ -27,7 +27,7 @@ end a name. The folder path spells the project's name, and the `.csproj` inside 
    member's folder starts with the family's name: `Core/Client/Devices/Devices.Android/` holds
    `VpnHood.Core.Client.Devices.Android.csproj`. The base repeats it: `Core/Client/Client/`.
 2. **Peers that only share a kind** sit in a plain folder they don't repeat:
-   `AppUi/Assets/Classic/`.
+   `AppLib/Stores/GooglePlay/`, `AppUi/Assets/Classic/`.
 3. **A project that is a concept on its own** is just its folder: `Core/Common/`.
 
 ## `src/Core/` — the engine, one folder per concept
@@ -84,6 +84,35 @@ src/Core/
     ├── VpnAdapters.WinDivert/
     └── VpnAdapters.WinTun/
 ```
+
+## `src/AppLib/` — the app, one folder per concept
+
+```text
+src/AppLib/
+├── Abstractions/                   the contracts the providers implement
+├── Ads/
+│   └── AdMob.Android/
+├── Api/
+│   ├── Api/                        the app's API: its interfaces and DTOs
+│   ├── Api.HttpClients/            the API over HTTP, for a UI outside the app's process
+│   └── Api.WebHost/                the web host that serves it
+├── App/
+│   ├── App/                        VpnHoodApp and AppOptions
+│   ├── App.Android/                the app on each platform: VpnHoodAndroidApp, VpnHoodIosApp, …
+│   ├── App.Ios/
+│   ├── App.Linux/
+│   └── App.Win/
+├── Portal/                         accounts and purchases through the VpnHood Portal API
+└── Stores/
+    ├── AppStore/                   App Store billing and Sign in with Apple
+    ├── GooglePlay/                 Play Billing and Google sign-in
+    └── GooglePlay.Core/            Play in-app updates and reviews
+```
+
+The store folders take their names from `StoreIds`, so a Microsoft Store package would be
+`Stores/Microsoft/`. The package ids follow the folders: `VpnHood.AppLib.App.Android`,
+`VpnHood.AppLib.Stores.GooglePlay`, `VpnHood.AppLib.Ads.AdMob.Android`. The namespaces kept their
+earlier names (`VpnHood.AppLib.Droid.Common`), so moving to these packages changes no `using`.
 
 ## `src/Apps/` — one folder per product
 

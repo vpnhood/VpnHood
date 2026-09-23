@@ -12,6 +12,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
-		<ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+		<ProjectReference Include="..\..\..\..\AppLib\App\App.Android\VpnHood.AppLib.App.Android.csproj" />
 	</ItemGroup>
 </Project>

@@ -10,10 +10,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
-		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
-		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
-		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
+		<ProjectReference Include="..\..\src\AppLib\App\App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\src\AppLib\Portal\VpnHood.AppLib.Portal.csproj" />
+		<ProjectReference Include="..\..\src\AppLib\Api\Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
+		<ProjectReference Include="..\..\src\AppLib\Api\Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
 		<ProjectReference Include="..\..\src\Core\IpLocations\IpLocations.SqliteProvider\VpnHood.Core.IpLocations.SqliteProvider.csproj" />
 		<ProjectReference Include="..\VpnHood.Test\VpnHood.Test.csproj" />
 	</ItemGroup>

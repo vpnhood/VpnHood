@@ -9,6 +9,6 @@
 		<ProjectReference Include="..\Cli\VpnHood.AppUi.Hosting.Cli.csproj" />
 		<!-- The app as Linux hosts it: the single-instance socket, the command file, the adapter
 		     a previous run may have left. -->
-		<ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />
+		<ProjectReference Include="..\..\..\..\AppLib\App\App.Linux\VpnHood.AppLib.App.Linux.csproj" />
 	</ItemGroup>
 </Project>

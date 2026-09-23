@@ -491,7 +491,7 @@
     <ROW Component="VpnHood.Net.Packets.dll" ComponentId="{957F0E62-F09D-46AF-98E5-516CC9947BA4}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Net.Packets.dll"/>
     <ROW Component="VpnHood.Core.Proxies.EndPointManag_1_ement.dll" ComponentId="{54592393-D3F2-4690-9176-DE5E79CC69F5}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Proxies.Management.dll"/>
     <ROW Component="VpnHood.Core.Proxies.Management.Abstractions.dll" ComponentId="{A726E43B-FF58-42F5-93B2-2C8ACE882021}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Proxies.Management.Abstractions.dll"/>
-    <ROW Component="VpnHood.Core.Proxies.dll" ComponentId="{657F154E-9C2C-45D2-93CC-4862BF130B18}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Proxies.dll"/>
+    <ROW Component="VpnHood.Net.Proxies.dll" ComponentId="{657F154E-9C2C-45D2-93CC-4862BF130B18}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Net.Proxies.dll"/>
     <ROW Component="VpnHood.Net.Toolkit.dll" ComponentId="{005F48BA-01FC-4A0E-8B25-53382A221EAD}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Net.Toolkit.dll"/>
     <ROW Component="VpnHood.Core.Tunneling.dll" ComponentId="{32B02FCC-1B8E-4D08-82FB-42F6B10AD9FD}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Tunneling.dll"/>
     <ROW Component="VpnHood.Net.VpnAdapters.Abstractions.dll" ComponentId="{CC43F834-52AD-41D6-B41A-ACDB97B0B334}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Net.VpnAdapters.Abstractions.dll"/>
@@ -1024,7 +1024,7 @@
     <ROW File="UrlMatcher.dll" Component_="UrlMatcher.dll" FileName="URLMAT~1.DLL|UrlMatcher.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\UrlMatcher.dll" SelfReg="false"/>
     <ROW File="VpnHood.Net.IpLocations.dll" Component_="VpnHood.Net.IpLocations.dll" FileName="VPNHO~26.DLL|VpnHood.Net.IpLocations.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Net.IpLocations.dll" SelfReg="false"/>
     <ROW File="VpnHood.Net.IpLocations.pdb" Component_="VpnHood.Net.IpLocations.dll" FileName="VPNHO~24.PDB|VpnHood.Net.IpLocations.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Net.IpLocations.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Core.Proxies.dll" Component_="VpnHood.Core.Proxies.dll" FileName="VPNHO~27.DLL|VpnHood.Core.Proxies.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.Proxies.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Net.Proxies.dll" Component_="VpnHood.Net.Proxies.dll" FileName="VPNHO~27.DLL|VpnHood.Net.Proxies.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Net.Proxies.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Proxies.Management.Abstractions.dll" Component_="VpnHood.Core.Proxies.Management.Abstractions.dll" FileName="VPNHO~28.DLL|VpnHood.Core.Proxies.Management.Abstractions.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.Proxies.Management.Abstractions.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Proxies.Management.Abstractions.pdb" Component_="VpnHood.Core.Proxies.Management.Abstractions.dll" FileName="VPNHO~25.PDB|VpnHood.Core.Proxies.Management.Abstractions.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.Proxies.Management.Abstractions.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Proxies.Management.dll" Component_="VpnHood.Core.Proxies.EndPointManag_1_ement.dll" FileName="VPNHO~29.DLL|VpnHood.Core.Proxies.Management.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.Proxies.Management.dll" SelfReg="false"/>
@@ -1676,7 +1676,7 @@
     <ROW Feature_="MainFeature" Component_="Timestamps.dll"/>
     <ROW Feature_="MainFeature" Component_="UrlMatcher.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Net.IpLocations.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Proxies.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Net.Proxies.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Proxies.Management.Abstractions.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Proxies.EndPointManag_1_ement.dll"/>
     <ROW Feature_="MainFeature" Component_="WatsonWebserver.Core.dll"/>

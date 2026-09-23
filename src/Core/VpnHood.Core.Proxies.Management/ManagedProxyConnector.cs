@@ -6,6 +6,7 @@ using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
+using VpnHood.Net.Proxies;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;

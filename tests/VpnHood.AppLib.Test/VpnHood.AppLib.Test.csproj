@@ -26,8 +26,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Core.IpLocations.Assets.Ip2LocationLite" Version="8.2.852" />
-		<PackageReference Include="VpnHood.Core.Proxies" Version="8.0.835" />
+		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="8.2.854" />
+		<PackageReference Include="VpnHood.Net.Proxies" Version="8.1.852" />
 	</ItemGroup>
 
 	<ItemGroup>

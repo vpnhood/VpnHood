@@ -4,7 +4,7 @@ How to give a vpnhood library its own repo and its own NuGet cadence while keepi
 **version-aligned with the monorepo family**. Companion to [RELEASE-STRATEGY.md](RELEASE-STRATEGY.md)
 (which covers the monorepo's own model); this file is the step-by-step for onboarding a new module.
 
-Reference implementation: **`VpnHood.Core.Proxies`**. Copy its shape.
+Reference implementation: **`VpnHood.Net.Proxies`**. Copy its shape.
 
 > Shipping an **executable** rather than a library? See [TOOL-REPOS.md](TOOL-REPOS.md) — tools reuse
 > this machinery but keep an independent version line and publish with Trusted Publishing.
@@ -149,7 +149,7 @@ is not enough.
 
 **5. Optional `_publish.ps1`** — local one-shot trigger: refuse a dirty tree → `git pull` (picks up
 the last run's bump commit) → `git push` → `gh workflow run publish_nugets.yml`. CI still does all the
-real work; this is only ergonomics. Copy `VpnHood.Core.Proxies/_publish.ps1` verbatim.
+real work; this is only ergonomics. Copy `VpnHood.Net.Proxies/_publish.ps1` verbatim.
 
 ## Variant: modules whose payload is generated
 

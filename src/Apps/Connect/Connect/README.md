@@ -12,7 +12,7 @@ window. What is the same for all of them is decided here, once:
 | Part | What it decides |
 |---|---|
 | `ConnectAppResources.cs` | the premium feature list (`AppPremiumOptions.Features`) every head hands to the app |
-| the project file | the IP-location database the product ships (`VpnHood.Core.IpLocations.Assets.Ip2LocationLite`), and the app framework and web host every head builds on |
+| the project file | the IP-location database the product ships (`VpnHood.Net.IpLocations.Assets.Ip2LocationLite`), and the app framework and web host every head builds on |
 
 The settings each head must state - `AppId`, `UpdateInfoUrl`, `Ga4MeasurementId`, the legal URLs, the
 logo and consent names - are `IRequiredAppConfigs` in `VpnHood.AppLib.App`, beside `AppConfigsBase`,

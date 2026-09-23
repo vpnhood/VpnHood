@@ -1,5 +1,5 @@
 # Publishes the NuGet packages of a MODULE repo — a separate vpnhood library repo (e.g.
-# VpnHood.Core.Proxies) that ships its own NuGets on its own cadence but stays version-aligned with
+# VpnHood.Net.Proxies) that ships its own NuGets on its own cadence but stays version-aligned with
 # the monorepo. Runs in the module repo's CI via the reusable workflow
 # .github/workflows/publish_module_nugets.yml (this script rides the monorepo checkout); can also
 # run locally from a sibling checkout as a -noPush dry run. See pub/RELEASE-STRATEGY.md.

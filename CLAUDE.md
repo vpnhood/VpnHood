@@ -6,7 +6,7 @@ truth — follow them, and when a new durable convention is agreed, update this 
 ## Repo layout
 - Top-level directories are lowercase: `src/`, `tests/`, `samples/`, `docs/`, `pub/`. Shared
   script folders are lowercase too (`pub/lib`, `pub/lib/utils`, `pub/lib/vh-installer`); project
-  folders keep their own casing (`src/Apps`, …). Module repos (e.g. VpnHood.Core.Proxies) follow
+  folders keep their own casing (`src/Apps`, …). Module repos (e.g. VpnHood.Net.Proxies) follow
   the same convention (`pub/PubVersion.json`).
 - `src/Apps/` holds only what ships, one folder per product (`Client/`, `Connect/`, `Server/`) plus
   `Tools/` for what we run ourselves (the Avalonia dev head, MacShim). A head is

@@ -107,9 +107,9 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
 ## How to release (current flow)
 
 1. **Refresh our own package pins.** A few of our libraries live in their own repos and reach the
-   apps as `PackageReference`, not `ProjectReference` — today `VpnHood.Core.Quic.MsQuic.AndroidNative`
+   apps as `PackageReference`, not `ProjectReference` — today `VpnHood.Net.Quic.MsQuic.AndroidNative`
    (the prebuilt `libmsquic.so`, published from the msquic fork on every push to its `main`) and the
-   `Assets.*` data packages (`VpnHood.Core.IpLocations.Assets.Ip2LocationLite`, pinned once per product
+   `Assets.*` data packages (`VpnHood.Net.IpLocations.Assets.Ip2LocationLite`, pinned once per product
    in `src/Apps/<Product>/<Product>/`). They are **pinned to an exact version**, so a newly published
    one does not reach a build until someone edits the pin. Publishing without that edit ships the
    *previous* library with new app code, silently and successfully.
@@ -124,7 +124,7 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
 
    ```bash
    dotnet restore src/Apps/Client/Client/VpnHood.App.Client.csproj --force -p:VhUserDir=<an empty dir>
-   grep -o '"VpnHood.Core.IpLocations.Assets.Ip2LocationLite/[0-9.]*"' src/Apps/Client/Client/obj/project.assets.json
+   grep -o '"VpnHood.Net.IpLocations.Assets.Ip2LocationLite/[0-9.]*"' src/Apps/Client/Client/obj/project.assets.json
    ```
 
 2. Maintain the CHANGELOG **by hand**: put the next release's notes under a leading `# Latest`
@@ -288,7 +288,7 @@ Design + validation notes: [docs/cicd/server-publishing.md](../docs/cicd/server-
 
 ## Module repos — separate library repos publishing their own NuGets
 
-Some vpnhood libraries live in their own repos ("module repos", e.g. `VpnHood.Core.Proxies`) and
+Some vpnhood libraries live in their own repos ("module repos", e.g. `VpnHood.Net.Proxies`) and
 ship their own NuGets on their own cadence — while staying **version-aligned** with the monorepo.
 They all publish through ONE shared cross-repo module in this repo, so the logic exists once:
 
@@ -313,7 +313,7 @@ To onboard a module repo: add `pub/PubVersion.json` (`{Version, BumpTime}`, lowe
 the same layout convention as the monorepo), a root
 `Directory.Build.props` carrying the single `<Version>` (remove per-csproj `<Version>`s so it
 applies), `IsPackable=false` on non-library projects, and the small `publish_nugets.yml`
-dispatcher — see `VpnHood.Core.Proxies` for the reference shape. Optionally a root `_publish.ps1`
+dispatcher — see `VpnHood.Net.Proxies` for the reference shape. Optionally a root `_publish.ps1`
 one-shot trigger (commit pending work → pull → push → `gh workflow run publish_nugets.yml`) so a
 publish is a single local command; the CI still does all the real work.
 

@@ -4,8 +4,8 @@ using VpnHood.Core.Proxies.Management;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Management.Sqlite;
-using VpnHood.Core.Proxies.HttpProxyServers;
-using VpnHood.Core.Proxies.Socks5ProxyServers;
+using VpnHood.Net.Proxies.HttpProxyServers;
+using VpnHood.Net.Proxies.Socks5ProxyServers;
 using VpnHood.Test.Dom;
 using VpnHood.Test.Providers;
 

@@ -51,7 +51,7 @@ we never touch OpenSSL from managed code).
 
 This project is **pure managed code**. The native `libmsquic.so` and the MsQuic C# P/Invoke bindings
 (`Microsoft.Quic` namespace) both come from the self-contained package
-**`VpnHood.Core.Quic.MsQuic.AndroidNative`**, which this project references (a local `ProjectReference`
+**`VpnHood.Net.Quic.MsQuic.AndroidNative`**, which this project references (a local `ProjectReference`
 today, the published NuGet later). That package exposes the `Microsoft.Quic` binding types as **public**
 API, so all native-linking complexity is hidden behind one reference. Unmanaged callbacks here are
 `[UnmanagedCallersOnly(CallConvs=[CallConvCdecl])]` statics that resolve the managed instance from a
@@ -93,11 +93,11 @@ name did not match `TargetHost` → validation failed.)
 ## Native dependency & build
 
 This project bundles **no** native libraries itself. Everything native comes from the referenced
-**`VpnHood.Core.Quic.MsQuic.AndroidNative`** package, which ships the prebuilt **`libmsquic.so`** per ABI
+**`VpnHood.Net.Quic.MsQuic.AndroidNative`** package, which ships the prebuilt **`libmsquic.so`** per ABI
 (committed in that package's `native/` folder) plus the `Microsoft.Quic` bindings. msquic statically
 links its own OpenSSL, so no `libcrypto`/`libssl`/.NET-OpenSSL-shim is needed.
 
-- That package lives in the sibling repo **`VpnHood.Core.Quic.MsQuic.AndroidNative`** (a msquic+OpenSSL
+- That package lives in the sibling repo **`VpnHood.Net.Quic.MsQuic.AndroidNative`** (a msquic+OpenSSL
   fork) at `android/AndroidNative/`. See its `android/DEV-GUIDE.md` for how the
   `.so` is produced (`build-android.ps1`); the package commits the binary so consumers never build it.
 - The `<AndroidNativeLibrary>` items in that package flow **transitively** into any consuming APK
@@ -115,7 +115,7 @@ is `Quic` and the server advertises a `QuicPort` (otherwise TCP).
 
 ## Testing (without the VPN)
 
-A standalone test harness lives in `VpnHood.Core.Quic.MsQuic.AndroidNative/android/`:
+A standalone test harness lives in `VpnHood.Net.Quic.MsQuic.AndroidNative/android/`:
 - `quic-test-android/` — minimal APK that runs `AndroidQuicClient` against a
   [VpnHood.NetTester](https://github.com/vpnhood/VpnHood.NetTester) QUIC **echo** server.
 - `quic-test/` — desktop runner of the same logic (sanity check on Windows).

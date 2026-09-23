@@ -60,8 +60,8 @@ public class IpLocationTest : TestAppBase
     {
         // update current ipLocation in app project after a week
         var vhFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 6);
-        var solutionFolder = Path.Combine(vhFolder, "VpnHood.Core.IpLocations.Assets.Ip2LocationLite");
-        var projectFolder = Path.Combine(solutionFolder, "VpnHood.Core.IpLocations.Assets.Ip2LocationLite");
+        var solutionFolder = Path.Combine(vhFolder, "VpnHood.Net.IpLocations.Assets.Ip2LocationLite");
+        var projectFolder = Path.Combine(solutionFolder, "VpnHood.Net.IpLocations.Assets.Ip2LocationLite");
         var ipLocationFile = Path.Combine(projectFolder, "Resources", "IpLocations.zip");
         VhLogger.Instance.LogInformation("ipLocationFile: {ipLocationFile}", ipLocationFile);
         if (!Directory.Exists(projectFolder))

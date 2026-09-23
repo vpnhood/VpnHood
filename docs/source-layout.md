@@ -24,8 +24,10 @@ A folder under a layer is always a concept, never an OS, a store or a technology
 end a name. The folder path spells the project's name, and the `.csproj` inside keeps its full name.
 
 1. **A family** — a base or `Abstractions` project and its variants — is one folder, and each
-   member's folder starts with the family's name: `Core/Client/Devices/Devices.Android/` holds
-   `VpnHood.Core.Client.Devices.Android.csproj`. The base repeats it: `Core/Client/Client/`.
+   member's folder starts with the family's name: `Core/Client/Client.Devices/Devices.Android/` holds
+   `VpnHood.Core.Client.Devices.Android.csproj`. The base repeats it: `Core/Client/Client/`. A
+   family inside another is one of its members too, so its folder starts with the outer family's
+   name (`Client.Devices/`), and its own members start with its own name (`Devices.Android/`).
 2. **Peers that only share a kind** sit in a plain folder they don't repeat:
    `AppLib/Stores/GooglePlay/`, `AppUi/Assets/Classic/`.
 3. **A project that is a concept on its own** is just its folder: `Core/Common/`.
@@ -41,13 +43,13 @@ src/Core/
 ├── Client/
 │   ├── Client/
 │   ├── Client.Abstractions/
-│   ├── Devices/                    one IDevice per OS
+│   ├── Client.Devices/             one IDevice per OS
 │   │   ├── Devices.Abstractions/
 │   │   ├── Devices.Android/
 │   │   ├── Devices.Ios/
 │   │   ├── Devices.Linux/
 │   │   └── Devices.Win/
-│   └── VpnServices/                the VPN service host and the manager that talks to it
+│   └── Client.VpnServices/         the VPN service host and the manager that talks to it
 │       ├── VpnServices.Abstractions/
 │       ├── VpnServices.Host/
 │       └── VpnServices.Manager/

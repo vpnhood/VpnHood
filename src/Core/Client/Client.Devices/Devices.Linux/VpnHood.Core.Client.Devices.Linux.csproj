@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
-    <ProjectReference Include="..\..\VpnServices\VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+    <ProjectReference Include="..\..\Client.VpnServices\VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
     <ProjectReference Include="..\..\..\Quic\Quic.MsQuic\VpnHood.Core.Quic.MsQuic.csproj" />
     <ProjectReference Include="..\..\..\VpnAdapters\VpnAdapters.LinuxTun\VpnHood.Core.VpnAdapters.LinuxTun.csproj" />
   </ItemGroup>

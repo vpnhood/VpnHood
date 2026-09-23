@@ -16,7 +16,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\Core\IpLocations\IpLocations\VpnHood.Core.IpLocations.csproj" />
-		<ProjectReference Include="..\..\..\Core\Client\VpnServices\VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
+		<ProjectReference Include="..\..\..\Core\Client\Client.VpnServices\VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
 		<ProjectReference Include="..\..\..\Core\Filtering\Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
 		<ProjectReference Include="..\..\..\Core\Proxies\Proxies.Management.Sqlite\VpnHood.Core.Proxies.Management.Sqlite.csproj" />
 		<ProjectReference Include="..\..\Abstractions\VpnHood.AppLib.Abstractions.csproj" />

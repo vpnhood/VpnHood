@@ -177,19 +177,19 @@
     <Project Path="src/Core/Client/Client.Abstractions/VpnHood.Core.Client.Abstractions.csproj" />
     <Project Path="src/Core/Client/Client/VpnHood.Core.Client.csproj" />
   </Folder>
-  <Folder Name="/src/Core/Client/Devices/">
-    <Project Path="src/Core/Client/Devices/Devices.Abstractions/VpnHood.Core.Client.Devices.Abstractions.csproj" />
-    <Project Path="src/Core/Client/Devices/Devices.Android/VpnHood.Core.Client.Devices.Android.csproj" />
-    <Project Path="src/Core/Client/Devices/Devices.Ios/VpnHood.Core.Client.Devices.Ios.csproj">
+  <Folder Name="/src/Core/Client/Client.Devices/">
+    <Project Path="src/Core/Client/Client.Devices/Devices.Abstractions/VpnHood.Core.Client.Devices.Abstractions.csproj" />
+    <Project Path="src/Core/Client/Client.Devices/Devices.Android/VpnHood.Core.Client.Devices.Android.csproj" />
+    <Project Path="src/Core/Client/Client.Devices/Devices.Ios/VpnHood.Core.Client.Devices.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/Core/Client/Devices/Devices.Linux/VpnHood.Core.Client.Devices.Linux.csproj" />
-    <Project Path="src/Core/Client/Devices/Devices.Win/VpnHood.Core.Client.Devices.Win.csproj" />
+    <Project Path="src/Core/Client/Client.Devices/Devices.Linux/VpnHood.Core.Client.Devices.Linux.csproj" />
+    <Project Path="src/Core/Client/Client.Devices/Devices.Win/VpnHood.Core.Client.Devices.Win.csproj" />
   </Folder>
-  <Folder Name="/src/Core/Client/VpnServices/">
-    <Project Path="src/Core/Client/VpnServices/VpnServices.Abstractions/VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
-    <Project Path="src/Core/Client/VpnServices/VpnServices.Host/VpnHood.Core.Client.VpnServices.Host.csproj" />
-    <Project Path="src/Core/Client/VpnServices/VpnServices.Manager/VpnHood.Core.Client.VpnServices.Manager.csproj" />
+  <Folder Name="/src/Core/Client/Client.VpnServices/">
+    <Project Path="src/Core/Client/Client.VpnServices/VpnServices.Abstractions/VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
+    <Project Path="src/Core/Client/Client.VpnServices/VpnServices.Host/VpnHood.Core.Client.VpnServices.Host.csproj" />
+    <Project Path="src/Core/Client/Client.VpnServices/VpnServices.Manager/VpnHood.Core.Client.VpnServices.Manager.csproj" />
   </Folder>
   <Folder Name="/src/Core/Filtering/">
     <Project Path="src/Core/Filtering/Filtering.Abstractions/VpnHood.Core.Filtering.Abstractions.csproj" />

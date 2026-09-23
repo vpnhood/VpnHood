@@ -21,7 +21,7 @@
 		<ProjectReference Include="..\..\src\Core\Quic\Quic.MsQuic\VpnHood.Core.Quic.MsQuic.csproj" />
 		<ProjectReference Include="..\..\src\Core\Server\Access\Access.Managers.FileAccessManager\VpnHood.Core.Server.Access.Managers.FileAccessManager.csproj" />
 		<ProjectReference Include="..\..\src\Core\Server\Server\VpnHood.Core.Server.csproj" />
-		<ProjectReference Include="..\..\src\Core\Client\Devices\Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
+		<ProjectReference Include="..\..\src\Core\Client\Client.Devices\Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

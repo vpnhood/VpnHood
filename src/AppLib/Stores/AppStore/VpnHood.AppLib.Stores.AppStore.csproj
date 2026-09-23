@@ -9,7 +9,7 @@
 		<ProjectReference Include="..\..\Abstractions\VpnHood.AppLib.Abstractions.csproj" />
 		<!-- for the shared iOS helpers (NSError -> Exception), the counterpart of
 		     AppLib.Android.GooglePlay.Core referencing Core.Client.Devices.Android -->
-		<ProjectReference Include="..\..\..\Core\Client\Devices\Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+		<ProjectReference Include="..\..\..\Core\Client\Client.Devices\Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
 	</ItemGroup>
 
 	<!-- The StoreKit 2 facade (Swift xcframework + C# P/Invoke binding) lives in its own

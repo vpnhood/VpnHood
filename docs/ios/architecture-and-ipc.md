@@ -13,7 +13,7 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
 
 | Type | Location | Role |
 |--|--|--|
-| `IosDevice` | `src/Core/Client/Devices/Devices.Ios/IosDevice.cs` | `IDevice`; NEVPNManager save/load/start, creates the IPC transport |
+| `IosDevice` | `src/Core/Client/Client.Devices/Devices.Ios/IosDevice.cs` | `IDevice`; NEVPNManager save/load/start, creates the IPC transport |
 | `IosVpnService` | same project | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, and the memory watchdogs (`IosMemoryGuard.Start()` / `IosMemoryMonitor.Start()`) |
 | `IosMessageClient` / `IosMessageListener` | same project | App↔Extension IPC over `SendProviderMessage` / `HandleAppMessage` |
 | `IosVpnAdapter` | `src/Core/VpnAdapters/VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |

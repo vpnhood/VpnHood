@@ -6,7 +6,6 @@
     <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
-    <!-- Match the namespace used by PacketTunnelProvider.cs (the only source file here). -->
     <AssemblyName>VpnHoodClientExtension</AssemblyName>
     <BundleIdentifier>com.vpnhood.client.ios.networkextension</BundleIdentifier>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
@@ -52,7 +51,7 @@
     <!-- The iOS Network Extension implementation (abstract IosVpnService) lives in the core Device.iOS
          project and transitively references the VpnServiceHost + iOSTun adapter. This project only adds
          the thin [Register("PacketTunnelProvider")] subclass that roots the core assembly. -->
-    <ProjectReference Include="..\..\..\Core\Client\Devices\Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+    <ProjectReference Include="..\..\..\Core\Client\Client.Devices\Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
   </ItemGroup>
 
 </Project>

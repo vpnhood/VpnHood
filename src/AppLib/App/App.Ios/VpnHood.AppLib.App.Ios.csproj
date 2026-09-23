@@ -8,6 +8,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\App\VpnHood.AppLib.App.csproj" />
 		<ProjectReference Include="..\..\Api\Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
-		<ProjectReference Include="..\..\..\Core\Client\Devices\Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+		<ProjectReference Include="..\..\..\Core\Client\Client.Devices\Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
 	</ItemGroup>
 </Project>

@@ -11,7 +11,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
-		<ProjectReference Include="..\..\VpnServices\VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<ProjectReference Include="..\..\Client.VpnServices\VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
 		<!-- diagnostics-only (this branch): lets the memory probe read SplitSqlite.MemoryUsed(); the
 		     assembly is already in the extension transitively via VpnServices.Host -->
 		<ProjectReference Include="..\..\..\Filtering\Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />

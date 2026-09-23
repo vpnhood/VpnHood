@@ -11,7 +11,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\Api\Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
-		<ProjectReference Include="..\..\..\Core\Client\Devices\Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
+		<ProjectReference Include="..\..\..\Core\Client\Client.Devices\Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -6,7 +6,7 @@ using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.WinDivert;
 using VpnHood.Net.VpnAdapters.WinTun;
 
-namespace VpnHood.Core.Client.Devices.Win;
+namespace VpnHood.Core.Client.Devices.Windows;
 
 public class WinVpnService : IVpnServiceHandler, IDisposable
 {

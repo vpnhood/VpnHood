@@ -10,7 +10,7 @@ using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
-using VpnHood.AppLib.App.Win;
+using VpnHood.AppLib.App.Windows;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 

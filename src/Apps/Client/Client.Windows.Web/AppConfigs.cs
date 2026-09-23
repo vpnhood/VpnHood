@@ -5,7 +5,7 @@ using VpnHood.Core.Client.Abstractions;
 // ReSharper disable HeuristicUnreachableCode
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
-namespace VpnHood.App.Client.Win.Web;
+namespace VpnHood.App.Client.Windows.Web;
 
 internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {

@@ -23,7 +23,7 @@ if ($cleanall) {
 Remove-Item "$packagesRootDir/$packageConnectDirName/ReleaseNote.txt" -ErrorAction Ignore;
 
 if ($windows) {
-	& "$solutionDir/src/Apps/Connect/Connect.Win.Web/_publish.ps1";
+	& "$solutionDir/src/Apps/Connect/Connect.Windows.Web/_publish.ps1";
 }
 
 if ($linux) {

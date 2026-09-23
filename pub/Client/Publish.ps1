@@ -26,7 +26,7 @@ if ($cleanall) {
 Remove-Item "$packagesRootDir/$packageClientDirName/ReleaseNote.txt" -ErrorAction Ignore;
 
 if ($windows) {
-	& "$solutionDir/src/Apps/Client/Client.Win.Web/_publish.ps1";
+	& "$solutionDir/src/Apps/Client/Client.Windows.Web/_publish.ps1";
 }
 
 if ($linux) {

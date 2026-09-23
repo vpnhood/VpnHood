@@ -87,7 +87,7 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="src/AppLib/VpnHood.AppLib.App.Linux/VpnHood.AppLib.App.Linux.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.App.Win/VpnHood.AppLib.App.Win.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.App.Windows/VpnHood.AppLib.App.Windows.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Stores/">
@@ -142,7 +142,7 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="src/Apps/Client/Client.Linux.Web/VpnHood.App.Client.Linux.Web.csproj" />
-    <Project Path="src/Apps/Client/Client.Win.Web/VpnHood.App.Client.Win.Web.csproj" />
+    <Project Path="src/Apps/Client/Client.Windows.Web/VpnHood.App.Client.Windows.Web.csproj" />
   </Folder>
   <Folder Name="/src/Apps/Connect/">
     <Project Path="src/Apps/Connect/Connect/VpnHood.App.Connect.csproj" />
@@ -160,7 +160,7 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="src/Apps/Connect/Connect.Linux.Web/VpnHood.App.Connect.Linux.Web.csproj" />
-    <Project Path="src/Apps/Connect/Connect.Win.Web/VpnHood.App.Connect.Win.Web.csproj" />
+    <Project Path="src/Apps/Connect/Connect.Windows.Web/VpnHood.App.Connect.Windows.Web.csproj" />
   </Folder>
   <Folder Name="/src/Apps/Server/">
     <Project Path="src/Apps/Server/VpnHood.App.Server.Net.csproj" />
@@ -184,7 +184,7 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="src/Core/VpnHood.Core.Client.Devices.Linux/VpnHood.Core.Client.Devices.Linux.csproj" />
-    <Project Path="src/Core/VpnHood.Core.Client.Devices.Win/VpnHood.Core.Client.Devices.Win.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.Devices.Windows/VpnHood.Core.Client.Devices.Windows.csproj" />
   </Folder>
   <Folder Name="/src/Core/Client/VpnServices/">
     <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnHood.Core.Client.VpnServices.Abstractions.csproj" />

@@ -4,7 +4,7 @@ using VpnHood.AppLib.App;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
-using VpnHood.AppLib.App.Win;
+using VpnHood.AppLib.App.Windows;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 

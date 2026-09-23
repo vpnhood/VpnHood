@@ -12,7 +12,7 @@ this table.
 | --- | --- | --- |
 | `src/Net/` | networking with no VPN in it: packets, a user-space TCP stack, QUIC, the TUN and WinDivert adapters, IP locations, and the toolkit they share | NuGet |
 | `src/Core/` | the VPN engine: the tunnel, the client, the server, split tunneling and proxies | NuGet |
-| `src/AppLib/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.Win`), and the store and ad providers | NuGet |
+| `src/AppLib/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.Windows`), and the store and ad providers | NuGet |
 | `src/AppUi/` | the user interface: the app's state as a UI sees it, the look, and the hosts that mount a UI on a platform | NuGet |
 | `src/Apps/` | the apps we ship, and the tools we run ourselves | the stores, our site |
 
@@ -69,7 +69,7 @@ src/Core/
 ├── VpnHood.Core.Client.Devices.Android/
 ├── VpnHood.Core.Client.Devices.Ios/
 ├── VpnHood.Core.Client.Devices.Linux/
-├── VpnHood.Core.Client.Devices.Win/
+├── VpnHood.Core.Client.Devices.Windows/
 ├── VpnHood.Core.Client.VpnServices.Abstractions/   the VPN service host and the manager that talks to it
 ├── VpnHood.Core.Client.VpnServices.Host/
 ├── VpnHood.Core.Client.VpnServices.Manager/
@@ -99,7 +99,7 @@ src/AppLib/
 ├── VpnHood.AppLib.App.Android/                 the app on each platform: VpnHoodAndroidApp, VpnHoodIosApp, …
 ├── VpnHood.AppLib.App.Ios/
 ├── VpnHood.AppLib.App.Linux/
-├── VpnHood.AppLib.App.Win/
+├── VpnHood.AppLib.App.Windows/
 ├── VpnHood.AppLib.Portal/                      accounts and purchases through the VpnHood Portal API
 ├── VpnHood.AppLib.Stores.AppStore/             App Store billing and Sign in with Apple
 ├── VpnHood.AppLib.Stores.AppStore.Core/        App Store updates and reviews
@@ -122,8 +122,8 @@ src/Apps/
 │   ├── Client.Ios.Apple/           the App Store distribution
 │   ├── Client.Ios.Extension/       the Network Extension it bundles
 │   ├── Client.Linux.Web/
-│   ├── Client.Win.Web/
-│   └── Client.Win.Web.Setup/       the Advanced Installer project (.aip), not a csproj
+│   ├── Client.Windows.Web/
+│   └── Client.Windows.Web.Setup/       the Advanced Installer project (.aip), not a csproj
 ├── Connect/                        the same set, with Connect's own product project
 ├── Server/                         VpnHood.App.Server.Net.csproj + its Docker and Linux packaging
 └── Tools/
@@ -141,7 +141,7 @@ a second one on the same platform is a sibling rather than a rename.
 
 Two folders are not heads and do not follow that rule. `*.Ios.Extension` is the Network Extension
 the iOS app bundles, which belongs to the platform rather than to a channel, so every iOS channel
-of a product would reuse the same one. `*.Win.Web.Setup` holds the installer definition the
+of a product would reuse the same one. `*.Windows.Web.Setup` holds the installer definition the
 Windows publish script builds.
 
 `Tools/` is what we run ourselves. Nothing in it ships, and nothing in it is built by CI.

@@ -1,16 +1,18 @@
-﻿using System.Security.Principal;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.App;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppUi.Hosting.Avalonia.Desktop;
+using VpnHood.AppLib.Api.Premium;
+using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.App.Utils;
-using VpnHood.AppLib.App.Win;
+using VpnHood.AppLib.App.Windows;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Net.Toolkit.Assets;
 
-namespace VpnHood.App.Client.Win.Web;
+namespace VpnHood.App.Connect.Windows.Web;
 
 public static class App
 {
@@ -24,24 +26,31 @@ public static class App
         // web host, which serves the same entries at /assets/ to a paired phone's page.
         var platformAssets = new FolderAssetProvider(AppContext.BaseDirectory);
 
-        var options = new AppOptions(appConfigs.AppId, appConfigs.StorageFolderName, AppConfigs.IsDebugMode) {
+        var appOptions = new AppOptions(appId: appConfigs.AppId, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             AppName = AppConfigs.AppName,
-            DeviceId = WindowsIdentity.GetCurrent().User?.Value,
+            UiTheme = "violet",
+            CustomData = appConfigs.CustomData,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             LogoAssetPath = appConfigs.LogoAssetPath,
             PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
             CompanyName = appConfigs.CompanyName,
-            CustomData = appConfigs.CustomData,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
-            IsAddAccessKeySupported = true,
-            RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
+            IsAddAccessKeySupported = false,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
             WebUiPort = appConfigs.WebUiPort,
-            AllowRecommendUserReviewByServer = false,
+            RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
+            AllowRecommendUserReviewByServer = true,
             LogServiceOptions = {
                 SingleLineConsole = false
+            },
+            Premium = new AppPremiumOptions {
+                Features = ConnectAppResources.PremiumFeatures,
+                // nothing forbids a typed code on this channel (App Review 3.1.1 binds the App Store head only)
+                AllowImportAccessCode = true,
+                // not shipped through a store, so an operator may point its buyers at its own shop
+                IsPurchaseUrlSupported = true
             },
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
@@ -54,7 +63,39 @@ public static class App
             WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };
-        return options;
+
+        appOptions.AccountProvider = CreateAppAccountProvider(appConfigs, appOptions.StorageFolderPath);
+        return appOptions;
+    }
+
+    private static IAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
+    {
+        try {
+            // no Portal configured — ship without account features rather than half-wired ones
+            if (appConfigs.PortalBaseUri == null)
+                return null;
+
+            // no external identity provider on this head: the portal's own password sign-in serves
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
+                appConfigs.PortalBaseUri, appConfigs.AppId, [],
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
+
+            // the web-distribution store: plans priced by the portal, checkout in the browser
+            var webBillingProvider = new PortalWebBillingProvider(appConfigs.PortalBaseUri, appConfigs.AppId,
+                openUrl: (_, url, _) => {
+                    VpnHoodAppWin.OpenUrlInExternalBrowser(url);
+                    return Task.CompletedTask;
+                },
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
+
+            return new PortalAccountProvider(portalAuthenticationProvider, billingProvider: webBillingProvider,
+                portalBaseUrl: appConfigs.PortalBaseUri, packageName: appConfigs.AppId,
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create AccountService.");
+            return null;
+        }
     }
 
     [STAThread]

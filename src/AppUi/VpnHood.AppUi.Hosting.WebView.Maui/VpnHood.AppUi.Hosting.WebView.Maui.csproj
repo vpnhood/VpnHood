@@ -30,8 +30,8 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Win\VpnHood.AppLib.App.Win.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Windows\VpnHood.AppLib.App.Windows.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Windows\VpnHood.Core.Client.Devices.Windows.csproj" />
 	</ItemGroup>
 
 </Project>

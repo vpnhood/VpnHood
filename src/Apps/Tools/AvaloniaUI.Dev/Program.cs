@@ -4,7 +4,7 @@ using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices.Win;
+using VpnHood.Core.Client.Devices.Windows;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.AppUi.Common;

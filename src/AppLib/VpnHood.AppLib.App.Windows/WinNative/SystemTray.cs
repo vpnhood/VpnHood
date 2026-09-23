@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 // ReSharper disable EventNeverSubscribedTo.Global
 // ReSharper disable once CheckNamespace
 
-namespace VpnHood.AppLib.App.Win.WinNative;
+namespace VpnHood.AppLib.App.Windows.WinNative;
 
 public sealed class SystemTray : IDisposable
 {

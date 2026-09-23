@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions.Device;
 
-namespace VpnHood.AppLib.App.Win;
+namespace VpnHood.AppLib.App.Windows;
 
 public class WinDeviceUiProvider : NullDeviceUiProvider
 {

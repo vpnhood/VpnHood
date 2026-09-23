@@ -83,7 +83,7 @@ while the server remains healthy. A full reload resets the current route and uns
 
 - **iOS** — built Release and device-verified (launches, server starts, background→foreground
   recovers).
-- **Windows (WPF)** — build-verified (adapter + full `Client.Win.Web` app). Still smoke-test at
+- **Windows (WPF)** — build-verified (adapter + full `Client.Windows.Web` app). Still smoke-test at
   runtime (WebView2 present + runtime-missing fallback).
 - **Android** — build-verified (adapter + full `Client.Android.Web` app). Still smoke-test on a
   device (content-view swap, hardware back, background→foreground recovery).

@@ -6,7 +6,8 @@ param(
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot)));
 & "$SolutionDir/pub/lib/Publish-WinApp.ps1" `
 	-projectDir $PSScriptRoot  `
-	-appFolder "VpnHoodClient" `
-	-aipFileR "src/Apps/Client/Client.Win.Web.Setup/VpnHood.App.Client.Win.Web.Setup.aip" `
+	-appFolder "VpnHoodConnect" `
+	-aipFileR "src/Apps/Connect/Connect.Windows.Web.Setup/VpnHood.App.Connect.Windows.Web.Setup.aip" `
 	-distribution "web" `
+	-connect `
 	-stage $stage

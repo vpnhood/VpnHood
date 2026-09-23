@@ -57,7 +57,7 @@
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
 		<ProjectReference Include="..\Connect\VpnHood.App.Connect.csproj" />
 		<!-- The tray, the single instance and the Windows device this head runs on. -->
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Win\VpnHood.AppLib.App.Win.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Windows\VpnHood.AppLib.App.Windows.csproj" />
 	</ItemGroup>
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way

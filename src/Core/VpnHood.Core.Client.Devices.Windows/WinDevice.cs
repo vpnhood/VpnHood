@@ -3,7 +3,7 @@ using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Quic.MsQuic;
 
-namespace VpnHood.Core.Client.Devices.Win;
+namespace VpnHood.Core.Client.Devices.Windows;
 
 public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
 {

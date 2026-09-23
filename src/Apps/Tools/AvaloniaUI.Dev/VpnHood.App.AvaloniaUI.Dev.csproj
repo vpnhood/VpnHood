@@ -17,7 +17,7 @@
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
-		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
+		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Windows\VpnHood.Core.Client.Devices.Windows.csproj" />
 		<!-- The app itself and its web host: a real VpnHoodApp runs here, and a phone pairs with it. -->
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />

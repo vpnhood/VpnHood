@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 // Words a UI pushed at configure time, in the language it was speaking. The culture is ignored on
 // purpose: these are one set of words, not a translation table, and the UI pushes again when its

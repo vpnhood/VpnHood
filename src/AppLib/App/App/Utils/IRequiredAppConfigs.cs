@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace VpnHood.AppLib.Utils;
+namespace VpnHood.AppLib.App.Utils;
 
 // The settings a product's head must state, one implementation per head beside AppConfigsBase, so a new
 // head - ours or a fork's - cannot forget one. What each means, and what null means, AppOptions documents.

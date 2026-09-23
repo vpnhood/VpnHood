@@ -1,10 +1,10 @@
 using System.Windows;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.AppLib.Win.Common;
+using VpnHood.AppLib.App.Win;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 

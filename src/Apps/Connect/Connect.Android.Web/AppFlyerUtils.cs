@@ -4,7 +4,7 @@ using Com.Appsflyer;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.App.Connect.Droid.Web;
+namespace VpnHood.App.Connect.Android.Web;
 
 public static class AppFlyerUtils
 {

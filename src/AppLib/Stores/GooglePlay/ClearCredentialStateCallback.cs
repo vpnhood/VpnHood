@@ -1,7 +1,7 @@
 using AndroidX.Credentials;
 using VpnHood.Core.Toolkit.ApiClients;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 // Clear-credential completes with a Java Void result, so unlike
 // CredentialManagerCallback any OnResult means success.

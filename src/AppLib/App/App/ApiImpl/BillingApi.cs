@@ -1,11 +1,11 @@
 ﻿using VpnHood.AppLib.Api.Billing;
-using VpnHood.AppLib.Services.Accounts;
+using VpnHood.AppLib.App.Services.Accounts;
 using VpnHood.Core.Client.Devices.UiContexts;
-using VpnHood.AppLib.DtoConverters;
+using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.AppLib.Api;
 
-namespace VpnHood.AppLib.ApiImpl;
+namespace VpnHood.AppLib.App.ApiImpl;
 
 internal sealed class BillingApi(VpnHoodApp app) : IBillingApi
 {

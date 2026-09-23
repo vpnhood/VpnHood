@@ -2,10 +2,10 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.ClientProfiles;
-using VpnHood.AppLib.Services.Countries;
+using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.Core.Common.Tokens;
 
-namespace VpnHood.AppLib.ClientProfiles;
+namespace VpnHood.AppLib.App.ClientProfiles;
 
 // The locations a profile offers, built from its token: the category gaps a UI needs (a country
 // head above its regions, the automatic one above the countries), then what each location costs

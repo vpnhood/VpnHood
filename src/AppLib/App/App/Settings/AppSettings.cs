@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Api.Settings;
 using VpnHood.Core.Common.Messaging;
 
-namespace VpnHood.AppLib.Settings;
+namespace VpnHood.AppLib.App.Settings;
 
 public class AppSettings
 {

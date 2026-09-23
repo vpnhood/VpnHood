@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 // ReSharper disable IdentifierTypo
 // ReSharper disable InconsistentNaming
 
-namespace VpnHood.AppLib.Win.Common.WinNative;
+namespace VpnHood.AppLib.App.Win.WinNative;
 
 public static class WinIcon
 {

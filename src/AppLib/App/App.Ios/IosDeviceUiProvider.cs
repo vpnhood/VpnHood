@@ -2,7 +2,7 @@
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 
-namespace VpnHood.AppLib.Ios.Common;
+namespace VpnHood.AppLib.App.Ios;
 
 // iOS implementation of the device UI provider. Most platform-integration points (quick launch,
 // notifications, private DNS, kill switch) are not applicable to a regular iOS VPN app, so they

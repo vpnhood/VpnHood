@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Droid.Common.Constants;
+namespace VpnHood.AppLib.App.Android.Constants;
 
 public static class AndroidAppConstants
 {

@@ -5,7 +5,7 @@ using VpnHood.AppLib.Api.Settings;
 using CoreMsg = VpnHood.Core.Common.Messaging;
 using CoreTokens = VpnHood.Core.Common.Tokens;
 
-namespace VpnHood.AppLib.DtoConverters;
+namespace VpnHood.AppLib.App.DtoConverters;
 
 // The session vocabulary the engine speaks and the one the contract publishes. Every enum maps with
 // no default arm: these travel to a UI and, for several of them, into settings.json, so a member

@@ -2,11 +2,11 @@
 using AndroidX.Credentials;
 using AndroidX.Credentials.Exceptions;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.Core.Client.Devices.Droid;
+using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.UiContexts;
 using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAuthenticationExternalProvider
 {

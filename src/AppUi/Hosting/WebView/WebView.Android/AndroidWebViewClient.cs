@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using NativeWebView = Android.Webkit.WebView;
 
-namespace VpnHood.AppUi.Hosting.WebView.Droid;
+namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 internal class AndroidWebViewClient : WebViewClient
 {
@@ -36,7 +36,7 @@ internal class AndroidWebViewClient : WebViewClient
         }
 
         try {
-            var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
+            var intent = new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(url));
             intent.SetFlags(ActivityFlags.NewTask);
             Application.Context.StartActivity(intent);
         }

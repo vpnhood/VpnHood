@@ -4,11 +4,11 @@ using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Quic;
-using VpnHood.Core.Quic.Droid.Interop;
+using VpnHood.Core.Quic.Android.Interop;
 using VpnHood.Core.Toolkit.Extensions;
 using static Microsoft.Quic.MsQuic;
 
-namespace VpnHood.Core.Quic.Droid;
+namespace VpnHood.Core.Quic.Android;
 
 /// <summary>
 /// Adapts a single MsQuic stream to a <see cref="Stream"/>. Inbound data delivered by msquic

@@ -6,15 +6,15 @@ using Microsoft.Extensions.Logging;
 using Permission = Android.Content.PM.Permission;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.AppLib.Droid.Common.Utils;
-using VpnHood.Core.Client.Devices.Droid;
-using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.AppLib.App.Android.Utils;
+using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.ActivityEvents;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.AppLib.Droid.Common;
+namespace VpnHood.AppLib.App.Android;
 
 public class AndroidDeviceUiProvider : IDeviceUiProvider
 {
@@ -114,7 +114,7 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
             throw new NotSupportedException("SystemKillSwitchSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
-        var intent = new Intent(Android.Provider.Settings.ActionVpnSettings);
+        var intent = new Intent(global::Android.Provider.Settings.ActionVpnSettings);
         appUiContext.Activity.StartActivity(intent);
     }
 
@@ -124,7 +124,7 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
             throw new NotSupportedException("SystemAlwaysOnSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
-        var intent = new Intent(Android.Provider.Settings.ActionVpnSettings);
+        var intent = new Intent(global::Android.Provider.Settings.ActionVpnSettings);
         appUiContext.Activity.StartActivity(intent);
     }
 
@@ -134,7 +134,7 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
             throw new NotSupportedException("SystemSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
-        var intent = new Intent(Android.Provider.Settings.ActionSettings);
+        var intent = new Intent(global::Android.Provider.Settings.ActionSettings);
         appUiContext.Activity.StartActivity(intent);
     }
 
@@ -144,8 +144,8 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
             throw new NotSupportedException("AppSystemSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
-        var intent = new Intent(Android.Provider.Settings.ActionApplicationDetailsSettings);
-        intent.SetData(Android.Net.Uri.FromParts("package", appUiContext.Activity.PackageName, null));
+        var intent = new Intent(global::Android.Provider.Settings.ActionApplicationDetailsSettings);
+        intent.SetData(global::Android.Net.Uri.FromParts("package", appUiContext.Activity.PackageName, null));
         appUiContext.Activity.StartActivity(intent);
     }
 
@@ -156,12 +156,12 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
 
         var appUiContext = (AndroidUiContext)context;
         if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
-            var intent = new Intent(Android.Provider.Settings.ActionAppNotificationSettings);
-            intent.PutExtra(Android.Provider.Settings.ExtraAppPackage, appUiContext.Activity.PackageName);
+            var intent = new Intent(global::Android.Provider.Settings.ActionAppNotificationSettings);
+            intent.PutExtra(global::Android.Provider.Settings.ExtraAppPackage, appUiContext.Activity.PackageName);
             appUiContext.Activity.StartActivity(intent);
         }
         else {
-            var intent = new Intent(Android.Provider.Settings.ActionAppNotificationSettings);
+            var intent = new Intent(global::Android.Provider.Settings.ActionAppNotificationSettings);
             intent.PutExtra("app_package", appUiContext.Activity.PackageName);
             intent.PutExtra("app_uid", appUiContext.Activity.ApplicationInfo!.Uid);
             appUiContext.Activity.StartActivity(intent);

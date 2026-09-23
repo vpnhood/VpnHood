@@ -6,7 +6,7 @@ using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Services.Updaters;
+namespace VpnHood.AppLib.App.Services.Updaters;
 
 public class AppUpdaterService : IDisposable
 {

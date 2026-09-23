@@ -6,7 +6,7 @@ using VpnHood.Core.Toolkit.Graphics;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
 
-namespace VpnHood.AppLib.Branding;
+namespace VpnHood.AppLib.App.Branding;
 
 // The look the OS chrome draws with - the window and bar colours, the tray icons - as the UI's
 // store carries it: branding/<theme>/manifest.json and the icon files it names, written by the

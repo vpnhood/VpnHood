@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Branding;
+namespace VpnHood.AppLib.App.Branding;
 
 // branding/<theme>/manifest.json, as the UI's build writes it into the store.
 internal sealed class AppBrandingManifest

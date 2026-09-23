@@ -1,7 +1,7 @@
 ﻿using Android.Content.PM;
 using Android.Views;
 
-namespace VpnHood.AppLib.Droid.Common.Constants;
+namespace VpnHood.AppLib.App.Android.Constants;
 
 public static class AndroidMainActivityConstants
 {
@@ -17,16 +17,16 @@ public static class AndroidMainActivityConstants
     public const SoftInput WindowSoftInputMode = SoftInput.AdjustResize;
 
     // required for TV
-    public const ScreenOrientation ScreenOrientation = Android.Content.PM.ScreenOrientation.Unspecified;
+    public const ScreenOrientation ScreenOrientation = global::Android.Content.PM.ScreenOrientation.Unspecified;
 
     // if SingleInstance, reopening the app after minimizing will not show the ad activity
-    public const LaunchMode LaunchMode = Android.Content.PM.LaunchMode.Multiple;
+    public const LaunchMode LaunchMode = global::Android.Content.PM.LaunchMode.Multiple;
 
     public const ConfigChanges ConfigChanges =
-        Android.Content.PM.ConfigChanges.Orientation | Android.Content.PM.ConfigChanges.ScreenSize |
-        Android.Content.PM.ConfigChanges.LayoutDirection |
-        Android.Content.PM.ConfigChanges.Keyboard | Android.Content.PM.ConfigChanges.KeyboardHidden |
-        Android.Content.PM.ConfigChanges.FontScale |
-        Android.Content.PM.ConfigChanges.Locale | Android.Content.PM.ConfigChanges.Navigation |
-        Android.Content.PM.ConfigChanges.UiMode;
+        global::Android.Content.PM.ConfigChanges.Orientation | global::Android.Content.PM.ConfigChanges.ScreenSize |
+        global::Android.Content.PM.ConfigChanges.LayoutDirection |
+        global::Android.Content.PM.ConfigChanges.Keyboard | global::Android.Content.PM.ConfigChanges.KeyboardHidden |
+        global::Android.Content.PM.ConfigChanges.FontScale |
+        global::Android.Content.PM.ConfigChanges.Locale | global::Android.Content.PM.ConfigChanges.Navigation |
+        global::Android.Content.PM.ConfigChanges.UiMode;
 }

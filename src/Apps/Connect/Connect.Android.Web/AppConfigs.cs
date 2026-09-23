@@ -1,11 +1,11 @@
 using System.Text.Json;
-using VpnHood.AppLib.Utils;
+using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Client.Abstractions;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
 // ReSharper disable HeuristicUnreachableCode
-namespace VpnHood.App.Connect.Droid.Web;
+namespace VpnHood.App.Connect.Android.Web;
 
 internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {

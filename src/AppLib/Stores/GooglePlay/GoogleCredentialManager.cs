@@ -1,6 +1,6 @@
 ﻿using AndroidX.Credentials;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 // The callback objects handed to Credential Manager are deliberately NOT disposed here. Android
 // keeps calling them on the main executor for as long as it holds them, and disposing the managed

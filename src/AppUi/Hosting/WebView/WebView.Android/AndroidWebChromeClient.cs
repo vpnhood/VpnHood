@@ -3,7 +3,7 @@ using Android.Webkit;
 
 using NativeWebView = Android.Webkit.WebView;
 
-namespace VpnHood.AppUi.Hosting.WebView.Droid;
+namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 internal class AndroidWebChromeClient : WebChromeClient
 {

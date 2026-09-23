@@ -2,7 +2,7 @@
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Services.Ads;
+namespace VpnHood.AppLib.App.Services.Ads;
 
 public class InternalInAdProvider : IAdProvider
 {

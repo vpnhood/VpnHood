@@ -2,7 +2,7 @@
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.ClientProfiles;
 
-namespace VpnHood.AppLib.ClientProfiles;
+namespace VpnHood.AppLib.App.ClientProfiles;
 
 public static class ClientProfileExtensions
 {

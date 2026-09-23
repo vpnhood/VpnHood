@@ -4,16 +4,16 @@ using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Premium;
-using VpnHood.AppLib.Services.Ads;
-using VpnHood.AppLib.Services.Updaters;
+using VpnHood.AppLib.App.Services.Ads;
+using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Assets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.AppLib.WebHosting;
+using VpnHood.AppLib.App.WebHosting;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 public class AppOptions(string appId, string storageFolderName, bool isDebugMode)
 {

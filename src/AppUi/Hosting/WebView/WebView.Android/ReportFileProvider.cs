@@ -4,7 +4,7 @@ using Android.OS;
 using AndroidUri = Android.Net.Uri;
 using JavaFile = Java.IO.File;
 
-namespace VpnHood.AppUi.Hosting.WebView.Droid;
+namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 // A minimal, dependency-free FileProvider for exporting the on-device report/log via the share sheet.
 // Sharing a file:// URI throws FileUriExposedException on modern Android, and putting the whole log in

@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.WebHosting;
+﻿using VpnHood.AppLib.App.WebHosting;
 
 namespace VpnHood.AppLib.Api.WebHost;
 

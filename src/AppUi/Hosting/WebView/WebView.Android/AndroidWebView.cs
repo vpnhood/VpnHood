@@ -1,14 +1,14 @@
 ﻿using System.Web;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using Android.Webkit;
-using VpnHood.AppLib.Droid.Common.Activities;
+using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.Android.ActivityEvents;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using Uri = System.Uri;
 using NativeWebView = Android.Webkit.WebView;
 
-namespace VpnHood.AppUi.Hosting.WebView.Droid;
+namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 // Android IWebView adapter: the only Android-specific SPA-hosting code. It owns the Android
 // WebView, swapping the activity's content between the loading screen and the WebView, and reports

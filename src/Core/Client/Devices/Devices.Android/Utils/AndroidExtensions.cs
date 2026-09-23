@@ -2,7 +2,7 @@
 using Android.Graphics.Drawables;
 using VpnHood.Core.Toolkit.Graphics;
 
-namespace VpnHood.Core.Client.Devices.Droid.Utils;
+namespace VpnHood.Core.Client.Devices.Android.Utils;
 
 public static class AndroidExtensions
 {

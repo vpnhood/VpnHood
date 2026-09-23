@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppUi.Common</RootNamespace>
 		<Description>The VpnHood app as a UI sees it, for any UI toolkit: the app's state and API in one place, the words of every language read from the assets folder, and the code that turns the app's state into text - errors, dates, traffic, documents. No toolkit, no theme, no picture, no file of its own</Description>
 	</PropertyGroup>
 

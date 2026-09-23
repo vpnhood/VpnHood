@@ -8,7 +8,6 @@
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <!-- Match the namespace used by PacketTunnelProvider.cs (the only source file here). -->
     <AssemblyName>VpnHoodConnectExtension</AssemblyName>
-    <RootNamespace>VpnHood.App.Connect.Ios.Extension</RootNamespace>
     <BundleIdentifier>com.vpnhood.connect.ios.networkextension</BundleIdentifier>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
 

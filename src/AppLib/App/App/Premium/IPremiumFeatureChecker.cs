@@ -1,7 +1,7 @@
 ﻿
 using VpnHood.AppLib.Api.App;
 
-namespace VpnHood.AppLib.Premium;
+namespace VpnHood.AppLib.App.Premium;
 
 // The premium gate the feature services and settings resolution need. VpnHoodApp implements it, so
 // a service can ask about its own feature without seeing anything else the app owns. It answers and

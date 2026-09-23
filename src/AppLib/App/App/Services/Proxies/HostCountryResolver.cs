@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.Toolkit.Extensions;
 
-namespace VpnHood.AppLib.Services.Proxies;
+namespace VpnHood.AppLib.App.Services.Proxies;
 
 public class HostCountryResolver(
     IIpLocationProvider ipLocationProvider)

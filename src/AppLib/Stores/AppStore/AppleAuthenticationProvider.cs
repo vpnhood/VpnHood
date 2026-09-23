@@ -7,7 +7,7 @@ using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Ios.Extensions;
 using VpnHood.Core.Client.Devices.UiContexts;
 
-namespace VpnHood.AppLib.Ios.AppStore;
+namespace VpnHood.AppLib.Stores.AppStore;
 
 /// <summary>
 /// Sign in with Apple (ASAuthorizationAppleIdProvider — fully bound in

@@ -1,7 +1,7 @@
 using VpnHood.Core.Client.Devices;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Ios.Common;
+namespace VpnHood.AppLib.App.Ios;
 
 // iOS counterpart of VpnHoodAndroidApp. Bootstraps VpnHoodApp with iOS defaults.
 // Unlike Android, the concrete IosDevice needs app-specific identifiers (App Group id and the

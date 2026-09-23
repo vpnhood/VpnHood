@@ -1,13 +1,13 @@
 ﻿using VpnHood.AppLib.Api.Proxies;
-using VpnHood.AppLib.DtoConverters;
-using VpnHood.AppLib.Services.Proxies;
+using VpnHood.AppLib.App.DtoConverters;
+using VpnHood.AppLib.App.Services.Proxies;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Generics;
 using ProxyEndPoint = VpnHood.AppLib.Api.Proxies.ProxyEndPoint;
 using ProxyEndPointDefaults = VpnHood.AppLib.Api.Proxies.ProxyEndPointDefaults;
 using VpnHood.AppLib.Api;
 
-namespace VpnHood.AppLib.ApiImpl;
+namespace VpnHood.AppLib.App.ApiImpl;
 
 internal sealed class ProxyEndPointsApi(VpnHoodApp app) : IProxyEndPointsApi
 {

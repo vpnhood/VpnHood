@@ -1,12 +1,12 @@
-﻿using VpnHood.AppLib.Premium;
-using VpnHood.AppLib.Settings;
-using VpnHood.AppLib.Utils;
+﻿using VpnHood.AppLib.App.Premium;
+using VpnHood.AppLib.App.Settings;
+using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Services;
+namespace VpnHood.AppLib.App.Services;
 
 // Prepares the on-disk split-ip-via-app filter db before connecting — ONE self-describing db whose sets
 // mirror the user's three source files exactly (no merge algebra, each table answers "what did the user

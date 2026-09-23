@@ -4,7 +4,7 @@ using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
 
-namespace VpnHood.AppLib.ClientProfiles;
+namespace VpnHood.AppLib.App.ClientProfiles;
 
 public class ClientProfile
 {

@@ -1,9 +1,9 @@
 ﻿using Android.Content;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.VpnServices.Host;
 
-namespace VpnHood.Core.Client.Devices.Droid;
+namespace VpnHood.Core.Client.Devices.Android;
 
 public sealed class AndroidVpnNotification : IDisposable
 {

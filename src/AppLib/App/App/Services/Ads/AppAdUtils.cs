@@ -3,7 +3,7 @@ using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
-namespace VpnHood.AppLib.Services.Ads;
+namespace VpnHood.AppLib.App.Services.Ads;
 
 internal static class AppAdUtils
 {

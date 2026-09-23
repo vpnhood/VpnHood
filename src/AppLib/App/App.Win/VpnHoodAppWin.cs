@@ -5,16 +5,15 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Win.Common.WinNative;
+using VpnHood.AppLib.App.Win.WinNative;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Common;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Graphics;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using WinNative;
 
-namespace VpnHood.AppLib.Win.Common;
+namespace VpnHood.AppLib.App.Win;
 
 public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
 {

@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
-namespace VpnHood.AppLib.Services.Ads;
+namespace VpnHood.AppLib.App.Services.Ads;
 
 public class AppAdService(
     IReadOnlyList<AppAdProviderItem> adProviderItems,

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Linux.Common;
+using VpnHood.AppLib.App.Linux;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;

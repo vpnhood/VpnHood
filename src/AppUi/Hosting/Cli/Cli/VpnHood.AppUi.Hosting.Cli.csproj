@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppUi.Hosting.Cli</RootNamespace>
 		<Description>The VpnHood app at a terminal: the commands that drive a running app over its own API, and the daemon that is that app on a machine with no window. Platform-free - what a service is and where an install keeps things is the platform package's to say (Cli.Linux, Cli.Win)</Description>
 	</PropertyGroup>
 

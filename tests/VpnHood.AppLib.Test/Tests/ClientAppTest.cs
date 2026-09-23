@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.App.ClientProfiles;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Api.WebHost.Helpers;

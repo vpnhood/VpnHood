@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
-namespace VpnHood.AppLib.Droid.Ads.VhAdMob;
+namespace VpnHood.AppLib.Ads.AdMob.Android;
 
 public static class AdMobUtil
 {

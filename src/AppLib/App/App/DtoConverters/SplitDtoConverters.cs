@@ -2,7 +2,7 @@ using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.SplitTunneling;
 using CoreClient = VpnHood.Core.Client.Abstractions;
 
-namespace VpnHood.AppLib.DtoConverters;
+namespace VpnHood.AppLib.App.DtoConverters;
 
 // The split vocabulary in both directions. These are saved settings as well as wire values, so the
 // member names on each side must stay identical - the switches below are exhaustive with no default

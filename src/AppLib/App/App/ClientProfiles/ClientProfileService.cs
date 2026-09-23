@@ -11,9 +11,9 @@ using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-using VpnHood.AppLib.DtoConverters;
+using VpnHood.AppLib.App.DtoConverters;
 
-namespace VpnHood.AppLib.ClientProfiles;
+namespace VpnHood.AppLib.App.ClientProfiles;
 
 public class ClientProfileService
 {

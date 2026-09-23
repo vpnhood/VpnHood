@@ -1,14 +1,14 @@
 using Android.Runtime;
 using Android.Views;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.AppLib.Droid.Common.Activities;
+using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
+using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.UiContexts;
 
-namespace VpnHood.AppUi.Hosting.WebView.Droid;
+namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 // Android host for the VpnHood SPA. All hosting business logic lives in the shared WebViewHost;
 // this handler only supplies the Android chrome (content-view timing, hardware back) and forwards the

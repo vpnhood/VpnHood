@@ -1,7 +1,7 @@
 ﻿using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions.Ads;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 public static class AppTrackerBuilder
 {

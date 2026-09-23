@@ -4,17 +4,17 @@ using Android.Net;
 using Android.OS;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions.Exceptions;
-using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
-using VpnHood.Core.Client.Devices.Droid.Messaging;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.Android.ActivityEvents;
+using VpnHood.Core.Client.Devices.Android.Messaging;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
-using VpnHood.Core.Quic.Droid;
+using VpnHood.Core.Quic.Android;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Extensions;
 
-namespace VpnHood.Core.Client.Devices.Droid;
+namespace VpnHood.Core.Client.Devices.Android;
 
 public class AndroidDevice : IDevice
 {

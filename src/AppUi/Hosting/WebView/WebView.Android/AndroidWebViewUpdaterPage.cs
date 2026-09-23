@@ -4,7 +4,7 @@ using Android.Graphics.Drawables;
 using Android.OS;
 using Android.Views;
 
-namespace VpnHood.AppUi.Hosting.WebView.Droid;
+namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 internal static class AndroidWebViewUpdaterPage
 {
@@ -79,7 +79,7 @@ internal static class AndroidWebViewUpdaterPage
 
             // Set button click event to open a URL
             button.Click += (_, _) => {
-                var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(buttonUrl));
+                var intent = new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(buttonUrl));
                 activity.StartActivity(intent);
             };
 

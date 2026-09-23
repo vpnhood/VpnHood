@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 // ReSharper disable UnassignedField.Global
 // ReSharper disable once CheckNamespace
 // ReSharper disable ClassWithVirtualMembersNeverInherited.Global
-namespace WinNative;
+namespace VpnHood.AppLib.App.Win.WinNative;
 
 public class ContextMenu : IDisposable
 {

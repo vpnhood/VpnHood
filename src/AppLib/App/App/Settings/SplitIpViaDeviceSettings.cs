@@ -1,8 +1,8 @@
 ﻿
 using VpnHood.AppLib.Api.SplitTunneling;
-using VpnHood.AppLib.Utils;
+using VpnHood.AppLib.App.Utils;
 
-namespace VpnHood.AppLib.Settings;
+namespace VpnHood.AppLib.App.Settings;
 
 // The split-ip-via-device source lists (see SplitTunneling.UseIpViaDevice). They shape the vpn adapter's
 // ranges, which are applied at connect only — a change while connected flags the session for a

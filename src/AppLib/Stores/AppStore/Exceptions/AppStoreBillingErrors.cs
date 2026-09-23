@@ -1,6 +1,6 @@
 using VpnHood.AppLib.Abstractions.Billing;
 
-namespace VpnHood.AppLib.Ios.AppStore.Exceptions;
+namespace VpnHood.AppLib.Stores.AppStore.Exceptions;
 
 /// <summary>
 /// Translates StoreKit outcomes into the store-agnostic <see cref="BillingException" />, the

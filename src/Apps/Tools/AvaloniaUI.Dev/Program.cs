@@ -1,5 +1,5 @@
 ﻿using Avalonia;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.WebHost;

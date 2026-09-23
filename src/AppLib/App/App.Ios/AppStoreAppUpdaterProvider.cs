@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Ios.Common;
+namespace VpnHood.AppLib.App.Ios;
 
 // App Store counterpart of GooglePlayAppUpdaterProvider. iOS has no in-app update API, so
 // IsUpdateAvailable asks the iTunes Lookup API for the released store version (keyed by the bundle

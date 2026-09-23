@@ -1,7 +1,7 @@
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Sockets;
 
-namespace VpnHood.Core.Quic.Droid;
+namespace VpnHood.Core.Quic.Android;
 
 /// <summary>
 /// A <see cref="SystemSocketFactory"/> that adds Android QUIC client support via <see cref="AndroidQuicClient"/>

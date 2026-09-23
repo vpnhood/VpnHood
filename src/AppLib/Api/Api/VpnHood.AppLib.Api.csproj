@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppLib.Api</RootNamespace>
 		<Description>The VpnHood app's API: the six interfaces a UI reads the app through, every shape they carry - state, features, settings, profiles - and the client that dials them over HTTP. A UI needs this and nothing else of the app.</Description>
 	</PropertyGroup>
 

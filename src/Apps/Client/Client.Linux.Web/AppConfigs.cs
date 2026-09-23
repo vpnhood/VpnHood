@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using VpnHood.AppLib.Utils;
+using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Client.Abstractions;
 
 // ReSharper disable StringLiteralTypo

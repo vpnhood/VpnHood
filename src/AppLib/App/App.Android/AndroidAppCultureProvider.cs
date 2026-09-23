@@ -3,7 +3,7 @@ using Android.OS;
 using Java.Util;
 using VpnHood.AppLib.Abstractions;
 
-namespace VpnHood.AppLib.Droid.Common;
+namespace VpnHood.AppLib.App.Android;
 
 public class AndroidAppCultureProvider : IAppCultureProvider
 {

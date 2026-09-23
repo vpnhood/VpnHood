@@ -7,7 +7,7 @@ using Uri = System.Uri;
 
 using NativeWebView = Android.Webkit.WebView;
 
-namespace VpnHood.AppUi.Hosting.WebView.Droid;
+namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 // In-app viewer for the on-device report/log — the loopback URL the SPA opens via window.open (e.g. the
 // "open log" button). Mirrors the iOS report viewer: shows the report in a full-screen dialog WebView with a
@@ -59,13 +59,13 @@ internal sealed class AndroidReportViewer
         bar.SetGravity(GravityFlags.CenterVertical);
         bar.SetPadding(Dp(4), Dp(4), Dp(4), Dp(4));
 
-        var closeBtn = IconButton(Android.Resource.Drawable.IcMenuCloseClearCancel);
+        var closeBtn = IconButton(global::Android.Resource.Drawable.IcMenuCloseClearCancel);
         closeBtn.Click += (_, _) => _dialog.Dismiss();
 
         var title = new TextView(_activity) { Text = ReportFileName() };
         title.SetPadding(Dp(8), 0, Dp(8), 0);
 
-        var searchBtn = IconButton(Android.Resource.Drawable.IcMenuSearch);
+        var searchBtn = IconButton(global::Android.Resource.Drawable.IcMenuSearch);
         searchBtn.Click += (_, _) => ToggleFindBar();
 
         // Jump to the end of the report: a log's newest lines are its last ones, and dragging through a long
@@ -73,17 +73,17 @@ internal sealed class AndroidReportViewer
         // no JavaScript (which stays disabled here). The framework has no "go to end" drawable, so the
         // skip-to-next media icon (a triangle resting on a bar) is turned a quarter turn into a downward
         // jump-to-the-end arrow — keeping the bar on stock icons of one style instead of a stray legacy one.
-        var jumpToEndBtn = IconButton(Android.Resource.Drawable.IcMediaNext);
+        var jumpToEndBtn = IconButton(global::Android.Resource.Drawable.IcMediaNext);
         jumpToEndBtn.Rotation = 90f;
         jumpToEndBtn.Click += (_, _) => _webView.PageDown(bottom: true);
 
         // Re-fetch the report from its (loopback) source and reload, so the user can pull the latest log
         // without closing and reopening the viewer. The WebView loads straight from the URL, so a fresh
         // LoadUrl re-requests it — no separate download step is needed (unlike the iOS viewer).
-        var refreshBtn = IconButton(Android.Resource.Drawable.IcPopupSync);
+        var refreshBtn = IconButton(global::Android.Resource.Drawable.IcPopupSync);
         refreshBtn.Click += (_, _) => _webView.LoadUrl(_reportUri.ToString());
 
-        var shareBtn = IconButton(Android.Resource.Drawable.IcMenuShare);
+        var shareBtn = IconButton(global::Android.Resource.Drawable.IcMenuShare);
         shareBtn.Click += (_, _) => _ = ShareAsync();
 
         bar.AddView(closeBtn);
@@ -206,7 +206,7 @@ internal sealed class AndroidReportViewer
     {
         var button = new ImageButton(_activity);
         button.SetImageResource(drawableRes);
-        button.SetBackgroundColor(Android.Graphics.Color.Transparent);
+        button.SetBackgroundColor(global::Android.Graphics.Color.Transparent);
         var size = Dp(40);
         button.LayoutParameters = new LinearLayout.LayoutParams(size, size);
         return button;

@@ -1,7 +1,7 @@
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.Toolkit.Extensions;
 
-namespace VpnHood.AppLib.Services;
+namespace VpnHood.AppLib.App.Services;
 
 // Publishes the current split filter db set for the VpnService: asks each split service for its db
 // (each service owns its whole activity decision — settings gate, premium plan, build) and writes the

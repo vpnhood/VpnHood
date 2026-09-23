@@ -1,25 +1,25 @@
-﻿using VpnHood.AppLib.Utils;
+﻿using VpnHood.AppLib.App.Utils;
 using Android.Content;
 using Android.Runtime;
 using Avalonia.Android;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.Accounts;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.Premium;
-using VpnHood.AppUi.Hosting.Avalonia.Droid;
-using VpnHood.AppLib.Droid.Common;
-using VpnHood.AppLib.Droid.Common.Constants;
+using VpnHood.AppUi.Hosting.Avalonia.Android;
+using VpnHood.AppLib.App.Android;
+using VpnHood.AppLib.App.Android.Constants;
 using VpnHood.AppLib.Portal;
-using VpnHood.AppLib.Services.Updaters;
-using VpnHood.Core.Client.Devices.Droid;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Toolkit.Assets;
 
-namespace VpnHood.App.Connect.Droid.Web;
+namespace VpnHood.App.Connect.Android.Web;
 
 [Application(
     Label = AppConfigs.AppName,
@@ -102,7 +102,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             // the web-distribution store: plans priced by the portal, checkout in the browser
             var webBillingProvider = new PortalWebBillingProvider(appConfigs.PortalBaseUri, appConfigs.AppId,
                 openUrl: (uiContext, url, _) => {
-                    var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url.AbsoluteUri));
+                    var intent = new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(url.AbsoluteUri));
                     intent.AddFlags(ActivityFlags.NewTask);
                     ((AndroidUiContext) uiContext).Activity.StartActivity(intent);
                     return Task.CompletedTask;

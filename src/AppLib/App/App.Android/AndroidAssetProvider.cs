@@ -1,7 +1,7 @@
 ﻿using Android.Content;
 using VpnHood.Core.Toolkit.Assets;
 
-namespace VpnHood.AppLib.Droid.Common;
+namespace VpnHood.AppLib.App.Android;
 
 // Asset files on Android: entries of the .apk, under base/assets, which the platform does not split
 // by CPU architecture - which is why data ships as placed files rather than inside an assembly, and

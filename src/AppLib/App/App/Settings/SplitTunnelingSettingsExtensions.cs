@@ -1,10 +1,10 @@
 ﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Settings;
-using VpnHood.AppLib.DtoConverters;
-using VpnHood.AppLib.Premium;
+using VpnHood.AppLib.App.DtoConverters;
+using VpnHood.AppLib.App.Premium;
 using VpnHood.Core.Client.Abstractions;
 
-namespace VpnHood.AppLib.Settings;
+namespace VpnHood.AppLib.App.Settings;
 
 // What the split actually does, as against what it is set to: a setting the build does not sell,
 // or this person has not paid for, is not in effect, and the UI is told so rather than being

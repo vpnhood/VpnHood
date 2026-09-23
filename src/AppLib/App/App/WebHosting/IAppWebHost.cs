@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace VpnHood.AppLib.WebHosting;
+namespace VpnHood.AppLib.App.WebHosting;
 
 // A place the app's own UI and API are served from. There are two, and they are the same thing bound
 // differently: the local one on loopback, which this device loads from, and the remote one on the

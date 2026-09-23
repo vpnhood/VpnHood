@@ -1,6 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 

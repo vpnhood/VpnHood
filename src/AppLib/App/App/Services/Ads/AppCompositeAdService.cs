@@ -10,7 +10,7 @@ using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
-namespace VpnHood.AppLib.Services.Ads;
+namespace VpnHood.AppLib.App.Services.Ads;
 
 internal class AppCompositeAdService
 {

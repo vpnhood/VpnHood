@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Services.Accounts;
+namespace VpnHood.AppLib.App.Services.Accounts;
 
 public class BillingService(
     AccountService accountService,

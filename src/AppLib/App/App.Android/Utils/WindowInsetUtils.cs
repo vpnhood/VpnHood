@@ -1,11 +1,11 @@
 ﻿using Android.Graphics;
 using Android.Views;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Droid.Common.Utils;
+namespace VpnHood.AppLib.App.Android.Utils;
 
 public static class WindowInsetUtils
 {

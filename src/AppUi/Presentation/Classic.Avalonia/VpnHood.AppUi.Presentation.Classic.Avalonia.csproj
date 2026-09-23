@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppUi.Presentation.Classic.Avalonia</RootNamespace>
 		<Description>VpnHood's own Avalonia UI: the web UI's pages, page for page, in one responsive layout - the views, the controls and the two products' themes</Description>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>

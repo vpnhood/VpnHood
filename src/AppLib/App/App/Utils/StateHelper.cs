@@ -5,16 +5,16 @@ using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
-using VpnHood.AppLib.DtoConverters;
-using VpnHood.AppLib.Premium;
-using VpnHood.AppLib.Services.Ads;
-using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.App.DtoConverters;
+using VpnHood.AppLib.App.Premium;
+using VpnHood.AppLib.App.Services.Ads;
+using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Utils;
+namespace VpnHood.AppLib.App.Utils;
 
 internal static class StateHelper
 {

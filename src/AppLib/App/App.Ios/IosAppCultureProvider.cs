@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
 
-namespace VpnHood.AppLib.Ios.Common;
+namespace VpnHood.AppLib.App.Ios;
 
 // iOS counterpart of AndroidAppCultureProvider.
 // - SystemCultures: the user's ordered device languages (NSLocale.PreferredLanguages).

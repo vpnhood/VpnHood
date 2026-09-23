@@ -1,7 +1,7 @@
 using AndroidX.Credentials;
 using VpnHood.Core.Toolkit.ApiClients;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 /// <summary>
 /// The create-credential side of <see cref="CredentialManagerCallback" />: resolves to the

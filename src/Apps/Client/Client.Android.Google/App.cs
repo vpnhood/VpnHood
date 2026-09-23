@@ -1,17 +1,17 @@
-﻿using VpnHood.AppLib.Utils;
+﻿using VpnHood.AppLib.App.Utils;
 using Android.Runtime;
 using Avalonia.Android;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.AppUi.Hosting.Avalonia.Droid;
-using VpnHood.AppLib.Droid.Common;
-using VpnHood.AppLib.Droid.Common.Constants;
-using VpnHood.AppLib.Droid.GooglePlay;
-using VpnHood.AppLib.Services.Updaters;
+using VpnHood.AppUi.Hosting.Avalonia.Android;
+using VpnHood.AppLib.App.Android;
+using VpnHood.AppLib.App.Android.Constants;
+using VpnHood.AppLib.Stores.GooglePlay;
+using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Toolkit.Assets;
 
-namespace VpnHood.App.Client.Droid.Google;
+namespace VpnHood.App.Client.Android.Google;
 
 [Application(
     Label = AppConfigs.AppName,

@@ -7,13 +7,13 @@ using Android.Service.QuickSettings;
 using Java.Util.Functions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices.Droid;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.AppLib.Droid.Common;
+namespace VpnHood.AppLib.App.Android;
 
 // A passive tile running in its own lightweight process. It never touches VpnHoodApp: state and
 // disconnect go through VpnServiceManager, which reads the vpn.status file first and only talks
@@ -31,8 +31,8 @@ namespace VpnHood.AppLib.Droid.Common;
 // tile-process spawn per panel open — is acceptable and shrinks further with AOT.
 [Service(
     // Android keeps a user's added tile by this Java name. The generated default hashes the namespace
-    // and the assembly name, so it is pinned to the name the tile shipped under: renaming the assembly
-    // (VpnHood.AppLib.Android.Common -> VpnHood.AppLib.App.Android) must never drop the tile.
+    // and the assembly name, so it is pinned to the name the tile shipped under (VpnHood.AppLib.Droid.Common
+    // in VpnHood.AppLib.Android.Common): renaming either must never drop the tile.
     Name = "crc64b220724eeef25bf1.QuickLaunchTileService",
 #if !DEBUG
     Process = ProcessName,

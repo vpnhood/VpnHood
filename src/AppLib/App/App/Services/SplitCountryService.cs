@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Settings;
-using VpnHood.AppLib.Premium;
-using VpnHood.AppLib.Services.Countries;
-using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.App.Premium;
+using VpnHood.AppLib.App.Services.Countries;
+using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.IpLocations;
@@ -17,7 +17,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Services;
+namespace VpnHood.AppLib.App.Services;
 
 // Prepares the on-disk split-country filter db before connecting. Uses the app's ip-range provider
 // as a data source; the client country itself comes from AppRegionInfo and country names from

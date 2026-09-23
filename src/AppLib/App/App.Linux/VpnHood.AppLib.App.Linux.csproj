@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<Description>Shared library for VpnHood Linux Clients</Description>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppLib.Linux.Common</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

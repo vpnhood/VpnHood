@@ -3,11 +3,11 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Quic;
 using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Quic.Droid.Interop;
+using VpnHood.Core.Quic.Android.Interop;
 using VpnHood.Core.Toolkit.Extensions;
 using static Microsoft.Quic.MsQuic;
 
-namespace VpnHood.Core.Quic.Droid;
+namespace VpnHood.Core.Quic.Android;
 
 /// <summary>
 /// Client-side QUIC connector for Android, backed by MsQuic (libmsquic.so) through our own P/Invoke

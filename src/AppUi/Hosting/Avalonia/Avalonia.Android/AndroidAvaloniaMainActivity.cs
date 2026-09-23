@@ -7,12 +7,12 @@ using Avalonia.Android;
 // this file sits in a namespace called Avalonia, so the framework type needs an explicit name
 using AvaloniaApplication = Avalonia.Application;
 using VpnHood.AppUi.Hosting.Avalonia;
-using VpnHood.AppLib.Droid.Common.Activities;
-using VpnHood.AppLib;
-using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
+using VpnHood.AppLib.App.Android.Activities;
+using VpnHood.AppLib.App;
+using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.AppUi.Common;
 
-namespace VpnHood.AppUi.Hosting.Avalonia.Droid;
+namespace VpnHood.AppUi.Hosting.Avalonia.Android;
 
 // The Avalonia UI's activity, as AndroidWebViewMainActivity is the web view UI's. Two base classes
 // cannot be had at once, so this is Avalonia's main activity speaking the app's activity-event

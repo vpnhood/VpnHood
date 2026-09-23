@@ -1,11 +1,11 @@
 ﻿using Android.Runtime;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Devices.Droid;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Droid.Common;
+namespace VpnHood.AppLib.App.Android;
 
 public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
 {

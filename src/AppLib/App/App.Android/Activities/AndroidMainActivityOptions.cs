@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.Droid.Common.Activities;
+﻿namespace VpnHood.AppLib.App.Android.Activities;
 
 public class AndroidMainActivityOptions
 {

@@ -3,7 +3,6 @@
 		<Description>Hosts the app web UI in an iOS WKWebView: the IWebView adapter and the view controller a head mounts as its root</Description>
 		<TargetFramework>net11.0-ios</TargetFramework>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.AppUi.Hosting.WebView.Ios</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

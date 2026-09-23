@@ -5,7 +5,7 @@ using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
-using VpnHood.AppLib.Utils;
+using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Management.Abstractions;

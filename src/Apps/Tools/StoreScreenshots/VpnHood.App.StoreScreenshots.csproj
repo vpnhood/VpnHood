@@ -4,7 +4,6 @@
 		<Description>Renders store screenshots of the VpnHood Avalonia UI without a display, an app or a VPN: the UI over a fixture of the app's API, one page at a time, to a PNG</Description>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.App.StoreScreenshots</RootNamespace>
 		<AssemblyName>VpnHoodStoreScreenshots</AssemblyName>
 	</PropertyGroup>
 

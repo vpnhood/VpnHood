@@ -1,7 +1,7 @@
 ﻿using Android.Content;
-using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
+using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 
-namespace VpnHood.AppLib.Droid.Common.Activities;
+namespace VpnHood.AppLib.App.Android.Activities;
 
 public abstract class AndroidAppMainActivity : ActivityEvent
 {

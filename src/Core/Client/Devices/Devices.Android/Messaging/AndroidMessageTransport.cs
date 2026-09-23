@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Android.OS;
 
-namespace VpnHood.Core.Client.Devices.Droid.Messaging;
+namespace VpnHood.Core.Client.Devices.Android.Messaging;
 
 // Shared contract of the binder-based VpnService message channel. The channel carries the same
 // opaque request/response blobs as the other IMessageListener/IMessageClient transports; framing

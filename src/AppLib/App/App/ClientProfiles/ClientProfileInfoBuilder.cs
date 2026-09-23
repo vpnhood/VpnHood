@@ -4,9 +4,9 @@ using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
 
-using VpnHood.AppLib.DtoConverters;
+using VpnHood.AppLib.App.DtoConverters;
 
-namespace VpnHood.AppLib.ClientProfiles;
+namespace VpnHood.AppLib.App.ClientProfiles;
 
 // A profile as the UIs read it: plain values taken off the stored profile once, so the same object
 // is read back by a UI on the other side of the API. The client country is baked in - the policy

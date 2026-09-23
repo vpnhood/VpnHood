@@ -5,9 +5,9 @@ using Windows.UI.Notifications;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
-using VpnHood.AppLib.Win.Common;
+using VpnHood.AppLib.App.Win;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppUi.Hosting.WebView.Maui;

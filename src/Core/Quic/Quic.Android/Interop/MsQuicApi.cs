@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Quic;
 using static Microsoft.Quic.MsQuic;
 
-namespace VpnHood.Core.Quic.Droid.Interop;
+namespace VpnHood.Core.Quic.Android.Interop;
 
 /// <summary>
 /// Process-wide MsQuic library handle: opens the native QUIC API table and a single registration

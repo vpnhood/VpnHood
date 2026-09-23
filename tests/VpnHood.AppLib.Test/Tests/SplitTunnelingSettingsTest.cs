@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Settings;
-using VpnHood.AppLib.Premium;
-using VpnHood.AppLib.Settings;
-using VpnHood.AppLib.Utils;
+using VpnHood.AppLib.App.Premium;
+using VpnHood.AppLib.App.Settings;
+using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using CoreSplit = VpnHood.Core.Client.Abstractions;

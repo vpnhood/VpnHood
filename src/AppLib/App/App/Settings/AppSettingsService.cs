@@ -5,7 +5,7 @@ using VpnHood.AppLib.Api.Settings;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Settings;
+namespace VpnHood.AppLib.App.Settings;
 
 public class AppSettingsService
 {

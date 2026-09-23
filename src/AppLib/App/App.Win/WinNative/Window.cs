@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 // ReSharper disable ClassWithVirtualMembersNeverInherited.Global
 // ReSharper disable once CheckNamespace
 // ReSharper disable IdentifierTypo
-namespace WinNative;
+namespace VpnHood.AppLib.App.Win.WinNative;
 
 public class Window : IDisposable
 {

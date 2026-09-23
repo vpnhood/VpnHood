@@ -1,7 +1,7 @@
 using System.Text.Json;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Utils;
+using VpnHood.AppLib.App.Utils;
 
 namespace VpnHood.App.Connect.Ios.Apple;
 

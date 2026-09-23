@@ -2,6 +2,7 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Sessions;
+using VpnHood.AppLib.App;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test;

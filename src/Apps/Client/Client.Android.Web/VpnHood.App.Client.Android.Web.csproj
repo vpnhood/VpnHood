@@ -3,7 +3,6 @@
 		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
 		<Description>VpnHood Android Client App</Description>
 		<TargetFramework>net10.0-android36.1</TargetFramework>
-		<RootNamespace>VpnHood.App.Client.Droid.Web</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.web.debug</ApplicationId>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>

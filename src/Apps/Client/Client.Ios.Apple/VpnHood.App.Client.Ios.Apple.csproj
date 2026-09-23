@@ -7,7 +7,6 @@
     <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
-    <RootNamespace>VpnHood.App.Client.Ios.Apple</RootNamespace>
     <!-- The project is named for its channel (the App Store); the bundle's executable keeps the platform name. -->
     <AssemblyName>VpnHoodClient</AssemblyName>
     <BundleIdentifier>com.vpnhood.client.ios</BundleIdentifier>

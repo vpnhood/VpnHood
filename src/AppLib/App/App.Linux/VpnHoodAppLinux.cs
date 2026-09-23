@@ -6,7 +6,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Linux.Common;
+namespace VpnHood.AppLib.App.Linux;
 
 public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
 {

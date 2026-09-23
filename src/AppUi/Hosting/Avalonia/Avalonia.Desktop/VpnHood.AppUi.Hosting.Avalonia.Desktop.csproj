@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppUi.Hosting.Avalonia.Desktop</RootNamespace>
 		<Description>Runs the VpnHood Avalonia UI in a desktop window on Windows and Linux</Description>
 	</PropertyGroup>
 

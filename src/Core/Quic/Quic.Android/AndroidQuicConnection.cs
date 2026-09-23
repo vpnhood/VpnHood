@@ -6,12 +6,12 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using Microsoft.Quic;
 using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Quic.Droid.Interop;
+using VpnHood.Core.Quic.Android.Interop;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using static Microsoft.Quic.MsQuic;
 
-namespace VpnHood.Core.Quic.Droid;
+namespace VpnHood.Core.Quic.Android;
 
 /// <summary>
 /// A QUIC connection backed by MsQuic (libmsquic.so) via our own P/Invoke bindings — bypassing

@@ -4,7 +4,6 @@
 		<Description>A developer's tool: runs the VpnHood Avalonia UI on a PC, from a TV's size down to a phone's</Description>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.App.AvaloniaUI.Dev</RootNamespace>
 		<AssemblyName>VpnHoodAvaloniaDev</AssemblyName>
 	</PropertyGroup>
 

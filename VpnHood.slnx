@@ -217,8 +217,10 @@
     <Project Path="src/Core/Server/Server/VpnHood.Core.Server.csproj" />
   </Folder>
   <Folder Name="/src/Core/Server/Access/">
-    <Project Path="src/Core/Server/Access/Access.FileAccessManager/VpnHood.Core.Server.Access.FileAccessManager.csproj" />
     <Project Path="src/Core/Server/Access/Access/VpnHood.Core.Server.Access.csproj" />
+  </Folder>
+  <Folder Name="/src/Core/Server/Access/Managers/">
+    <Project Path="src/Core/Server/Access/Managers/FileAccessManagement/VpnHood.Core.Server.Access.Managers.FileAccessManagement.csproj" />
   </Folder>
   <Folder Name="/src/Core/TcpStack/">
     <Project Path="src/Core/TcpStack/TcpStack.Abstractions/VpnHood.Core.TcpStack.Abstractions.csproj" />

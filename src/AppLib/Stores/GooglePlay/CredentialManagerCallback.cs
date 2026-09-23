@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using GetCredentialResponse = AndroidX.Credentials.GetCredentialResponse;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 public partial class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCallback
 {

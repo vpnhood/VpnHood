@@ -1,6 +1,6 @@
-﻿using VpnHood.AppLib.Droid.Common.Activities;
+﻿using VpnHood.AppLib.App.Android.Activities;
 
-namespace VpnHood.AppUi.Hosting.WebView.Droid;
+namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 public class AndroidWebViewMainActivityOptions : AndroidMainActivityOptions
 {

@@ -13,9 +13,9 @@ using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 using CoreDeviceAppInfo = VpnHood.Core.Client.Devices.DeviceAppInfo;
 
-using VpnHood.AppLib.Services.Countries;
+using VpnHood.AppLib.App.Services.Countries;
 
-namespace VpnHood.AppLib.DtoConverters;
+namespace VpnHood.AppLib.App.DtoConverters;
 
 public static class AppDtoConverterExtensions
 {

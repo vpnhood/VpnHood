@@ -4,7 +4,7 @@ using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.AppLib.Services.Accounts;
+namespace VpnHood.AppLib.App.Services.Accounts;
 
 public class AuthenticationService(
     AccountService accountService,

@@ -1,12 +1,12 @@
 using Google.Android.Gms.Ads;
 using Google.Android.Gms.Ads.AppOpen;
 using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.Core.Client.Devices.Droid;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
-namespace VpnHood.AppLib.Droid.Ads.VhAdMob;
+namespace VpnHood.AppLib.Ads.AdMob.Android;
 
 // ReSharper disable once UnusedType.Global
 public class AdMobAppOpenAdProvider(string adUnitId) : IAdProvider

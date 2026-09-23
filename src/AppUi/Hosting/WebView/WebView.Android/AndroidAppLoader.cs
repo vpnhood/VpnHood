@@ -2,13 +2,13 @@
 using Android.Util;
 using Android.Views;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.AppLib.App;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using Orientation = Android.Widget.Orientation;
 
-namespace VpnHood.AppUi.Hosting.WebView.Droid;
+namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 internal static class AndroidAppLoader
 {
@@ -44,7 +44,7 @@ internal static class AndroidAppLoader
                 linearLayout.SetBackgroundColor(backgroundColor.Value));
 
         // Create the progress bar
-        var progressBar = new ProgressBar(activity, null, Android.Resource.Attribute.ProgressBarStyleHorizontal) {
+        var progressBar = new ProgressBar(activity, null, global::Android.Resource.Attribute.ProgressBarStyleHorizontal) {
             Indeterminate = true,
             LayoutParameters = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,

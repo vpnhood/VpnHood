@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<Description>Platform-neutral controller that hosts the app web UI in a native web view; each platform supplies a thin IWebView adapter.</Description>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppUi.Hosting.WebView</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -1,9 +1,9 @@
-﻿using VpnHood.AppLib.Utils;
+﻿using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Toolkit.Assets;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.WebHosting;
+namespace VpnHood.AppLib.App.WebHosting;
 
 // Everything the app knows about its web hosts: which two exist, what each is told, when they come up
 // by themselves, and what happens when the answer changes under a running app. The app keeps two

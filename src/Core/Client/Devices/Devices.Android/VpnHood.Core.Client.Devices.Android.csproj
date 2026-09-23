@@ -3,7 +3,6 @@
 		<Description>VpnHood client device provider for Android</Description>
 		<TargetFramework>net10.0-android36.1</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.Core.Client.Devices.Droid</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -2,7 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.AppLib.Api;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Assets;

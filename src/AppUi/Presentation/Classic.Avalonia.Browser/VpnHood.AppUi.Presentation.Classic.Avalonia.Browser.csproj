@@ -4,7 +4,6 @@
 		<Description>The Classic Avalonia UI as a browser page: what the app's web server hands a paired device. The host does the work (VpnHood.AppUi.Hosting.Avalonia.Browser); this names the UI.</Description>
 		<TargetFramework>net10.0-browser</TargetFramework>
 		<OutputType>Exe</OutputType>
-		<RootNamespace>VpnHood.AppUi.Presentation.Classic.Avalonia.Browser</RootNamespace>
 		<!-- The bundle's main assembly, which main.js starts by this name. -->
 		<AssemblyName>VpnHoodAvaloniaBrowser</AssemblyName>
 	</PropertyGroup>

@@ -3,7 +3,6 @@
 		<Description>VpnHood Android Ad Library for AdMob</Description>
 		<TargetFramework>net10.0-android36.1</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.AppLib.Droid.Ads.VhAdMob</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>

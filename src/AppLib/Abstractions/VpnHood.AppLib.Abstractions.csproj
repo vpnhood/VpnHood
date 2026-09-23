@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<Description>What a head supplies to the app and the app consumes without knowing the implementation: the account, billing, ad, device-UI, culture, updater and user-review providers. Interfaces and the shapes they exchange - no app, no engine, no UI.</Description>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppLib.Abstractions</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

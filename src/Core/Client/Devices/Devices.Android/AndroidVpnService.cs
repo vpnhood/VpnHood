@@ -5,16 +5,16 @@ using Android.Content.PM;
 using Android.Net;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Devices.Droid.Messaging;
+using VpnHood.Core.Client.Devices.Android.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
-using VpnHood.Core.Quic.Droid;
+using VpnHood.Core.Quic.Android;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.AndroidTun;
 
-namespace VpnHood.Core.Client.Devices.Droid;
+namespace VpnHood.Core.Client.Devices.Android;
 
 // VPN requires TypeSystemExempted:  https://developer.android.com/about/versions/14/changes/fgs-types-required#system-exempted
 [Service(
@@ -75,7 +75,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     // the message listener claims only its own bind action; everything else (especially the
     // system's android.net.VpnService bind that establishes the VPN) goes to the base VpnService
-    public override Android.OS.IBinder? OnBind(Intent? intent)
+    public override global::Android.OS.IBinder? OnBind(Intent? intent)
     {
         return _messageListener.TryBind(intent) ?? base.OnBind(intent);
     }

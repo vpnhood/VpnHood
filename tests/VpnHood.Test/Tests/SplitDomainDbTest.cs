@@ -1,9 +1,9 @@
 ﻿using Microsoft.Data.Sqlite;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Premium;
-using VpnHood.AppLib.Services;
-using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.App.Premium;
+using VpnHood.AppLib.App.Services;
+using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
 

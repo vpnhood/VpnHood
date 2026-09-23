@@ -1,4 +1,4 @@
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.AppLib.Api;
 using VpnHood.Core.Toolkit.Assets;
 

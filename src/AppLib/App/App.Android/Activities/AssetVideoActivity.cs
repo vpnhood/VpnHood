@@ -2,9 +2,9 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Media;
 using Android.Views;
-using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
+using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 
-namespace VpnHood.AppLib.Droid.Common.Activities;
+namespace VpnHood.AppLib.App.Android.Activities;
 
 // Plays a video that ships as an asset, full screen, over whatever is showing - the shape every ad
 // network uses for an interstitial, so a promotion of ours and a bought one look the same to the

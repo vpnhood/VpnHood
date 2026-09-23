@@ -1,28 +1,28 @@
-﻿using VpnHood.AppLib.Utils;
+﻿using VpnHood.AppLib.App.Utils;
 using Android.Runtime;
 using Avalonia.Android;
 using Microsoft.Extensions.Logging;
-using VpnHood.App.Connect.Droid.Google.FirebaseUtils;
+using VpnHood.App.Connect.Android.Google.FirebaseUtils;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.Accounts;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Api.Premium;
-using VpnHood.AppUi.Hosting.Avalonia.Droid;
-using VpnHood.AppLib.Droid.Ads.VhAdMob;
-using VpnHood.AppLib.Droid.Common;
-using VpnHood.AppLib.Droid.Common.Constants;
-using VpnHood.AppLib.Droid.GooglePlay;
+using VpnHood.AppUi.Hosting.Avalonia.Android;
+using VpnHood.AppLib.Ads.AdMob.Android;
+using VpnHood.AppLib.App.Android;
+using VpnHood.AppLib.App.Android.Constants;
+using VpnHood.AppLib.Stores.GooglePlay;
 using VpnHood.AppLib.Portal;
-using VpnHood.AppLib.Services.Ads;
-using VpnHood.AppLib.Services.Updaters;
+using VpnHood.AppLib.App.Services.Ads;
+using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Toolkit.Assets;
 
-namespace VpnHood.App.Connect.Droid.Google;
+namespace VpnHood.App.Connect.Android.Google;
 
 [Application(
     Label = AppConfigs.AppName,

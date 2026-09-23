@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<TargetFramework>net10.0-android36.1</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.AppUi.Hosting.Avalonia.Droid</RootNamespace>
 		<Description>Hosts the VpnHood Avalonia UI in an Android activity</Description>
 	</PropertyGroup>
 

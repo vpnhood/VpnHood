@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
 
-namespace VpnHood.AppLib.Utils;
+namespace VpnHood.AppLib.App.Utils;
 
 public static class AppCultureProviderExtensions
 {

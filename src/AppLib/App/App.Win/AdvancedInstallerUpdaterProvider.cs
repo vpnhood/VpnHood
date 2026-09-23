@@ -5,7 +5,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.AppLib.Win.Common;
+namespace VpnHood.AppLib.App.Win;
 
 public class AdvancedInstallerUpdaterProvider : IAppUpdaterProvider
 {

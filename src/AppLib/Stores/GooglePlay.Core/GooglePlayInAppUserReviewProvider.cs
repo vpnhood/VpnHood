@@ -3,12 +3,12 @@ using Google.Android.Play.Core.Review;
 using Google.Android.Play.Core.Review.Testing;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client.Devices.Droid;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUserReviewProvider
 {

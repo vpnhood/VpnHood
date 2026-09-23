@@ -6,7 +6,7 @@ using Nager.Country.Translation;
 using VpnHood.AppLib.Api.Countries;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.AppLib.Services.Countries;
+namespace VpnHood.AppLib.App.Services.Countries;
 
 /// <summary>
 /// A reliable RegionInfo companion: country names with translations, keyed by ISO alpha-2 code.

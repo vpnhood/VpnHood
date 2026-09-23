@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.App.ClientProfiles;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.Core.Common.Exceptions;

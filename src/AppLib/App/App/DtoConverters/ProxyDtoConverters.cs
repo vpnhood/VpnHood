@@ -3,7 +3,7 @@ using VpnHood.AppLib.Api.Settings;
 using CoreOptions = VpnHood.Core.Proxies.Management.Abstractions.Options;
 using CoreProxy = VpnHood.Core.Proxies.Management.Abstractions;
 
-namespace VpnHood.AppLib.DtoConverters;
+namespace VpnHood.AppLib.App.DtoConverters;
 
 // The app's proxy shapes and the engine's, in both directions. The engine's ProxyEndPoint computes
 // its own Id and Url and rates its own quality; the contract carries those as values, because a

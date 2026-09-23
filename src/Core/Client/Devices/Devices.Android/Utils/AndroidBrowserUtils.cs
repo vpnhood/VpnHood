@@ -1,6 +1,6 @@
 using Android.Content;
 
-namespace VpnHood.Core.Client.Devices.Droid.Utils;
+namespace VpnHood.Core.Client.Devices.Android.Utils;
 
 public static class AndroidBrowserUtils
 {
@@ -18,7 +18,7 @@ public static class AndroidBrowserUtils
         if (packageManager == null)
             return false;
 
-        using var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse("https://vpnhood.com"));
+        using var intent = new Intent(Intent.ActionView, global::Android.Net.Uri.Parse("https://vpnhood.com"));
         var componentName = intent.ResolveActivity(packageManager);
         return componentName != null && componentName.PackageName != TvStubsPackage;
     }

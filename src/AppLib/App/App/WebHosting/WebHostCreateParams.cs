@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Api;
 using VpnHood.Core.Toolkit.Assets;
 
-namespace VpnHood.AppLib.WebHosting;
+namespace VpnHood.AppLib.App.WebHosting;
 
 // Everything a web host is made with: the API it puts on HTTP, the two things it serves - the page
 // and the UI's files - the port to prefer, and how it should behave. The head chooses all of it on

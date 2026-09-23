@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppUi.Hosting.Avalonia</RootNamespace>
 		<Description>What mounts any Avalonia UI for the VpnHood app: the Application every host builds and the contract a UI fulfils. The app's state as pages read it is VpnHood.AppUi.Common, which this references. No theme, no layout, no control, no words</Description>
 	</PropertyGroup>
 

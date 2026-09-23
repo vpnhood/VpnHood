@@ -1,8 +1,8 @@
 ﻿using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Api.Proxies;
-using VpnHood.AppLib.DtoConverters;
+using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.AppLib.Api.Settings;
-using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.Proxies.Management.Abstractions;
@@ -16,7 +16,7 @@ using CoreProxy = VpnHood.Core.Proxies.Management.Abstractions;
 using ProxyEndPoint = VpnHood.AppLib.Api.Proxies.ProxyEndPoint;
 using ProxyEndPointStatus = VpnHood.AppLib.Api.Proxies.ProxyEndPointStatus;
 
-namespace VpnHood.AppLib.Services.Proxies;
+namespace VpnHood.AppLib.App.Services.Proxies;
 
 public class AppProxyEndPointService(
     string dbPath,

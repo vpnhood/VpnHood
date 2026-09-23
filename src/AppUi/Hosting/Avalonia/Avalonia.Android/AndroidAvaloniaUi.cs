@@ -1,8 +1,8 @@
 ﻿using VpnHood.AppUi.Hosting.Avalonia;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 using VpnHood.AppUi.Common;
 
-namespace VpnHood.AppUi.Hosting.Avalonia.Droid;
+namespace VpnHood.AppUi.Hosting.Avalonia.Android;
 
 // The UI's step in a head's Application.OnCreate, between the app and Avalonia: the app's API,
 // handed to the UI in the process that has an app - the VPN service's and the quick tile's have

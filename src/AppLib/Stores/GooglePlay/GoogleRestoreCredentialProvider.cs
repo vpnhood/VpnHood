@@ -1,10 +1,10 @@
 using AndroidX.Credentials;
 using AndroidX.Credentials.Exceptions;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.Core.Client.Devices.Droid;
+using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.UiContexts;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 /// <summary>
 /// Android Restore Credentials (zero-tap sign-in restoration, a Play requirement for sign-in apps

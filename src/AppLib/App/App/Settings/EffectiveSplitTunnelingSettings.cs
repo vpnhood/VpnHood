@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Api.Settings;
 using VpnHood.Core.Client.Abstractions;
 
-namespace VpnHood.AppLib.Settings;
+namespace VpnHood.AppLib.App.Settings;
 
 // The resolved view of SplitTunnelingSettings and the only shape consumers may act on: holding one
 // of these proves BOTH gates have been applied — the super toggle and the premium plan — so neither

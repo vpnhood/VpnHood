@@ -3,7 +3,6 @@
 		<Description>VpnHood shared code for iOS client apps (WebView host + app bootstrap)</Description>
 		<TargetFramework>net11.0-ios</TargetFramework>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.AppLib.Ios.Common</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

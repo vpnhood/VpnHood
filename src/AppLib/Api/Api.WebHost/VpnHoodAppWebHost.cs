@@ -13,7 +13,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
-using VpnHood.AppLib.WebHosting;
+using VpnHood.AppLib.App.WebHosting;
 
 namespace VpnHood.AppLib.Api.WebHost;
 

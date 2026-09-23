@@ -30,6 +30,10 @@ end a name. The folder path spells the project's name, and the `.csproj` inside 
    `AppLib/Stores/GooglePlay/`, `AppUi/Assets/Classic/`.
 3. **A project that is a concept on its own** is just its folder: `Core/Common/`.
 
+A project's namespace is its name. Inside a namespace that ends in `.Android`, C# resolves `Android`
+to that namespace before the platform's, so the platform's own types are written
+`global::Android.Net.Uri` where they are not imported with a `using`.
+
 ## `src/Core/` — the engine, one folder per concept
 
 ```text
@@ -70,7 +74,8 @@ src/Core/
 │   ├── Server/
 │   └── Access/
 │       ├── Access/
-│       └── Access.FileAccessManager/
+│       └── Managers/
+│           └── FileAccessManagement/
 ├── TcpStack/
 │   ├── TcpStack/
 │   └── TcpStack.Abstractions/
@@ -110,9 +115,8 @@ src/AppLib/
 ```
 
 The store folders take their names from `StoreIds`, so a Microsoft Store package would be
-`Stores/Microsoft/`. The package ids follow the folders: `VpnHood.AppLib.App.Android`,
-`VpnHood.AppLib.Stores.GooglePlay`, `VpnHood.AppLib.Ads.AdMob.Android`. The namespaces kept their
-earlier names (`VpnHood.AppLib.Droid.Common`), so moving to these packages changes no `using`.
+`Stores/Microsoft/`. The package ids, and with them the namespaces, follow the folders: `VpnHood.AppLib.App.Android`,
+`VpnHood.AppLib.Stores.GooglePlay`, `VpnHood.AppLib.Ads.AdMob.Android`.
 
 ## `src/Apps/` — one folder per product
 

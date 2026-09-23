@@ -119,7 +119,7 @@ Configured in `appsettings.json`:
 ### 3. No manager at all is a supported mode
 
 If `HttpAccessManager` is absent from settings, the server falls back to
-[`FileAccessManager`](../src/Core/Server/Access/Access.FileAccessManager/FileAccessManager.cs)
+[`FileAccessManager`](../src/Core/Server/Access/Managers/FileAccessManagement/FileAccessManager.cs)
 and keeps its tokens in a local folder — the selection is a single branch in
 [`ServerApp.cs`](../src/Apps/Server/ServerApp.cs). Same `IAccessManager` interface,
 no network, no panel. The server does not know the difference.

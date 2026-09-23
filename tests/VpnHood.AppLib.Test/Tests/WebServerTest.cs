@@ -1,6 +1,7 @@
 using System.Net;
 using VpnHood.AppLib.Api.WebHost;
-using VpnHood.AppLib.WebHosting;
+using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.WebHosting;
 using VpnHood.Core.Client.Devices.UiContexts;
 // ReSharper disable ShortLivedHttpClient
 

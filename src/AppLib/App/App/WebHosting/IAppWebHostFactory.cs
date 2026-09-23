@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.WebHosting;
+﻿namespace VpnHood.AppLib.App.WebHosting;
 
 // How the app gets its web hosts, since a host needs the API to exist first while the app must say at
 // construction whether pairing is supported. A head hands in a factory; the app calls it once per

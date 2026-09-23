@@ -2,7 +2,7 @@ using System.Net.Security;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
 
-namespace VpnHood.Core.Quic.Droid;
+namespace VpnHood.Core.Quic.Android;
 
 /// <summary>
 /// Shared state for a connection's unmanaged callback. Lives behind a <see cref="GCHandle"/> that is

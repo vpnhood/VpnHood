@@ -2,6 +2,7 @@
 using System.Net.Quic;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Test.Dom;
+using VpnHood.AppLib.App;
 using VpnHood.Core.Client.Abstractions;
 using SplitDnsMode = VpnHood.AppLib.Api.SplitTunneling.SplitDnsMode;
 using VpnHood.Core.Toolkit.Net;

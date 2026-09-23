@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.Core.Client.Devices.Droid.Utils;
+namespace VpnHood.Core.Client.Devices.Android.Utils;
 
 public static class AndroidUtils
 {

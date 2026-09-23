@@ -7,7 +7,7 @@ using ProviderAds = VpnHood.AppLib.Abstractions.Ads;
 using ProviderBilling = VpnHood.AppLib.Abstractions.Billing;
 using ProviderDevice = VpnHood.AppLib.Abstractions.Device;
 
-namespace VpnHood.AppLib.DtoConverters;
+namespace VpnHood.AppLib.App.DtoConverters;
 
 // The provider surface and the contract say the same things in two vocabularies, and this is where
 // they meet. The duplication is the point: a head's account, billing, ad or device-UI provider

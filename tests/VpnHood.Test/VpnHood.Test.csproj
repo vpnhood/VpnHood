@@ -19,7 +19,7 @@
 		<ProjectReference Include="..\..\src\Core\Client\Client\VpnHood.Core.Client.csproj" />
 		<ProjectReference Include="..\..\src\Core\Filtering\Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
 		<ProjectReference Include="..\..\src\Core\Quic\Quic.MsQuic\VpnHood.Core.Quic.MsQuic.csproj" />
-		<ProjectReference Include="..\..\src\Core\Server\Access\Access.FileAccessManager\VpnHood.Core.Server.Access.FileAccessManager.csproj" />
+		<ProjectReference Include="..\..\src\Core\Server\Access\Managers\FileAccessManagement\VpnHood.Core.Server.Access.Managers.FileAccessManagement.csproj" />
 		<ProjectReference Include="..\..\src\Core\Server\Server\VpnHood.Core.Server.csproj" />
 		<ProjectReference Include="..\..\src\Core\Client\Devices\Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
 	</ItemGroup>

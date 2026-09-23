@@ -3,7 +3,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 public static class AppExceptionConverter
 {

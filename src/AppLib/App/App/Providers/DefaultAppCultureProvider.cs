@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
 
-namespace VpnHood.AppLib.Providers;
+namespace VpnHood.AppLib.App.Providers;
 
 internal class DefaultAppCultureProvider(VpnHoodApp vpnHoodApp)
     : IAppCultureProvider

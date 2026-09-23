@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.AppLib.Utils;
+namespace VpnHood.AppLib.App.Utils;
 
 public static class IpRangeTextFileParser
 {

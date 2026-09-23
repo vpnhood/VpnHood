@@ -2,7 +2,7 @@ using Android.BillingClient.Api;
 using VpnHood.AppLib.Abstractions.Billing;
 using PurchaseState = Android.BillingClient.Api.PurchaseState;
 
-namespace VpnHood.AppLib.Droid.GooglePlay.Exceptions;
+namespace VpnHood.AppLib.Stores.GooglePlay.Exceptions;
 
 /// <summary>
 /// Translates Play Billing results into the store-agnostic <see cref="BillingException" />.

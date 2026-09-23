@@ -1,6 +1,6 @@
 ﻿using Android.OS;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 public static class CancellationTokenExtensions
 {

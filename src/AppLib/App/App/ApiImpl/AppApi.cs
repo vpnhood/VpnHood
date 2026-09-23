@@ -1,20 +1,20 @@
 ﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.App.ClientProfiles;
 using VpnHood.AppLib.Api.Ads;
 using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
-using VpnHood.AppLib.DtoConverters;
-using VpnHood.AppLib.Services.Countries;
+using VpnHood.AppLib.App.DtoConverters;
+using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.AppLib.WebHosting;
+using VpnHood.AppLib.App.WebHosting;
 using VpnHood.AppLib.Api;
 
-namespace VpnHood.AppLib.ApiImpl;
+namespace VpnHood.AppLib.App.ApiImpl;
 
 // The host is asked for, not held: this exists before any listener does - in process there may
 // never be one - and only the three remote-access calls, the pairing page's, need it. The one they

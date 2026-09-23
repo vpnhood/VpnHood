@@ -1,10 +1,10 @@
 ﻿using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Ios.AppStore.Exceptions;
-using VpnHood.AppLib.Ios.StoreKitNative;
+using VpnHood.AppLib.Stores.AppStore.Exceptions;
+using VpnHood.AppLib.Stores.AppStore.Native;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 
-namespace VpnHood.AppLib.Ios.AppStore;
+namespace VpnHood.AppLib.Stores.AppStore;
 
 /// <summary>
 /// StoreKit 2 billing. The plan token is the App Store product id (Apple has

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Light access manager using OS file system</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\..\..\IpLocations\IpLocations\VpnHood.Core.IpLocations.csproj" />
+	  <ProjectReference Include="..\..\Access\VpnHood.Core.Server.Access.csproj" />
+	</ItemGroup>
+
+</Project>

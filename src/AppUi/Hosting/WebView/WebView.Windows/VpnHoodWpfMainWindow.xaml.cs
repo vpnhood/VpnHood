@@ -9,8 +9,8 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.AppLib;
-using VpnHood.AppLib.Win.Common;
+using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.Win;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.App.Connect.Droid.Google.FirebaseUtils;
+namespace VpnHood.App.Connect.Android.Google.FirebaseUtils;
 
 // This one instance owns everything this build sends to Firebase: analytics events and crash reports.
 // Both follow the user's consent through IsEnabled — the app has a single "Share anonymous usage data"

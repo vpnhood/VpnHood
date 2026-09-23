@@ -2,15 +2,15 @@
 using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Droid.Common.Utils;
-using VpnHood.Core.Client.Devices.Droid;
-using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
+using VpnHood.AppLib.App.ClientProfiles;
+using VpnHood.AppLib.App.Android.Utils;
+using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
 
-namespace VpnHood.AppLib.Droid.Common.Activities;
+namespace VpnHood.AppLib.App.Android.Activities;
 
 public class AndroidAppMainActivityHandler
 {

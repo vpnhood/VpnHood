@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Droid.Common;
-using VpnHood.Core.Client.Devices.Droid;
+using VpnHood.AppLib.App.Android;
+using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.AppLib;
+using VpnHood.AppLib.App;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppUi.Hosting.WebView.Maui;

@@ -1,7 +1,7 @@
 ﻿
 using VpnHood.AppLib.Api.Updaters;
 
-namespace VpnHood.AppLib.Services.Updaters;
+namespace VpnHood.AppLib.App.Services.Updaters;
 
 internal class AppUpdaterData
 {

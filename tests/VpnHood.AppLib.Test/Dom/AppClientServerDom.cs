@@ -1,6 +1,7 @@
 ﻿using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.ClientProfiles;
+using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices;
 using VpnHood.AppLib.Api.App;

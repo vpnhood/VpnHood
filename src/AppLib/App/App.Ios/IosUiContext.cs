@@ -1,6 +1,6 @@
 using VpnHood.Core.Client.Devices.UiContexts;
 
-namespace VpnHood.AppLib.Ios.Common;
+namespace VpnHood.AppLib.App.Ios;
 
 // Minimal iOS UI context. The host app is a single foreground UIViewController, so the context is
 // always considered active and never destroyed while the app is running. It is published to

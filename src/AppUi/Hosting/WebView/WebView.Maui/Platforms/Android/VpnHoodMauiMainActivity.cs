@@ -1,5 +1,5 @@
 ﻿using Android.OS;
-using VpnHood.AppLib.Droid.Common.Activities;
+using VpnHood.AppLib.App.Android.Activities;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppUi.Hosting.WebView.Maui;

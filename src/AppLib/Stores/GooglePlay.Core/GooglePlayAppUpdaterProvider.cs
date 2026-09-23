@@ -1,14 +1,14 @@
 ﻿using Android.Gms.Extensions;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client.Devices.Droid;
-using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;
 
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 {

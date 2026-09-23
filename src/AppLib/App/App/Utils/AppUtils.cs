@@ -3,7 +3,7 @@ using System.Text;
 using VpnHood.AppLib.Api.App;
 using VpnHood.Core.Toolkit.Assets;
 
-namespace VpnHood.AppLib.Utils;
+namespace VpnHood.AppLib.App.Utils;
 
 public static class AppUtils
 {

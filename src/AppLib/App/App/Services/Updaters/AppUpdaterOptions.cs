@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions;
 
-namespace VpnHood.AppLib.Services.Updaters;
+namespace VpnHood.AppLib.App.Services.Updaters;
 
 public class AppUpdaterOptions
 {

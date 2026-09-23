@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Api.App;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 public class ConnectOptions
 {

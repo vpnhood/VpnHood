@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Droid.GooglePlay;
+namespace VpnHood.AppLib.Stores.GooglePlay;
 
 internal class SubscriptionPlanToken
 {

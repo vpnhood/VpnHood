@@ -1,15 +1,19 @@
 ﻿using Android.Content;
 using Android.Service.QuickSettings;
-using VpnHood.AppLib.Droid.Common.Constants;
-using VpnHood.AppUi.Hosting.Avalonia.Droid;
+using VpnHood.AppLib.App.Android.Constants;
+using VpnHood.AppUi.Hosting.Avalonia.Android;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 
-namespace VpnHood.App.Connect.Droid.Google;
+namespace VpnHood.App.Connect.Android.Google;
 
 // The launcher and the UI in one activity: Avalonia's. The theme above is the one that UI brings
 // (Avalonia.Android, Resources/values/themes.xml). This head takes no access key, so it takes no
 // intent that carries one.
 [Activity(
+    // Launchers keep the app's home-screen icon by this Java name. The generated default hashes the
+    // namespace and the assembly name, and the publish build's assembly is <project>.csproj.tmp, so it
+    // is pinned to the name the app shipped under.
+    Name = "crc64ec926fcefe4f3435.MainActivity",
     MainLauncher = true,
     Label = AppConfigs.AppName,
     Theme = "@style/Theme.VpnHood.Avalonia",

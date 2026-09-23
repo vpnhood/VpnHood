@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description></Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="VpnHood.Core.Proxies" Version="8.0.835" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.Core.Proxies.Management.Abstractions\VpnHood.Core.Proxies.Management.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

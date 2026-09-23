@@ -141,7 +141,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: browser-page
-          path: code/src/AppUi/Presentation/Classic.Avalonia.Browser/bin
+          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/bin
       - name: Build Android (${{ matrix.label }})
         shell: pwsh
         run: |

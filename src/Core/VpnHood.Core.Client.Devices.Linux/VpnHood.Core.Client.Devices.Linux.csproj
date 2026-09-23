@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood client device provider for Linux</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
+    <ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+    <ProjectReference Include="..\VpnHood.Core.Quic.MsQuic\VpnHood.Core.Quic.MsQuic.csproj" />
+    <ProjectReference Include="..\VpnHood.Core.VpnAdapters.LinuxTun\VpnHood.Core.VpnAdapters.LinuxTun.csproj" />
+  </ItemGroup>
+
+</Project>

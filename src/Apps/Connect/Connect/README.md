@@ -2,7 +2,7 @@
 
 What every distribution of VpnHood Connect shares - Android (Play and web), iOS, Windows and Linux.
 It is **not** a library, it is not published, and a forker does not use it: VpnHood Client has its
-own (`../../Client/Client`), and a fork writes its own of this shape.
+own (`../../Client/VpnHood.App.Client`), and a fork writes its own of this shape.
 
 ## What it is for
 
@@ -30,5 +30,5 @@ template: its own of this project, and its heads. Nothing beneath `src/Apps/` ma
 
 The look lives in the UI's store (`VpnHood.AppUi.Assets.Classic`, `ui.zip`), placed beside each head by
 that package's targets. The page the web host serves to a paired device is the Classic Avalonia UI's
-browser build (`src/AppUi/Presentation/Classic.Avalonia.Browser`), placed the same way as
+browser build (`src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser`), placed the same way as
 `assets/web-root.zip`. Neither passes through this project.

@@ -17,13 +17,13 @@ WORKDIR /src
 COPY ["src/Apps/Server/NLog.xsd", "VpnHood.App.Server.App.Net/"]
 COPY ["src/Apps/Server/NLog.config", "VpnHood.App.Server.Net/"]
 COPY ["src/Apps/Server/VpnHood.App.Server.Net.csproj", "VpnHood.App.Server.Net/"]
-COPY ["src/Core/Toolkit/VpnHood.Core.Toolkit.csproj", "VpnHood.Core.Toolkit/"]
-COPY ["src/Core/VpnAdapters/VpnAdapters.Abstractions/VpnHood.Core.VpnAdapters.Abstractions.csproj", "VpnHood.Core.VpnAdapters.Abstractions/"]
-COPY ["src/Core/VpnAdapters/VpnAdapters.LinuxTun/VpnHood.Core.VpnAdapters.LinuxTun.csproj", "VpnHood.Core.VpnAdapters.LinuxTun/"]
-COPY ["src/Core/Common/VpnHood.Core.Common.csproj", "VpnHood.Core.Common/"]
-COPY ["src/Core/Tunneling/VpnHood.Core.Tunneling.csproj", "VpnHood.Core.Tunneling/"]
-COPY ["src/Core/Server/Server/VpnHood.Core.Server.csproj", "VpnHood.Core.Server/"]
-COPY ["src/Core/Server/Server.Access/VpnHood.Core.Server.Access.csproj", "VpnHood.Core.Server.Access/"]
+COPY ["src/Core/VpnHood.Core.Toolkit/VpnHood.Core.Toolkit.csproj", "VpnHood.Core.Toolkit/"]
+COPY ["src/Core/VpnHood.Core.VpnAdapters.Abstractions/VpnHood.Core.VpnAdapters.Abstractions.csproj", "VpnHood.Core.VpnAdapters.Abstractions/"]
+COPY ["src/Core/VpnHood.Core.VpnAdapters.LinuxTun/VpnHood.Core.VpnAdapters.LinuxTun.csproj", "VpnHood.Core.VpnAdapters.LinuxTun/"]
+COPY ["src/Core/VpnHood.Core.Common/VpnHood.Core.Common.csproj", "VpnHood.Core.Common/"]
+COPY ["src/Core/VpnHood.Core.Tunneling/VpnHood.Core.Tunneling.csproj", "VpnHood.Core.Tunneling/"]
+COPY ["src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj", "VpnHood.Core.Server/"]
+COPY ["src/Core/VpnHood.Core.Server.Access/VpnHood.Core.Server.Access.csproj", "VpnHood.Core.Server.Access/"]
 RUN dotnet restore "VpnHood.App.Server.Net/VpnHood.App.Server.Net.csproj"
 COPY . .
 # The repo's global.json pins an SDK (11 preview) only needed by the full solution.

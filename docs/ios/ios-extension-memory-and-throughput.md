@@ -161,7 +161,7 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 
 ## Current configuration (working tree)
 
-**iOS TCP-stack profile** — `src/Core/TcpStack/TcpStack/LocalTcpStackOptions.cs` `Ios`:
+**iOS TCP-stack profile** — `src/Core/VpnHood.Core.TcpStack/LocalTcpStackOptions.cs` `Ios`:
 - `ReceiveWindowSize=0xFFFF (64 KB)`, **`GlobalReceiveBudget=6 MB`**, `RetxBufferSize=16 KB`.
 - **`MaxConnections=40`**, `AcceptQueueCapacity=128`, **`IdleTimeout=20 s`**, **`IdleCheckInterval=5 s`**.
 - **`AdmissionMemoryLimitMb=42.0`** — Memory admission gate. When the process footprint matches or exceeds 42.0 MB, new TCP SYNs are dropped silently so the peer's own SYN-retransmit backoff acts as a natural pacing mechanism until memory recedes.
@@ -179,7 +179,7 @@ GlobalReceiveBudget − totalPipeBuffered)`; `UpdateAdvertisedWindow()` tracks `
 so the iOS AppDelegates no longer rewrite it on launch. Installs that persisted the old force of 1 heal
 themselves — the stale `maxPacketChannelCount` in `settings.json` is simply ignored on load. The buffer
 sizes live in the same `LimitedMemory` preset in
-`src/Core/Client/Client.Abstractions/ClientTransportOptions.cs`: `PacketChannelBufferSize=16 KB`,
+`src/Core/VpnHood.Core.Client.Abstractions/ClientTransportOptions.cs`: `PacketChannelBufferSize=16 KB`,
 `UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude
 socket buffers), and `TcpPacketChannelKernelBufferSize=null` — the OS default — for the outer TCP packet
 channels.

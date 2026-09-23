@@ -112,13 +112,13 @@ jobs:
     needs: [verify-release-type]
     runs-on: ubuntu-latest
     env:
-      PAGE_DIR: code/src/AppUi/Presentation/Classic.Avalonia.Browser
+      PAGE_DIR: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v5
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
       - uses: actions/setup-dotnet@v5
-        with: { global-json-file: code/src/AppUi/Presentation/Classic.Avalonia.Browser/global.json }
+        with: { global-json-file: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/global.json }
       - name: Install .NET WebAssembly workload (for the SDK the page's global.json names)
         shell: pwsh
         run: |

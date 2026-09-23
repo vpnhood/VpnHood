@@ -70,58 +70,58 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/AppLib/">
-    <Project Path="src/AppLib/Abstractions/VpnHood.AppLib.Abstractions.csproj" />
-    <Project Path="src/AppLib/Portal/VpnHood.AppLib.Portal.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Abstractions/VpnHood.AppLib.Abstractions.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Portal/VpnHood.AppLib.Portal.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Ads/">
-    <Project Path="src/AppLib/Ads/AdMob.Android/VpnHood.AppLib.Ads.AdMob.Android.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Ads.AdMob.Android/VpnHood.AppLib.Ads.AdMob.Android.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Api/">
-    <Project Path="src/AppLib/Api/Api.HttpClients/VpnHood.AppLib.Api.HttpClients.csproj" />
-    <Project Path="src/AppLib/Api/Api.WebHost/VpnHood.AppLib.Api.WebHost.csproj" />
-    <Project Path="src/AppLib/Api/Api/VpnHood.AppLib.Api.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Api.HttpClients/VpnHood.AppLib.Api.HttpClients.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Api.WebHost/VpnHood.AppLib.Api.WebHost.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Api/VpnHood.AppLib.Api.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/App/">
-    <Project Path="src/AppLib/App/App.Android/VpnHood.AppLib.App.Android.csproj" />
-    <Project Path="src/AppLib/App/App.Ios/VpnHood.AppLib.App.Ios.csproj">
+    <Project Path="src/AppLib/VpnHood.AppLib.App.Android/VpnHood.AppLib.App.Android.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.App.Ios/VpnHood.AppLib.App.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/AppLib/App/App.Linux/VpnHood.AppLib.App.Linux.csproj" />
-    <Project Path="src/AppLib/App/App.Win/VpnHood.AppLib.App.Win.csproj" />
-    <Project Path="src/AppLib/App/App/VpnHood.AppLib.App.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.App.Linux/VpnHood.AppLib.App.Linux.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.App.Win/VpnHood.AppLib.App.Win.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Stores/">
-    <Project Path="src/AppLib/Stores/AppStore.Core/VpnHood.AppLib.Stores.AppStore.Core.csproj">
+    <Project Path="src/AppLib/VpnHood.AppLib.Stores.AppStore.Core/VpnHood.AppLib.Stores.AppStore.Core.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/AppLib/Stores/AppStore/VpnHood.AppLib.Stores.AppStore.csproj">
+    <Project Path="src/AppLib/VpnHood.AppLib.Stores.AppStore/VpnHood.AppLib.Stores.AppStore.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/AppLib/Stores/GooglePlay.Core/VpnHood.AppLib.Stores.GooglePlay.Core.csproj" />
-    <Project Path="src/AppLib/Stores/GooglePlay/VpnHood.AppLib.Stores.GooglePlay.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Stores.GooglePlay.Core/VpnHood.AppLib.Stores.GooglePlay.Core.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Stores.GooglePlay/VpnHood.AppLib.Stores.GooglePlay.csproj" />
   </Folder>
   <Folder Name="/src/AppUi/Assets/">
-    <Project Path="src/AppUi/Assets/Classic/VpnHood.AppUi.Assets.Classic.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Assets.Classic/VpnHood.AppUi.Assets.Classic.csproj" />
   </Folder>
-  <Folder Name="/src/AppUi/Common/">
-    <Project Path="src/AppUi/Common/VpnHood.AppUi.Common.csproj" />
+  <Folder Name="/src/AppUi/">
+    <Project Path="src/AppUi/VpnHood.AppUi.Common/VpnHood.AppUi.Common.csproj" />
   </Folder>
   <Folder Name="/src/AppUi/Presentation/">
-    <Project Path="src/AppUi/Presentation/Classic.Avalonia/VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
-    <Project Path="src/AppUi/Presentation/Classic.Avalonia.Browser/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.csproj" />
   </Folder>
   <Folder Name="/src/AppUi/Hosting/">
-    <Project Path="src/AppUi/Hosting/Avalonia/Avalonia/VpnHood.AppUi.Hosting.Avalonia.csproj" />
-    <Project Path="src/AppUi/Hosting/Avalonia/Avalonia.Android/VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
-    <Project Path="src/AppUi/Hosting/Avalonia/Avalonia.Browser/VpnHood.AppUi.Hosting.Avalonia.Browser.csproj" />
-    <Project Path="src/AppUi/Hosting/Avalonia/Avalonia.Desktop/VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
-    <Project Path="src/AppUi/Hosting/Cli/Cli/VpnHood.AppUi.Hosting.Cli.csproj" />
-    <Project Path="src/AppUi/Hosting/Cli/Cli.Linux/VpnHood.AppUi.Hosting.Cli.Linux.csproj" />
-    <Project Path="src/AppUi/Hosting/WebView/WebView/VpnHood.AppUi.Hosting.WebView.csproj" />
-    <Project Path="src/AppUi/Hosting/WebView/WebView.Android/VpnHood.AppUi.Hosting.WebView.Android.csproj" />
-    <Project Path="src/AppUi/Hosting/WebView/WebView.Windows/VpnHood.AppUi.Hosting.WebView.Windows.csproj" />
-    <Project Path="src/AppUi/Hosting/WebView/WebView.Maui/VpnHood.AppUi.Hosting.WebView.Maui.csproj" />
-    <Project Path="src/AppUi/Hosting/WebView/WebView.Ios/VpnHood.AppUi.Hosting.WebView.Ios.csproj">
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Avalonia/VpnHood.AppUi.Hosting.Avalonia.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Avalonia.Android/VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Avalonia.Browser/VpnHood.AppUi.Hosting.Avalonia.Browser.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Avalonia.Desktop/VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Cli/VpnHood.AppUi.Hosting.Cli.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Cli.Linux/VpnHood.AppUi.Hosting.Cli.Linux.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView/VpnHood.AppUi.Hosting.WebView.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Android/VpnHood.AppUi.Hosting.WebView.Android.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Windows/VpnHood.AppUi.Hosting.WebView.Windows.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Maui/VpnHood.AppUi.Hosting.WebView.Maui.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Ios/VpnHood.AppUi.Hosting.WebView.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
   </Folder>
@@ -170,68 +170,68 @@
     <Project Path="src/Apps/Tools/StoreScreenshots/VpnHood.App.StoreScreenshots.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
-    <Project Path="src/Core/Common/VpnHood.Core.Common.csproj" />
-    <Project Path="src/Core/Packets/VpnHood.Core.Packets.csproj" />
-    <Project Path="src/Core/PacketTransports/VpnHood.Core.PacketTransports.csproj" />
-    <Project Path="src/Core/Toolkit/VpnHood.Core.Toolkit.csproj" />
-    <Project Path="src/Core/Tunneling/VpnHood.Core.Tunneling.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Common/VpnHood.Core.Common.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Packets/VpnHood.Core.Packets.csproj" />
+    <Project Path="src/Core/VpnHood.Core.PacketTransports/VpnHood.Core.PacketTransports.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Toolkit/VpnHood.Core.Toolkit.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Tunneling/VpnHood.Core.Tunneling.csproj" />
   </Folder>
   <Folder Name="/src/Core/Client/">
-    <Project Path="src/Core/Client/Client.Abstractions/VpnHood.Core.Client.Abstractions.csproj" />
-    <Project Path="src/Core/Client/Client/VpnHood.Core.Client.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.Abstractions/VpnHood.Core.Client.Abstractions.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client/VpnHood.Core.Client.csproj" />
   </Folder>
-  <Folder Name="/src/Core/Client/Client.Devices/">
-    <Project Path="src/Core/Client/Client.Devices/Devices.Abstractions/VpnHood.Core.Client.Devices.Abstractions.csproj" />
-    <Project Path="src/Core/Client/Client.Devices/Devices.Android/VpnHood.Core.Client.Devices.Android.csproj" />
-    <Project Path="src/Core/Client/Client.Devices/Devices.Ios/VpnHood.Core.Client.Devices.Ios.csproj">
+  <Folder Name="/src/Core/Client/Devices/">
+    <Project Path="src/Core/VpnHood.Core.Client.Devices.Abstractions/VpnHood.Core.Client.Devices.Abstractions.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.Devices.Android/VpnHood.Core.Client.Devices.Android.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.Devices.Ios/VpnHood.Core.Client.Devices.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/Core/Client/Client.Devices/Devices.Linux/VpnHood.Core.Client.Devices.Linux.csproj" />
-    <Project Path="src/Core/Client/Client.Devices/Devices.Win/VpnHood.Core.Client.Devices.Win.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.Devices.Linux/VpnHood.Core.Client.Devices.Linux.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.Devices.Win/VpnHood.Core.Client.Devices.Win.csproj" />
   </Folder>
-  <Folder Name="/src/Core/Client/Client.VpnServices/">
-    <Project Path="src/Core/Client/Client.VpnServices/VpnServices.Abstractions/VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
-    <Project Path="src/Core/Client/Client.VpnServices/VpnServices.Host/VpnHood.Core.Client.VpnServices.Host.csproj" />
-    <Project Path="src/Core/Client/Client.VpnServices/VpnServices.Manager/VpnHood.Core.Client.VpnServices.Manager.csproj" />
+  <Folder Name="/src/Core/Client/VpnServices/">
+    <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Host/VpnHood.Core.Client.VpnServices.Host.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Manager/VpnHood.Core.Client.VpnServices.Manager.csproj" />
   </Folder>
   <Folder Name="/src/Core/Filtering/">
-    <Project Path="src/Core/Filtering/Filtering.Abstractions/VpnHood.Core.Filtering.Abstractions.csproj" />
-    <Project Path="src/Core/Filtering/Filtering.DomainFiltering/VpnHood.Core.Filtering.DomainFiltering.csproj" />
-    <Project Path="src/Core/Filtering/Filtering.Sqlite/VpnHood.Core.Filtering.Sqlite.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Filtering.Abstractions/VpnHood.Core.Filtering.Abstractions.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Filtering.DomainFiltering/VpnHood.Core.Filtering.DomainFiltering.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Filtering.Sqlite/VpnHood.Core.Filtering.Sqlite.csproj" />
   </Folder>
   <Folder Name="/src/Core/IpLocations/">
-    <Project Path="src/Core/IpLocations/IpLocations.Providers.SqliteProvider/VpnHood.Core.IpLocations.Providers.SqliteProvider.csproj" />
-    <Project Path="src/Core/IpLocations/IpLocations/VpnHood.Core.IpLocations.csproj" />
+    <Project Path="src/Core/VpnHood.Core.IpLocations.Providers.SqliteProvider/VpnHood.Core.IpLocations.Providers.SqliteProvider.csproj" />
+    <Project Path="src/Core/VpnHood.Core.IpLocations/VpnHood.Core.IpLocations.csproj" />
   </Folder>
   <Folder Name="/src/Core/Proxies/">
-    <Project Path="src/Core/Proxies/Proxies.Management.Abstractions/VpnHood.Core.Proxies.Management.Abstractions.csproj" />
-    <Project Path="src/Core/Proxies/Proxies.Management.Sqlite/VpnHood.Core.Proxies.Management.Sqlite.csproj" />
-    <Project Path="src/Core/Proxies/Proxies.Management/VpnHood.Core.Proxies.Management.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Proxies.Management.Abstractions/VpnHood.Core.Proxies.Management.Abstractions.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Proxies.Management.Sqlite/VpnHood.Core.Proxies.Management.Sqlite.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Proxies.Management/VpnHood.Core.Proxies.Management.csproj" />
   </Folder>
   <Folder Name="/src/Core/Quic/">
-    <Project Path="src/Core/Quic/Quic.Abstractions/VpnHood.Core.Quic.Abstractions.csproj" />
-    <Project Path="src/Core/Quic/Quic.Android/VpnHood.Core.Quic.Android.csproj" />
-    <Project Path="src/Core/Quic/Quic.Ios/VpnHood.Core.Quic.Ios.csproj">
+    <Project Path="src/Core/VpnHood.Core.Quic.Abstractions/VpnHood.Core.Quic.Abstractions.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Quic.Android/VpnHood.Core.Quic.Android.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Quic.Ios/VpnHood.Core.Quic.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="src/Core/Quic/Quic.MsQuic/VpnHood.Core.Quic.MsQuic.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Quic.MsQuic/VpnHood.Core.Quic.MsQuic.csproj" />
   </Folder>
   <Folder Name="/src/Core/Server/">
-    <Project Path="src/Core/Server/Server.Access.Managers.FileAccessManagers/VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
-    <Project Path="src/Core/Server/Server.Access/VpnHood.Core.Server.Access.csproj" />
-    <Project Path="src/Core/Server/Server/VpnHood.Core.Server.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Server.Access.Managers.FileAccessManagers/VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Server.Access/VpnHood.Core.Server.Access.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj" />
   </Folder>
   <Folder Name="/src/Core/TcpStack/">
-    <Project Path="src/Core/TcpStack/TcpStack.Abstractions/VpnHood.Core.TcpStack.Abstractions.csproj" />
-    <Project Path="src/Core/TcpStack/TcpStack/VpnHood.Core.TcpStack.csproj" />
+    <Project Path="src/Core/VpnHood.Core.TcpStack.Abstractions/VpnHood.Core.TcpStack.Abstractions.csproj" />
+    <Project Path="src/Core/VpnHood.Core.TcpStack/VpnHood.Core.TcpStack.csproj" />
   </Folder>
   <Folder Name="/src/Core/VpnAdapters/">
-    <Project Path="src/Core/VpnAdapters/VpnAdapters.Abstractions/VpnHood.Core.VpnAdapters.Abstractions.csproj" />
-    <Project Path="src/Core/VpnAdapters/VpnAdapters.AndroidTun/VpnHood.Core.VpnAdapters.AndroidTun.csproj" />
-    <Project Path="src/Core/VpnAdapters/VpnAdapters.IosTun/VpnHood.Core.VpnAdapters.IosTun.csproj" />
-    <Project Path="src/Core/VpnAdapters/VpnAdapters.LinuxTun/VpnHood.Core.VpnAdapters.LinuxTun.csproj" />
-    <Project Path="src/Core/VpnAdapters/VpnAdapters.WinDivert/VpnHood.Core.VpnAdapters.WinDivert.csproj" />
-    <Project Path="src/Core/VpnAdapters/VpnAdapters.WinTun/VpnHood.Core.VpnAdapters.WinTun.csproj" />
+    <Project Path="src/Core/VpnHood.Core.VpnAdapters.Abstractions/VpnHood.Core.VpnAdapters.Abstractions.csproj" />
+    <Project Path="src/Core/VpnHood.Core.VpnAdapters.AndroidTun/VpnHood.Core.VpnAdapters.AndroidTun.csproj" />
+    <Project Path="src/Core/VpnHood.Core.VpnAdapters.IosTun/VpnHood.Core.VpnAdapters.IosTun.csproj" />
+    <Project Path="src/Core/VpnHood.Core.VpnAdapters.LinuxTun/VpnHood.Core.VpnAdapters.LinuxTun.csproj" />
+    <Project Path="src/Core/VpnHood.Core.VpnAdapters.WinDivert/VpnHood.Core.VpnAdapters.WinDivert.csproj" />
+    <Project Path="src/Core/VpnHood.Core.VpnAdapters.WinTun/VpnHood.Core.VpnAdapters.WinTun.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj" />

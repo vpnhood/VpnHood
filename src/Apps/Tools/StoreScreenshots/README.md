@@ -34,7 +34,7 @@ VpnHoodStoreScreenshots frame --device <device json> --assets <store> --in <png>
 at a time. The other two exist because that is how a wrong pixel is chased: every run keeps the
 exact input of every picture, so one of them can be drawn again by hand.
 
-`--assets` is the UI's asset store: the folder `src/AppUi/Assets/Classic/_sync-assets.ps1` mirrors,
+`--assets` is the UI's asset store: the folder `src/AppUi/VpnHood.AppUi.Assets.Classic/_sync-assets.ps1` mirrors,
 or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words of its own.
 
 ## The files an app owns

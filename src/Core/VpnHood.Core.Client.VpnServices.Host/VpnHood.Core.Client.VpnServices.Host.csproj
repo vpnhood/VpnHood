@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Handles VPN service tasks and controls the VpnHood client. It can be managed by VpnServiceManager.</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+   <ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.Proxies.Management\VpnHood.Core.Proxies.Management.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.Proxies.Management.Sqlite\VpnHood.Core.Proxies.Management.Sqlite.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -29,9 +29,9 @@
 # A plain `git clone` does NOT fetch it, and a head built without it starts with no images and no
 # words - so clone with --recurse-submodules, or `git submodule update --init` after the fact.
 #
-#     git submodule update --remote src/AppUi/Assets/Classic && git commit -am "Bump the look"
+#     git submodule update --remote src/AppUi/VpnHood.AppUi.Assets.Classic && git commit -am "Bump the look"
 
 [submodule "src/AppUi/Assets/Classic"]
-	path = src/AppUi/Assets/Classic
+	path = src/AppUi/VpnHood.AppUi.Assets.Classic
 	url = https://github.com/vpnhood/VpnHood.AppUi.Assets.Classic.git
 	branch = main

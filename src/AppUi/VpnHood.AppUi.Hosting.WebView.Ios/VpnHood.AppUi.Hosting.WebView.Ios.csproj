@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Hosts the app web UI in an iOS WKWebView: the IWebView adapter and the view controller a head mounts as its root</Description>
+		<TargetFramework>net11.0-ios</TargetFramework>
+		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The shared controller this adapter reports to. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.WebView\VpnHood.AppUi.Hosting.WebView.csproj" />
+		<!-- The app's iOS bootstrap and UI context. Not a UI - it stays in AppLib. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Ios\VpnHood.AppLib.App.Ios.csproj" />
+	</ItemGroup>
+</Project>

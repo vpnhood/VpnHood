@@ -68,7 +68,7 @@ rather than requiring — a language falling back to another, a picture that may
 
 ```mermaid
 graph LR
-    W["the look, a submodule:<br/>src/AppUi/Assets/Classic"] --> UZ["ui.zip"]
+    W["the look, a submodule:<br/>src/AppUi/VpnHood.AppUi.Assets.Classic"] --> UZ["ui.zip"]
     CA["Classic.Avalonia<br/>compiled to WebAssembly"] --> BZ["avalonia-browser.zip"]
     IP["Ip2Location package"] --> IZ["IpLocations.zip"]
 
@@ -128,7 +128,7 @@ The bundle is 7.3 MB zipped, 20.1 MB extracted, 64 files.
 ## Adding a set of files
 
 1. Put them in a package of the shape described in
-   [`src/AppUi/Assets/Classic/README.md`](../src/AppUi/Assets/Classic/README.md), which has the id
+   [`src/AppUi/VpnHood.AppUi.Assets.Classic/README.md`](../src/AppUi/VpnHood.AppUi.Assets.Classic/README.md), which has the id
    convention.
 2. Give it a folder of its own in the consuming app. Never `assets/`, which is taken.
 3. Place it with targets in `buildTransitive/`, and a `build/` file that imports them.
@@ -173,5 +173,5 @@ build, working app, wrong result.
 ## See also
 
 - [source-layout.md](source-layout.md) — where these projects live and what a head is made of
-- [`src/AppUi/Assets/Classic/README.md`](../src/AppUi/Assets/Classic/README.md) — the asset package
+- [`src/AppUi/VpnHood.AppUi.Assets.Classic/README.md`](../src/AppUi/VpnHood.AppUi.Assets.Classic/README.md) — the asset package
   itself: what is in it, and how to make another

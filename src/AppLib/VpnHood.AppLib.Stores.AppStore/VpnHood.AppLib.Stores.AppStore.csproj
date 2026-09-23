@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood App Store billing (StoreKit 2 via the VpnHoodStoreKit Swift facade) and Sign in with Apple</Description>
+		<TargetFramework>net11.0-ios</TargetFramework>
+		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+		<!-- for the shared iOS helpers (NSError -> Exception), the counterpart of
+		     Stores.GooglePlay referencing Core.Client.Devices.Android -->
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+	</ItemGroup>
+
+	<!-- The StoreKit 2 facade (Swift xcframework + C# P/Invoke binding) lives in its own
+	     repo/NuGet so the native contract versions atomically; the package is a binding
+	     project, so the xcframework flows into the app link automatically. Pinned exact —
+	     upgrades are deliberate and announced, never floated. -->
+	<ItemGroup>
+		<PackageReference Include="VpnHood.AppLib.Stores.AppStore.Native" Version="8.0.5" />
+	</ItemGroup>
+
+</Project>

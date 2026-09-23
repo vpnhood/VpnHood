@@ -13,7 +13,7 @@ truth — follow them, and when a new durable convention is agreed, update this 
   `<Product>/<Product>.<Platform>.<Channel>` (`Client/Client.Android.Google`, `Connect/Connect.Ios.Apple`);
   the product's own project, what every distribution of it shares, is `<Product>/<Product>`. A fork
   copies one product folder as its template. The browser page every head serves lives with the UI it
-  compiles (`src/AppUi/Presentation/Classic.Avalonia.Browser`), placed beside each head as
+  compiles (`src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser`), placed beside each head as
   `assets/web-root.zip` by its targets; CI builds it once (`build-browser` in `publish_app.yml`) and
   hands it to every platform build.- Shared PowerShell scripts under `pub/` are PascalCase Verb-Noun with approved verbs
   (`Invoke-VersionBump.ps1`, `pub/lib/Publish-NugetPackages.ps1`). Dot-sourced libraries/config
@@ -21,7 +21,7 @@ truth — follow them, and when a new durable convention is agreed, update this 
   folder-scoped names (`pub/Client/Publish.ps1`, `src/Apps/*/*/_publish.ps1`).
 
 ## UI
-- The products' UI is the Avalonia presentation under `src/AppUi`. The look it draws with - images, flags, fonts, words - is the submodule at `src/AppUi/Assets/Classic` (vpnhood/VpnHood.AppUi.Assets.Classic); a clone needs `--recurse-submodules` or a head starts with no images and no words. The web UI is kept as a sample in the sibling repo `..\VpnHood.AppUi.Spa\` (its SPA at `src\VpnHood.AppUi.Presentation.Classic.Spa`), where those files were authored and from which `_sync-assets.ps1` still mirrors a change across.
+- The products' UI is the Avalonia presentation under `src/AppUi`. The look it draws with - images, flags, fonts, words - is the submodule at `src/AppUi/VpnHood.AppUi.Assets.Classic` (vpnhood/VpnHood.AppUi.Assets.Classic); a clone needs `--recurse-submodules` or a head starts with no images and no words. The web UI is kept as a sample in the sibling repo `..\VpnHood.AppUi.Spa\` (its SPA at `src\VpnHood.AppUi.Presentation.Classic.Spa`), where those files were authored and from which `_sync-assets.ps1` still mirrors a change across.
   relative to this repo. It consumes the generated TypeScript API stub.
 - Never manually edit the TypeScript API stub (the generated .ts file in the Swagger project, e.g.
   VpnHood.Client.Api.ts). It is auto-generated: build the Swagger project to (re)generate the stub, then

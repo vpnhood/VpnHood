@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Hosts the app web UI in an Android WebView: the IWebView adapter, the web-view clients, and the activity handler a head derives from</Description>
+		<TargetFramework>net10.0-android36.1</TargetFramework>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<BaseIntermediateOutputPath />
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The shared controller this adapter reports to. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.WebView\VpnHood.AppUi.Hosting.WebView.csproj" />
+		<!-- The app's Android lifecycle: AndroidAppMainActivityHandler, the activity options, the
+		     window-inset helpers. Not a UI - it stays in AppLib and this references it downward. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Android\VpnHood.AppLib.App.Android.csproj" />
+	</ItemGroup>
+
+</Project>

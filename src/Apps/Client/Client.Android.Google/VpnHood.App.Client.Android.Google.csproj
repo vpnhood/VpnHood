@@ -52,12 +52,12 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\AppLib\App\App.Android\VpnHood.AppLib.App.Android.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Android\VpnHood.AppLib.App.Android.csproj" />
 		<!-- The UI this head runs, which MainActivity is the activity of. -->
-		<ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia.Android\VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
+		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Android\VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->
-		<ProjectReference Include="..\..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
-		<ProjectReference Include="..\..\..\AppLib\Stores\GooglePlay.Core\VpnHood.AppLib.Stores.GooglePlay.Core.csproj" />
+		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.GooglePlay.Core\VpnHood.AppLib.Stores.GooglePlay.Core.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 
@@ -65,8 +65,8 @@
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
 	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
-	<Import Project="..\..\..\AppUi\Assets\Classic\build\VpnHood.AppUi.Assets.Classic.targets" />
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\build\VpnHood.AppUi.Assets.Classic.targets" />
 	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way, from
 	     Classic.Avalonia.Browser's publish; the head reads it at "assets/web-root.zip". -->
-	<Import Project="..\..\..\AppUi\Presentation\Classic.Avalonia.Browser\build\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.targets" />
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser\build\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.targets" />
 </Project>

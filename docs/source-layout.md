@@ -20,108 +20,91 @@ the rule that makes a fork possible: a fork replaces `src/Apps/` and nothing els
 
 ## How a folder is named
 
-A folder under a layer is always a concept, never an OS, a store or a technology — those only ever
-end a name. The folder path spells the project's name, and the `.csproj` inside keeps its full name.
+**In `Core`, `AppLib` and `AppUi`, every project sits directly under its layer, in a folder named
+with its full project id**: `VpnHood.Core.Client.Devices.Android.csproj` lives in
+`src/Core/VpnHood.Core.Client.Devices.Android/`. There are no grouping folders, as in dotnet/runtime's
+`src/libraries/`: the ids sort a family together on their own (`VpnHood.Core.Quic.*`,
+`VpnHood.AppLib.Stores.*`), and the id alone says where a project is.
 
-1. **A family** — a base or `Abstractions` project and its variants — is one folder, and each
-   member's folder starts with the family's name: `Core/Client/Client.Devices/Devices.Android/` holds
-   `VpnHood.Core.Client.Devices.Android.csproj`. The base repeats it: `Core/Client/Client/`. A
-   family inside another is one of its members too, so its folder starts with the outer family's
-   name (`Client.Devices/`), and its own members start with its own name (`Devices.Android/`).
-2. **Peers that only share a kind** sit in a plain folder they don't repeat:
-   `AppLib/Stores/GooglePlay/`, `AppUi/Assets/Classic/`.
-3. **A project that is a concept on its own** is just its folder: `Core/Common/`.
+The solution file keeps the grouping on screen: `VpnHood.slnx` has a solution folder per family
+(`Devices`, `Quic`, `Stores`, `Hosting`, …), so the IDE shows a tree while the disk stays flat.
 
 A project's namespace is its name. Inside a namespace that ends in `.Android`, C# resolves `Android`
 to that namespace before the platform's, so the platform's own types are written
 `global::Android.Net.Uri` where they are not imported with a `using`.
 
-## `src/Core/` — the engine, one folder per concept
+## `src/Core/` — the engine
 
 ```text
 src/Core/
-├── Client/
-│   ├── Client/
-│   ├── Client.Abstractions/
-│   ├── Client.Devices/             one IDevice per OS
-│   │   ├── Devices.Abstractions/
-│   │   ├── Devices.Android/
-│   │   ├── Devices.Ios/
-│   │   ├── Devices.Linux/
-│   │   └── Devices.Win/
-│   └── Client.VpnServices/         the VPN service host and the manager that talks to it
-│       ├── VpnServices.Abstractions/
-│       ├── VpnServices.Host/
-│       └── VpnServices.Manager/
-├── Common/
-├── Filtering/
-│   ├── Filtering.Abstractions/
-│   ├── Filtering.DomainFiltering/
-│   └── Filtering.Sqlite/
-├── IpLocations/
-│   ├── IpLocations/
-│   └── IpLocations.Providers.SqliteProvider/
-├── Packets/
-├── PacketTransports/
-├── Proxies/
-│   ├── Proxies.Management/
-│   ├── Proxies.Management.Abstractions/
-│   └── Proxies.Management.Sqlite/
-├── Quic/
-│   ├── Quic.Abstractions/
-│   ├── Quic.Android/
-│   ├── Quic.Ios/
-│   └── Quic.MsQuic/
-├── Server/
-│   ├── Server/
-│   ├── Server.Access/
-│   └── Server.Access.Managers.FileAccessManagers/
-├── TcpStack/
-│   ├── TcpStack/
-│   └── TcpStack.Abstractions/
-├── Toolkit/
-├── Tunneling/
-└── VpnAdapters/                    one IVpnAdapter per OS or driver
-    ├── VpnAdapters.Abstractions/
-    ├── VpnAdapters.AndroidTun/
-    ├── VpnAdapters.IosTun/
-    ├── VpnAdapters.LinuxTun/
-    ├── VpnAdapters.WinDivert/
-    └── VpnAdapters.WinTun/
+├── VpnHood.Core.Client/
+├── VpnHood.Core.Client.Abstractions/
+├── VpnHood.Core.Client.Devices.Abstractions/       one IDevice per OS
+├── VpnHood.Core.Client.Devices.Android/
+├── VpnHood.Core.Client.Devices.Ios/
+├── VpnHood.Core.Client.Devices.Linux/
+├── VpnHood.Core.Client.Devices.Win/
+├── VpnHood.Core.Client.VpnServices.Abstractions/   the VPN service host and the manager that talks to it
+├── VpnHood.Core.Client.VpnServices.Host/
+├── VpnHood.Core.Client.VpnServices.Manager/
+├── VpnHood.Core.Common/
+├── VpnHood.Core.Filtering.Abstractions/
+├── VpnHood.Core.Filtering.DomainFiltering/
+├── VpnHood.Core.Filtering.Sqlite/
+├── VpnHood.Core.IpLocations/
+├── VpnHood.Core.IpLocations.Providers.SqliteProvider/
+├── VpnHood.Core.PacketTransports/
+├── VpnHood.Core.Packets/
+├── VpnHood.Core.Proxies.Management/
+├── VpnHood.Core.Proxies.Management.Abstractions/
+├── VpnHood.Core.Proxies.Management.Sqlite/
+├── VpnHood.Core.Quic.Abstractions/
+├── VpnHood.Core.Quic.Android/
+├── VpnHood.Core.Quic.Ios/
+├── VpnHood.Core.Quic.MsQuic/
+├── VpnHood.Core.Server/
+├── VpnHood.Core.Server.Access/
+├── VpnHood.Core.Server.Access.Managers.FileAccessManagers/
+├── VpnHood.Core.TcpStack/
+├── VpnHood.Core.TcpStack.Abstractions/
+├── VpnHood.Core.Toolkit/
+├── VpnHood.Core.Tunneling/
+├── VpnHood.Core.VpnAdapters.Abstractions/          one IVpnAdapter per OS or driver
+├── VpnHood.Core.VpnAdapters.AndroidTun/
+├── VpnHood.Core.VpnAdapters.IosTun/
+├── VpnHood.Core.VpnAdapters.LinuxTun/
+├── VpnHood.Core.VpnAdapters.WinDivert/
+└── VpnHood.Core.VpnAdapters.WinTun/
 ```
 
-## `src/AppLib/` — the app, one folder per concept
+## `src/AppLib/` — the app
 
 ```text
 src/AppLib/
-├── Abstractions/                   the contracts the providers implement
-├── Ads/
-│   └── AdMob.Android/
-├── Api/
-│   ├── Api/                        the app's API: its interfaces and DTOs
-│   ├── Api.HttpClients/            the API over HTTP, for a UI outside the app's process
-│   └── Api.WebHost/                the web host that serves it
-├── App/
-│   ├── App/                        VpnHoodApp and AppOptions
-│   ├── App.Android/                the app on each platform: VpnHoodAndroidApp, VpnHoodIosApp, …
-│   ├── App.Ios/
-│   ├── App.Linux/
-│   └── App.Win/
-├── Portal/                         accounts and purchases through the VpnHood Portal API
-└── Stores/
-    ├── AppStore/                   App Store billing and Sign in with Apple
-    ├── AppStore.Core/              App Store updates and reviews
-    ├── GooglePlay/                 Play Billing and Google sign-in
-    └── GooglePlay.Core/            Play in-app updates and reviews
+├── VpnHood.AppLib.Abstractions/                the contracts the providers implement
+├── VpnHood.AppLib.Ads.AdMob.Android/
+├── VpnHood.AppLib.Api/                         the app's API: its interfaces and DTOs
+├── VpnHood.AppLib.Api.HttpClients/             the API over HTTP, for a UI outside the app's process
+├── VpnHood.AppLib.Api.WebHost/                 the web host that serves it
+├── VpnHood.AppLib.App/                         VpnHoodApp and AppOptions
+├── VpnHood.AppLib.App.Android/                 the app on each platform: VpnHoodAndroidApp, VpnHoodIosApp, …
+├── VpnHood.AppLib.App.Ios/
+├── VpnHood.AppLib.App.Linux/
+├── VpnHood.AppLib.App.Win/
+├── VpnHood.AppLib.Portal/                      accounts and purchases through the VpnHood Portal API
+├── VpnHood.AppLib.Stores.AppStore/             App Store billing and Sign in with Apple
+├── VpnHood.AppLib.Stores.AppStore.Core/        App Store updates and reviews
+├── VpnHood.AppLib.Stores.GooglePlay/           Play Billing and Google sign-in
+└── VpnHood.AppLib.Stores.GooglePlay.Core/      Play in-app updates and reviews
 ```
 
-The store folders take their names from `StoreIds`, so a Microsoft Store package would be
-`Stores/Microsoft/`. The package ids, and with them the namespaces, follow the folders: `VpnHood.AppLib.App.Android`,
+The store packages take their names from `StoreIds`, so a Microsoft Store package would be
+`VpnHood.AppLib.Stores.Microsoft`. A project's namespace is its id: `VpnHood.AppLib.App.Android`,
 `VpnHood.AppLib.Stores.GooglePlay`, `VpnHood.AppLib.Ads.AdMob.Android`.
 
 ## `src/Apps/` — one folder per product
 
-```
+```text
 src/Apps/
 ├── Client/
 │   ├── Client/                     VpnHood.App.Client.csproj          the product
@@ -136,8 +119,12 @@ src/Apps/
 ├── Server/                         VpnHood.App.Server.Net.csproj + its Docker and Linux packaging
 └── Tools/
     ├── AvaloniaUI.Dev/             the Avalonia UI on a PC, for a developer
-    └── MacShim/                    an Xcode stub that installs iOS dev profiles on a Mac
+    ├── MacShim/                    an Xcode stub that installs iOS dev profiles on a Mac
+    └── StoreScreenshots/           renders the store screenshots
 ```
+
+`src/Apps/` is not a library layer, so the full-id rule above does not apply to it: a product is a
+folder, and a head's folder is `<Product>.<Platform>.<Channel>` without the `VpnHood.App.` prefix.
 
 **A head is `<Product>.<Platform>.<Channel>`.** The channel is who hands the app to the user:
 `Google` is Play, `Apple` is the App Store, `Web` is our own site. Every head names its channel, so
@@ -161,7 +148,7 @@ A head is a thin shell — an activity, a view controller, a window — and usua
 | `_publish.ps1` | the one entry point that builds and packages this head; CI calls exactly this |
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
-hosts it mounts from `AppUi`. A Linux head mounts one more host than the others: `Hosting/Cli`,
+hosts it mounts from `AppUi`. A Linux head mounts one more host than the others: `VpnHood.AppUi.Hosting.Cli`,
 which is the command line, the headless daemon and the window launcher in one binary — see
 [linux/](linux/README.md#how-it-fits-together).
 
@@ -195,10 +182,10 @@ via `buildTransitive/`.
 The app's web host serves a page to a phone paired with a TV. That page is the Avalonia UI compiled
 to WebAssembly - the same UI the head itself runs in process, drawn by a browser instead.
 
-```
-Presentation/Classic.Avalonia/            the UI itself: pages, controls, themes
-Hosting/Avalonia/Avalonia.Browser/        mounts ANY Avalonia UI as a page: AvaloniaBrowserHost.RunAsync<TUi>
-Presentation/Classic.Avalonia.Browser/    names which UI: a global.json, a csproj, a three-line Main
+```text
+VpnHood.AppUi.Presentation.Classic.Avalonia/          the UI itself: pages, controls, themes
+VpnHood.AppUi.Hosting.Avalonia.Browser/               mounts ANY Avalonia UI as a page: AvaloniaBrowserHost.RunAsync<TUi>
+VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/  names which UI: a global.json, a csproj, a three-line Main
         │  _publish.ps1
         ▼
      bin/avalonia-browser.zip  ──build/*.targets──▶  <head>/assets/web-root.zip

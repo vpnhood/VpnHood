@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Description>VpnHood's own Avalonia UI: the web UI's pages, page for page, in one responsive layout - the views, the controls and the two products' themes</Description>
+		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+	</PropertyGroup>
+
+	<!-- This UI embeds no assets: its images, country flags, fonts, content documents and words are
+	     the files of VpnHood.AppUi.Assets.Classic, read at run time through the IAssetProvider the
+	     head hands in - the zip that package's targets placed, extracted; or the app's web host,
+	     from a browser page. -->
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+		<!-- The QR of the pairing address: Android has no encoder of its own and Core Image is tvOS-only,
+		     so one dependency-free .NET encoder serves both (TV plan, Phase 4). -->
+		<PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Mounting Avalonia and the app's state as the pages read it, which any Avalonia UI needs. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
+		<!-- The words, the error sentences, the formatting - what the pages say, for any toolkit. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Common\VpnHood.AppUi.Common.csproj" />
+		<!-- The look this UI draws: the store's files, which the head's build places by importing the
+		     store's targets (a project reference carries none; a package reference will). Declared, not
+		     compiled against - the store has no assembly. -->
+		<!-- PrivateAssets: packed, this declaration would become a dependency on a package that is
+		     not published - the store's zip is gitignored and built from the web UI - so every
+		     restore of THIS package would fail. A consumer names its own store, which is the rule
+		     anyway: the look belongs to the head, not to the UI. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Assets.Classic\VpnHood.AppUi.Assets.Classic.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+		<!-- The pairing page starts and stops the LAN listener the phone dials into. -->
+	</ItemGroup>
+</Project>

@@ -65,13 +65,13 @@ base URL and has nowhere else to report.
 
 Not at install, not at connect, not ever. The app has no manager address and no code
 that could use one: `IAccessManager` lives in
-[`VpnHood.Core.Server.Access`](../src/Core/Server/Server.Access/Managers/IAccessManager.cs),
+[`VpnHood.Core.Server.Access`](../src/Core/VpnHood.Core.Server.Access/Managers/IAccessManager.cs),
 a **server** assembly, and neither `VpnHood.Core.Client` nor
 `VpnHood.Core.Client.Abstractions` references it.
 
 What the client actually knows comes from the access key it was given. Decode one
-([`Token`](../src/Core/Common/Tokens/Token.cs) →
-[`ServerToken`](../src/Core/Common/Tokens/ServerToken.cs)) and you find
+([`Token`](../src/Core/VpnHood.Core.Common/Tokens/Token.cs) →
+[`ServerToken`](../src/Core/VpnHood.Core.Common/Tokens/ServerToken.cs)) and you find
 `HostName`, `HostPort`, `HostEndPoints`, `Urls`, `ServerLocations` — **server**
 endpoints. There is no manager URL in a token, because the client has no reason for one.
 
@@ -83,7 +83,7 @@ endpoints. There is no manager URL in a token, because the client has no reason 
 ### 2. The server connects to the manager, never the reverse
 
 The server is the *client* of the manager's API. Every call in
-[`IAccessManager`](../src/Core/Server/Server.Access/Managers/IAccessManager.cs) is
+[`IAccessManager`](../src/Core/VpnHood.Core.Server.Access/Managers/IAccessManager.cs) is
 made by the server, outbound:
 
 | Call | When | Why |
@@ -102,9 +102,9 @@ mechanism by which a panel "controls" a server.
 
 Transport is plain HTTPS to `api/agent/` under the configured base URL, with a static
 `Authorization` header — see
-[`HttpAccessManager`](../src/Core/Server/Server.Access/Managers/HttpAccessManagers/HttpAccessManager.cs)
+[`HttpAccessManager`](../src/Core/VpnHood.Core.Server.Access/Managers/HttpAccessManagers/HttpAccessManager.cs)
 and its
-[options](../src/Core/Server/Server.Access/Managers/HttpAccessManagers/HttpAccessManagerOptions.cs).
+[options](../src/Core/VpnHood.Core.Server.Access/Managers/HttpAccessManagers/HttpAccessManagerOptions.cs).
 Configured in `appsettings.json`:
 
 ```json
@@ -119,7 +119,7 @@ Configured in `appsettings.json`:
 ### 3. No manager at all is a supported mode
 
 If `HttpAccessManager` is absent from settings, the server falls back to
-[`FileAccessManager`](../src/Core/Server/Server.Access.Managers.FileAccessManagers/FileAccessManager.cs)
+[`FileAccessManager`](../src/Core/VpnHood.Core.Server.Access.Managers.FileAccessManagers/FileAccessManager.cs)
 and keeps its tokens in a local folder — the selection is a single branch in
 [`ServerApp.cs`](../src/Apps/Server/ServerApp.cs). Same `IAccessManager` interface,
 no network, no panel. The server does not know the difference.

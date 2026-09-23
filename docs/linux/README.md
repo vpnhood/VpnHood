@@ -218,8 +218,8 @@ window is, so it lives beside the Avalonia hosts and is split the same way: one 
 one small adapter per platform.
 
 ```
-src/AppUi/Hosting/Cli/
-├── Cli/            VpnHood.AppUi.Hosting.Cli          the commands, the daemon, the window launcher
+src/AppUi/
+├── VpnHood.AppUi.Hosting.Cli/        the commands, the daemon, the window launcher
 │   ├── CliHost.cs                    builds the command tree and dispatches
 │   ├── CliHeadParams.cs              what a head declares: its AppOptions, its UI, whether it takes keys
 │   ├── CliPlatform.cs                what a platform declares: paths, the instance, how to be the daemon
@@ -230,7 +230,7 @@ src/AppUi/Hosting/Cli/
 │   ├── DaemonInfo.cs                 the address the daemon publishes (storage/daemon.json)
 │   ├── Commands/                     one type per command
 │   └── Internal/                     printer, session, profile lookup
-└── Cli.Linux/      VpnHood.AppUi.Hosting.Cli.Linux    systemd, /opt, XDG, root
+└── VpnHood.AppUi.Hosting.Cli.Linux/  systemd, /opt, XDG, root
     ├── LinuxCliHost.cs               a Linux head's entry point; catches the old launcher words
     ├── LinuxCliPaths.cs
     ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Manages the VpnHood service from another process by communicating with VpnHoodService.</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Devices\Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
+	  <ProjectReference Include="..\VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

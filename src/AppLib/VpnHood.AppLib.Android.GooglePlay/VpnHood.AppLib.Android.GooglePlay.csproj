@@ -19,7 +19,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
-	  <ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
+	  <ProjectReference Include="..\..\Core\Client\Devices\Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
 	  <ProjectReference Include="..\VpnHood.AppLib.Android.GooglePlay.Core\VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
 	</ItemGroup>
 

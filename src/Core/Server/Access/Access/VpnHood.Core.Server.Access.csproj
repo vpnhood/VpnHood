@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>Stores, and retrieves end users' access and usage. Provides required interfaces and classes to use or create an access server and accounting</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Common\VpnHood.Core.Common.csproj" />
+	</ItemGroup>
+
+
+
+</Project>

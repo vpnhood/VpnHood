@@ -18,6 +18,73 @@ this table.
 Nothing in `Core`, `AppLib` or `AppUi` knows that VpnHood Client or VpnHood Connect exist. That is
 the rule that makes a fork possible: a fork replaces `src/Apps/` and nothing else.
 
+## How a folder is named
+
+A folder under a layer is always a concept, never an OS, a store or a technology — those only ever
+end a name. The folder path spells the project's name, and the `.csproj` inside keeps its full name.
+
+1. **A family** — a base or `Abstractions` project and its variants — is one folder, and each
+   member's folder starts with the family's name: `Core/Client/Devices/Devices.Android/` holds
+   `VpnHood.Core.Client.Devices.Android.csproj`. The base repeats it: `Core/Client/Client/`.
+2. **Peers that only share a kind** sit in a plain folder they don't repeat:
+   `AppUi/Assets/Classic/`.
+3. **A project that is a concept on its own** is just its folder: `Core/Common/`.
+
+## `src/Core/` — the engine, one folder per concept
+
+```text
+src/Core/
+├── Client/
+│   ├── Client/
+│   ├── Client.Abstractions/
+│   ├── Devices/                    one IDevice per OS
+│   │   ├── Devices.Abstractions/
+│   │   ├── Devices.Android/
+│   │   ├── Devices.Ios/
+│   │   ├── Devices.Linux/
+│   │   └── Devices.Win/
+│   └── VpnServices/                the VPN service host and the manager that talks to it
+│       ├── VpnServices.Abstractions/
+│       ├── VpnServices.Host/
+│       └── VpnServices.Manager/
+├── Common/
+├── Filtering/
+│   ├── Filtering.Abstractions/
+│   ├── Filtering.DomainFiltering/
+│   └── Filtering.Sqlite/
+├── IpLocations/
+│   ├── IpLocations/
+│   └── IpLocations.SqliteProvider/
+├── Packets/
+├── PacketTransports/
+├── Proxies/
+│   ├── Proxies.Management/
+│   ├── Proxies.Management.Abstractions/
+│   └── Proxies.Management.Sqlite/
+├── Quic/
+│   ├── Quic.Abstractions/
+│   ├── Quic.Android/
+│   ├── Quic.Ios/
+│   └── Quic.MsQuic/
+├── Server/
+│   ├── Server/
+│   └── Access/
+│       ├── Access/
+│       └── Access.FileAccessManager/
+├── TcpStack/
+│   ├── TcpStack/
+│   └── TcpStack.Abstractions/
+├── Toolkit/
+├── Tunneling/
+└── VpnAdapters/                    one IVpnAdapter per OS or driver
+    ├── VpnAdapters.Abstractions/
+    ├── VpnAdapters.AndroidTun/
+    ├── VpnAdapters.IosTun/
+    ├── VpnAdapters.LinuxTun/
+    ├── VpnAdapters.WinDivert/
+    └── VpnAdapters.WinTun/
+```
+
 ## `src/Apps/` — one folder per product
 
 ```

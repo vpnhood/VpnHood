@@ -12,6 +12,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
+		<ProjectReference Include="..\..\Core\Toolkit\VpnHood.Core.Toolkit.csproj" />
 	</ItemGroup>
 </Project>

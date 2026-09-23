@@ -16,10 +16,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Core\VpnHood.Core.IpLocations\VpnHood.Core.IpLocations.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Proxies.Management.Sqlite\VpnHood.Core.Proxies.Management.Sqlite.csproj" />
+		<ProjectReference Include="..\..\Core\IpLocations\IpLocations\VpnHood.Core.IpLocations.csproj" />
+		<ProjectReference Include="..\..\Core\Client\VpnServices\VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
+		<ProjectReference Include="..\..\Core\Filtering\Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
+		<ProjectReference Include="..\..\Core\Proxies\Proxies.Management.Sqlite\VpnHood.Core.Proxies.Management.Sqlite.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
 		<!-- The shapes and the six interfaces this app fills: the contract, which knows nothing of it. -->
 		<ProjectReference Include="..\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />

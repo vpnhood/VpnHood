@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Abstractions for VPN services shared between the manager and host</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

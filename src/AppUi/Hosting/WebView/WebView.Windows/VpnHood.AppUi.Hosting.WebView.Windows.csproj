@@ -9,7 +9,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\WebView\VpnHood.AppUi.Hosting.WebView.csproj" />
 		<ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.Win.Common\VpnHood.AppLib.Win.Common.csproj" />
-		<ProjectReference Include="..\..\..\..\Core\VpnHood.Core.Client.Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
+		<ProjectReference Include="..\..\..\..\Core\Client\Devices\Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

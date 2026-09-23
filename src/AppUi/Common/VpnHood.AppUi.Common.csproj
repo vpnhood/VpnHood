@@ -19,8 +19,8 @@
 		<!-- The app's API, and the whole of what this package knows about the app: the six
 		     interfaces and the shapes they carry, in process or over HTTP. No engine, no listener. -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
+		<ProjectReference Include="..\..\Core\Common\VpnHood.Core.Common.csproj" />
 		<!-- IAssetProvider: the store's files, wherever this platform reads them from. -->
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
+		<ProjectReference Include="..\..\Core\Toolkit\VpnHood.Core.Toolkit.csproj" />
 	</ItemGroup>
 </Project>

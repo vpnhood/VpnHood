@@ -6,7 +6,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Linux\VpnHood.Core.Client.Devices.Linux.csproj" />
+		<ProjectReference Include="..\..\Core\Client\Devices\Devices.Linux\VpnHood.Core.Client.Devices.Linux.csproj" />
 	</ItemGroup>
 
 </Project>

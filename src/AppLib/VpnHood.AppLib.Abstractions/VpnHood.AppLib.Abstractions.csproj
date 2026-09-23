@@ -6,7 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
+		<ProjectReference Include="..\..\Core\Client\Devices\Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 	</ItemGroup>
 
 

@@ -8,7 +8,7 @@
 		<ProjectReference Include="..\..\Filtering\Filtering.Abstractions\VpnHood.Core.Filtering.Abstractions.csproj" />
 		<ProjectReference Include="..\..\Quic\Quic.Abstractions\VpnHood.Core.Quic.Abstractions.csproj" />
 		<ProjectReference Include="..\..\Tunneling\VpnHood.Core.Tunneling.csproj" />
-		<ProjectReference Include="..\Access\Access\VpnHood.Core.Server.Access.csproj" />
+		<ProjectReference Include="..\Server.Access\VpnHood.Core.Server.Access.csproj" />
 		<ProjectReference Include="..\..\VpnAdapters\VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 

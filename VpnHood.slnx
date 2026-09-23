@@ -214,11 +214,9 @@
     <Project Path="src/Core/Quic/Quic.MsQuic/VpnHood.Core.Quic.MsQuic.csproj" />
   </Folder>
   <Folder Name="/src/Core/Server/">
+    <Project Path="src/Core/Server/Server.Access.Managers.FileAccessManagers/VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
+    <Project Path="src/Core/Server/Server.Access/VpnHood.Core.Server.Access.csproj" />
     <Project Path="src/Core/Server/Server/VpnHood.Core.Server.csproj" />
-  </Folder>
-  <Folder Name="/src/Core/Server/Access/">
-    <Project Path="src/Core/Server/Access/Access.Managers.FileAccessManager/VpnHood.Core.Server.Access.Managers.FileAccessManager.csproj" />
-    <Project Path="src/Core/Server/Access/Access/VpnHood.Core.Server.Access.csproj" />
   </Folder>
   <Folder Name="/src/Core/TcpStack/">
     <Project Path="src/Core/TcpStack/TcpStack.Abstractions/VpnHood.Core.TcpStack.Abstractions.csproj" />

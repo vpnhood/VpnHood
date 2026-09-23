@@ -6,7 +6,7 @@ using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManager;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 
 public class FileAccessManagerOptions : ServerConfig
 {

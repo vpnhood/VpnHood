@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Server.Access.Managers.FileAccessManager;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Toolkit.Utils;
 

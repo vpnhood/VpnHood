@@ -1,6 +1,6 @@
 using VpnHood.Core.Common.Messaging;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManager.Dtos;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
 
 public class AccessToken
 {

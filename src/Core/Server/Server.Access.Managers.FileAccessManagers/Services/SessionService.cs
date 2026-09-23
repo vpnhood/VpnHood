@@ -4,13 +4,13 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Server.Access.Managers.FileAccessManager.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManager.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
 
 public class SessionService : IDisposable
 {

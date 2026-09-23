@@ -74,9 +74,8 @@ src/Core/
 │   └── Quic.MsQuic/
 ├── Server/
 │   ├── Server/
-│   └── Access/
-│       ├── Access/
-│       └── Access.Managers.FileAccessManager/
+│   ├── Server.Access/
+│   └── Server.Access.Managers.FileAccessManagers/
 ├── TcpStack/
 │   ├── TcpStack/
 │   └── TcpStack.Abstractions/

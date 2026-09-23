@@ -23,7 +23,7 @@ COPY ["src/Core/VpnAdapters/VpnAdapters.LinuxTun/VpnHood.Core.VpnAdapters.LinuxT
 COPY ["src/Core/Common/VpnHood.Core.Common.csproj", "VpnHood.Core.Common/"]
 COPY ["src/Core/Tunneling/VpnHood.Core.Tunneling.csproj", "VpnHood.Core.Tunneling/"]
 COPY ["src/Core/Server/Server/VpnHood.Core.Server.csproj", "VpnHood.Core.Server/"]
-COPY ["src/Core/Server/Access/Access/VpnHood.Core.Server.Access.csproj", "VpnHood.Core.Server.Access/"]
+COPY ["src/Core/Server/Server.Access/VpnHood.Core.Server.Access.csproj", "VpnHood.Core.Server.Access/"]
 RUN dotnet restore "VpnHood.App.Server.Net/VpnHood.App.Server.Net.csproj"
 COPY . .
 # The repo's global.json pins an SDK (11 preview) only needed by the full solution.

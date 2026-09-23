@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Api.App;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppLib.App.Utils;
 

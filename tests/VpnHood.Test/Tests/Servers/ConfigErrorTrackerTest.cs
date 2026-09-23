@@ -1,7 +1,7 @@
 using System.Text.Json;
-using VpnHood.Core.Quic.MsQuic;
+using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Core.Server;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Providers;
 

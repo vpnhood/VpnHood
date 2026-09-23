@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.Converters;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Converters;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
 

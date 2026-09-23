@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>MsQuic (System.Net.Quic) implementation of the VpnHood QUIC abstractions. Supported on Windows and Linux.</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Native.Quic.MsQuic.OpenSSL" Version="2.6.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- VpnHood.Net.Toolkit provides SystemSocketFactory and transitively references
+		     VpnHood.Net.Quic.Abstractions -->
+		<ProjectReference Include="..\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
+	</ItemGroup>
+
+</Project>

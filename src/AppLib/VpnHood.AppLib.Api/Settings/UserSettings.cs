@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.AppLib.Api.Sessions;
-using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.AppLib.Api.Settings;
 

@@ -2,7 +2,7 @@
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 
 using VpnHood.AppLib.App.DtoConverters;
 

@@ -5,7 +5,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
 	</ItemGroup>
 
 </Project>

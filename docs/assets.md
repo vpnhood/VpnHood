@@ -34,7 +34,7 @@ None + copy      Link="assets\ui.zip"           Windows, Linux: a file beside th
 
 ## How code reads one
 
-Two small types in `VpnHood.Core.Toolkit` carry all of it.
+Two small types in `VpnHood.Net.Toolkit` carry all of it.
 
 `IAssetProvider` answers a stream by name, asynchronously, and nothing else:
 

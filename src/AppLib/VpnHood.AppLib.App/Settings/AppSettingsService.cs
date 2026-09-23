@@ -2,8 +2,8 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.Settings;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Settings;
 

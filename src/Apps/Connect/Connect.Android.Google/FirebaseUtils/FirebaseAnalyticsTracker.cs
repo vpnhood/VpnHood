@@ -3,8 +3,8 @@ using Firebase.Analytics;
 using Firebase.Crashlytics;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.App.Connect.Android.Google.FirebaseUtils;
 

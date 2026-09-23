@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Api.App;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Api.Ads;
 using VpnHood.AppLib.Api.Countries;

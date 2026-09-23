@@ -3,7 +3,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 

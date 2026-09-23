@@ -1,11 +1,11 @@
 ﻿using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Core.PacketTransports;
-using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Jobs;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
+using VpnHood.Net.PacketTransports;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Exceptions;
 

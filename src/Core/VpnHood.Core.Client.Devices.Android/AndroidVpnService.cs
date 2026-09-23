@@ -9,10 +9,10 @@ using VpnHood.Core.Client.Devices.Android.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
-using VpnHood.Core.Quic.Android;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.VpnAdapters.AndroidTun;
+using VpnHood.Net.Quic.Android;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.VpnAdapters.Abstractions;
+using VpnHood.Net.VpnAdapters.AndroidTun;
 
 namespace VpnHood.Core.Client.Devices.Android;
 

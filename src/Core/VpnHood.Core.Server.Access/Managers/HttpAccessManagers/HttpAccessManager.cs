@@ -5,9 +5,9 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Messaging;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 

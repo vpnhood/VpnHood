@@ -9,8 +9,8 @@ using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.AppLib.App.Services.Countries;
-using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.AppLib.App.WebHosting;
 using VpnHood.AppLib.Api;
 

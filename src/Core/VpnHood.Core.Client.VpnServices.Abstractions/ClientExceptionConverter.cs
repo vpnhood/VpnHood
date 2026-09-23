@@ -1,7 +1,7 @@
 ﻿using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 

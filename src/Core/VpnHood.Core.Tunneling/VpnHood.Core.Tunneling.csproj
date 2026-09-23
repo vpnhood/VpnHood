@@ -6,8 +6,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Packets\VpnHood.Core.Packets.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.PacketTransports\VpnHood.Core.PacketTransports.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Packets\VpnHood.Net.Packets.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.PacketTransports\VpnHood.Net.PacketTransports.csproj" />
 	</ItemGroup>
 
 </Project>

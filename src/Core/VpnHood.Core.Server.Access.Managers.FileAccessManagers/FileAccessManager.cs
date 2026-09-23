@@ -5,15 +5,15 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.IpLocations;
-using VpnHood.Core.IpLocations.Providers.Onlines;
+using VpnHood.Net.IpLocations;
+using VpnHood.Net.IpLocations.Providers.Onlines;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
 using VpnHood.Core.Server.Access.Messaging;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 

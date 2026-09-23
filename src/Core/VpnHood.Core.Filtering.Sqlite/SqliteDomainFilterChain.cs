@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 

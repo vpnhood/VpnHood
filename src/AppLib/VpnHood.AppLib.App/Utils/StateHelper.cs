@@ -11,8 +11,8 @@ using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Utils;
 

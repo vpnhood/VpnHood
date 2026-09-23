@@ -2,7 +2,7 @@ using System.Globalization;
 using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.Portal;
 

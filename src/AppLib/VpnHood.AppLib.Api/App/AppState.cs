@@ -6,7 +6,7 @@ using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.Api.Updaters;
-using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.Api.App;
 

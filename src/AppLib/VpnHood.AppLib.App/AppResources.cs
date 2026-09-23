@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Toolkit.Graphics;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppLib.App;
 

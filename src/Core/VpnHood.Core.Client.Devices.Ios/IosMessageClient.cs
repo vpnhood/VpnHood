@@ -1,7 +1,7 @@
 using NetworkExtension;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.Devices.Ios;
 

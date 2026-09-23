@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.App.Utils;
-using VpnHood.Core.Toolkit.Assets;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.WebHosting;
 

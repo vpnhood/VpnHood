@@ -1,5 +1,5 @@
 using System.Net;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test;

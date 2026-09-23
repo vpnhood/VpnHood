@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services.Ads;
 

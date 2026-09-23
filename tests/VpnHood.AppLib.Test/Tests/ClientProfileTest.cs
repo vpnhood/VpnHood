@@ -6,8 +6,8 @@ using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Common.Tokens;
 using ClientPolicy = VpnHood.Core.Common.Tokens.ClientPolicy;
-using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Utils;
 
 // ReSharper disable DisposeOnUsingVariable
 namespace VpnHood.AppLib.Test.Tests;

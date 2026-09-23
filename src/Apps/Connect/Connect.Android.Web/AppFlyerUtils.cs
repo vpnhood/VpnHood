@@ -2,7 +2,7 @@
 using Android.Content;
 using Com.Appsflyer;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Android.Web;
 

@@ -1,6 +1,6 @@
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.Api;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Hosting.Cli;
 

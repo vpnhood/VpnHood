@@ -2,7 +2,7 @@ using Android.Content;
 using Android.Graphics;
 using Android.Webkit;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using NativeWebView = Android.Webkit.WebView;
 
 namespace VpnHood.AppUi.Hosting.WebView.Android;

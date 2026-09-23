@@ -2,7 +2,7 @@
 using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.AppLib.App.Services.Proxies;
 using VpnHood.Core.Proxies.Management.Abstractions;
-using VpnHood.Core.Toolkit.Generics;
+using VpnHood.Net.Toolkit.Generics;
 using ProxyEndPoint = VpnHood.AppLib.Api.Proxies.ProxyEndPoint;
 using ProxyEndPointDefaults = VpnHood.AppLib.Api.Proxies.ProxyEndPointDefaults;
 using VpnHood.AppLib.Api;

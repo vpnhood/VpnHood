@@ -10,7 +10,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Proxies.Management.Abstractions;
-using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.ApiClients;
 using CoreDeviceAppInfo = VpnHood.Core.Client.Devices.Abstractions.DeviceAppInfo;
 
 using VpnHood.AppLib.App.Services.Countries;

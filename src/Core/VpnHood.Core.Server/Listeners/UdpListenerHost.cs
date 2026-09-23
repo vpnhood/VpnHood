@@ -1,10 +1,10 @@
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Net;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Common.Configuration;

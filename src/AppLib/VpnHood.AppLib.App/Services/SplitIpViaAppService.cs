@@ -2,9 +2,9 @@
 using VpnHood.AppLib.App.Settings;
 using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Filtering.Sqlite;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services;
 

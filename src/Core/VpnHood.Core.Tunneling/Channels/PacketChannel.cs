@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Packets;
-using VpnHood.Core.PacketTransports;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Packets;
+using VpnHood.Net.PacketTransports;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Jobs;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.DatagramMessaging;
 using VpnHood.Core.Common.Configuration;
 

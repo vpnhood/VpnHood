@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Nager.Country;
 using Nager.Country.Translation;
 using VpnHood.AppLib.Api.Countries;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.App.Services.Countries;
 

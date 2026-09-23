@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
-using VpnHood.Core.Toolkit.Collections;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Collections;
+using VpnHood.Net.Toolkit.Utils;
 // ReSharper disable AccessToDisposedClosure
 
 namespace VpnHood.Test.Tests;

@@ -2,8 +2,8 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Server.Abstractions;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.App.Server.Providers.Linux;
 

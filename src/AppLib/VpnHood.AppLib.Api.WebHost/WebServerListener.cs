@@ -2,8 +2,8 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.WebHost.Helpers;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 using WatsonWebserver.Lite;
 
 namespace VpnHood.AppLib.Api.WebHost;

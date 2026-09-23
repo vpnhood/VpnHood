@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Core.Tunneling.Channels;
 
 namespace VpnHood.Core.Client;

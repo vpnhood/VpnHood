@@ -1,4 +1,4 @@
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.App.StoreScreenshots;
 

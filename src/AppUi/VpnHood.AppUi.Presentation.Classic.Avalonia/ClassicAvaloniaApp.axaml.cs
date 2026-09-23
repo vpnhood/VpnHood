@@ -6,8 +6,8 @@ using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Styles;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
-using VpnHood.Core.Toolkit.Assets;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
 

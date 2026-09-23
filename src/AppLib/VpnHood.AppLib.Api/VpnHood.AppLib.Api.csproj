@@ -15,6 +15,6 @@
 	     converters in VpnHood.AppLib.App, so that this project references no engine assembly. -->
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
 	</ItemGroup>
 </Project>

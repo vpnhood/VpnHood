@@ -1,5 +1,5 @@
 using AndroidX.Credentials;
-using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 

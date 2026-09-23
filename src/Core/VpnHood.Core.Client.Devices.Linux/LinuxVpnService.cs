@@ -1,9 +1,9 @@
 ﻿using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
-using VpnHood.Core.Quic.MsQuic;
-using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.VpnAdapters.LinuxTun;
+using VpnHood.Net.Quic.MsQuic;
+using VpnHood.Net.VpnAdapters.Abstractions;
+using VpnHood.Net.VpnAdapters.LinuxTun;
 
 namespace VpnHood.Core.Client.Devices.Linux;
 

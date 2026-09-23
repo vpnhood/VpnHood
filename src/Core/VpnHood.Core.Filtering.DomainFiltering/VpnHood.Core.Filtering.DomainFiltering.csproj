@@ -6,7 +6,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Filtering.Abstractions\VpnHood.Core.Filtering.Abstractions.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Packets\VpnHood.Core.Packets.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Packets\VpnHood.Net.Packets.csproj" />
 	</ItemGroup>
 
 </Project>

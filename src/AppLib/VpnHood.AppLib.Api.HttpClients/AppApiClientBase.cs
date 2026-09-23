@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.Api.HttpClients;
 

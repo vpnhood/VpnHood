@@ -4,8 +4,8 @@ using AndroidX.Credentials;
 using AndroidX.Credentials.Exceptions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions.Exceptions;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Logging;
 using GetCredentialResponse = AndroidX.Credentials.GetCredentialResponse;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;

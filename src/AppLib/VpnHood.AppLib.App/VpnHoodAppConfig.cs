@@ -1,5 +1,5 @@
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.App;
 

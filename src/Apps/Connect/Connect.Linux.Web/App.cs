@@ -10,8 +10,8 @@ using VpnHood.AppUi.Hosting.Cli.Linux;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.Api.WebHost;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.App.Connect.Linux.Web;
 

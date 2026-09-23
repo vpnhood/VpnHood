@@ -3,8 +3,8 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Devices.Linux;
 using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Linux;
 

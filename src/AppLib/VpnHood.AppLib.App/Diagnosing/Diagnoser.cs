@@ -1,10 +1,10 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Diagnosing;
 

@@ -4,8 +4,8 @@ using VpnHood.Core.Client.Devices.Ios.Extensions;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
-using VpnHood.Core.Quic.Ios;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Quic.Ios;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Devices.Ios;
 

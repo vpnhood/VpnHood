@@ -2,7 +2,7 @@ using Android.Runtime;
 using Android.Views;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;

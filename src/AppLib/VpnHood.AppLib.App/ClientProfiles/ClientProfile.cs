@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.AppLib.App.ClientProfiles;
 

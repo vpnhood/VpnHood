@@ -11,7 +11,7 @@ using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Socks5ProxyServers;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 using ProxyEndPoint = VpnHood.AppLib.Api.Proxies.ProxyEndPoint;
 using ProxyProtocol = VpnHood.AppLib.Api.Proxies.ProxyProtocol;
 using ProxyAutoUpdateOptions = VpnHood.AppLib.Api.Settings.ProxyAutoUpdateOptions;

@@ -14,9 +14,9 @@ using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 

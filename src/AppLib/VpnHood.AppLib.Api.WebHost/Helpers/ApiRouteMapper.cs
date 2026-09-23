@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.WebHost.Controllers;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Logging;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;

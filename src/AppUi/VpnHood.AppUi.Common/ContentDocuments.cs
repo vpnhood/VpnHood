@@ -1,5 +1,5 @@
-using VpnHood.Core.Toolkit.Assets;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Common;
 

@@ -5,7 +5,7 @@ using Avalonia.Threading;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.Api;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;

@@ -1,5 +1,5 @@
 using System.Reflection;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Utils;
 

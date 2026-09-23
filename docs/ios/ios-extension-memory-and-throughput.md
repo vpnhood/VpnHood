@@ -161,7 +161,7 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 
 ## Current configuration (working tree)
 
-**iOS TCP-stack profile** — `src/Core/VpnHood.Core.TcpStack/LocalTcpStackOptions.cs` `Ios`:
+**iOS TCP-stack profile** — `src/Net/VpnHood.Net.TcpStack/LocalTcpStackOptions.cs` `Ios`:
 - `ReceiveWindowSize=0xFFFF (64 KB)`, **`GlobalReceiveBudget=6 MB`**, `RetxBufferSize=16 KB`.
 - **`MaxConnections=40`**, `AcceptQueueCapacity=128`, **`IdleTimeout=20 s`**, **`IdleCheckInterval=5 s`**.
 - **`AdmissionMemoryLimitMb=42.0`** — Memory admission gate. When the process footprint matches or exceeds 42.0 MB, new TCP SYNs are dropped silently so the peer's own SYN-retransmit backoff acts as a natural pacing mechanism until memory recedes.

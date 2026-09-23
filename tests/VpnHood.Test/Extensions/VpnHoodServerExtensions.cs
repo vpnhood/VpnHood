@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Client;
 using VpnHood.Core.Server;
-using VpnHood.Core.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Exceptions;
 
 namespace VpnHood.Test.Extensions;
 

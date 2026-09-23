@@ -2,9 +2,9 @@
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Proxies;

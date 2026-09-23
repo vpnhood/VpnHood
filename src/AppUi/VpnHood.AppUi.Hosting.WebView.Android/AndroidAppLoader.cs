@@ -4,8 +4,8 @@ using Android.Views;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
 using VpnHood.Core.Client.Devices.Android.Utils;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 using Orientation = Android.Widget.Orientation;
 
 namespace VpnHood.AppUi.Hosting.WebView.Android;

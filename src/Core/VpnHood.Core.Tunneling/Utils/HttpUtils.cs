@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Text;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling.Utils;
 

@@ -1,4 +1,4 @@
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Net;
 using System.Net;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Tunneling;

@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Net;
 
 // ReSharper disable StringLiteralTypo
 namespace VpnHood.Test.Tests;

@@ -3,8 +3,8 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Device;

@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Toolkit.Memory;
+using VpnHood.Net.Toolkit.Memory;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 

@@ -3,12 +3,12 @@ using System.Net;
 using System.Runtime.InteropServices;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Assets;
-using VpnHood.Core.Toolkit.Streams;
-using VpnHood.Core.IpLocations.Providers.Offlines;
-using VpnHood.Core.IpLocations.Providers.SqliteProvider;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Streams;
+using VpnHood.Net.IpLocations.Providers.Offlines;
+using VpnHood.Net.IpLocations.Providers.SqliteProvider;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
 

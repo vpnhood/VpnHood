@@ -1,9 +1,9 @@
 ﻿using System.Text.Json.Nodes;
 using SkiaSharp;
 using VpnHood.AppUi.Common;
-using VpnHood.Core.Toolkit.Assets;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Streams;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Streams;
 
 namespace VpnHood.App.StoreScreenshots;
 

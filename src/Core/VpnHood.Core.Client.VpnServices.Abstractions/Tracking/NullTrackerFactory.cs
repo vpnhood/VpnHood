@@ -1,5 +1,5 @@
 ﻿using Ga4.Trackers;
-using VpnHood.Core.Toolkit.Trackers;
+using VpnHood.Net.Toolkit.Trackers;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 

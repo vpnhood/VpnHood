@@ -9,7 +9,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Sessions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 

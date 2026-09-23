@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppLib.App.Win;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;

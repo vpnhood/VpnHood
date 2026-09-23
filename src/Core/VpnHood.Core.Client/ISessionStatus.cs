@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Client;
 

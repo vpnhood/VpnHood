@@ -5,7 +5,7 @@ using VpnHood.AppUi.Hosting.Cli.Linux;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 
 // ReSharper disable LocalizableElement
 

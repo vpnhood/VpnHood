@@ -20,6 +20,6 @@
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
 		<!-- IAssetProvider: the store's files, wherever this platform reads them from. -->
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
 	</ItemGroup>
 </Project>

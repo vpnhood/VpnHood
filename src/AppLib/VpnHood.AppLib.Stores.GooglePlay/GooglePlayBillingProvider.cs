@@ -7,9 +7,9 @@ using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Stores.GooglePlay.Exceptions;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 using PurchaseState = VpnHood.AppLib.Abstractions.Billing.PurchaseState;
 using VpnHood.Core.Client.Devices.Android.Utils;
 

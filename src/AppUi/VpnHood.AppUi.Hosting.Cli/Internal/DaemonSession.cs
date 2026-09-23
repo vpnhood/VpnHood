@@ -1,5 +1,5 @@
 using VpnHood.AppLib.Api;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Cli.Internal;
 

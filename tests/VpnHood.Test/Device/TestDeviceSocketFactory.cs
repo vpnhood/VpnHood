@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Quic.MsQuic;
-using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Net.Quic.MsQuic;
+using VpnHood.Net.Toolkit.Sockets;
 
 namespace VpnHood.Test.Device;
 

@@ -50,7 +50,7 @@ Store policy and legal checkpoints a publisher must clear:
 
 | Area | Document |
 | --- | --- |
-| Source layout | [source-layout.md](source-layout.md) — the four layers under `src/`, what a head is made of, how the browser page is built and placed |
+| Source layout | [source-layout.md](source-layout.md) — the five layers under `src/`, what a head is made of, how the browser page is built and placed |
 | Assets and zips | [assets.md](assets.md) — why data ships as a placed zip and never as an embedded resource, the provider chain that reads one, and why the paired-phone page is WebAssembly |
 | Component topology | [topology.md](topology.md) — who connects to whom, in which direction, and how many of each |
 | iOS app + Network Extension | [ios/](ios/README.md) — architecture, build & provisioning, memory limits, runtime rules |

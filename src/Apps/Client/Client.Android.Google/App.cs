@@ -9,7 +9,7 @@ using VpnHood.AppLib.App.Android.Constants;
 using VpnHood.AppLib.Stores.GooglePlay;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.Api.WebHost;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.App.Client.Android.Google;
 

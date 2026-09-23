@@ -2,10 +2,10 @@
 using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Proxies;
 
 namespace VpnHood.Test.Tests;

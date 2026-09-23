@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.VpnAdapters.WinDivert;
+﻿using VpnHood.Net.VpnAdapters.WinDivert;
 
 namespace VpnHood.Test.Device;
 

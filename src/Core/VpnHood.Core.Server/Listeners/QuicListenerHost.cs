@@ -2,11 +2,11 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Quic.Abstractions;
+using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Core.Server.Access;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
 

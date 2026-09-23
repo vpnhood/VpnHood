@@ -16,8 +16,8 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
 | `IosDevice` | `src/Core/VpnHood.Core.Client.Devices.Ios/IosDevice.cs` | `IDevice`; NEVPNManager save/load/start, creates the IPC transport |
 | `IosVpnService` | same project | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, and the memory watchdogs (`IosMemoryGuard.Start()` / `IosMemoryMonitor.Start()`) |
 | `IosMessageClient` / `IosMessageListener` | same project | App↔Extension IPC over `SendProviderMessage` / `HandleAppMessage` |
-| `IosVpnAdapter` | `src/Core/VpnHood.Core.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
-| `LocalTcpStack` (proxy mode) | `src/Core/VpnHood.Core.TcpStack/` | user-space TCP stack used when `UseTcpProxy=true` |
+| `IosVpnAdapter` | `src/Net/VpnHood.Net.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
+| `LocalTcpStack` (proxy mode) | `src/Net/VpnHood.Net.TcpStack/` | user-space TCP stack used when `UseTcpProxy=true` |
 
 **The app projects contain only thin glue:**
 - `src/Apps/Client/Client.Ios.Extension/PacketTunnelProvider.cs` — `[Register("PacketTunnelProvider")]` subclass of core `IosVpnService`,

@@ -1,5 +1,5 @@
 using VpnHood.AppUi.Common;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;
 

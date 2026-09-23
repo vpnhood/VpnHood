@@ -1,6 +1,6 @@
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Core.Proxies.Management.Abstractions;
-using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Net.Toolkit.Sockets;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 

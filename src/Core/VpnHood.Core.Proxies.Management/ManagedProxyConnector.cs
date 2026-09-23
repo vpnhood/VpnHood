@@ -6,13 +6,13 @@ using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Monitoring;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Sockets;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Jobs;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Monitoring;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Sockets;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Proxies.Management;
 

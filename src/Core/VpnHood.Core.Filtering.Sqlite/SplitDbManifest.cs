@@ -1,5 +1,5 @@
 using System.Text.Json;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 

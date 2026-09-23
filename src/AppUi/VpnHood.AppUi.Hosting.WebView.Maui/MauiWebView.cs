@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using Uri = System.Uri;
 // this file sits in a namespace called WebView, so MAUI's own control needs an explicit name
 using NativeWebView = Microsoft.Maui.Controls.WebView;

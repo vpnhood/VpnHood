@@ -4,13 +4,13 @@ using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Client.VpnServices.Manager;
-using VpnHood.Core.IpLocations;
+using VpnHood.Net.IpLocations;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Management.Sqlite;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Generics;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Generics;
+using VpnHood.Net.Toolkit.Utils;
 using CoreProxy = VpnHood.Core.Proxies.Management.Abstractions;
 // the store and the parser are the engine's; what this service hands out is the contract's
 using ProxyEndPoint = VpnHood.AppLib.Api.Proxies.ProxyEndPoint;

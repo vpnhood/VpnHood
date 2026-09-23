@@ -8,10 +8,10 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App.Win.WinNative;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Common;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Graphics;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Graphics;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Win;
 

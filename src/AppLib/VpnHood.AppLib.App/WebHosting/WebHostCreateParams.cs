@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Api;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppLib.App.WebHosting;
 

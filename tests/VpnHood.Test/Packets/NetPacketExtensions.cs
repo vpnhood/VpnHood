@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using PacketDotNet;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Toolkit.Net;
 using IcmpV4Packet = PacketDotNet.IcmpV4Packet;
 using IcmpV6Packet = PacketDotNet.IcmpV6Packet;
 using TcpPacket = PacketDotNet.TcpPacket;

@@ -1,8 +1,8 @@
 ﻿using Android.Content;
 using Google.Android.Gms.Ads;
 using Google.Android.Gms.Ads.Initialization;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib.Ads.AdMob.Android;

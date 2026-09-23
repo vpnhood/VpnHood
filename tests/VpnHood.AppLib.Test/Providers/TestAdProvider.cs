@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.AccessManagers;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;

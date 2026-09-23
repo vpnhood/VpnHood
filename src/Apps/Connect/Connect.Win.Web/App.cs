@@ -8,9 +8,9 @@ using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.App.Utils;
 using VpnHood.AppLib.App.Win;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppLib.Api.WebHost;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.App.Connect.Win.Web;
 

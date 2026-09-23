@@ -2,9 +2,9 @@
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Sockets;
-using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Sockets;
+using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Test.Device;
 

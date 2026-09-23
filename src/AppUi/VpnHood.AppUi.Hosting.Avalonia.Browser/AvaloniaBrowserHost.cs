@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Browser;
 using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppUi.Common;
-using VpnHood.Core.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Browser;
 

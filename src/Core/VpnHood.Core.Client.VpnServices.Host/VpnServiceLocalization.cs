@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Toolkit.Graphics;
+﻿using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 

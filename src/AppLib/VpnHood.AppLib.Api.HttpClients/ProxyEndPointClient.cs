@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Api.Proxies;
-using VpnHood.Core.Toolkit.Generics;
+using VpnHood.Net.Toolkit.Generics;
 
 namespace VpnHood.AppLib.Api.HttpClients;
 

@@ -51,8 +51,8 @@ truth — follow them, and when a new durable convention is agreed, update this 
 
 ## iOS (Client & Connect apps)
 - The iOS apps live in `src/Apps/{Client,Connect}/{Client,Connect}.Ios.Apple` (host) + `….Ios.Extension` (Network
-  Extension `.appex`); the real device/extension/TUN/TCP-stack code is in `src/Core/*` (`Devices.Ios`,
-  `VpnAdapters.IosTun`, `TcpStack`, `Quic.Ios`). The extension projects are one-file `[Register]` shims.
+  Extension `.appex`); the real device/extension/TUN/TCP-stack code is in `src/Core/VpnHood.Core.Client.Devices.Ios`
+  and `src/Net/*` (`VpnAdapters.IosTun`, `TcpStack`, `Quic.Ios`). The extension projects are one-file `[Register]` shims.
 - **Read [`docs/ios/`](docs/ios/) before working on anything iOS** — especially
   `ios-extension-memory-and-throughput.md` before touching memory/throughput/TCP-stack code (the extension
   runs under a ~52 MB jetsam limit).

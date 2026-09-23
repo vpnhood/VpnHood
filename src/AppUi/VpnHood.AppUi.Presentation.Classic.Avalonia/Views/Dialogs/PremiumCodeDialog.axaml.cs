@@ -7,7 +7,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Sessions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 

@@ -14,9 +14,9 @@
 		<ProjectReference Include="..\VpnHood.Core.Filtering.Abstractions\VpnHood.Core.Filtering.Abstractions.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Filtering.DomainFiltering\VpnHood.Core.Filtering.DomainFiltering.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Proxies.Management.Abstractions\VpnHood.Core.Proxies.Management.Abstractions.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.TcpStack\VpnHood.Core.TcpStack.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.TcpStack\VpnHood.Net.TcpStack.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.Abstractions\VpnHood.Net.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -6,7 +6,7 @@ using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
 using VpnHood.AppLib.App.Win;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
 
 // ReSharper disable once CheckNamespace

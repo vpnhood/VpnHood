@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Toolkit.Utils;
+﻿using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
 
 namespace VpnHood.AppUi.Hosting.WebView.Maui;

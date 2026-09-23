@@ -1,6 +1,6 @@
 ﻿using Android.Graphics;
 using Android.Graphics.Drawables;
-using VpnHood.Core.Toolkit.Graphics;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.Core.Client.Devices.Android.Utils;
 

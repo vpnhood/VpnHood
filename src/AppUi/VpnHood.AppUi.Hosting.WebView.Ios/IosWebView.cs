@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using WebKit;
 
 namespace VpnHood.AppUi.Hosting.WebView.Ios;

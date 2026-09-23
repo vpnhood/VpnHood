@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using OSLogHandle = CoreFoundation.OSLog;
 using OSLogLevel = CoreFoundation.OSLogLevel;
 

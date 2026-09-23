@@ -1,7 +1,7 @@
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.PacketTransports;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.PacketTransports;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Common.Configuration;
 

@@ -5,7 +5,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.Core.IpLocations\VpnHood.Core.IpLocations.csproj" />
+	  <ProjectReference Include="..\..\Net\VpnHood.Net.IpLocations\VpnHood.Net.IpLocations.csproj" />
 	  <ProjectReference Include="..\VpnHood.Core.Server.Access\VpnHood.Core.Server.Access.csproj" />
 	</ItemGroup>
 

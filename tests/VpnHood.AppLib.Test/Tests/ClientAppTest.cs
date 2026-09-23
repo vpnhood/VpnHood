@@ -8,7 +8,7 @@ using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;

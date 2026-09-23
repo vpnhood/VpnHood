@@ -8,8 +8,8 @@ using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
-using VpnHood.Core.Toolkit.Assets;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.StoreScreenshots;
 

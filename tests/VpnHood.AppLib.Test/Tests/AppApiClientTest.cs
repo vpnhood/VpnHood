@@ -5,8 +5,8 @@ using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Utils;
 // ReSharper disable ShortLivedHttpClient
 
 namespace VpnHood.AppLib.Test.Tests;

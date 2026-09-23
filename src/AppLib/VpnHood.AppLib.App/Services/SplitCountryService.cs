@@ -9,13 +9,13 @@ using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
-using VpnHood.Core.IpLocations;
-using VpnHood.Core.Toolkit.Assets;
-using VpnHood.Core.Toolkit.Streams;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.IpLocations;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Streams;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services;
 

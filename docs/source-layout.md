@@ -3,28 +3,31 @@
 How `src/` is organised, what a platform app is made of, and what a fork copies. Written for
 someone opening this repo for the first time.
 
-## The four layers
+## The five layers
 
-Everything under `src/` is one of four things, and each layer only knows about the ones above it in
+Everything under `src/` is one of five things, and each layer only knows about the ones above it in
 this table.
 
 | Folder | What it is | Ships as |
 | --- | --- | --- |
-| `src/Core/` | the VPN engine: the tunnel, the adapters, the protocols, the server | NuGet |
+| `src/Net/` | networking with no VPN in it: packets, a user-space TCP stack, QUIC, the TUN and WinDivert adapters, IP locations, and the toolkit they share | NuGet |
+| `src/Core/` | the VPN engine: the tunnel, the client, the server, split tunneling and proxies | NuGet |
 | `src/AppLib/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.Win`), and the store and ad providers | NuGet |
 | `src/AppUi/` | the user interface: the app's state as a UI sees it, the look, and the hosts that mount a UI on a platform | NuGet |
 | `src/Apps/` | the apps we ship, and the tools we run ourselves | the stores, our site |
 
-Nothing in `Core`, `AppLib` or `AppUi` knows that VpnHood Client or VpnHood Connect exist. That is
-the rule that makes a fork possible: a fork replaces `src/Apps/` and nothing else.
+Nothing in `Net`, `Core`, `AppLib` or `AppUi` knows that VpnHood Client or VpnHood Connect exist. That
+is the rule that makes a fork possible: a fork replaces `src/Apps/` and nothing else. `Net` goes one
+step further and knows nothing of a VPN, so any .NET app can use it.
 
 ## How a folder is named
 
-**In `Core`, `AppLib` and `AppUi`, every project sits directly under its layer, in a folder named
-with its full project id**: `VpnHood.Core.Client.Devices.Android.csproj` lives in
+**In `Net`, `Core`, `AppLib` and `AppUi`, every project sits directly under its layer, in a folder
+named with its full project id**: `VpnHood.Core.Client.Devices.Android.csproj` lives in
 `src/Core/VpnHood.Core.Client.Devices.Android/`. There are no grouping folders, as in dotnet/runtime's
-`src/libraries/`: the ids sort a family together on their own (`VpnHood.Core.Quic.*`,
-`VpnHood.AppLib.Stores.*`), and the id alone says where a project is.
+`src/libraries/`: the ids sort a family together on their own (`VpnHood.Net.Quic.*`,
+`VpnHood.AppLib.Stores.*`), and the id alone says where a project is. A layer's folder is the second
+word of its ids: `src/Net/` holds `VpnHood.Net.*`, `src/Core/` holds `VpnHood.Core.*`.
 
 The solution file keeps the grouping on screen: `VpnHood.slnx` has a solution folder per family
 (`Devices`, `Quic`, `Stores`, `Hosting`, …), so the IDE shows a tree while the disk stays flat.
@@ -32,6 +35,29 @@ The solution file keeps the grouping on screen: `VpnHood.slnx` has a solution fo
 A project's namespace is its name. Inside a namespace that ends in `.Android`, C# resolves `Android`
 to that namespace before the platform's, so the platform's own types are written
 `global::Android.Net.Uri` where they are not imported with a `using`.
+
+## `src/Net/` — networking, no VPN
+
+```text
+src/Net/
+├── VpnHood.Net.IpLocations/                    the country of an IP address
+├── VpnHood.Net.IpLocations.Providers.SqliteProvider/
+├── VpnHood.Net.PacketTransports/
+├── VpnHood.Net.Packets/                        IPv4/IPv6, TCP, UDP and ICMP packets
+├── VpnHood.Net.Quic.Abstractions/              QUIC on every platform, MsQuic or native
+├── VpnHood.Net.Quic.Android/
+├── VpnHood.Net.Quic.Ios/
+├── VpnHood.Net.Quic.MsQuic/
+├── VpnHood.Net.TcpStack/                       a user-space TCP stack over raw packets
+├── VpnHood.Net.TcpStack.Abstractions/
+├── VpnHood.Net.Toolkit/                        the logging, IP ranges and helpers the rest share
+├── VpnHood.Net.VpnAdapters.Abstractions/       one IVpnAdapter per OS or driver
+├── VpnHood.Net.VpnAdapters.AndroidTun/
+├── VpnHood.Net.VpnAdapters.IosTun/
+├── VpnHood.Net.VpnAdapters.LinuxTun/
+├── VpnHood.Net.VpnAdapters.WinDivert/
+└── VpnHood.Net.VpnAdapters.WinTun/
+```
 
 ## `src/Core/` — the engine
 
@@ -51,30 +77,13 @@ src/Core/
 ├── VpnHood.Core.Filtering.Abstractions/
 ├── VpnHood.Core.Filtering.DomainFiltering/
 ├── VpnHood.Core.Filtering.Sqlite/
-├── VpnHood.Core.IpLocations/
-├── VpnHood.Core.IpLocations.Providers.SqliteProvider/
-├── VpnHood.Core.PacketTransports/
-├── VpnHood.Core.Packets/
 ├── VpnHood.Core.Proxies.Management/
 ├── VpnHood.Core.Proxies.Management.Abstractions/
 ├── VpnHood.Core.Proxies.Management.Sqlite/
-├── VpnHood.Core.Quic.Abstractions/
-├── VpnHood.Core.Quic.Android/
-├── VpnHood.Core.Quic.Ios/
-├── VpnHood.Core.Quic.MsQuic/
 ├── VpnHood.Core.Server/
 ├── VpnHood.Core.Server.Access/
 ├── VpnHood.Core.Server.Access.Managers.FileAccessManagers/
-├── VpnHood.Core.TcpStack/
-├── VpnHood.Core.TcpStack.Abstractions/
-├── VpnHood.Core.Toolkit/
-├── VpnHood.Core.Tunneling/
-├── VpnHood.Core.VpnAdapters.Abstractions/          one IVpnAdapter per OS or driver
-├── VpnHood.Core.VpnAdapters.AndroidTun/
-├── VpnHood.Core.VpnAdapters.IosTun/
-├── VpnHood.Core.VpnAdapters.LinuxTun/
-├── VpnHood.Core.VpnAdapters.WinDivert/
-└── VpnHood.Core.VpnAdapters.WinTun/
+└── VpnHood.Core.Tunneling/
 ```
 
 ## `src/AppLib/` — the app

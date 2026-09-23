@@ -30,7 +30,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\Core\Quic\Quic.MsQuic\VpnHood.Core.Quic.MsQuic.csproj" />
-		<ProjectReference Include="..\..\Core\Server\Access\Managers\FileAccessManagement\VpnHood.Core.Server.Access.Managers.FileAccessManagement.csproj" />
+		<ProjectReference Include="..\..\Core\Server\Access\Access.Managers.FileAccessManager\VpnHood.Core.Server.Access.Managers.FileAccessManager.csproj" />
 		<ProjectReference Include="..\..\Core\Tunneling\VpnHood.Core.Tunneling.csproj" />
 		<ProjectReference Include="..\..\Core\Server\Server\VpnHood.Core.Server.csproj" />
 		<ProjectReference Include="..\..\Core\VpnAdapters\VpnAdapters.LinuxTun\VpnHood.Core.VpnAdapters.LinuxTun.csproj" />

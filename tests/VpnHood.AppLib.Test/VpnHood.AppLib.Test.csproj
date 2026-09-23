@@ -14,7 +14,7 @@
 		<ProjectReference Include="..\..\src\AppLib\Portal\VpnHood.AppLib.Portal.csproj" />
 		<ProjectReference Include="..\..\src\AppLib\Api\Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
 		<ProjectReference Include="..\..\src\AppLib\Api\Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
-		<ProjectReference Include="..\..\src\Core\IpLocations\IpLocations.SqliteProvider\VpnHood.Core.IpLocations.SqliteProvider.csproj" />
+		<ProjectReference Include="..\..\src\Core\IpLocations\IpLocations.Providers.SqliteProvider\VpnHood.Core.IpLocations.Providers.SqliteProvider.csproj" />
 		<ProjectReference Include="..\VpnHood.Test\VpnHood.Test.csproj" />
 	</ItemGroup>
 

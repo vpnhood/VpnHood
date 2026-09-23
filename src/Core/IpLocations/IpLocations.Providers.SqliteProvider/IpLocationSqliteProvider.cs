@@ -6,7 +6,7 @@ using Microsoft.Data.Sqlite;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.IpLocations.SqliteProvider;
+namespace VpnHood.Core.IpLocations.Providers.SqliteProvider;
 
 public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposable
 {

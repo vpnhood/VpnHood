@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Assets;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.IpLocations.Providers.Offlines;
-using VpnHood.Core.IpLocations.SqliteProvider;
+using VpnHood.Core.IpLocations.Providers.SqliteProvider;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 

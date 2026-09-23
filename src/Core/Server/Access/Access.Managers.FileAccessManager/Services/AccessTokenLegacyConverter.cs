@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManager.Services;
 
 internal static class AccessTokenLegacyConverter
 {

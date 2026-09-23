@@ -8,7 +8,7 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.Core.Common.Tokens;
 using ConnectPlanId = VpnHood.AppLib.Api.App.ConnectPlanId;
 using VpnHood.Core.Server;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
+using VpnHood.Core.Server.Access.Managers.FileAccessManager;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 

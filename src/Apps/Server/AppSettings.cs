@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Server.Access.Configurations;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
+using VpnHood.Core.Server.Access.Managers.FileAccessManager;
 using VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 
 namespace VpnHood.App.Server;

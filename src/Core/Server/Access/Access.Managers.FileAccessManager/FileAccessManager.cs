@@ -8,14 +8,14 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.IpLocations.Providers.Onlines;
 using VpnHood.Core.Server.Access.Configurations;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
+using VpnHood.Core.Server.Access.Managers.FileAccessManager.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManager.Services;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManager;
 
 public class FileAccessManager : IAccessManager
 {

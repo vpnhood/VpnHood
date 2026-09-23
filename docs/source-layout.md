@@ -58,7 +58,7 @@ src/Core/
 │   └── Filtering.Sqlite/
 ├── IpLocations/
 │   ├── IpLocations/
-│   └── IpLocations.SqliteProvider/
+│   └── IpLocations.Providers.SqliteProvider/
 ├── Packets/
 ├── PacketTransports/
 ├── Proxies/
@@ -74,8 +74,7 @@ src/Core/
 │   ├── Server/
 │   └── Access/
 │       ├── Access/
-│       └── Managers/
-│           └── FileAccessManagement/
+│       └── Access.Managers.FileAccessManager/
 ├── TcpStack/
 │   ├── TcpStack/
 │   └── TcpStack.Abstractions/

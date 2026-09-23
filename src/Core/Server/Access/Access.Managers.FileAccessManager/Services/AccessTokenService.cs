@@ -3,12 +3,12 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
+using VpnHood.Core.Server.Access.Managers.FileAccessManager.Dtos;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
+namespace VpnHood.Core.Server.Access.Managers.FileAccessManager.Services;
 
 public class AccessTokenService
 {

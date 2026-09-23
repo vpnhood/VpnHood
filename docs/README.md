@@ -12,6 +12,7 @@ you are trying to do.
 | Know exactly which credential goes where in CI | [cicd/deployment.md](cicd/deployment.md) |
 | Understand what free / trial / ad / premium mean in the app | [connection-options.md](connection-options.md) |
 | Understand accounts, subscriptions, refunds | [accounts/account-lifecycle.md](accounts/account-lifecycle.md) |
+| Install, run or script the Linux client (desktop or headless) | [linux/](linux/README.md) |
 | Work on the iOS app or its VPN extension | [ios/](ios/README.md) |
 | Work on split tunnelling (by country, domain, or app) | [split-ip/](split-ip/README.md) |
 | Read the policies our users are shown | [legal/end-user/](legal/end-user/README.md) |

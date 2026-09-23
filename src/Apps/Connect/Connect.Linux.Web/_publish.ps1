@@ -4,4 +4,6 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-publishDirName "VpnHoodConnect" `
 	-os "linux" `
 	-launcherName "vhconnect" `
+	-installTemplate "install-client" `
+	-logoAssetPath "images/VpnHoodConnect-logo.png" `
 	-connect;

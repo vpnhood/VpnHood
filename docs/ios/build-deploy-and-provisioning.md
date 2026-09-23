@@ -45,12 +45,12 @@ rm -rf src/Apps/Client/Client.Ios.Apple/bin src/Apps/Client/Client.Ios.Apple/obj
 - `-p:SolutionDir="$(pwd)/"` (trailing slash **required**) is mandatory in Release — without it the core `.csproj`
   files emit `CS8101: pathmap incorrectly formatted` (the `PathMap` in the root `Directory.Build.props` needs it).
 - Repo uses `.slnx`; build the host csproj directly. The host build also builds the Extension appex.
-- Output: `src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app`
+- Output: `src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app`
   (contains `PlugIns/VpnHood.App.Client.Ios.Extension.appex`).
 
 ## Deploy & run (devicectl)
 ```bash
-APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
+APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
 xcrun devicectl device install app     --device $DEVICE "$APP"
 xcrun devicectl device process launch  --device $DEVICE com.vpnhood.client.ios
 ```
@@ -69,11 +69,11 @@ Mac app would need a system extension). Verified working 2026-08-24 (M2 Pro, Cli
 Then build exactly as above (no `_DeviceName` needed). macOS refuses to launch a raw iOS `.app`
 (“incorrect executable format”) — it must sit in the wrapper bundle Xcode/the App Store normally create:
 ```bash
-APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
+APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
 WRAP=".working/mac-run/VpnHood Client.app"
 rm -rf .working/mac-run && mkdir -p "$WRAP/Wrapper"
 cp -R "$APP" "$WRAP/Wrapper/"
-ln -s "Wrapper/VpnHood.App.Client.Ios.Apple.app" "$WRAP/WrappedBundle"
+ln -s "Wrapper/VpnHoodClient.app" "$WRAP/WrappedBundle"
 open "$WRAP"
 ```
 - Verify first with the "Diagnose a stale profile" commands below — both `embedded.mobileprovision`
@@ -131,7 +131,7 @@ provisioning; create named dev profiles per the steps below only if that isn't a
 
 ### Diagnose a stale profile
 ```bash
-APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
+APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
 # what the embedded profile allows
 security cms -D -i "$APP/embedded.mobileprovision" \
   | plutil -convert xml1 - -o - | grep -A3 -E "ProvisionedDevices|application-groups|TeamIdentifier"

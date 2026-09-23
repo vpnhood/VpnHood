@@ -2,7 +2,7 @@
 
 // The app's API as one object: the six controllers of the web server, whichever way a UI reaches
 // them - in the app's own process, where they are the controllers themselves and no listener is
-// involved (VpnHoodApp.Api), or over HTTP from a paired browser (HttpVpnHoodApi). A UI written
+// involved (VpnHoodApp.Api), or over HTTP from a paired browser (VpnHoodApiHttpFactory). A UI written
 // against this runs on the device and in a browser alike, and is the same UI in both.
 public sealed class VpnHoodApi(
     IAppApi app,

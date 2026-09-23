@@ -13,8 +13,8 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 
 // The Avalonia UI on a PC, for a developer to look at: a real VpnHoodApp on the Windows device,
 // its own storage and id so it never touches the installed client, the web server up so a phone
-// can pair with it exactly as with a TV, and the UI in a window that opens at a TV's size and
-// resizes down to a phone's. Never shipped; a head shows this UI with /avalonia-ui instead.
+// can pair with it exactly as with a TV, and the UI in a window that opens at its layout's size -
+// a phone's, or a TV's panel with --tv. Never shipped; a head shows this UI with /avalonia-ui instead.
 // "--sample-key" starts it with a server profile, which the location pages need.
 // "--tv" runs it as a TV (AppFeatures.IsTv: the pairing row, the ring on arrival); without it, as
 // a phone or a desktop. "--connect" runs it as the Connect product - the violet look, no keys to

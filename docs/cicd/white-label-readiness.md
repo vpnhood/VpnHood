@@ -1,7 +1,8 @@
 ﻿# White-label readiness — what still needs a file edit
 
 Written for the planned **white-label builder service** (a merchant supplies a name, a logo and
-colours; we produce and publish their app) and the planned **starter repo** (a small project that
+colours; we produce their app and upload it into their own store accounts) and the planned
+**starter repo** (a small project that
 consumes our NuGet packages instead of forking the monorepo).
 
 Today a fork can be configured almost entirely from GitHub **variables and secrets** — see

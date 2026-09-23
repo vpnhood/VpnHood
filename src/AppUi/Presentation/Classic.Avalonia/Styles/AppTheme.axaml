@@ -189,6 +189,15 @@
     <Setter Property="Opacity" Value="0.5" />
   </Style>
 
+  <!-- The hand over whatever presses: the browser's cursor: pointer on a v-btn, a v-switch and a
+       link v-list-item. Avalonia leaves the arrow everywhere, and a disabled control is no press. -->
+  <Style Selector="Button, ToggleButton, ToggleSwitch, ListBoxItem">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button:disabled, ToggleButton:disabled, ToggleSwitch:disabled, ListBoxItem:disabled">
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
+
   <!-- #connectBtn: a 180x40 pill, cream on the way in, purple once connected, 0.4s between. -->
   <Style Selector="Button.connect-btn">
     <Setter Property="Background" Value="{StaticResource ConnectBtnBrush}" />

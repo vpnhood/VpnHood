@@ -9,7 +9,7 @@
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <RootNamespace>VpnHood.App.Connect.Ios.Apple</RootNamespace>
     <!-- The project is named for its channel (the App Store); the bundle's executable keeps the platform name. -->
-    <AssemblyName>VpnHood.App.Connect.Ios.Apple</AssemblyName>
+    <AssemblyName>VpnHoodConnect</AssemblyName>
     <BundleIdentifier>com.vpnhood.connect.ios</BundleIdentifier>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
 

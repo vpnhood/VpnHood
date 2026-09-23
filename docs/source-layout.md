@@ -60,7 +60,9 @@ A head is a thin shell — an activity, a view controller, a window — and usua
 | `_publish.ps1` | the one entry point that builds and packages this head; CI calls exactly this |
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
-hosts it mounts from `AppUi`.
+hosts it mounts from `AppUi`. A Linux head mounts one more host than the others: `Hosting/Cli`,
+which is the command line, the headless daemon and the window launcher in one binary — see
+[linux/](linux/README.md#how-it-fits-together).
 
 ## The product project
 

@@ -7,7 +7,10 @@ param(
     [Parameter(Mandatory = $true)] [string]$launcherName,
     [Parameter(Mandatory = $true)] [string]$os,
     # Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client.
-    [switch]$connect
+    [switch]$connect,
+    # Passed through to both CPU builds; see Publish-InstallerImpl.ps1 for what each means.
+    [Parameter(Mandatory = $false)] [string]$installTemplate = "install",
+    [Parameter(Mandatory = $false)] [string]$logoAssetPath = ""
 )
 
 # Per-app config + repo resolution. Publish-InstallerImpl.ps1 sources Common.ps1, but we need these before the
@@ -33,6 +36,7 @@ Assert-DefaultAccessKey $publishDirName "web" -Connect:$connect;
 . "$PSScriptRoot/Publish-InstallerImpl.ps1" `
     -projectDir $projectDir -repoBaseUrl $repoBaseUrl -os $os `
     -publishDirName $publishDirName -launcherName $launcherName `
+    -installTemplate $installTemplate -logoAssetPath $logoAssetPath `
     -cpu "x64";
 
 $installerUrl_x64 = $module_installerUrl;
@@ -41,6 +45,7 @@ $installerUrl_x64 = $module_installerUrl;
 . "$PSScriptRoot/Publish-InstallerImpl.ps1" `
     -projectDir $projectDir -repoBaseUrl $repoBaseUrl -os $os `
     -publishDirName $publishDirName -launcherName $launcherName `
+    -installTemplate $installTemplate -logoAssetPath $logoAssetPath `
     -cpu "arm64";
 
 $installerUrl_arm64 = $module_installerUrl;

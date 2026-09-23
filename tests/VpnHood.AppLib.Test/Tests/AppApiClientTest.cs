@@ -51,7 +51,7 @@ public class AppApiClientTest : TestAppBase
         var localUrl = await localHost.EnsureStarted(CancellationToken.None);
         // the address without the web view's cache-buster: the client builds its own paths on it
         using var http = new HttpClient { BaseAddress = new Uri(localUrl.GetLeftPart(UriPartial.Authority) + "/") };
-        var api = HttpVpnHoodApi.Create(http);
+        var api = VpnHoodApiHttpFactory.Create(http);
 
         // the configuration, whole: the features, the state, the settings, the profiles, the languages
         var config = await api.App.Configure(new ConfigParams { AvailableCultures = ["en", "fa"] }, CancellationToken.None);

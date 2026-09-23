@@ -1,25 +1,31 @@
-﻿using System.Diagnostics;
-using Microsoft.Extensions.Logging;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.AppLib;
-using VpnHood.AppUi.Hosting.Avalonia.Desktop;
-using VpnHood.AppLib.Linux.Common;
-using VpnHood.AppLib.Services.Updaters;
-using VpnHood.AppLib.Utils;
+﻿using VpnHood.AppLib;
 using VpnHood.AppLib.Api.WebHost;
-using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.AppUi.Hosting.Cli;
+using VpnHood.AppUi.Hosting.Cli.Linux;
+using VpnHood.AppLib.Services.Updaters;
+using VpnHood.AppUi.Hosting.Avalonia.Desktop;
+using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.Core.Toolkit.Assets;
 
 // ReSharper disable LocalizableElement
 
 namespace VpnHood.App.Client.Linux.Web;
 
+// The Linux head, which is the two answers CliHost cannot give: the app to build when this
+// process is the service, and the UI to show when it is the window. Everything else - which of the
+// three this run is, the commands, the service - is the same on both Linux heads and lives in Hosting/Cli.
 internal static class App
 {
-    public static string StoragePath => Path.Combine(
-        Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath)!)!, "storage");
+    private static Task<int> Main(string[] args)
+    {
+        return LinuxCliHost.Run(args, new CliHeadParams {
+            AppOptionsFactory = CreateAppOptions,
+            // this head takes access keys, so its profiles are the person's to manage
+            IsAddAccessKeySupported = true,
+            RunUi = (uiArgs, api, uiAssets) =>
+                AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(uiArgs, showWindow: true, api, uiAssets)
+        }, CancellationToken.None);
+    }
 
     private static AppOptions CreateAppOptions()
     {
@@ -27,8 +33,8 @@ internal static class App
 
         // The files this build's asset packages placed beside the app, read the way this
         // platform reads them: the IP-location database and the UI's store. The app extracts
-        // what it must under its storage - the store once, for the in-process UI and for the
-        // web host, which serves the same entries at /assets/ to a paired phone's page.
+        // what it must under its storage - the store once, for the web host, which serves the
+        // same entries at /assets/ to a paired phone's page and to the window beside it.
         var platformAssets = new FolderAssetProvider(AppContext.BaseDirectory);
 
         var appOptions = new AppOptions(appConfigs.AppId, "storage", AppConfigs.IsDebugMode) {
@@ -55,7 +61,7 @@ internal static class App
             LogServiceOptions = {
                 SingleLineConsole = false
             },
-            StorageFolderPath = StoragePath,
+            StorageFolderPath = new LinuxCliPaths().StoragePath,
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
             // the page a paired phone opens: this same UI, as its browser build
@@ -64,46 +70,5 @@ internal static class App
         };
 
         return appOptions;
-    }
-
-    private static async Task Main(string[] args)
-    {
-        Console.WriteLine("Starting VpnHood Client for linux (Beta).");
-
-        // init VpnHood app
-        try {
-            VpnHoodAppLinux.Init(CreateAppOptions, args);
-            VpnHoodAppLinux.Instance.Exiting += InstanceOnExiting;
-        }
-        catch (GracefullyShutdownException) {
-            VhLogger.Instance.LogInformation("Exit due to stop command.");
-            return;
-        }
-        catch (AnotherInstanceIsRunningException) {
-            // the running instance was handed the open-window command on the way here, and its
-            // window is what a second launch is for
-            VhLogger.Instance.LogInformation("Another instance is running.");
-            return;
-        }
-
-        // the UI, in a window on this thread
-        await RunAvaloniaUi(args).Vhc();
-    }
-
-    // The UI in a window: opened again by a second launch, and ended by the stop command,
-    // with the app.
-    private static Task RunAvaloniaUi(string[] args)
-    {
-        var appLinux = VpnHoodAppLinux.Instance;
-        appLinux.OpenMainWindowRequested += (_, _) => AvaloniaDesktopHost.ShowMainWindow();
-        appLinux.Exiting += (_, _) => AvaloniaDesktopHost.Shutdown();
-        appLinux.PrepareAsync().GetAwaiter().GetResult();
-        AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, appLinux.ShowWindowAfterStart);
-        return Task.CompletedTask;
-    }
-
-    private static void InstanceOnExiting(object? sender, EventArgs e)
-    {
-        // the app owns its web host and disposes it with itself
     }
 }

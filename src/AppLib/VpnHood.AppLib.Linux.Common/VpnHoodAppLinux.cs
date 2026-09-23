@@ -53,15 +53,15 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
 
 
     // What a run does before its UI: the old adapter, as a previous run's route may still be active.
-    public Task PrepareAsync()
+    public Task PrepareAsync(CancellationToken cancellationToken)
     {
         return VhUtils.TryInvokeAsync(null, () =>
-            ExecuteCommandAsync($"ip link delete {VpnHoodApp.Instance.Features.AppName}", CancellationToken.None));
+            ExecuteCommandAsync($"ip link delete {VpnHoodApp.Instance.Features.AppName}", cancellationToken));
     }
 
     public async Task Run()
     {
-        await PrepareAsync();
+        await PrepareAsync(CancellationToken.None);
 
         // show main window if requested
         if (ShowWindowAfterStart)

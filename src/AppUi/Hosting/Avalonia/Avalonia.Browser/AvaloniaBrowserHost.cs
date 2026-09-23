@@ -23,7 +23,7 @@ public static class AvaloniaBrowserHost
         var pageUrl = new Uri(args.Length > 0 ? args[0] : "http://localhost:9090/");
         var http = new HttpClient { BaseAddress = new Uri(pageUrl.GetLeftPart(UriPartial.Authority) + "/") };
 
-        await VhApp.Init(HttpVpnHoodApi.Create(http), CancellationToken.None);
+        await VhApp.Init(VpnHoodApiHttpFactory.Create(http), CancellationToken.None);
         await TUi.PrepareContentAsync(new HttpAssetProvider(http, "assets/"), CancellationToken.None);
         await VhApp.Configure(TUi.AvailableCultures, CancellationToken.None);
         await AppBuilder.Configure<TUi>().StartBrowserAppAsync("out");

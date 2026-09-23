@@ -7,7 +7,7 @@
 
 	<!-- Deliberately without VpnHood.AppLib.App: what is here is the contract, not the app. A UI
 	     built on this package compiles without the engine, and runs against an app in its own
-	     process or one on another device (HttpVpnHoodApi) - which is what the WASM head does. The app
+	     process or one on another device (VpnHoodApiHttpFactory) - which is what the WASM head does. The app
 	     references this package to implement the contract, never the other way round.
 
 	     The data shapes are shared on purpose rather than twinned per side: the app owns them and a

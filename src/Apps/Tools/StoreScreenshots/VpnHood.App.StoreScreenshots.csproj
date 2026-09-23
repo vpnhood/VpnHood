@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- a build tool, never shipped -->
+		<Description>Renders store screenshots of the VpnHood Avalonia UI without a display, an app or a VPN: the UI over a fixture of the app's API, one page at a time, to a PNG</Description>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.App.StoreScreenshots</RootNamespace>
+		<AssemblyName>VpnHoodStoreScreenshots</AssemblyName>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Avalonia without a window system: a top level that renders into memory, on any CI box. The
+		     drawing is Skia's - the same rasterizer the shipped heads use - not the headless stub. -->
+		<PackageReference Include="Avalonia.Headless" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Skia" Version="12.1.2" />
+		<!-- The rasterizer Avalonia draws with, used here directly too: the reduction from the
+		     oversized frame to the store's own size, and the PNG encoder that packs it (PngImage).
+		     Pinned to the version Avalonia.Skia brings, so one Skia is loaded, not two. -->
+		<PackageReference Include="SkiaSharp" Version="3.119.4" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Mounting the UI and the app's state as its pages read it (VhApp). -->
+		<ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
+		<!-- The UI itself: the pages this renders, the controls, the themes. -->
+		<ProjectReference Include="..\..\..\AppUi\Presentation\Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
+	</ItemGroup>
+
+	<!-- Deliberately without VpnHood.AppLib.App and without a device: nothing here runs the app. The
+	     pages read the API (VpnHoodApi), and here the API is a fixture - the same fixture.json the
+	     web UI's screenshot engine answers /api/** from - so no app, no engine and no VPN is needed to
+	     draw what the app would show. The store (images, fonts, words) is handed in on the command
+	     line rather than placed by the assets targets: the caller says which store to draw with. -->
+</Project>

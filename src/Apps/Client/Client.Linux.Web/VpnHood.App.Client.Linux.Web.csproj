@@ -31,6 +31,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />
+		<!-- The command line, and the daemon and window it dispatches to: the same on every Linux head. -->
+		<ProjectReference Include="..\..\..\AppUi\Hosting\Cli\Cli.Linux\VpnHood.AppUi.Hosting.Cli.Linux.csproj" />
 		<!-- The UI this head runs, in its own window. -->
 		<ProjectReference Include="..\..\..\AppUi\Hosting\Avalonia\Avalonia.Desktop\VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->

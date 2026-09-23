@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.AppUi.Hosting.Cli.Linux</RootNamespace>
+		<Description>The VpnHood command line on Linux: systemd is the service, /opt is the install, XDG is the cache, and root is who runs the daemon. Everything the commands themselves do is VpnHood.AppUi.Hosting.Cli</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Cli\VpnHood.AppUi.Hosting.Cli.csproj" />
+		<!-- The app as Linux hosts it: the single-instance socket, the command file, the adapter
+		     a previous run may have left. -->
+		<ProjectReference Include="..\..\..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />
+	</ItemGroup>
+</Project>

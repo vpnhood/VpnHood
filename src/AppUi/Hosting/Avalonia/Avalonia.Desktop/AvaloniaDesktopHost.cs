@@ -3,7 +3,9 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using VpnHood.AppLib;
+using VpnHood.AppLib.Api;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Toolkit.Assets;
 using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
@@ -26,10 +28,21 @@ public static class AvaloniaDesktopHost
     {
         // The UI reaches the app through its API - the same six interfaces a paired browser dials
         // over HTTP, here the app's own controllers in process; in process both complete at once.
-        VhApp.Init(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
+        Run<TUi>(args, showWindow, VpnHoodApp.Instance.Api, VpnHoodApp.Instance.UiAssetProvider);
+    }
+
+    // The same window, for a head that holds no VpnHoodApp: the API is the one built over HTTP
+    // (VpnHoodApiHttpFactory) against an app running in another process, and the content store is the
+    // head's own - on Linux a user's cache, since the app's storage belongs to root. Nothing below
+    // this line knows which of the two it was given; the pages never did.
+    public static void Run<TUi>(string[] args, bool showWindow, VpnHoodApi api,
+        IAssetProvider? uiAssetProvider)
+        where TUi : Application, IAvaloniaUi, new()
+    {
+        VhApp.Init(api, CancellationToken.None).GetAwaiter().GetResult();
 
         // what this UI needs before its first view, and the languages it has words for
-        AvaloniaUiHosting.PrepareContent<TUi>(VpnHoodApp.Instance.UiAssetProvider);
+        AvaloniaUiHosting.PrepareContent<TUi>(uiAssetProvider);
         VhApp.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 
         var lifetime = new ClassicDesktopStyleApplicationLifetime {

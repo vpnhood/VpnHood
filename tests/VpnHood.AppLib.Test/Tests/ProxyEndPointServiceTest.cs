@@ -347,18 +347,17 @@ public class ProxyEndPointServiceTest : TestAppBase
             Mode = AppProxyMode.Manual
         };
 
-        var workingProxy = new ProxyEndPoint {
+        // the service assigns the id from the normalized endpoint, so keep what Add returns
+        var workingProxy = (await dom.App.Services.ProxyEndPointService.Add(new ProxyEndPoint {
             Port = socks5ProxyServer.ListenerEndPoint.Port,
             Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
             Protocol = ProxyProtocol.Socks5
-        };
-        var extraProxy = new ProxyEndPoint {
+        })).EndPoint;
+        var extraProxy = (await dom.App.Services.ProxyEndPointService.Add(new ProxyEndPoint {
             Port = 1, // unreachable
             Host = "127.0.0.1",
             Protocol = ProxyProtocol.Socks5
-        };
-        await dom.App.Services.ProxyEndPointService.Add(workingProxy);
-        await dom.App.Services.ProxyEndPointService.Add(extraProxy);
+        })).EndPoint;
 
         // connect
         await dom.App.Connect();

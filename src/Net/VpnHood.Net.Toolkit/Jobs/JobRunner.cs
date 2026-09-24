@@ -1,0 +1,147 @@
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
+
+namespace VpnHood.Net.Toolkit.Jobs;
+
+public class JobRunner
+{
+    private SemaphoreSlim _semaphore;
+    private readonly LinkedList<JobItem> _jobs = [];
+    private static readonly Lazy<JobRunner> SlowInstanceLazy = new(() => new JobRunner(TimeSpan.FromSeconds(10)));
+    private static readonly Lazy<JobRunner> FastInstanceLazy = new(() => new JobRunner(TimeSpan.FromSeconds(2)));
+    private int _maxDegreeOfParallelism = 2;
+    private readonly TimeSpan _cleanupTimeSpan = TimeSpan.FromSeconds(60);
+    private DateTime _lastCleanupTime = FastDateTime.UtcNow;
+
+    public static JobRunner SlowInstance => SlowInstanceLazy.Value;
+    public static JobRunner FastInstance => FastInstanceLazy.Value;
+    public TimeSpan Interval { get; set; }
+    public ILogger? Logger { get; set; } = VhLogger.Instance;
+
+    public int MaxDegreeOfParallelism {
+        get => _maxDegreeOfParallelism;
+        set {
+            if (value < 1)
+                throw new ArgumentOutOfRangeException(nameof(value), "MaxDegreeOfParallelism must be greater than 0.");
+            _maxDegreeOfParallelism = value;
+            _semaphore = new SemaphoreSlim(_maxDegreeOfParallelism);
+        }
+    }
+
+    public JobRunner(TimeSpan interval)
+    {
+        Interval = interval;
+        _semaphore = new SemaphoreSlim(_maxDegreeOfParallelism);
+        Task.Run(RunJobs);
+    }
+
+
+    private async Task RunJobs()
+    {
+        while (true) {
+            await Task.Delay(Interval).Vhc();
+
+            // Periodic cleanup of dead jobs based on CleanupTimeSpan
+            var now = FastDateTime.UtcNow;
+            if (now - _lastCleanupTime >= _cleanupTimeSpan) {
+                RemoveDeadCallbacks();
+                _lastCleanupTime = now;
+            }
+
+            // Run jobs
+            await RunJobsInternal().Vhc();
+        }
+
+        // ReSharper disable once FunctionNeverReturns
+    }
+
+    private async Task RunJobsInternal()
+    {
+        // copy all callbacks to a temporary list
+        var jobCallbacks = GetReadyJobs();
+
+        // run jobs
+        foreach (var jobCallback in jobCallbacks) {
+            await _semaphore.WaitAsync().Vhc();
+            _ = RunJob(jobCallback);
+        }
+    }
+
+    private async Task RunJob(Job job)
+    {
+        try {
+            await job.RunNow().Vhc();
+        }
+        catch (ObjectDisposedException) {
+            Remove(job);
+        }
+        catch (Exception ex) {
+            Logger?.LogCritical(ex, "JobCallback should not throw this exception.");
+        }
+        finally {
+            _semaphore.Release();
+        }
+    }
+
+    private void RemoveDeadCallbacks()
+    {
+        lock (_jobs) {
+            var node = _jobs.First;
+            while (node != null) {
+                // store next before possibly removing current
+                var next = node.Next;
+
+                // if the WeakReference is dead, remove it
+                if (!node.Value.JobReference.TryGetTarget(out _)) {
+                    Logger?.LogDebug(
+                        "Removing a dead job. Ensure proper disposal by the caller. JobName: {JobName}",
+                        node.Value.Name);
+                    _jobs.Remove(node);
+                }
+
+                node = next;
+            }
+        }
+    }
+
+    private IReadOnlyList<Job> GetReadyJobs()
+    {
+        List<Job> jobs;
+        lock (_jobs) {
+            jobs = new List<Job>(_jobs.Count);
+            foreach (var jobRef in _jobs) {
+                if (jobRef.JobReference.TryGetTarget(out var target) && target.IsReadyToRun) {
+                    jobs.Add(target);
+                }
+            }
+        }
+
+        return jobs;
+    }
+
+    public void Add(Job job)
+    {
+        lock (_jobs)
+            _jobs.AddLast(new JobItem {
+                Name = job.Name,
+                JobReference = new WeakReference<Job>(job)
+            });
+    }
+
+    public void Remove(Job job)
+    {
+        lock (_jobs) {
+            var item = _jobs.FirstOrDefault(x => x.JobReference.TryGetTarget(out var target) && target == job);
+            if (item != null)
+                _jobs.Remove(item);
+        }
+    }
+
+    private class JobItem
+    {
+        public required string Name { get; init; }
+        public required WeakReference<Job> JobReference { get; init; }
+    }
+}

@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Jobs;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server;
 

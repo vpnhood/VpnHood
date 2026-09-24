@@ -4,7 +4,14 @@ param(
     [Parameter(Mandatory = $true)] [string]$publishDirName,
     [Parameter(Mandatory = $true)] [string]$os,
     [Parameter(Mandatory = $true)] [string]$cpu,
-    [Parameter(Mandatory = $true)] [string]$launcherName
+    [Parameter(Mandatory = $true)] [string]$launcherName,
+    # Which install template to fill. The server takes "install"; a desktop client takes
+    # "install-client", which writes a headless service, a PATH entry and a desktop entry instead
+    # of a server's single daemon. Named rather than switched so a fork can add its own.
+    [Parameter(Mandatory = $false)] [string]$installTemplate = "install",
+    # Where the app's logo sits inside assets/ui.zip, for the desktop entry's icon. Only the client
+    # templates read it; this repo ships no second copy of the picture to point at instead.
+    [Parameter(Mandatory = $false)] [string]$logoAssetPath = ""
 )
  
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
@@ -46,7 +53,8 @@ $packageFileExt = if ($os -ieq "linux") { "tar.gz" } else { "zip" };
 
 # Creating package
 $templateDir = "$PSScriptRoot/$os";
-$template_installScriptFile = "$templateDir/install.$shellExt";
+$template_installScriptFile = "$templateDir/$installTemplate.$shellExt";
+if (-not (Test-Path $template_installScriptFile)) { throw "Install template not found: $template_installScriptFile"; }
 $template_launcherFile = "$templateDir/vhlauncher.$shellExt";
 $template_updaterFile = "$templateDir/updater.$shellExt";
 
@@ -100,6 +108,7 @@ $installScript = $installScript.Replace('$(versionTagParam)', "$versionTag");
 $installScript = $installScript.Replace('$(productNameParam)', "$productName");
 $installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName");
 $installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName");
+$installScript = $installScript.Replace('$(logoAssetPathParam)', "$logoAssetPath");
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
 

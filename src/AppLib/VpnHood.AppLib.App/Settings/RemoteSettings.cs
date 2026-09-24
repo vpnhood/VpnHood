@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.Settings;
+﻿namespace VpnHood.AppLib.App.Settings;
 
 public class RemoteSettings
 {

@@ -4,10 +4,10 @@ using Android.OS;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.Core.Client.Devices.Droid.Messaging;
+namespace VpnHood.Core.Client.Devices.Android.Messaging;
 
 // Binder-based IMessageClient. It keeps a single dormant binding (no AutoCreate) to
 // AndroidVpnService, so it never keeps the VPN service process alive by itself; the binding

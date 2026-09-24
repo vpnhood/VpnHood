@@ -2,8 +2,8 @@
 using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Server.Abstractions;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Server;
 

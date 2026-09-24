@@ -1,5 +1,5 @@
 ﻿using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Test.Providers;
 

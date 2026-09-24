@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Net.Toolkit.Converters;
 
 
 namespace VpnHood.Core.Client.Abstractions;

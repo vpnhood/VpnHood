@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Client.Devices.UiContexts;
+﻿using VpnHood.AppLib.Abstractions.Device;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Abstractions.Device;
 
@@ -13,7 +14,7 @@ public interface IDeviceUiProvider
     Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Whether a page can be handed to an EXTERNAL browser. Not "is there a web view" — the SPA can
+    /// Whether a page can be handed to an EXTERNAL browser. Not "can this app draw a page" — the UI can
     /// always render a page inside itself; this is only about leaving the app. False on a device
     /// with no browser, which is where an outbound link opens nothing at all: the UI withholds the
     /// link rather than offering a dead one.

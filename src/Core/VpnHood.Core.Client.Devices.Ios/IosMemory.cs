@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using VpnHood.Core.Toolkit.Memory;
+using VpnHood.Net.Toolkit.Memory;
 // ReSharper disable CommentTypo
 // ReSharper disable StringLiteralTypo
 // ReSharper disable IdentifierTypo

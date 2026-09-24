@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
+		<Product>VpnHood! SERVER</Product>
+		<Description>VpnHood Server App</Description>
+		<RootNamespace>VpnHood.App.Server</RootNamespace>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<AssemblyName>VpnHoodServer</AssemblyName>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="NLog.config">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="NLog.xsd">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.11" />
+		<PackageReference Include="NLog" Version="6.2.0" />
+		<PackageReference Include="NLog.Extensions.Logging" Version="6.2.0" />
+		<PackageReference Include="System.CommandLine" Version="2.0.11" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.11" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Server.Access.Managers.FileAccessManagers\VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.LinuxTun\VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
+	</ItemGroup>
+
+</Project>

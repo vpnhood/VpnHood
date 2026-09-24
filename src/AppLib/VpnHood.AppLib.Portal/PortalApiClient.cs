@@ -3,10 +3,10 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.AppLib.Portal.Dto;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Portal;
 

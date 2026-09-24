@@ -1,4 +1,4 @@
-<Project Sdk="MSTest.Sdk/4.3.3">
+﻿<Project Sdk="MSTest.Sdk/4.3.3">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<IsPackable>false</IsPackable>
@@ -12,8 +12,9 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
-		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.IpLocations.SqliteProvider\VpnHood.Core.IpLocations.SqliteProvider.csproj" />
+		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
+		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
+		<ProjectReference Include="..\..\src\Net\VpnHood.Net.IpLocations.Providers.SqliteProvider\VpnHood.Net.IpLocations.Providers.SqliteProvider.csproj" />
 		<ProjectReference Include="..\VpnHood.Test\VpnHood.Test.csproj" />
 	</ItemGroup>
 
@@ -25,8 +26,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.745" />
-		<PackageReference Include="VpnHood.Core.Proxies" Version="8.0.835" />
+		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="8.2.854" />
+		<PackageReference Include="VpnHood.Net.Proxies" Version="8.1.852" />
 	</ItemGroup>
 
 	<ItemGroup>

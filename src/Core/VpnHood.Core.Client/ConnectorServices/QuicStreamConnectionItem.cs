@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Security;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Quic.Abstractions;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
 

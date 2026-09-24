@@ -1,11 +1,11 @@
 ﻿using System.Net;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.PacketTransports;
-using VpnHood.Core.Toolkit.Collections;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.PacketTransports;
+using VpnHood.Net.Toolkit.Collections;
+using VpnHood.Net.Toolkit.Jobs;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Proxies;

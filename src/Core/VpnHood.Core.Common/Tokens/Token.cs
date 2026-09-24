@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 
 // ReSharper disable StringLiteralTypo
 

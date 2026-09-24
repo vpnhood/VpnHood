@@ -1,10 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Portal.Dto;
-using VpnHood.Core.Client.Devices.UiContexts;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Portal;
 

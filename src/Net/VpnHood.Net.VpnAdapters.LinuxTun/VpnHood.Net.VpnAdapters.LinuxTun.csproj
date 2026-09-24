@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>VpnHood VpnAdapter for LinuxTun</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Net.VpnAdapters.Abstractions\VpnHood.Net.VpnAdapters.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -3,10 +3,10 @@
 ## Two app targets + core
 | Target | Bundle ID | Purpose |
 |--|--|--|
-| `src/Apps/Client.Ios/` | `com.vpnhood.client.ios` | Host UI app |
-| `src/Apps/Client.Ios.Extension/` | `com.vpnhood.client.ios.networkextension` | Network Extension (Packet Tunnel Provider) |
+| `src/Apps/Client/Client.Ios.Apple/` | `com.vpnhood.client.ios` | Host UI app |
+| `src/Apps/Client/Client.Ios.Extension/` | `com.vpnhood.client.ios.networkextension` | Network Extension (Packet Tunnel Provider) |
 
-(The **Connect** app mirrors this exactly: `src/Apps/Connect.Ios/` + `Connect.Ios.Extension/`, bundle ids
+(The **Connect** app mirrors this exactly: `src/Apps/Connect/Connect.Ios.Apple/` + `Connect.Ios.Extension/`, bundle ids
 `com.vpnhood.connect.ios` / `.networkextension`. Everything below applies to both — they share the same core.)
 
 The device/extension/adapter implementations live in **`src/Core`** (referenced via `ProjectReference`):
@@ -16,17 +16,17 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
 | `IosDevice` | `src/Core/VpnHood.Core.Client.Devices.Ios/IosDevice.cs` | `IDevice`; NEVPNManager save/load/start, creates the IPC transport |
 | `IosVpnService` | same project | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, and the memory watchdogs (`IosMemoryGuard.Start()` / `IosMemoryMonitor.Start()`) |
 | `IosMessageClient` / `IosMessageListener` | same project | App↔Extension IPC over `SendProviderMessage` / `HandleAppMessage` |
-| `IosVpnAdapter` | `src/Core/VpnHood.Core.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
-| `LocalTcpStack` (proxy mode) | `src/Core/VpnHood.Core.TcpStack/` | user-space TCP stack used when `UseTcpProxy=true` |
+| `IosVpnAdapter` | `src/Net/VpnHood.Net.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
+| `LocalTcpStack` (proxy mode) | `src/Net/VpnHood.Net.TcpStack/` | user-space TCP stack used when `UseTcpProxy=true` |
 
 **The app projects contain only thin glue:**
-- `src/Apps/Client.Ios.Extension/PacketTunnelProvider.cs` — `[Register("PacketTunnelProvider")]` subclass of core `IosVpnService`,
+- `src/Apps/Client/Client.Ios.Extension/PacketTunnelProvider.cs` — `[Register("PacketTunnelProvider")]` subclass of core `IosVpnService`,
   with the `(NativeHandle)` ctor. The `[Register]` name **must** match `NSExtensionPrincipalClass` in
-  `src/Apps/Client.Ios.Extension/Info.plist` (the Connect extension is identical). **This subclass is required** — pointing the principal class straight at core
+  `src/Apps/Client/Client.Ios.Extension/Info.plist` (the Connect extension is identical). **This subclass is required** — pointing the principal class straight at core
   `IosVpnService` crashes on launch under .NET 11/CoreCLR's registrar (see the memory/throughput doc).
-- `src/Apps/Client.Ios/AppDelegate.cs` / `src/Apps/Client.Ios/SceneDelegate.cs` — host UI + `VpnHoodApp.Init(new IosDevice(...))`.
+- `src/Apps/Client/Client.Ios.Apple/AppDelegate.cs` / `src/Apps/Client/Client.Ios.Apple/SceneDelegate.cs` — host UI + `VpnHoodApp.Init(new IosDevice(...))`.
 
-Both the host and extension csprojs (`VpnHood.App.Client.Ios` / `VpnHood.App.Client.Ios.Extension`) `ProjectReference` the core `VpnHood.Core.Client.Devices.Ios` project
+Both the host and extension csprojs (`VpnHood.App.Client.Ios.Apple` / `VpnHood.App.Client.Ios.Extension`) `ProjectReference` the core `VpnHood.Core.Client.Devices.Ios` project
 (which transitively brings in Host + iOSTun + TcpStack + Device).
 
 > **Do NOT re-add local `IosDevice.cs` / `IosVpnService.cs` / `IosVpnAdapter.cs` to the app projects.** They live in core

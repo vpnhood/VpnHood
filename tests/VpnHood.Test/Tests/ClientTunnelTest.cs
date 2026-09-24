@@ -2,8 +2,8 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.Dom;
 // ReSharper disable ShortLivedHttpClient

@@ -1,7 +1,7 @@
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 // What this build decided at construction and never changes. Unlike AppFeatures this is not a DTO
 // for the UI — it is internal behavior, never serialized. ConnectTimeout is the whole-connect

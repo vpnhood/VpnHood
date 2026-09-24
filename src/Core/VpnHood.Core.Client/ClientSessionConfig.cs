@@ -1,8 +1,8 @@
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Net;
 using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
 

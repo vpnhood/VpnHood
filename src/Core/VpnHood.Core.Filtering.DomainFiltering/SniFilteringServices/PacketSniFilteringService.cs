@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering.SniExtractors;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 

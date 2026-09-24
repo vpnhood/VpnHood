@@ -1,10 +1,9 @@
-﻿namespace VpnHood.AppLib.Utils;
+﻿namespace VpnHood.AppLib.App.Utils;
 
 public static class DebugCommands
 {
     public const string CaptureContext = "/capture-context";
     public const string DropUdp = "/drop-udp";
-    public const string KillSpaServer = "/kill-spa-server";
     public const string LogDebug = "/log:debug";
     public const string LogTrace = "/log:trace";
     public const string NullCapture = "/null-capture";
@@ -21,7 +20,7 @@ public static class DebugCommands
     // still reads the real device.
     public const string TvMode = "/tv-mode";
 
-    // Read by the SPA only: it reveals the Starlink Tools page in Settings. The app itself never
+    // Read by the UI only: it reveals the Starlink Tools page in Settings. The app itself never
     // acts on it.
     public const string Starlink = "/starlink";
 
@@ -30,7 +29,6 @@ public static class DebugCommands
         DropUdp,
         LogDebug,
         LogTrace,
-        KillSpaServer,
         NoChannelReuse,
         NullCapture,
         UserReview,

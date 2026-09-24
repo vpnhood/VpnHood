@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Server;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Test.Extensions;
 
 namespace VpnHood.Test.Tests;

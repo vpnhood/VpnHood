@@ -3,15 +3,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.PacketTransports;
-using VpnHood.Core.Toolkit.Collections;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Sockets;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.PacketTransports;
+using VpnHood.Net.Toolkit.Collections;
+using VpnHood.Net.Toolkit.Jobs;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Memory;
+using VpnHood.Net.Toolkit.Sockets;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Common.Configuration;
 
@@ -183,7 +184,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
                     "[VH-UDP] Created UdpProxy. pool={Pool}, workers={WorkerCount}/{MaxWorkers}, footprint={Footprint:F1}MB, " +
                     "dstPort={DstPort}, {SourceEp} => {DestinationEp}",
                     isDns ? "dns" : "udp", proxies.Count, isDns ? _maxDnsClientCount : _maxClientCount,
-                    Toolkit.Memory.VhMemory.Instance.GetInfo().ProcessFootprintMb ?? -1,
+                    VhMemory.Instance.GetInfo().ProcessFootprintMb ?? -1,
                     destinationEndPoint.Port, VhLogger.Format(sourceEndPoint), VhLogger.Format(destinationEndPoint));
         }
 

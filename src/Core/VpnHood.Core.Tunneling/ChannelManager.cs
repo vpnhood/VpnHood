@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Toolkit.Jobs;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Channels;
 
 namespace VpnHood.Core.Tunneling;

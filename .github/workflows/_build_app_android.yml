@@ -89,7 +89,7 @@ jobs:
       - name: Provision Android SDK
         shell: pwsh
         run: |
-          dotnet build "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Android.Web/VpnHood.App.$env:PREFIX.Android.Web.csproj" `
+          dotnet build "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Android.Web/VpnHood.App.$env:PREFIX.Android.Web.csproj" `
             -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=True -p:AndroidSdkPath="$env:ANDROID_HOME"
       - name: Credentials + Android signing config
         shell: pwsh
@@ -137,10 +137,15 @@ jobs:
           $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+      - name: Place the browser page (built once by publish_app's build-browser job)
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-page
+          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/bin
       - name: Build Android (${{ matrix.label }})
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.${{ matrix.subdir }}/${{ matrix.script }}"
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.${{ matrix.subdir }}/${{ matrix.script }}"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.app }}-android-${{ matrix.id }}

@@ -107,12 +107,12 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
 ## How to release (current flow)
 
 1. **Refresh our own package pins.** A few of our libraries live in their own repos and reach the
-   apps as `PackageReference`, not `ProjectReference` — today `VpnHood.AppLib.Assets.ClassicSpa`
-   (the SPA, published from `VpnHood.Client.WebUI`), `VpnHood.Core.Quic.MsQuic.AndroidNative` (the
-   prebuilt `libmsquic.so`, published from the msquic fork on every push to its `main`), and the
-   `Assets.*` data packages. They are **pinned to an exact version**, so a newly published one does
-   not reach a build until someone edits the pin. Publishing without that edit ships the *previous*
-   library with new app code, silently and successfully.
+   apps as `PackageReference`, not `ProjectReference` — today `VpnHood.Net.Quic.MsQuic.AndroidNative`
+   (the prebuilt `libmsquic.so`, published from the msquic fork on every push to its `main`) and the
+   `Assets.*` data packages (`VpnHood.Net.IpLocations.Assets.Ip2LocationLite`, pinned once per product
+   in `src/Apps/<Product>/<Product>/`). They are **pinned to an exact version**, so a newly published
+   one does not reach a build until someone edits the pin. Publishing without that edit ships the
+   *previous* library with new app code, silently and successfully.
 
    Check each against nuget.org before every release:
 
@@ -120,14 +120,11 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    curl -s https://api.nuget.org/v3-flatcontainer/<package-id-lowercased>/index.json
    ```
 
-   The SPA hides this better than the rest: a developer with `.user/use-local-spa.txt` builds
-   against the freshly built `spa.zip` and never restores the package at all, so a stale pin looks
-   correct locally and only reaches the real world through CI. Verify the way CI sees it, without
-   moving that file:
+   Verify the way CI sees it, with no `.user` overrides in play:
 
    ```bash
-   dotnet restore src/Apps/Client/VpnHood.App.Client.csproj --force -p:VhUserDir=<an empty dir>
-   grep -o '"VpnHood.AppLib.Assets.ClassicSpa/[0-9.]*"' src/Apps/Client/obj/project.assets.json
+   dotnet restore src/Apps/Client/Client/VpnHood.App.Client.csproj --force -p:VhUserDir=<an empty dir>
+   grep -o '"VpnHood.Net.IpLocations.Assets.Ip2LocationLite/[0-9.]*"' src/Apps/Client/Client/obj/project.assets.json
    ```
 
 2. Maintain the CHANGELOG **by hand**: put the next release's notes under a leading `# Latest`
@@ -138,7 +135,7 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    CI never rewrites the changelog — at release time the first H1 (`#`) section becomes the GitHub
    release note (the other product's lines dropped, tags stripped), and the **store release notes**
    are generated from the same section by each store repo's `update-release-notes.yml` (extract →
-   vhtranslator → fastlane; see the store pipeline README in VpnHood.Client.WebUI `e2e/store/`) —
+   vhtranslator → fastlane; see the store pipeline README in VpnHood.AppUi.Spa `src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store/`) —
    run it after editing the section, before publishing. Update the `# Latest` section yourself each
    cycle. Commit + push as normal work.
 3. Run `pub/Client/PublishByGithub.ps1` (or `pub/Connect/PublishByGithub.ps1`). It prompts for the
@@ -236,21 +233,22 @@ override with `-revision <n>`). Implemented directly in
 [pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1) **discovers** the packages to publish
 instead of carrying a hand-maintained list: it globs `src/**/*.csproj` and packs every project that
 does **not** opt out with `<IsPackable>false</IsPackable>` — the standard .NET convention. Apps under
-`src/Apps` and the `VpnHood.AppLib.Swagger` stub declare `IsPackable=false`; every library under
-`src/Core` and `src/AppLib` is packable by default. To publish a new library, just add it — no script
+`src/Apps` and the `VpnHood.AppLib.Api.SwaggerHost` stub declare `IsPackable=false`; every library under
+`src/Net`, `src/Core` and `src/AppLib` is packable by default. To publish a new library, just add it — no script
 edit. To keep one out, set `IsPackable=false` on it.
 
 This replaced ~48 identical per-project `_publish.ps1` forwarder scripts and the explicit list that
 lived in `Publish-NugetPackages.ps1`. That list had silently drifted (a trailing-dot path typo that only
 failed on Linux CI *after* real packages had been pushed, and two packable libraries —
-`VpnHood.AppLib.Linux.Common` and `VpnHood.AppLib.Ios.Common` — that were never being published);
-discovery makes that class of bug impossible. Per-app build scripts (`src/Apps/*/_publish.ps1`) are
+`VpnHood.AppLib.Linux.Common` and `VpnHood.AppLib.Ios.Common`, today `VpnHood.AppLib.App.Linux` and
+`VpnHood.AppLib.App.Ios` — that were never being published);
+discovery makes that class of bug impossible. Per-app build scripts (`src/Apps/*/*/_publish.ps1`) are
 unrelated and remain — they are real build logic invoked directly by the app CI workflows.
 
 ### Build environment, speed, and the publishing gate
 
 - **Windows runner + workloads.** The packable suite spans `net10.0`, `net10.0-android`,
-  `net10.0-windows` (incl. the WPF library `VpnHood.AppLib.Win.Common.WpfSpa`) and `net11.0-ios`.
+  `net10.0-windows` (incl. the WPF library `VpnHood.AppUi.Hosting.WebView.Windows`) and `net11.0-ios`.
   Only a Windows host can build the Windows/WPF projects, so `publish_nugets.yml` runs on
   `windows-latest`, installs the `android`+`ios` workloads, and installs the **.NET 11 preview** SDK
   (the `net11.0-ios` libraries need it; `global.json` `rollForward=latestMajor` then selects it).
@@ -290,7 +288,7 @@ Design + validation notes: [docs/cicd/server-publishing.md](../docs/cicd/server-
 
 ## Module repos — separate library repos publishing their own NuGets
 
-Some vpnhood libraries live in their own repos ("module repos", e.g. `VpnHood.Core.Proxies`) and
+Some vpnhood libraries live in their own repos ("module repos", e.g. `VpnHood.Net.Proxies`) and
 ship their own NuGets on their own cadence — while staying **version-aligned** with the monorepo.
 They all publish through ONE shared cross-repo module in this repo, so the logic exists once:
 
@@ -315,7 +313,7 @@ To onboard a module repo: add `pub/PubVersion.json` (`{Version, BumpTime}`, lowe
 the same layout convention as the monorepo), a root
 `Directory.Build.props` carrying the single `<Version>` (remove per-csproj `<Version>`s so it
 applies), `IsPackable=false` on non-library projects, and the small `publish_nugets.yml`
-dispatcher — see `VpnHood.Core.Proxies` for the reference shape. Optionally a root `_publish.ps1`
+dispatcher — see `VpnHood.Net.Proxies` for the reference shape. Optionally a root `_publish.ps1`
 one-shot trigger (commit pending work → pull → push → `gh workflow run publish_nugets.yml`) so a
 publish is a single local command; the CI still does all the real work.
 

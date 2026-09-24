@@ -2,10 +2,10 @@ using Android.Content;
 using Android.OS;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.Core.Client.Devices.Droid.Messaging;
+namespace VpnHood.Core.Client.Devices.Android.Messaging;
 
 // Binder-based IMessageListener. AndroidVpnService hands out Binder from OnBind for
 // AndroidMessageTransport.BindAction. Requests arrive as oneway transactions, so OnTransact only

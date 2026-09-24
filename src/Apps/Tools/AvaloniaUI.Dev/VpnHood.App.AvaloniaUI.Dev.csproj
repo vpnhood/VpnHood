@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- a developer's tool, never shipped -->
+		<Description>A developer's tool: runs the VpnHood Avalonia UI on a PC, from a TV's size down to a phone's</Description>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<AssemblyName>VpnHoodAvaloniaDev</AssemblyName>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+		<!-- The IP-location database a product ships, placed beside the app the way its heads get it. -->
+		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="8.2.854" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
+		<!-- The UI itself: the pages, the controls, the themes. -->
+		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
+		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Windows\VpnHood.Core.Client.Devices.Windows.csproj" />
+		<!-- The app itself and its web host: a real VpnHoodApp runs here, and a phone pairs with it. -->
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
+	</ItemGroup>
+	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
+	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\build\VpnHood.AppUi.Assets.Classic.targets" />
+	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way, from
+	     Classic.Avalonia.Browser's publish; the head reads it at "assets/web-root.zip". -->
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser\build\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.targets" />
+</Project>

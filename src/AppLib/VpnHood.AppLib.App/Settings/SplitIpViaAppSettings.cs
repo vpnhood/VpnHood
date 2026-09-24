@@ -1,7 +1,8 @@
-using VpnHood.AppLib.Dtos;
-using VpnHood.AppLib.Utils;
+﻿
+using VpnHood.AppLib.Api.SplitTunneling;
+using VpnHood.AppLib.App.Utils;
 
-namespace VpnHood.AppLib.Settings;
+namespace VpnHood.AppLib.App.Settings;
 
 // The split-ip-via-app source lists (see SplitTunneling.UseIpViaApp). They feed the split-ip db, which
 // live-applies to a running session through a reconfigure.

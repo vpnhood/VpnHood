@@ -4,10 +4,10 @@ using Android.Content.Res;
 using Android.OS;
 using Android.Provider;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.Core.Client.Devices.Droid.Utils;
+namespace VpnHood.Core.Client.Devices.Android.Utils;
 
 public static class AndroidUtils
 {

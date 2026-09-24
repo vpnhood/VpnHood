@@ -1,0 +1,57 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>	<!-- app extension, not a NuGet package -->
+    <TargetFramework>net11.0-ios</TargetFramework>
+    <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
+    <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
+    <UseMaui>false</UseMaui>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
+    <AssemblyName>VpnHoodClientExtension</AssemblyName>
+    <BundleIdentifier>com.vpnhood.client.ios.networkextension</BundleIdentifier>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+
+    <!-- Automatic signing: Xcode picks the cert/profile for the team (6KKW3MKLR7, OmegaHood LLC). -->
+    <AutomaticProvisioning>true</AutomaticProvisioning>
+    <CodesignKey>Apple Development</CodesignKey>
+
+
+    <!-- Critical: tells the iOS workload to package this project as an .appex (PlugIn). -->
+    <IsAppExtension>true</IsAppExtension>
+    <!-- SdkOnly: trim system assemblies, but keep user assemblies. -->
+    <MtouchLink>SdkOnly</MtouchLink>
+    <!-- iOS jetsam: cap the Mono SGen managed heap HARD. Device-measured, a 40-connection burst ballooned
+         the managed heap 6.7 -> 15 MB of transient garbage in ~1.7 s, tipping a ~41 MB load over the ~50 MB
+         jetsam line. soft-heap-limit=8m forces SGen to collect far sooner; a small nursery keeps gen0 cheap
+         under the packet-allocation storm. See docs/ios-extension-memory-and-throughput.md. -->
+    <MtouchExtraArgs>$(MtouchExtraArgs) --setenv=MONO_GC_PARAMS=soft-heap-limit=8m,nursery-size=2m</MtouchExtraArgs>
+  </PropertyGroup>
+
+  <!-- App Store (manual) signing for the Network Extension. The App Store publish (Publish-IosApp.ps1)
+       turns AutomaticProvisioning off and passes the *app* profile via a global /p:CodesignProvision;
+       that global would otherwise leak onto this .appex and fail codesign (its App ID is the
+       ...networkextension one, not the app's). The parent Client.Ios.Apple.csproj strips CodesignProvision
+       from this ProjectReference (UndefineProperties), so the .appex resolves ITS OWN profile here.
+       Only active for distribution builds (AutomaticProvisioning=false); dev/Xcode auto-signing is
+       unaffected. -->
+  <PropertyGroup Condition="'$(AutomaticProvisioning)' == 'false'">
+    <CodesignProvision>VpnHood Client Extension AppStore</CodesignProvision>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="9" />
+  </ItemGroup>
+
+  <!-- Apple's privacy manifest for this .appex. An extension is scanned as its own bundle, so the host
+       app's manifest does not cover it; LogicalName puts this at the root of the .appex. -->
+  <ItemGroup>
+    <BundleResource Include="PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The iOS Network Extension implementation (abstract IosVpnService) lives in the core Device.iOS
+         project and transitively references the VpnServiceHost + iOSTun adapter. This project only adds
+         the thin [Register("PacketTunnelProvider")] subclass that roots the core assembly. -->
+    <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+  </ItemGroup>
+
+</Project>

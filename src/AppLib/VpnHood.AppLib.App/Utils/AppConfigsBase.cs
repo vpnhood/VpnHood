@@ -1,7 +1,7 @@
 using System.Reflection;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Utils;
+namespace VpnHood.AppLib.App.Utils;
 
 public class AppConfigsBase<T> : Singleton<T> where T : Singleton<T>
 {

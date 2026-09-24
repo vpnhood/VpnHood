@@ -1,6 +1,6 @@
 ﻿using Java.Util.Concurrent;
 
-namespace VpnHood.Core.Client.Devices.Droid.Utils;
+namespace VpnHood.Core.Client.Devices.Android.Utils;
 
 public static class CompletableFutureExtensions
 {

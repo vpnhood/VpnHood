@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.Core.Client.Devices.UiContexts;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.AppLib.Services.Accounts;
+namespace VpnHood.AppLib.App.Services.Accounts;
 
 public class AuthenticationService(
     AccountService accountService,

@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 using System.Buffers;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Streams;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Streams;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.WebSockets;
 using VpnHood.Core.Common.Configuration;
 

@@ -1,8 +1,10 @@
 using CoreFoundation;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Quic.Ios;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.VpnAdapters.IosTun;
+using VpnHood.Net.Quic.Ios;
+using VpnHood.Net.TcpStack;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Memory;
+using VpnHood.Net.VpnAdapters.IosTun;
 // ReSharper disable CommentTypo
 
 namespace VpnHood.Core.Client.Devices.Ios;
@@ -252,7 +254,7 @@ internal static class IosMemoryMonitor
         var footprint = IosMemory.TryRead(out var vm) && vm.Footprint > 0
             ? $"{vm.Footprint / Mib:F1}MB"
             : "unknown";
-        var tcp = TcpStack.LocalTcpStack.ActiveDiagnostics;
+        var tcp = LocalTcpStack.ActiveDiagnostics;
         var lastRead = IosTunDiagnostics.LastReadTicks;
         var lastWrite = IosTunDiagnostics.LastWriteTicks;
         var readAge = lastRead == 0 ? -1 : nowTicks - lastRead;
@@ -299,7 +301,7 @@ internal static class IosMemoryMonitor
         var upMb = outboundBytes / Mib;
         // TCP-stack diagnostics: concurrent connections + bytes parked in the reassembly pipes + the
         // active small-buffer profile.
-        var diag = TcpStack.LocalTcpStack.ActiveDiagnostics;
+        var diag = LocalTcpStack.ActiveDiagnostics;
         var pipeBuf = (diag?.TotalPipeBufferedBytes ?? 0) / Mib;
         var conn = diag?.ConnectionCount ?? 0;
         var peakConn = diag?.PeakConnectionCount ?? 0;
@@ -327,7 +329,7 @@ internal static class IosMemoryMonitor
         // sqlite3_memory_used: live native SQLite allocator bytes, answers "how big is the
         // exclude-country layer" exactly (expected ~a hundred KB with the shared-reader fix)
         var sqliteKb = Filtering.Sqlite.SplitSqlite.MemoryUsed() / 1024.0;
-        var tracker = Toolkit.Memory.VhTypeTracker.GetSnapshotString();
+        var tracker = VhTypeTracker.GetSnapshotString();
 
         var trafficBytes = inboundBytes + outboundBytes;
         var trafficElapsedMs = _lastTrafficSampleTicks == 0 ? 0 : nowTicks - _lastTrafficSampleTicks;
@@ -369,7 +371,7 @@ internal static class IosMemoryMonitor
                 var footprintAfterGc = IosMemory.TryRead(out var afterGcVm) && afterGcVm.Footprint > 0
                     ? afterGcVm.Footprint / Mib
                     : mb;
-                tracker = Toolkit.Memory.VhTypeTracker.GetSnapshotString();
+                tracker = VhTypeTracker.GetSnapshotString();
 
                 var phase = "IDLE_CHECKPOINT";
                 if (!_baselineFootprint.HasValue || !_baselineNative.HasValue) {

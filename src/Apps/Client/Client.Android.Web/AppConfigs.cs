@@ -1,0 +1,42 @@
+using System.Text.Json;
+using VpnHood.AppLib.App.Utils;
+using VpnHood.Core.Client.Abstractions;
+
+// ReSharper disable StringLiteralTypo
+// ReSharper disable CommentTypo
+// ReSharper disable HeuristicUnreachableCode
+namespace VpnHood.App.Client.Android.Web;
+
+internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
+{
+    public const string AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
+    public string AppId { get; set; } = Application.Context.PackageName!;
+
+    public Uri? UpdateInfoUrl { get; set; } =
+        new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web.json");
+
+    public int? WebUiPort { get; set; } = IsDebugMode ? 4701 : 4700;
+    public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
+    public string? Ga4MeasurementId { get; set; }
+    public Uri? RemoteSettingsUrl { get; set; }
+    public bool AllowEndPointTracker { get; set; }
+    public JsonElement? CustomData { get; set; }
+    public Uri? PrivacyPolicyUrl { get; set; }
+    public Uri? TermsOfUseUrl { get; set; }
+    public string LogoAssetPath { get; set; } = "images/VpnHoodClient-logo.png";
+    public string PrivacyConsentAssetName { get; set; } = "privacy-consent-client";
+    public string CompanyName { get; set; } = "VpnHood";
+
+    public static AppConfigs Load()
+    {
+        var appConfigs = new AppConfigs();
+        appConfigs.LoadConfig();
+        return appConfigs;
+    }
+
+#if DEBUG
+    public const bool IsDebugMode = true;
+#else
+    public const bool IsDebugMode = false;
+#endif
+}

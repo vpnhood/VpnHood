@@ -1,7 +1,7 @@
 ﻿using Java.Util.Concurrent;
 using Java.Util.Functions;
 
-namespace VpnHood.Core.Client.Devices.Droid.Utils;
+namespace VpnHood.Core.Client.Devices.Android.Utils;
 
 public class CompletableFutureTask
 {

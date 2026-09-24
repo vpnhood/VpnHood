@@ -1,13 +1,13 @@
 using Ga4.Trackers;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Quic.Abstractions;
+using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.SystemInformation;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;

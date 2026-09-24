@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Toolkit.Memory;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Memory;
+using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 

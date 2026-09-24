@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Toolkit.Net;
+﻿using VpnHood.Net.Toolkit.Net;
 using VpnHood.Core.Tunneling.Messaging;
 
 namespace VpnHood.Core.Server.Exceptions;

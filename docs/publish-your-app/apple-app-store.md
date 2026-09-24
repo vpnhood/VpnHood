@@ -22,8 +22,9 @@ Two websites are involved, and it matters which one you are on:
 
 ## 1. Enrol as an organization
 
-A VPN app is only accepted from an **organization** account belonging to the entity that provides
-the VPN service — not a personal account. Enrolment needs your company's legal details and usually
+A VPN app is only accepted from an **organization** account — not a personal account
+([guideline 5.4](https://developer.apple.com/app-store/review/guidelines/#5.4)). Enrolment needs
+your company's legal details and usually
 a **D‑U‑N‑S number** (free, but obtaining one can take up to a couple of weeks).
 
 Then, in App Store Connect → **Business**: accept the current agreements. If you intend to sell

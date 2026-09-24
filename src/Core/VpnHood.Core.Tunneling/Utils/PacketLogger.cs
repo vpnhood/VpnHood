@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Exceptions;
 
 // ReSharper disable UnusedMember.Global

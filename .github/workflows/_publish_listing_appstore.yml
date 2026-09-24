@@ -29,7 +29,7 @@ on:
         type: string
         required: true
       webui_ref:
-        description: "vpnhood/VpnHood.Client.WebUI ref supplying the screenshot sync tool."
+        description: "vpnhood/VpnHood.AppUi.Spa ref supplying the screenshot sync tool."
         type: string
         required: false
         default: develop
@@ -76,7 +76,7 @@ jobs:
         if: env.APPSTORE_CONNECT_API_KEY != ''
         uses: actions/checkout@v5
         with:
-          repository: vpnhood/VpnHood.Client.WebUI
+          repository: vpnhood/VpnHood.AppUi.Spa
           ref: ${{ inputs.webui_ref }}
           path: .webui
 
@@ -94,7 +94,7 @@ jobs:
         if: env.APPSTORE_CONNECT_API_KEY != ''
         run: |
           set +e
-          node .webui/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --editable-check
+          node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --editable-check
           rc=$?
           set -e
           if [ "$rc" = "0" ]; then
@@ -147,7 +147,7 @@ jobs:
 
       - name: Sync the listing screenshots (checksum diff)
         if: env.APPSTORE_CONNECT_API_KEY != '' && steps.editable.outputs.editable == 'true' && inputs.skip_screenshots != true
-        run: node .webui/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE"
+        run: node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE"
 
       # published=true only when the listing was actually writable: a locked listing must NOT be
       # recorded, so the gate publishes the pending content once a new version opens.

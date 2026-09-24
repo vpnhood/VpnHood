@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Jobs;
+using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 

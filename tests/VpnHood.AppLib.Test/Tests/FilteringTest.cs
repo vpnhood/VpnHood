@@ -1,8 +1,11 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Quic;
+using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Test.Dom;
+using VpnHood.AppLib.App;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Toolkit.Net;
+using SplitDnsMode = VpnHood.AppLib.Api.SplitTunneling.SplitDnsMode;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;

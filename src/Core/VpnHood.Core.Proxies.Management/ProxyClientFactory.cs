@@ -1,9 +1,10 @@
 ﻿using System.Net;
 using VpnHood.Core.Proxies.Management.Abstractions;
-using VpnHood.Core.Proxies.HttpProxyClients;
-using VpnHood.Core.Proxies.Socks4ProxyClients;
-using VpnHood.Core.Proxies.Socks5ProxyClients;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Proxies;
+using VpnHood.Net.Proxies.HttpProxyClients;
+using VpnHood.Net.Proxies.Socks4ProxyClients;
+using VpnHood.Net.Proxies.Socks5ProxyClients;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Proxies.Management;
 

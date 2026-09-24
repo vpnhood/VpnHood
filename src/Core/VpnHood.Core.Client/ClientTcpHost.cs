@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Net;
-using VpnHood.Core.Packets;
-using VpnHood.Core.TcpStack;
-using VpnHood.Core.TcpStack.Abstractions;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Packets;
+using VpnHood.Net.TcpStack;
+using VpnHood.Net.TcpStack.Abstractions;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Utils;

@@ -1,4 +1,4 @@
-using VpnHood.Core.Toolkit.Collections;
+using VpnHood.Net.Toolkit.Collections;
 
 namespace VpnHood.Core.Filtering.Abstractions;
 

@@ -2,7 +2,7 @@
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Exceptions;
 

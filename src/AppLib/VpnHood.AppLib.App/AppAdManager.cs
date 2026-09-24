@@ -1,19 +1,19 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Exceptions;
-using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
+using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 public class AppAdManager(
     AppAdService adService,

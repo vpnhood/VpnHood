@@ -1,0 +1,20 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppUi.Common"
+             xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
+             xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SplitLocalNetworkView">
+  <!-- The web UI's split-local-network: one switch, disabled while the server enforces it -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding SplitLocalNetwork, Source={x:Static res:Strings.Current}}" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel MaxWidth="720">
+        <Image ui:AppImage.Source="images/access-local-network.webp" MaxHeight="130" Stretch="Uniform" Margin="0,0,0,20" />
+        <Border x:Name="EnforcedAlert" Classes="alert-warning" Margin="0,0,0,16" IsVisible="False">
+          <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding EnforcedByServer, Source={x:Static res:Strings.Current}}" />
+        </Border>
+        <controls:SettingsToggleItem x:Name="EnabledItem" Toggled="OnToggled" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

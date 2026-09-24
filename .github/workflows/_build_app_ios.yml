@@ -111,10 +111,15 @@ jobs:
         shell: pwsh
         run: |
           & "$env:GITHUB_WORKSPACE/code/pub/lib/Initialize-CiIosSigning.ps1" -appFolder $env:PKG
+      - name: Place the browser page (built once by publish_app's build-browser job)
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-page
+          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/bin
       - name: Build iOS (.ipa)
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Ios/_publish.ps1"
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Ios.Apple/_publish.ps1"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.app }}-ios

@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.WebServer.Helpers;
+using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;

@@ -1,16 +1,19 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Abstractions.Device;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
-namespace VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.App.DtoConverters;
+
+namespace VpnHood.AppLib.App.ClientProfiles;
 
 public class ClientProfileService
 {
@@ -240,7 +243,7 @@ public class ClientProfileService
             if (item?.AccessCode == null || item.AccessCodeRefusal != null)
                 return;
 
-            item.AccessCodeRefusal = new AccessCodeRefusal { ErrorCode = errorCode, RefusedTime = FastDateTime.UtcNow };
+            item.AccessCodeRefusal = new AccessCodeRefusal { ErrorCode = errorCode.ToAppDto(), RefusedTime = FastDateTime.UtcNow };
             Save();
         }
     }

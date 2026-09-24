@@ -1,8 +1,8 @@
 using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.Converters;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Converters;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Messaging;

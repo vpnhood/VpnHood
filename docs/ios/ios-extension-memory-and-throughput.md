@@ -9,7 +9,7 @@ so treat them as the preview.5 baseline).
 
 > This file merges the three working docs (`ios-memory-jetsam-investigation`, `ios-net11-coreclr-proxy-speed`,
 > and Gemini's `upload-speed-and-memory-stabilization`) into one accurate record. Code changes live in the
-> core projects under `src/Core`; the app glue is under `src/Apps/{Client,Connect}.Ios[.Extension]`. The
+> core projects under `src/Core`; the app glue is under `src/Apps/{Client,Connect}/{Client,Connect}.Ios.{Apple,Extension}`. The
 > **batched native tun write** (Part 4) has since merged; everything described here is on `develop`.
 
 ---
@@ -54,7 +54,7 @@ so treat them as the preview.5 baseline).
 - **CoreCLR boot fix (required):** under CoreCLR's managed-static registrar, pointing
   `NSExtensionPrincipalClass` at the core `IosVpnService` crashes on launch:
   `ObjCRuntime.RuntimeException: Could not find the assembly VpnHood.Core.Client.Devices.Ios`. Fix = a thin
-  local **`src/Apps/Client.Ios.Extension/PacketTunnelProvider.cs`** subclass of `IosVpnService` (roots the core assembly), with
+  local **`src/Apps/Client/Client.Ios.Extension/PacketTunnelProvider.cs`** subclass of `IosVpnService` (roots the core assembly), with
   `Info.plist NSExtensionPrincipalClass = PacketTunnelProvider`. (Mono tolerated its absence.)
 
 | | Mono (net10) | **CoreCLR (net11)** |
@@ -161,7 +161,7 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 
 ## Current configuration (working tree)
 
-**iOS TCP-stack profile** — `src/Core/VpnHood.Core.TcpStack/LocalTcpStackOptions.cs` `Ios`:
+**iOS TCP-stack profile** — `src/Net/VpnHood.Net.TcpStack/LocalTcpStackOptions.cs` `Ios`:
 - `ReceiveWindowSize=0xFFFF (64 KB)`, **`GlobalReceiveBudget=6 MB`**, `RetxBufferSize=16 KB`.
 - **`MaxConnections=40`**, `AcceptQueueCapacity=128`, **`IdleTimeout=20 s`**, **`IdleCheckInterval=5 s`**.
 - **`AdmissionMemoryLimitMb=42.0`** — Memory admission gate. When the process footprint matches or exceeds 42.0 MB, new TCP SYNs are dropped silently so the peer's own SYN-retransmit backoff acts as a natural pacing mechanism until memory recedes.

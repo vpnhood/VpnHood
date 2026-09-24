@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
-using VpnHood.Core.Toolkit.Monitoring;
-using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Net.Toolkit.Monitoring;
+using VpnHood.Net.Toolkit.Sockets;
 
 namespace VpnHood.Core.Proxies.Management.Abstractions;
 

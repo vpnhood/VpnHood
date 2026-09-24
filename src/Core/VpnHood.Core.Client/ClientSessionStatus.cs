@@ -1,7 +1,7 @@
 ﻿using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.DomainFiltering;
-using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
 

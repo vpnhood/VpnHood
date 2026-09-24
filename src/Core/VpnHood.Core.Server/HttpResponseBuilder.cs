@@ -2,7 +2,7 @@
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
-using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling.WebSockets;
 
 namespace VpnHood.Core.Server;

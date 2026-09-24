@@ -40,7 +40,7 @@ outside the app and is not data the iOS binary collects.
 
 ## The privacy manifest is the contract
 
-[`Client.Ios/PrivacyInfo.xcprivacy`](../../../src/Apps/Client.Ios/PrivacyInfo.xcprivacy) declares no
+[`Client.Ios.Apple/PrivacyInfo.xcprivacy`](../../../src/Apps/Client/Client.Ios.Apple/PrivacyInfo.xcprivacy) declares no
 collected data types and sets `NSPrivacyTracking = false`. The Network Extension's manifest also
 declares no collection (packet data never leaves the tunnel process).
 
@@ -170,7 +170,7 @@ three types below and nothing else.
 > **pricing**: a free app still needs Free explicitly set on Pricing and Availability.
 
 **One row per *Set Up* screen**, in the order App Store Connect presents them. Every value matches
-[`Connect.Ios/PrivacyInfo.xcprivacy`](../../../src/Apps/Connect.Ios/PrivacyInfo.xcprivacy), which
+[`Connect.Ios.Apple/PrivacyInfo.xcprivacy`](../../../src/Apps/Connect/Connect.Ios.Apple/PrivacyInfo.xcprivacy), which
 Apple cross-checks against these answers — if the two ever disagree, the manifest wins and the panel
 alone cannot fix it (that takes a new build).
 
@@ -218,7 +218,7 @@ prevent, so do not reintroduce it in a fork. The shipped behaviour is described 
 [CONNECT privacy policy](../end-user/vpnhood-connect-privacy-policy.md) and specified in
 [account-lifecycle.md](../../accounts/account-lifecycle.md).
 
-**Manifest status.** `Connect.Ios/PrivacyInfo.xcprivacy` and
+**Manifest status.** `Connect.Ios.Apple/PrivacyInfo.xcprivacy` and
 `Connect.Ios.Extension/PrivacyInfo.xcprivacy` now exist (the extension stays collection-free). The
 host app's manifest declares **three** collected types: User ID, Email Address, and Purchase History,
 all for App Functionality and all with `Linked = true`. Manifest and panel must ship together: Apple
@@ -251,10 +251,19 @@ own inventory of SDKs and account data.
 Not privacy-questionnaire items, but each one has rejected or removed real VPN apps. Export
 compliance has its own document: [APP_STORE_EXPORT_COMPLIANCE.md](APP_STORE_EXPORT_COMPLIANCE.md).
 
-- **Guideline 5.4 — who may publish a VPN.** Apple only accepts VPN apps from the **entity that
-  provides the VPN service**, submitted from an **organization** developer account. A personal
-  account gets rejected regardless of code quality. The app must use NEVPNManager / Network
-  Extension (this codebase does).
+- **[Guideline 5.4](https://developer.apple.com/app-store/review/guidelines/#5.4) — who may
+  publish a VPN.** Apple only accepts VPN apps from an **organization** developer account; a
+  personal account gets rejected regardless of code quality. The guideline does not require owning
+  the servers: rented hosting or another operator's backend is fine when a contract makes them
+  process traffic on your behalf (no logging or use of their own) and your privacy policy discloses
+  it. What it forbids is user data reaching a **third party** — so a fork whose built-in key points
+  at servers it neither runs nor contracts for cannot truthfully make the in-app data declaration
+  the guideline demands. The app must use NEVPNManager / Network Extension (this codebase does).
+- **[Guideline 4.2.6](https://developer.apple.com/app-store/review/guidelines/#4.2.6) — who
+  submits.** An app produced by a template or builder service must be submitted from the developer
+  account of the business it belongs to, not from the service's. If someone builds your fork for
+  you, they work inside your account (team member or App Store Connect API key) and the submission
+  is yours.
 - **Age rating.** The questionnaire asks about **"Unrestricted Web Access"** — a VPN provides it,
   so the honest answers produce a **17+** rating. Answering "No" to look friendlier is grounds for
   rejection or later removal.

@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions.Ads;
 
-namespace VpnHood.AppLib.Services.Ads;
+namespace VpnHood.AppLib.App.Services.Ads;
 
 public class AppAdProviderItem
 {

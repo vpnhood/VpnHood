@@ -1,9 +1,9 @@
-﻿using VpnHood.AppLib.Abstractions.AdExceptions;
-using VpnHood.AppLib.Exceptions;
+﻿using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 public static class AppExceptionConverter
 {

@@ -1,4 +1,4 @@
-using VpnHood.Core.Packets;
+using VpnHood.Net.Packets;
 
 namespace VpnHood.Core.Client;
 

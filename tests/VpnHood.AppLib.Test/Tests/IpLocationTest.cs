@@ -3,11 +3,12 @@ using System.Net;
 using System.Runtime.InteropServices;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Assets.Ip2LocationLite;
-using VpnHood.Core.IpLocations.Providers.Offlines;
-using VpnHood.Core.IpLocations.SqliteProvider;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Streams;
+using VpnHood.Net.IpLocations.Providers.Offlines;
+using VpnHood.Net.IpLocations.Providers.SqliteProvider;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -26,14 +27,15 @@ public class IpLocationTest : TestAppBase
         await using var keepAliveConnection = new SqliteConnection(sqliteConnectionString);
         await keepAliveConnection.OpenAsync();
 
-        await using (var memoryStream = new MemoryStream(Ip2LocationLiteDb.ZipData)) {
-            await IpLocationSqliteBuilder.Build(memoryStream, keepAliveConnection);
+        var ipLocationAsset = new Asset(TestAppHelper.AssetProvider, TestAppHelper.IpLocationAssetPath);
+        await using (var zipStream = await ipLocationAsset.OpenReadAsync(TestCt)) {
+            await IpLocationSqliteBuilder.Build(zipStream, keepAliveConnection);
         }
 
         await using var ipLocationSqliteProvider =
             await IpLocationSqliteProvider.Open(keepAliveConnection, leaveOpen: true);
         using var localRangeProvider = new LocalIpRangeLocationProvider(
-            () => new ZipArchive(new MemoryStream(Ip2LocationLiteDb.ZipData)),
+            ipLocationAsset,
             () => null);
 
         // compare ip ranges for a country
@@ -58,8 +60,8 @@ public class IpLocationTest : TestAppBase
     {
         // update current ipLocation in app project after a week
         var vhFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 6);
-        var solutionFolder = Path.Combine(vhFolder, "VpnHood.AppLib.Assets.IpLocations");
-        var projectFolder = Path.Combine(solutionFolder, "VpnHood.AppLib.Assets.Ip2LocationLite");
+        var solutionFolder = Path.Combine(vhFolder, "VpnHood.Net.IpLocations.Assets.Ip2LocationLite");
+        var projectFolder = Path.Combine(solutionFolder, "VpnHood.Net.IpLocations.Assets.Ip2LocationLite");
         var ipLocationFile = Path.Combine(projectFolder, "Resources", "IpLocations.zip");
         VhLogger.Instance.LogInformation("ipLocationFile: {ipLocationFile}", ipLocationFile);
         if (!Directory.Exists(projectFolder))

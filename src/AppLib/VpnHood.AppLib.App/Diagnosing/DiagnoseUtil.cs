@@ -2,11 +2,11 @@
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Diagnosing;
+namespace VpnHood.AppLib.App.Diagnosing;
 
 public static class DiagnoseUtil
 {

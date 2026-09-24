@@ -1,5 +1,7 @@
 #!/bin/bash
-curDir="$(dirname "$0")";
+# readlink, not dirname alone: the client installer puts a symlink to this script on the PATH
+# (/usr/local/bin/vhclient), and $0 is then the symlink - whose folder holds no publish.json.
+curDir="$(dirname "$(readlink -f "$0")")";
 publishInfoFile="$curDir/publish.json";
 
 # -------------------
@@ -25,7 +27,13 @@ function json_extract() {
 publishInfoJson=`cat $publishInfoFile`;
 exeFileR=$(json_extract ExeFile "$publishInfoJson");
 exeFile="$curDir/$exeFileR";
-chmod +x "$exeFile";
+# The installer has already done this as root. Here it is a best effort for a build run from a
+# folder nobody installed, and must not make a normal user's launch fail.
+[ -x "$exeFile" ] || chmod +x "$exeFile" 2>/dev/null;
+
+# The binary cannot know what a person typed to get here - "vhclient" is on the PATH and
+# "VpnHoodClient" is not - so the hints it prints are told (LinuxCliPaths.LauncherNameVariable).
+export VH_LAUNCHER_NAME="$(basename "$0")";
 
 # Executing Module
 "$exeFile" "$@";

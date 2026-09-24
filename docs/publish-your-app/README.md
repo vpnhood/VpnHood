@@ -44,14 +44,17 @@ apps](#3-what-the-stores-demand-of-vpn-apps) before spending anything.
 
 | | How it works | Available |
 | --- | --- | --- |
-| **A — Managed** | You give us your app name, logo and colours, plus temporary access to your store accounts. We build, publish and hand the accounts back. | **Planned** — ask us |
+| **A — Managed** | You give us your app name, logo and colours, and add us to your store accounts as a team member. We build and upload; you press *Submit*, and remove us whenever you like. | **Planned** — ask us |
 | **B — Starter repo** | You get a small project of your own that pulls in our ready-made building blocks. You own it; our pipeline publishes it. | **Planned** |
 | **C — Fork** | You copy the whole VpnHood project into your own account and turn the publishing pipeline on. | **Available today** |
 
 This guide describes **C**, the path that works today. A and B take the technical middle of the
 journey off your hands — copying the project, branding it, wiring up the pipeline. Everything the
 stores require of *you* as the publisher — accounts, agreements, bank details, questionnaires,
-submission — stays yours on every path.
+submission — stays yours on every path. That is not only our preference: Apple rejects an app
+built by a service unless it is submitted from the account of the business it belongs to
+([guideline 4.2.6](https://developer.apple.com/app-store/review/guidelines/#4.2.6)), so on path A
+we work inside your account rather than publishing from ours.
 
 ---
 
@@ -60,18 +63,28 @@ submission — stays yours on every path.
 Read this section before you spend a cent. Every item below has caused real apps to be rejected or
 removed.
 
-1. **You must be a company, not a person.** Apple accepts a VPN app only from the organization that
-   actually provides the VPN service, submitted from an **organization** developer account. A
-   personal account is rejected no matter how good the app is. Registering a company takes days to
-   weeks and usually needs a business number (D‑U‑N‑S). Start here, not last.
-2. **You must own the VPN service.** Reselling somebody else's VPN under your logo is against the
-   same rule. In practice: you run the servers behind your app.
+1. **You must be a company, not a person.** Apple accepts a VPN app only from an **organization**
+   developer account ([guideline 5.4](https://developer.apple.com/app-store/review/guidelines/#5.4)).
+   A personal account is rejected no matter how good the app is. Registering a company takes days
+   to weeks and usually needs a business number (D‑U‑N‑S). Start here, not last.
+2. **The servers behind your app must be yours — owned or contracted.** Apple does not require
+   you to own hardware; rented hosting or another company's backend is fine **if** a contract makes
+   them handle traffic on your behalf (no logging or use of their own) and your privacy policy says
+   so. What Apple forbids is user data reaching a third party you have no such agreement with. The
+   same guideline requires a screen, before first use, declaring what data the app collects and how
+   it is handled, and that declaration must be true. Shipping our key is not an option: our own
+   [Connect terms](../legal/end-user/vpnhood-connect-terms-of-use.md) forbid reselling VpnHood's
+   service as your own. See [step 6](#6-your-servers-and-your-key).
 3. **Your app will be rated 17+.** The rating questionnaire asks about unrestricted web access; a
    VPN provides it. Answering otherwise is grounds for removal.
 4. **You need your own privacy policy**, on your own website, describing *your* data practices
    under *your* name. You cannot reuse ours.
 5. **You must rebrand.** The licence gives you the code, not the VpnHood name or logo. A copycat
-   app is rejected under a separate rule.
+   app is rejected under a separate rule
+   ([4.1](https://developer.apple.com/app-store/review/guidelines/#4.1)), and so is one that is
+   indistinguishable from an app already on the store
+   ([4.3](https://developer.apple.com/app-store/review/guidelines/#4.3)) — change the name, logo
+   and colours, not just the name.
 6. **Some countries must be switched off** before your first release — selling a VPN there gets the
    app pulled and leaves a mark on your account. Which ones and why:
    [App Store territories](../legal/developer/APP_STORE_TERRITORIES.md).

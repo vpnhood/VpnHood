@@ -1,7 +1,7 @@
 name: publish_module_nugets (reusable)
 
 # Reusable NuGet publisher for MODULE repos — separate vpnhood library repos (e.g.
-# VpnHood.Core.Proxies) that ship their own NuGets on their own cadence but stay version-aligned
+# VpnHood.Net.Proxies) that ship their own NuGets on their own cadence but stay version-aligned
 # with the monorepo. The module repo calls this as a cross-repo module:
 #
 #   uses: vpnhood/VpnHood/.github/workflows/publish_module_nugets.yml@develop

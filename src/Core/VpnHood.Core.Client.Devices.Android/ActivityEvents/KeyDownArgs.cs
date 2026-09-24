@@ -1,6 +1,6 @@
 ﻿using Android.Views;
 
-namespace VpnHood.Core.Client.Devices.Droid.ActivityEvents;
+namespace VpnHood.Core.Client.Devices.Android.ActivityEvents;
 
 public class KeyDownArgs
 {

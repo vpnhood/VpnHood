@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Toolkit.Streams;
+﻿using VpnHood.Net.Toolkit.Streams;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 

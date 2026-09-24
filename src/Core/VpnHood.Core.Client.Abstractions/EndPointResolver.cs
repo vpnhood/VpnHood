@@ -2,9 +2,9 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Abstractions;
 

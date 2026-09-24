@@ -1,4 +1,4 @@
-# Build, Deploy & Provisioning — VpnHood iOS (Client & Connect)
+﻿# Build, Deploy & Provisioning — VpnHood iOS (Client & Connect)
 
 How to build the App + Network Extension, install/run on device, stream logs, and fix signing/provisioning.
 
@@ -12,8 +12,8 @@ The iOS apps live under `src/Apps/` — one host project + one Network-Extension
 
 | App | Host csproj | Extension csproj | App bundle id |
 |-----|-------------|------------------|---------------|
-| Client  | `src/Apps/Client.Ios/VpnHood.App.Client.Ios.csproj`   | `src/Apps/Client.Ios.Extension/…`   | `com.vpnhood.client.ios` |
-| Connect | `src/Apps/Connect.Ios/VpnHood.App.Connect.Ios.csproj` | `src/Apps/Connect.Ios.Extension/…`  | `com.vpnhood.connect.ios` |
+| Client  | `src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj`   | `src/Apps/Client/Client.Ios.Extension/…`   | `com.vpnhood.client.ios` |
+| Connect | `src/Apps/Connect/Connect.Ios.Apple/VpnHood.App.Connect.Ios.Apple.csproj` | `src/Apps/Connect/Connect.Ios.Extension/…`  | `com.vpnhood.connect.ios` |
 
 The host references the extension as an `IsAppExtension` `ProjectReference`, so **building the host also builds
 and bundles the appex**. All iOS build settings are inlined per-csproj (no shared props file).
@@ -33,10 +33,10 @@ and bundles the appex**. All iOS build settings are inlined per-csproj (no share
 ## Build (always Release for device)
 Debug AOT emits ~51 MB and hits the 52 MB jetsam limit — **always build Release** for the device.
 ```bash
-# Client (swap Client.Ios -> Connect.Ios for the Connect app)
-rm -rf src/Apps/Client.Ios/bin src/Apps/Client.Ios/obj \
-       src/Apps/Client.Ios.Extension/bin src/Apps/Client.Ios.Extension/obj   # clean: avoid stale AOT
-~/.dotnet11/dotnet build src/Apps/Client.Ios/VpnHood.App.Client.Ios.csproj \
+# Client (swap Client.Ios.Apple -> Connect.Ios.Apple for the Connect app)
+rm -rf src/Apps/Client/Client.Ios.Apple/bin src/Apps/Client/Client.Ios.Apple/obj \
+       src/Apps/Client/Client.Ios.Extension/bin src/Apps/Client/Client.Ios.Extension/obj   # clean: avoid stale AOT
+~/.dotnet11/dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
   -f net11.0-ios -r ios-arm64 -c Release \
   -p:ArchiveOnBuild=false \
   -p:_DeviceName=:v2:udid=$DEVICE \
@@ -45,12 +45,12 @@ rm -rf src/Apps/Client.Ios/bin src/Apps/Client.Ios/obj \
 - `-p:SolutionDir="$(pwd)/"` (trailing slash **required**) is mandatory in Release — without it the core `.csproj`
   files emit `CS8101: pathmap incorrectly formatted` (the `PathMap` in the root `Directory.Build.props` needs it).
 - Repo uses `.slnx`; build the host csproj directly. The host build also builds the Extension appex.
-- Output: `src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app`
+- Output: `src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app`
   (contains `PlugIns/VpnHood.App.Client.Ios.Extension.appex`).
 
 ## Deploy & run (devicectl)
 ```bash
-APP=src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
+APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
 xcrun devicectl device install app     --device $DEVICE "$APP"
 xcrun devicectl device process launch  --device $DEVICE com.vpnhood.client.ios
 ```
@@ -69,11 +69,11 @@ Mac app would need a system extension). Verified working 2026-08-24 (M2 Pro, Cli
 Then build exactly as above (no `_DeviceName` needed). macOS refuses to launch a raw iOS `.app`
 (“incorrect executable format”) — it must sit in the wrapper bundle Xcode/the App Store normally create:
 ```bash
-APP=src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
+APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
 WRAP=".working/mac-run/VpnHood Client.app"
 rm -rf .working/mac-run && mkdir -p "$WRAP/Wrapper"
 cp -R "$APP" "$WRAP/Wrapper/"
-ln -s "Wrapper/VpnHood.App.Client.Ios.app" "$WRAP/WrappedBundle"
+ln -s "Wrapper/VpnHoodClient.app" "$WRAP/WrappedBundle"
 open "$WRAP"
 ```
 - Verify first with the "Diagnose a stale profile" commands below — both `embedded.mobileprovision`
@@ -88,7 +88,7 @@ open "$WRAP"
   (`/var/db/MobileIdentityService/Profiles`); the ONLY user-space writer is **Xcode's
   run-on-"My Mac (Designed for iPad)" action** (`profiles install -type=provisioning` rejects iOS
   profiles with -214; `devicectl` can't target the local Mac). Fix: open
-  [`src/Apps/MacShim/Shim.xcodeproj`](../../src/Apps/MacShim/) — a stub app+appex using the real
+  [`src/Apps/Tools/MacShim/Shim.xcodeproj`](../../src/Apps/Tools/MacShim/) — a stub app+appex using the real
   bundle ids, team and dev profiles (see its README, incl. the Client retarget) — select
   **My Mac (Designed for iPad)**, **⌘R once, then Stop**. Redo after every profile regeneration.
   After the shim run, clean up or the real app won't launch (`open` fails with -1712):
@@ -131,7 +131,7 @@ provisioning; create named dev profiles per the steps below only if that isn't a
 
 ### Diagnose a stale profile
 ```bash
-APP=src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
+APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
 # what the embedded profile allows
 security cms -D -i "$APP/embedded.mobileprovision" \
   | plutil -convert xml1 - -o - | grep -A3 -E "ProvisionedDevices|application-groups|TeamIdentifier"
@@ -214,7 +214,8 @@ via `POST /v1/billing/purchases` + the daily reconciliation.
   retry the purchase/restore before suspecting configuration.
 
 ### 6. The StoreKit facade
-Billing goes through `VpnHoodStoreKit.xcframework` (Swift, `src/AppLib/VpnHood.AppLib.Ios.AppStore/swift/`).
+Billing goes through `VpnHoodStoreKit.xcframework` (Swift), which the `VpnHood.AppLib.Stores.AppStore.Native`
+package carries; it is built from that package's own repo, not from this one.
 It is committed so CI needs no Swift toolchain; rebuild with `./build-xcframework.sh` only when
 `StoreKitBridge.swift` changes, and verify the four `vhsk_*` symbols with
 `nm -gU …/VpnHoodStoreKit.framework/VpnHoodStoreKit | grep vhsk`.

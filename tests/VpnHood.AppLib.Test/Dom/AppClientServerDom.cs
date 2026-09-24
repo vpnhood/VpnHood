@@ -1,11 +1,14 @@
 ﻿using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.ClientProfiles;
+using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
-using VpnHood.Core.Client.Devices;
+using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.AppLib.Api.App;
 using VpnHood.Core.Common.Tokens;
+using ConnectPlanId = VpnHood.AppLib.Api.App.ConnectPlanId;
 using VpnHood.Core.Server;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 

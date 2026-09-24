@@ -1,0 +1,16 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppUi.Common"
+             xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.LanguageView">
+  <!-- The web UI's settings/language: the device's language first, then every language the app
+       ships, each a radio row; the chosen one applies at once. -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Language, Source={x:Static res:Strings.Current}}" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <Border Classes="config-card" MaxWidth="720" Padding="4">
+        <StackPanel x:Name="Rows" />
+      </Border>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

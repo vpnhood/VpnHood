@@ -1,8 +1,8 @@
 ﻿using System.Net;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Streams;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Streams;
 
 namespace VpnHood.Core.Tunneling.DatagramMessaging;
 

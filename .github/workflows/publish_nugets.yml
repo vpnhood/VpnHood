@@ -29,7 +29,7 @@ jobs:
     # for a NuGet key) — packages here share the vpnhood package IDs, so a fork must never push them.
     if: github.repository_owner == 'vpnhood'
     # Windows host is the superset build environment for the packable suite: net*-windows and the WPF
-    # library (VpnHood.AppLib.Win.Common.WpfSpa) need Windows, while the net*-android / net*-ios
+    # library (VpnHood.AppUi.Hosting.WebView.Windows) need Windows, while the net*-android / net*-ios
     # libraries build via workloads (below). Linux cannot build the Windows/WPF projects.
     runs-on: windows-latest
     env:

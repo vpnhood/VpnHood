@@ -1,10 +1,38 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
+using VpnHood.AppLib.Api.App;
+using VpnHood.Net.Toolkit.Assets;
 
-namespace VpnHood.AppLib.Utils;
+namespace VpnHood.AppLib.App.Utils;
 
 public static class AppUtils
 {
+    // A zip a head named, as assets: extracted once into a folder the APP chooses, named for what
+    // it holds rather than for the zip it came from, so no head can put two of them in one.
+    internal static IAssetProvider? CreateZipAssetProvider(IAsset? zipAsset, string storageFolderPath,
+        string folderName)
+    {
+        return zipAsset is null
+            ? null
+            : new ZipAssetProvider(zipAsset, Path.Combine(storageFolderPath, "assets", folderName));
+    }
+
+    // The same for zips a head named more than one of, as ONE provider joined here rather than at
+    // every read: searched in the order given, and the first zip that has the file wins. Each gets a
+    // folder of its own - a ZipAssetProvider owns its folder and clears what is not the version in
+    // hand - and the first keeps the plain name, so adding a zip does not re-extract the one that
+    // was always there. Null when the head named none.
+    internal static IAssetProvider? CreateZipAssetProvider(IReadOnlyList<IAsset> zipAssets,
+        string storageFolderPath, string folderName)
+    {
+        return zipAssets.Count == 0
+            ? null
+            : new CompositeAssetProvider(zipAssets
+                .Select((asset, index) => (IAssetProvider)new ZipAssetProvider(asset,
+                    Path.Combine(storageFolderPath, "assets", index == 0 ? folderName : $"{folderName}-{index}")))
+                .ToArray());
+    }
+
     // Mac Catalyst is checked BEFORE iOS on purpose: OperatingSystem.IsIOS() reports true for Catalyst
     // too, so testing iOS first would label a Mac build as an iPhone and hide/show the wrong content.
     public static AppOsType GetOsType()

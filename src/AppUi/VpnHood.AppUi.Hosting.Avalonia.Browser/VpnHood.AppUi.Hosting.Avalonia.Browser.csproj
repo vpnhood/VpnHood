@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0-browser</TargetFramework>
+		<Description>Runs any VpnHood Avalonia UI as a browser page: the app's web host serves it to a paired device, and the page dials the app's API over HTTP. Names no UI; a page project names one (AvaloniaBrowserHost.RunAsync) and imports build/*.props for the WebAssembly settings.</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia.Browser" Version="12.1.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The Application every host builds and the contract a UI fulfils (IAvaloniaUi). -->
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
+		<!-- The app as a UI sees it (VhApp), configured here from the API dialed over HTTP. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Common\VpnHood.AppUi.Common.csproj" />
+		<!-- The API over HTTP: the page runs nothing of the app, it talks to the one that served it. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
+	</ItemGroup>
+</Project>

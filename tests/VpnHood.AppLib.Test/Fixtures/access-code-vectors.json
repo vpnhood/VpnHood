@@ -1,7 +1,7 @@
 {
   "_": [
     "Shared access-code SHAPE vectors. The portal (IapRepository::normalizeAccessCode) and the apps",
-    "(VpnHood.Core.Toolkit AccessCodeUtils.Validate) must agree exactly: a code one accepts and the",
+    "(VpnHood.Net.Toolkit AccessCodeUtils.Validate) must agree exactly: a code one accepts and the",
     "other refuses is a person who cannot use a code they legitimately hold. They drifted once —",
     "the portal required all-digits while the apps allow letters after the checksum.",
     "",

@@ -1,12 +1,14 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Net;
 using Microsoft.Data.Sqlite;
-using VpnHood.AppLib;
-using VpnHood.AppLib.Services;
-using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.App;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.App.Premium;
+using VpnHood.AppLib.App.Services;
+using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Test.Tests;
 
@@ -29,7 +31,7 @@ public class SplitIpDbTest : TestBase
 
     private static SplitCountryService.SplitCountryDbBuilder CreateCountryBuilder(byte[] zipBytes, string[] countryCodes,
         string assetHash, FilterAction action = FilterAction.Include) =>
-        new(() => new ZipArchive(new MemoryStream(zipBytes)), countryCodes, assetHash, action);
+        new(_ => Task.FromResult(new ZipArchive(new MemoryStream(zipBytes))), countryCodes, assetHash, action);
 
     private static long CountRows(string dbPath, string table)
     {

@@ -1,4 +1,7 @@
-﻿namespace VpnHood.AppLib.Services.Updaters;
+﻿
+using VpnHood.AppLib.Api.Updaters;
+
+namespace VpnHood.AppLib.App.Services.Updaters;
 
 internal class AppUpdaterData
 {

@@ -1,0 +1,47 @@
+﻿using System.Diagnostics;
+using System.Reflection;
+using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Logging;
+
+namespace VpnHood.AppLib.App.Windows;
+
+public class AdvancedInstallerUpdaterProvider : IAppUpdaterProvider
+{
+    // return false if the app update system does not work
+    public Task<bool> IsUpdateAvailable(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return UpdateInternal(false, cancellationToken);
+    }
+
+    public Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return UpdateInternal(true, cancellationToken);
+    }
+
+    private static async Task<bool> UpdateInternal(bool executeUpdate, CancellationToken cancellationToken)
+    {
+        // launch updater if exists
+        var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??
+                               throw new Exception("Could not get the parent of Assembly location.");
+
+        var updaterFilePath = Path.Combine(assemblyLocation, "updater.exe");
+        if (!File.Exists(updaterFilePath))
+            throw new Exception($"Could not find updater: {updaterFilePath}.");
+
+        // check for update
+        VhLogger.Instance.LogInformation("Checking for new updates...");
+        var process = Process.Start(updaterFilePath, "/justcheck");
+        await process.WaitForExitAsync(cancellationToken);
+
+        // install update
+        if (process.ExitCode == 0 && executeUpdate) {
+            process = Process.Start(updaterFilePath);
+            await process.WaitForExitAsync(cancellationToken);
+        }
+
+        // https://www.advancedinstaller.com/user-guide/updater.html#updater-return-codes
+        return process.ExitCode is 0 or -536870895;
+    }
+}

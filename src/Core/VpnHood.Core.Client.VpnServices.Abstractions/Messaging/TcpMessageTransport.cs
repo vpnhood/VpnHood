@@ -1,8 +1,8 @@
 using System.Buffers.Binary;
 using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Toolkit.Converters;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Converters;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 

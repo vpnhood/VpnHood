@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.VpnAdapters.Abstractions;
+﻿using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Test.Device;
 

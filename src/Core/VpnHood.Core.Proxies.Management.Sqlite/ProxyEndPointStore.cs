@@ -1,10 +1,10 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.Management.Abstractions;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Generics;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Generics;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Proxies.Management.Sqlite;
 

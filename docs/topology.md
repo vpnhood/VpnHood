@@ -14,7 +14,7 @@ dials into a client, and nothing dials into a server except clients.
 | Piece | What it is | Where it runs |
 | --- | --- | --- |
 | **VpnHood! MANAGER** | The control panel and its agent API. Holds servers, farms, access tokens, usage. | A web service (hosted for you, or your own Access Manager implementation) |
-| **VpnHood! SERVER** | The node that carries traffic. | A VPS or dedicated box you rent — not the user's device — [`src/Apps/Server.Net`](../src/Apps/Server.Net) |
+| **VpnHood! SERVER** | The node that carries traffic. | A VPS or dedicated box you rent — not the user's device — [`src/Apps/Server`](../src/Apps/Server) |
 | **VpnHood! CLIENT / CONNECT** | The end-user app. | The user's phone, desktop, or TV |
 | **Access key** | A base64 blob the user pastes. Not a component, but it is how a client learns anything at all. | Issued by the manager, delivered by you |
 
@@ -119,9 +119,9 @@ Configured in `appsettings.json`:
 ### 3. No manager at all is a supported mode
 
 If `HttpAccessManager` is absent from settings, the server falls back to
-[`FileAccessManager`](../src/Core/VpnHood.Core.Server.Access.FileAccessManager/FileAccessManager.cs)
+[`FileAccessManager`](../src/Core/VpnHood.Core.Server.Access.Managers.FileAccessManagers/FileAccessManager.cs)
 and keeps its tokens in a local folder — the selection is a single branch in
-[`ServerApp.cs`](../src/Apps/Server.Net/ServerApp.cs). Same `IAccessManager` interface,
+[`ServerApp.cs`](../src/Apps/Server/ServerApp.cs). Same `IAccessManager` interface,
 no network, no panel. The server does not know the difference.
 
 This is why "does the server need the manager to run?" is answered *no*: the manager is

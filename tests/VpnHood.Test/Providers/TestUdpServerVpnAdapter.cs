@@ -1,16 +1,16 @@
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.PacketTransports;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.PacketTransports;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
-using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Test.Providers;

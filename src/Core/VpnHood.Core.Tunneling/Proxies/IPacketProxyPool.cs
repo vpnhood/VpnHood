@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.PacketTransports;
+﻿using VpnHood.Net.PacketTransports;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 

@@ -1,8 +1,8 @@
 ﻿using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Monitoring;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Monitoring;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 

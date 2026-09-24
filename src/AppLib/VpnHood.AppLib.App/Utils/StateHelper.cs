@@ -1,15 +1,20 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Dtos;
-using VpnHood.AppLib.Services.Ads;
-using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLib.Api.Settings;
+using VpnHood.AppLib.Api.SplitTunneling;
+using VpnHood.AppLib.App.DtoConverters;
+using VpnHood.AppLib.App.Premium;
+using VpnHood.AppLib.App.Services.Ads;
+using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Utils;
+namespace VpnHood.AppLib.App.Utils;
 
 internal static class StateHelper
 {
@@ -37,15 +42,14 @@ internal static class StateHelper
 
 
 
-    public static AppServerLocationInfo? GetServerLocationInfo(
+    public static CurrentServerLocationInfo? GetServerLocationInfo(
         SessionInfo? sessionInfo,
         ClientProfileInfo? clientProfileInfo)
     {
         // get session server location info
         var sessionServerLocationInfo = sessionInfo?.ServerLocationInfo;
         if (sessionServerLocationInfo != null) {
-            return AppServerLocationInfo.FromInfo(
-                sessionServerLocationInfo,
+            return sessionServerLocationInfo.ToAppDto(
                 clientProfileInfo?.HasMultipleRegion(sessionServerLocationInfo.CountryCode) == true);
         }
 
@@ -53,10 +57,8 @@ internal static class StateHelper
         if (clientProfileInfo?.SelectedLocationInfo is null)
             return null;
 
-        return
-             AppServerLocationInfo.FromInfo(
-                 clientProfileInfo.SelectedLocationInfo,
-                 clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode));
+        return clientProfileInfo.SelectedLocationInfo.ToAppDto(
+            clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode));
     }
 
     // The one place that says why a configured feature is not in effect. The gate itself is silent —
@@ -144,12 +146,12 @@ internal static class StateHelper
             _ => false
         };
 
-        var isIpV6Split = splitTunneling.UnsupportedIpV6Mode is SplitUnsupportedIpMode.Exclude &&
+        var isIpV6Split = splitTunneling.UnsupportedIpV6Mode is Core.Client.Abstractions.SplitUnsupportedIpMode.Exclude &&
                           sessionInfo?.IsIpV6SupportedByServer == false;
 
         // the server's word only splits while the effective mode lets unsupported destinations out —
         // the toggle forces Block, and a power user may have chosen Block even while splitting is allowed
-        var isSplitByServer = splitTunneling.UnroutedIpMode is SplitUnsupportedIpMode.Exclude &&
+        var isSplitByServer = splitTunneling.UnroutedIpMode is Core.Client.Abstractions.SplitUnsupportedIpMode.Exclude &&
                               sessionInfo?.IsTrafficSplitByServer == true;
 
         // SplitDnsMode is deliberately not a split of its own: DefaultRoute only lets DNS follow the
@@ -170,8 +172,8 @@ internal static class StateHelper
             IsSplitByServer = isSplitByServer,
             CountryMode = splitTunneling.CountryMode,
             Countries = splitTunneling.Countries,
-            DnsMode = splitTunneling.DnsMode,
-            UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
+            DnsMode = splitTunneling.DnsMode.ToAppDto(),
+            UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode.ToAppDto(),
             IsSplittingTraffic = isCountrySplit ||
                                  splitTunneling.UseIpViaApp || splitTunneling.UseIpViaDevice ||
                                  splitTunneling.UseDomain || isIpV6Split || isSplitByServer

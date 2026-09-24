@@ -1,8 +1,8 @@
 ﻿using Android.Graphics;
 using Android.Graphics.Drawables;
-using VpnHood.Core.Toolkit.Graphics;
+using VpnHood.Net.Toolkit.Graphics;
 
-namespace VpnHood.Core.Client.Devices.Droid.Utils;
+namespace VpnHood.Core.Client.Devices.Android.Utils;
 
 public static class AndroidExtensions
 {

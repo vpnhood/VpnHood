@@ -4,11 +4,12 @@ using ObjCRuntime;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
-using VpnHood.Core.Quic.Ios;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.VpnAdapters.IosTun;
+using VpnHood.Net.Quic.Ios;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Memory;
+using VpnHood.Net.VpnAdapters.Abstractions;
+using VpnHood.Net.VpnAdapters.IosTun;
 
 namespace VpnHood.Core.Client.Devices.Ios;
 
@@ -185,7 +186,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     {
         // Diagnostics hooks — no-ops unless debug logging is on (the gates follow VhLogger.MinLogLevel,
         // set by the host's LogService from vpn.config just before this per-(re)connect call).
-        Toolkit.Memory.VhTypeTracker.Enabled = IosMemoryMonitor.Enabled;
+        VhTypeTracker.Enabled = IosMemoryMonitor.Enabled;
         IosMemoryMonitor.Start();
 
         return new IosVpnAdapter(this, new IosVpnAdapterSettings {

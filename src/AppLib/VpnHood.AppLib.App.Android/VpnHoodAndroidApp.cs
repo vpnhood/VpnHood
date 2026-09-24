@@ -1,0 +1,48 @@
+﻿using Android.Runtime;
+using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.Utils;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
+
+namespace VpnHood.AppLib.App.Android;
+
+public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
+{
+    public static VpnHoodAndroidApp Init(Func<AppOptions> optionsFactory)
+    {
+        AndroidEnvironment.UnhandledExceptionRaiser += OnUnhandledExceptionRaiser;
+
+
+        // do not init again or in the vpn service/tile processes
+        if (VpnHoodApp.IsInit || AndroidDevice.IsVpnServiceProcess || QuickLaunchTileService.IsTileProcess)
+            return new VpnHoodAndroidApp();
+
+        //app init
+        var options = optionsFactory();
+        options.DeviceUiProvider ??= new AndroidDeviceUiProvider();
+        options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
+        options.DeviceId ??= AndroidUtils.GetDeviceId(Application.Context); //this will be hashed using AppId
+
+        var vpnHoodDevice = AndroidDevice.Create();
+        VpnHoodApp.Init(vpnHoodDevice, options);
+        return new VpnHoodAndroidApp();
+    }
+
+    private static void OnUnhandledExceptionRaiser(object? sender, RaiseThrowableEventArgs args)
+    {
+        // Log the error to your analytics service here
+        var exception = args.Exception;
+        VhLogger.Instance.LogError(exception, "Unhandled exception in Android environment");
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) {
+            if (VpnHoodApp.IsInit)
+                VpnHoodApp.Instance.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
+}

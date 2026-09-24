@@ -1,8 +1,8 @@
-﻿using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
-using VpnHood.Core.Client.Devices.Droid.Utils;
-using VpnHood.Core.Client.Devices.UiContexts;
+﻿using VpnHood.Core.Client.Devices.Android.ActivityEvents;
+using VpnHood.Core.Client.Devices.Android.Utils;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
-namespace VpnHood.Core.Client.Devices.Droid;
+namespace VpnHood.Core.Client.Devices.Android;
 
 public class AndroidUiContext(IActivityEvent activityEvent) : IUiContext
 {

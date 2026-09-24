@@ -3,8 +3,8 @@ using System.Net;
 using System.Text.Json;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server;
 

@@ -32,7 +32,7 @@ on:
         type: string
         required: true
       webui_ref:
-        description: "vpnhood/VpnHood.Client.WebUI ref supplying the store tooling."
+        description: "vpnhood/VpnHood.AppUi.Spa ref supplying the store tooling."
         type: string
         required: false
         default: develop
@@ -72,7 +72,7 @@ jobs:
       - name: Checkout the store tooling
         uses: actions/checkout@v5
         with:
-          repository: vpnhood/VpnHood.Client.WebUI
+          repository: vpnhood/VpnHood.AppUi.Spa
           ref: ${{ inputs.webui_ref }}
           path: .webui
 
@@ -83,7 +83,7 @@ jobs:
 
       - name: Compare against the last published listing
         id: state
-        run: node .webui/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE"
+        run: node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE"
 
       # Apple never carries "What's New" over to a newly created version — the field starts empty
       # and is required per localization — while the fingerprint above compares only repo content.
@@ -96,7 +96,7 @@ jobs:
         if: steps.state.outputs.ios_changed != 'true' && inputs.force != true && inputs.skip_metadata != true && inputs.skip_screenshots != true && env.APPSTORE_CONNECT_API_KEY != ''
         run: |
           set +e
-          node .webui/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --whatsnew-check
+          node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --whatsnew-check
           rc=$?
           set -e
           if [ "$rc" = "4" ]; then
@@ -161,7 +161,7 @@ jobs:
       - name: Checkout the store tooling
         uses: actions/checkout@v5
         with:
-          repository: vpnhood/VpnHood.Client.WebUI
+          repository: vpnhood/VpnHood.AppUi.Spa
           ref: ${{ inputs.webui_ref }}
           path: .webui
 
@@ -174,11 +174,11 @@ jobs:
       # other half as "already published". Only a complete push may be recorded.
       - name: Record the App Store listing
         if: needs.appstore.outputs.published == 'true' && !inputs.skip_metadata && !inputs.skip_screenshots
-        run: node .webui/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update ios
+        run: node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update ios
 
       - name: Record the Google Play listing
         if: needs.play.outputs.published == 'true'
-        run: node .webui/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update android
+        run: node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update android
 
       - name: Commit the published fingerprints
         run: |

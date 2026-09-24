@@ -1,0 +1,15 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppUi.Common"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.SplitDisabledAlert">
+  <!-- The web UI's SplitTunnelingDisabledAlert: a split page reached while splitting is off says
+       why its edits have no effect, and repairs it in one press. -->
+  <Border Classes="alert-warning" Margin="0,0,0,16">
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Classes="body-small" TextWrapping="Wrap" VerticalAlignment="Center" Text="{Binding SplitTunnelingDisabledAlert, Source={x:Static res:Strings.Current}}" />
+      <Button x:Name="TurnOnButton" Grid.Column="1" Classes="alert-link" Margin="8,0,0,0" Click="OnTurnOnClick">
+        <TextBlock Text="{Binding TurnOn, Source={x:Static res:Strings.Current}}" />
+      </Button>
+    </Grid>
+  </Border>
+</UserControl>

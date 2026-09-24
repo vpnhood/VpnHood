@@ -1,0 +1,88 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppUi.Common"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.MainView"
+             xmlns:animation="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Animation"
+             xmlns:helpers="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers"
+             XYFocus.NavigationModes="Enabled"
+             FontFamily="fonts:VpnHood#Poppins"
+             FontWeight="Light"
+             FlowDirection="{Binding IsRightToLeft, Source={x:Static res:Strings.Current}, Converter={x:Static helpers:FlowDirectionConverter.Instance}}"
+             Background="{StaticResource BackgroundBrush}">
+  <!-- One host, one page at a time; the pages push and pop through the code-behind, and Back
+       pops. The host is the "Page" container the layouts query (AppTheme, the views): its own
+       width, never its content's, decides which layout a page takes. The pages change hands with
+       the web UI's route transition (OutInTransition), reversed on the way back. Over the page,
+       in the order the web UI's App.vue stacks them: the reconnect bar, the drawer, the dialogs
+       and the snackbar. The font is the web UI's: Poppins Light for text, Bold where a style says.
+       The language's direction is set here, on the root (Strings.IsRightToLeft), and everything
+       beneath mirrors with it: the drawer's "Left" is the start edge, the right in Persian. -->
+  <Panel>
+    <TransitioningContentControl x:Name="Host" Container.Name="Page" Container.Sizing="Width">
+      <TransitioningContentControl.PageTransition>
+        <animation:OutInTransition />
+      </TransitioningContentControl.PageTransition>
+    </TransitioningContentControl>
+
+    <!-- ReconnectRequiredAlert: a connect-only setting changed while a session runs -->
+    <Border x:Name="ReconnectBar" Classes="reconnect-bar" VerticalAlignment="Top" IsVisible="False" Margin="0,78,0,0">
+      <Grid ColumnDefinitions="*,Auto,Auto" MaxWidth="720">
+        <TextBlock Text="{Binding ReconnectRequiredMsg, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="alert-link" Click="OnReconnectClick" Margin="8,0">
+          <TextBlock Text="{Binding Reconnect, Source={x:Static res:Strings.Current}}" />
+        </Button>
+        <Button Grid.Column="2" Classes="icon small" Click="OnReconnectDismissClick">
+          <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Close}" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- the drawer, off the TV UI: a scrim, and the panel from the start edge. Both are animated
+         from the code-behind, as Vuetify's temporary navigation drawer animates them. -->
+    <Panel x:Name="DrawerLayer" IsVisible="False">
+      <Border x:Name="DrawerScrim" Background="{StaticResource ScrimBrush}" PointerPressed="OnScrimPressed" />
+      <ContentControl x:Name="DrawerContent" HorizontalAlignment="Left" />
+    </Panel>
+
+    <!-- the dialogs: a scrim, and the one on top of the stack, centred -->
+    <Panel x:Name="DialogLayer" IsVisible="False">
+      <Border Background="{StaticResource ScrimBrush}" />
+      <ContentControl x:Name="DialogContent" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16" />
+    </Panel>
+
+    <!-- UpdateSnackbar: a newer version and the way to it, until Later -->
+    <Border x:Name="UpdateNotice" Classes="snackbar update-alert" IsVisible="False" MaxWidth="570" HorizontalAlignment="Center">
+      <StackPanel Spacing="8" MinWidth="320">
+        <TextBlock x:Name="UpdateNoticeText" Classes="body-large" />
+        <Button x:Name="UpdateStoreButton" Classes="update-btn" Click="OnUpdateStoreClick" Content="{Binding UpdateFromGooglePlay, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="UpdateDirectButton" Classes="update-btn" Click="OnUpdateDirectClick" Content="{Binding UpdateFromDirectLink, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="UpdateNoStoreButton" Classes="update-btn tonal" Click="OnUpdateNoStoreClick" Content="{Binding DoNotHaveAccessToGooglePlay, Source={x:Static res:Strings.Current}}" />
+        <StackPanel x:Name="UpdateAlternative" Spacing="4" IsVisible="False">
+          <Button Classes="update-btn tonal" Click="OnUpdateDirectClick" Content="{Binding UpdateFromAlternativeLink, Source={x:Static res:Strings.Current}}" />
+          <TextBlock Classes="body-small" TextAlignment="Center" Opacity="0.6" Text="{Binding UpdateFromAlternativeLinkNotice, Source={x:Static res:Strings.Current}}" />
+        </StackPanel>
+        <Border Classes="divider" Margin="0,4" />
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock x:Name="UpdateCurrentText" Classes="body-small" Opacity="0.6" />
+            <TextBlock x:Name="UpdateNewText" Classes="body-small" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="update-btn tonal" Width="NaN" HorizontalAlignment="Right" Click="OnUpdateLaterClick" Content="{Binding Later, Source={x:Static res:Strings.Current}}" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <!-- GeneralSnackbar: a sentence at the top, gone by itself or by Close -->
+    <Border x:Name="Snackbar" Classes="snackbar" IsVisible="False">
+      <StackPanel Spacing="6">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <TextBlock x:Name="SnackbarIcon" Classes="mdi" FontSize="22" Margin="0,0,10,0" />
+          <TextBlock x:Name="SnackbarText" Grid.Column="1" />
+          <Button x:Name="SnackbarClose" Grid.Column="2" Margin="12,0,0,0" IsVisible="False" Click="OnSnackbarCloseClick"
+                  Content="{Binding Close, Source={x:Static res:Strings.Current}}" />
+        </Grid>
+        <ProgressBar x:Name="SnackbarBar" Minimum="0" Maximum="1" Value="1" MinHeight="3" Foreground="#73FFFFFF" Background="Transparent" />
+      </StackPanel>
+    </Border>
+  </Panel>
+</UserControl>

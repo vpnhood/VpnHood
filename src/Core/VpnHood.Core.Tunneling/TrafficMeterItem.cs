@@ -1,5 +1,5 @@
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 

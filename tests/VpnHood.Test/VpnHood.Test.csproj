@@ -15,13 +15,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
 		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
 		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Quic.MsQuic\VpnHood.Core.Quic.MsQuic.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Server.Access.FileAccessManager\VpnHood.Core.Server.Access.FileAccessManager.csproj" />
+		<ProjectReference Include="..\..\src\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
+		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Server.Access.Managers.FileAccessManagers\VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
 		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Client.Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />
+		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Client.Devices.Windows\VpnHood.Core.Client.Devices.Windows.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

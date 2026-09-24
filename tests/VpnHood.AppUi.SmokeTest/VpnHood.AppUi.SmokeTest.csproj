@@ -1,0 +1,46 @@
+﻿<Project Sdk="MSTest.Sdk/4.3.3">
+	<PropertyGroup>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<IsPackable>false</IsPackable>
+		<UseVSTest>true</UseVSTest>
+		<!-- UI Automation ships in the Windows Desktop framework; the walk uses no other part of it. -->
+		<UseWPF>true</UseWPF>
+		<!--MSTest.Sdk injects the test packages implicitly; override its bundled versions via these properties, NOT
+		    PackageReference Update (which is a no-op against the SDK's late .targets Include).-->
+		<MicrosoftNETTestSdkVersion>18.9.0</MicrosoftNETTestSdkVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Built so a walk always has something to run, and referenced for nothing else: the test
+		     drives the head the way a person does, through its window, not through its types. -->
+		<ProjectReference Include="..\..\src\Apps\Tools\AvaloniaUI.Dev\VpnHood.App.AvaloniaUI.Dev.csproj"
+						  ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Where that head's build put it, resolved at build time, so the test searches for nothing
+		     and a walk in Release never drives a Debug window by accident. -->
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>DevHeadDirectory</_Parameter1>
+			<_Parameter2>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\src\Apps\Tools\AvaloniaUI.Dev\bin\$(Configuration)\net10.0'))</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- the screen copy behind the walk's pictures; Windows-only, as this project is -->
+		<PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="MSTest.TestAdapter" Version="4.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="MSTest.TestFramework" Version="4.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+	</ItemGroup>
+
+</Project>

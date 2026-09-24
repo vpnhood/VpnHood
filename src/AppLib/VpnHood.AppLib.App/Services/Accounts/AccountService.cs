@@ -1,14 +1,15 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Settings;
-using VpnHood.Core.Client.Devices.UiContexts;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.AppLib.App.ClientProfiles;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.App.Settings;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Services.Accounts;
+namespace VpnHood.AppLib.App.Services.Accounts;
 
 public class AccountService
 {

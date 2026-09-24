@@ -1,48 +1,56 @@
-using System.Globalization;
-using System.IO.Compression;
+﻿using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using TaskExtensions = VpnHood.Core.Toolkit.Extensions.TaskExtensions;
-using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Abstractions.Billing;
+using TaskExtensions = VpnHood.Net.Toolkit.Extensions.TaskExtensions;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Diagnosing;
-using VpnHood.AppLib.DtoConverters;
-using VpnHood.AppLib.Exceptions;
-using VpnHood.AppLib.Providers;
-using VpnHood.AppLib.Services;
-using VpnHood.AppLib.Services.Accounts;
-using VpnHood.AppLib.Services.Ads;
-using VpnHood.AppLib.Services.Proxies;
-using VpnHood.AppLib.Services.Updaters;
-using VpnHood.AppLib.Settings;
-using VpnHood.AppLib.Utils;
+using VpnHood.AppLib.App.ClientProfiles;
+using VpnHood.AppLib.Api;
+using VpnHood.AppLib.App.ApiImpl;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.App.Branding;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.Premium;
+using VpnHood.AppLib.Api.Settings;
+using VpnHood.AppLib.App.Diagnosing;
+using VpnHood.AppLib.App.DtoConverters;
+using VpnHood.AppLib.Api.Exceptions;
+using VpnHood.AppLib.App.Premium;
+using VpnHood.AppLib.App.Providers;
+using VpnHood.AppLib.App.Services.Countries;
+using VpnHood.AppLib.App.Services;
+using VpnHood.AppLib.App.Services.Accounts;
+using VpnHood.AppLib.App.Services.Ads;
+using VpnHood.AppLib.App.Services.Proxies;
+using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.AppLib.App.Settings;
+using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
-using VpnHood.Core.Client.Devices;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.IpLocations;
-using VpnHood.Core.IpLocations.Providers.Offlines;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Trackers;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.IpLocations;
+using VpnHood.Net.IpLocations.Providers.Offlines;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Trackers;
+using VpnHood.Net.Toolkit.Utils;
+using VpnHood.AppLib.App.WebHosting;
+using VpnHood.Net.Toolkit.Assets;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 public class VpnHoodApp : Singleton<VpnHoodApp>,
     IPremiumFeatureChecker, IDisposable, IAsyncDisposable
@@ -61,10 +69,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CancellationTokenSource _showAdCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
     private CultureInfo? _systemUiCulture;
-    private IReadOnlyList<DeviceAppInfo>? _installedApps;
+    private IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>? _installedApps;
     private bool _isConnecting;
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
+    private readonly AppWebHostManager _webHostManager;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     internal IIpRangeLocationProvider? IpRangeLocationProvider => _ipRangeLocationProvider;
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -79,25 +88,56 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public ClientProfileService ClientProfileService { get; }
     public Diagnoser Diagnoser { get; } = new();
     public AppResources Resources { get; }
+
+    // Completes when Resources are final: the look read out of the UI's store, or the built-in one
+    // when there is no store or it could not be read. Anything the user would SEE change waits for
+    // this and draws once - a tray icon or a window that appears a moment later goes unnoticed, one
+    // that switches under them does not. Never faulted, so a waiter needs no catch for it.
+    public Task ResourcesLoaded { get; }
+
+    public IAssetProvider? UiAssetProvider { get; }
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
     // Building this list is expensive (on Android it loads and png encodes an icon for every
     // installed app), so it is cached until the app returns to the foreground, which is the only
     // moment the user could have installed or removed an app.
-    public IReadOnlyList<DeviceAppInfo> InstalledApps => _installedApps ??= _device.InstalledApps;
+    public IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo> InstalledApps =>
+        _installedApps ??= _device.InstalledApps;
 
 
     public AppAdManager AdManager { get; }
+
+    // What a UI reads this app through - the same six interfaces a browser reaches over HTTP, here
+    // answered in process with no listener and no JSON. The implementations are internal: a head
+    // holds this object and the contract's interfaces, never their classes.
+    public VpnHoodApi Api { get; }
+
+    // The two hosts a head can ask for; null when this head runs no web host at all. Everything about
+    // them - what each is told, when they come up by themselves, what a settings change does to them -
+    // belongs to AppWebHostManager, so this is only the way in.
+    public IAppWebHost? LocalWebHost => _webHostManager.Local;
+    public IAppWebHost? RemoteWebHost => _webHostManager.Remote;
 
     private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options)
         : base(register: options.IsSingleton)
     {
         var appVersion = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version();
-        Resources = options.Resources;
+        Resources = new AppResources();
         StorageFolderPath = options.StorageFolderPath ??
                             throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = settingsService;
         SettingsService.BeforeSave += SettingsBeforeSave;
+
+        // The head names the zips; where they are unpacked is the app's own business - one fixed
+        // folder each under its storage, so no two of them can be handed the same one. The UI's are
+        // one provider over all the head named, in the order it named them.
+        UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAssets, StorageFolderPath, "ui");
+        _webHostManager = new AppWebHostManager(this, options.WebHostFactory, 
+            AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, StorageFolderPath, "web-root"));
+
+        // The look the OS chrome draws with, out of the UI's store, read while the rest of the app
+        // comes up; whatever draws with it waits for ResourcesLoaded, not for this line.
+        ResourcesLoaded = AppBranding.LoadAsync(Resources, UiAssetProvider, options.UiTheme);
         _device = device;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _logService = logService;
@@ -115,16 +155,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Transport = options.Transport
         };
 
-        _ipRangeLocationProvider = options.Resources.IpLocationZipData is { } ipLocationZipData
+        _ipRangeLocationProvider = options.IpLocationZipAsset is { } ipLocationZipAsset
             ? new LocalIpRangeLocationProvider(
-                () => new ZipArchive(new MemoryStream(ipLocationZipData.Value)),
+                ipLocationZipAsset,
                 () => AppRegionInfo.CurrentRegion.Name)
             : null;
 
         // each split service owns its whole activity decision: its settings gate + the premium plan
         // (this app implements IPremiumFeatureChecker)
         var splitCountryService = new SplitCountryService(settingsService, this, _ipRangeLocationProvider,
-            ipLocationZipData: options.Resources.IpLocationZipData);
+            ipLocationZipAsset: options.IpLocationZipAsset);
         splitCountryService.StateChanged += LocationService_StateChanged;
 
         var splitIpViaAppService = new SplitIpViaAppService(settingsService, this);
@@ -170,7 +210,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsTv = device.IsTv || HasDebugCommand(DebugCommands.TvMode),
             OsType = AppUtils.GetOsType(),
             AdjustForSystemBars = options.AdjustForSystemBars,
-            UiName = options.UiName,
+            UiTheme = options.UiTheme,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.Billing != null,
             AuthProviderIds = options.AccountProvider?.AuthenticationProvider.ProviderIds ?? [],
@@ -184,17 +224,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             WebUiPort = options.WebUiPort,
             ClientId = clientId,
             AppId = options.AppId,
-            AppName = options.Resources.Strings.AppName,
+            AppName = options.AppName,
+            CompanyName = options.CompanyName,
             IsLicenseAgreementRequired = options.IsLicenseAgreementRequired,
             PrivacyPolicyUrl = options.PrivacyPolicyUrl,
             TermsOfUseUrl = options.TermsOfUseUrl,
+            LogoAssetPath = options.LogoAssetPath,
+            PrivacyConsentAssetName = options.PrivacyConsentAssetName,
             DebugCommands = DebugCommands.All,
             IsDebugMode = options.IsDebugMode,
             CustomData = options.CustomData,
             IsAdSupported = options.AdProviderItems.Any(),
             IsRewardedAdSupported = options.AdProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd),
             IsProxySupported = true,
-            ChannelProtocols = [.. protocols]
+            IsRemoteAccessSupported = options.WebHostFactory != null,
+            ChannelProtocols = [.. protocols.Select(x => x.ToAppDto())]
         };
 
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles), Features);
@@ -268,6 +312,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (options.AdProviderItems.Any(x => x.Name == "InternalAd"))
             AdManager.AdService.EnableAdProvider("InternalAd", SettingsService.RemoteSettings?.ShowInternalAd == true);
 
+        // The API over this app, built last: every service it reaches through must already exist.
+        Api = new VpnHoodApi(
+            app: new AppApi(this),
+            clientProfiles: new ClientProfilesApi(this),
+            account: new AccountApi(this),
+            billing: new BillingApi(this),
+            intents: new IntentsApi(this),
+            proxyEndPoints: new ProxyEndPointsApi(this));
+
         // Apply settings but no error on startup
         ApplySettings();
 
@@ -281,6 +334,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task OnStartup()
     {
+        CleanupLegacyTempFolder();
+
         // track first launch with the locale-based country
         try {
             if (!SettingsService.Settings.IsStartupTrackerSent) {
@@ -294,12 +349,26 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
         }
 
+        await _webHostManager.StartAlwaysOn(CancellationToken.None).Vhc();
+
         // Deliberately NO account refresh here. Launching the app is not a reason to call the portal:
         // a credential that still works needs no permission to go on working, and the people with no
         // premium at all are the many — every one of their launches would be pure load for an answer
         // nobody was waiting for. The account is asked when something actually depends on it: an
         // expiry that has passed, a code typed in, a refusal from the access server, a purchase, or
         // the person pressing refresh.
+    }
+
+    // Where every build up to 8.1 extracted the page's files, under the folder name of that era;
+    // 8.2 moved them under Temp/WebRoot/<hash>, and WebRoot cleans only that root, so on a machine
+    // that upgraded the old folder would sit there for good. Delete this method once
+    // DeprecatedVersion (pub/PubVersion.json) passes 8.2 - no install that old can still be
+    // upgrading. Temp itself stays: a head may keep data of its own in it.
+    private void CleanupLegacyTempFolder()
+    {
+        var folderPath = Path.Combine(TempFolderPath, "SPA");
+        if (Directory.Exists(folderPath))
+            VhUtils.TryInvoke("Delete the legacy page temp folder", () => Directory.Delete(folderPath, true));
     }
 
     private void ApplySettings()
@@ -350,6 +419,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             TaskExtensions.DefaultContinueOnCapturedContext =
                 HasDebugCommand(DebugCommands.CaptureContext);
 
+            // the developer's open door, opened or shut from the running app
+            _webHostManager.ApplySettings();
+
             // apply the last known client country (reported by the server); fall back to the device region
             if (UserSettings.CountryCode != null)
                 VhUtils.TryInvoke("Apply the client country",
@@ -398,7 +470,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
         var reconfigureParams = new ClientReconfigureParams {
-            ChannelProtocol = UserSettings.ChannelProtocol,
+            ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
             DropQuic = UserSettings.DropQuic,
             UseTcpProxy = UserSettings.UseTcpProxy,
             DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
@@ -487,21 +559,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ConnectRequestTime = _appPersistState.ConnectRequestTime,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
                 SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
-                PurchaseState = Services.AccountService?.BillingService?.PurchaseState,
+                PurchaseState = Services.AccountService?.BillingService?.PurchaseState.ToAppDto(),
                 UpdaterStatus = Services.UpdaterService?.Status,
                 LastError = LastError?.ToAppDto(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
-                ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol ?? UserSettings.ChannelProtocol,
+                ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol.ToAppDto() ??
+                                  UserSettings.ChannelProtocol,
                 IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
-                SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()),
+                SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()?.ToAppDto()),
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
                 PromotionExists = PromotionExists(),
                 TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo, this),
                 SplitTunnelingState = StateHelper.GetSplitTunnelingState(UserSettings, connectionInfo?.SessionInfo, this),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
-                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext)
-                    : SystemBarsInfo.Default
+                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext).ToAppDto()
+                    : VpnHood.AppLib.Api.Device.SystemBarsInfo.Default
             };
 
             return appState;
@@ -787,7 +860,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent,
-        ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
+        Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
         CancellationToken cancellationToken)
     {
         var profileInfo = CurrentClientProfileInfo ?? throw new NotExistsException("ClientProfile is not set.");
@@ -827,7 +900,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // create clientOptions
             var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
             var clientOptions = new ClientOptions {
-                AppName = Resources.Strings.AppName,
+                AppName = Features.AppName,
                 ClientId = Features.ClientId,
                 AccessKey = token.ToAccessKey(),
                 Transport = Config.Transport,
@@ -840,9 +913,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UseTcpProxy = UserSettings.UseTcpProxy,
                 DropQuic = UserSettings.DropQuic,
                 DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                ChannelProtocol = UserSettings.ChannelProtocol,
+                ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
                 ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
-                PlanId = planId,
+                PlanId = planId.ToEngine(),
                 AccessCode = accessCode,
                 IsTcpProxySupported = Features.IsTcpProxySupported,
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
@@ -857,8 +930,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 TrackerFactoryAssemblyQualifiedName = Config.TrackerFactoryAssemblyQualifiedName,
                 UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
                 EndPointStrategy = Features.AllowEndPointStrategy
-                    ? UserSettings.EndPointStrategy
-                    : EndPointStrategy.Auto,
+                    ? UserSettings.EndPointStrategy.ToEngine()
+                    : Core.Common.Tokens.EndPointStrategy.Auto,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2,
                 SessionName = profileInfo.ClientProfileName,
@@ -881,7 +954,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // start to diagnose if requested
             if (_appPersistState.HasDiagnoseRequested) {
                 var hostEndPoints = await EndPointResolver
-                    .ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy, cancellationToken).Vhc();
+                    .ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy.ToEngine(), cancellationToken).Vhc();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).Vhc();
                 await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
                 await _vpnServiceManager.Start(serviceOptions, cancellationToken).Vhc();
@@ -1059,6 +1132,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return HasDebugCommand(UserSettings, command);
     }
 
+    // The command in the settings kept in the storage folder, read without starting the app: for
+    // a head that must choose its UI framework before it can start the app (iOS names its
+    // delegate to UIKit first). Everything else asks the instance.
+    public static bool HasDebugCommand(string storageFolderPath, string command)
+    {
+        var settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsService.GetAppSettingsFilePath(storageFolderPath));
+        return settings != null && HasDebugCommand(settings.UserSettings, command);
+    }
+
     private static bool HasDebugCommand(UserSettings userSettings, string command)
     {
         if (string.IsNullOrEmpty(userSettings.DebugData1))
@@ -1231,7 +1313,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // save SuccessfulConnectionsCount
             if (FastDateTime.UtcNow > state.SessionInfo?.CreatedTime.AddMinutes(15) && // 15 minutes
-                state.SessionStatus?.SessionTraffic.Total > 5_000_000) // 5MB
+                state.SessionStatus?.SessionTraffic is { } traffic && traffic.Sent + traffic.Received > 5_000_000) // 5MB
                 _appPersistState.SuccessfulConnectionsCount++;
 
             // set review needed after disconnecting. It must be in connected state
@@ -1338,7 +1420,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         var purchaseOptions = new AppPurchaseOptions {
             IsStoreAvailable = storeInfo.IsAvailable,
-            SubscriptionPlans = storeInfo.SubscriptionPlans,
+            SubscriptionPlans = [.. storeInfo.SubscriptionPlans.Select(x => x.ToAppDto())],
             StoreError = storeInfo.StoreError,
             PurchaseUrl = purchaseUrl,
             // the remote policy offers it; the BUILD must also be allowed to take a typed code at
@@ -1409,6 +1491,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
         Services.SplitCountryService.StateChanged -= LocationService_StateChanged;
         Services.SplitIpViaAppService.StateChanged -= LocationService_StateChanged;
+        _webHostManager.Dispose();
         _vpnServiceManager.Dispose();
         Services.UpdaterService?.Dispose();
         Services.Dispose();

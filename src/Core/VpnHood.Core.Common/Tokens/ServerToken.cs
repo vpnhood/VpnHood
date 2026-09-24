@@ -2,8 +2,8 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Toolkit.Converters;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Converters;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.Tokens;
 

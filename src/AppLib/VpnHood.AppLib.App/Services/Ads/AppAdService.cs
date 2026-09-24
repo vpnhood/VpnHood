@@ -1,14 +1,14 @@
 ﻿using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices.UiContexts;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Monitoring;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Monitoring;
+using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
-namespace VpnHood.AppLib.Services.Ads;
+namespace VpnHood.AppLib.App.Services.Ads;
 
 public class AppAdService(
     IReadOnlyList<AppAdProviderItem> adProviderItems,

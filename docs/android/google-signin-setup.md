@@ -2,7 +2,7 @@
 
 Google sign-in only works in a **debug** build after that build's signing certificate is registered
 with Firebase. Without these steps, signing in fails on a developer machine while working fine in
-release builds. Applies to `src/Apps/Connect.Android.Google`.
+release builds. Applies to `src/Apps/Connect/Connect.Android.Google`.
 
 Background: [Authenticating your client](https://developers.google.com/android/guides/client-auth#windows).
 

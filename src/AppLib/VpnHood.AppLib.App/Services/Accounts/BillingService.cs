@@ -1,11 +1,11 @@
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.Core.Client.Devices.UiContexts;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Services.Accounts;
+namespace VpnHood.AppLib.App.Services.Accounts;
 
 public class BillingService(
     AccountService accountService,

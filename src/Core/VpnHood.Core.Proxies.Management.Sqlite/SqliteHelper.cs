@@ -1,5 +1,5 @@
 using Microsoft.Data.Sqlite;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Proxies.Management.Sqlite;
 

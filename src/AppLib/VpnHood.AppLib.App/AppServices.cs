@@ -1,12 +1,12 @@
 using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Services;
-using VpnHood.AppLib.Services.Accounts;
-using VpnHood.AppLib.Services.Proxies;
-using VpnHood.AppLib.Services.Updaters;
+using VpnHood.AppLib.App.Services;
+using VpnHood.AppLib.App.Services.Accounts;
+using VpnHood.AppLib.App.Services.Proxies;
+using VpnHood.AppLib.App.Services.Updaters;
 
-namespace VpnHood.AppLib;
+namespace VpnHood.AppLib.App;
 
 public class AppServices : IDisposable
 {

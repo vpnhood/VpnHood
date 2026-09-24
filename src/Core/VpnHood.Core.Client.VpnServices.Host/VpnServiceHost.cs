@@ -5,13 +5,13 @@ using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Sockets;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Sockets;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 

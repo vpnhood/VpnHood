@@ -1,0 +1,17 @@
+﻿using VpnHood.Net.Toolkit.Extensions;
+
+namespace VpnHood.App.Server;
+
+internal static class Program
+{
+    private static async Task Main(string[] args)
+    {
+        try {
+            using var serverApp = new ServerApp();
+            await serverApp.Start(args, CancellationToken.None).Vhc();
+        }
+        catch (Exception ex) {
+            throw new Exception(ex.Message);
+        }
+    }
+}

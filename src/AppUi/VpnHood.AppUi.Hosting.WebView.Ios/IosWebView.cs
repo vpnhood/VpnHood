@@ -1,0 +1,232 @@
+using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.App;
+using VpnHood.AppUi.Hosting.WebView;
+using VpnHood.Net.Toolkit.Logging;
+using WebKit;
+
+namespace VpnHood.AppUi.Hosting.WebView.Ios;
+
+// iOS IWebView adapter: the only iOS-specific SPA-hosting code. It owns a WKWebView (plus a
+// loading spinner and an error label) inside the given UIViewController, and maps the
+// WKNavigationDelegate callbacks onto the platform-neutral events WebViewHost drives.
+public sealed class IosWebView : IWebView
+{
+    private readonly UIViewController _controller;
+    private readonly UIColor _backgroundColor;
+    private readonly IosReportViewer _reportViewer;
+    private WKWebView? _webView;
+    private readonly UIActivityIndicatorView? _spinner;
+
+    public event EventHandler? PageLoaded;
+    public event EventHandler? LoadFailed;
+    public event EventHandler? ContentProcessGone;
+
+    public IosWebView(UIViewController controller, UIColor backgroundColor)
+    {
+        _controller = controller;
+        _backgroundColor = backgroundColor;
+        _reportViewer = new IosReportViewer(controller, backgroundColor);
+
+        // Loading indicator, centered and shown immediately (SPA zip extraction + socket bind happen
+        // before the first navigation). Hidden automatically once stopped.
+        _spinner = new UIActivityIndicatorView(UIActivityIndicatorViewStyle.Large) {
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            HidesWhenStopped = true
+        };
+        var view = _controller.View!;
+        view.AddSubview(_spinner);
+        NSLayoutConstraint.ActivateConstraints([
+            _spinner.CenterXAnchor.ConstraintEqualTo(view.CenterXAnchor),
+            _spinner.CenterYAnchor.ConstraintEqualTo(view.CenterYAnchor)
+        ]);
+        _spinner.StartAnimating();
+    }
+
+    public void Initialize()
+    {
+        var config = new WKWebViewConfiguration();
+        config.AllowsInlineMediaPlayback = true;
+        config.DefaultWebpagePreferences ??= new WKWebpagePreferences();
+        config.DefaultWebpagePreferences.AllowsContentJavaScript = true;
+        // Autoplay/JS-opened windows without a user gesture (parity with the Android WebView).
+        config.MediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypes.None;
+
+        // Disable user zoom: the SPA is app UI, not a web document, so pinch/double-tap zoom is a bug
+        // (users zoom by accident and can't reset). Pin the viewport scale and swallow the pinch
+        // gesture. Unlike mobile Safari, an app WKWebView honors user-scalable=no. Injected at
+        // document-end so it overrides whatever viewport the SPA's HTML declared.
+        config.UserContentController.AddUserScript(new WKUserScript(
+            new NSString(
+                "var vp = document.querySelector('meta[name=viewport]');" +
+                "if (!vp) { vp = document.createElement('meta'); vp.setAttribute('name','viewport'); document.head.appendChild(vp); }" +
+                "vp.setAttribute('content','width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');" +
+                "document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive: false });"),
+            WKUserScriptInjectionTime.AtDocumentEnd, isForMainFrameOnly: true));
+
+        var view = _controller.View!;
+        _webView = new WKWebView(view.Bounds, config) {
+            AutoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight,
+            BackgroundColor = _backgroundColor,
+            Opaque = false,
+            NavigationDelegate = new NavDelegate(this),
+            // Handles target="_blank"/window.open links (e.g. the error dialog's "Open Report"), which
+            // WKWebView drops silently without a UI delegate. Routed to IosReportViewer.
+            UIDelegate = new UiDelegate(this)
+        };
+
+        // The status-bar / home-indicator safe-area gaps and any over-scroll area should show the
+        // app background color (not white), so the system bars blend into the app like Android.
+        _webView.ScrollView.BackgroundColor = _backgroundColor;
+
+        // Disable the rubber-band over-scroll bounce: the SPA is app UI, not a scrollable web
+        // document, so dragging the whole page and having it snap back looks broken (and Android's
+        // WebView doesn't do it). Overflowing content still scrolls normally; it just stops hard at
+        // the edges instead of bouncing.
+        _webView.ScrollView.Bounces = false;
+
+        // True edge-to-edge: by default WKWebView auto-insets content for the safe area, which would
+        // double up with the SPA's own SystemBarsInfo padding. Disable the automatic inset so the page
+        // fills the whole window and ONLY the SPA pads itself — matching Android's edge-to-edge.
+        _webView.ScrollView.ContentInsetAdjustmentBehavior =
+            UIScrollViewContentInsetAdjustmentBehavior.Never;
+
+        // Allow Safari Web Inspector to attach when debugging (iOS 16.4+).
+        if (VpnHoodApp.Instance.Features.IsDebugMode && OperatingSystem.IsIOSVersionAtLeast(16, 4))
+            _webView.Inspectable = true;
+
+        // Insert below the spinner so the loading indicator stays visible until the first page loads.
+        view.InsertSubview(_webView, 0);
+    }
+
+    public void Load(Uri url)
+    {
+        _webView?.LoadRequest(new NSUrlRequest(new NSUrl(url.ToString())));
+    }
+
+    public void SetLoading(bool isLoading)
+    {
+        if (isLoading)
+            _spinner?.StartAnimating();
+        else
+            _spinner?.StopAnimating();
+    }
+
+    public void ShowError(string message)
+    {
+        _spinner?.StopAnimating();
+
+        var view = _controller.View!;
+        var label = new UILabel {
+            Text = "Failed to start the user interface.\n\n" + message,
+            Lines = 0,
+            TextAlignment = UITextAlignment.Center,
+            TextColor = UIColor.Label,
+            TranslatesAutoresizingMaskIntoConstraints = false
+        };
+        view.AddSubview(label);
+        NSLayoutConstraint.ActivateConstraints([
+            label.CenterXAnchor.ConstraintEqualTo(view.CenterXAnchor),
+            label.CenterYAnchor.ConstraintEqualTo(view.CenterYAnchor),
+            label.LeadingAnchor.ConstraintEqualTo(view.SafeAreaLayoutGuide.LeadingAnchor, 24),
+            label.TrailingAnchor.ConstraintEqualTo(view.SafeAreaLayoutGuide.TrailingAnchor, -24)
+        ]);
+    }
+
+    public void Post(Action action)
+    {
+        _controller.BeginInvokeOnMainThread(action);
+    }
+
+    private void RaisePageLoaded() => PageLoaded?.Invoke(this, EventArgs.Empty);
+    private void RaiseLoadFailed() => LoadFailed?.Invoke(this, EventArgs.Empty);
+    private void RaiseContentProcessGone() => ContentProcessGone?.Invoke(this, EventArgs.Empty);
+
+    private sealed class NavDelegate(IosWebView owner) : WKNavigationDelegate
+    {
+        // Keeps the SPA in its own WebView. A main-frame navigation to a web page would REPLACE the app
+        // UI with that page — no browser chrome, no back button, no way home, and the loopback server the
+        // SPA is served from is gone the moment the app backgrounds, so it reads as a crash. target="_blank"
+        // avoids that by going through the UI delegate, but relying on it means every link author AND every
+        // machine-regenerated translation that carries an <a> has to remember the attribute; one that
+        // doesn't, kills the app. So the invariant is enforced here rather than asked for at each call site.
+        // Android has always done this (AndroidSpaWebViewClient.ShouldOverrideUrlLoading); this is parity.
+        public override void DecidePolicy(WKWebView webView, WKNavigationAction navigationAction,
+            Action<WKNavigationActionPolicy> decisionHandler)
+        {
+            var url = navigationAction.Request.Url;
+
+            // A null TargetFrame means "open in a new window" (target="_blank"/window.open): allow it so
+            // the UI delegate still gets it and routes through IosReportViewer, which additionally keeps
+            // loopback URLs — the log/report — in the in-app viewer that external Safari cannot reach.
+            // Sub-frame loads are the page's own business. Loopback IS the SPA, so its initial load and
+            // reloads must proceed or the UI never appears. Non-http(s) schemes (about:, blob:) are
+            // WKWebView's internal plumbing and must not be handed to the system browser.
+            if (navigationAction.TargetFrame?.MainFrame != true ||
+                url.AbsoluteString is not { } urlString ||
+                !Uri.TryCreate(urlString, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+                uri.IsLoopback) {
+                decisionHandler(WKNavigationActionPolicy.Allow);
+                return;
+            }
+
+            // A real off-origin web link that would have navigated the SPA away. Host only, never the
+            // full URL: these can carry a premium/purchase token and the log is user-shareable.
+            VhLogger.Instance.LogInformation(
+                "Opening an external link in the system browser instead of the SPA WebView. Host: {Host}",
+                VhLogger.FormatHostName(uri.Host));
+
+            decisionHandler(WKNavigationActionPolicy.Cancel);
+            UIApplication.SharedApplication.OpenUrl(url, new NSDictionary(), null);
+        }
+
+        public override void DidFinishNavigation(WKWebView webView, WKNavigation navigation)
+        {
+            owner.RaisePageLoaded();
+        }
+
+        public override void DidFailNavigation(WKWebView webView, WKNavigation navigation, NSError error)
+        {
+            // Failure of an already-committed navigation — not a server-connect failure, so just
+            // clear the loading state rather than triggering a server restart.
+            VhLogger.Instance.LogWarning("WebView navigation failed: {Error}", error.LocalizedDescription);
+            owner.RaisePageLoaded();
+        }
+
+        public override void DidFailProvisionalNavigation(WKWebView webView, WKNavigation navigation,
+            NSError error)
+        {
+            // NSUrlError.Cancelled (-999) is the expected result of superseding an in-flight load
+            // (e.g. our own reload) — it is not a server failure, so don't report it or the reload
+            // would keep cancelling itself.
+            const int nsUrlErrorCancelled = -999;
+            if (error.Code == nsUrlErrorCancelled)
+                return;
+
+            VhLogger.Instance.LogWarning("WebView provisional navigation failed: {Error}",
+                error.LocalizedDescription);
+            owner.RaiseLoadFailed();
+        }
+
+        // iOS jettisoned the WebView's content process under memory pressure — the page is now blank.
+        // Loading again spawns a new one.
+        public override void ContentProcessDidTerminate(WKWebView webView)
+        {
+            VhLogger.Instance.LogWarning("WKWebView content process terminated.");
+            owner.RaiseContentProcessGone();
+        }
+    }
+
+    private sealed class UiDelegate(IosWebView owner) : WKUIDelegate
+    {
+        // WKWebView asks the UI delegate to open target="_blank"/window.open navigations in a "new window".
+        // We never create a second web view; instead we route the URL through IosReportViewer (in-app viewer
+        // for the report, system browser for external links) and return null so no extra web view is created.
+        public override WKWebView? CreateWebView(WKWebView webView, WKWebViewConfiguration configuration,
+            WKNavigationAction navigationAction, WKWindowFeatures windowFeatures)
+        {
+            owner._reportViewer.HandleNewWindow(navigationAction.Request.Url);
+            return null;
+        }
+    }
+}

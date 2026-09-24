@@ -1,0 +1,21 @@
+﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:res="using:VpnHood.AppUi.Common"
+                    xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.ConfirmDialog">
+  <!-- The web UI's ConfirmDialog: a title with the alert mark, the question, No and Yes. No is
+       where the remote lands - the safe answer - and Back answers No too. -->
+  <Border Classes="dialog">
+    <StackPanel Spacing="12">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock x:Name="TitleText" Classes="dialog-title" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Classes="mdi" FontSize="22" Text="{x:Static res:Mdi.AlertCircleOutline}" />
+      </Grid>
+      <TextBlock x:Name="MessageText" Classes="dialog-text" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,8,0,0">
+        <Button x:Name="NoButton" Classes="dialog-btn" Content="{Binding No, Source={x:Static res:Strings.Current}}" Click="OnNoClick" />
+        <Button x:Name="YesButton" Classes="dialog-btn plain" Content="{Binding Yes, Source={x:Static res:Strings.Current}}" Click="OnYesClick" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</dialogs:DialogBase>

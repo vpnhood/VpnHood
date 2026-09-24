@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.IpLocations;
-using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Net.IpLocations;
+using VpnHood.Net.Toolkit.Extensions;
 
-namespace VpnHood.AppLib.Services.Proxies;
+namespace VpnHood.AppLib.App.Services.Proxies;
 
 public class HostCountryResolver(
     IIpLocationProvider ipLocationProvider)

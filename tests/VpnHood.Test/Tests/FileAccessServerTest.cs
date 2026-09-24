@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Messaging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Test.Tests;
 

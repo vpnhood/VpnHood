@@ -106,16 +106,21 @@ jobs:
           $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+      - name: Place the browser page (built once by publish_app's build-browser job)
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-page
+          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/bin
       - name: Build Windows binary (dotnet publish)
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Win.Web/_publish.ps1" -stage publish
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Windows.Web/_publish.ps1" -stage publish
       - name: Package Windows MSI (Advanced Installer)
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Win.Web/_publish.ps1" -stage package
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Windows.Web/_publish.ps1" -stage package
       - uses: actions/upload-artifact@v7
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         with:

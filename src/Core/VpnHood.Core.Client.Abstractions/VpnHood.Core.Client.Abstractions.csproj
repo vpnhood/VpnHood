@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<Description>VpnHood Client Abstractions</Description>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.Core.Client.Abstractions</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>

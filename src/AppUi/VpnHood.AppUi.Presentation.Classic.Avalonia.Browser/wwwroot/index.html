@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>VpnHood</title>
+    <link rel="icon" href="data:," />
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1b1e3a; color: #ffffff; font-family: sans-serif; }
+        #out { width: 100%; height: 100%; }
+        #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        /* the same notice once main.js has something to report: the message, readable and whole */
+        #loading.failed { align-items: flex-start; justify-content: flex-start; padding: 16px; overflow: auto; color: #ff9d9d; font: 13px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading…</div>
+    <div id="out"></div>
+    <script type="module" src="./main.js"></script>
+</body>
+</html>

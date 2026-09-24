@@ -1,14 +1,15 @@
-using System.Net;
+﻿using System.Net;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Services.Accounts;
+using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.Services.Accounts;
 using VpnHood.AppLib.Test.Providers;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -383,7 +384,8 @@ public class BillingServiceTest : TestAppBase
 
         profile = app.CurrentClientProfileInfo;
         Assert.IsNotNull(profile);
-        Assert.AreEqual(SessionErrorCode.AccessExpired, profile.AccessCodeRefusal?.ErrorCode,
+        Assert.AreEqual(VpnHood.AppLib.Api.Sessions.SessionErrorCode.AccessExpired,
+            profile.AccessCodeRefusal?.ErrorCode,
             "the refusal is the record that premium ended; no second flag carries the same news");
     }
 

@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Toolkit.Net;
+﻿using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Tunneling.Connections;
 

@@ -1,18 +1,18 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices;
-using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
-using VpnHood.Core.Toolkit.ApiClients;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Streams;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Jobs;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Streams;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Manager;
 

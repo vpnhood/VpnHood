@@ -1,15 +1,22 @@
-using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Settings;
+﻿using VpnHood.AppLib.Abstractions.Device;
+using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLib.App.DtoConverters;
+using VpnHood.AppLib.Api.Settings;
+using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Client.VpnServices.Manager;
-using VpnHood.Core.IpLocations;
+using VpnHood.Net.IpLocations;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Management.Sqlite;
-using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Generics;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Generics;
+using VpnHood.Net.Toolkit.Utils;
+using CoreProxy = VpnHood.Core.Proxies.Management.Abstractions;
+// the store and the parser are the engine's; what this service hands out is the contract's
+using ProxyEndPoint = VpnHood.AppLib.Api.Proxies.ProxyEndPoint;
+using ProxyEndPointStatus = VpnHood.AppLib.Api.Proxies.ProxyEndPointStatus;
 
-namespace VpnHood.AppLib.Services.Proxies;
+namespace VpnHood.AppLib.App.Services.Proxies;
 
 public class AppProxyEndPointService(
     string dbPath,
@@ -60,7 +67,7 @@ public class AppProxyEndPointService(
         return _hasCustomEndPointsCache.Value;
     }
 
-    public AppProxyEndPointInfo? GetDeviceProxy()
+    private CoreProxy.ProxyEndPoint? GetDeviceProxyEndPoint()
     {
         if (!deviceUiProvider.IsProxySettingsSupported)
             return null;
@@ -69,8 +76,13 @@ public class AppProxyEndPointService(
         if (deviceProxySettings?.ProxyUrl is null)
             return null;
 
-        var deviceProxyEndPoint = VhUtils.TryInvoke("Parse device proxy url",
+        return VhUtils.TryInvoke("Parse device proxy url",
             () => ProxyEndPointParser.FromUrl(deviceProxySettings.ProxyUrl));
+    }
+
+    public AppProxyEndPointInfo? GetDeviceProxy()
+    {
+        var deviceProxyEndPoint = GetDeviceProxyEndPoint();
         if (deviceProxyEndPoint is null)
             return null;
 
@@ -81,7 +93,7 @@ public class AppProxyEndPointService(
             ? vpnServiceManager.ConnectionInfo.ProxyConnectorStatus?.SessionStatus
             : null;
 
-        var status = new ProxyEndPointStatus();
+        var status = new CoreProxy.ProxyEndPointStatus();
         if (sessionStatus != null) {
             status.SucceededCount = sessionStatus.SucceededCount;
             status.FailedCount = sessionStatus.FailedCount;
@@ -92,9 +104,9 @@ public class AppProxyEndPointService(
         }
 
         return new AppProxyEndPointInfo {
-            EndPoint = deviceProxyEndPoint,
+            EndPoint = deviceProxyEndPoint.ToAppDto(),
             CountryCode = null,
-            Status = status
+            Status = status.ToAppDto()
         };
     }
 
@@ -133,36 +145,36 @@ public class AppProxyEndPointService(
 
     public async Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint)
     {
-        proxyEndPoint = ProxyEndPointParser.Normalize(proxyEndPoint);
+        var endPoint = ProxyEndPointParser.Normalize(proxyEndPoint.ToEngine());
 
         // adding an existing endpoint updates it and keeps its status
-        await Store.Upsert([new ProxyEndPointRecord { EndPoint = proxyEndPoint }]).Vhc();
+        await Store.Upsert([new ProxyEndPointRecord { EndPoint = endPoint }]).Vhc();
         await RefreshHasCustomEndPoints().Vhc();
         settingsService.Save(); // fire changes
 
-        return await Get(proxyEndPoint.Id).Vhc();
+        return await Get(endPoint.Id).Vhc();
     }
 
     public async Task<AppProxyEndPointInfo> Update(string id, ProxyEndPoint proxyEndPoint)
     {
-        proxyEndPoint = ProxyEndPointParser.Normalize(proxyEndPoint);
+        var endPoint = ProxyEndPointParser.Normalize(proxyEndPoint.ToEngine());
         var oldRecord = await Store.Get(id).Vhc() ??
                         throw new KeyNotFoundException($"ProxyEndPoint not found. Id: {id}");
 
         // keep the status even when the natural key (and so the id) changed
-        if (proxyEndPoint.Id != id)
+        if (endPoint.Id != id)
             await Store.Delete([id]).Vhc();
 
         await Store.Upsert([
             new ProxyEndPointRecord {
-                EndPoint = proxyEndPoint,
+                EndPoint = endPoint,
                 Status = oldRecord.Status,
                 CountryCode = oldRecord.CountryCode
             }
         ], keepExistingStatus: false).Vhc();
 
         settingsService.Save(); // fire changes
-        return await Get(proxyEndPoint.Id).Vhc();
+        return await Get(endPoint.Id).Vhc();
     }
 
     public async Task Delete(string proxyEndPointId)
@@ -259,7 +271,7 @@ public class AppProxyEndPointService(
         };
 
         // the device proxy travels inline; it never enters the shared store
-        var singleProxyEndPoint = mode is ProxyMode.Simple ? GetDeviceProxy()?.EndPoint : null;
+        var singleProxyEndPoint = mode is ProxyMode.Simple ? GetDeviceProxyEndPoint() : null;
         if (mode is ProxyMode.Simple && singleProxyEndPoint is null)
             mode = ProxyMode.None;
 
@@ -267,15 +279,15 @@ public class AppProxyEndPointService(
             Mode = mode,
             ProxyEndPoint = singleProxyEndPoint,
             ResetStates = resetStates,
-            AutoUpdateOptions = ProxySettings.AutoUpdateOptions
+            AutoUpdateOptions = ProxySettings.AutoUpdateOptions.ToEngine()
         };
     }
 
     private static AppProxyEndPointInfo ToAppInfo(ProxyEndPointRecord record)
     {
         return new AppProxyEndPointInfo {
-            EndPoint = record.EndPoint,
-            Status = record.Status,
+            EndPoint = record.EndPoint.ToAppDto(),
+            Status = record.Status.ToAppDto(),
             CountryCode = record.CountryCode
         };
     }

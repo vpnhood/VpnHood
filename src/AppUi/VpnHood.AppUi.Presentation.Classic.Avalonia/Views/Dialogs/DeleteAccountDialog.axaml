@@ -1,0 +1,27 @@
+﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:res="using:VpnHood.AppUi.Common"
+                    xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+                    xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.DeleteAccountDialog">
+  <!-- The web UI's DeleteAccountDialog: the whole contract in a few lines, an acknowledgement that
+       arms the button, and the act named on it - never a Yes/No pair. -->
+  <Border Classes="dialog" MaxWidth="480">
+    <StackPanel Spacing="12">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="dialog-title" VerticalAlignment="Center" Text="{Binding ConfirmDeleteAccountTitle, Source={x:Static res:Strings.Current}}" />
+        <TextBlock Grid.Column="1" Classes="mdi" FontSize="22" Text="{x:Static res:Mdi.AlertCircleOutline}" />
+      </Grid>
+      <TextBlock Classes="dialog-text" Text="{Binding ConfirmDeleteAccountDesc, Source={x:Static res:Strings.Current}}" />
+      <TextBlock Classes="dialog-text" Text="{Binding DeleteAccountCodesNote, Source={x:Static res:Strings.Current}}" />
+      <TextBlock Classes="dialog-text" Text="{Binding DeleteAccountSubscriptionNote, Source={x:Static res:Strings.Current}}" />
+      <TextBlock Classes="dialog-text" Opacity="0.6" Text="{Binding DeleteAccountInvoicesNote, Source={x:Static res:Strings.Current}}" />
+      <controls:OptionRow x:Name="UnderstoodRow" IsCheckBox="True" Clicked="OnUnderstoodClick" />
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button x:Name="CancelButton" Classes="dialog-btn" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="DeleteButton" Grid.Column="2" Classes="dialog-btn plain text-error" IsEnabled="False" Click="OnDeleteClick"
+                Content="{Binding DeleteMyAccount, Source={x:Static res:Strings.Current}}" />
+      </Grid>
+    </StackPanel>
+  </Border>
+</dialogs:DialogBase>

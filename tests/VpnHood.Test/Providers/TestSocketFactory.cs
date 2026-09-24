@@ -1,4 +1,4 @@
-using VpnHood.Core.Quic.MsQuic;
+using VpnHood.Net.Quic.MsQuic;
 
 namespace VpnHood.Test.Providers;
 

@@ -9,14 +9,14 @@ using VpnHood.Net.VpnAdapters.LinuxTun;
 
 namespace VpnHood.AppLib.App.Linux;
 
-public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
+public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>
 {
     private readonly CommandListener _commandListener;
     private const string FileNameAppCommand = "appcommand";
     public bool ShowWindowAfterStart { get; }
     public event EventHandler? Exiting;
 
-    public VpnHoodAppLinux(AppOptions appOptions, bool showWindowAfterStart)
+    public VpnHoodLinuxApp(AppOptions appOptions, bool showWindowAfterStart)
     {
         ShowWindowAfterStart = showWindowAfterStart;
 
@@ -30,7 +30,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
         _commandListener.Start();
     }
 
-    public static VpnHoodAppLinux Init(Func<AppOptions> optionsFactory, string[] args)
+    public static VpnHoodLinuxApp Init(Func<AppOptions> optionsFactory, string[] args)
     {
         var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
         var showWindowAfterStart =
@@ -48,7 +48,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
             throw new GracefullyShutdownException();
 
         // create linux app
-        var app = new VpnHoodAppLinux(appOptions, showWindowAfterStart);
+        var app = new VpnHoodLinuxApp(appOptions, showWindowAfterStart);
         return app;
     }
 

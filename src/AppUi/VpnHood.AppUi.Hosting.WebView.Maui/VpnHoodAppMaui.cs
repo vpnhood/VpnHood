@@ -31,7 +31,7 @@ public class VpnHoodAppMaui : Singleton<VpnHoodAppMaui>, IVpnHoodAppMaui
 #if ANDROID
         return VpnHoodAppMauiAndroid.Init(optionsFactory);
 #elif WINDOWS
-        return VpnHoodAppMauiWin.Init(optionsFactory);
+        return VpnHoodAppMauiWindows.Init(optionsFactory);
 #else
         throw new PlatformNotSupportedException();
 #endif

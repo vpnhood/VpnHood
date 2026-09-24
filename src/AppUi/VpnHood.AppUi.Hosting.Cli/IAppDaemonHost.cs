@@ -1,7 +1,7 @@
 namespace VpnHood.AppUi.Hosting.Cli;
 
 // The platform's half of the daemon command: the app, built the way this OS hosts a headless one -
-// VpnHoodAppLinux on Linux, with its single-instance socket and command file - and whatever must
+// VpnHoodLinuxApp on Linux, with its single-instance socket and command file - and whatever must
 // happen around it. The shared half (DaemonCommand) binds the API, publishes the address and waits.
 //
 // Constructing one IS starting the app; a platform that cannot - not root, another instance up -

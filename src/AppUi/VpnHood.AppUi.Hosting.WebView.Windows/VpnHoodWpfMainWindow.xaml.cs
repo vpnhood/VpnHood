@@ -32,7 +32,7 @@ public partial class VpnHoodWpfMainWindow : Window
         if (backgroundColor != null)
             Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R,
                 backgroundColor.Value.G, backgroundColor.Value.B));
-        Visibility = VpnHoodAppWin.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
+        Visibility = VpnHoodWindowsApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
         // On the TV UI the window is the panel: the web view takes the TV's viewport and the
         // window wraps it, so the layout is judged here at the TV's shape and measure. Everything
         // else keeps the phone-shaped window from the resources.
@@ -52,7 +52,7 @@ public partial class VpnHoodWpfMainWindow : Window
 
         // set window title bar color
         var hWnd = new WindowInteropHelper(this).EnsureHandle();
-        if (backgroundColor != null) VpnHoodAppWin.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
+        if (backgroundColor != null) VpnHoodWindowsApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
         // initialize MainWebView user-data folder (the WebView2 mechanics live in WpfWebView).
         // On the TV UI the arrow keys move focus: Chromium's spatial navigation, which Android's
@@ -68,7 +68,7 @@ public partial class VpnHoodWpfMainWindow : Window
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) =>
             VhUtils.TryInvoke("UpdatingSystemIcon", () => Dispatcher.Invoke(UpdateIcon));
 
-        AppUiContext.Context = new WinUiContext(this);
+        AppUiContext.Context = new WpfUiContext(this);
 
         // Host the SPA via the shared WebViewHost (server lifecycle, launch URL, reload on failure).
         // The Activated handler keeps the host alive for the window's lifetime.
@@ -101,7 +101,7 @@ public partial class VpnHoodWpfMainWindow : Window
 
             Visibility = Visibility.Hidden; // Hide() does not work properly in this state on sandbox
             VpnHoodAppWpf.NotifyWebViewUnavailable();
-            if (VpnHoodAppWin.Instance.ShowWindowAfterStart)
+            if (VpnHoodWindowsApp.Instance.ShowWindowAfterStart)
                 _ = VpnHoodAppWpf.OpenMainWindowInBrowser();
         }
     }

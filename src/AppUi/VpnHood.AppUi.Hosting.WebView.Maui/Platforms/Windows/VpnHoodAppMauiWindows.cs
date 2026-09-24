@@ -12,7 +12,7 @@ using VpnHood.AppLib.App;
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppUi.Hosting.WebView.Maui;
 
-internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
+internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoodAppMaui
 {
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -20,14 +20,14 @@ internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
     
     protected AppWindow? AppWindow;
 
-    private VpnHoodAppMauiWin(AppOptions appOptions)
+    private VpnHoodAppMauiWindows(AppOptions appOptions)
     {
         // initialize Win App
         appOptions.DisconnectOnDispose = true;
-        VpnHoodAppWin.Init(appOptions, args: Environment.GetCommandLineArgs());
-        VpnHoodAppWin.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
-        VpnHoodAppWin.Instance.ExitRequested += ExitRequested;
-        VpnHoodAppWin.Instance.Start();
+        VpnHoodWindowsApp.Init(appOptions, args: Environment.GetCommandLineArgs());
+        VpnHoodWindowsApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
+        VpnHoodWindowsApp.Instance.ExitRequested += ExitRequested;
+        VpnHoodWindowsApp.Instance.Start();
 
         // initialize VpnHoodApp
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
@@ -37,10 +37,10 @@ internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
 
     }
 
-    public static VpnHoodAppMauiWin Init(Func<AppOptions> optionsFactory)
+    public static VpnHoodAppMauiWindows Init(Func<AppOptions> optionsFactory)
     {
         var appOptions = optionsFactory();
-        var app = new VpnHoodAppMauiWin(appOptions);
+        var app = new VpnHoodAppMauiWindows(appOptions);
         app.UpdateIcon();
         return app;
     }
@@ -76,8 +76,8 @@ internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
     protected virtual void ExitRequested(object? sender, EventArgs e)
     {
         MauiWinUIApplication.Current.Exit();
-        if (VpnHoodAppWin.IsInit)
-            VpnHoodAppWin.Instance.Dispose();
+        if (VpnHoodWindowsApp.IsInit)
+            VpnHoodWindowsApp.Instance.Dispose();
     }
 
     protected virtual void ConnectionStateChanged(object? sender, EventArgs e)
@@ -116,8 +116,8 @@ internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            if (VpnHoodAppWin.IsInit)
-                VpnHoodAppWin.Instance.Dispose();
+            if (VpnHoodWindowsApp.IsInit)
+                VpnHoodWindowsApp.Instance.Dispose();
         }
 
         base.Dispose(disposing);

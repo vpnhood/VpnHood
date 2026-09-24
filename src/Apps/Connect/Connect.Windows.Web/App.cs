@@ -83,7 +83,7 @@ public static class App
             // the web-distribution store: plans priced by the portal, checkout in the browser
             var webBillingProvider = new PortalWebBillingProvider(appConfigs.PortalBaseUri, appConfigs.AppId,
                 openUrl: (_, url, _) => {
-                    VpnHoodAppWin.OpenUrlInExternalBrowser(url);
+                    VpnHoodWindowsApp.OpenUrlInExternalBrowser(url);
                     return Task.CompletedTask;
                 },
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
@@ -105,7 +105,7 @@ public static class App
         // all this head starts: the web host is the paired device's, and the pairing screen is
         // what puts it up.
         try {
-            VpnHoodAppWin.Init(CreateAppOptions, args);
+            VpnHoodWindowsApp.Init(CreateAppOptions, args);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not run the app.");
@@ -118,7 +118,7 @@ public static class App
     // The Avalonia UI in its own window, opened from the tray; Exit there ends it, with the app.
     private static void RunAvaloniaUi(string[] args)
     {
-        var appWin = VpnHoodAppWin.Instance;
+        var appWin = VpnHoodWindowsApp.Instance;
         appWin.OpenMainWindowRequested += (_, _) => AvaloniaDesktopHost.ShowMainWindow();
         appWin.ExitRequested += (_, _) => AvaloniaDesktopHost.Shutdown();
         try {

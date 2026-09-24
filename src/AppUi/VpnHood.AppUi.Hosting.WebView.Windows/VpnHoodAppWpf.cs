@@ -8,7 +8,7 @@ using VpnHood.AppLib.App.Windows;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
-// The web UI in WPF's window, on the app VpnHoodAppWin.Init has started: the window, and what
+// The web UI in WPF's window, on the app VpnHoodWindowsApp.Init has started: the window, and what
 // WPF answers of the tray's requests - opening the window, exiting. Called from the WPF
 // application's startup, where a window can be made.
 // ReSharper disable once RedundantExtendsListEntry
@@ -18,8 +18,8 @@ public class VpnHoodAppWpf : Singleton<VpnHoodAppWpf>
     {
         var app = new VpnHoodAppWpf();
         Application.Current.Exit += (_, _) => Exit();
-        VpnHoodAppWin.Instance.ExitRequested += (_, _) => Exit();
-        VpnHoodAppWin.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
+        VpnHoodWindowsApp.Instance.ExitRequested += (_, _) => Exit();
+        VpnHoodWindowsApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
         _ = ShowMainWindowWhenReady();
         return app;
     }
@@ -58,7 +58,7 @@ public class VpnHoodAppWpf : Singleton<VpnHoodAppWpf>
         try {
             var webHost = VpnHoodApp.Instance.LocalWebHost ??
                           throw new InvalidOperationException("This app was given no web host.");
-            VpnHoodAppWin.OpenUrlInExternalBrowser(await webHost.EnsureStarted(CancellationToken.None).Vhc());
+            VpnHoodWindowsApp.OpenUrlInExternalBrowser(await webHost.EnsureStarted(CancellationToken.None).Vhc());
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not open the main window in the system browser.");
@@ -92,8 +92,8 @@ public class VpnHoodAppWpf : Singleton<VpnHoodAppWpf>
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && VpnHoodAppWin.IsInit)
-            VpnHoodAppWin.Instance.Dispose();
+        if (disposing && VpnHoodWindowsApp.IsInit)
+            VpnHoodWindowsApp.Instance.Dispose();
 
         base.Dispose(disposing);
     }

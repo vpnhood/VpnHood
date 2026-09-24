@@ -9,7 +9,7 @@ namespace VpnHood.AppUi.Hosting.Cli.Linux;
 // on screen, which is how the window starts a root service without being root.
 //
 // NOT OsUtils.ExecuteCommandAsync, which is the toolkit's way to run a command and is what the rest
-// of the Linux code uses (VpnHoodAppLinux, LinuxTunVpnAdapter). It redirects both streams and
+// of the Linux code uses (VpnHoodLinuxApp, LinuxTunVpnAdapter). It redirects both streams and
 // returns the output, and that is the one thing these must not do:
 //
 //   * "sudo" writes "[sudo] password for you:" to STDERR. Redirect it and a person waiting at a

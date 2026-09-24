@@ -234,14 +234,14 @@ src/AppUi/
     ├── LinuxCliHost.cs               a Linux head's entry point; catches the old launcher words
     ├── LinuxCliPaths.cs
     ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through
-    └── LinuxDaemonHost.cs            VpnHoodAppLinux, root required
+    └── LinuxDaemonHost.cs            VpnHoodLinuxApp, root required
 ```
 
 A head is then its `AppOptions` and one line naming its UI — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
 project reads a static or names a platform: every command is handed a `CliPlatform`, and the two
 interfaces on it are all a second platform has to write. `VpnHood.AppLib.App.Linux` is back to
-the one thing it always was, `VpnHoodAppLinux`.
+the one thing it always was, `VpnHoodLinuxApp`.
 
 Two points that are easy to get wrong:
 

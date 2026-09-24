@@ -5,9 +5,9 @@ using VpnHood.Net.Quic.MsQuic;
 
 namespace VpnHood.Core.Client.Devices.Windows;
 
-public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
+public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
 {
-    private WinVpnService? _vpnService;
+    private WindowsVpnService? _vpnService;
     public bool IsBindProcessToVpnSupported => false;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
@@ -54,7 +54,7 @@ public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
     public Task StartVpnService(CancellationToken cancellationToken)
     {
         if (_vpnService == null || _vpnService.IsDisposed)
-            _vpnService = new WinVpnService(VpnServiceConfigFolder);
+            _vpnService = new WindowsVpnService(VpnServiceConfigFolder);
 
         _vpnService.OnConnect();
         return Task.CompletedTask;

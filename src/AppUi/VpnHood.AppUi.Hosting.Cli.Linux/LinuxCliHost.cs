@@ -34,7 +34,7 @@ public static class LinuxCliHost
     {
         if (args.Count > 0 && args[0].Equals("stop", StringComparison.OrdinalIgnoreCase)) {
             try {
-                VpnHoodAppLinux.Init(head.AppOptionsFactory, ["stop"]);
+                VpnHoodLinuxApp.Init(head.AppOptionsFactory, ["stop"]);
                 return 0;
             }
             catch (GracefullyShutdownException) {

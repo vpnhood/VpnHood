@@ -15,7 +15,7 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Windows;
 
-public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
+public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IDisposable
 {
     private readonly string _appId;
     private const string FileNameAppCommand = "appcommand";
@@ -38,7 +38,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
 
-    private VpnHoodAppWin(string appId, string storageFolder)
+    private VpnHoodWindowsApp(string appId, string storageFolder)
     {
         VhLogger.Instance = new VhConsoleLogger();
         _appId = appId;
@@ -59,11 +59,11 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     // device dials, the tray. Which UI shows it, and how it draws one, is the head's next step - so
     // nothing here belongs to a UI framework. Throws when another instance is running, after asking
     // it for its window.
-    public static VpnHoodAppWin Init(Func<AppOptions> optionsFactory, string[] args)
+    public static VpnHoodWindowsApp Init(Func<AppOptions> optionsFactory, string[] args)
     {
         var appOptions = optionsFactory();
         appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
-        appOptions.DeviceUiProvider = new WinDeviceUiProvider();
+        appOptions.DeviceUiProvider = new WindowsDeviceUiProvider();
         appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
 
         var appWin = Init(appOptions, args);
@@ -71,14 +71,14 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         return appWin;
     }
 
-    public static VpnHoodAppWin Init(AppOptions appOptions, string[] args)
+    public static VpnHoodWindowsApp Init(AppOptions appOptions, string[] args)
     {
         // create app
-        var ret = new VpnHoodAppWin(appOptions.AppId, appOptions.StorageFolderPath);
+        var ret = new VpnHoodWindowsApp(appOptions.AppId, appOptions.StorageFolderPath);
         ret.PreStart(args);
 
         // initialize VpnHoodApp
-        var device = new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode);
+        var device = new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode);
         VpnHoodApp.Init(device, appOptions);
         return ret;
     }

@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppLib.App.Windows;
 
-public class WinDeviceUiProvider : NullDeviceUiProvider
+public class WindowsDeviceUiProvider : NullDeviceUiProvider
 {
     public override bool IsProxySettingsSupported => true;
     private readonly Uri _internetUrl = new("https://www.microsoft.com");

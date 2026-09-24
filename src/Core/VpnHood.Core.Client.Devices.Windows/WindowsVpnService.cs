@@ -8,12 +8,12 @@ using VpnHood.Net.VpnAdapters.WinTun;
 
 namespace VpnHood.Core.Client.Devices.Windows;
 
-public class WinVpnService : IVpnServiceHandler, IDisposable
+public class WindowsVpnService : IVpnServiceHandler, IDisposable
 {
     private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
 
-    public WinVpnService(
+    public WindowsVpnService(
         string configFolder)
     {
         _vpnServiceHost = new VpnServiceHost(

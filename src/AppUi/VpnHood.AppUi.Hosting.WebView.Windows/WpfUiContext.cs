@@ -3,7 +3,7 @@ using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
-public class WinUiContext(Window window) : IUiContext
+public class WpfUiContext(Window window) : IUiContext
 {
     public async Task<bool> IsActive()
     {

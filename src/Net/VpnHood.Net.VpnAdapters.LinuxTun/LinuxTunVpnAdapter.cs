@@ -26,6 +26,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private int _tunAdapterFd = InvalidFd;
     private int? _metric;
     private string? _primaryAdapterName;
+    private bool _isResolvconfDnsSet;
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
@@ -99,6 +100,9 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     {
         // close if open
         AdapterClose();
+
+        // DNS comes off before the interface, and whether or not the interface is still there
+        RemoveResolvconfDns();
 
         var tunAdapterExists = NetworkInterface
             .GetAllNetworkInterfaces()
@@ -237,6 +241,42 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         var dnsPayload = string.Join("\n", dnsServers.Select(x => $"nameserver {x}")) + "\n";
         var command = $"echo \"{dnsPayload}\" | resolvconf -a {AdapterName}";
         await ExecuteCommandAsync(command, cancellationToken).Vhc();
+        _isResolvconfDnsSet = true;
+    }
+
+    // The resolvconf fallback's entry outlives the interface, where resolvectl's per-link DNS goes
+    // with it: left behind, resolv.conf keeps the VPN's nameserver after a disconnect. So every
+    // removal takes it off first, and so does a start that clears the interface a crashed run, or
+    // an older version, left.
+    public static Task RemoveResolvconfDnsAsync(string adapterName, CancellationToken cancellationToken)
+    {
+        return ExecuteCommandAsync(RemoveResolvconfDnsCommand(adapterName), cancellationToken);
+    }
+
+    private static string RemoveResolvconfDnsCommand(string adapterName)
+    {
+        return $"if command -v resolvconf >/dev/null; then resolvconf -d {adapterName}; fi";
+    }
+
+    private void RemoveResolvconfDns()
+    {
+        // An entry this adapter added must come off, so a failure there is a warning. Otherwise
+        // there is usually nothing to remove, and some resolvconf implementations say so as an error.
+        if (!_isResolvconfDnsSet) {
+            VhUtils.TryInvoke($"remove a leftover resolvconf DNS entry of {AdapterName}", () =>
+                ExecuteCommand(RemoveResolvconfDnsCommand(AdapterName)));
+            return;
+        }
+
+        try {
+            ExecuteCommand(RemoveResolvconfDnsCommand(AdapterName));
+            _isResolvconfDnsSet = false;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex,
+                "Could not remove the resolvconf DNS entry of {AdapterName}; resolv.conf may keep the VPN's nameserver.",
+                AdapterName);
+        }
     }
 
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]

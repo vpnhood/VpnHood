@@ -5,6 +5,7 @@ using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.Net.VpnAdapters.LinuxTun;
 
 namespace VpnHood.AppLib.App.Linux;
 
@@ -52,11 +53,15 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
     }
 
 
-    // What a run does before its UI: the old adapter, as a previous run's route may still be active.
-    public Task PrepareAsync(CancellationToken cancellationToken)
+    // What a run does before its UI: the old adapter, as a previous run's route may still be active,
+    // and its resolvconf DNS entry before it, which would outlive it (LinuxTunVpnAdapter).
+    public async Task PrepareAsync(CancellationToken cancellationToken)
     {
-        return VhUtils.TryInvokeAsync(null, () =>
-            ExecuteCommandAsync($"ip link delete {VpnHoodApp.Instance.Features.AppName}", cancellationToken));
+        var adapterName = VpnHoodApp.Instance.Features.AppName;
+        await VhUtils.TryInvokeAsync("remove a leftover resolvconf DNS entry", () =>
+            LinuxTunVpnAdapter.RemoveResolvconfDnsAsync(adapterName, cancellationToken));
+        await VhUtils.TryInvokeAsync(null, () =>
+            ExecuteCommandAsync($"ip link delete {adapterName}", cancellationToken));
     }
 
     public async Task Run()

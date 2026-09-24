@@ -93,6 +93,14 @@ if [ "$versionTag" == "" ]; then
 fi
 binDir="$destinationPath/$versionTag";
 
+# Run by the updater, this script is inside the updater unit's own cgroup: the old vhupdate runs it
+# inline. Restarting that unit from here would stop this script with it, before the VPN service is
+# started again below, and leave the machine with no VPN until someone notices.
+insideUpdaterUnit="n";
+if grep -qF "/${assemblyName}Updater.service" /proc/self/cgroup 2>/dev/null; then
+	insideUpdaterUnit="y";
+fi
+
 # Is there a desktop on this machine? Only a graphical default target gets the window, its icon
 # and its libraries; a server install stops at the service and the commands. Asked before the
 # prompts so the answer can be shown rather than demanded.
@@ -188,15 +196,25 @@ if [ $? != 0 ]; then
 	exit 1;
 fi
 
-# Updating shared files...
+# The shared files are replaced by rename, never overwritten in place. The vhupdate running this
+# script is still reading its own file, as the launcher behind an open window is - bash reads a
+# script as it goes - and an in-place copy would hand them the new file's bytes at their old
+# offset. A rename leaves each running one its own file.
 echo "Updating shared files...";
 infoDir="$binDir/publish_info";
-cp "$infoDir/vhupdate" "$destinationPath/" -f;
-cp "$infoDir/$launcher" "$destinationPath/" -f;
-cp "$infoDir/publish.json" "$destinationPath/" -f;
+function replace_file() {
+	local source="$1";
+	local target="$2";
+	local mode="$3";
+	if ! cp -f "$source" "$target.new" || ! chmod "$mode" "$target.new" || ! mv -f "$target.new" "$target"; then
+		echo "Could not update $target";
+		exit 1;
+	fi
+}
+replace_file "$infoDir/vhupdate" "$destinationPath/vhupdate" 755;
+replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
+replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
 chmod +x "$binDir/$assemblyName";
-chmod +x "$destinationPath/$launcher";
-chmod +x "$destinationPath/vhupdate";
 
 # The storage the service owns. Made here rather than on first run so an advanced user has a
 # folder to drop a settings.json into before anything has started.
@@ -252,7 +270,11 @@ systemctl daemon-reload;
 if [ "${autostart,,}" = "y" ]; then
 	systemctl enable "$assemblyName.service";
 	systemctl enable "${assemblyName}Updater.service";
-	systemctl restart "${assemblyName}Updater.service";
+	# Not from inside it (above): the unit's next run takes the unit file and the vhupdate written
+	# here anyway.
+	if [ "$insideUpdaterUnit" != "y" ]; then
+		systemctl restart "${assemblyName}Updater.service";
+	fi
 else
 	systemctl disable "$assemblyName.service" >/dev/null 2>&1;
 	systemctl disable "${assemblyName}Updater.service" >/dev/null 2>&1;

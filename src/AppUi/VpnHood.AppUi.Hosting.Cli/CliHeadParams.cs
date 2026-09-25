@@ -1,26 +1,20 @@
 using VpnHood.AppLib.App;
-using VpnHood.AppLib.Api;
-using VpnHood.Net.Toolkit.Assets;
+using VpnHood.AppUi.Hosting.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Cli;
 
-// What a head says for itself, and only that: the product facts no library can know. Where the
-// machine keeps things and what "the service" is are the platform's answers, in CliPlatform.
-//
-// The UI arrives as a call rather than a type because of which way the references point: the
-// Avalonia host already references this layer's app, and a UI package naming it back would turn
-// that around. So the head - which references both, as a head does - passes the one line that
-// starts its own UI.
-public class CliHeadParams
+// What a head says for itself, and only that: the init params every platform takes
+// (AppInitParams) and the two answers the commands and the window need. Where the machine keeps
+// things and what "the service" is are the platform's answers, in CliPlatform; the daemon's host
+// lays its storage out itself, so a desktop head names no storage folder. The options factory runs
+// once, in the daemon and nowhere else: the window and the commands hold no VpnHoodApp at all.
+public class CliHeadParams : AppInitParams
 {
-    // Built once, by the daemon and by nothing else. The window and the commands hold no
-    // VpnHoodApp at all.
-    public required Func<AppOptions> AppOptionsFactory { get; init; }
-
-    // Runs the head's UI on the calling thread and returns when the window is gone. The API is the
-    // one built over loopback against the running daemon; the assets are the UI's own content,
-    // extracted under the current user's cache.
-    public required Action<string[], VpnHoodApi, IAssetProvider?> RunUi { get; init; }
+    // The head's UI, which the window runs on the host's main thread against the running daemon:
+    // the API over loopback, and the UI's own content extracted under the current user's cache. It
+    // comes from the small package this and every UI package reference, so neither references the
+    // other.
+    public required IDesktopUi Ui { get; init; }
 
     // The same answer the head gives AppOptions.IsAddAccessKeySupported, and it must be the same
     // one: a head that cannot be given a key has exactly the profile it was built with, so naming

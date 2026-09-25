@@ -10,7 +10,6 @@ using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppLib.App;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
-using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Android;
 
@@ -49,15 +48,15 @@ public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityE
         MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions());
 
         // Also before base.OnCreate, which makes the view (the UI hands this activity its
-        // factory): the UI's store, which on Android is the zip's extraction out of the package
-        // (ZipAssetProvider), made on the first run of a version - waited for here, deliberately,
-        // as every frame after this line depends on it. Preparing the content also registers the
-        // UI's fonts, Avalonia having started with the process's Application, before the store
-        // could be read. Then the app is told which languages the UI has; in process that
-        // completes at once. The web server is what a phone pairs with, so it comes up here rather
-        // than on the pairing screen.
-        AvaloniaUiHosting.PrepareContent<TUi>(VpnHoodApp.Instance.UiAssetProvider);
-        VhApp.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+        // factory): the second half of the UI's start, whose first the Application ran
+        // (AndroidAvaloniaApplication). The UI's store is, on Android, the zip's extraction out of
+        // the package (ZipAssetProvider), made on the first run of a version - waited for here,
+        // deliberately, as every frame after this line depends on it. Preparing the content also
+        // registers the UI's fonts, Avalonia having started with the process's Application, before
+        // the store could be read. Then the app is told which languages the UI has; in process that
+        // completes at once.
+        AvaloniaUiHosting.PrepareAsync<TUi>(VpnHoodApp.Instance.UiAssetProvider, CancellationToken.None)
+            .GetAwaiter().GetResult();
 
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });

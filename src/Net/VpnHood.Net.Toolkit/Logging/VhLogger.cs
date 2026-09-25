@@ -41,9 +41,9 @@ public static class VhLogger
     public static LogLevel MinLogLevel { get; set; } = LogLevel.Information;
 
 
-    public static ILogger CreateConsoleLogger(bool singleLine = false)
+    public static ILogger CreateConsoleLogger()
     {
-        return new VhConsoleLogger(singleLine);
+        return new VhConsoleLogger();
     }
 
     public static Redactor.RedactedValue<EndPoint> Format(EndPoint? endPoint)
@@ -149,11 +149,7 @@ public static class VhLogger
     {
         private readonly AotPreserveHelper _aotPreserveHelper = new();
 
-        // Default is NullLogger — callers that want console output must set
-        // VhLogger.Instance = VhLogger.CreateConsoleLogger() explicitly.
-        // This prevents LoggerFactory.Create() + Console.Write* from running
-        // during class initialization in environments without a readable stdout
-        // (e.g. iOS Network Extension).
+        // The device log until a caller sets one: no console, which an iOS Network Extension lacks.
         public ILogger Logger {
             get => field ??= new VhDeviceLogger();
             set;
@@ -161,8 +157,6 @@ public static class VhLogger
 
         public VhLoggerDecorator()
         {
-            // Preserve AOT types. Logger intentionally starts as NullLogger — callers
-            // must opt in to console output via VhLogger.Instance = VhLogger.CreateConsoleLogger().
             _ = _aotPreserveHelper.PreserveTypes();
         }
 

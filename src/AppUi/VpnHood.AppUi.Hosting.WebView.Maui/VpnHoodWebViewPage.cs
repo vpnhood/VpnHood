@@ -1,3 +1,4 @@
+using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.WebView;
 
 using NativeWebView = Microsoft.Maui.Controls.WebView;
@@ -37,8 +38,11 @@ public class VpnHoodWebViewPage : ContentPage
 
         Content = new Grid { Children = { webView, spinner, errorLabel } };
 
+        // the app's own web host: the platform started the app in this process (VpnHoodAppMaui)
         var adapter = new MauiWebView(webView, Dispatcher, spinner, errorLabel);
-        _host = new WebViewHost(adapter);
+        var webHost = VpnHoodApp.Instance.LocalWebHost ??
+                      throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
+        _host = new WebViewHost(adapter, webHost);
     }
 
     protected override void OnAppearing()

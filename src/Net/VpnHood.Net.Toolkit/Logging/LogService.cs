@@ -111,8 +111,7 @@ public class LogService(
 
         // console
         if (logServiceOptions.LogToConsole) // AddSimpleConsole does not support event id
-            _loggerProviders.Add(new VhConsoleLoggerProvider(includeScopes: true,
-                singleLine: logServiceOptions.SingleLineConsole));
+            _loggerProviders.Add(new VhConsoleLoggerProvider(includeScopes: true));
 
         if (logServiceOptions.LogToFile)
             _loggerProviders.Add(new FileLoggerProvider(LogFilePath, autoFlush: logServiceOptions.AutoFlush));

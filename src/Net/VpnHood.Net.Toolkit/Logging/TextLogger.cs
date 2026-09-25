@@ -3,7 +3,9 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Net.Toolkit.Logging;
 
-public abstract class TextLogger(bool includeScopes, string? categoryName) : ILogger
+// singleLine: one line per entry, its own line breaks written as "\n" - for the console and the
+// system's log, which keep each line as its own entry; the file keeps an entry's lines.
+public abstract class TextLogger(bool includeScopes, string? categoryName, bool singleLine) : ILogger
 {
     private readonly LoggerExternalScopeProvider _scopeProvider = new();
 
@@ -46,8 +48,12 @@ public abstract class TextLogger(bool includeScopes, string? categoryName) : ILo
         // scopes
         if (includeScopes) {
             logBuilder.Append(logLevel.ToString()[..4] + " |");
+            var scopesStart = logBuilder.Length;
             WriteScopeInformation(logBuilder);
-            logBuilder.AppendLine();
+            if (!singleLine)
+                logBuilder.AppendLine();
+            else
+                logBuilder.Append(logBuilder.Length == scopesStart ? " " : " | ");
         }
 
         // event
@@ -62,6 +68,9 @@ public abstract class TextLogger(bool includeScopes, string? categoryName) : ILo
             message += "\r\nException: " + exception;
 
         logBuilder.Append(message);
+        if (singleLine)
+            return logBuilder.ToString().ReplaceLineEndings(@"\n");
+
         logBuilder.AppendLine();
         return logBuilder.ToString();
     }

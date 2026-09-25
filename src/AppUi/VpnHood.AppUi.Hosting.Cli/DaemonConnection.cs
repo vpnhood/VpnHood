@@ -1,5 +1,7 @@
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.HttpClients;
+using VpnHood.AppLib.Api.UiAttachments;
+using VpnHood.AppUi.Hosting.Cli.Internal;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Cli;
@@ -22,19 +24,34 @@ public sealed class DaemonConnection : IDisposable
     private static readonly TimeSpan BindTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
 
+    private readonly UiAttachmentHandler _uiAttachmentHandler = new();
     private readonly HttpClient _httpClient;
 
-    private DaemonConnection(Uri apiUrl)
+    internal DaemonConnection(Uri apiUrl)
     {
-        _httpClient = new HttpClient {
+        Url = apiUrl;
+        _httpClient = new HttpClient(_uiAttachmentHandler) {
             BaseAddress = new Uri(apiUrl.GetLeftPart(UriPartial.Authority) + "/"),
             Timeout = TimeSpan.FromMinutes(2) // a connect attempt walks a server list and may be slow
         };
 
         Api = VpnHoodApiHttpFactory.Create(_httpClient);
+        UiAttachments = VpnHoodApiHttpFactory.CreateUiAttachments(_httpClient);
     }
 
     public VpnHoodApi Api { get; }
+
+    // The window's attachment to the daemon (DaemonUiAttachment); the commands never attach.
+    internal IUiAttachmentsApi UiAttachments { get; }
+
+    // Every request from here on names this attachment - or none, once the window has detached.
+    internal string? UiAttachmentId {
+        get => _uiAttachmentHandler.AttachmentId;
+        set => _uiAttachmentHandler.AttachmentId = value;
+    }
+
+    // The address the daemon published: its local web host, which serves the page and the API.
+    public Uri Url { get; }
 
     public static async Task<DaemonConnection> Open(CliPlatform platform, CancellationToken cancellationToken)
     {

@@ -3,35 +3,41 @@ using VpnHood.AppLib.App.Linux;
 
 namespace VpnHood.AppUi.Hosting.Cli.Linux;
 
-// The app as Linux hosts a headless one: VpnHoodLinuxApp, which takes the single-instance socket
-// and opens the command file the stop command writes to. Only root can be it - the tun device, the
-// routes, the firewall rules and resolvectl all belong to root (LinuxTunVpnAdapter) - and that is
-// said here, in the constructor, rather than let the tun device fail ten layers down, which is
-// what someone running "daemon" by hand out of curiosity would otherwise be shown.
+// The app as Linux hosts a headless one, or a debugger does: VpnHoodLinuxApp, which takes the
+// single-instance lock on the app id before anything is built and clears what a previous run left.
 public sealed class LinuxDaemonHost : IAppDaemonHost
 {
-    private readonly VpnHoodLinuxApp _appLinux;
+    private readonly VpnHoodLinuxApp _linuxApp;
 
-    public LinuxDaemonHost(Func<AppOptions> appOptionsFactory, string instanceName)
+    private LinuxDaemonHost(AppInitParams initParams, string storagePath)
+    {
+        // AnotherInstanceIsRunningException passes through as it is: its message is the answer.
+        _linuxApp = VpnHoodLinuxApp.Init(initParams, storagePath);
+    }
+
+    // The service, in the storage that belongs to it. Only root can be it - the tun device, the
+    // routes, the firewall rules and resolvectl all belong to root (LinuxTunVpnAdapter) - and that is
+    // said here rather than let the tun device fail ten layers down, which is what someone running
+    // "daemon" by hand out of curiosity would otherwise be shown.
+    public static LinuxDaemonHost CreateService(AppInitParams initParams, LinuxCliPaths paths)
     {
         if (!LinuxUser.IsRoot)
             throw new InvalidOperationException(
                 "The VPN service must run as root: it creates the tunnel device and edits the routing table. " +
-                $"Try: sudo systemctl start {instanceName}");
+                $"Try: sudo systemctl start {paths.InstanceName}");
 
-        // AnotherInstanceIsRunningException passes through as it is: its message is the answer.
-        _appLinux = VpnHoodLinuxApp.Init(appOptionsFactory, ["/nowindow"]);
+        return new LinuxDaemonHost(initParams, paths.StoragePath);
     }
 
-    // The old adapter, as a previous run's route may still be active.
-    public Task Prepare(CancellationToken cancellationToken)
+    // A debugger's (CliPlatform.CreateDevDaemonHost), in the storage it is handed, as whoever runs it.
+    public static LinuxDaemonHost CreateDev(AppInitParams initParams, string storagePath)
     {
-        return _appLinux.PrepareAsync(cancellationToken);
+        return new LinuxDaemonHost(initParams, storagePath);
     }
 
-    public void Dispose()
+    // The stop: the tunnel comes down, then the app.
+    public ValueTask DisposeAsync()
     {
-        // Singleton<T> publishes Dispose without implementing IDisposable, hence a call and not a using.
-        _appLinux.Dispose();
+        return _linuxApp.DisposeAsync();
     }
 }

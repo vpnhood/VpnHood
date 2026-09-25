@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Description>What a desktop host and a desktop UI agree on - IDesktopUi and what the host hands it - so that UI packages and hosts both reference this, and neither references the other</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The app's API, which a UI is handed: the six interfaces and the shapes they carry. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
+	</ItemGroup>
+</Project>

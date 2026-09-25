@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Net.Toolkit.Logging;
 
-public class VhConsoleLoggerProvider(bool includeScopes = true, bool singleLine = true)
+public class VhConsoleLoggerProvider(bool includeScopes = true)
     : ILoggerProvider
 {
     private readonly ConcurrentDictionary<string, VhConsoleLogger> _loggers = new();
@@ -11,7 +11,7 @@ public class VhConsoleLoggerProvider(bool includeScopes = true, bool singleLine 
     public ILogger CreateLogger(string categoryName)
     {
         return _loggers.GetOrAdd(categoryName, name => new VhConsoleLogger(
-            includeScopes: includeScopes, singleLine: singleLine, categoryName: name));
+            includeScopes: includeScopes, categoryName: name));
     }
 
     public void Dispose()

@@ -14,5 +14,7 @@
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
 		<!-- The one command that IS the app - daemon - builds it; the rest never touch this. -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<!-- The UI a head names, which the window runs. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Abstractions\VpnHood.AppUi.Hosting.Abstractions.csproj" />
 	</ItemGroup>
 </Project>

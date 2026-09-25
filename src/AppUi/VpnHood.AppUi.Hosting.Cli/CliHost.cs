@@ -1,5 +1,6 @@
 using System.CommandLine;
 using VpnHood.AppUi.Hosting.Cli.Commands;
+using VpnHood.AppUi.Hosting.Cli.Internal;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Cli;
@@ -14,8 +15,29 @@ namespace VpnHood.AppUi.Hosting.Cli;
 // to catch before this sees it (LinuxCliHost).
 public static class CliHost
 {
-    public static async Task<int> Run(string[] args, CliHeadParams head, CliPlatform platform,
-        CancellationToken cancellationToken)
+    // The whole run, on the calling thread, which is the host's main thread: the UI gets it (on
+    // Windows it must be the STA thread Main was given), and it waits while the parser and every
+    // command's work run off it (MainThreadQueue).
+    public static int Run(string[] args, CliHeadParams head, CliPlatform platform)
+    {
+        using var mainThread = new MainThreadQueue();
+        var run = Task.Run(() => RunAsync(args, head, platform, mainThread));
+
+        // A signal's forced end completes the run without waiting for its command (the parser's
+        // ProcessTerminationTimeout), and a UI that did not close when its command was cancelled
+        // still holds this thread - which would keep the process alive for good. The process then
+        // ends the way the run did.
+        run.ContinueWith(completed => {
+            if (mainThread.IsBusy)
+                Environment.Exit(completed.IsCompletedSuccessfully ? completed.Result : 1);
+        }, TaskScheduler.Default);
+
+        mainThread.RunUntil(run);
+        return run.GetAwaiter().GetResult();
+    }
+
+    private static async Task<int> RunAsync(string[] args, CliHeadParams head, CliPlatform platform,
+        MainThreadQueue mainThread)
     {
         if (args.Length == 0)
             args = ["ui"];
@@ -36,13 +58,24 @@ public static class CliHost
             rootCommand.Subcommands.Add(ProfileCommand.Create(platform));
 
         rootCommand.Subcommands.Add(ServiceCommand.Create(platform));
-        rootCommand.Subcommands.Add(UiCommand.Create(platform, head));
+        rootCommand.Subcommands.Add(UiCommand.Create(platform, head, mainThread));
 
         // Only a platform whose instance is this binary run headless has anything for "daemon" to be.
         if (platform.CreateDaemonHost != null)
             rootCommand.Subcommands.Add(DaemonCommand.Create(platform, platform.CreateDaemonHost));
 
+        // A debugger's: the daemon and the window in this one process, which help leaves out.
+        if (platform.CreateDevDaemonHost != null)
+            rootCommand.Subcommands.Add(DevCommand.Create(platform, head, mainThread, platform.CreateDevDaemonHost));
+
+        // SIGTERM - how the service manager stops the daemon - cancels the running command, and the
+        // parser then waits this long for it to finish before it ends the process. Its default of
+        // 2 s is too short for the daemon, whose stop disconnects the tunnel first.
+        var invocationConfiguration = new InvocationConfiguration {
+            ProcessTerminationTimeout = TimeSpan.FromSeconds(10)
+        };
+
         var parseResult = rootCommand.Parse(args);
-        return await parseResult.InvokeAsync(new InvocationConfiguration(), cancellationToken).Vhc();
+        return await parseResult.InvokeAsync(invocationConfiguration, CancellationToken.None).Vhc();
     }
 }

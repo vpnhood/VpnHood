@@ -24,7 +24,9 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
   with the `(NativeHandle)` ctor. The `[Register]` name **must** match `NSExtensionPrincipalClass` in
   `src/Apps/Client/Client.Ios.Extension/Info.plist` (the Connect extension is identical). **This subclass is required** — pointing the principal class straight at core
   `IosVpnService` crashes on launch under .NET 11/CoreCLR's registrar (see the memory/throughput doc).
-- `src/Apps/Client/Client.Ios.Apple/AppDelegate.cs` / `src/Apps/Client/Client.Ios.Apple/SceneDelegate.cs` — host UI + `VpnHoodApp.Init(new IosDevice(...))`.
+- `src/Apps/Client/Client.Ios.Apple/AppDelegate.cs` — derives from `IosAvaloniaAppDelegate<ClassicAvaloniaApp>`, which
+  starts the app and the UI, and returns its `IosStartParams`: `VpnHoodIosApp.Init` builds the `IosDevice` from the App
+  Group and the extension's bundle id named there.
 
 Both the host and extension csprojs (`VpnHood.App.Client.Ios.Apple` / `VpnHood.App.Client.Ios.Extension`) `ProjectReference` the core `VpnHood.Core.Client.Devices.Ios` project
 (which transitively brings in Host + iOSTun + TcpStack + Device).
@@ -33,8 +35,9 @@ Both the host and extension csprojs (`VpnHood.App.Client.Ios.Apple` / `VpnHood.A
 > to core; a stale local copy diverges from the core API and silently breaks IPC or re-introduces the jetsam kill.
 
 ## App Group — the IPC channel
-Both targets share App Group `group.com.vpnhood.client.ios` (in each `Entitlements.plist`). The config folder
-for both sides resolves to:
+Both targets share App Group `group.com.vpnhood.client.ios`, which the build adds to both targets' entitlements
+from the product's id base (`VpnHood.AppLib.App.targets`; see [source-layout](../source-layout.md#the-apps-identity)).
+The config folder for both sides resolves to:
 ```
 NSFileManager.DefaultManager.GetContainerUrl("group.com.vpnhood.client.ios")?.Path + "/vpn-service/"
 ```

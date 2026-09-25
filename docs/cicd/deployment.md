@@ -136,13 +136,15 @@ half-filled config can never silently ship the wrong id or repo (`pub/lib/AppPub
 - The three top-level keys are **required once the file exists** — omitting any one throws.
 - `Distributions.<store>` blocks are optional (you needn't ship every store), but a block that IS
   present **must** name `AndroidPackageId` — the built application id (`/p:ApplicationId`). Absent
-  file entirely = the csproj `<ApplicationId>` (a `.debug` placeholder), so a fork must set its own
-  to publish a real app. Windows/Linux builds have no package id.
+  file entirely = the head's own id, which the app's identity makes: the product's id base with the
+  platform, and `.web` for the website's APK (`src/Apps/<Product>/Directory.Build.props`, see
+  [source-layout](../source-layout.md#the-apps-identity)); a fork sets its own base there. Windows and
+  Linux take their ids from the identity alone.
 - `AndroidKeystoreAlias` — the signing alias (non-secret, hence in the config); optional, absent =
   auto-detect the single key entry, or the optional `ANDROID_KEYSTORE_<NAME>_ALIAS` secret for a
   multi-entry keystore.
-- `PackageTitle` — Linux artifact names come from the csproj `AssemblyName`, so the title does not apply
-  there. Most forks leave it at the default.
+- `PackageTitle` — Linux artifact names come from the head's `AssemblyName` (`VhAppPackageTitle`), so
+  the title does not apply there. Most forks leave it at the default.
 
 > **Field names are exact.** `AndroidPackageId` / `AndroidKeystoreAlias` — NOT `PackageId` /
 > `KeystoreAlias`. A misnamed key reads as absent and throws.

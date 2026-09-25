@@ -36,7 +36,9 @@ public class ClientProfileService
     private ClientProfileInfo? _cashInfo;
     private string? _cashInfoRegion;
 
-    private string ClientProfilesFilePath => Path.Combine(field, FilenameProfiles);
+    private string ClientProfilesFilePath => GetClientProfilesFilePath(field);
+
+    private static string GetClientProfilesFilePath(string folderPath) => Path.Combine(folderPath, FilenameProfiles);
 
     public ClientProfileService(string folderPath, AppFeatures appFeatures)
     {

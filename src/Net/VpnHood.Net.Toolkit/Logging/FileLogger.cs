@@ -8,7 +8,7 @@ public class FileLogger(
     bool includeScopes = true,
     bool autoFlush = false,
     string? categoryName = null)
-    : TextLogger(includeScopes, categoryName), IDisposable
+    : TextLogger(includeScopes, categoryName, singleLine: false), IDisposable
 {
     private const int DefaultBufferSize = 1024;
     private readonly Lock _lock = new();

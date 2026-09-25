@@ -13,13 +13,24 @@ internal static class ServiceCommand
     public static Command Create(CliPlatform platform)
     {
         var instance = platform.Instance;
-        return new Command("service", "Start, stop and inspect the background service.") {
+        var command = new Command("service", "Start, stop and inspect the background service.") {
             Simple("start", "Start the VPN service.", instance.Start),
             Simple("stop", "Stop the VPN service. This disconnects the VPN.", instance.Stop),
             Simple("restart", "Restart the VPN service.", instance.Restart),
             Simple("status", "Show what the system says about the service.", instance.ShowStatus),
             CreateLog(instance)
         };
+
+        // Only where the app registers its service itself; elsewhere the package's installer does,
+        // and a command that could only refuse is left out of help altogether.
+        if (platform.InstanceSetup is { } setup) {
+            command.Subcommands.Add(Simple("install",
+                "Register the VPN service, started at boot. The installer runs this.", setup.Install));
+            command.Subcommands.Add(Simple("uninstall",
+                "Stop the VPN service and remove it. The uninstaller runs this.", setup.Uninstall));
+        }
+
+        return command;
     }
 
     private static Command Simple(string name, string description, Func<CancellationToken, Task<int>> action)

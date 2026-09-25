@@ -58,7 +58,7 @@ sudo rm -f /etc/systemd/system/VpnHoodClient*.service /usr/local/bin/vhclient \
            /usr/share/applications/VpnHoodClient.desktop
 sudo systemctl daemon-reload
 sudo rm -rf /opt/VpnHoodClient            # this deletes your settings and profiles too
-rm -rf ~/.cache/VpnHoodClient
+rm -rf ~/.cache/com.vpnhood.client.linux ~/.cache/VpnHoodClient   # the window's; the second, an older release's
 ```
 
 ---
@@ -96,7 +96,7 @@ vhclient status
 | `vhclient service start\|stop\|restart` | Drives the systemd unit. Asks for your password. |
 | `vhclient service status` | What systemd says. No password needed. |
 | `vhclient service log [-f] [-n N]` | The service log, out of the journal. No password needed. |
-| `vhclient stop` | Stops the running service directly. This is what the unit's `ExecStop` calls. |
+| `vhclient stop` | Does nothing. Kept for the units older installers wrote, whose `ExecStop` calls it; systemd stops the service with a signal, and the service disconnects before it exits. |
 
 ### One profile, or many
 
@@ -111,7 +111,7 @@ follows one fact: can this app be given an access key?
 
 On CONNECT there is exactly one profile and nothing to choose between, so those are not printed in
 help, not parsed, and not quietly accepted. It is the same answer the app gives
-`AppOptions.IsAddAccessKeySupported`; a head states it once, in `LinuxHeadParams`.
+`AppOptions.IsAddAccessKeySupported`; a head states it once, in `CliHeadParams`.
 
 **Naming a profile.** On CLIENT, anywhere a command takes a profile you may give its id or its
 name, and a name may be a prefix — `vhclient connect -p "VpnHood Sam"` is enough. A prefix that
@@ -161,7 +161,8 @@ It belongs to root, so edit it with `sudo`, then `sudo vhclient service restart`
 and the app's other state live beside it in the same folder.
 
 The window and the commands write nothing there. The window keeps its own extracted content under
-`~/.cache/VpnHoodClient/`, per user — which is what lets it run without privilege.
+`~/.cache/com.vpnhood.client.linux/`, per user and named by the app id — which is what lets it run
+without privilege.
 
 ---
 
@@ -205,6 +206,7 @@ reports honestly.
 | The menu entry does nothing | The window could not open. Run `vhclient ui` in a terminal to see why — usually a missing GUI library on a machine installed with `-nodesktop`. |
 | `status` says `None` forever | No profile, or none chosen. `vhclient profile list`. |
 | Connects, but no traffic | Check the log: `vhclient service log -n 100`. |
+| `The VPN cannot use its interface name` | Another VPN — or another app built on VpnHood under the same name — has an interface called `VpnHoodClient`. The message says whose it is. Stop that VPN, or, if it is gone and left the interface behind, `sudo ip link delete VpnHoodClient`. |
 
 The service log is the journal's, so everything systemd knows is there too:
 `journalctl -u VpnHoodClient -n 200`.
@@ -221,8 +223,10 @@ one small adapter per platform.
 src/AppUi/
 ├── VpnHood.AppUi.Hosting.Cli/        the commands, the daemon, the window launcher
 │   ├── CliHost.cs                    builds the command tree and dispatches
-│   ├── CliHeadParams.cs              what a head declares: its AppOptions, its UI, whether it takes keys
+│   ├── CliHeadParams.cs              what a head declares: its start params, its UI, whether it takes keys
 │   ├── CliPlatform.cs                what a platform declares: paths, the instance, how to be the daemon
+│   │                                 (and a debugger's), and what only some have: a tray, "service install",
+│   │                                 an older folder to import
 │   ├── IAppCliPaths.cs               where this install keeps things
 │   ├── IAppInstanceController.cs     the running instance: is it up, start, stop, log
 │   ├── IAppDaemonHost.cs             the app built the way this OS hosts a headless one
@@ -230,33 +234,72 @@ src/AppUi/
 │   ├── DaemonInfo.cs                 the address the daemon publishes (storage/daemon.json)
 │   ├── Commands/                     one type per command
 │   └── Internal/                     printer, session, profile lookup
-└── VpnHood.AppUi.Hosting.Cli.Linux/  systemd, /opt, XDG, root
-    ├── LinuxCliHost.cs               a Linux head's entry point; catches the old launcher words
-    ├── LinuxCliPaths.cs
-    ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through
-    └── LinuxDaemonHost.cs            VpnHoodLinuxApp, root required
+├── VpnHood.AppUi.Hosting.Cli.Linux/  systemd, /opt, XDG, root
+│   ├── LinuxCliHost.cs               a Linux head's entry point; catches the old launcher words
+│   ├── LinuxCliPaths.cs
+│   ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through
+│   └── LinuxDaemonHost.cs            VpnHoodLinuxApp: the service's, root required, or a debugger's
+└── VpnHood.AppUi.Hosting.Cli.Windows/  the same design on Windows: a LocalSystem service, ProgramData
+    ├── WindowsCliHost.cs             a Windows head's entry point; catches /nowindow and /autoconnect
+    ├── WindowsCliPaths.cs            ProgramData for the service, the person's local app data for the UI
+    ├── WindowsInstanceController.cs  the service control manager; elevates a stop as sudo would
+    ├── WindowsServiceSetup.cs        "service install | uninstall"
+    └── WindowsDaemonHost.cs          VpnHoodWindowsApp: the service's, in storage only it may write, or a debugger's
 ```
 
-A head is then its `AppOptions` and one line naming its UI — see
+A head is then its options — the product's, and its channel's lines — and one line naming its UI,
+an `IDesktopUi` (`VpnHood.AppUi.Hosting.Abstractions`), which the window runs on the host's main
+thread: `static int Main` returns `LinuxCliHost.Run(args, …)` — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
 project reads a static or names a platform: every command is handed a `CliPlatform`, and the two
-interfaces on it are all a second platform has to write. `VpnHood.AppLib.App.Linux` is back to
-the one thing it always was, `VpnHoodLinuxApp`.
+interfaces on it are what each platform writes. Windows adds the rest of `CliPlatform`: the tray
+that keeps its window, `service install`, the import of the folder each person's release kept
+before the service, and a daemon run the service control manager stops by a call.
+`VpnHood.AppLib.App.Linux` is back to the one thing it always was, `VpnHoodLinuxApp`.
 
-Two points that are easy to get wrong:
+**In a debugger** a head runs `dev`, which the desktop heads' launch profiles pass: the daemon and
+the window in one process, so a breakpoint in the app, its tunnel or its UI is reached from one run
+with no service installed. The window still reaches the app over loopback, as it reaches the service.
+The app keeps its storage in the person's own folder of the app (`IAppCliPaths.DevStoragePath`:
+`%LOCALAPPDATA%\<app id>`, `~/.local/share/<app id>`; a Debug build's id ends in `.debug`, so it is
+never a release's) and runs as whoever started
+it, so a tunnel needs an administrator or root unless DebugData1 has `/null-capture`. A Debug build
+installed as a service holds the app's single-instance lock and the build's own files: uninstall it
+first (`VpnHoodClient service uninstall`).
+
+Points that are easy to get wrong:
 
 1. **The port is not a constant.** The local listener takes 4700 when it is free and whatever the
    OS gives when it is not (`VpnHoodAppWebHost.ResolvePort`). That is why the service publishes
    `daemon.json` and nothing dials a hard-coded port.
 2. **The UI must not reach for `VpnHoodApp.Instance`.** It gets a `VpnHoodApi` — in process on
-   Windows and Android, over loopback here — and the presentation layer already knows only
-   `VhApp`. `AvaloniaDesktopHost.Run` has an overload for each.
-3. **The seam is "the running instance", not "the service".** On Linux that is a systemd unit; on
-   Windows it is the elevated tray app, which would publish `daemon.json` from its own startup and
-   set `CliPlatform.CreateDaemonHost` to null, so there is no `daemon` command to type. A Store
-   build is a third `IAppCliPaths` + `IAppInstanceController` pair, not a third design.
+   Android and iOS, over loopback here and on Windows — and the presentation layer already knows
+   only `VhApp`. `AvaloniaDesktopHost.Run` has an overload for each.
+3. **The seam is "the running instance", not "the service".** On Linux that is a systemd unit, which
+   a signal stops; on Windows a service under the service control manager, which stops it with a
+   call (`CliPlatform.HostDaemon`, `ServiceBase`). A Store build, whose app runs in its own process,
+   is a third `IAppCliPaths` + `IAppInstanceController` pair, not a third design.
 4. **Hints print `CommandName`, not the binary's name.** `vhclient` is on the `PATH`;
    `VpnHoodClient` is not. The launcher script says its own name in `VH_LAUNCHER_NAME`.
+5. **A tun says whose it is.** A tun device outlives a crash with its routes and DNS, and its name
+   says nothing about its owner, so the adapter writes the app id on each one it creates as the
+   interface's alias (`ip link set dev VpnHoodClient alias <app id>`; the server writes
+   `VpnHoodServer`). The service's start, after its single-instance lock on the same app id, clears
+   only a tun no process holds that carries that tag — or, from a version before tags, no tag and
+   the app's name — and takes its `resolvconf` entry off first. A connect refuses a name another
+   owner holds, and says whose (`LinuxTunVpnAdapter`, `LinuxTunDevice`).
+6. **What the app asks of a UI is done by the window, as its person.** The service runs as root with
+   no session, so a checkout it opened itself would open nowhere, or as root. The window attaches
+   to it instead (`IUiAttachmentsApi`): every request the window makes names its attachment, so
+   what the request starts — a sign-in, a purchase — runs with that window as its UI context, and
+   an action such as opening the checkout reaches the window's long poll, which opens the person's
+   browser and answers. A window that closes mid-action fails the action with a defined error; with
+   no window open, a UI-bound call fails with a message that says to open the app.
+7. **One window per person.** The window serves a pipe named for its person (`DesktopUiInstance`;
+   .NET's pipes are Unix sockets here, `/tmp/CoreFxPipe_<instance>-ui-<user>`). A second launch
+   asks that pipe first and, if a window answers, brings it forward and ends; another person finds
+   no pipe of theirs and gets a window of their own. Closing the window ends its process — there is
+   no tray to keep a hidden one — and the service runs on.
 
 The installer is [`pub/lib/vh-installer/linux/install-client.sh`](../../pub/lib/vh-installer/linux/install-client.sh),
 which is **not** the server's `install.sh` next to it. Each head picks its template in its

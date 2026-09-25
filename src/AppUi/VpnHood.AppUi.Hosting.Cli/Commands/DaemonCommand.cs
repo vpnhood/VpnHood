@@ -10,17 +10,21 @@ namespace VpnHood.AppUi.Hosting.Cli.Commands;
 // headless. It shows nothing - a display belongs to a session, and this starts before anyone has
 // logged in - and serves its API on loopback, which is how the window and the commands reach it.
 //
-// The platform builds the app (IAppDaemonHost) and says what it needs to; this binds the API,
-// publishes the address, and waits. It ends when the instance is stopped, when the platform's
-// stop command arrives, or when the app disposes itself.
+// The platform builds the app (IAppDaemonHost), which is starting it; this binds the API, publishes
+// the address, and waits. It ends when the service manager stops it - by a signal the parser turns
+// into cancellation (CliHost gives the stop time to disconnect), or by a call the platform's host
+// turns into the same (CliPlatform.HostDaemon) - or when the app disposes itself.
 internal static class DaemonCommand
 {
     public static Command Create(CliPlatform platform, Func<IAppDaemonHost> createDaemonHost)
     {
         var command = new Command("daemon",
-            "Run the VPN service in the foreground. This is what the system's service unit starts.");
+            "Run the VPN service in the foreground. This is what the system's service manager starts.");
 
-        command.SetAction((_, cancellationToken) => Run(platform, createDaemonHost, cancellationToken));
+        command.SetAction((_, cancellationToken) => platform.HostDaemon is { } hostDaemon
+            ? hostDaemon(runCancellationToken => Run(platform, createDaemonHost, runCancellationToken), cancellationToken)
+            : Run(platform, createDaemonHost, cancellationToken));
+
         return command;
     }
 
@@ -39,8 +43,6 @@ internal static class DaemonCommand
 
         var daemonInfoFilePath = platform.Paths.DaemonInfoFilePath;
         try {
-            await daemonHost.Prepare(cancellationToken).Vhc();
-
             // Bind now rather than wait for the first caller: the window and the commands look for
             // the address this publishes, and an instance that has not bound is one they call dead.
             var localWebHost = VpnHoodApp.Instance.LocalWebHost ??
@@ -53,16 +55,22 @@ internal static class DaemonCommand
             VhLogger.Instance.LogInformation("{InstanceName} is listening on {ApiUrl}",
                 platform.Paths.InstanceName, apiUrl);
 
-            // until the app is disposed - by the stop command, by the system's signal, or by itself
+            // until the app is disposed - by the system's signal, or by itself
             while (VpnHoodApp.IsInit && !cancellationToken.IsCancellationRequested)
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).Vhc();
         }
         catch (OperationCanceledException) {
             VhLogger.Instance.LogInformation("Exit requested.");
         }
+        catch (Exception ex) {
+            // in the app's log while it is still open, and where a person or a service manager reads
+            VhLogger.Instance.LogError(ex, "{InstanceName} could not start.", platform.Paths.InstanceName);
+            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            return 1;
+        }
         finally {
             DaemonInfo.Delete(daemonInfoFilePath);
-            daemonHost.Dispose();
+            await daemonHost.DisposeAsync().Vhc();
         }
 
         return 0;

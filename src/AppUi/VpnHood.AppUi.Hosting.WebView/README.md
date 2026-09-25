@@ -66,7 +66,9 @@ while the server remains healthy. A full reload resets the current route and uns
 
 1. Implement `IWebView` wrapping the native web view; raise the events from its navigation
    callbacks (drop cancelled/superseded loads, e.g. iOS `NSURLErrorCancelled -999`).
-2. In the OS host: construct the adapter, `new WebViewHost(adapter)`, call `Start()` on create,
+2. In the OS host: construct the adapter, `new WebViewHost(adapter, webHost)` - the web host the
+   page is served from: the app's own `LocalWebHost` when the app runs in this process, or
+   `ExternalAppWebHost` over the address a desktop's service published - call `Start()` on create,
    `OnResume()` from the platform's foreground/resume hook, `Dispose()` on teardown.
 3. Keep OS-only chrome (safe area, status bar, tray icon, hardware back, window state) in the host.
 
@@ -76,15 +78,25 @@ while the server remains healthy. A full reload resets the current route and uns
 |---|---|---|---|
 | iOS | `IosWebView` (WebView.Ios) | `IosWebViewController` | `WKWebView` |
 | Android | `AndroidWebView` (WebView.Android) | `AndroidWebViewMainActivityHandler` | `Android.Webkit.WebView` |
-| Windows (WPF) | `WpfWebView` (WebView.Windows) | `VpnHoodWpfMainWindow` | WebView2 |
+| Windows (WPF) | `WpfWebView` (WebView.Windows) | `VpnHoodWpfMainWindow`, run by `WpfWebViewUi` - the `IDesktopUi` a Windows head names - over the service's address | WebView2 |
 | MAUI | `MauiWebView` (WebView.Maui) | `VpnHoodWebViewPage` | `Microsoft.Maui.Controls.WebView` |
+
+## A mobile head's classes
+
+A head constructs none of the above. The OS creates its classes, so they derive from the web view
+UI's own: on Android its `Application` from `AndroidWebViewApplication` and its launcher activity
+from `AndroidWebViewMainActivity`; on iOS its `AppDelegate` from `IosWebViewAppDelegate`, which gives
+every window scene an `IosWebViewSceneDelegate` with an `IosWebViewController` as its root. Each
+starts the app from the head's init params (`CreateInitParams`), and the head carries only what
+the OS reads - its attributes, its `[Register]` name, its access keys.
 
 ## Build / verification status
 
 - **iOS** — built Release and device-verified (launches, server starts, background→foreground
   recovers).
-- **Windows (WPF)** — build-verified (adapter + full `Client.Windows.Web` app). Still smoke-test at
-  runtime (WebView2 present + runtime-missing fallback).
+- **Windows (WPF)** — `WpfWebViewUi` run over a service on the dev machine (2026-09-23): the window
+  shows the page the service serves, with the app's name and colours read over its API. Still to
+  try: the runtime-missing fallback.
 - **Android** — build-verified (adapter + full `Client.Android.Web` app). Still smoke-test on a
   device (content-view swap, hardware back, background→foreground recovery).
 - **MAUI** — build-verified (adapter, both android + windows target frameworks). Greenfield host —
@@ -99,9 +111,8 @@ The three above were compile-checked against the toolchains but not yet runtime-
   callback). The old `KillSpaServer` debug OnPause/OnResume hook was dropped (the watchdog
   supersedes it). `LoadFailed` is raised for main-frame connection errors; a dead render process
   rebuilds the WebView, then raises `ContentProcessGone`.
-- **Windows** — the SPA URL now carries `?nocache={SpaHash}` (it didn't before); the WebView2
-  "runtime missing" fallback (hide window + open system browser) moved into `OnWebView2Unavailable`;
-  the window hides rather than closes, so `_host` is not explicitly disposed (process exit handles
-  it).
+- **Windows** — the WebView2 "runtime missing" fallback (hide the window, open the page in the
+  system browser) is `OnWebView2Unavailable`; the window hides rather than closes where the tray
+  keeps it, and its web view's profile is under the person's own folder, not the service's.
 - **MAUI** — greenfield (no SPA host existed before). Verify the `Dispatcher` is non-null when the
   page is constructed, and that resume is delivered (`Window.Resumed` + `OnAppearing`).

@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Hosts the VpnHood Avalonia UI in an iOS app: the application delegate a head's AppDelegate derives from</Description>
+		<TargetFramework>net11.0-ios</TargetFramework>
+		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia.iOS" Version="12.1.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The UI's start, the same under every host. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
+		<!-- The app's iOS start and the UI context. Not a UI - it stays in AppLib. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Ios\VpnHood.AppLib.App.Ios.csproj" />
+	</ItemGroup>
+</Project>

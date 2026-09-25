@@ -14,7 +14,6 @@ public class LogServiceOptions
     public bool? LogAnonymous { get; set; }
     public bool AutoFlush { get; set; } = true;
     public string[] LogEventNames { get; set; } = [];
-    public bool SingleLineConsole { get; set; } = true;
     public string? CategoryName { get; set; } = "VpnHood";
 
     [JsonConverter(typeof(JsonStringEnumConverter<LogLevel>))]

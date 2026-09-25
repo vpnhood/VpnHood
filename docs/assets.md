@@ -42,11 +42,13 @@ Two small types in `VpnHood.Net.Toolkit` carry all of it.
 Task<Stream> OpenReadAsync(string assetPath, CancellationToken cancellationToken);
 ```
 
-`Asset` is a provider plus a path as one value, which is what a head hands to `AppOptions`:
+`Asset` is a provider plus a path as one value, which is what a product's options builder
+(`ClientAppOptions`, `ConnectAppOptions`, or a fork's own) hands to `AppOptions`. The provider is
+the one the platform gives it, `AppOptionsContext.PackagedAssets`:
 
 ```csharp
-UiZipAssets     = [new Asset(platformAssets, "assets/ui.zip")],
-WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
+UiZipAssets     = [new Asset(context.PackagedAssets, "assets/ui.zip")],
+WebRootZipAsset = new Asset(context.PackagedAssets, "assets/web-root.zip"),
 ```
 
 There is one implementation per **platform**, not per set of files, so a new set of files is a new
@@ -132,7 +134,8 @@ The bundle is 7.3 MB zipped, 20.1 MB extracted, 64 files.
    convention.
 2. Give it a folder of its own in the consuming app. Never `assets/`, which is taken.
 3. Place it with targets in `buildTransitive/`, and a `build/` file that imports them.
-4. Have the head name it in `AppOptions` as an `Asset`. Nothing below the head knows the path.
+4. Have the product's options builder name it in `AppOptions` as an `Asset` of the platform's
+   packaged files. Nothing below the product knows the path, and an asset it does not name is off.
 
 ## What not to do
 

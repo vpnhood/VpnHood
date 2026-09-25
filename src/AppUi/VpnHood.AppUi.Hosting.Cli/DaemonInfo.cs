@@ -11,7 +11,7 @@ namespace VpnHood.AppUi.Hosting.Cli;
 //
 // Written when the daemon has bound and deleted when it stops, so its absence is the answer to "is
 // it running" that the commands give a person. Where it is written is the platform's
-// (IAppCliPaths.DaemonInfoFilePath); a Windows tray app writes the same file from its own startup.
+// (IAppCliPaths.DaemonInfoFilePath): the systemd unit's storage on Linux, the service's on Windows.
 public class DaemonInfo
 {
     public required Uri ApiUrl { get; init; }
@@ -32,7 +32,7 @@ public class DaemonInfo
         await File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(daemonInfo), cancellationToken);
 
         // The readers are the desktop session and a person's shell, neither of them root. On
-        // Windows the folder's own ACL already says who reads it.
+        // Windows the service's folder passes its own ACL down: everyone reads, only it writes.
         if (!OperatingSystem.IsWindows())
             File.SetUnixFileMode(filePath,
                 UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);

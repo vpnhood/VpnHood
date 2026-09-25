@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Browser;
 using VpnHood.AppLib.Api.HttpClients;
-using VpnHood.AppUi.Common;
 using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Browser;
@@ -23,9 +22,8 @@ public static class AvaloniaBrowserHost
         var pageUrl = new Uri(args.Length > 0 ? args[0] : "http://localhost:9090/");
         var http = new HttpClient { BaseAddress = new Uri(pageUrl.GetLeftPart(UriPartial.Authority) + "/") };
 
-        await VhApp.Init(VpnHoodApiHttpFactory.Create(http), CancellationToken.None);
-        await TUi.PrepareContentAsync(new HttpAssetProvider(http, "assets/"), CancellationToken.None);
-        await VhApp.Configure(TUi.AvailableCultures, CancellationToken.None);
+        await AvaloniaUiHosting.StartAsync<TUi>(VpnHoodApiHttpFactory.Create(http),
+            new HttpAssetProvider(http, "assets/"), CancellationToken.None);
         await AppBuilder.Configure<TUi>().StartBrowserAppAsync("out");
     }
 }

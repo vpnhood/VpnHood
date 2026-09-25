@@ -124,7 +124,34 @@ testing) so you can buy your own subscriptions without being charged.
 
 ---
 
-## 8. Afterwards
+## 8. Register the website build
+
+Skip if you only publish on Play.
+
+If you also hand out the app as a downloadable file (the website build from step 2), Android needs to
+know it is yours. Google calls this **Android developer verification**: certified Android phones
+refuse to install an app whose package name is not registered to a verified developer. Google is
+switching it on country by country, and the console shows the deadline that applies to you (for the
+first countries it was September 30, 2026).
+
+Your Play apps are registered for you. The website build is not, because its package name is
+different. In Play Console → **Android developer verification → Register package name**:
+
+1. Enter the website build's package name and a friendly name.
+2. **Select key.** If the website build is already out there, Google lists the signing key it has
+   seen on it — pick that one. It must be the key your pipeline signs the website build with.
+3. **Sign and upload an APK** to prove you hold that key. Google shows a short snippet for your
+   account. Put it in a file named `adi-registration.properties` in the `assets` folder of any app
+   with the same package name — an empty app is fine — build it in release mode, sign it with that
+   key, and upload it. Only the public half of the key reaches Google, and this APK is never
+   published.
+
+The status moves from *In review* to *Registered*, usually within minutes. It is a one-off: you
+register again only for a new package name or a new signing key, never per release.
+
+---
+
+## 9. Afterwards
 
 Later releases are automatic: the pipeline builds, uploads and updates the listing. You return to
 the console only when Google asks you to re-confirm a declaration, or when you change something

@@ -49,8 +49,11 @@ public class IosWebViewController : UIViewController
             await VpnHoodApp.Instance.ResourcesLoaded;
             View!.BackgroundColor = BackgroundColor;
 
+            // the app's own web host: the platform started the app in this process
             var webView = new IosWebView(this, BackgroundColor);
-            _host = new WebViewHost(webView);
+            var webHost = VpnHoodApp.Instance.LocalWebHost ??
+                          throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
+            _host = new WebViewHost(webView, webHost);
             _host.Start();
 
             // iOS suspends the host app in the background and can close the loopback socket meanwhile;

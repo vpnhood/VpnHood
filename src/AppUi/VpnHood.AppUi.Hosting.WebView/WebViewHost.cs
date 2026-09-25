@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.App;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -7,10 +6,11 @@ using VpnHood.AppLib.App.WebHosting;
 
 namespace VpnHood.AppUi.Hosting.WebView;
 
-// Platform-neutral controller that hosts the VpnHood SPA in a web view: starts the loopback web
-// server, computes the launch URL, drives the loading/error state and loads the SPA again after
-// the web view reports a failure. Only the native web-view mechanics live in the per-platform
-// IWebView; the host keeps itself alive (see IAppWebHost).
+// Platform-neutral controller that hosts the VpnHood SPA in a web view: starts the web host it is
+// handed, computes the launch URL, drives the loading/error state and loads the SPA again after the
+// web view reports a failure. Only the native web-view mechanics live in the per-platform IWebView;
+// the web host keeps itself alive (see IAppWebHost). Which web host is the OS host's to say - the
+// app's own local one when the app runs in the host's process - so nothing here assumes the app is.
 //
 // Lifecycle from the OS host: construct one per web view, call Start() when the host UI is created,
 // OnResume() from the platform's foreground/resume hook, and Dispose() when it is torn down.
@@ -18,21 +18,23 @@ public sealed class WebViewHost : IDisposable
 {
     private static readonly TimeSpan ReloadDelay = TimeSpan.FromSeconds(1);
     private readonly IWebView _view;
+    private readonly IAppWebHost _webHost;
     private readonly WebViewHostOptions _options;
-    private IAppWebHost? _server;
     private Uri? _launchUrl;
     private bool _viewInitialized;
     private bool _reloadPending;
     private bool _disposed;
 
-    public WebViewHost(IWebView view, WebViewHostOptions? options = null)
+    public WebViewHost(IWebView view, IAppWebHost webHost, WebViewHostOptions? options = null)
     {
         _view = view ?? throw new ArgumentNullException(nameof(view));
+        _webHost = webHost ?? throw new ArgumentNullException(nameof(webHost));
         _options = options ?? new WebViewHostOptions();
 
         _view.PageLoaded += OnPageLoaded;
         _view.LoadFailed += OnLoadFailed;
         _view.ContentProcessGone += OnContentProcessGone;
+        _webHost.Restarted += OnServerRestarted;
     }
 
     // Start the web host off the UI thread (it extracts the web root and binds a socket), then
@@ -41,7 +43,7 @@ public sealed class WebViewHost : IDisposable
     {
         Task.Run(async () => {
             try {
-                _launchUrl = await LocalWebHost.EnsureStarted(CancellationToken.None).Vhc();
+                _launchUrl = await _webHost.EnsureStarted(CancellationToken.None).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to start the SPA web server.");
@@ -52,9 +54,6 @@ public sealed class WebViewHost : IDisposable
             _view.Post(InitializeAndLoad);
         });
     }
-
-    private static IAppWebHost LocalWebHost => VpnHoodApp.Instance.LocalWebHost ??
-        throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
 
     // Call from the platform's resume/foreground hook. The app and the web server subscribe to it.
     public void OnResume()
@@ -68,11 +67,6 @@ public sealed class WebViewHost : IDisposable
             return;
 
         try {
-            if (_server == null) {
-                _server = LocalWebHost;
-                _server.Restarted += OnServerRestarted;
-            }
-
             if (!_viewInitialized) {
                 _view.Initialize();
                 _viewInitialized = true;
@@ -140,7 +134,7 @@ public sealed class WebViewHost : IDisposable
         Task.Run(async () => {
             try {
                 // one real connect check, and a rebind when the listener really is gone
-                _launchUrl = await LocalWebHost.EnsureStarted(CancellationToken.None).Vhc();
+                _launchUrl = await _webHost.EnsureStarted(CancellationToken.None).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to check the SPA web server after a failed load.");
@@ -164,9 +158,6 @@ public sealed class WebViewHost : IDisposable
         _view.PageLoaded -= OnPageLoaded;
         _view.LoadFailed -= OnLoadFailed;
         _view.ContentProcessGone -= OnContentProcessGone;
-        if (_server != null) {
-            _server.Restarted -= OnServerRestarted;
-            _server = null;
-        }
+        _webHost.Restarted -= OnServerRestarted;
     }
 }

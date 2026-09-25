@@ -45,7 +45,7 @@ public sealed class WpfWebView(WebView2 webView, Action onWebView2Unavailable) :
 
     private static void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
     {
-        VpnHoodWindowsApp.OpenUrlInExternalBrowser(new Uri(e.Uri));
+        WindowsShell.OpenUrl(new Uri(e.Uri));
         e.Handled = true;
     }
 

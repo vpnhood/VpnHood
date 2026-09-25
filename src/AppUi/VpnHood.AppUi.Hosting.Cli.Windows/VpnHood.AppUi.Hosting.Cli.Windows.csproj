@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<Description>The VpnHood command line on Windows: a LocalSystem service is the app, ProgramData is its storage, and the window, the tray and the commands run as whoever is signed in. Everything the commands themselves do is VpnHood.AppUi.Hosting.Cli</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- ServiceBase, for the service control manager's start and stop, and ServiceController. -->
+		<PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.12" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Cli\VpnHood.AppUi.Hosting.Cli.csproj" />
+		<!-- The app as the service runs it, and the tray the window shows. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Windows\VpnHood.AppLib.App.Windows.csproj" />
+	</ItemGroup>
+</Project>

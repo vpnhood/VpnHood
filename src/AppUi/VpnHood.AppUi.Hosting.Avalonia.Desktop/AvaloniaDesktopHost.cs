@@ -6,16 +6,16 @@ using VpnHood.AppLib.App;
 using VpnHood.AppLib.Api;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
 // An Avalonia UI in a window on a desktop: a Windows or Linux head runs it here in place of the
 // web UI when the app asks (DebugCommands.AvaloniaUi). Which UI is the head's to name, once, as
-// the type argument of Run. The window hides rather than closes - the
-// app lives on, in the tray on Windows and as a service on Linux, and asks for the window again
-// through ShowMainWindow - so the run ends only with Shutdown, which the head calls as the app
-// exits. Run takes the calling thread as the UI thread until then.
+// the type argument of Run. Where a tray keeps the UI (Windows), the window hides rather than
+// closes - the app lives on in the tray and asks for the window again through ShowMainWindow - so
+// the run ends only with Shutdown, which the head calls as the app exits. Where none does (Linux,
+// exitOnClose), closing the window ends the run; the service lives on either way. Run takes the
+// calling thread as the UI thread until then.
 public static class AvaloniaDesktopHost
 {
     private static ClassicDesktopStyleApplicationLifetime? _lifetime;
@@ -28,7 +28,8 @@ public static class AvaloniaDesktopHost
     {
         // The UI reaches the app through its API - the same six interfaces a paired browser dials
         // over HTTP, here the app's own controllers in process; in process both complete at once.
-        Run<TUi>(args, showWindow, VpnHoodApp.Instance.Api, VpnHoodApp.Instance.UiAssetProvider);
+        Run<TUi>(args, showWindow, VpnHoodApp.Instance.Api, VpnHoodApp.Instance.UiAssetProvider,
+            exitOnClose: false);
     }
 
     // The same window, for a head that holds no VpnHoodApp: the API is the one built over HTTP
@@ -36,14 +37,10 @@ public static class AvaloniaDesktopHost
     // head's own - on Linux a user's cache, since the app's storage belongs to root. Nothing below
     // this line knows which of the two it was given; the pages never did.
     public static void Run<TUi>(string[] args, bool showWindow, VpnHoodApi api,
-        IAssetProvider? uiAssetProvider)
+        IAssetProvider? uiAssetProvider, bool exitOnClose)
         where TUi : Application, IAvaloniaUi, new()
     {
-        VhApp.Init(api, CancellationToken.None).GetAwaiter().GetResult();
-
-        // what this UI needs before its first view, and the languages it has words for
-        AvaloniaUiHosting.PrepareContent<TUi>(uiAssetProvider);
-        VhApp.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+        AvaloniaUiHosting.StartAsync<TUi>(api, uiAssetProvider, CancellationToken.None).GetAwaiter().GetResult();
 
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
             Args = args,
@@ -53,10 +50,15 @@ public static class AvaloniaDesktopHost
 
         var window = lifetime.MainWindow ??
                      throw new InvalidOperationException("The UI has made no main window.");
-        window.Closing += (_, e) => {
-            e.Cancel = true;
-            window.Hide();
-        };
+        if (exitOnClose) {
+            window.Closed += (_, _) => lifetime.Shutdown();
+        }
+        else {
+            window.Closing += (_, e) => {
+                e.Cancel = true;
+                window.Hide();
+            };
+        }
         AppUiContext.Context = new AvaloniaUiContext(window);
         _lifetime = lifetime;
         _window = window;
@@ -81,9 +83,14 @@ public static class AvaloniaDesktopHost
         });
     }
 
+    // From any thread. Before a run has a lifetime there is nothing to end, and nothing of Avalonia
+    // is touched: its dispatcher belongs to the thread the run makes it on.
     public static void Shutdown()
     {
-        Dispatcher.UIThread.Post(() => _lifetime?.Shutdown());
+        if (_lifetime is not { } lifetime)
+            return;
+
+        Dispatcher.UIThread.Post(() => lifetime.Shutdown());
     }
 
     private static AppBuilder BuildAvaloniaApp<TUi>()

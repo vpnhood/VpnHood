@@ -3,6 +3,8 @@ using VpnHood.AppLib.App;
 
 namespace VpnHood.AppUi.Hosting.WebView.Maui;
 
+// The app under a MAUI UI. The app itself is started by the platform's own Init, from the same
+// init params as every head (VpnHoodAndroidApp, VpnHoodWindowsApp): a UI package never starts it.
 public class VpnHoodAppMaui : Singleton<VpnHoodAppMaui>, IVpnHoodAppMaui
 {
     private readonly IVpnHoodAppMaui _appMaui;
@@ -12,9 +14,9 @@ public class VpnHoodAppMaui : Singleton<VpnHoodAppMaui>, IVpnHoodAppMaui
         _appMaui = appMaui;
     }
 
-    public static VpnHoodAppMaui Init(Func<AppOptions> optionsFactory)
+    public static VpnHoodAppMaui Init(AppInitParams initParams)
     {
-        return new VpnHoodAppMaui(CreateMauiApp(optionsFactory));
+        return new VpnHoodAppMaui(CreateMauiApp(initParams));
     }
 
     protected override void Dispose(bool disposing)
@@ -26,12 +28,12 @@ public class VpnHoodAppMaui : Singleton<VpnHoodAppMaui>, IVpnHoodAppMaui
         base.Dispose(disposing);
     }
 
-    public static IVpnHoodAppMaui CreateMauiApp(Func<AppOptions> optionsFactory)
+    public static IVpnHoodAppMaui CreateMauiApp(AppInitParams initParams)
     {
 #if ANDROID
-        return VpnHoodAppMauiAndroid.Init(optionsFactory);
+        return VpnHoodAppMauiAndroid.Init(initParams);
 #elif WINDOWS
-        return VpnHoodAppMauiWindows.Init(optionsFactory);
+        return VpnHoodAppMauiWindows.Init(initParams);
 #else
         throw new PlatformNotSupportedException();
 #endif

@@ -19,28 +19,33 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
     private static extern bool SetForegroundWindow(IntPtr hWnd);
     
     protected AppWindow? AppWindow;
+    private readonly WindowsAppTray _tray;
 
-    private VpnHoodAppMauiWindows(AppOptions appOptions)
+    private VpnHoodAppMauiWindows(AppInitParams initParams)
     {
-        // initialize Win App
-        appOptions.DisconnectOnDispose = true;
-        VpnHoodWindowsApp.Init(appOptions, args: Environment.GetCommandLineArgs());
-        VpnHoodWindowsApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
-        VpnHoodWindowsApp.Instance.ExitRequested += ExitRequested;
-        VpnHoodWindowsApp.Instance.Start();
+        // The platform starts the app, as under any other UI - in this process, under the
+        // person's storage folder, until this becomes a window over the service (hosting plan,
+        // step 10) - and it disconnects on the way out.
+        VpnHoodWindowsApp.Init(initParams, initParams.ResolveStoragePath());
+
+        // the tray over the app's own API here; its requests come from its own thread
+        _tray = WindowsAppTray.Start(VpnHoodApp.Instance.Api, VpnHoodApp.Instance.UiAssetProvider,
+            showWindow: _ => {
+                MainThread.BeginInvokeOnMainThread(ShowMainWindow);
+                return Task.CompletedTask;
+            },
+            exit: () => MainThread.BeginInvokeOnMainThread(Exit));
 
         // initialize VpnHoodApp
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
 
         // customize main window
         WindowHandler.Mapper.AppendToMapping(nameof(IWindow), MappingMethod);
-
     }
 
-    public static VpnHoodAppMauiWindows Init(Func<AppOptions> optionsFactory)
+    public static VpnHoodAppMauiWindows Init(AppInitParams initParams)
     {
-        var appOptions = optionsFactory();
-        var app = new VpnHoodAppMauiWindows(appOptions);
+        var app = new VpnHoodAppMauiWindows(initParams);
         app.UpdateIcon();
         return app;
     }
@@ -64,7 +69,7 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         }
     }
 
-    protected virtual void OpenMainWindowRequested(object? sender, EventArgs e)
+    protected virtual void ShowMainWindow()
     {
         AppWindow?.Show(true);
         AppWindow?.MoveInZOrderAtTop();
@@ -73,11 +78,10 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
             SetForegroundWindow(mainWindowHandle);
     }
 
-    protected virtual void ExitRequested(object? sender, EventArgs e)
+    protected virtual void Exit()
     {
         MauiWinUIApplication.Current.Exit();
-        if (VpnHoodWindowsApp.IsInit)
-            VpnHoodWindowsApp.Instance.Dispose();
+        Dispose();
     }
 
     protected virtual void ConnectionStateChanged(object? sender, EventArgs e)
@@ -116,6 +120,7 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
+            _tray.Dispose();
             if (VpnHoodWindowsApp.IsInit)
                 VpnHoodWindowsApp.Instance.Dispose();
         }

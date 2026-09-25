@@ -50,8 +50,11 @@ public class AndroidWebViewMainActivityHandler(
         // Experimental. Fixing: Window couldn't find content container view.
         // Some OEMs are subject to this issue, so postpone the content setup.
         ActivityEvent.Activity.Window?.DecorView.Post(() => {
+            // the app's own web host: the platform started the app in this process
             _spaWebView = new AndroidWebView(ActivityEvent, options);
-            _host = new WebViewHost(_spaWebView);
+            var webHost = VpnHoodApp.Instance.LocalWebHost ??
+                          throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
+            _host = new WebViewHost(_spaWebView, webHost);
             _host.Start();
 
             // Register back callback for Android 13+ (API 33+) with default priority (0).

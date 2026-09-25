@@ -69,8 +69,8 @@ foreach ($file in Get-ChildItem $projectDir -Recurse -Include *.cs, *.axaml) {
     $text = [System.IO.File]::ReadAllText($file.FullName, $utf8);
     foreach ($match in [regex]::Matches($text, '"(?:images/)?([\w.-]+\.(?:webp|png|svg|mp4))"')) { $images += $match.Groups[1].Value; }
 }
-# The heads' names too, by the store path they write (LogoAssetPath in each AppConfigs.cs): the file a
-# head names must be in the store as much as one a page names. Only the prefixed form - a bare name
+# The apps' names too, by the store path they write (LogoAssetPath in each product's options builder): the
+# file an app names must be in the store as much as one a page names. Only the prefixed form - a bare name
 # in a head is not a store path - and never the build's own output.
 foreach ($file in Get-ChildItem (Join-Path $repoDir "src\Apps") -Recurse -Include *.cs | Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }) {
     $text = [System.IO.File]::ReadAllText($file.FullName, $utf8);

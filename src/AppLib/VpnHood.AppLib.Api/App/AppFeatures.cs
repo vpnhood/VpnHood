@@ -70,7 +70,6 @@ public class AppFeatures
     // Whether this head runs a listener a phone can pair with. False means the three remote-access
     // calls throw, so a UI hides the pairing entry rather than offering it and failing.
     public required bool IsRemoteAccessSupported { get; init; }
-    public required bool AdjustForSystemBars { get; init; }
     public required bool AllowEndPointStrategy { get; init; }
     public required bool IsAdSupported { get; set; }
     public required bool IsRewardedAdSupported { get; init; }

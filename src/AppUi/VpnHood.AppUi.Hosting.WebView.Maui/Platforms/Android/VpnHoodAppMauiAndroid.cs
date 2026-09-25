@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.App.Android;
-using VpnHood.Core.Client.Devices.Android;
-using VpnHood.Net.Toolkit.Logging;
+﻿using VpnHood.AppLib.App.Android;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
 
@@ -10,26 +7,19 @@ namespace VpnHood.AppUi.Hosting.WebView.Maui;
 
 internal class VpnHoodAppMauiAndroid : Singleton<VpnHoodAppMauiAndroid>, IVpnHoodAppMaui
 {
-    public static VpnHoodAppMauiAndroid Init(Func<AppOptions> optionsFactory)
+    // The platform starts the app - only in the app's own process, with its own defaults - as it
+    // does under any other UI.
+    public static VpnHoodAppMauiAndroid Init(AppInitParams initParams)
     {
-        if (AndroidDevice.IsVpnServiceProcess) {
-            VhLogger.Instance.LogInformation(
-                "This is the VPN service process, skipping VpnHoodApp initialization.");
-            return new VpnHoodAppMauiAndroid();
-        }
-
-        var options = optionsFactory();
-        var device = AndroidDevice.Create();
-        options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
-        VpnHoodApp.Init(device, options);
+        VpnHoodAndroidApp.Init(() => initParams);
         return new VpnHoodAppMauiAndroid();
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            if (VpnHoodApp.IsInit)
-                VpnHoodApp.Instance.Dispose();
+            if (VpnHoodAndroidApp.IsInit)
+                VpnHoodAndroidApp.Instance.Dispose();
         }
 
         base.Dispose(disposing);

@@ -195,19 +195,24 @@ public class AndroidDevice : IDevice
 
     public static string CurrentProcessName {
         get {
-            //if (OperatingSystem.IsAndroidVersionAtLeast(28))
-            //return Application.ProcessName ?? "";
+            // Both answers come from inside the process: Android 9 and later say it; the kernel's copy of
+            // the same name - written before any Application code runs, then null padding - answers before
+            // that and whenever Android does not. An unnamed process would read as the app's own, so it throws.
+            if (OperatingSystem.IsAndroidVersionAtLeast(28) && Application.ProcessName is { Length: > 0 } processName)
+                return processName;
 
-            var activityManager = (ActivityManager)Application.Context.GetSystemService(Context.ActivityService)!;
-            var pid = Process.MyPid();
-            return activityManager
-                .RunningAppProcesses?
-                .SingleOrDefault(x => x.Pid == pid)?
-                .ProcessName ?? "";
+            var name = File.ReadAllText("/proc/self/cmdline").Split('\0')[0];
+            return name.Length > 0 ? name : throw new InvalidOperationException("Android gave this process no name.");
         }
     }
 
     public static bool IsVpnServiceProcess => CurrentProcessName.Contains(AndroidVpnService.ProcessName);
+
+    // The app's own process is the one named after the package. Every other - the VPN service's, the
+    // tile's, any a library declares - carries a suffix, so a head must not rename its application's
+    // process ([Application(Process = ...)]).
+    public static bool IsMainProcess => CurrentProcessName == (Application.Context.PackageName
+        ?? throw new InvalidOperationException("The Android context has no package name."));
 
     public IMessageClient CreateMessageClient()
     {

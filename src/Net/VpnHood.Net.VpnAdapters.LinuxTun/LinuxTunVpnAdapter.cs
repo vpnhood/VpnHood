@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
@@ -17,15 +18,25 @@ using VpnHood.Net.VpnAdapters.LinuxTun.LinuxNative;
 
 namespace VpnHood.Net.VpnAdapters.LinuxTun;
 
-public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
-    : TunVpnAdapter(adapterSettings)
+public class LinuxTunVpnAdapter : TunVpnAdapter
 {
     // -1 (not 0) is the "closed" sentinel: fd 0 is a valid descriptor (stdin), so using it would let a
     // post-close read/write hit an unrelated descriptor instead of failing.
     private const int InvalidFd = -1;
+
+    // IFNAMSIZ less its terminator; the kernel and ip(8) refuse longer ones
+    private const int MaxAdapterNameLength = 15;
+    private const int KeptNameLength = 10;
+
+    // IFALIASZ less its terminator
+    private const int MaxAdapterAliasLength = 255;
+    private const int KeptAliasLength = 64;
+
+    private readonly string? _adapterAlias;
     private int _tunAdapterFd = InvalidFd;
     private int? _metric;
     private string? _primaryAdapterName;
+    private bool _isAdapterAdded;
     private bool _isResolvconfDnsSet;
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
@@ -37,6 +48,123 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
     protected override bool RestartAfterNetworkAddressChanged => true;
+
+    public LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
+        : base(adapterSettings)
+    {
+        if (!IsValidAdapterName(AdapterName))
+            throw new ArgumentException(
+                $"'{AdapterName}' is not a valid Linux interface name; {nameof(GetValidAdapterName)} derives one.",
+                nameof(adapterSettings));
+
+        _adapterAlias = adapterSettings.AppId == null ? null : GetAdapterAlias(adapterSettings.AppId);
+    }
+
+    // A name the kernel takes: at most 15 characters, and none it refuses - whitespace, '/' or ':'.
+    // This keeps to letters, digits, '_', '-' and '.', and never starts with '-', which a command
+    // line would read as an option.
+    public static bool IsValidAdapterName(string name)
+    {
+        return name.Length is > 0 and <= MaxAdapterNameLength &&
+               name is not ("." or "..") &&
+               name[0] != '-' &&
+               name.All(IsValidAdapterNameChar);
+    }
+
+    // A valid name passes unchanged (VpnHoodClient, VpnHoodConnect, VpnHoodServer all are). Any other
+    // becomes its first ten valid characters, a dash and four hex digits of a hash of the whole name,
+    // so two long names that share a prefix still differ; the app id, not the name, decides whose
+    // a tun is.
+    public static string GetValidAdapterName(string name)
+    {
+        if (IsValidAdapterName(name))
+            return name;
+
+        var kept = new string(name.Where(IsValidAdapterNameChar).Take(KeptNameLength).ToArray())
+            .TrimStart('-', '.');
+        var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(name)))[..4];
+        return kept.Length > 0 ? $"{kept}-{hash}" : $"vh-{hash}";
+    }
+
+    private static bool IsValidAdapterNameChar(char c)
+    {
+        return char.IsAsciiLetterOrDigit(c) || c is '_' or '-' or '.';
+    }
+
+    // An app id is any string. One the kernel takes as an alias, in characters a command line needs
+    // no quoting for, passes unchanged, so today's aliases stay; any other becomes its first 64
+    // characters, those an alias cannot hold as '_', a dash and 16 hex digits of a hash of the
+    // whole id, which keeps two ids apart however much they share.
+    internal static string GetAdapterAlias(string appId)
+    {
+        if (appId.Length is > 0 and <= MaxAdapterAliasLength && appId.All(IsValidAliasChar))
+            return appId;
+
+        var kept = new string(appId.Take(KeptAliasLength)
+            .Select(c => IsValidAliasChar(c) ? c : '_').ToArray());
+        var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(appId)))[..16];
+        return kept.Length > 0 ? $"{kept}-{hash}" : $"app-{hash}";
+    }
+
+    private static bool IsValidAliasChar(char c)
+    {
+        return char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-' or ':' or '/';
+    }
+
+    // Whether a tun is one this app left and may clear: nobody holds it, and it carries the app's id,
+    // or, from a version before tags, no tag and this adapter's name.
+    internal static bool IsOwnLeftover(LinuxTunInfo tun, string adapterName, string? adapterAlias)
+    {
+        if (tun.IsHeld)
+            return false;
+
+        // Migration (2026-09), the untagged case - versions before tags: drop a few months after it ships.
+        return tun.Alias.Length == 0
+            ? tun.Name == adapterName
+            : tun.Alias == adapterAlias;
+    }
+
+    // At the daemon's start, after its single-instance lock, rather than at the next connect: a crash
+    // leaves its tun with the routes on. Every tun that carries this app's id and no process holds
+    // goes, its DNS entry first; nothing here throws. An untagged one, known only by the adapter's
+    // name, the adapter's own start clears.
+    public static void RemoveLeftovers(string appId)
+    {
+        var adapterAlias = GetAdapterAlias(appId);
+        foreach (var tun in TryListTuns().Where(x => x.Alias == adapterAlias)) {
+            if (tun.IsHeld) {
+                VhLogger.Instance.LogWarning("Leaving {AdapterName} alone: a process holds it.", tun.Name);
+                continue;
+            }
+
+            VhLogger.Instance.LogInformation("Removing {AdapterName}, a tun a previous run left.", tun.Name);
+            TryRemoveResolvconfDns(tun.Name);
+            VhUtils.TryInvoke($"remove the leftover tun {tun.Name}", () =>
+                ExecuteCommand($"ip link delete {tun.Name}"));
+        }
+    }
+
+    private static IReadOnlyList<LinuxTunInfo> TryListTuns()
+    {
+        try {
+            return LinuxTunInfo.List();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not list the tun devices, so no leftover was removed.");
+            return [];
+        }
+    }
+
+    // Why a tun cannot be taken for this adapter, in the words its start reports.
+    private static string DescribeUnusable(LinuxTunInfo tun)
+    {
+        var owner = tun.Alias.Length > 0 ? tun.Alias : "an app that does not tag its tun";
+        return tun.IsHeld
+            ? $"the interface {tun.Name} is in use by another VPN ({owner}), or is down. " +
+              "Stop that VPN, or give this app another name."
+            : $"the interface {tun.Name} belongs to {owner}. " +
+              $"If that app is gone, remove it with: sudo ip link delete {tun.Name}";
+    }
 
     protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
@@ -78,13 +206,19 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         _primaryAdapterName = await GetPrimaryAdapterName(cancellationToken);
         VhLogger.Instance.LogDebug("Primary adapter name is {PrimaryAdapterName}", _primaryAdapterName);
 
-        // delete existing tun interface
+        // the way clear: this adapter's own previous run, then whatever else has the name
         VhLogger.Instance.LogDebug("Clean previous tun adapter...");
         AdapterRemove();
+        ClearAdapterName();
 
         // Create and configure tun interface
         VhLogger.Instance.LogDebug("Creating tun adapter...");
         await ExecuteCommandAsync($"ip tuntap add dev {AdapterName} mode tun", cancellationToken).Vhc();
+        _isAdapterAdded = true;
+
+        // The alias derived from the app id lets a later start tell this tun from another app's.
+        if (_adapterAlias != null)
+            await ExecuteCommandAsync($"ip link set dev {AdapterName} alias {_adapterAlias}", cancellationToken).Vhc();
 
         // Enable IP forwarding
         VhLogger.Instance.LogDebug("Enabling IP forwarding...");
@@ -96,23 +230,24 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         await ExecuteCommandAsync($"ip link set {AdapterName} up", cancellationToken).Vhc();
     }
 
+    // Only what this adapter added: a start that was refused the name must not take down the tun,
+    // or the DNS entry, of the owner that holds it.
     protected override void AdapterRemove()
     {
         // close if open
         AdapterClose();
 
-        // DNS comes off before the interface, and whether or not the interface is still there
-        RemoveResolvconfDns();
+        if (_isAdapterAdded) {
+            // DNS comes off before the interface
+            RemoveOwnResolvconfDns();
 
-        var tunAdapterExists = NetworkInterface
-            .GetAllNetworkInterfaces()
-            .Any(x => x.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase));
+            if (LinuxTunInfo.InterfaceExists(AdapterName)) {
+                VhLogger.Instance.LogDebug("Removing the {AdapterName} TUN adapter...", AdapterName);
+                VhUtils.TryInvoke($"remove the {AdapterName} TUN adapter", () =>
+                    ExecuteCommand($"ip link delete {AdapterName}"));
+            }
 
-        // Remove existing tun interface
-        if (tunAdapterExists) {
-            VhLogger.Instance.LogDebug("Removing existing {AdapterName} TUN adapter (if any)...", AdapterName);
-            VhUtils.TryInvoke($"remove existing {AdapterName} TUN adapter", () =>
-                ExecuteCommand($"ip link delete {AdapterName}"));
+            _isAdapterAdded = false;
         }
 
         // Remove previous NAT iptables record
@@ -245,26 +380,19 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     }
 
     // The resolvconf fallback's entry outlives the interface, where resolvectl's per-link DNS goes
-    // with it: left behind, resolv.conf keeps the VPN's nameserver after a disconnect. So every
-    // removal takes it off first, and so does a start that clears the interface a crashed run, or
-    // an older version, left.
-    public static Task RemoveResolvconfDnsAsync(string adapterName, CancellationToken cancellationToken)
-    {
-        return ExecuteCommandAsync(RemoveResolvconfDnsCommand(adapterName), cancellationToken);
-    }
-
+    // with it: left behind, resolv.conf keeps the VPN's nameserver after a disconnect. So it comes
+    // off before any interface this owner removes - its own at a disconnect, a leftover at a start -
+    // and never for a name another owner holds.
     private static string RemoveResolvconfDnsCommand(string adapterName)
     {
         return $"if command -v resolvconf >/dev/null; then resolvconf -d {adapterName}; fi";
     }
 
-    private void RemoveResolvconfDns()
+    // An entry this adapter added must come off, so a failure there is a warning.
+    private void RemoveOwnResolvconfDns()
     {
-        // An entry this adapter added must come off, so a failure there is a warning. Otherwise
-        // there is usually nothing to remove, and some resolvconf implementations say so as an error.
         if (!_isResolvconfDnsSet) {
-            VhUtils.TryInvoke($"remove a leftover resolvconf DNS entry of {AdapterName}", () =>
-                ExecuteCommand(RemoveResolvconfDnsCommand(AdapterName)));
+            TryRemoveResolvconfDns(AdapterName);
             return;
         }
 
@@ -277,6 +405,36 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
                 "Could not remove the resolvconf DNS entry of {AdapterName}; resolv.conf may keep the VPN's nameserver.",
                 AdapterName);
         }
+    }
+
+    // Usually there is nothing to remove, and some resolvconf implementations say so as an error.
+    private static void TryRemoveResolvconfDns(string adapterName)
+    {
+        VhUtils.TryInvoke($"remove the resolvconf DNS entry of {adapterName}", () =>
+            ExecuteCommand(RemoveResolvconfDnsCommand(adapterName)));
+    }
+
+    // Before the tun is created, nothing may hold its name but a leftover of this app, which is
+    // cleared. Anything else - a tun in use, another app's, an interface that is not a tun -
+    // refuses the start and says whose it is, instead of taking the name over.
+    private void ClearAdapterName()
+    {
+        if (!LinuxTunInfo.InterfaceExists(AdapterName)) {
+            TryRemoveResolvconfDns(AdapterName);
+            return;
+        }
+
+        var tun = LinuxTunInfo.Find(AdapterName) ??
+                  throw new InvalidOperationException(
+                      $"An interface named {AdapterName} exists and is not a tun, so the VPN cannot create its own.");
+
+        if (!IsOwnLeftover(tun, AdapterName, _adapterAlias))
+            throw new InvalidOperationException(
+                $"The VPN cannot use its interface name: {DescribeUnusable(tun)}");
+
+        VhLogger.Instance.LogInformation("Removing {AdapterName}, a tun a previous run left.", AdapterName);
+        TryRemoveResolvconfDns(AdapterName);
+        ExecuteCommand($"ip link delete {AdapterName}");
     }
 
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]

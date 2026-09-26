@@ -16,7 +16,7 @@ internal static class App
 {
     private static int Main(string[] args)
     {
-        return LinuxCliHost.Run(args, new CliHeadParams {
+        return LinuxCliHost.Run(args, new CliInitParams {
             AppId = AppConstants.AppId,
             AppOptionsFactory = CreateAppOptions,
             IsAddAccessKeySupported = ClientAppOptions.IsAddAccessKeySupported,

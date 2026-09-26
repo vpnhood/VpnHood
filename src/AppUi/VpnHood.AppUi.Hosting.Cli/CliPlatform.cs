@@ -2,7 +2,7 @@ namespace VpnHood.AppUi.Hosting.Cli;
 
 // What the platform says for itself: the two answers every command reaches for that are not the
 // app's, and the ones only some platforms have. A platform package (Cli.Linux, Cli.Windows) builds
-// one of these and hands it to CliHost with the head's CliHeadParams; nothing in this project reads
+// one of these and hands it to CliHost with the head's CliInitParams; nothing in this project reads
 // a static.
 public class CliPlatform
 {

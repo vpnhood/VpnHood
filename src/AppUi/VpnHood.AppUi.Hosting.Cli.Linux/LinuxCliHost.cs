@@ -4,24 +4,24 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.AppUi.Hosting.Cli.Linux;
 
 // A Linux head's whole entry point: the machine facts Linux answers (CliPlatform) joined to the
-// product facts the head answers (CliHeadParams), and the words an earlier installer's launcher
+// product facts the head answers (CliInitParams), and the words an earlier installer's launcher
 // script or systemd unit may still be passing, caught before the parser sees them. The same
 // synchronous call as every desktop host's, run on the head's main thread (CliHost.Run).
 public static class LinuxCliHost
 {
-    public static int Run(string[] args, CliHeadParams head)
+    public static int Run(string[] args, CliInitParams initParams)
     {
-        var paths = new LinuxCliPaths(head.AppId);
+        var paths = new LinuxCliPaths(initParams.AppId);
         // No tray keeps a hidden window, so a closed one is gone; the installer registers the unit;
         // and systemd's signal stops the daemon.
         var platform = new CliPlatform {
             Paths = paths,
             Instance = new LinuxInstanceController(paths),
-            CreateDaemonHost = () => LinuxDaemonHost.CreateService(head, paths),
-            CreateDevDaemonHost = storagePath => LinuxDaemonHost.CreateDev(head, storagePath)
+            CreateDaemonHost = () => LinuxDaemonHost.CreateService(initParams, paths),
+            CreateDevDaemonHost = storagePath => LinuxDaemonHost.CreateDev(initParams, storagePath)
         };
 
-        return TryRunLegacy(args, platform) ?? CliHost.Run(args, head, platform);
+        return TryRunLegacy(args, platform) ?? CliHost.Run(args, initParams, platform);
     }
 
     // Migration (2026-09): drop a few months after it ships.

@@ -12,9 +12,9 @@ namespace VpnHood.AppUi.Hosting.Cli.Windows;
 // its tray run as whoever is signed in, not elevated, and reach the service over loopback.
 public static class WindowsCliHost
 {
-    public static int Run(string[] args, CliHeadParams head)
+    public static int Run(string[] args, CliInitParams initParams)
     {
-        var paths = new WindowsCliPaths(head.AppId);
+        var paths = new WindowsCliPaths(initParams.AppId);
         var setup = new WindowsServiceSetup(paths);
         var instance = new WindowsInstanceController(paths, setup);
         var platform = new CliPlatform {
@@ -23,13 +23,13 @@ public static class WindowsCliHost
             InstanceSetup = setup,
             CreateTray = trayParams => WindowsAppTray.Start(trayParams.Api, trayParams.UiAssets,
                 trayParams.ShowWindow, trayParams.Exit),
-            CreateDaemonHost = () => WindowsDaemonHost.CreateService(head, paths),
-            CreateDevDaemonHost = storagePath => WindowsDaemonHost.CreateDev(head, storagePath),
+            CreateDaemonHost = () => WindowsDaemonHost.CreateService(initParams, paths),
+            CreateDevDaemonHost = storagePath => WindowsDaemonHost.CreateDev(initParams, storagePath),
             HostDaemon = (run, cancellationToken) =>
                 WindowsDaemonService.Host(paths.InstanceName, run, cancellationToken)
         };
 
-        return CliHost.Run(TranslateLegacy(args), head, platform);
+        return CliHost.Run(TranslateLegacy(args), initParams, platform);
     }
 
     // Migration (2026-09): drop a few months after it ships.

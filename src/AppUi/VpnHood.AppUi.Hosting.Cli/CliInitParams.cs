@@ -8,7 +8,7 @@ namespace VpnHood.AppUi.Hosting.Cli;
 // things and what "the service" is are the platform's answers, in CliPlatform; the daemon's host
 // lays its storage out itself, so a desktop head names no storage folder. The options factory runs
 // once, in the daemon and nowhere else: the window and the commands hold no VpnHoodApp at all.
-public class CliHeadParams : AppInitParams
+public class CliInitParams : AppInitParams
 {
     // The head's UI, which the window runs on the host's main thread against the running daemon:
     // the API over loopback, and the UI's own content extracted under the current user's cache. It

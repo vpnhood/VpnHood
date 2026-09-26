@@ -111,7 +111,7 @@ follows one fact: can this app be given an access key?
 
 On CONNECT there is exactly one profile and nothing to choose between, so those are not printed in
 help, not parsed, and not quietly accepted. It is the same answer the app gives
-`AppOptions.IsAddAccessKeySupported`; a head states it once, in `CliHeadParams`.
+`AppOptions.IsAddAccessKeySupported`; a head states it once, in `CliInitParams`.
 
 **Naming a profile.** On CLIENT, anywhere a command takes a profile you may give its id or its
 name, and a name may be a prefix — `vhclient connect -p "VpnHood Sam"` is enough. A prefix that
@@ -223,7 +223,7 @@ one small adapter per platform.
 src/AppUi/
 ├── VpnHood.AppUi.Hosting.Cli/        the commands, the daemon, the window launcher
 │   ├── CliHost.cs                    builds the command tree and dispatches
-│   ├── CliHeadParams.cs              what a head declares: its init params, its UI, whether it takes keys
+│   ├── CliInitParams.cs              what a head declares: its init params, its UI, whether it takes keys
 │   ├── CliPlatform.cs                what a platform declares: paths, the instance, how to be the daemon
 │   │                                 (and a debugger's), and what only some have: a tray, "service install",
 │   │                                 an older folder to import

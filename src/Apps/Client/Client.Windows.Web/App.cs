@@ -16,7 +16,7 @@ internal static class App
     [STAThread]
     private static int Main(string[] args)
     {
-        return WindowsCliHost.Run(args, new CliHeadParams {
+        return WindowsCliHost.Run(args, new CliInitParams {
             AppId = AppConstants.AppId,
             AppOptionsFactory = CreateAppOptions,
             IsAddAccessKeySupported = ClientAppOptions.IsAddAccessKeySupported,

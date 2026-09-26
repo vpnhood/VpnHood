@@ -15,7 +15,7 @@ namespace VpnHood.App.Client;
 public static class ClientAppOptions
 {
     // The product takes access keys, so its profiles are the person's to manage. A constant, since
-    // the desktop commands need it before any app exists (CliHeadParams).
+    // the desktop commands need it before any app exists (CliInitParams).
     public const bool IsAddAccessKeySupported = true;
 
     public static AppOptions Create(AppOptionsContext context, ClientAppConfigs appConfigs)

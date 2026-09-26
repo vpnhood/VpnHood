@@ -21,7 +21,7 @@ namespace VpnHood.AppUi.Hosting.Cli.Commands;
 // waits for any caller.
 internal static class UiCommand
 {
-    public static Command Create(CliPlatform platform, CliHeadParams head, MainThreadQueue mainThread)
+    public static Command Create(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread)
     {
         var command = new Command("ui", "Open the app window. This is what the desktop entry starts.");
 
@@ -42,7 +42,7 @@ internal static class UiCommand
             command.Options.Add(connectOption);
         }
 
-        command.SetAction((parseResult, cancellationToken) => Run(platform, head, mainThread,
+        command.SetAction((parseResult, cancellationToken) => Run(platform, initParams, mainThread,
             startHidden: platform.CreateTray != null && parseResult.GetValue(trayOption),
             connect: platform.CreateTray != null && parseResult.GetValue(connectOption),
             cancellationToken));
@@ -50,12 +50,12 @@ internal static class UiCommand
         return command;
     }
 
-    private static async Task<int> Run(CliPlatform platform, CliHeadParams head, MainThreadQueue mainThread,
+    private static async Task<int> Run(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread,
         bool startHidden, bool connect, CancellationToken cancellationToken)
     {
         try {
             // One window per person: a second launch brings the open one forward, and that is all it does.
-            await using var uiInstance = await DesktopUiInstance.TryClaim(platform.Paths.InstanceName, head.Ui,
+            await using var uiInstance = await DesktopUiInstance.TryClaim(platform.Paths.InstanceName, initParams.Ui,
                 cancellationToken).Vhc();
             if (uiInstance == null)
                 return 0;
@@ -68,7 +68,7 @@ internal static class UiCommand
             }
 
             using var connection = await DaemonConnection.Open(platform, cancellationToken).Vhc();
-            await RunWindow(platform, head, mainThread, connection, startHidden, connect, cancellationToken).Vhc();
+            await RunWindow(platform, initParams, mainThread, connection, startHidden, connect, cancellationToken).Vhc();
             return 0;
         }
         catch (OperationCanceledException) {
@@ -82,7 +82,7 @@ internal static class UiCommand
 
     // The window over a connection to the app, until it is gone: the service's app, or the one this
     // process holds itself (DevCommand).
-    internal static async Task RunWindow(CliPlatform platform, CliHeadParams head, MainThreadQueue mainThread,
+    internal static async Task RunWindow(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread,
         DaemonConnection connection, bool startHidden, bool connect, CancellationToken cancellationToken)
     {
         if (connect)
@@ -92,14 +92,14 @@ internal static class UiCommand
         // under its storage, which a session may not write, and each provider owns its folder.
         var packagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory);
         var uiAssets = new ZipAssetProvider(
-            new Asset(packagedAssetProvider, head.UiZipAssetPath), platform.Paths.UiContentCachePath);
+            new Asset(packagedAssetProvider, initParams.UiZipAssetPath), platform.Paths.UiContentCachePath);
 
         // The UI's run ends with the command - a signal, a logout - or with the tray's Exit.
         using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         using var tray = platform.CreateTray?.Invoke(new DesktopTrayParams {
             Api = connection.Api,
             UiAssets = uiAssets,
-            ShowWindow = head.Ui.BringToFront,
+            ShowWindow = initParams.Ui.BringToFront,
             Exit = uiCancellation.Cancel
         });
 
@@ -112,7 +112,7 @@ internal static class UiCommand
             ExitOnClose = platform.CreateTray == null,
             StartHidden = startHidden
         };
-        await mainThread.Run(() => head.Ui.Run(uiParams, uiCancellation.Token)).Vhc();
+        await mainThread.Run(() => initParams.Ui.Run(uiParams, uiCancellation.Token)).Vhc();
     }
 
     // Beside the window, which shows how it goes; a connect that fails is the service's to report.

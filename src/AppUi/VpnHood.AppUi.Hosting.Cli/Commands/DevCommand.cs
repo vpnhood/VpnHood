@@ -13,7 +13,7 @@ namespace VpnHood.AppUi.Hosting.Cli.Commands;
 // The app keeps its storage in the person's own folder and runs as whoever started it.
 internal static class DevCommand
 {
-    public static Command Create(CliPlatform platform, CliHeadParams head, MainThreadQueue mainThread,
+    public static Command Create(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread,
         Func<string, IAppDaemonHost> createDevDaemonHost)
     {
         var command = new Command("dev", "Run the service and the window in this one process, for a debugger.") {
@@ -21,12 +21,12 @@ internal static class DevCommand
         };
 
         command.SetAction((_, cancellationToken) =>
-            Run(platform, head, mainThread, createDevDaemonHost, cancellationToken));
+            Run(platform, initParams, mainThread, createDevDaemonHost, cancellationToken));
 
         return command;
     }
 
-    private static async Task<int> Run(CliPlatform platform, CliHeadParams head, MainThreadQueue mainThread,
+    private static async Task<int> Run(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread,
         Func<string, IAppDaemonHost> createDevDaemonHost, CancellationToken cancellationToken)
     {
         try {
@@ -37,7 +37,7 @@ internal static class DevCommand
             var url = await localWebHost.EnsureStarted(cancellationToken).Vhc();
 
             using var connection = new DaemonConnection(new Uri(url.GetLeftPart(UriPartial.Authority)));
-            await UiCommand.RunWindow(platform, head, mainThread, connection,
+            await UiCommand.RunWindow(platform, initParams, mainThread, connection,
                 startHidden: false, connect: false, cancellationToken).Vhc();
             return 0;
         }

@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- MSBuild imports only the NEAREST Directory.Build.targets, so this file shadows the repo's one -
+       and with it the Android version code every store build needs. Import that first. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- The app's identity - ids, names, constants - for every head of a product that states one
+       (src/Apps/<Product>/Directory.Build.props): the same file a package reference of
+       VpnHood.AppLib.App imports, since a project reference carries no targets. A project that states
+       no identity, as the tools and the server do, is left as it is. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\AppLib\VpnHood.AppLib.App\buildTransitive\VpnHood.AppLib.App.targets" />
+
+</Project>

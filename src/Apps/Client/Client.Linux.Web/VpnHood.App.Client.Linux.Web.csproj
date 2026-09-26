@@ -1,11 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
-		<Product>VpnHood! CLIENT</Product>
 		<Description>VpnHood Linux Client App</Description>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net10.0</TargetFramework>
-		<AssemblyName>VpnHoodClient</AssemblyName>
+		<!-- A plain target framework names no platform, so the head does. -->
+		<VhAppPlatform>linux</VhAppPlatform>
+		<!-- The binary, its unit and their folders are called by the app's package title
+		     (../Directory.Build.props). No VhAppIdChannel, though the website hands this build out: it
+		     shipped as com.vpnhood.client.linux before the website's builds said so in their ids, and the
+		     id is part of every install's client id. -->
+		<AssemblyName>$(VhAppPackageTitle)</AssemblyName>
 	</PropertyGroup>
 
 
@@ -17,17 +22,6 @@
 	<PropertyGroup>
 		<AssemblyVersion></AssemblyVersion>
 	</PropertyGroup>
-
-	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.
-	     Conditional so a fork without them still builds; AppConfigs reads them at startup. -->
-	<ItemGroup>
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodClient\appsettings.json"
-			LogicalName="AppSettings.json"
-			Condition="Exists('$(VhUserDir)\VpnHoodClient\appsettings.json')" />
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodClient\appsettings.$(Configuration).json"
-			LogicalName="AppSettings_Environment.json"
-			Condition="Exists('$(VhUserDir)\VpnHoodClient\appsettings.$(Configuration).json')" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Linux\VpnHood.AppLib.App.Linux.csproj" />
@@ -42,7 +36,7 @@
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
 	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
-	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\build\VpnHood.AppUi.Assets.Classic.targets" />
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
 	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way, from
 	     Classic.Avalonia.Browser's publish; the head reads it at "assets/web-root.zip". -->
 	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser\build\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.targets" />

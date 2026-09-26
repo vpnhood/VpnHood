@@ -7,8 +7,9 @@
 # secret — see Publish-AndroidApp.ps1 / Initialize-CiAndroidSigning.ps1.
 #
 # ALL-OR-NOTHING (strict) by design — the presence of publish.json is the switch:
-#   * publish.json ABSENT  -> lenient: the build uses the committed built-in defaults (csproj
-#                             <ApplicationId> etc.). This is the local/dev quick-build path.
+#   * publish.json ABSENT  -> lenient: the build uses the committed built-in defaults (the head's own
+#                             ApplicationId, from the app's identity, etc.). This is the local/dev
+#                             quick-build path.
 #   * publish.json PRESENT  -> STRICT: every required key must be there or we THROW. There is NO
 #                             field-level fallback to defaults, so a half-filled config can never
 #                             silently ship the wrong id/repo. Same on GitHub: if the variable exists,
@@ -29,7 +30,7 @@
 # MUST name AndroidPackageId (the built /p:ApplicationId). AndroidKeystoreAlias stays optional: it's the
 # signing alias, auto-detected from the keystore when omitted (that's derivation from the real key, not a
 # guessed default). The title override renames published artifacts only; .user lookups + the bin module
-# dir stay keyed by the default app folder, and Linux artifact names come from the csproj AssemblyName.
+# dir stay keyed by the default app folder, and Linux artifact names come from the head's AssemblyName.
 
 function Get-AppPublishConfig {
     param([Parameter(Mandatory = $true)][string]$appFolder)

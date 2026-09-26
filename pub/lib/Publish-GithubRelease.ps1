@@ -112,7 +112,7 @@ else {
 	$assets = @(
 		"$packageDir/android-google/$packageFileTitle-android.aab",
 		# Update-info file for the Google build; named "-android.json" (NOT "-android.aab.json") to match
-		# the URL the shipped app polls (Android.Google/AppConfigs.cs UpdateInfoUrl).
+		# the URL the shipped app polls (Android.Google/App.cs UpdateInfoUrl).
 		"$packageDir/android-google/$packageFileTitle-android.json",
 		# Google Play-signed universal APK (added by the publish-play-android CI job). Optional.
 		"$packageDir/android-google/$packageFileTitle-android.apk",

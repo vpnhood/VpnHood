@@ -98,7 +98,8 @@ public static class ProviderDtoConverters
             TrialPeriod = plan.TrialPeriod,
             PlanToken = plan.PlanToken,
             CurrencySymbol = plan.CurrencySymbol,
-            CurrencyCode = plan.CurrencyCode
+            CurrencyCode = plan.CurrencyCode,
+            CheckoutUrl = plan.CheckoutUrl
         };
     }
 

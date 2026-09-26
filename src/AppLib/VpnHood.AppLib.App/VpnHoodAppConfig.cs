@@ -16,4 +16,5 @@ public class VpnHoodAppConfig
     public required LogServiceOptions LogServiceOptions { get; init; }
     public required string? TrackerFactoryAssemblyQualifiedName { get; init; }
     public required ClientTransportOptions Transport { get; init; }
+    public required string AdapterName { get; init; }
 }

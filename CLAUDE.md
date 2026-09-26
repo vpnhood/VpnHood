@@ -21,6 +21,7 @@ truth — follow them, and when a new durable convention is agreed, update this 
   folder-scoped names (`pub/Client/Publish.ps1`, `src/Apps/*/*/_publish.ps1`).
 
 ## UI
+
 - The products' UI is the Avalonia presentation under `src/AppUi`. The look it draws with - images, flags, fonts, words - is the submodule at `src/AppUi/VpnHood.AppUi.Assets.Classic` (vpnhood/VpnHood.AppUi.Assets.Classic); a clone needs `--recurse-submodules` or a head starts with no images and no words. The web UI is kept as a sample in the sibling repo `..\VpnHood.AppUi.Spa\` (its SPA at `src\VpnHood.AppUi.Presentation.Classic.Spa`), where those files were authored and from which `_sync-assets.ps1` still mirrors a change across.
   relative to this repo. It consumes the generated TypeScript API stub.
 - Never manually edit the TypeScript API stub (the generated .ts file in the Swagger project, e.g.
@@ -29,6 +30,7 @@ truth — follow them, and when a new durable convention is agreed, update this 
   project reference.
 
 ## Language
+
 - Use primary constructors when possible.
 - Use `TestHelper.WorkingPath` as the temp directory for tests.
 - Don't use the `async` postfix if there is no async method with the same name.
@@ -36,20 +38,24 @@ truth — follow them, and when a new durable convention is agreed, update this 
 - Use `AsyncLock` instead of `SemaphoreSlim` for non-hot-path code, and use it with a `using` statement.
 
 ## Await and ConfigureAwait
+
 - Use `.Vhc()` instead of `.ConfigureAwait(false)` if it is available, but do not add it to the project if
   it is not available.
 - For UI code such as Android UI, always use `.ConfigureAwait(false)` when it is required.
 
 ## Documentation
+
 - The wiki repo is a separate repository located at `..\VpnHood.wiki` relative to this repo (i.e.
   `$(SolutionDir)/../VpnHood.wiki`). It holds end-user documentation, not development/internal docs. Update
   it only when I request; keep developer docs inside this repo.
 
 ## QUIC
+
 - Our QUIC is a custom protocol, not HTTP3. We use it as a transport protocol and the protocol is exactly
   the same as HTTP2, so we treat it the same as TCP.
 
 ## iOS (Client & Connect apps)
+
 - The iOS apps live in `src/Apps/{Client,Connect}/{Client,Connect}.Ios.Apple` (host) + `….Ios.Extension` (Network
   Extension `.appex`); the real device/extension/TUN/TCP-stack code is in `src/Core/VpnHood.Core.Client.Devices.Ios`
   and `src/Net/*` (`VpnAdapters.IosTun`, `TcpStack`, `Quic.Ios`). The extension projects are one-file `[Register]` shims.
@@ -57,15 +63,15 @@ truth — follow them, and when a new durable convention is agreed, update this 
   `ios-extension-memory-and-throughput.md` before touching memory/throughput/TCP-stack code (the extension
   runs under a ~52 MB jetsam limit).
 - Build **Release** for device with `~/.dotnet11/dotnet` (TFM `net11.0-ios` / CoreCLR — the system `dotnet`
-  can't target it). Don't commit a test `AccessKey` in `AppConfigs.cs` (production defaults to `null`).
+  can't target it). Don't commit a test access key in a head (production has none in code).
 - When asked to build/run/launch an app without naming the product, use the **Client** app
   (`src/Apps/Client/Client.Ios.Apple`), not Connect.
-- Updates come from the **App Store only**: wire `AppStoreAppUpdaterProvider`, and keep `UpdateInfoUrl`
-  **null in the iOS config** (`AppConfigs`) rather than dropping it from the wiring — options still read
-  it from config, as on every other platform. That feed describes downloadable packages, so a non-null
-  value makes the SPA offer a direct download — wrong channel on iOS, and an App Review problem.
+- Updates come from the **App Store only**: wire `AppStoreAppUpdaterProvider` and name **no
+  `UpdateInfoUrl`** in the iOS heads' updater options. That feed describes downloadable packages, so a
+  non-null value makes the UI offer a direct download — wrong channel on iOS, and an App Review problem.
 
 ## CI/CD & publishing
+
 - All app **builds** (`.ipa`/AAB/MSI/Linux) and **Fastlane publishing** (Google Play, TestFlight/App Store,
   store listings) run on **GitHub Actions — never from a developer machine**. Don't build release packages
   or run Fastlane locally; the runners hold the signing keys, toolchains, and store credentials. A local

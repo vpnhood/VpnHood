@@ -20,7 +20,7 @@ public static class AppFlyerUtils
 
             VhLogger.Instance.LogInformation("Initialize AppsFlyer. DeviceRegion: {DeviceRegion}",
                 RegionInfo.CurrentRegion.Name);
-            AppsFlyerLib.Instance.SetDebugLog(AppConfigs.IsDebugMode);
+            AppsFlyerLib.Instance.SetDebugLog(AppConstants.IsDebugMode);
             AppsFlyerLib.Instance.SetDisableAdvertisingIdentifiers(true);
             AppsFlyerLib.Instance.Init(appsFlyerDevKey, null, context);
             AppsFlyerLib.Instance.Start(context);

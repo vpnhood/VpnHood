@@ -22,21 +22,22 @@ $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullNa
 
 # Per-app identity from .user/<appFolder>/publish.json (see AppPublishConfig.ps1). publish.json is
 # all-or-nothing: PRESENT -> strict (every needed key must be there or Get-AppPublishConfig / the check
-# below throws); ABSENT -> the committed built-in defaults (csproj <ApplicationId>, resolved repo).
-#   packageId        <- Distributions.<store>.AndroidPackageId  (strict) else the csproj <ApplicationId>
+# below throws); ABSENT -> the committed built-in defaults (the head's own id, resolved repo).
+#   packageId        <- Distributions.<store>.AndroidPackageId  (strict) else the head's ApplicationId,
+#                       as the app's identity makes it (src/Apps/<Product>/Directory.Build.props)
 #   packageFileTitle <- PackageTitle                            (strict) else $appFolder (renames only)
 #   repoUrl          <- RepoUrl                                 (strict) else the resolved publish repo
 $appUserDir = Join-Path "$solutionDir/../.user/" $appFolder;
 $appConfig = Get-AppPublishConfig $appFolder;
 $packageId = if ($appConfig.exists) {
 		# STRICT: publish.json present -> the store being built MUST declare AndroidPackageId. No fallback
-		# to the csproj default, so we can never silently ship the wrong (e.g. .debug) application id.
+		# to the head's own id, so a half-filled publish.json can never ship an id nobody named.
 		if (-not $appConfig.packageId[$store]) {
-			Throw "publish.json is present but Distributions.$store.AndroidPackageId is not set; the '$store' store cannot be built in strict mode. Add it, or remove publish.json to build with the csproj default id.";
+			Throw "publish.json is present but Distributions.$store.AndroidPackageId is not set; the '$store' store cannot be built in strict mode. Add it, or remove publish.json to build with the head's own id.";
 		}
 		$appConfig.packageId[$store]
 	} else {
-		([Xml](Get-Content $projectFile)).Project.PropertyGroup.ApplicationId | Where-Object { $_ } | Select-Object -First 1
+		Get-ProjectProperty $projectFile "ApplicationId"
 	}
 $packageFileTitle = if ($appConfig.packageFileTitle) { $appConfig.packageFileTitle } else { $appFolder }
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
@@ -217,7 +218,7 @@ try {
 		};
 
 		# The update-info file MUST be named "<title>-android.json" (NOT "<title>-android.aab.json"):
-		# the shipped Google app polls exactly that name (Client.Android.Google/AppConfigs.cs UpdateInfoUrl,
+		# the shipped Google app polls exactly that name (Client.Android.Google/App.cs UpdateInfoUrl,
 		# mirrored in $json.UpdateInfoUrl above) and the web build follows the same "<title>-<dist>.json"
 		# convention. Writing it as "<aab>.json" made the app's update/deprecation check 404.
 		$module_infoFile = "$moduleDir/$packageFileTitle-android.json";

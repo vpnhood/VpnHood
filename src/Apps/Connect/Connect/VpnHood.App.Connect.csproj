@@ -2,9 +2,22 @@
 
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- the product, not a NuGet package -->
-		<Description>What every distribution of VpnHood Connect shares: its premium feature list, the packages it pins and the app framework and web host its heads build on</Description>
+		<Description>What every distribution of VpnHood Connect shares: its private settings, its premium feature list, the packages it pins and the app framework and web host its heads build on</Description>
 		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
+
+	<!-- The product's private settings (from the external ".user" folder), embedded here once for every
+	     head: ConnectAppConfigs reads them from this assembly. Conditional so a fork without them still
+	     builds; a head then has no PortalBaseUri and builds no account provider at all. The built-in key
+	     stays each head's own file. Forward slashes: the iOS head builds this project on macOS. -->
+	<ItemGroup>
+		<EmbeddedResource Include="$(VhUserDir)/VpnHoodConnect/appsettings.json"
+			LogicalName="AppSettings.json"
+			Condition="Exists('$(VhUserDir)/VpnHoodConnect/appsettings.json')" />
+		<EmbeddedResource Include="$(VhUserDir)/VpnHoodConnect/appsettings.$(Configuration).json"
+			LogicalName="AppSettings_Environment.json"
+			Condition="Exists('$(VhUserDir)/VpnHoodConnect/appsettings.$(Configuration).json')" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="8.2.854" />

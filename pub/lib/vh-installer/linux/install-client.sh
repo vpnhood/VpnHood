@@ -227,7 +227,8 @@ ln -sf "$destinationPath/$launcher" "/usr/local/bin/$launcher";
 # The service
 # ------------------------------------------------------------------
 # "daemon", not the bare binary: the bare binary now opens a window, and a unit that asks for one
-# on a machine with no display restarts forever without ever saying why.
+# on a machine with no display restarts forever without ever saying why. No ExecStop: systemd's
+# SIGTERM stops the daemon, which disconnects the tunnel before it exits.
 echo "Writing the $assemblyName service...";
 service="
 [Unit]
@@ -237,7 +238,6 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=$destinationPath/$launcher daemon
-ExecStop=$destinationPath/$launcher stop
 TimeoutStartSec=0
 Restart=always
 RestartSec=10

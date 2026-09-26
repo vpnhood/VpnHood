@@ -26,6 +26,7 @@ public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin)
             try {
                 // Add CORS to all requests centrally
                 CorsMiddleware.AddCors(ctx, allowAnyOrigin);
+                DrainBody(ctx);
                 await handler(ctx);
             }
             catch (Exception ex) {
@@ -43,6 +44,7 @@ public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin)
             try {
                 // Add CORS to all requests centrally
                 CorsMiddleware.AddCors(ctx, allowAnyOrigin);
+                DrainBody(ctx);
                 await handler(ctx);
             }
             catch (Exception ex) {
@@ -50,6 +52,15 @@ public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin)
             }
         });
         server.Routes.PreAuthentication.Parameter.Add(HttpMethod.OPTIONS, path, Options);
+    }
+
+    // The whole body, read before the route runs, whether or not it wants one (Watson keeps it for
+    // ReadJson). A reply sent over a request body nobody read ends, on Windows, in a reset rather than
+    // a close, which can cut the reply off at the caller: a POST whose route takes no body - a
+    // restore - and answers with one.
+    private static void DrainBody(HttpContextBase ctx)
+    {
+        _ = ctx.Request.DataAsBytes;
     }
 
     private static async Task HandleException(HttpContextBase context, Exception ex)

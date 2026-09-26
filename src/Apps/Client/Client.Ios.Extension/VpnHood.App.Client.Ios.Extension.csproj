@@ -6,8 +6,8 @@
     <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
-    <AssemblyName>VpnHoodClientExtension</AssemblyName>
-    <BundleIdentifier>com.vpnhood.client.ios.networkextension</BundleIdentifier>
+    <!-- The bundle id and the App Group come from the app's identity (../Directory.Build.props). -->
+    <AssemblyName>$(VhAppPackageTitle)Extension</AssemblyName>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
 
     <!-- Automatic signing: Xcode picks the cert/profile for the team (6KKW3MKLR7, OmegaHood LLC). -->

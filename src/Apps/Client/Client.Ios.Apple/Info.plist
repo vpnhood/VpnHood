@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
-	<key>CFBundleDisplayName</key>
-	<string>VpnHood! CLIENT</string>
-	<key>CFBundleIdentifier</key>
-	<string>com.vpnhood.client.ios</string>
-	<!-- false = "no encryption requiring Apple export-compliance documentation" — NOT "no encryption".
+	<!-- CFBundleIdentifier and CFBundleDisplayName are the build's: ApplicationId and ApplicationTitle,
+	     from the app's identity (VpnHood.AppLib.App.targets), which this file does not state again. -->
+	<!-- false ="no encryption requiring Apple export-compliance documentation" — NOT "no encryption".
 	     The app uses only standards-body cryptography (AES-GCM/CTR, RSA, SHA-2, HMAC, TLS — NIST/IETF/
 	     ISO), nothing proprietary, no French store: Apple's App Encryption Documentation wizard concludes
 	     "no documents needed" for exactly these answers and prescribes this value to skip the per-build

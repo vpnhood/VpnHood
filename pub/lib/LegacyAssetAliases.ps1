@@ -18,7 +18,7 @@
 #
 # Note for whoever traces an actual update bug here: our OWN Android apps never polled these arm64
 # files. Both the universal and the arm64 APK are built from the same Client/Connect .Android.Web
-# project, whose AppConfigs.UpdateInfoUrl has always named "VpnHood<App>-Android-web.json" (verified in
+# project, whose update feed (UpdateInfoUrl, App.cs) has always named "VpnHood<App>-Android-web.json" (verified in
 # the shipped v7.9.811 APK). So the rename did not cut off in-app update notifications; this alias
 # exists for third parties and forks that polled the per-arch file directly.
 #

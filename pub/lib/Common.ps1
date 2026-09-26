@@ -42,6 +42,17 @@ $packagesRootDirLatest = "$pubDir/bin/latest";
 # Release root such as latet or pre-release folder
 $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
 
+# A project property as MSBuild evaluates it: its imports, the app's identity and every condition
+# included. The csproj's XML shows only what is written there, and a head takes its id and names from
+# the app's identity (src/Apps/<Product>/Directory.Build.props, VpnHood.AppLib.App.targets), writing
+# $(VhAppPackageTitle) where its name used to be, or nothing at all.
+function Get-ProjectProperty([string]$projectFile, [string]$name, [string]$configuration = "Release")
+{
+	$value = & dotnet msbuild $projectFile -nologo "-getProperty:$name" "-p:Configuration=$configuration";
+	if ($LASTEXITCODE -ne 0) { Throw "Could not evaluate $name of ${projectFile}: $value"; }
+	return "$value".Trim();
+}
+
 function PrepareModuleFolder([string]$moduleDir, [string]$moduleDirLatest)
 {
 	# Remove old files

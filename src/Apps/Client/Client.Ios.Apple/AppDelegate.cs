@@ -1,10 +1,5 @@
-﻿using Avalonia;
-using Avalonia.iOS;
-using VpnHood.AppUi.Common;
-using VpnHood.AppUi.Hosting.Avalonia;
+﻿using VpnHood.AppUi.Hosting.Avalonia.Ios;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.AppLib.App.Utils;
 using Foundation;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -15,144 +10,86 @@ using VpnHood.AppLib.Stores.AppStore;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices.Ios;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Net.Toolkit.Logging;
-using VpnHood.AppLib.Api.WebHost;
-using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.App.Client.Ios.Apple;
 
-// UIKit's delegate and the UI's: Avalonia's own, which builds the UI as launching finishes and
-// gives each scene its AvaloniaSceneDelegate - which is why Info.plist names no scene delegate of
-// ours. The app is started at the one step of that launch this class is asked for, the app
-// builder; then the UI is given the app's API (its own controllers in process, the same six
-// interfaces a paired browser dials over HTTP). Its files are the store's zip in the app bundle,
-// where the build placed it.
+// The Avalonia UI's application delegate: it starts the app from the params below as launching
+// finishes, then the UI.
 [Register("AppDelegate")]
-public class AppDelegate : AvaloniaAppDelegate<ClassicAvaloniaApp>
+public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
 {
-    protected override AppBuilder CreateAppBuilder()
+    // The folder in the sandbox that every shipped build has kept its settings and saved keys in, apart
+    // from the app's name: iOS paths are case-sensitive and the app's Documents folder outlives updates,
+    // so another folder would orphan every install's settings. Frozen; the name may change, this may not.
+    // ReSharper disable once HeuristicUnreachableCode
+    private const string StorageFolderName = AppConstants.IsDebugMode ? "VpnHood! Client (DEBUG)" : "VpnHood! Client";
+
+    // The platform builds the device from the App Group and the extension's bundle id (VpnHoodIosApp).
+    protected override IosInitParams CreateInitParams()
     {
-        StartApp();
-        // in process both complete at once
-        VhApp.Init(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
-        AvaloniaUiHosting.PrepareContent<ClassicAvaloniaApp>(VpnHoodApp.Instance.UiAssetProvider);
-        VhApp.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
-        AppUiContext.Context = new IosUiContext();
-        return base.CreateAppBuilder();
+        return new IosInitParams {
+            // the bundle's own id, which the build took from the app's identity
+            AppId = NSBundle.MainBundle.BundleIdentifier ??
+                    throw new InvalidOperationException("The app's bundle has no identifier."),
+            StorageFolderName = StorageFolderName,
+            AppGroupId = AppConstants.AppGroupId,
+            ProviderBundleId = AppConstants.ProviderBundleId,
+            AppOptionsFactory = BuildAppOptions
+        };
     }
 
-    // The app as this head configures it, started as launching finishes.
-    private static void StartApp()
+    // The product's options, and the App Store's lines on top.
+    private static AppOptions BuildAppOptions(AppOptionsContext context)
     {
-        if (VpnHoodApp.IsInit)
-            return;
+        // The product's settings, as every Client head loads them (Client is bring-your-own-key,
+        // so there is no built-in key).
+        var appConfigs = ClientAppConfigs.Load();
+        var options = ClientAppOptions.Create(context, appConfigs);
 
-        // The App process has a readable stdout, so a console logger is fine here.
-        VhLogger.Instance = VhLogger.CreateConsoleLogger();
+        // The loopback port of the in-process web host, distinct from the Connect app's so both can
+        // run on one device.
+        options.WebUiPort = 9580;
 
-        // Load per-product settings the same way the Android Client app does: merge the embedded
-        // ".user" appsettings over the in-code defaults (Client is bring-your-own-key, so no default key).
-        var appConfigs = AppConfigs.Load();
-
-        // Evaluate GetContainerUrl here — on the main thread, after iOS has fully initialized the
-        // sandbox — so the App-Group container path (the App<->Extension IPC folder) is stable for
-        // the whole session. If this is null the App Group entitlement is missing from the profile.
-        var sharedContainerPath = NSFileManager.DefaultManager.GetContainerUrl(AppConfigs.AppGroupId).Path;
-        VhLogger.Instance.LogInformation(
-            "FinishedLaunching: GetContainerUrl({AppGroupId}) = {Path}",
-            AppConfigs.AppGroupId, sharedContainerPath ?? "<null>");
-
-        // IosDevice lives in the core VpnHood.Core.Client.Devices.Ios project; it needs the
-        // extension's bundle id and the resolved shared-container path to wire up NEVPNManager +
-        // the IPC config folder. The App Group id stays here only to compute sharedContainerPath
-        // (above) — the Extension receives the resolved path, not the App Group id.
-        var device = new IosDevice(
-            providerBundleId: AppConfigs.ProviderBundleId,
-            sharedContainerPath: sharedContainerPath,
-            localizedDescription: AppConfigs.AppName);
-
-        VpnHoodIosApp.Init(device, BuildAppOptions(appConfigs));
-    }
-
-    private static AppOptions BuildAppOptions(AppConfigs appConfigs)
-    {
-        var storageFolderPath = AppOptions.BuildStorageFolderPath(AppConfigs.StorageFolderName);
-
-
-        // The files this build's asset packages placed beside the app, read the way this
-        // platform reads them: the IP-location database and the UI's store. The app extracts
-        // what it must under its storage - the store once, for the in-process UI and for the
-        // web host, which serves the same entries at /assets/ to a paired phone's page.
-        var platformAssets = new FolderAssetProvider(AppContext.BaseDirectory);
-
-        var options = new AppOptions(appId: appConfigs.AppId, storageFolderName: AppConfigs.StorageFolderName,
-            isDebugMode: AppConfigs.IsDebugMode) {
-            AppName = AppConfigs.AppName,
-            StorageFolderPath = storageFolderPath,
-            // Product settings sourced from the embedded ".user" appsettings (parity with Client.Android.Web).
-            // Apple applies an additional privacy rule to VPN apps: the iOS build does not send
-            // analytics or Firebase reports to third parties. Keep unrelated custom data intact.
-            CustomData = WithoutFirebaseOptions(appConfigs.CustomData),
-            Ga4MeasurementId = null,
-            TrackerFactory = new NullTrackerFactory(),
-            AllowEndPointTracker = false,
-            RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
-            // Empty until a DefaultAccessKey is supplied (see AppConfigs; Client is bring-your-own-key). An
-            // invalid string here would throw inside VpnHoodApp.Init, so we pass an empty array otherwise.
-            AccessKeys = string.IsNullOrEmpty(appConfigs.DefaultAccessKey) ? [] : [appConfigs.DefaultAccessKey],
-            PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
-            // Not appConfigs.TermsOfUseUrl: a purchase here is governed by Apple's standard EULA while
-            // no custom EULA is registered in App Store Connect. Delete this line once one is.
-            TermsOfUseUrl = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"),
-            LogoAssetPath = appConfigs.LogoAssetPath,
-            PrivacyConsentAssetName = appConfigs.PrivacyConsentAssetName,
-            CompanyName = appConfigs.CompanyName,
-            // The store already took this acceptance at install - see AppOptions.
-            IsLicenseAgreementRequired = false,
-            // Loopback port for the web host a paired device dials.
-            WebUiPort = appConfigs.WebUiPort,
-            IsAddAccessKeySupported = true,
-            // Native in-app rating dialog (parity with Client.Android.Google's Google Play provider).
-            // Like Android Client, AllowRecommendUserReviewByServer stays at its default (false).
-            UserReviewProvider = new AppStoreInAppUserReviewProvider(),
-            // The WKWebView renders edge-to-edge (fills the whole window incl. the status-bar and
-            // home-indicator safe areas). false = "don't let the native side pad to the safe area;
-            // instead publish the inset sizes (SystemBarsInfo) so the SPA pads itself" — matching the
-            // Android clients. With the default (true), SystemBarsInfo is suppressed and the SPA's
-            // bottom content slides under the home indicator.
-            AdjustForSystemBars = false,
-            // State only the exception ForCurrentPlatform cannot see: "Designed for iPad" on Apple
-            // Silicon runs the extension without the iOS jetsam cap, yet reports IsIOS() with no
-            // Mac Catalyst marker. Only Foundation can tell it from a real device; everything else
-            // stays the platform's own choice.
-            Transport = NSProcessInfo.ProcessInfo.IsiOSApplicationOnMac
-                ? ClientTransportOptions.NormalMemory
-                : ClientTransportOptions.ForCurrentPlatform(),
-            // Log level: Information in production. To investigate, add the "/log:debug" debug command in
-            // the UI (Debug Data 1) — the iOS diagnostics gates are computed from VhLogger.MinLogLevel, so
-            // below-Information logging auto-enables them in the extension: vpn-ext.log carries the TcpStack
-            // "+CONN/-CONN" and [VHQUIC] +CONN/-CONN/brake lines (EventIds "TcpStack"/"Quic") plus ext-mem.log.
-            LogServiceOptions = new LogServiceOptions {
-                MinLogLevel = LogLevel.Information
-            },
-            AdOptions = new AppAdOptions {
-                PreloadAd = false
-            },
-            // Update check via the App Store (parity with Client.Android.Google's Google Play provider):
-            // the provider looks up the released store version by bundle id and opens the App Store page
-            // when an update is due. UpdateInfoUrl comes from config, which keeps it null on iOS (see
-            // AppConfigs) — the store is the only install channel here.
-            UpdaterOptions = new AppUpdaterOptions {
-                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
-                UpdaterProvider = new AppStoreAppUpdaterProvider()
-            },
-            IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
-            UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
-            // the page a paired phone opens: this same UI, as its browser build
-            WebRootZipAsset = new Asset(platformAssets, "assets/web-root.zip"),
-            WebHostFactory = new VpnHoodAppWebHostFactory()
+        // Apple applies an additional privacy rule to VPN apps: the iOS build does not send
+        // analytics or Firebase reports to third parties. Keep unrelated custom data intact.
+        options.CustomData = WithoutFirebaseOptions(appConfigs.CustomData);
+        options.Ga4MeasurementId = null;
+        options.TrackerFactory = new NullTrackerFactory();
+        options.AllowEndPointTracker = false;
+        // Not appConfigs.TermsOfUseUrl: a purchase here is governed by Apple's standard EULA while
+        // no custom EULA is registered in App Store Connect. Delete this line once one is.
+        options.TermsOfUseUrl = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+        // The store already took this acceptance at install - see AppOptions.
+        options.IsLicenseAgreementRequired = false;
+        // Native in-app rating dialog (parity with Client.Android.Google's Google Play provider).
+        // Like Android Client, AllowRecommendUserReviewByServer stays at its default (false).
+        options.UserReviewProvider = new AppStoreInAppUserReviewProvider();
+        // State only the exception ForCurrentPlatform cannot see: "Designed for iPad" on Apple
+        // Silicon runs the extension without the iOS jetsam cap, yet reports IsIOS() with no
+        // Mac Catalyst marker. Only Foundation can tell it from a real device; everything else
+        // stays the platform's own choice.
+        options.Transport = NSProcessInfo.ProcessInfo.IsiOSApplicationOnMac
+            ? ClientTransportOptions.NormalMemory
+            : ClientTransportOptions.ForCurrentPlatform();
+        // Log level: Information in production. To investigate, add the "/log:debug" debug command in
+        // the UI (Debug Data 1) — the iOS diagnostics gates are computed from VhLogger.MinLogLevel, so
+        // below-Information logging auto-enables them in the extension: vpn-ext.log carries the TcpStack
+        // "+CONN/-CONN" and [VHQUIC] +CONN/-CONN/brake lines (EventIds "TcpStack"/"Quic") plus ext-mem.log.
+        options.LogServiceOptions = new LogServiceOptions {
+            MinLogLevel = LogLevel.Information
+        };
+        options.AdOptions = new AppAdOptions {
+            PreloadAd = false
+        };
+        // Update check via the App Store (parity with Client.Android.Google's Google Play provider):
+        // the provider looks up the released store version by bundle id and opens the App Store page
+        // when an update is due. No update feed: it describes downloadable packages, so naming one
+        // would make the UI offer a direct download — the wrong install channel here, and an App
+        // Review problem. The store is the only install channel.
+        options.UpdaterOptions = new AppUpdaterOptions {
+            UpdaterProvider = new AppStoreAppUpdaterProvider()
         };
         return options;
     }

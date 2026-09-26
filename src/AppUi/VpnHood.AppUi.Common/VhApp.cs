@@ -4,6 +4,7 @@ using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Api.ClientProfiles;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Common;
 
@@ -28,11 +29,14 @@ public static class VhApp
 
     // The head's first step, before Avalonia starts: the API, and the app's info read through
     // it - the features decide the theme, which is applied as the application initializes. In
-    // process the read completes at once.
+    // process the read completes at once. This and Configure configure their awaits away (Vhc): the
+    // Android host blocks its main thread on both (AvaloniaUiHosting). The read is this method's own,
+    // not ReloadInfo's: the pages call that one, and it stores its values on their thread.
     public static async Task Init(VpnHoodApi api, CancellationToken cancellationToken)
     {
         _api = api;
-        await ReloadInfo(cancellationToken);
+        _info = await Api.App.GetInfo(cancellationToken).Vhc();
+        _state = _info.State;
     }
 
     // The head's second step, once the UI can say which languages it has: they are declared to
@@ -41,7 +45,7 @@ public static class VhApp
     // must first place has placed them by now - that moment is the head's, not a page's.
     public static async Task Configure(IReadOnlyList<string> availableCultures, CancellationToken cancellationToken)
     {
-        _info = await Api.App.Configure(new ConfigParams { AvailableCultures = [.. availableCultures] }, cancellationToken);
+        _info = await Api.App.Configure(new ConfigParams { AvailableCultures = [.. availableCultures] }, cancellationToken).Vhc();
         _state = _info.State;
         IsConfigured = true;
     }

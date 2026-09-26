@@ -224,7 +224,12 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
                         return;
                     }
                 }
-                await Purchase(new PurchaseParams { PlanToken = plan.PlanToken });
+
+                // a plan sold on the web: its page, opened as any link is - a QR code for the phone on a TV
+                if (plan.CheckoutUrl is { } checkoutUrl)
+                    await _host.OpenLink(checkoutUrl, Strings.Current.PurchaseViaWeb);
+                else
+                    await Purchase(new PurchaseParams { PlanToken = plan.PlanToken });
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);

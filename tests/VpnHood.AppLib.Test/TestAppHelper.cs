@@ -31,12 +31,21 @@ public class TestAppHelper : TestHelper
 
     // isDebugMode: false stands for a release build where the test needs the difference, e.g. the web
     // server's remote access. The tracker and log options below are explicit, so the flag changes nothing else.
-    public AppOptions CreateAppOptions(bool isDebugMode = true)
+    // storagePath: another app's, for a test that reopens what it saved.
+    public AppOptions CreateAppOptions(bool isDebugMode = true, string? storagePath = null)
     {
-        var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode) {
+        // a storage of its own per app, since tests run many apps side by side
+        var context = new AppOptionsContext {
+            AppId = "com.vpnhood.client.test",
+            StoragePath = storagePath ?? Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
+            PackagedAssetProvider = AssetProvider
+        };
+
+        var appOptions = new AppOptions(context, isDebugMode) {
             AppName = "VpnHood! Test",
+            PackageTitle = "VpnHoodTest",
             CompanyName = "VpnHood",
-            LogoAssetPath = "images/VpnHoodClient-logo.png",
+            LogoAssetPath = "images/logo-client.png",
             PrivacyConsentAssetName = "privacy-consent-client",
             IpLocationZipAsset = new Asset(AssetProvider, IpLocationAssetPath),
             IsSingleton = false, // tests run many concurrent apps in one process
@@ -47,7 +56,6 @@ public class TestAppHelper : TestHelper
                 AllowImportAccessCode = true,
                 IsPurchaseUrlSupported = true
             },
-            StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             DeviceUiProvider = new TestDeviceUiProvider(),
             EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no SPA in test, so we need to use event watcher
             Ga4MeasurementId = null,

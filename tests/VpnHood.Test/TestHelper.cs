@@ -317,7 +317,7 @@ public class TestHelper : IDisposable
         bool useTcpProxy = true)
     {
         return new ClientOptions {
-            AppName = "VpnHoodTester",
+            AdapterName = "VpnHoodTester",
             SessionName = "UnitTestSession",
             ClientId = clientId ?? Guid.NewGuid().ToString(),
             AllowAnonymousTracker = true,

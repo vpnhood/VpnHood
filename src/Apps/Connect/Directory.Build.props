@@ -1,0 +1,20 @@
+<Project>
+
+  <!-- MSBuild imports only the NEAREST Directory.Build.props, so this file shadows src/Apps' one (and
+       through it the repo's): import it first, as that one does the repo's. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- The Connect app's identity, once for every head below: each builds its ids and the name it shows
+       from these (VpnHood.AppLib.App.targets). The package title is stated, not derived from the name:
+       it is the Windows service, the Linux unit and the folders every install already has. -->
+  <PropertyGroup>
+    <VhAppIdBase>com.vpnhood.connect</VhAppIdBase>
+    <VhAppName>VpnHood! CONNECT</VhAppName>
+    <VhAppPackageTitle>VpnHoodConnect</VhAppPackageTitle>
+  </PropertyGroup>
+
+  <!-- After the values, as NuGet imports a package's props after Directory.Build.props: the same file
+       a package reference of VpnHood.AppLib.App imports. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\AppLib\VpnHood.AppLib.App\buildTransitive\VpnHood.AppLib.App.props" />
+
+</Project>

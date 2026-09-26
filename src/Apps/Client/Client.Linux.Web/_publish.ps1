@@ -5,4 +5,4 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-os "linux" `
 	-launcherName "vhclient" `
 	-installTemplate "install-client" `
-	-logoAssetPath "images/VpnHoodClient-logo.png";
+	-logoAssetPath "images/logo-client.png";

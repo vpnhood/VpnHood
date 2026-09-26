@@ -2,13 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- The capabilities only. The App Group the extension shares with its app is the build's, from
+         the app's identity (CustomEntitlements in VpnHood.AppLib.App.targets). -->
     <key>com.apple.developer.networking.networkextension</key>
     <array>
         <string>packet-tunnel-provider</string>
-    </array>
-    <key>com.apple.security.application-groups</key>
-    <array>
-        <string>group.com.vpnhood.client.ios</string>
     </array>
 </dict>
 </plist>

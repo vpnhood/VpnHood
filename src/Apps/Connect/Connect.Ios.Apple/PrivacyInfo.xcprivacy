@@ -22,8 +22,8 @@
 <dict>
 	<!-- No cross-app/cross-site tracking: no IDFA, no ATTrackingManager, and no ad or attribution SDK is
 	     linked into the iOS Connect app. The AdMob / Chartboost / InMobi / AppsFlyer keys that appear in
-	     .user/VpnHoodConnect/appsettings.json are ANDROID-only — Connect.Ios/AppConfigs.cs implements
-	     IRequiredAppConfigs and simply ignores those properties, and no ad package is referenced by
+	     .user/VpnHoodConnect/appsettings.json are ANDROID-only — ConnectAppConfigs loads them on every
+	     head, but nothing in the iOS head reads them, and no ad package is referenced by
 	     VpnHood.App.Connect.Ios.csproj. false here is what keeps the app out of the App Tracking
 	     Transparency prompt requirement; adding any ad/attribution SDK to iOS MUST flip this to true and
 	     add NSUserTrackingUsageDescription to Info.plist. -->

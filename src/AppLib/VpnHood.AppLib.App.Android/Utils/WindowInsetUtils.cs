@@ -99,16 +99,8 @@ public static class WindowInsetUtils
                 v.SetBackgroundColor(backgroundColor.Value);
 
             if (OperatingSystem.IsAndroidVersionAtLeast(30)) {
-                // Get the insets for the IME and system bars
-                var mask = 0;
-                if (insets.IsVisible(WindowInsets.Type.Ime()))
-                    mask |= WindowInsets.Type.Ime();
-
-                // Adjust for system bars
-                if (VpnHoodApp.Instance.Features.AdjustForSystemBars)
-                    mask |= WindowInsets.Type.SystemBars();
-
-                // Apply padding to prevent layout overlap with system bars
+                // the keyboard only: the UI keeps clear of the system bars itself
+                var mask = insets.IsVisible(WindowInsets.Type.Ime()) ? WindowInsets.Type.Ime() : 0;
                 var rect = insets.GetInsets(mask);
                 v.SetPadding(rect.Left, rect.Top, rect.Right, rect.Bottom);
                 return WindowInsets.Consumed;

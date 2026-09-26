@@ -1,6 +1,6 @@
 ﻿using System.IO.Pipes;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
@@ -18,25 +18,27 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromMilliseconds(500);
     private const PipeOptions Options = PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly;
     private readonly string _pipeName;
+    private readonly IDesktopUi _ui;
     private readonly CancellationTokenSource _cancellation = new();
     private readonly Task _serving;
 
-    private DesktopUiInstance(string pipeName)
+    private DesktopUiInstance(string pipeName, IDesktopUi ui)
     {
         _pipeName = pipeName;
+        _ui = ui;
         _serving = Serve(CreateServer(), _cancellation.Token);
     }
 
-    // This launch's window, or null when this person already has one open, which has been asked to
-    // come forward.
-    public static async Task<DesktopUiInstance?> TryClaim(string instanceName,
+    // This launch's window, the UI a later launch brings forward, or null when this person already
+    // has one open, which has been asked to come forward.
+    public static async Task<DesktopUiInstance?> TryClaim(string instanceName, IDesktopUi ui,
         CancellationToken cancellationToken)
     {
         var pipeName = BuildPipeName(instanceName);
         if (await TryShowExisting(pipeName, cancellationToken).Vhc())
             return null;
 
-        return new DesktopUiInstance(pipeName);
+        return new DesktopUiInstance(pipeName, ui);
     }
 
     // one pipe per person and instance, in characters every platform's pipe names take
@@ -90,14 +92,14 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     }
 
     // What a second launch asks: this window, to the front.
-    private static async Task Answer(NamedPipeServerStream connected, CancellationToken cancellationToken)
+    private async Task Answer(NamedPipeServerStream connected, CancellationToken cancellationToken)
     {
         await using var pipe = connected;
         try {
             using var reader = new StreamReader(pipe);
             var command = await reader.ReadLineAsync(cancellationToken).Vhc();
-            if (command == ShowCommand && AppUiContext.Context is { } uiContext)
-                await uiContext.BringToFront(cancellationToken).Vhc();
+            if (command == ShowCommand)
+                await _ui.BringToFront(cancellationToken).Vhc();
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested) {
             VhLogger.Instance.LogWarning(ex, "Could not bring the window forward for a second launch.");

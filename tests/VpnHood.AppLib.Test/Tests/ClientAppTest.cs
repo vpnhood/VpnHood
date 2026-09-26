@@ -59,6 +59,27 @@ public class ClientAppTest : TestAppBase
         Assert.IsTrue(app.State.LogExists);
     }
 
+    // A head whose product names no IP-location data - a fork without the package: the app starts
+    // with no local location lookup, and connects.
+    [TestMethod]
+    public async Task Runs_without_ip_location_asset()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.IpLocationZipAsset = null;
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        Assert.IsNull(app.IpRangeLocationProvider);
+
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+        await app.WaitForState(AppConnectionState.Connected);
+        await app.Disconnect();
+        await app.WaitForState(AppConnectionState.None);
+        Assert.IsNull(app.State.LastError);
+    }
+
     [TestMethod]
     public async Task State_Error_Unreachable_Server()
     {

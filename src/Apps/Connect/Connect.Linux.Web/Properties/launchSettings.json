@@ -1,9 +1,13 @@
 {
   "profiles": {
-    "VpnHood.AppLib.Windows": {
-      "commandName": "Executable",
-      "executablePath": "dotnet",
-      "commandLineArgs": "VpnHoodConnect.dll"
+    "VpnHood.Connect.Linux": {
+      "commandName": "Project",
+      "commandLineArgs": "dev"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "commandLineArgs": "dev",
+      "distributionName": ""
     }
   }
 }

@@ -13,6 +13,9 @@ namespace VpnHood.AppUi.Hosting.WebView.Windows;
 // main thread until the run is cancelled, or, where no tray keeps it, until the window closes.
 public class WpfWebViewUi : IDesktopUi
 {
+    // the running window, which BringToFront reaches from another thread
+    private volatile VpnHoodWpfMainWindow? _window;
+
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -42,6 +45,7 @@ public class WpfWebViewUi : IDesktopUi
             window.Closed += (_, _) => application.Shutdown();
 
         AppUiContext.Context = new WpfUiContext(window);
+        _window = window;
         using var registration = cancellationToken.Register(() =>
             application.Dispatcher.BeginInvoke(() => application.Shutdown()));
 
@@ -49,6 +53,13 @@ public class WpfWebViewUi : IDesktopUi
             window.Show();
 
         application.Run();
+        _window = null;
         AppUiContext.Context = null;
+    }
+
+    public async Task BringToFront(CancellationToken cancellationToken)
+    {
+        if (_window is { } window)
+            await window.Dispatcher.InvokeAsync(window.ShowOrOpen);
     }
 }

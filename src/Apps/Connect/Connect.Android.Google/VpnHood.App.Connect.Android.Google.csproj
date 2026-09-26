@@ -4,7 +4,9 @@
 		<Description>VpnHood Android Client Connect App with Ads and memebership</Description>
 		<TargetFramework>net10.0-android36.1</TargetFramework>
 		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
+		<!-- The Play id in Debug too, not the rule's .debug one (../Directory.Build.props):
+		     google-services.json, and the Google sign-in client behind it, know no other package. -->
+		<ApplicationId>$(VhAppIdBase).android</ApplicationId>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
@@ -39,23 +41,13 @@
 	  <AndroidKeyStore>False</AndroidKeyStore>
 	</PropertyGroup>
 
-	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.
-	     Conditional so a fork without them still builds; AppConfigs reads them at startup. -->
-	<ItemGroup>
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\appsettings.json"
-			LogicalName="AppSettings.json"
-			Condition="Exists('$(VhUserDir)\VpnHoodConnect\appsettings.json')" />
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\appsettings.$(Configuration).json"
-			LogicalName="AppSettings_Environment.json"
-			Condition="Exists('$(VhUserDir)\VpnHoodConnect\appsettings.$(Configuration).json')" />
-	</ItemGroup>
-
 	<!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret.
 	     Keys are per-entitlement, not per-store: this Google build is the only ad-supported one, so it
 	     embeds access_key_ad; every other distribution embeds access_key_premium.
 	     The configuration-specific file wins (Debug embeds access_key_ad.Debug.txt), otherwise
-	     the base access_key_ad.txt is used. Both are optional: a fork without them falls back to the
-	     in-code default in AppConfigs. -->
+	     the base access_key_ad.txt is used. Both are optional: a fork without them has no built-in key
+	     (a Debug build takes the engine's sample, ConnectAppOptions). The product's settings are
+	     embedded by the product project (ConnectAppConfigs). -->
 	<ItemGroup>
 		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\access_key_ad.$(Configuration).txt"
 			LogicalName="access_key_default.txt"
@@ -96,7 +88,7 @@
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
 	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
-	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\build\VpnHood.AppUi.Assets.Classic.targets" />
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
 	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way, from
 	     Classic.Avalonia.Browser's publish; the head reads it at "assets/web-root.zip". -->
 	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser\build\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.targets" />

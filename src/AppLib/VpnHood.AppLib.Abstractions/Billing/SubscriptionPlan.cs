@@ -17,4 +17,7 @@ public class SubscriptionPlan
     public required string PlanToken { get; init; }
     public required string CurrencySymbol { get; init; }
     public required string CurrencyCode { get; init; }
+
+    /// <summary>The page the plan is bought on, for a store that sells on the web: the UI opens it as it opens any link. Null where the purchase happens in the app.</summary>
+    public Uri? CheckoutUrl { get; init; }
 }

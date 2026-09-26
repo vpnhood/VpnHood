@@ -1,10 +1,12 @@
 {
   "profiles": {
     "VpnHood.Client.Linux": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "dev"
     },
     "WSL": {
       "commandName": "WSL2",
+      "commandLineArgs": "dev",
       "distributionName": ""
     }
   }

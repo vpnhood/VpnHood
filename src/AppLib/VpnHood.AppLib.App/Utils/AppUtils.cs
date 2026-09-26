@@ -33,6 +33,13 @@ public static class AppUtils
                 .ToArray());
     }
 
+    // The adapter's name, which only a desktop shows to people: the package title, with _dbg in a
+    // Debug build so it never takes over a release's adapter.
+    public static string GetAdapterName(string packageTitle, bool isDebugMode)
+    {
+        return isDebugMode ? $"{packageTitle}_dbg" : packageTitle;
+    }
+
     // Mac Catalyst is checked BEFORE iOS on purpose: OperatingSystem.IsIOS() reports true for Catalyst
     // too, so testing iOS first would label a Mac build as an iPhone and hide/show the wrong content.
     public static AppOsType GetOsType()

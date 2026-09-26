@@ -49,8 +49,9 @@ $doPackage = $stage -in @("all", "package");
 
 # --- Shared values (computed in every stage so each process is self-contained) ---
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
-$productName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Product[0];
-$assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName[0];
+# Both from the app's identity, so as MSBuild evaluates them (Get-ProjectProperty).
+$productName = Get-ProjectProperty $projectFile "Product";
+$assemblyName = Get-ProjectProperty $projectFile "AssemblyName";
 $targetFramework = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.TargetFramework;
 $publishDir = "$projectDir/bin/Publish-$distribution";
 $aipFile = "$solutionDir/$aipFileR";

@@ -1,6 +1,5 @@
 using System.Globalization;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -9,31 +8,22 @@ namespace VpnHood.AppLib.Portal;
 /// <summary>
 /// The web-distribution channel's billing provider: the portal IS the store. Plans and prices come
 /// from GET /billing/plans — the same rows the checkout bills, in one currency that every checkout
-/// URL pins, so a shown price can never disagree with the invoice. Purchase opens the checkout in
-/// the system browser (how is platform business — the app passes its own opener) and ends the
-/// in-app flow as a <see cref="UserCanceledException" />, which the UI already renders as silence:
-/// an external checkout has no in-app completion to report, and delivery arrives through the
+/// URL pins, so a shown price can never disagree with the invoice. Each plan carries its checkout
+/// page (<see cref="SubscriptionPlan.CheckoutUrl" />), which the UI opens as it opens any link — on
+/// a TV, as a QR code for the phone — so nothing is bought in the app: delivery arrives through the
 /// signed-in account like every web purchase.
 /// </summary>
 public class PortalWebBillingProvider : IBillingProvider
 {
     private readonly HttpClient _httpClient;
     private readonly string _packageName;
-    private readonly Func<IUiContext, Uri, CancellationToken, Task> _openUrl;
-    private IReadOnlyDictionary<string, Uri> _checkoutUrls = new Dictionary<string, Uri>();
 
     /// <param name="portalBaseUrl">The portal the plans are listed from and the checkout opens on.</param>
     /// <param name="packageName">The app the plans are listed for, as the portal names it.</param>
-    /// <param name="openUrl">
-    /// Opens a URL in the SYSTEM browser. Platform business, so the app that knows its platform
-    /// passes it in — an Intent on Android, the shell on desktop.
-    /// </param>
     /// <param name="ignoreSslVerification">Accepts any server certificate: a development portal's.</param>
-    public PortalWebBillingProvider(Uri portalBaseUrl, string packageName,
-        Func<IUiContext, Uri, CancellationToken, Task> openUrl, bool ignoreSslVerification = false)
+    public PortalWebBillingProvider(Uri portalBaseUrl, string packageName, bool ignoreSslVerification = false)
     {
         _packageName = packageName;
-        _openUrl = openUrl;
 
         // this provider owns its transport, like PortalAccountProvider and for the same reason
         var handler = new HttpClientHandler();
@@ -63,7 +53,6 @@ public class PortalWebBillingProvider : IBillingProvider
 
         // like every store: price exactly what the backend says is sellable, nothing more
         plans = [.. plans.Where(plan => productIds.Contains(plan.PlanId))];
-        _checkoutUrls = plans.ToDictionary(plan => plan.PlanId, plan => plan.PurchaseUrl);
 
         return [.. plans.Select(plan => new SubscriptionPlan {
             PlanToken = plan.PlanId,
@@ -72,27 +61,17 @@ public class PortalWebBillingProvider : IBillingProvider
             CurrentPrice = double.Parse(plan.PriceAmount, CultureInfo.InvariantCulture),
             CurrencyCode = plan.PriceCurrency,
             // the portal's own symbol: the checkout renders "{symbol}{amount}", so the card matches it
-            CurrencySymbol = plan.PriceCurrencySymbol
+            CurrencySymbol = plan.PriceCurrencySymbol,
+            CheckoutUrl = plan.PurchaseUrl
         })];
     }
 
-    public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+    // The UI opens the plan's checkout page instead; the purchase reaches the account server-side,
+    // and the next account refresh delivers it.
+    public Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
-        // the chosen plan's own checkout URL, fetched fresh if this instance has not priced the
-        // plans yet — a purchase always follows a rendered plans page, but never trust that ordering
-        if (!_checkoutUrls.TryGetValue(purchaseParams.PlanToken, out var checkoutUrl)) {
-            await GetSubscriptionPlans([purchaseParams.PlanToken], cancellationToken).Vhc();
-            if (!_checkoutUrls.TryGetValue(purchaseParams.PlanToken, out checkoutUrl))
-                throw new InvalidOperationException($"The portal sells no such plan: {purchaseParams.PlanToken}");
-        }
-
-        await _openUrl(uiContext, checkoutUrl, cancellationToken).Vhc();
-
-        // Not an error and not a completion: the checkout continues in the browser, where this app
-        // cannot see it end. The UI shows this exception as silence, and the purchase reaches the
-        // account server-side — the next account refresh delivers it.
-        throw new UserCanceledException("The checkout continues in the system browser.");
+        throw new NotSupportedException("A web plan is bought on its checkout page (SubscriptionPlan.CheckoutUrl).");
     }
 
     public Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)

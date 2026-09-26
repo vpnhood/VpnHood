@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
-	<key>CFBundleDisplayName</key>
-	<string>VpnHood! CLIENT Extension</string>
-	<key>CFBundleIdentifier</key>
-	<string>com.vpnhood.client.ios.networkextension</string>
-	<!-- false = "no encryption requiring Apple export-compliance documentation" — mirrors the host app;
+	<!-- CFBundleIdentifier and CFBundleDisplayName are the build's: ApplicationId and ApplicationTitle,
+	     from the app's identity (VpnHood.AppLib.App.targets), which this file does not state again. -->
+	<!-- false ="no encryption requiring Apple export-compliance documentation" — mirrors the host app;
 	     standards-body crypto only, no France. NEVER true (true-without-code is rejected at upload,
 	     error 90592, and the non-France flow issues no code). See docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md. -->
 	<key>ITSAppUsesNonExemptEncryption</key>

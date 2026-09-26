@@ -289,13 +289,10 @@ Points that are easy to get wrong:
    only a tun no process holds that carries that tag, and takes its `resolvconf` entry off first. A
    connect clears the same under its own name — and, from a version before tags, an untagged one —
    and refuses a name another owner holds, and says whose (`LinuxTunVpnAdapter`, `LinuxTunInfo`).
-6. **What the app asks of a UI is done by the window, as its person.** The service runs as root with
-   no session, so a checkout it opened itself would open nowhere, or as root. The window attaches
-   to it instead (`IUiAttachmentsApi`): every request the window makes names its attachment, so
-   what the request starts — a sign-in, a purchase — runs with that window as its UI context, and
-   an action such as opening the checkout reaches the window's long poll, which opens the person's
-   browser and answers. A window that closes mid-action fails the action with a defined error; with
-   no window open, a UI-bound call fails with a message that says to open the app.
+6. **The service opens nothing for a person.** It runs as root with no session, so a page it opened
+   would open nowhere, or as root. A plan sold on the web carries its checkout page
+   (`SubscriptionPlan.CheckoutUrl`), and the window opens it as it opens any link, in the person's
+   own browser.
 7. **One window per person.** The window serves a pipe named for its person (`DesktopUiInstance`;
    .NET's pipes are Unix sockets here, `/tmp/CoreFxPipe_<instance>-ui-<user>`). A second launch
    asks that pipe first and, if a window answers, brings it forward and ends; another person finds

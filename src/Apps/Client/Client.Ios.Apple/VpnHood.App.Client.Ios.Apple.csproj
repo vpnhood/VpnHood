@@ -7,9 +7,10 @@
     <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
-    <!-- The project is named for its channel (the App Store); the bundle's executable keeps the platform name. -->
-    <AssemblyName>VpnHoodClient</AssemblyName>
-    <BundleIdentifier>com.vpnhood.client.ios</BundleIdentifier>
+    <!-- The project is named for its channel (the App Store); the bundle's executable is the app's
+         package title. The bundle id, the name, the App Group and the extension's id come from the app's
+         identity (../Directory.Build.props). -->
+    <AssemblyName>$(VhAppPackageTitle)</AssemblyName>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
 
     <!-- Automatic signing: Xcode picks the cert/profile for the team (6KKW3MKLR7, OmegaHood LLC). -->
@@ -26,19 +27,6 @@
     <BundleResource Include="PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
   </ItemGroup>
 
-  <!-- Optional private app settings (from the external ".user" folder, sibling to the solution) embedded as
-       resources. Mirrors Client.Android.Web. Conditional so a fork without them still builds; AppConfigs
-       reads them at startup via AppConfigsBase.LoadConfig(). Client is bring-your-own-key, so unlike Connect
-       there is no embedded default access key. Forward slashes: this builds on macOS. -->
-  <ItemGroup>
-    <EmbeddedResource Include="$(VhUserDir)/VpnHoodClient/appsettings.json"
-        LogicalName="AppSettings.json"
-        Condition="Exists('$(VhUserDir)/VpnHoodClient/appsettings.json')" />
-    <EmbeddedResource Include="$(VhUserDir)/VpnHoodClient/appsettings.$(Configuration).json"
-        LogicalName="AppSettings_Environment.json"
-        Condition="Exists('$(VhUserDir)/VpnHoodClient/appsettings.$(Configuration).json')" />
-  </ItemGroup>
-
   <ItemGroup>
     <!-- App framework + iOS device abstraction. -->
     <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
@@ -49,11 +37,10 @@
     <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Ios\VpnHood.AppLib.App.Ios.csproj" />
     <!-- App Store updates and reviews (AppStoreAppUpdaterProvider / AppStoreInAppUserReviewProvider). -->
     <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.AppStore.Core\VpnHood.AppLib.Stores.AppStore.Core.csproj" />
-    <!-- The UI this head runs, mounted by AppDelegate as UIKit finishes launching. -->
-    <ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
+    <!-- The UI this head runs, which AppDelegate is the application delegate of. -->
+    <ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Ios\VpnHood.AppUi.Hosting.Avalonia.Ios.csproj" />
     <!-- The UI itself: the pages, the controls, the themes. -->
     <ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
-    <PackageReference Include="Avalonia.iOS" Version="12.1.2" />
     <!-- Shared client resources: the IP-location db and ClientAppResources. -->
     <ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
   </ItemGroup>
@@ -71,7 +58,7 @@
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
 	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
-	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\build\VpnHood.AppUi.Assets.Classic.targets" />
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
 	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way, from
 	     Classic.Avalonia.Browser's publish; the head reads it at "assets/web-root.zip". -->
 	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser\build\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.targets" />

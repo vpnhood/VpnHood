@@ -298,9 +298,7 @@ public class ClientProfileTest : TestAppBase
         var clientProfiles = app1.ClientProfileService.List();
         await app1.DisposeAsync();
 
-        var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.StorageFolderPath = app1.StorageFolderPath;
-
+        var appOptions = TestAppHelper.CreateAppOptions(storagePath: app1.StorageFolderPath);
         await using var app2 = TestAppHelper.CreateClientApp(appOptions: appOptions);
         Assert.HasCount(clientProfiles.Length, app2.ClientProfileService.List(), "ClientProfiles count are not same!");
         Assert.IsNotNull(app2.ClientProfileService.FindById(clientProfile1.ClientProfileId));

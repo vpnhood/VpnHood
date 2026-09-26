@@ -28,12 +28,13 @@ param(
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 
 # Per-app identity from .user/<appFolder>/publish.json (see AppPublishConfig.ps1). The iOS BUNDLE ID is
-# NOT part of publish.json's schema (it is Android-only), so it always comes from the csproj
-# <BundleIdentifier> — never a throw when the (optional) iOS block is absent from a strict publish.json.
+# NOT part of publish.json's schema (it is Android-only), so it is always the head's ApplicationId, as
+# the app's identity makes it (src/Apps/<Product>/Directory.Build.props) — never a throw when the
+# (optional) iOS block is absent from a strict publish.json.
 $appUserDir = Join-Path "$solutionDir/../.user/" $appFolder;
 $appConfig = Get-AppPublishConfig $appFolder;
-$packageId = ([Xml](Get-Content $projectFile)).Project.PropertyGroup.BundleIdentifier | Where-Object { $_ } | Select-Object -First 1;
-if ([string]::IsNullOrWhiteSpace($packageId)) { Throw "No <BundleIdentifier> found in $projectFile."; }
+$packageId = Get-ProjectProperty $projectFile "ApplicationId";
+if ([string]::IsNullOrWhiteSpace($packageId)) { Throw "The head has no ApplicationId: $projectFile."; }
 $packageFileTitle = if ($appConfig.packageFileTitle) { $appConfig.packageFileTitle } else { $appFolder }
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
 # iOS installs come from the App Store, so the "installation page" is the store/download page, not the

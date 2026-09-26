@@ -13,4 +13,8 @@ internal class TestDeviceUiProvider : NullDeviceUiProvider
 
     public override PrivateDns? GetPrivateDns() => SystemPrivateDns;
     public override SystemBarsInfo GetBarsInfo(IUiContext uiContext) => SystemBarsInfo.Default;
+
+    // the UI the last settings request was carried out through: which window a request ran as
+    public IUiContext? LastSettingsUiContext { get; private set; }
+    public override void OpenSettings(IUiContext uiContext) => LastSettingsUiContext = uiContext;
 }

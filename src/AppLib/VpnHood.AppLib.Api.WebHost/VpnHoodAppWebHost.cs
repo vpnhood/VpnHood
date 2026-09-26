@@ -160,10 +160,11 @@ public class VpnHoodAppWebHost : IAppWebHost
         var addresses = await GetAddresses().Vhc();
         cancellationToken.ThrowIfCancellationRequested();
 
-        // The page before the socket: a listener that answers must have something to answer with,
-        // and an unpacking that fails belongs to whoever called EnsureStarted rather than to whichever
-        // request happened to arrive first. The first read of index.html is what extracts the page.
-        _indexHtml ??= await ReadIndexHtml(cancellationToken).Vhc();
+        // The page before the socket: an unpacking that fails belongs to whoever called EnsureStarted
+        // rather than to whichever request happened to arrive first. The first read of index.html is
+        // what extracts the page. A build that placed no page still serves the API, which is all the
+        // window needs; a request for the page then fails naming the missing file.
+        _indexHtml ??= await TryReadIndexHtml(cancellationToken).Vhc();
 
         bool wasBound;
         lock (_lock) {
@@ -606,6 +607,17 @@ public class VpnHoodAppWebHost : IAppWebHost
         var memoryStream = new MemoryStream();
         await stream.CopyToAsync(memoryStream).Vhc();
         await context.Response.Send(memoryStream.ToArray()).Vhc();
+    }
+
+    private async Task<string?> TryReadIndexHtml(CancellationToken cancellationToken)
+    {
+        try {
+            return await ReadIndexHtml(cancellationToken).Vhc();
+        }
+        catch (AssetNotFoundException ex) {
+            VhLogger.Instance.LogWarning(ex, "The web host has no page to serve, only its API.");
+            return null;
+        }
     }
 
     // The one file every unmatched path falls back to, so the UI can route itself.

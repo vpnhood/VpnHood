@@ -19,4 +19,10 @@ public class AvaloniaDesktopHost<TUi> : IDesktopUi
         AvaloniaDesktopHost.Run<TUi>([], showWindow: !uiParams.StartHidden, uiParams.Api, uiParams.UiAssetProvider,
             uiParams.ExitOnClose);
     }
+
+    public Task BringToFront(CancellationToken cancellationToken)
+    {
+        AvaloniaDesktopHost.ShowMainWindow();
+        return Task.CompletedTask;
+    }
 }

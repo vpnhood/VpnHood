@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.Cli.Internal;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -56,7 +55,8 @@ internal static class UiCommand
     {
         try {
             // One window per person: a second launch brings the open one forward, and that is all it does.
-            await using var uiInstance = await DesktopUiInstance.TryClaim(platform.Paths.InstanceName, cancellationToken).Vhc();
+            await using var uiInstance = await DesktopUiInstance.TryClaim(platform.Paths.InstanceName, head.Ui,
+                cancellationToken).Vhc();
             if (uiInstance == null)
                 return 0;
 
@@ -85,11 +85,6 @@ internal static class UiCommand
     internal static async Task RunWindow(CliPlatform platform, CliHeadParams head, MainThreadQueue mainThread,
         DaemonConnection connection, bool startHidden, bool connect, CancellationToken cancellationToken)
     {
-        // Attached before the UI makes its first request, so every one names this window and what it
-        // starts - a sign-in, a purchase - comes back here to be carried out as this session's
-        // person; detached once the window is gone.
-        await using var uiAttachment = await DaemonUiAttachment.Attach(connection, cancellationToken).Vhc();
-
         if (connect)
             _ = Connect(connection, cancellationToken);
 
@@ -104,7 +99,7 @@ internal static class UiCommand
         using var tray = platform.CreateTray?.Invoke(new DesktopTrayParams {
             Api = connection.Api,
             UiAssets = uiAssets,
-            ShowWindow = token => AppUiContext.Context?.BringToFront(token) ?? Task.CompletedTask,
+            ShowWindow = head.Ui.BringToFront,
             Exit = uiCancellation.Cancel
         });
 

@@ -17,21 +17,18 @@ param(
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
 $runtime = "$os-$cpu";
 
-# Get project infomration
+# Init script
+. "$SolutionDir/pub/lib/Common.ps1";
+
+# Get project information, as MSBuild evaluates it (Get-ProjectProperty): a client head takes both
+# names from the app's identity, which its csproj does not spell out.
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
-$projectXml = [Xml] (Get-Content $projectFile);
-# Read via the pipeline, NOT [0]: when the csproj has a SINGLE <PropertyGroup>, .PropertyGroup.AssemblyName
-# is a plain string and [0] would index its first CHARACTER (e.g. "V" from "VpnHoodServer"). Select-Object
-# -First 1 returns the whole string in that case and the first element when there are multiple groups.
-$assemblyName = ($projectXml.Project.PropertyGroup.AssemblyName | Where-Object { $_ } | Select-Object -First 1);
-$productName = ($projectXml.Project.PropertyGroup.Product | Where-Object { $_ } | Select-Object -First 1);
-if (-not $assemblyName) { throw "AssemblyName not found in project file '$projectFile'. Please define an <AssemblyName> property in the .csproj." };
+$assemblyName = Get-ProjectProperty $projectFile "AssemblyName";
+$productName = Get-ProjectProperty $projectFile "Product";
+if (-not $assemblyName) { throw "The project has no AssemblyName: '$projectFile'." };
 
 Write-Host;
 Write-Host "*** Creating $assemblyName-$runtime Module ..." -BackgroundColor Blue -ForegroundColor White;
-
-# Init script
-. "$SolutionDir/pub/lib/Common.ps1";
 
 # Build the release URL only AFTER Common.ps1 is sourced: $versionTag is defined there (via
 # Update-VersionFile.ps1). Computing it earlier leaves the version segment empty on the first call and

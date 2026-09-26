@@ -55,15 +55,17 @@ namespace VpnHood.AppLib.App;
 public class VpnHoodApp : Singleton<VpnHoodApp>,
     IPremiumFeatureChecker, IDisposable, IAsyncDisposable
 {
-    private const string FileNameLog = "app.log";
+    // In the storage folder; public for a reader that holds no app ("service log" on Windows).
+    public const string FileNameLog = "app.log";
     private const string FileNamePersistState = "state.json";
-    private const string FolderNameProfiles = "profiles";
+    internal const string FolderNameProfiles = "profiles";
     private readonly LogService _logService;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly IDevice _device;
     private readonly IIpRangeLocationProvider? _ipRangeLocationProvider;
     private bool _isDisconnecting;
+    private bool _disposed;
     private AppConnectionState? _lastConnectionState;
     private CancellationTokenSource _connectCts = new();
     private CancellationTokenSource _showAdCts = new();
@@ -152,7 +154,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ConnectTimeout = options.ConnectTimeout,
             LogServiceOptions = options.LogServiceOptions,
             TrackerFactoryAssemblyQualifiedName = trackerFactory.GetType().AssemblyQualifiedName,
-            Transport = options.Transport
+            Transport = options.Transport,
+            AdapterName = options.AdapterName ?? AppUtils.GetAdapterName(options.PackageTitle, options.IsDebugMode)
         };
 
         _ipRangeLocationProvider = options.IpLocationZipAsset is { } ipLocationZipAsset
@@ -209,7 +212,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowEndPointStrategy = options.AllowEndPointStrategy,
             IsTv = device.IsTv || HasDebugCommand(DebugCommands.TvMode),
             OsType = AppUtils.GetOsType(),
-            AdjustForSystemBars = options.AdjustForSystemBars,
             UiTheme = options.UiTheme,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.Billing != null,
@@ -225,6 +227,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClientId = clientId,
             AppId = options.AppId,
             AppName = options.AppName,
+            PackageTitle = options.PackageTitle,
             CompanyName = options.CompanyName,
             IsLicenseAgreementRequired = options.IsLicenseAgreementRequired,
             PrivacyPolicyUrl = options.PrivacyPolicyUrl,
@@ -359,6 +362,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // the person pressing refresh.
     }
 
+    // Migration (2026-09).
     // Where every build up to 8.1 extracted the page's files, under the folder name of that era;
     // 8.2 moved them under Temp/WebRoot/<hash>, and WebRoot cleans only that root, so on a machine
     // that upgraded the old folder would sit there for good. Delete this method once
@@ -572,7 +576,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PromotionExists = PromotionExists(),
                 TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo, this),
                 SplitTunnelingState = StateHelper.GetSplitTunnelingState(UserSettings, connectionInfo?.SessionInfo, this),
-                SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
+                SystemBarsInfo = uiContext != null
                     ? Services.DeviceUiProvider.GetBarsInfo(uiContext).ToAppDto()
                     : VpnHood.AppLib.Api.Device.SystemBarsInfo.Default
             };
@@ -674,6 +678,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public static VpnHoodApp Init(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
+
         var settingsService =
             new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl);
         var logService = new LogService(Path.Combine(options.StorageFolderPath, FileNameLog));
@@ -709,7 +714,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             LogAnonymous = !isDebug && (appLogOptions.LogAnonymous == true || userSettings.LogAnonymous),
             LogEventNames =
                 [.. LogService.GetLogEventNames(appLogOptions.LogEventNames, userSettings.DebugData1 ?? "")],
-            SingleLineConsole = appLogOptions.SingleLineConsole,
             LogToConsole = appLogOptions.LogToConsole,
             LogToFile = appLogOptions.LogToFile,
             AutoFlush = appLogOptions.AutoFlush,
@@ -900,7 +904,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // create clientOptions
             var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
             var clientOptions = new ClientOptions {
-                AppName = Features.AppName,
+                AdapterName = Config.AdapterName,
+                AppId = Features.AppId,
                 ClientId = Features.ClientId,
                 AccessKey = token.ToAccessKey(),
                 Transport = Config.Transport,
@@ -1479,6 +1484,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async ValueTask DisposeAsync()
     {
+        if (_disposed)
+            return;
+
         if (Config.DisconnectOnDispose && ConnectionState.CanDisconnect())
             await TryDisconnect().Vhc();
 
@@ -1487,6 +1495,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     protected override void Dispose(bool disposing)
     {
+        if (_disposed)
+            return;
+
+        _disposed = true;
         SettingsService.BeforeSave -= SettingsBeforeSave;
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
         Services.SplitCountryService.StateChanged -= LocationService_StateChanged;

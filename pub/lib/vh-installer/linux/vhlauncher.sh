@@ -35,5 +35,7 @@ exeFile="$curDir/$exeFileR";
 # "VpnHoodClient" is not - so the hints it prints are told (LinuxCliPaths.LauncherNameVariable).
 export VH_LAUNCHER_NAME="$(basename "$0")";
 
-# Executing Module
-"$exeFile" "$@";
+# Executing Module. exec, so the binary takes this process over: under the systemd unit the daemon
+# is then the unit's main process - systemd's SIGTERM and the exit status are its own - and no
+# shell is left reading this file, which an update replaces.
+exec "$exeFile" "$@";

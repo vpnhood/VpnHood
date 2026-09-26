@@ -183,7 +183,8 @@ public class VpnServiceHost : IDisposable
             // create client
             VhLogger.Instance.LogDebug("VpnService is creating a new VpnHoodClient.");
             var adapterSetting = new VpnAdapterSettings {
-                AdapterName = clientOptions.AppName,
+                AdapterName = clientOptions.AdapterName,
+                AppId = clientOptions.AppId,
                 Blocking = false,
                 AutoDisposePackets = true
             };

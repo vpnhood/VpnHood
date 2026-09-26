@@ -12,8 +12,7 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
     private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
 
-    public LinuxVpnService(
-        string configFolder)
+    public LinuxVpnService(string configFolder)
     {
         _vpnServiceHost = new VpnServiceHost(
             configFolder: configFolder, 
@@ -41,7 +40,9 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
-            AdapterName = adapterSettings.AdapterName,
+            // the app's name as an interface name the kernel takes: a debug build's is too long
+            AdapterName = LinuxTunVpnAdapter.GetValidAdapterName(adapterSettings.AdapterName),
+            AppId = adapterSettings.AppId,
             AutoRestart = adapterSettings.AutoRestart,
             MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
             Blocking = adapterSettings.Blocking,

@@ -223,7 +223,7 @@ one small adapter per platform.
 src/AppUi/
 ├── VpnHood.AppUi.Hosting.Cli/        the commands, the daemon, the window launcher
 │   ├── CliHost.cs                    builds the command tree and dispatches
-│   ├── CliHeadParams.cs              what a head declares: its start params, its UI, whether it takes keys
+│   ├── CliHeadParams.cs              what a head declares: its init params, its UI, whether it takes keys
 │   ├── CliPlatform.cs                what a platform declares: paths, the instance, how to be the daemon
 │   │                                 (and a debugger's), and what only some have: a tray, "service install",
 │   │                                 an older folder to import
@@ -284,10 +284,11 @@ Points that are easy to get wrong:
 5. **A tun says whose it is.** A tun device outlives a crash with its routes and DNS, and its name
    says nothing about its owner, so the adapter writes the app id on each one it creates as the
    interface's alias (`ip link set dev VpnHoodClient alias <app id>`; the server writes
-   `VpnHoodServer`). The service's start, after its single-instance lock on the same app id, clears
-   only a tun no process holds that carries that tag — or, from a version before tags, no tag and
-   the app's name — and takes its `resolvconf` entry off first. A connect refuses a name another
-   owner holds, and says whose (`LinuxTunVpnAdapter`, `LinuxTunDevice`).
+   `com.vpnhood.server`), or its first 64 characters, a dash and a hash where an alias cannot hold it
+   as it is. The service's start, after its single-instance lock on the same app id, clears
+   only a tun no process holds that carries that tag, and takes its `resolvconf` entry off first. A
+   connect clears the same under its own name — and, from a version before tags, an untagged one —
+   and refuses a name another owner holds, and says whose (`LinuxTunVpnAdapter`, `LinuxTunInfo`).
 6. **What the app asks of a UI is done by the window, as its person.** The service runs as root with
    no session, so a checkout it opened itself would open nowhere, or as root. The window attaches
    to it instead (`IUiAttachmentsApi`): every request the window makes names its attachment, so

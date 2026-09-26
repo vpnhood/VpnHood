@@ -15,28 +15,19 @@ using VpnHood.AppLib.App.WebHosting;
 
 namespace VpnHood.AppLib.App;
 
-public class AppOptions(string appId, string storageFolderName, bool isDebugMode)
+// The app id and the storage path come from the platform's context (AppInitParams), never from a
+// default here: a platform that settled them after the options were built would be too late for
+// the providers the head made with them. Neither can be set after, either: a desktop platform has
+// used both - its lock, its files - before it calls the factory.
+public class AppOptions(AppOptionsContext context, bool isDebugMode)
 {
-    public static string BuildStorageFolderPath(string subFolder)
-    {
-        // default
-        var baseFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-        if (OperatingSystem.IsLinux()) {
-            // get current executable folder
-            baseFolder = Path.GetDirectoryName(Environment.ProcessPath!)!;
-        }
-
-        return Path.Combine(baseFolder, subFolder);
-    }
-
-    public string AppId => appId;
+    public string AppId => context.AppId;
     public bool IsDebugMode => isDebugMode;
 
     // Tests run many concurrent apps in one process, so they opt out of the singleton
     // registration; production keeps the single-instance guarantee and VpnHoodApp.Instance.
     internal bool IsSingleton { get; set; } = true;
-    public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);
+    public string StorageFolderPath => context.StoragePath;
 
     // Transport tuning handed to the client untouched. Its timeouts default themselves; the buffer
     // and count knobs stay null so each core component applies its own default at first use.
@@ -47,9 +38,18 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // the tray icons - is read out of the UI's store (AppBranding, under UiTheme), not handed in.
     public required string AppName { get; init; }
 
+    // The name without spaces, which the release files, a desktop executable and its service, and
+    // the VPN adapter are called by: the build's (AppConstants.PackageTitle).
+    public required string PackageTitle { get; init; }
+
     // Whose app this is: the maker's name, for the words that name it - {companyName} in a consent
-    // summary or any content document - as AppName is {appName}. Ours say VpnHood; a fork says itself.
+    // summary or any content document - as AppName is {appName}: the Company the build states
+    // (AppConstants.CompanyName).
     public required string CompanyName { get; init; }
+
+    // The VPN adapter's name where the OS shows one: a Windows adapter, a Linux interface. Null is
+    // the package title, with _dbg in a Debug build (AppUtils.GetAdapterName).
+    public string? AdapterName { get; set; }
 
     // The ~14 MB IP-location db the head ships, wherever its platform placed it. Opened only when a
     // country split or a location lookup actually runs, never at startup, and opened afresh each
@@ -71,8 +71,9 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // are named once; the app itself never reads it. Required by a head that sets WebHostFactory.
     public IAsset? WebRootZipAsset { get; set; }
 
-    // ReSharper disable once StringLiteralTypo
-    public string? Ga4MeasurementId { get; set; } = "G-4LE99XKZYE";
+    // The GA4 id the app's tracker reports to. Null, the default, sends nothing: a head that means to
+    // report names its own.
+    public string? Ga4MeasurementId { get; set; }
     // The look, as the UI's store carries it: "blue" or "violet" - the theme's own name, never a
     // product's, since what a product IS is the features above. It picks the palette the UI draws
     // and branding/<theme>/ in the store for the OS chrome.
@@ -108,9 +109,9 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public string? DeviceId { get; set; }
     public TimeSpan? EventWatcherInterval { get; set; } // set if you don't call State periodically
     public bool DisconnectOnDispose { get; set; }
+
     public LogServiceOptions LogServiceOptions { get; set; } = new();
-    public bool AdjustForSystemBars { get; set; } = true;
-    public bool AllowEndPointStrategy { get; set; }
+    public bool AllowEndPointStrategy { get; set; } = true;
     // JSON the head hands the UI, uninterpreted: the product's own settings (firebaseOptions and
     // friends) straight out of its appsettings. JsonElement, not object - the contract is serialized
     // through a source-generated context on trimmed heads, and "object" means "whatever the head
@@ -121,8 +122,8 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public Uri? RemoteSettingsUrl { get; set; }
 
     // The two legal documents this build links to - from the paywall, from Settings > Privacy, and
-    // from the first-run screen where that is shown. Every head fills them in from its
-    // appsettings.json, exactly like Ga4MeasurementId and RemoteSettingsUrl above, so a fork points
+    // from the first-run screen where that is shown. Every head fills them in from its product's
+    // appsettings (AppConfigs), exactly like Ga4MeasurementId and RemoteSettingsUrl above, so a fork points
     // at its own documents without editing code. The App Store heads are the one exception: they
     // hardcode TermsOfUseUrl to Apple's standard EULA, the agreement actually governing a purchase
     // made there while no custom EULA is registered with Apple.
@@ -138,13 +139,14 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // name and its own promises.
     //
     // Both address the UI's store, and the suffix says how completely. PATH is the whole thing, the
-    // string a provider takes ("images/VpnHoodConnect-logo.png"), so a fork may keep its logo
+    // string a provider takes ("images/logo-connect.png"), so a fork may keep its logo
     // anywhere in the store. NAME is the part the head chooses ("privacy-consent-connect") and the
     // UI completes: content/<lang>/<name>.md, because the consent summary is one asset per language
     // and a language never translated has to fall back to English.
     //
-    // Required here and again in each head's config (IRequiredAppConfigs): a connect head that
-    // forgot would show the client's promises on a consent screen, which no test finds.
+    // Required here, and stated once per product by its options builder rather than by each head: a
+    // connect head that forgot would show the client's promises on a consent screen, which no test
+    // finds.
     public required string LogoAssetPath { get; init; }
     public required string PrivacyConsentAssetName { get; init; }
 

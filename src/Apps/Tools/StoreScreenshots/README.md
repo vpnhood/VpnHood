@@ -50,8 +50,9 @@ or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words o
 1. **The fixture says which product it is.** `features.uiTheme`, `logoAssetPath`,
    `privacyConsentAssetName`, `privacyPolicyUrl` and `termsOfUseUrl` are refused rather than filled:
    a picture wearing the other product's theme or logo looks right and is wrong. Copy them from the
-   product's own head (`src/Apps/<product>/<head>/AppConfigs.cs`, or `src/Apps/Tools/AvaloniaUI.Dev`
-   for a whole product at once).
+   product's own options builder (`src/Apps/<product>/<product>/<Product>AppOptions.cs`; the two
+   documents from its private appsettings), or from `src/Apps/Tools/AvaloniaUI.Dev` for a whole
+   product at once.
 2. **A capability patch is never invented.** Each value mirrors a device class in this repo and is
    cited beside it in the configuration. When a capability changes there, it changes there too.
 3. **Array order is store order.** A file is numbered by where its shot sits in the list, so

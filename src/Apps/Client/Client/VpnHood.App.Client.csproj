@@ -2,10 +2,21 @@
 
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- the product, not a NuGet package -->
-		<Description>What every distribution of VpnHood Client shares: the packages it pins and the app framework and web host its heads build on</Description>
+		<Description>What every distribution of VpnHood Client shares: its private settings, the packages it pins and the app framework and web host its heads build on</Description>
 		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
 
+	<!-- The product's private settings (from the external ".user" folder), embedded here once for every
+	     head: ClientAppConfigs reads them from this assembly. Conditional so a fork without them still
+	     builds. Forward slashes: the iOS head builds this project on macOS. -->
+	<ItemGroup>
+		<EmbeddedResource Include="$(VhUserDir)/VpnHoodClient/appsettings.json"
+			LogicalName="AppSettings.json"
+			Condition="Exists('$(VhUserDir)/VpnHoodClient/appsettings.json')" />
+		<EmbeddedResource Include="$(VhUserDir)/VpnHoodClient/appsettings.$(Configuration).json"
+			LogicalName="AppSettings_Environment.json"
+			Condition="Exists('$(VhUserDir)/VpnHoodClient/appsettings.$(Configuration).json')" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="8.2.854" />

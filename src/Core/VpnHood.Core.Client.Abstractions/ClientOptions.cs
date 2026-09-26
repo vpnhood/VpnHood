@@ -14,7 +14,7 @@ public class ClientOptions
         ClientId = string.Empty,
         UseTcpProxy = true,
         AccessKey = SampleAccessKey,
-        AppName = "VpnHoodEngine"
+        AdapterName = "VpnHoodEngine"
     };
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
@@ -26,7 +26,11 @@ public class ClientOptions
     [JsonConverter(typeof(VersionConverter))]
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version ?? new Version();
 
-    public required string AppName { get; set; }
+    public required string AdapterName { get; set; }
+
+    // The app's id, which the adapter carries where it can (VpnAdapterSettings.AppId).
+    public string? AppId { get; set; }
+
     public required string AccessKey { get; set; }
     public required string ClientId { get; set; }
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;

@@ -67,9 +67,10 @@ internal sealed class StoreFixture
 
     // What the product IS - the theme it wears, its logo, the consent text it shows, the documents
     // it links to - is never invented here. A fixture without them would render the other product's
-    // brand, and that screenshot looks right while showing the wrong app. Every head sets these from
-    // its own AppConfigs (src/Apps/<product>/<head>/AppConfigs.cs); AvaloniaUI.Dev's Program.cs
-    // lists one product's values side by side, which is the easiest place to copy them from.
+    // brand, and that screenshot looks right while showing the wrong app. Every product sets these in
+    // its options builder (src/Apps/<product>/<product>/<Product>AppOptions.cs), the two documents from
+    // its private appsettings; AvaloniaUI.Dev's Program.cs lists one product's values side by side,
+    // which is the easiest place to copy them from.
     private static readonly string[] ProductIdentity =
         ["uiTheme", "logoAssetPath", "privacyConsentAssetName", "privacyPolicyUrl", "termsOfUseUrl"];
 
@@ -83,7 +84,7 @@ internal sealed class StoreFixture
         if (missing.Length > 0)
             throw new InvalidOperationException(
                 $"The fixture does not say which product it is: features has no {string.Join(", ", missing)}. " +
-                "Add them from the product's own head (src/Apps/<product>/<head>/AppConfigs.cs, or " +
+                "Add them from the product's options builder (src/Apps/<product>/<product>/<Product>AppOptions.cs, or " +
                 "src/Apps/Tools/AvaloniaUI.Dev/Program.cs for a whole product at once). They are never " +
                 "filled in here: a screenshot wearing the other product's theme or logo looks right and is wrong.");
 

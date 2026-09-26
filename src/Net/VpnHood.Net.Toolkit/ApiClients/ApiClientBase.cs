@@ -150,9 +150,8 @@ public class ApiClientBase : ApiClientCommon
         request.Method = httpMethod;
         request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
-        // only the methods that carry a body get one; a DELETE used to be sent with a
-        // literal "null" payload, which some servers and proxies reject outright
-        if (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Put || httpMethod == HttpMethod.Patch) {
+        // A body only when there is data: no data is no body, not the JSON null.
+        if (data != null) {
             var content = new StringContent(JsonSerializer.Serialize(data, JsonSerializerSettings));
             content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
             request.Content = content;

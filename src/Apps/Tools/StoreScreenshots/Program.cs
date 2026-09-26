@@ -4,7 +4,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Headless;
 using Avalonia.Threading;
 using VpnHood.AppLib.Api;
-using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
@@ -80,11 +79,10 @@ internal static class Program
         var app = new FakeAppApi(fixture.Info, fixture.InstalledApps);
         var api = new VpnHoodApi(app, new FakeClientProfilesApi(app), new FakeAccountApi(), new FakeBillingApi(), new FakeIntentsApi(), new FakeProxyEndPointsApi());
 
-        // The head's three steps before Avalonia starts (AvaloniaDesktopHost.Run): the API, the
-        // content out of the store, the languages the UI has words for.
-        VhApp.Init(api, CancellationToken.None).GetAwaiter().GetResult();
-        AvaloniaUiHosting.PrepareContent<ClassicAvaloniaApp>(Store.Open(options.AssetsPath));
-        VhApp.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+        // The UI's start, as every host runs it before Avalonia starts: the API, the content out of
+        // the store, the languages the UI has words for.
+        AvaloniaUiHosting.StartAsync<ClassicAvaloniaApp>(api, Store.Open(options.AssetsPath), CancellationToken.None)
+            .GetAwaiter().GetResult();
 
         // Strings falls back to the language alone and then to English for a culture the store has
         // no words for, which on a screen is a listing in the wrong language: refused by name here.

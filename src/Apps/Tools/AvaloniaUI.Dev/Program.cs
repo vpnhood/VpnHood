@@ -7,7 +7,6 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Windows;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.AppUi.Common;
 
 namespace VpnHood.App.AvaloniaUI.Dev;
 
@@ -44,10 +43,16 @@ internal static class Program
 
         // the name the UI shows, as a head of that product would set it (AppFeatures.AppName is
         // this very string), so the window says which product it is running as
-        var appOptions = new AppOptions(appId: "com.vpnhood.avalonia.dev", "VpnHood! Avalonia Dev", isDebugMode: true) {
+        var appOptionsContext = new AppOptionsContext {
+            AppId = "com.vpnhood.avalonia.dev",
+            StoragePath = storageFolderPath,
+            PackagedAssetProvider = platformAssets
+        };
+
+        var appOptions = new AppOptions(appOptionsContext, isDebugMode: true) {
             AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
+            PackageTitle = isConnect ? "VpnHoodConnect" : "VpnHoodClient",
             CompanyName = "VpnHood",
-            StorageFolderPath = storageFolderPath,
             // the documents the product links to, which every head takes from its appsettings.json:
             // without them the pages that link to them - Settings > Privacy, the paywall, the
             // drawer - have nothing to show, which is a look at a build no one ships
@@ -59,7 +64,7 @@ internal static class Program
                 : "https://www.vpnhood.com/legal/vpnhood-client-terms-of-use"),
             // the product's own word in the UI - its logo, its consent summary - as a head of that
             // product names them in the store
-            LogoAssetPath = isConnect ? "images/VpnHoodConnect-logo.png" : "images/VpnHoodClient-logo.png",
+            LogoAssetPath = isConnect ? "images/logo-connect.png" : "images/logo-client.png",
             PrivacyConsentAssetName = isConnect ? "privacy-consent-connect" : "privacy-consent-client",
             // left at the product default (on): the consent screen is part of what a client head
             // shows on a first run, and a run that skips it shows a build no one ships
@@ -86,10 +91,9 @@ internal static class Program
             // The UI reaches the app through its API - the same six interfaces a paired browser
             // dials over HTTP, here the app's own controllers in process - and draws from the
             // store's zip beside this executable, which the build placed there (the same files
-            // the web server serves at /assets/). In process both complete at once.
-            VhApp.Init(app.Api, CancellationToken.None).GetAwaiter().GetResult();
-            AvaloniaUiHosting.PrepareContent<ClassicAvaloniaApp>(app.UiAssetProvider);
-            VhApp.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
+            // the web server serves at /assets/). In process the start completes at once.
+            AvaloniaUiHosting.StartAsync<ClassicAvaloniaApp>(app.Api, app.UiAssetProvider, CancellationToken.None)
+                .GetAwaiter().GetResult();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         finally {

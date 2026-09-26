@@ -148,27 +148,65 @@ Windows publish script builds.
 
 ## What a head is made of
 
-A head is a thin shell — an activity, a view controller, a window — and usually only three files.
+A head is a thin shell — an activity, a view controller, a window — and usually only two files. Its
+ids and names are not among them: they come from the app's identity (below).
 
 | File | What it does |
 | --- | --- |
-| `AppConfigs.cs` | derives from `AppConfigsBase` and implements `IRequiredAppConfigs` (both in `VpnHood.AppLib.App`), which is the list of settings a product must state: `AppId`, `UpdateInfoUrl`, `DefaultAccessKey`, `Ga4MeasurementId`, the legal URLs, the logo and consent names. Because the interface is a contract, a new head cannot forget one. Values can be overridden from a `.user` `appsettings.json` at build time. |
-| `App.cs` (or `AppDelegate.cs`) | builds `AppOptions` from those configs, names the theme (`UiTheme`), names the two zips below, and starts `VpnHoodApp` on the platform's device |
+| `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params and its UI to the platform's host (`WindowsCliHost.Run`, `LinuxCliHost.Run`), whose service starts the app. Either way the platform builds its own device and starts `VpnHoodApp` |
 | `_publish.ps1` | the one entry point that builds and packages this head; CI calls exactly this |
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
-hosts it mounts from `AppUi`. A Linux head mounts one more host than the others: `VpnHood.AppUi.Hosting.Cli`,
-which is the command line, the headless daemon and the window launcher in one binary — see
-[linux/](linux/README.md#how-it-fits-together).
+hosts it mounts from `AppUi`. A desktop head mounts one more host than a mobile one: its platform's
+`VpnHood.AppUi.Hosting.Cli.Linux` or `.Cli.Windows`, over the shared `VpnHood.AppUi.Hosting.Cli`,
+which is the service that holds the app, the window that shows it and the command line in one
+binary — see [linux/](linux/README.md#how-it-fits-together).
 
 ## The product project
 
 `Client/Client/` and `Connect/Connect/` hold what every distribution of that product agrees on:
+the options every head shares (`ClientAppOptions`, `ConnectAppOptions`), the product's settings —
+what its private appsettings can say (`ClientAppConfigs`, `ConnectAppConfigs`, over `AppConfigs` in
+`VpnHood.AppLib.App`), with the files from `.user/<product>` embedded here once for every head —
 the packages the product pins (today the IP-location database), the app framework and web host its
-heads build on, and any product-wide constant — Connect's premium feature list lives there.
+heads build on, and any product-wide constant — Connect's premium feature list lives there. A
+setting has no value in code: one the appsettings do not name stays null, and what needs it is off
+or fails where it is used.
 
 It is deliberately small. Everything that varies per platform stays in the head, and everything
 that a fork would want different stays out of the libraries underneath.
+
+## The app's identity
+
+Each product folder has a `Directory.Build.props` that states the app once, for every head in it:
+
+| Property | Client | What it is |
+| --- | --- | --- |
+| `VhAppIdBase` | `com.vpnhood.client` | every id of the app starts with it |
+| `VhAppName` | `VpnHood! CLIENT` | the name the app shows |
+| `VhAppPackageTitle` | `VpnHoodClient` | the name without spaces: the start of every release file's name, the update feeds' included (`AppConstants.PackageTitle`); the desktop executable, its service or unit, their folders. Taken from the name's letters and digits when not stated; an app that has shipped states it, since installs keep these names |
+| `Company` | `OmegaHood LLC` | the app's maker, as the UI (`AppConstants.CompanyName`) and the executable's details name it, with a copyright made from it where none is stated. The repo's own `Directory.Build.props` states it for every project, so the products do not |
+
+A build target in `VpnHood.AppLib.App` (`buildTransitive/VpnHood.AppLib.App.targets`, the file a
+package reference of it imports) makes the rest, so a head names no id and no name:
+
+- **the app id** (`ApplicationId`): the base, the platform, then `.web` for a build our website hands
+  out (the head states `VhAppIdChannel`), then `.debug` in Debug, except on iOS, where every bundle id
+  needs a provisioning profile of its own. Connect's Windows installer is
+  `com.vpnhood.connect.windows.web`;
+- **the name a build shows**: the app's name, with `(DEBUG)` after it in Debug;
+- **on iOS**, the bundle's display name, the network extension's id (`<base>.ios.networkextension`)
+  and the App Group (`group.<base>.ios`), which the build adds to both targets' entitlements;
+- **`AppConstants`**, a class the build writes for the code: `AppId`, `AppName`, `CompanyName`,
+  `PackageTitle` and `IsDebugMode`, and
+  on iOS `AppGroupId` and `ProviderBundleId`. At run time Android and iOS read the id their package or
+  bundle has; the desktops read `AppConstants.AppId`. The product library gets one too, without the
+  ids, which are each head's own: its options builder reads the rest there, so a head passes none.
+
+What a head states itself is kept. A shipped id never changes - the stores key their listings on it,
+and on Windows and Linux it is part of every install's client id - so a head whose shipped id the
+rule does not give states it: Client's Windows and Linux heads name no channel, and Connect's Play
+head keeps its Play id in Debug, the only package its Firebase configuration knows.
 
 ## The two zips a head places beside itself
 
@@ -181,10 +219,11 @@ arrive as **files placed by MSBuild targets**, and the head names each one in `A
 | `assets/ui.zip` | `VpnHood.AppUi.Assets.Classic` | `AppOptions.UiZipAssets` | images, country flags, fonts, content documents, the words of every language, and the per-theme branding the OS chrome draws with |
 | `assets/web-root.zip` | `VpnHood.AppUi.Presentation.Classic.Avalonia.Browser` | `AppOptions.WebRootZipAsset` | the page the app's web host serves to a paired device |
 
-Each of those projects owns a `build/*.targets` that places its file the way the platform reads
-files — `AndroidAsset` on Android, `BundleResource` on Apple, copy-to-output elsewhere. In this
-repo a head imports those targets directly; through a `PackageReference` the same placement arrives
-via `buildTransitive/`.
+Each of those projects owns a targets file that places its file the way the platform reads files —
+`AndroidAsset` on Android, `BundleResource` on Apple, copy-to-output elsewhere — and in this repo a
+head imports both directly. The store's is `buildTransitive/*.targets`, which a `PackageReference`
+brings at any depth; the page's is `build/*.targets`, which reaches no package consumer, since the
+page's project is not packed.
 
 ## The browser page, end to end
 
@@ -200,8 +239,9 @@ VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/  names which UI: a global.j
      bin/avalonia-browser.zip  ──build/*.targets──▶  <head>/assets/web-root.zip
 ```
 
-The host library is the fourth Avalonia host beside `Avalonia.Desktop` and `Avalonia.Android`, and
-it names no UI: it takes one as a type argument on the `IAvaloniaUi` contract, so the UI a build
+The host library is an Avalonia host like `Avalonia.Desktop`, `Avalonia.Android` and
+`Avalonia.Ios`, and like them it runs the one start `VpnHood.AppUi.Hosting.Avalonia` writes
+(`AvaloniaUiHosting`) and names no UI: it takes one as a type argument on the `IAvaloniaUi` contract, so the UI a build
 does not name is not in the bundle. A second presentation gets its own page by adding its own
 `.Browser` project of the same ten lines.
 
@@ -222,9 +262,11 @@ run; the app then has a web host with no page to serve.
 ## What a fork copies
 
 Copy one product folder — `Client/` or `Connect/` — and it becomes a third sibling. Inside it:
-rename the folders and projects to your product, put your ids and URLs in each head's
-`AppConfigs.cs`, and pin your own asset package if you are replacing the artwork. Everything else
-is consumed from NuGet.
+rename the folders and projects to your product, put your app's id base and name in the product's
+`Directory.Build.props` (see [the app's identity](#the-apps-identity)) and each head's update feed in
+its `App.cs`, your logo and consent summary in the product's options builder, your settings - links, analytics, portal, ad ids - in your own private
+appsettings, and pin your own asset package if you are replacing the artwork. Everything else is
+consumed from NuGet.
 
 Nothing beneath `src/Apps/` may be edited for a fork, and nothing beneath it may depend on anything
 inside it. If you find yourself wanting to change a library to brand your app, that is a bug in the

@@ -16,7 +16,7 @@ namespace VpnHood.App.Client.Android.Google;
     // is pinned to the name the app shipped under.
     Name = "crc64fdab4085f153388e.MainActivity",
     MainLauncher = true,
-    Label = AppConfigs.AppName,
+    Label = AppConstants.AppName,
     Theme = "@style/Theme.VpnHood.Avalonia",
     LaunchMode = AndroidMainActivityConstants.LaunchMode,
     Exported = AndroidMainActivityConstants.Exported,

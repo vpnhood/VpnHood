@@ -32,7 +32,7 @@ public sealed class IosDeviceLoggerProvider(string subsystem, bool includeScopes
     // Writes formatted log lines to os_log. The OSLog handle is a lightweight value (nothing to release),
     // so neither this logger nor the provider needs disposal logic for it.
     private sealed class IosDeviceLogger(OSLogHandle osLog, bool includeScopes, string? categoryName)
-        : TextLogger(includeScopes, categoryName)
+        : TextLogger(includeScopes, categoryName, singleLine: true)
     {
         public override void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
             Func<TState, Exception?, string> formatter)

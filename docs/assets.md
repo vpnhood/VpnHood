@@ -21,8 +21,9 @@ it came from, and an unchanged zip is never extracted twice.
 
 ## How a zip is placed
 
-Each producing package owns a `build/*.targets` that places its own file, and each owns a distinct
-folder in the consuming app. The placement is one item per platform:
+Each producer owns a targets file that places its own file — a package's in `buildTransitive/`
+(rule 4 below) — and each owns a distinct folder in the consuming app. The placement is one item
+per platform:
 
 ```text
 AndroidAsset     Link="assets\assets\ui.zip"    the folder name twice on purpose: .NET for Android
@@ -44,11 +45,11 @@ Task<Stream> OpenReadAsync(string assetPath, CancellationToken cancellationToken
 
 `Asset` is a provider plus a path as one value, which is what a product's options builder
 (`ClientAppOptions`, `ConnectAppOptions`, or a fork's own) hands to `AppOptions`. The provider is
-the one the platform gives it, `AppOptionsContext.PackagedAssets`:
+the one the platform gives it, `AppOptionsContext.PackagedAssetProvider`:
 
 ```csharp
-UiZipAssets     = [new Asset(context.PackagedAssets, "assets/ui.zip")],
-WebRootZipAsset = new Asset(context.PackagedAssets, "assets/web-root.zip"),
+UiZipAssets     = [new Asset(context.PackagedAssetProvider, "assets/ui.zip")],
+WebRootZipAsset = new Asset(context.PackagedAssetProvider, "assets/web-root.zip"),
 ```
 
 There is one implementation per **platform**, not per set of files, so a new set of files is a new
@@ -133,7 +134,7 @@ The bundle is 7.3 MB zipped, 20.1 MB extracted, 64 files.
    [`src/AppUi/VpnHood.AppUi.Assets.Classic/README.md`](../src/AppUi/VpnHood.AppUi.Assets.Classic/README.md), which has the id
    convention.
 2. Give it a folder of its own in the consuming app. Never `assets/`, which is taken.
-3. Place it with targets in `buildTransitive/`, and a `build/` file that imports them.
+3. Place it with targets in `buildTransitive/`, the zip beside them, and nothing in `build/`.
 4. Have the product's options builder name it in `AppOptions` as an `Asset` of the platform's
    packaged files. Nothing below the product knows the path, and an asset it does not name is off.
 
@@ -149,12 +150,14 @@ build, working app, wrong result.
    app's `Exe` to `Library`, so that test places nothing on the one platform where the per-ABI cost
    is worst. Test `AndroidApplication == 'true'` as well. Found by unzipping the APK, never by a
    build error.
-3. **Never rename an asset package without renaming both targets files.** NuGet imports
-   `build/<PackageId>.targets` and `buildTransitive/<PackageId>.targets` by name and by name only.
-   A mismatch imports nothing and places nothing. Verify inside the packed `.nupkg`, not in the
-   source folder.
-4. **Never put the placement only in `build/`.** That reaches a direct `PackageReference` and
-   nothing deeper. Put it in `buildTransitive/` with a `build/` file that imports it. Note also that
+3. **Never rename an asset package without renaming its targets file.** NuGet imports
+   `buildTransitive/<PackageId>.targets` by name and by name only. A mismatch imports nothing and
+   places nothing. Verify inside the packed `.nupkg`, not in the source folder.
+4. **Never put the placement in `build/`.** That reaches a direct `PackageReference` and nothing
+   deeper. Put it in `buildTransitive/`, which reaches every depth, a direct reference included.
+   Nor add a `build/` file that forwards to it: NuGet 5.0 and later ignore a `build/` file named
+   like a `buildTransitive/` one, so such a copy serves only legacy NuGet (before 5.0, 2019), which
+   we don't support. Note also that
    `PrivateAssets="all"` or `ExcludeAssets="build"` anywhere on the path stops the flow, and a
    `ProjectReference` never flows targets at all — which is why heads in this repo import the
    targets directly.

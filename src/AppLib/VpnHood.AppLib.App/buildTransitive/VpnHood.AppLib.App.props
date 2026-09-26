@@ -1,0 +1,33 @@
+<Project>
+	<!-- The app's identity, the half that must be settled before the project itself is read. An app
+	     states it once, in a file of its own that MSBuild reads before this one - a
+	     Directory.Build.props beside its heads:
+
+	       VhAppIdBase   com.example.vpn   every id of the app starts with it
+	       VhAppName     Example VPN       its name, the same in every build; what a build shows is
+	                                       VhAppDisplayName: "Example VPN (DEBUG)" in Debug
+	       Company       Example Inc.      its maker, as the UI and the executable's details name it
+
+	     and VpnHood.AppLib.App.targets builds the rest - the ids, each platform's name, the iOS App
+	     Group, a constants class - once the head is read. A head names none of them, so a new app is a
+	     new base and a new name.
+
+	     VhAppPackageTitle is the name without spaces. The release files begin with it, the update feeds
+	     included; the Windows executable, its service and its folders are called by it, and so are the
+	     Linux binary, its unit and its folders: a desktop head
+	     makes it its AssemblyName, which is why it is settled here, before the SDK derives the output's
+	     names from the assembly's. It is taken from the name's letters and digits unless the app states
+	     its own; an installed app keeps these names for good, so an app that has shipped states its
+	     package title rather than let a new name move its service and folders.
+
+	     Product is the name the executable's details show and the Windows service is listed under.
+	     Set here because the SDK sets it to the assembly's name before a targets file could, and so it
+	     does Company: whether the app stated one is noted here, while it still shows. Copyright follows
+	     from Company unless the app states its own. -->
+	<PropertyGroup Condition="'$(VhAppName)' != ''">
+		<VhAppPackageTitle Condition="'$(VhAppPackageTitle)' == ''">$([System.Text.RegularExpressions.Regex]::Replace('$(VhAppName)', '[^A-Za-z0-9]', ''))</VhAppPackageTitle>
+		<Product Condition="'$(Product)' == ''">$(VhAppName)</Product>
+		<_VhAppHasCompany Condition="'$(Company)' != ''">true</_VhAppHasCompany>
+		<Copyright Condition="'$(Copyright)' == '' And '$(Company)' != ''">&#169; $(Company). All rights reserved.</Copyright>
+	</PropertyGroup>
+</Project>

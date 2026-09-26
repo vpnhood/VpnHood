@@ -15,6 +15,7 @@ you are trying to do.
 | Install, run or script the Linux client (desktop or headless) | [linux/](linux/README.md) |
 | Work on the iOS app or its VPN extension | [ios/](ios/README.md) |
 | Work on split tunnelling (by country, domain, or app) | [split-ip/](split-ip/README.md) |
+| Know what the apps and the server report to analytics, and what turns it off | [tracking/](tracking/README.md) |
 | Read the policies our users are shown | [legal/end-user/](legal/end-user/README.md) |
 
 ---
@@ -56,6 +57,7 @@ Store policy and legal checkpoints a publisher must clear:
 | iOS app + Network Extension | [ios/](ios/README.md) — architecture, build & provisioning, memory limits, runtime rules |
 | Android | [android/google-signin-setup.md](android/google-signin-setup.md) — Google sign-in in debug builds |
 | Split tunnelling | [split-ip/](split-ip/README.md) — by country, by domain, by app |
+| Tracking | [tracking/](tracking/README.md) — what each component reports to Google Analytics, to which id, and the switch |
 
 ## Releases and CI
 

@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Headless;
-using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
@@ -23,7 +22,8 @@ internal static class FrameCommand
         }
 
         try {
-            AvaloniaUiHosting.PrepareContent<ClassicAvaloniaApp>(Store.Open(options.AssetsPath));
+            ClassicAvaloniaApp.PrepareContentAsync(Store.Open(options.AssetsPath), CancellationToken.None)
+                .GetAwaiter().GetResult();
             AppBuilder.Configure<FrameApp>()
                 .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
                 .UseSkia()

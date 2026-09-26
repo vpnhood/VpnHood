@@ -29,19 +29,20 @@ public class IosDevice : IDevice
     /// The Network Extension's bundle identifier (the Packet Tunnel Provider appex bundle id).
     /// </param>
     /// <param name="sharedContainerPath">
-    /// Pre-computed App Group container path. Pass
-    /// <c>NSFileManager.DefaultManager.GetContainerUrl(appGroupId)?.Path</c> from the app delegate
-    /// before calling <c>VpnHoodApp.Init</c> so the path is stable for the whole session. This path is
+    /// The App Group's container path, <c>NSFileManager.DefaultManager.GetContainerUrl(appGroupId).Path</c>,
+    /// resolved before <c>VpnHoodApp.Init</c> so it is stable for the whole session. This path is
     /// forwarded verbatim to the Extension via ProviderConfiguration — an App-Group container is mounted
-    /// at the same absolute path in both processes, so the Extension never needs the App Group id.
-    /// If <c>null</c> the constructor falls back to LocalApplicationData (App↔Extension IPC will NOT work).
+    /// at the same absolute path in both processes, so the Extension never needs the App Group id. No
+    /// other folder will do: LocalApplicationData is a different path in each process.
     /// </param>
     /// <param name="localizedDescription">The VPN configuration name shown in iOS Settings.</param>
     public IosDevice(
         string providerBundleId,
-        string? sharedContainerPath = null,
-        string localizedDescription = "VpnHood")
+        string sharedContainerPath,
+        string localizedDescription)
     {
+        ArgumentException.ThrowIfNullOrEmpty(sharedContainerPath);
+        ArgumentException.ThrowIfNullOrEmpty(localizedDescription);
         _providerBundleId = providerBundleId;
         _localizedDescription = localizedDescription;
 
@@ -50,13 +51,8 @@ public class IosDevice : IDevice
         // so it works in both processes; each reads its OWN process's footprint.
         IosMemory.Install();
 
-        var containerPath = sharedContainerPath
-            ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-        VpnServiceConfigFolder = Path.Combine(containerPath, "vpn-service");
-        VhLogger.Instance.LogInformation(
-            "IosDevice created. VpnServiceConfigFolder={Folder} (sharedContainerPath={Provided})",
-            VpnServiceConfigFolder, sharedContainerPath ?? "<not provided>");
+        VpnServiceConfigFolder = Path.Combine(sharedContainerPath, "vpn-service");
+        VhLogger.Instance.LogInformation("IosDevice created. VpnServiceConfigFolder={Folder}", VpnServiceConfigFolder);
     }
 
     public string VpnServiceConfigFolder { get; }

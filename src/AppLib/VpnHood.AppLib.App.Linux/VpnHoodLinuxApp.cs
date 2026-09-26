@@ -1,156 +1,93 @@
 ﻿using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Devices.Linux;
-using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Net.VpnAdapters.LinuxTun;
 
 namespace VpnHood.AppLib.App.Linux;
 
-public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>
+// The app as Linux runs it: one per app id on the machine, in a root service. Init takes the
+// single-instance lock before anything is built - a second daemon, started by hand or by a unit
+// restarted while one still runs, touches nothing, not even the head's options - then clears the
+// tuns a crashed run left, and starts the app. Stopping it is disposing it, and
+// asynchronously, so the tunnel comes down before the process ends. The storage path is the
+// host's (the daemon's folder beside its versions), so the init params name no folder here.
+public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 {
-    private readonly CommandListener _commandListener;
-    private const string FileNameAppCommand = "appcommand";
-    public bool ShowWindowAfterStart { get; }
-    public event EventHandler? Exiting;
-
-    public VpnHoodLinuxApp(AppOptions appOptions, bool showWindowAfterStart)
-    {
-        ShowWindowAfterStart = showWindowAfterStart;
-
-        // init app
-        VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath), appOptions);
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => Exit();
-
-        //create command Listener
-        _commandListener = new CommandListener(Path.Combine(appOptions.StorageFolderPath, FileNameAppCommand));
-        _commandListener.CommandReceived += CommandListener_CommandReceived;
-        _commandListener.Start();
-    }
-
-    public static VpnHoodLinuxApp Init(Func<AppOptions> optionsFactory, string[] args)
-    {
-        var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
-        var showWindowAfterStart =
-            !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
-        var stop = args.Length > 0 && args[0].Equals("stop", StringComparison.OrdinalIgnoreCase);
-        var appOptions = optionsFactory();
-        Directory.CreateDirectory(appOptions.StorageFolderPath);
-
-        // make sure only single instance is running
-        // it must run before VpnHoodApp.Init to prevent internal system conflicts with previous instances
-        VerifySingleInstance(appOptions, showWindowAfterStart, stop);
-
-        // if stop was requested, just throw exception to stop the app
-        if (stop)
-            throw new GracefullyShutdownException();
-
-        // create linux app
-        var app = new VpnHoodLinuxApp(appOptions, showWindowAfterStart);
-        return app;
-    }
-
-
-    // What a run does before its UI: the old adapter, as a previous run's route may still be active,
-    // and its resolvconf DNS entry before it, which would outlive it (LinuxTunVpnAdapter).
-    public async Task PrepareAsync(CancellationToken cancellationToken)
-    {
-        var adapterName = VpnHoodApp.Instance.Features.AppName;
-        await VhUtils.TryInvokeAsync("remove a leftover resolvconf DNS entry", () =>
-            LinuxTunVpnAdapter.RemoveResolvconfDnsAsync(adapterName, cancellationToken));
-        await VhUtils.TryInvokeAsync(null, () =>
-            ExecuteCommandAsync($"ip link delete {adapterName}", cancellationToken));
-    }
-
-    public async Task Run()
-    {
-        await PrepareAsync(CancellationToken.None);
-
-        // show main window if requested
-        if (ShowWindowAfterStart)
-            OpenMainWindowRequested?.Invoke(this, EventArgs.Empty);
-
-        // wait until app is closed
-        while (VpnHoodApp.IsInit)
-            await Task.Delay(1000);
-    }
-
-    public event EventHandler? OpenMainWindowRequested;
-
-    private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
-    {
-        // if stop command received, exit the app
-        if (e.Arguments.Any(x => x.Equals("/stop", StringComparison.OrdinalIgnoreCase))) {
-            VhLogger.Instance.LogInformation("Stop command has been received.");
-            Exit();
-            return;
-        }
-
-        if (e.Arguments.Any(x => x.Equals("/openwindow", StringComparison.OrdinalIgnoreCase)))
-            OpenMainWindowRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    private static void VerifySingleInstance(AppOptions appOptions, bool showWindow, bool stop)
-    {
-        if (!IsAnotherInstanceRunning(appOptions))
-            return;
-
-        var command = "";
-        if (stop) command += "/stop ";
-        else if (showWindow) command += "/openWindow ";
-
-        // Make single instance
-        // if you like to wait a few seconds in case that the instance is just shutting down
-        // open main window if app is already running and user run the app again
-        if (!string.IsNullOrWhiteSpace(command)) {
-            var commandListener = new CommandListener(Path.Combine(appOptions.StorageFolderPath, FileNameAppCommand));
-            VhUtils.TryInvoke(null, () => commandListener.SendCommand(command));
-        }
-
-        throw stop
-            ? new GracefullyShutdownException()
-            : new AnotherInstanceIsRunningException();
-    }
-
     private static Socket? _singleInstanceSocket;
 
-    private static bool IsAnotherInstanceRunning(AppOptions appOptions)
+    private VpnHoodLinuxApp(AppOptions appOptions)
     {
-        // Linux-only: abstract UDS address starts with '\0'
-        _singleInstanceSocket = new Socket(AddressFamily.Unix, SocketType.Stream, 0);
+        VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath), appOptions);
+    }
 
+    public static VpnHoodLinuxApp Init(AppInitParams initParams, string storagePath)
+    {
+        // this process already holds the lock; binding again would call itself another instance
+        if (IsInit)
+            return Instance;
+
+        TakeSingleInstanceLock(initParams.AppId);
+
+        // after the lock, so a tun of this app id is never one another of its instances is using
+        LinuxTunVpnAdapter.RemoveLeftovers(initParams.AppId);
+
+        Directory.CreateDirectory(storagePath);
+        var context = new AppOptionsContext {
+            AppId = initParams.AppId,
+            StoragePath = storagePath,
+            PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
+        };
+
+        var appOptions = initParams.AppOptionsFactory(context);
+
+        // the service manager stops the daemon with a signal, and the tunnel must end with it
+        appOptions.DisconnectOnDispose = true;
+
+        return new VpnHoodLinuxApp(appOptions);
+    }
+
+    // An abstract Unix socket - its name starts with '\0' - which the kernel releases with the
+    // process: a crash leaves no stale lock, and a second bind fails while the first process lives.
+    private static void TakeSingleInstanceLock(string appId)
+    {
+        var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
         try {
-            var abstractName = "\0singleton-" + appOptions.AppId;
-            _singleInstanceSocket.Bind(new UnixDomainSocketEndPoint(abstractName));
-            _singleInstanceSocket.Listen(1);
-            return false; // No other instance running
+            socket.Bind(new UnixDomainSocketEndPoint("\0singleton-" + appId));
+            socket.Listen(1);
+            _singleInstanceSocket = socket;
+        }
+        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse) {
+            socket.Dispose();
+            throw new AnotherInstanceIsRunningException($"Another {appId} instance is already running.", ex);
         }
         catch {
-            _singleInstanceSocket.Dispose();
-            return true; // Fallback: treat any unexpected error as "already running"
+            socket.Dispose();
+            throw;
         }
     }
 
-    public void Exit()
+    // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.
+    public async ValueTask DisposeAsync()
     {
-        Exiting?.Invoke(this, EventArgs.Empty);
+        if (VpnHoodApp.IsInit)
+            await VpnHoodApp.Instance.DisposeAsync().Vhc();
+
         Dispose();
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            if (VpnHoodApp.IsInit) VpnHoodApp.Instance.Dispose();
+            if (VpnHoodApp.IsInit)
+                VpnHoodApp.Instance.Dispose();
+
             _singleInstanceSocket?.Dispose();
+            _singleInstanceSocket = null;
         }
 
         base.Dispose(disposing);
-    }
-
-    private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken)
-    {
-        return OsUtils.ExecuteCommandAsync("/bin/bash", $"-c \"{command}\"", cancellationToken);
     }
 }

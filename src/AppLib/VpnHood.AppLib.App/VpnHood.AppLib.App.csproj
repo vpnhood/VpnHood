@@ -14,6 +14,16 @@
 	  <InternalsVisibleTo Include="VpnHood.AppLib.Test" />
 	</ItemGroup>
 
+	<!-- The app's identity (buildTransitive/, the .props and .targets beside this file): every head
+	     reaches this package, so an app states its id base and its name once and its heads build their
+	     ids, names and constants from them. No build/ copy: NuGet takes buildTransitive/ for a direct
+	     reference too. Each file's whole path in the package: a default None item keeps its folder,
+	     and a folder alone as PackagePath would nest it twice. -->
+	<ItemGroup>
+		<None Update="buildTransitive\VpnHood.AppLib.App.props" Pack="true" PackagePath="buildTransitive\VpnHood.AppLib.App.props" />
+		<None Update="buildTransitive\VpnHood.AppLib.App.targets" Pack="true" PackagePath="buildTransitive\VpnHood.AppLib.App.targets" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\..\Net\VpnHood.Net.IpLocations\VpnHood.Net.IpLocations.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />

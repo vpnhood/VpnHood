@@ -7,19 +7,32 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Android;
 
+// The app on Android. The OS starts the head's Application in every process of the package - the
+// VPN service's and the Quick Settings tile's too - and only the app's own process may build
+// anything: so the init params come as a factory, called only there, and a head's configuration
+// is never read where it is not needed.
 public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
 {
-    public static VpnHoodAndroidApp Init(Func<AppOptions> optionsFactory)
+    public static VpnHoodAndroidApp Init(Func<AppInitParams> initParamsFactory)
     {
+        if (IsInit)
+            return Instance;
+
         AndroidEnvironment.UnhandledExceptionRaiser += OnUnhandledExceptionRaiser;
 
-
-        // do not init again or in the vpn service/tile processes
-        if (VpnHoodApp.IsInit || AndroidDevice.IsVpnServiceProcess || QuickLaunchTileService.IsTileProcess)
+        // do not init again, or in any process but the app's own: the VPN service's, the tile's, or any
+        // other a library adds
+        if (VpnHoodApp.IsInit || !AndroidDevice.IsMainProcess)
             return new VpnHoodAndroidApp();
 
-        //app init
-        var options = optionsFactory();
+        var initParams = initParamsFactory();
+        var context = new AppOptionsContext {
+            AppId = initParams.AppId,
+            StoragePath = initParams.ResolveStoragePath(),
+            PackagedAssetProvider = new AndroidAssetProvider(Application.Context)
+        };
+
+        var options = initParams.AppOptionsFactory(context);
         options.DeviceUiProvider ??= new AndroidDeviceUiProvider();
         options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
         options.DeviceId ??= AndroidUtils.GetDeviceId(Application.Context); //this will be hashed using AppId

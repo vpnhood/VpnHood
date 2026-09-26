@@ -44,6 +44,7 @@ public class ServerApp : IDisposable
     public IAccessManager AccessManager { get; }
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
+    public static string AppId => "com.vpnhood.server";
     public static string AppFolderPath =>
         Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
         throw new Exception($"Could not acquire {nameof(AppFolderPath)}.");
@@ -330,7 +331,8 @@ public class ServerApp : IDisposable
         try {
             var vpnAdapter = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
-                    AdapterName = "VpnHoodServer",
+                    AdapterName = AppName,
+                    AppId = AppId,
                     Blocking = false,
                     AutoDisposePackets = true
                 })

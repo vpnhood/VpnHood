@@ -25,7 +25,7 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
   `src/Apps/Client/Client.Ios.Extension/Info.plist` (the Connect extension is identical). **This subclass is required** — pointing the principal class straight at core
   `IosVpnService` crashes on launch under .NET 11/CoreCLR's registrar (see the memory/throughput doc).
 - `src/Apps/Client/Client.Ios.Apple/AppDelegate.cs` — derives from `IosAvaloniaAppDelegate<ClassicAvaloniaApp>`, which
-  starts the app and the UI, and returns its `IosStartParams`: `VpnHoodIosApp.Init` builds the `IosDevice` from the App
+  starts the app and the UI, and returns its `IosInitParams`: `VpnHoodIosApp.Init` builds the `IosDevice` from the App
   Group and the extension's bundle id named there.
 
 Both the host and extension csprojs (`VpnHood.App.Client.Ios.Apple` / `VpnHood.App.Client.Ios.Extension`) `ProjectReference` the core `VpnHood.Core.Client.Devices.Ios` project
@@ -41,9 +41,9 @@ The config folder for both sides resolves to:
 ```
 NSFileManager.DefaultManager.GetContainerUrl("group.com.vpnhood.client.ios")?.Path + "/vpn-service/"
 ```
-If `GetContainerUrl` returns `null` (entitlement missing from the profile) it falls back to `LocalApplicationData`
-— **which breaks IPC** (the two processes get different paths). Do **not** change `AppGroupId`; it must match on
-both sides.
+If `GetContainerUrl` returns `null` (the App Group missing from the entitlements or the provisioning profile), the
+app stops at start with an error naming the group. There is no fallback: `LocalApplicationData` is a different path
+in each process, so IPC could not work there. Do **not** change `AppGroupId`; it must match on both sides.
 
 ### Connect flow
 1. **App** (`VpnServiceManager`) writes `vpn.config` (JSON) into the shared `vpn-service/` folder.

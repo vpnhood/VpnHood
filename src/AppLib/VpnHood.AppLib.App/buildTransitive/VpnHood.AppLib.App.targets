@@ -1,0 +1,124 @@
+<Project>
+	<!-- The app's identity, built from the two values the app states once (VhAppIdBase, VhAppName; see
+	     VpnHood.AppLib.App.props) after the head is read, so a head names no id and no name. What a
+	     head, or a build's command line, states itself is kept: every value here is set only where
+	     nothing is yet.
+
+	     The app's id is the base, the platform and, when the id names one, the channel, with .debug
+	     after it in a Debug build:
+
+	       com.example.vpn.android              the Play build
+	       com.example.vpn.android.web.debug    the website's APK, built in Debug
+	       com.example.vpn.windows.web          the website's Windows installer
+	       com.example.vpn.ios                  the App Store build, in Debug too: every iOS bundle id
+	                                            needs a provisioning profile of its own
+
+	     The platform comes from the target framework; a head on a plain one, as a Linux head is,
+	     states it (VhAppPlatform: linux). A head names its channel when its id carries one
+	     (VhAppIdChannel: web, for the builds a website hands out; a store's build names none, the
+	     store being where its id is registered). The id is ApplicationId on every platform: Android
+	     and iOS make their package and bundle of it, and the constants below give it to the code.
+	     Stating ApplicationId overrides the rule, as Publish-AndroidApp.ps1 does with publish.json's.
+
+	     An id never changes once it has shipped: the stores key their listings on it, and on Windows
+	     and Linux it is part of every install's client id. A head whose shipped id the rule does not
+	     give states its own, in the rule's parts. -->
+	<PropertyGroup Condition="'$(VhAppIdBase)' != ''">
+		<!-- An app, not a library that passes the reference on: .NET for Android rewrites an app's
+		     OutputType to Library, and AndroidApplication is what then tells it apart. An iOS app
+		     extension is a library with IsAppExtension. -->
+		<VhAppIsApp Condition="'$(OutputType)' == 'Exe' Or '$(OutputType)' == 'WinExe' Or '$(AndroidApplication)' == 'true'">true</VhAppIsApp>
+		<VhAppIsExtension Condition="'$(IsAppExtension)' == 'true'">true</VhAppIsExtension>
+		<VhAppIsDebug Condition="'$(Configuration)' == 'Debug'">true</VhAppIsDebug>
+		<!-- From TargetFramework, which is set wherever this file is read; TargetPlatformIdentifier is
+		     not yet when a head imports this from its own body. -->
+		<VhAppPlatform Condition="'$(VhAppPlatform)' == '' And $(TargetFramework.Contains('-android'))">android</VhAppPlatform>
+		<VhAppPlatform Condition="'$(VhAppPlatform)' == '' And $(TargetFramework.Contains('-ios'))">ios</VhAppPlatform>
+		<VhAppPlatform Condition="'$(VhAppPlatform)' == '' And $(TargetFramework.Contains('-windows'))">windows</VhAppPlatform>
+	</PropertyGroup>
+
+	<!-- The app's id. -->
+	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' != ''">
+		<_VhAppId>$(VhAppIdBase).$(VhAppPlatform)</_VhAppId>
+		<_VhAppId Condition="'$(VhAppIdChannel)' != ''">$(_VhAppId).$(VhAppIdChannel)</_VhAppId>
+		<_VhAppId Condition="'$(VhAppIsDebug)' == 'true' And '$(VhAppPlatform)' != 'ios'">$(_VhAppId).debug</_VhAppId>
+		<ApplicationId Condition="'$(ApplicationId)' == ''">$(_VhAppId)</ApplicationId>
+	</PropertyGroup>
+
+	<!-- The name this build shows (VhAppDisplayName), a head's and the product library's alike. Debug
+	     says so in the name. -->
+	<PropertyGroup Condition="'$(VhAppIdBase)' != ''">
+		<VhAppDisplayName Condition="'$(VhAppDisplayName)' == '' And '$(VhAppIsDebug)' == 'true'">$(VhAppName) (DEBUG)</VhAppDisplayName>
+		<VhAppDisplayName Condition="'$(VhAppDisplayName)' == ''">$(VhAppName)</VhAppDisplayName>
+	</PropertyGroup>
+
+	<!-- iOS: the App Group the app and its network extension share, and the extension's id. Both
+	     follow the base, since Apple wants an extension's bundle id to start with its app's: an iOS
+	     app changes its ids through the base, not through ApplicationId. The group reaches the
+	     entitlements here, so a head's Entitlements.plist names only its capabilities. -->
+	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppPlatform)' == 'ios'">
+		<VhAppGroupId Condition="'$(VhAppGroupId)' == ''">group.$(VhAppIdBase).ios</VhAppGroupId>
+		<VhAppExtensionId Condition="'$(VhAppExtensionId)' == ''">$(VhAppIdBase).ios.networkextension</VhAppExtensionId>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppPlatform)' == 'ios' And '$(VhAppIsApp)' == 'true'">
+		<ApplicationTitle Condition="'$(ApplicationTitle)' == ''">$(VhAppDisplayName)</ApplicationTitle>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppPlatform)' == 'ios' And '$(VhAppIsExtension)' == 'true'">
+		<ApplicationId Condition="'$(ApplicationId)' == ''">$(VhAppExtensionId)</ApplicationId>
+		<ApplicationTitle Condition="'$(ApplicationTitle)' == ''">$(VhAppName) Extension</ApplicationTitle>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppPlatform)' == 'ios' And ('$(VhAppIsApp)' == 'true' Or '$(VhAppIsExtension)' == 'true')">
+		<CustomEntitlements Include="com.apple.security.application-groups" Type="StringArray" Value="$(VhAppGroupId)" />
+	</ItemGroup>
+
+	<!-- What the code reads: AppConstants.AppId, AppName, CompanyName, PackageTitle and IsDebugMode, and on iOS
+	     AppGroupId and ProviderBundleId. The product library - a project of the app that is neither a head nor
+	     the iOS extension - gets the same but the ids, which are each head's own, so its options builder needs
+	     nothing from a head. Constants, because Android's manifest attributes take nothing else. In no
+	     namespace, so every file of the app finds it: the Android publish builds a copy of the head's
+	     project under another name, and with it another root namespace. Written before each compile,
+	     and only when it changed; the names go in as verbatim strings, so only a quote is escaped. -->
+	<Target Name="VhWriteAppConstants" BeforeTargets="CoreCompile" DependsOnTargets="PrepareForBuild"
+	        Condition="'$(VhAppIdBase)' != '' And '$(VhAppIsExtension)' != 'true'">
+		<Error Condition="'$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' == ''"
+		       Text="The app's platform does not follow from its target framework '$(TargetFramework)'. State it beside the target framework, as a Linux head does: &lt;VhAppPlatform&gt;linux&lt;/VhAppPlatform&gt;." />
+		<Error Condition="'$(VhAppName)' == ''"
+		       Text="The app states an id base (VhAppIdBase) but no name: state VhAppName beside it." />
+		<Error Condition="'$(_VhAppHasCompany)' != 'true'"
+		       Text="The app states no maker: state Company beside VhAppName." />
+
+		<PropertyGroup>
+			<_VhAppConstantsFile>$(IntermediateOutputPath)AppConstants.g.cs</_VhAppConstantsFile>
+			<_VhAppIsDebugCs>false</_VhAppIsDebugCs>
+			<_VhAppIsDebugCs Condition="'$(VhAppIsDebug)' == 'true'">true</_VhAppIsDebugCs>
+			<_VhAppIdConstant />
+			<_VhAppIdConstant Condition="'$(VhAppIsApp)' == 'true'">
+    public const string AppId = @"$(ApplicationId.Replace('"', '""'))";</_VhAppIdConstant>
+			<_VhAppIosConstants />
+			<_VhAppIosConstants Condition="'$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' == 'ios'">
+    public const string AppGroupId = @"$(VhAppGroupId.Replace('"', '""'))";
+    public const string ProviderBundleId = @"$(VhAppExtensionId.Replace('"', '""'))";</_VhAppIosConstants>
+			<_VhAppConstantsCode>// &lt;auto-generated&gt;
+// What this build of the app is, from the app's identity (VhAppIdBase, VhAppName) by
+// VpnHood.AppLib.App.targets. Every build writes it again: change the identity, not this file.
+// &lt;/auto-generated&gt;
+
+internal static class AppConstants
+{$(_VhAppIdConstant)
+    public const string AppName = @"$(VhAppDisplayName.Replace('"', '""'))";
+    public const string CompanyName = @"$(Company.Replace('"', '""'))";
+    public const string PackageTitle = @"$(VhAppPackageTitle.Replace('"', '""'))";
+    public const bool IsDebugMode = $(_VhAppIsDebugCs);$(_VhAppIosConstants)
+}</_VhAppConstantsCode>
+		</PropertyGroup>
+
+		<!-- One line of one item, escaped whole: WriteLinesToFile would split a list at a semicolon in
+		     the name and trim each line's indent. -->
+		<WriteLinesToFile File="$(_VhAppConstantsFile)" Lines="$([MSBuild]::Escape('$(_VhAppConstantsCode)'))"
+		                  Overwrite="true" WriteOnlyWhenDifferent="true" />
+		<ItemGroup>
+			<Compile Include="$(_VhAppConstantsFile)" />
+			<FileWrites Include="$(_VhAppConstantsFile)" />
+		</ItemGroup>
+	</Target>
+</Project>

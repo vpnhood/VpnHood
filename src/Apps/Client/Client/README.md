@@ -11,12 +11,17 @@ window. What is the same for all of them is decided here, once:
 
 | Part | What it decides |
 |---|---|
-| the project file | the IP-location database the product ships (`VpnHood.Net.IpLocations.Assets.Ip2LocationLite`), and the app framework and web host every head builds on |
+| `ClientAppOptions.cs` | the options every head shares - the logo and consent summary, the settings below, the web host's port, the three packaged files at the paths the asset packages place them - and `IsAddAccessKeySupported`, a constant the desktop commands read too. A head's options factory is this call and its channel's lines on top |
+| `ClientAppConfigs.cs` | the product's settings: what its private appsettings can say (`AppConfigs` in `VpnHood.AppLib.App`), which `Load` fills. Client adds no keys of its own |
+| the project file | the IP-location database the product ships (`VpnHood.Net.IpLocations.Assets.Ip2LocationLite`), the private appsettings from `.user/VpnHoodClient`, embedded here once for every head, and the app framework and web host every head builds on |
 
-The settings each head must state - `AppId`, `UpdateInfoUrl`, `Ga4MeasurementId`, the legal URLs, the
-logo and consent names - are `IRequiredAppConfigs` in `VpnHood.AppLib.App`, beside `AppConfigsBase`,
-which every head's `AppConfigs` derives from. That contract ships on NuGet, so a fork's head cannot
-forget one either.
+A setting has no value in code: one the appsettings do not name stays null, and what needs it is
+off or fails where it is used. The app's ids and names are not settings either: the product states
+its id base and name once, in `../Directory.Build.props`, and the build writes them into
+each head and into this project (`AppConstants` - see `docs/source-layout.md`): the ids are each head's
+own, and the options read the rest here, so a head passes none. A head states only what is
+its own - its update feed and its channel's lines - and changes a setting after the load only where
+it has one of its own, as the Play head does with the analytics id.
 
 ## Why a forker does not reference it
 

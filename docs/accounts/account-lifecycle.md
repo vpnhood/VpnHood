@@ -49,6 +49,7 @@ Section 8 answers these, in order:
 - They are connected when they delete
 - They never signed in
 - They ask for a refund instead
+- A partner refunds a code they sold
 
 ## The short version
 
@@ -67,6 +68,7 @@ Section 8 answers these, in order:
 | Coming back? | A new, empty account — the store is asked at sign-in and gives the subscription back by itself; a code they kept still works | §7 |
 | Blocked where they are, so they cannot sign in? | Connect first on the free or trial path, then sign in through the tunnel. No portal clock removes the applied code; only an access-server refusal starts the ending flow | §8 |
 | Does a refund end a code? | Only if we end it. Revoking is the default; keeping it is a choice | §8 |
+| Can a partner refund a code they sold? | Ending it, any time. Money back as credit, only for a first purchase and only for 3 days after they paid us; a refund always ends the code | §8 |
 
 ---
 
@@ -1184,6 +1186,37 @@ default and keeping it is the deliberate choice, never the other way round.
 A store-issued refund is the store's decision, not ours, and it arrives as a notification — the code
 is ended when the store says the entitlement is gone. **Refund and keep is a website-side option
 only**, because only there are we the merchant.
+
+### A partner refunds a code they sold
+
+A partner sells our codes to their own customers and pays us for each one from a prepaid credit
+balance. Whether and how the partner refunds their customer is between the two of them. What we
+promise the partner:
+
+- **Ending a code is always theirs to do.** A partner can suspend a code they sold (switch it off,
+  and back on) and terminate it (end it for good), at any time, without asking us. Ended stays
+  ended: a terminated or refunded code cannot be suspended, unsuspended or renewed again; the
+  partner sells a new one instead.
+- **Getting the money back has a short window.** Inside it, a refund ends the code and returns
+  what the partner paid us for it to their credit balance. The window is **3 days** from the moment
+  the partner paid us, unless we set another. After it the partner can still end the code, but the
+  credit stays spent. A refund always ends the code: the money and the service go back together.
+- **Only a code's first purchase.** A renewal is never refunded this way, and a code stops being
+  refundable once anything else is invoiced for it, because ending it would also take a term that
+  is paid for.
+- **Once.** Asking twice returns the money once.
+- **Everything else we decide by hand**, case by case: a code that was not bought through the
+  partner's own account, an order that never finished, an invoice already refunded in part, or a
+  refund after the window.
+
+The two decisions are separate on purpose. Ending a code costs us nothing and protects the
+partner (a chargeback, a fraudulent customer), so it is always open. Money back is instant, since
+a partner pays from credit and no store or payment gateway stands in between, so it is bounded by
+time instead.
+
+This is not the money-back guarantee of a customer who buys directly from us: that one is 30 days,
+on request, never automatic (*They ask for a refund instead*). A partner's customers are the
+partner's.
 
 ## 9. Where a person can do it, and what each store allows
 

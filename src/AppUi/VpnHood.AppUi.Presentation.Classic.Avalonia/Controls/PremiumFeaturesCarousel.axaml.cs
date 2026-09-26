@@ -1,7 +1,6 @@
-﻿using Avalonia;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -38,7 +37,9 @@ public partial class PremiumFeaturesCarousel : UserControl
         PrevButton.IsVisible = hasMany;
         NextButton.IsVisible = hasMany;
         for (var i = 0; i < _slides.Count; i++) {
-            var dot = new Border { Width = 8, Height = 8, CornerRadius = new CornerRadius(4) };
+            var index = i;
+            var dot = new Border { Classes = { "dot" }, Child = new Ellipse() };
+            dot.Tapped += (_, _) => Show(index);
             Dots.Children.Add(dot);
         }
         Dots.IsVisible = hasMany;
@@ -62,12 +63,8 @@ public partial class PremiumFeaturesCarousel : UserControl
         TitleText.Text = title;
         DescriptionText.Text = description;
 
-        var highlight = this.TryFindResource("HighlightBrush", out var value) && value is IBrush brush ? brush : Brushes.White;
-        for (var i = 0; i < Dots.Children.Count; i++) {
-            if (Dots.Children[i] is not Border dot) continue;
-            dot.Background = highlight;
-            dot.Opacity = i == _index ? 1 : 0.35;
-        }
+        for (var i = 0; i < Dots.Children.Count; i++)
+            Dots.Children[i].Classes.Set("active", i == _index);
     }
 
     private void OnPrevClick(object? sender, RoutedEventArgs e)

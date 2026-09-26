@@ -112,6 +112,15 @@
       </Animation>
     </Style.Animations>
   </Style>
+  <!-- the web UI's .animation-translate-y: a slow rise and fall, easing at both ends -->
+  <Style Selector="Image.floating">
+    <Style.Animations>
+      <Animation Duration="0:0:1.5" IterationCount="INFINITE" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+        <KeyFrame Cue="0%"><Setter Property="TranslateTransform.Y" Value="0" /></KeyFrame>
+        <KeyFrame Cue="100%"><Setter Property="TranslateTransform.Y" Value="-19" /></KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
 
   <!-- The TV pairing page's text (kept from the first cut, on the new palette). -->
   <Style Selector="TextBlock.title">

@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -38,9 +39,12 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         PrivacyLink.IsVisible = VhApp.Features.PrivacyPolicyUrl != null;
         LinksDot.IsVisible = TermsLink.IsVisible && PrivacyLink.IsVisible;
         LinksRow.IsVisible = TermsLink.IsVisible || PrivacyLink.IsVisible;
+        if (VhApp.IsTvUi)
+            AddHandler(KeyDownEvent, OnTvKeyDown);
         _ = LoadOptions();
     }
 
+    // On a TV nothing takes the focus while the catalog loads: the carousel's arrows take none there.
     public void FocusDefault()
     {
         if (PurchaseButton.IsVisible && StorePanel.IsVisible) _planButtons.FirstOrDefault(x => x.Plan == _selectedPlan).Button?.LandFocus();
@@ -49,7 +53,21 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         else if (CodeButton.IsVisible) CodeButton.LandFocus();
         else if (RestoreButton.IsVisible) RestoreButton.LandFocus();
         else if (BackButton.IsVisible) BackButton.LandFocus();
-        else Carousel.FirstButton.LandFocus();
+    }
+
+    // A remote's Left and Right slide the carousel wherever they move no focus - the documents'
+    // links are the only row here with a neighbour to either side.
+    private void OnTvKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Left or Key.Right))
+            return;
+
+        var direction = e.Key == Key.Left ? NavigationDirection.Left : NavigationDirection.Right;
+        if (TopLevel.GetTopLevel(this)?.FocusManager?.FindNextElement(direction) != null)
+            return;
+
+        Carousel.SlideToward(direction);
+        e.Handled = true;
     }
 
     // The catalog comes from the portal and nothing stands in for it: a failed load is only

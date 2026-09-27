@@ -1,6 +1,8 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 
@@ -35,6 +37,10 @@ public partial class PremiumFeaturesCarousel : UserControl
         var hasMany = _slides.Count > 1;
         PrevButton.IsVisible = hasMany;
         NextButton.IsVisible = hasMany;
+        // a TV's remote never lands on an arrow: its Left and Right slide the carousel instead
+        // (SlideToward), so the focus stays with the plans
+        PrevButton.Focusable = !VhApp.IsTvUi;
+        NextButton.Focusable = !VhApp.IsTvUi;
         for (var i = 0; i < _slides.Count; i++) {
             var index = i;
             var dot = new Border { Classes = { "dot" }, Child = new Ellipse() };
@@ -45,7 +51,12 @@ public partial class PremiumFeaturesCarousel : UserControl
         Show(0, reversed: false);
     }
 
-    public Button FirstButton => NextButton;
+    // A remote's Left or Right: the arrow on that side, which a right-to-left language swaps.
+    public void SlideToward(NavigationDirection direction)
+    {
+        var isNext = (direction == NavigationDirection.Right) != (FlowDirection == FlowDirection.RightToLeft);
+        Show(isNext ? _index + 1 : _index - 1, reversed: !isNext);
+    }
 
     // The arrows loop, each sliding its own way across the wrap too, so the last slide's Next brings
     // the first in as the next one; a dot slides by position.

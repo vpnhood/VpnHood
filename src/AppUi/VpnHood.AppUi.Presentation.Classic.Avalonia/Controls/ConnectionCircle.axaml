@@ -3,7 +3,8 @@
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.ConnectionCircle"
              Width="150" Height="150" ClipToBounds="False">
   <!-- The web UI's #connectionCircleIndicator (general.css "Home Circle Section"), value for value:
-       a 150px ring, faint white at rest and cream while the app works; two dots on a 3s turn while
+       a 150px ring, white at rest and cream while the app works - at rest the whole indicator is
+       faint, ring, dots and words alike, as the web UI fades it; two dots on a 3s turn while
        connecting; on connect the dots slide to the centre, a green ring grows past the circle and
        glows (resize-and-shine), a green flash fills it and fades (resize-and-hide), and the ring
        turns white. The phase drives the classes on RootGrid (code-behind); the styles below do the
@@ -11,19 +12,29 @@
        by default, and the turning dots and the glow both reach past the 150px box. -->
   <UserControl.Styles>
 
-    <!-- the outer ring -->
-    <Style Selector="Border#Ring">
+    <!-- the whole indicator: faint at rest -->
+    <Style Selector="Grid#RootGrid">
       <Setter Property="Opacity" Value="0.3" />
-      <Setter Property="BorderBrush" Value="White" />
       <Setter Property="Transitions">
         <Transitions>
           <DoubleTransition Property="Opacity" Duration="0:0:0.8" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Grid#RootGrid.live">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+
+    <!-- the outer ring -->
+    <Style Selector="Border#Ring">
+      <Setter Property="BorderBrush" Value="White" />
+      <Setter Property="Transitions">
+        <Transitions>
           <BrushTransition Property="BorderBrush" Duration="0:0:0.8" />
         </Transitions>
       </Setter>
     </Style>
     <Style Selector="Grid.live Border#Ring">
-      <Setter Property="Opacity" Value="1" />
       <Setter Property="BorderBrush" Value="{StaticResource ConnectionCircleBorderBrush}" />
     </Style>
     <Style Selector="Grid.connected Border#Ring">

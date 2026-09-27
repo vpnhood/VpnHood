@@ -110,8 +110,8 @@ public partial class HomeView : UserControl, IPage
         _host.Navigate(new ExtendSessionView(_host));
     }
 
-    // The account: signed in, its page; signed out, the sign-in - the dialog where there is a choice,
-    // as any build with the email form has, else the store's own.
+    // The account: signed in, its page; signed out, the sign-in - the dialog wherever the email form
+    // is offered, else the store's own.
     private async void OnAccountClick(object? sender, RoutedEventArgs e)
     {
         try {

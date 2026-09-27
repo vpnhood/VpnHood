@@ -1918,6 +1918,9 @@ public sealed partial class Strings
     /// <summary>Sign in on your phone</summary>
     public string SignInOnYourPhone => Get("SIGN_IN_ON_YOUR_PHONE");
 
+    /// <summary>Type it on your phone instead</summary>
+    public string SignInTypeOnYourPhone => Get("SIGN_IN_TYPE_ON_YOUR_PHONE");
+
     /// <summary>On your phone, open the menu and sign in.</summary>
     public string RemoteAccessHintSignIn => Get("REMOTE_ACCESS_HINT_SIGN_IN");
 

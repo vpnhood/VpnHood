@@ -41,26 +41,22 @@ public partial class SignInDialog : DialogBase
                 break;
         }
 
-        // the email form a step away; a TV adds the phone under it, for a password too long to type
-        // with a remote
+        // the email form a step away
         var hasPassword = VhApp.HasPasswordSignIn;
         OrRow.IsVisible = _primaryProviderId != null && hasPassword;
         EmailButton.IsVisible = hasPassword;
         EmailScopeHint.IsVisible = EmailButton.IsVisible;
-        PhoneButton.IsVisible = hasPassword && VhApp.IsTvUi;
 
         EmailBox.PlaceholderText = s.Email;
         PasswordBox.PlaceholderText = s.Password;
         CodeBox.PlaceholderText = s.TwoFactorCode;
-        ProviderHint.IsVisible = _primaryProviderId != null;
-        ProviderHint.Text = s.SignInProviderHint(PrimaryProviderName());
+        // a TV types with a remote: its phone can type the same form instead
+        PhoneLink.IsVisible = VhApp.IsTvUi;
         // the one place the account website appears - where a browser can open it
         ForgotButton.IsVisible = MainView.IsExternalLinkUsable && VhApp.Features.AccountWebsiteUrl != null;
-        // with nothing to choose - no identity provider, and no phone beside the form - the dialog
-        // opens on the form itself, with no chooser to go back to
-        var hasChoice = _primaryProviderId != null || PhoneButton.IsVisible;
-        BackButton.IsVisible = hasChoice;
-        if (!hasChoice)
+
+        // with no identity provider to choose, the dialog opens on the form itself
+        if (_primaryProviderId == null)
             ShowStep(PasswordStep);
     }
 
@@ -150,11 +146,6 @@ public partial class SignInDialog : DialogBase
     private void OnEmailClick(object? sender, RoutedEventArgs e)
     {
         ShowStep(PasswordStep);
-    }
-
-    private void OnBackClick(object? sender, RoutedEventArgs e)
-    {
-        ShowStep(StartStep);
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)

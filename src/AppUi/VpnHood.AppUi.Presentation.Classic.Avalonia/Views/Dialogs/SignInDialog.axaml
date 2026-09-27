@@ -4,9 +4,8 @@
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.SignInDialog">
   <!-- The web UI's SignInDialog: the store's sign-in as the one prominent button, the portal's own
-       email and password beneath it - on a TV, the phone under that, for a password too long to
-       type with a remote - then the second factor in here, and the new backup code shown exactly
-       once. -->
+       email and password beneath it - which a TV offers to type on the phone - then the second
+       factor in here, and the new backup code shown exactly once. -->
   <Border Classes="dialog" MaxWidth="420">
     <StackPanel Spacing="12">
 
@@ -34,12 +33,6 @@
         </Button>
         <TextBlock x:Name="EmailScopeHint" Classes="body-small disabled" TextWrapping="Wrap" TextAlignment="Center" IsVisible="False"
                    Text="{Binding SignInEmailScopeHint, Source={x:Static res:Strings.Current}}" />
-        <Button x:Name="PhoneButton" Classes="outlined pill block" Height="44" Click="OnPhoneClick" IsVisible="False">
-          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-            <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.CellphoneArrowDown}" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding SignInOnYourPhone, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
         <Button x:Name="StartCancelButton" Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick"
                 Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
@@ -48,7 +41,6 @@
       <StackPanel x:Name="PasswordStep" Spacing="10" IsVisible="False">
         <TextBlock Classes="dialog-title" Text="{Binding SignInWithEmail, Source={x:Static res:Strings.Current}}" />
         <TextBlock Classes="dialog-text" Text="{Binding SignInWithEmailDesc, Source={x:Static res:Strings.Current}}" />
-        <TextBlock x:Name="ProviderHint" Classes="body-small disabled" TextWrapping="Wrap" IsVisible="False" />
         <!-- told to the on-screen keyboard: an email layout, and a password it neither suggests
              nor learns -->
         <TextBox x:Name="EmailBox" Classes="outlined" TextInputOptions.ContentType="Email" TextChanged="OnFieldChanged" />
@@ -57,13 +49,13 @@
         <Button x:Name="SubmitPasswordButton" Classes="pill block" Height="44" Background="{StaticResource HighlightBrush}" IsEnabled="False"
                 Click="OnSubmitPasswordClick" Content="{Binding SignIn, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="PasswordError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />
+        <Button x:Name="PhoneLink" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnPhoneClick" IsVisible="False">
+          <TextBlock Classes="body-small highlight" Text="{Binding SignInTypeOnYourPhone, Source={x:Static res:Strings.Current}}" />
+        </Button>
         <Button x:Name="ForgotButton" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnForgotClick" IsVisible="False">
           <TextBlock Classes="body-small highlight" Text="{Binding ForgotPassword, Source={x:Static res:Strings.Current}}" />
         </Button>
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <Button x:Name="BackButton" Classes="dialog-btn" Click="OnBackClick" Content="{Binding Back, Source={x:Static res:Strings.Current}}" />
-          <Button Grid.Column="2" Classes="dialog-btn" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
-        </Grid>
+        <Button Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
 
       <!-- step 3: the second factor -->

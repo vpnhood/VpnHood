@@ -54,6 +54,72 @@
                                   BorderThickness="{TemplateBinding BorderThickness}" IsHitTestVisible="False" />
       </controls:RippleEffect>
     </ControlTemplate>
+
+    <!-- Every scroll bar, in place of Fluent's: a 5px rounded track in the theme's scroll colours,
+         8px under the pointer, with no arrows; its thumb lightens under the pointer, and a click on
+         the track pages. -->
+    <ControlTheme x:Key="ScrollBarThumb" TargetType="Thumb">
+      <Setter Property="Background" Value="{StaticResource ScrollThumbBrush}" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" />
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^:pointerover">
+        <Setter Property="Background" Value="{StaticResource ScrollThumbHoverBrush}" />
+      </Style>
+      <Style Selector="^:pressed">
+        <Setter Property="Background" Value="{StaticResource ScrollThumbHoverBrush}" />
+      </Style>
+    </ControlTheme>
+    <ControlTheme x:Key="ScrollBarPageButton" TargetType="RepeatButton">
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="Transparent" />
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+    <ControlTheme x:Key="{x:Type ScrollBar}" TargetType="ScrollBar">
+      <Setter Property="Background" Value="{StaticResource ScrollTrackBrush}" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}">
+            <Track Minimum="{TemplateBinding Minimum}"
+                   Maximum="{TemplateBinding Maximum}"
+                   Value="{TemplateBinding Value, Mode=TwoWay}"
+                   DeferThumbDrag="{TemplateBinding ScrollViewer.IsDeferredScrollingEnabled}"
+                   ViewportSize="{TemplateBinding ViewportSize}"
+                   Orientation="{TemplateBinding Orientation}">
+              <Track.DecreaseButton>
+                <RepeatButton Name="PART_PageUpButton" Theme="{StaticResource ScrollBarPageButton}" />
+              </Track.DecreaseButton>
+              <Track.IncreaseButton>
+                <RepeatButton Name="PART_PageDownButton" Theme="{StaticResource ScrollBarPageButton}" />
+              </Track.IncreaseButton>
+              <Thumb Theme="{StaticResource ScrollBarThumb}" />
+            </Track>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^:vertical">
+        <Setter Property="Width" Value="5" />
+        <Style Selector="^ /template/ Track">
+          <Setter Property="IsDirectionReversed" Value="True" />
+        </Style>
+      </Style>
+      <Style Selector="^:vertical:pointerover">
+        <Setter Property="Width" Value="8" />
+      </Style>
+      <Style Selector="^:horizontal">
+        <Setter Property="Height" Value="5" />
+      </Style>
+      <Style Selector="^:horizontal:pointerover">
+        <Setter Property="Height" Value="8" />
+      </Style>
+    </ControlTheme>
   </Styles.Resources>
 
   <!-- Every page's root, inset from the edge: the web UI's 16px sides, whatever the window's size -
@@ -67,6 +133,16 @@
   </Style>
   <Style Selector=":is(UserControl).tv :is(Panel).page">
     <Setter Property="Margin" Value="48,27" />
+  </Style>
+  <!-- The page's scroller reaches over that inset to the window's sides and bottom, so its bar runs
+       down the window's edge, and gives the inset back to what it scrolls. -->
+  <Style Selector=":is(Panel).page > ScrollViewer">
+    <Setter Property="Margin" Value="-16,0,-16,-16" />
+    <Setter Property="Padding" Value="16,0,16,16" />
+  </Style>
+  <Style Selector=":is(UserControl).tv :is(Panel).page > ScrollViewer">
+    <Setter Property="Margin" Value="-48,0,-48,-27" />
+    <Setter Property="Padding" Value="48,0,48,27" />
   </Style>
 
   <!-- The web UI's type scale (Vuetify's MD2 metrics kept by override.css): Poppins Light for
@@ -237,6 +313,17 @@
   </Style>
   <Style Selector="controls|RippleEffect">
     <Setter Property="RippleOpacity" Value="{StaticResource RippleOpacity}" />
+  </Style>
+  <!-- A link is words, not a button: no ripple and no light behind it, but its words (not its
+       icon) underlined under the pointer. -->
+  <Style Selector="Button.text-highlight /template/ controls|RippleEffect, Button.alert-link /template/ controls|RippleEffect">
+    <Setter Property="RippleOpacity" Value="0" />
+  </Style>
+  <Style Selector="Button.text-highlight:pointerover /template/ controls|BrightnessLayer#HoverLight, Button.alert-link:pointerover /template/ controls|BrightnessLayer#HoverLight">
+    <Setter Property="Factor" Value="1" />
+  </Style>
+  <Style Selector="Button.text-highlight:pointerover TextBlock:not(.mdi), Button.alert-link:pointerover TextBlock:not(.mdi)">
+    <Setter Property="TextDecorations" Value="Underline" />
   </Style>
 
   <!-- #connectBtn: a 180x40 pill, cream on the way in, purple once connected, 0.4s between. -->

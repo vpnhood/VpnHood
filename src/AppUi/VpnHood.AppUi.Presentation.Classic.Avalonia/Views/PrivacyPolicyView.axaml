@@ -13,7 +13,8 @@
       <Button x:Name="AcceptButton" Classes="btn3 block" Margin="0,16,0,0" Click="OnAcceptClick"
               Content="{Binding AcceptAndContinue, Source={x:Static res:Strings.Current}}" />
     </StackPanel>
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,8">
+    <!-- a box between the title and Accept rather than the page's scroller: it keeps to the inset -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,8" Padding="0">
       <StackPanel MaxWidth="720" Spacing="12" Margin="8,0">
         <TextBlock x:Name="DocumentText" Classes="body-medium disabled" TextWrapping="Wrap" />
         <TextBlock Classes="body-medium" TextWrapping="Wrap" Text="{Binding AcceptLicenseNotice, Source={x:Static res:Strings.Current}}" />

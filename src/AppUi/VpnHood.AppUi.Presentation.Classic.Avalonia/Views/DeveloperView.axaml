@@ -5,8 +5,8 @@
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.DeveloperView">
   <!-- The web UI's developer dialog (components/Home/DeveloperDialog.vue) as a page: the support
-       id, the debug commands, the free debug field, the log, and a Close that saves - as does
-       Back, since leaving is the only other way out. DebugData1 is that dialog's combobox: the
+       id, the debug commands, the free debug field and the log. The dialog's Close is the page's
+       Back, which saves. DebugData1 is that dialog's combobox: the
        chosen commands as chips in a field, and the list behind the chevron, scrolling on its own so
        the page never does. The items are the app's own (AppFeatures.DebugCommands); a chip is
        dropped by unticking it in the list, not by a close button on the chip, which a remote could
@@ -70,10 +70,8 @@
       <TextBlock Classes="body-small muted40" Text="DebugData2" />
       <TextBox x:Name="DebugData2Box" />
 
-      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" Margin="0,6,0,0">
-        <Button x:Name="LogButton" Classes="action" Content="Open log" Click="OnLogClick" />
-        <Button x:Name="CloseButton" Classes="action" Content="Close" Click="OnCloseClick" />
-      </StackPanel>
+      <Button x:Name="LogButton" Classes="action" Content="Open log" Click="OnLogClick"
+              HorizontalAlignment="Right" Margin="0,6,0,0" />
 
     </StackPanel>
   </DockPanel>

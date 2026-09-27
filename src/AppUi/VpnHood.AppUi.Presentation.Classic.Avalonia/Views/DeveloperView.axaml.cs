@@ -9,9 +9,9 @@ using VpnHood.AppUi.Common;
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
 // The debug fields of UserSettings, edited as the web UI's developer dialog edits them: DebugData1
-// a space-separated set of commands, DebugData2 free text, and both saved when the page closes -
-// through Close or through Back, which is the same thing here. A command the app does not know is
-// not shown but is not lost either: it is kept and written back beside the ones that are.
+// a space-separated set of commands, DebugData2 free text, and both saved when the page closes. A
+// command the app does not know is not shown but is not lost either: it is kept and written back
+// beside the ones that are.
 public partial class DeveloperView : UserControl, IPage, IDisposable
 {
     private readonly MainView _host;
@@ -65,13 +65,8 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         }
     }
 
-    private void OnCloseClick(object? sender, RoutedEventArgs e)
-    {
-        _host.GoBack();
-    }
-
-    // Every way out saves: Close and Back pop the page (Dispose), and a host that tears the view
-    // down without popping it still detaches this one. Saving twice costs nothing - it is a no-op
+    // Every way out saves: Back pops the page (Dispose), and a host that tears the view down
+    // without popping it still detaches this one. Saving twice costs nothing - it is a no-op
     // when nothing differs - and the page is shown again when the log page above it is closed.
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {

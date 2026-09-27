@@ -8,7 +8,7 @@ namespace VpnHood.AppUi.Hosting.Avalonia;
 
 // The Avalonia Application a VpnHood UI derives from: one view, whatever hosts it. A single-view
 // host (Android, tvOS, a browser) gets it as the main view; a desktop host gets it in a window
-// that opens at the size of the layout it shows - a phone's, or a TV's panel when the device is a
+// fixed at the size of the layout it shows - a phone's, or a TV's panel when the device is a
 // TV (/tv-mode) - as the web UI's Windows head does. The head gives the UI the app's API before
 // this runs (VhApp.Init) and configures it before the view is made (VhApp.Configure); the views
 // read nothing else.
@@ -17,11 +17,9 @@ public abstract class VpnHoodAvaloniaAppBase : Application
     // The TV layout gets the TV's panel: Android TV lays out at 960x540 dp (a 1920x1080 panel at
     // xhdpi), the measure the web UI's TV layout is judged at too; a logical px here is a dp. Any
     // other gets the phone-shaped window the web UI's Windows head opens (AppResources.WindowSize).
-    // 360 wide is the narrow phone.
+    // The size is the content's; the window can be minimized, never resized or maximized.
     protected virtual int WindowWidth => VhApp.IsTvUi ? 960 : 400;
     protected virtual int WindowHeight => VhApp.IsTvUi ? 540 : 700;
-    protected virtual int MinWindowWidth => 360;
-    protected virtual int MinWindowHeight => 480;
 
     // The UI itself, made once the head has configured it.
     protected abstract Control CreateMainView();
@@ -44,8 +42,8 @@ public abstract class VpnHoodAvaloniaAppBase : Application
                     Title = VhApp.Features.AppName,
                     Width = WindowWidth,
                     Height = WindowHeight,
-                    MinWidth = MinWindowWidth,
-                    MinHeight = MinWindowHeight,
+                    CanResize = false,
+                    CanMaximize = false,
                     Background = ThemeBrush("BackgroundBrush"),
                     Content = CreateConfiguredMainView()
                 };

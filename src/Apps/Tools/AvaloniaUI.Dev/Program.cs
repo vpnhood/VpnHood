@@ -1,4 +1,7 @@
 ﻿using Avalonia;
+using VpnHood.App.Connect;
+using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
@@ -17,9 +20,11 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 // "--sample-key" starts it with a server profile, which the location pages need.
 // "--tv" runs it as a TV (AppFeatures.IsTv: the pairing row, the ring on arrival); without it, as
 // a phone or a desktop. "--connect" runs it as the Connect product - the violet look, no keys to
-// add (AppOptions.UiTheme, IsAddAccessKeySupported); without it, as the client. Connecting
-// needs the WinDivert driver, so a plain run shows the walk and the pairing; run elevated to
-// connect as well.
+// add (AppOptions.UiTheme, IsAddAccessKeySupported); without it, as the client. "--store google"
+// or "--store apple" runs it as Connect's build for that store - its premium tier, its sign-in and
+// its paywall - against a stand-in account (DevAccountProvider) that sells sample plans and charges
+// no one; with --tv, as Google TV or Apple TV shows them. Connecting needs the WinDivert driver, so a
+// plain run shows the walk and the pairing; run elevated to connect as well.
 internal static class Program
 {
     [STAThread]
@@ -27,7 +32,8 @@ internal static class Program
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
         var isTv = args.Contains("--tv");
-        var isConnect = args.Contains("--connect");
+        var store = ValueOf(args, "--store");
+        var isConnect = args.Contains("--connect") || store != null; // only Connect sells
 
         // "--storage <name>" gives the run its own settings, log and profiles, so a second window
         // can be driven while someone is using one - and a name never used before is a first run,
@@ -75,6 +81,17 @@ internal static class Program
             // row, which is a walk through a build no one ships. It reaches no server of ours, and
             // it is the key the debug heads already embed.
             AccessKeys = args.Contains("--sample-key") ? [ClientOptions.SampleAccessKey] : [],
+            // a store build: the store's account and tier as that head sets them - Play lets a buyer type
+            // a code in, the App Store does not - and no terms screen, which a store's install replaces;
+            // Google Play has no subscriptions screen on a TV
+            AccountProvider = store switch {
+                null => null,
+                "google" => new DevAccountProvider(StoreIds.GooglePlay, AuthProviders.Google, isSubscriptionManagementSupported: !isTv),
+                "apple" => new DevAccountProvider(StoreIds.AppStore, AuthProviders.Apple, isSubscriptionManagementSupported: true),
+                _ => throw new ArgumentException($"--store {store}: google or apple.")
+            },
+            Premium = store == null ? null : ConnectAppOptions.CreatePremium(allowImportAccessCode: store == "google", isPurchaseUrlSupported: false),
+            IsLicenseAgreementRequired = store == null,
             IpLocationZipAsset = new Asset(platformAssets, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(platformAssets, "assets/ui.zip")],
             // the page a paired phone opens, and this head's own web view: the Avalonia UI's browser build

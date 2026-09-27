@@ -45,12 +45,12 @@
           </Border>
 
           <!-- cloak mode: its two paragraphs, and OK where the page opened on its own
-               (FeaturePageOptions.IsPrompt) -->
+               (FeaturePageOptions.IsPrompt), at the end as a dialog's is -->
           <Border x:Name="CloakCard" Classes="card-on-grad" Padding="16,12" IsVisible="False">
             <StackPanel Spacing="12">
               <TextBlock x:Name="CloakText1" Classes="body-medium" TextWrapping="Wrap" LineHeight="25" />
               <TextBlock Classes="body-medium" TextWrapping="Wrap" LineHeight="25" Text="{Binding CloakModeDesc2, Source={x:Static res:Strings.Current}}" />
-              <Button x:Name="OkButton" Classes="pill btn1 block" Click="OnBackClick" IsVisible="False"
+              <Button x:Name="OkButton" Classes="dialog-btn" HorizontalAlignment="Right" Click="OnBackClick" IsVisible="False"
                       Content="{Binding Ok, Source={x:Static res:Strings.Current}}" />
             </StackPanel>
           </Border>

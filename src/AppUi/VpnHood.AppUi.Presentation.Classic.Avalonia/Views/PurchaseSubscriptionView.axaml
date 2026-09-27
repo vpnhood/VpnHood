@@ -5,25 +5,60 @@
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.PurchaseSubscriptionView">
   <!-- The web UI's purchase-subscription page: what premium brings, in a carousel; then the ways to
        it - the store's plans, or the reason the store cannot be reached; the website, where a link
-       can reach the person; a code; and the way back to a premium already owned. -->
+       can reach the person; a code; and the way back to a premium already owned. From 800 logical
+       px - every TV, a wide window - the ways stand beside the carousel, so a TV shows the plans
+       without scrolling; narrower, they follow it. -->
+  <UserControl.Styles>
+    <Style Selector="Grid.paywall">
+      <Setter Property="MaxWidth" Value="1152" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="controls|PremiumFeaturesCarousel.features-pane">
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="StackPanel.options-pane">
+      <Setter Property="Grid.Column" Value="2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <ContainerQuery Name="Page" Query="max-width:799">
+      <Style Selector="Grid.paywall">
+        <Setter Property="MaxWidth" Value="560" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+      </Style>
+      <Style Selector="controls|PremiumFeaturesCarousel.features-pane">
+        <Setter Property="Grid.ColumnSpan" Value="3" />
+      </Style>
+      <Style Selector="StackPanel.options-pane">
+        <Setter Property="Grid.Row" Value="1" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.ColumnSpan" Value="3" />
+        <Setter Property="Margin" Value="0,12,0,0" />
+      </Style>
+    </ContainerQuery>
+  </UserControl.Styles>
+
   <Border Classes="grad-sheet">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <DockPanel Classes="page">
-        <Grid DockPanel.Dock="Top" Margin="0,8,0,4" MinHeight="43">
+        <Grid x:Name="HeaderRow" DockPanel.Dock="Top" Margin="0,8,0,4" MinHeight="43">
           <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" Click="OnBackClick">
             <TextBlock Classes="mdi" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
           </Button>
         </Grid>
-        <StackPanel MaxWidth="560" Spacing="12">
-          <controls:PremiumFeaturesCarousel x:Name="Carousel" />
+        <!-- Grid.Row and Grid.Column come from the styles above, which the container query
+             rewrites for a narrow page; a local value here would beat the query. The two
+             options-panes share a cell: the catalog shows one or the other. -->
+        <!-- ReSharper disable Xaml.MissingGridIndex -->
+        <Grid Classes="paywall" ColumnDefinitions="*,32,*" RowDefinitions="Auto,Auto">
+          <controls:PremiumFeaturesCarousel x:Name="Carousel" Classes="features-pane" />
 
           <!-- the catalog, while it loads -->
-          <StackPanel x:Name="LoadingPanel" Spacing="10" HorizontalAlignment="Center" Margin="0,16">
+          <StackPanel x:Name="LoadingPanel" Classes="options-pane" Spacing="10" HorizontalAlignment="Center" Margin="0,16">
             <TextBlock Classes="spinner" FontSize="30" Text="{x:Static res:Mdi.Loading}" HorizontalAlignment="Center" />
             <TextBlock Classes="body-small" Opacity="0.6" Text="{Binding PleaseWait, Source={x:Static res:Strings.Current}}" />
           </StackPanel>
 
-          <StackPanel x:Name="OptionsPanel" Spacing="12" IsVisible="False">
+          <StackPanel x:Name="OptionsPanel" Classes="options-pane" Spacing="12" IsVisible="False">
 
             <!-- PurchaseByStore: the plans, the one chosen outlined; the small print; Purchase -->
             <StackPanel x:Name="StorePanel" Spacing="8" IsVisible="False">
@@ -85,7 +120,8 @@
               <TextBlock x:Name="RestoreText" Classes="body-small" Foreground="{StaticResource WhiteBrush}" />
             </Button>
           </StackPanel>
-        </StackPanel>
+        </Grid>
+        <!-- ReSharper restore Xaml.MissingGridIndex -->
       </DockPanel>
     </ScrollViewer>
   </Border>

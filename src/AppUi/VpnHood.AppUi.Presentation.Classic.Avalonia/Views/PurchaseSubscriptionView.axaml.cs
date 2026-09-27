@@ -32,6 +32,8 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         _vpnProfileId = vpnProfileId;
         InitializeComponent();
         BackButton.IsVisible = !VhApp.IsTvUi;
+        // on a TV the row holds nothing and would only push the centred page down
+        HeaderRow.IsVisible = BackButton.IsVisible;
         TermsLink.IsVisible = VhApp.Features.TermsOfUseUrl != null;
         PrivacyLink.IsVisible = VhApp.Features.PrivacyPolicyUrl != null;
         LinksDot.IsVisible = TermsLink.IsVisible && PrivacyLink.IsVisible;

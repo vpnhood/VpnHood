@@ -44,6 +44,9 @@ public class VpnProfileService
     {
         VpnProfilesFilePath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
         _appFeatures = appFeatures;
+#pragma warning disable CS0618 // Type or member is obsolete
+        ClientProfileMigration.MigrateProfiles(VpnProfilesFilePath);
+#pragma warning restore CS0618 // Type or member is obsolete
         _vpnProfiles = [.. Load()];
     }
 

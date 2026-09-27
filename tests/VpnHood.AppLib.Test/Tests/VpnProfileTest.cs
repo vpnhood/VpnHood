@@ -307,6 +307,36 @@ public class VpnProfileTest : TestAppBase
         Assert.IsNotNull(app2.VpnProfileService.GetToken(token2.TokenId));
     }
 
+    // Migration (added 2026-09-26): remove with ClientProfileMigration.
+    [TestMethod]
+    public async Task Load_files_saved_before_the_VpnProfile_rename()
+    {
+        await using var app1 = TestAppHelper.CreateClientApp();
+        var vpnProfile = app1.VpnProfileService.ImportAccessKey(CreateToken().ToAccessKey());
+        app1.VpnProfileService.Update(vpnProfile.VpnProfileId,
+            new VpnProfileUpdateParams { VpnProfileName = new Patch<string?>("My Server") });
+        app1.UserSettings.VpnProfileId = vpnProfile.VpnProfileId;
+        app1.SettingsService.Save();
+        await app1.DisposeAsync();
+
+        // write both files the way the releases before the rename did
+        string[] filePaths = [
+            Path.Combine(app1.StorageFolderPath, "settings.json"),
+            Path.Combine(app1.StorageFolderPath, "profiles", "vpn_profiles.json")
+        ];
+        foreach (var filePath in filePaths) {
+            File.WriteAllText(filePath, File.ReadAllText(filePath)
+                .Replace("\"VpnProfileId\"", "\"ClientProfileId\"")
+                .Replace("\"VpnProfileName\"", "\"ClientProfileName\""));
+            Assert.Contains("\"ClientProfileId\"", File.ReadAllText(filePath));
+        }
+
+        var appOptions = TestAppHelper.CreateAppOptions(storagePath: app1.StorageFolderPath);
+        await using var app2 = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        Assert.AreEqual("My Server", app2.VpnProfileService.FindById(vpnProfile.VpnProfileId)?.VpnProfileName);
+        Assert.AreEqual(vpnProfile.VpnProfileId, app2.UserSettings.VpnProfileId);
+    }
+
     [TestMethod]
     public async Task Default_ServerLocation()
     {

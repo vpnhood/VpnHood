@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.Settings;
+using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -34,6 +35,10 @@ public class AppSettingsService
     public AppSettingsService(string storagePath, Uri? remoteSettingsUrl)
     {
         _storagePath = storagePath;
+#pragma warning disable CS0618 // Type or member is obsolete
+        ClientProfileMigration.MigrateSettings(AppSettingsFilePath);
+#pragma warning restore CS0618 // Type or member is obsolete
+
         // A file that cannot be read is replaced by defaults - a new client id among them - so the
         // failure must at least be in the log, or a device that keeps forgetting its settings has
         // nothing to show for it.

@@ -1,11 +1,16 @@
-﻿using Avalonia;
+﻿using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.Branding;
 using VpnHood.AppLib.Api;
+using VpnHood.AppUi.Common;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
@@ -20,6 +25,9 @@ public static class AvaloniaDesktopHost
 {
     private static ClassicDesktopStyleApplicationLifetime? _lifetime;
     private static Window? _window;
+
+    [DllImport("DwmApi")]
+    private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
 
     // VpnHoodApp must be up; its web host comes up by itself when a phone pairs. A run that starts
     // in the background (the head's /nowindow) keeps the window back until ShowMainWindow.
@@ -42,6 +50,10 @@ public static class AvaloniaDesktopHost
     {
         AvaloniaUiHosting.StartAsync<TUi>(api, uiAssetProvider, CancellationToken.None).GetAwaiter().GetResult();
 
+        // the colours the OS chrome takes, out of the UI's store
+        var resources = new AppResources();
+        AppBranding.LoadAsync(resources, uiAssetProvider, VhApp.Features.UiTheme).GetAwaiter().GetResult();
+
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
             Args = args,
             ShutdownMode = ShutdownMode.OnExplicitShutdown
@@ -50,6 +62,8 @@ public static class AvaloniaDesktopHost
 
         var window = lifetime.MainWindow ??
                      throw new InvalidOperationException("The UI has made no main window.");
+        if (OperatingSystem.IsWindows() && resources.Colors.WindowBackgroundColor is { } titleBarColor)
+            SetTitleBarColor(window, titleBarColor);
         if (exitOnClose) {
             window.Closed += (_, _) => lifetime.Shutdown();
         }
@@ -91,6 +105,19 @@ public static class AvaloniaDesktopHost
             return;
 
         Dispatcher.UIThread.Post(() => lifetime.Shutdown());
+    }
+
+    // Windows 11 draws the title bar in the given colour rather than the person's accent; Windows 10
+    // keeps its own.
+    [SupportedOSPlatform("windows")]
+    private static void SetTitleBarColor(Window window, VhColor color)
+    {
+        if (window.TryGetPlatformHandle() is not { } handle)
+            return;
+
+        const int captionColor = 35;
+        var attrValue = new[] { (color.B << 16) | (color.G << 8) | color.R };
+        DwmSetWindowAttribute(handle.Handle, captionColor, attrValue, attrValue.Length * 4);
     }
 
     private static AppBuilder BuildAvaloniaApp<TUi>()

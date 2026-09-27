@@ -209,7 +209,7 @@ public partial class AccountView : UserControl, IPage
 
         var profileId = VhApp.VpnProfileId;
         if (profileId == null) {
-            _premiumCode = Strings.Current.CouldNotGetClientProfileId;
+            _premiumCode = Strings.Current.CouldNotGetVpnProfileId;
             return null;
         }
 

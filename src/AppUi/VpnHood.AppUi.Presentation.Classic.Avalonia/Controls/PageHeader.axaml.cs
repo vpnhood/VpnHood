@@ -2,6 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
@@ -15,6 +16,7 @@ public partial class PageHeader : UserControl
     public PageHeader()
     {
         InitializeComponent();
+        BackButton.IsVisible = !VhApp.IsTvUi;
     }
 
     public string Title {
@@ -29,7 +31,8 @@ public partial class PageHeader : UserControl
             TitleBlock.Text = Title;
     }
 
-    // for a page that has nothing else to land on
+    // for a page that has nothing else to land on; on a TV, where there is no back button, such a
+    // page takes no focus and the remote's Back leaves it
     public void FocusBack()
     {
         BackButton.LandFocus();

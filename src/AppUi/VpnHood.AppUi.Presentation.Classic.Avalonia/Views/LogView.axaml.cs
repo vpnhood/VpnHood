@@ -18,11 +18,11 @@ public partial class LogView : UserControl, IPage
         _ = Load();
     }
 
-    // The back button is the only control here; the keys below do the scrolling a remote would
-    // otherwise have nothing to aim at.
+    // The page takes the focus itself, so the keys below reach it: the log has no control to aim
+    // at, and a TV has no back button either.
     public void FocusDefault()
     {
-        Header.FocusBack();
+        Focus();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

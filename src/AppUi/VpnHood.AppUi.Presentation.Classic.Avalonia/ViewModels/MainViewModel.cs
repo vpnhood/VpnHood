@@ -774,7 +774,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         var profiles = VhApp.VpnProfileInfos;
         if (profiles.Count == 0)
-            return Strings.Current.NoClientProfileAvailable;
+            return Strings.Current.NoVpnProfileAvailable;
 
         return profiles is [{ LocationInfos.Count: < 2 }]
             ? Strings.Current.NoAdditionalLocationAvailable

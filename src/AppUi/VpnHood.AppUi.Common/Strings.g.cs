@@ -1150,8 +1150,8 @@ public sealed partial class Strings
     /// <summary>You are already connected to the selected location.</summary>
     public string AlreadyConnectedToLocation => Get("ALREADY_CONNECTED_TO_LOCATION");
 
-    /// <summary>Could not find the client profile ID of the selected location. If you receive this message again, please let us know.</summary>
-    public string ClientProfileIdNotFoundMessage => Get("CLIENT_PROFILE_ID_NOT_FOUND_MESSAGE");
+    /// <summary>Could not find the VPN profile ID of the selected location. If you receive this message again, please let us know.</summary>
+    public string VpnProfileIdNotFoundMessage => Get("VPN_PROFILE_ID_NOT_FOUND_MESSAGE");
 
     /// <summary>or</summary>
     public string Or => Get("OR");
@@ -1244,7 +1244,7 @@ public sealed partial class Strings
     public string NoAdditionalLocationAvailable => Get("NO_ADDITIONAL_LOCATION_AVAILABLE");
 
     /// <summary>Ooops! Nothing is available. Contact support if you receive this message again.</summary>
-    public string NoClientProfileAvailable => Get("NO_CLIENT_PROFILE_AVAILABLE");
+    public string NoVpnProfileAvailable => Get("NO_VPN_PROFILE_AVAILABLE");
 
     /// <summary>Please stay in the app until the ad finishes. If you leave the app, your session will not be extended.</summary>
     public string ExtendByRewardedAdNote => Get("EXTEND_BY_REWARDED_AD_NOTE");
@@ -2023,8 +2023,8 @@ public sealed partial class Strings
     /// <summary>Use this code to get premium on your other devices.</summary>
     public string UseCodeOnOtherDevices => Get("USE_CODE_ON_OTHER_DEVICES");
 
-    /// <summary>Could not get client profile id.</summary>
-    public string CouldNotGetClientProfileId => Get("COULD_NOT_GET_CLIENT_PROFILE_ID");
+    /// <summary>Could not get VPN profile id.</summary>
+    public string CouldNotGetVpnProfileId => Get("COULD_NOT_GET_VPN_PROFILE_ID");
 
     /// <summary>Remove current premium code</summary>
     public string RemoveCurrentPremiumCode => Get("REMOVE_CURRENT_PREMIUM_CODE");

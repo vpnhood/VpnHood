@@ -15,12 +15,13 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 // rows: the panel a control template puts around its content presenter, drawing over it. A press
 // starts a circle of the text colour under the pointer, its radius the half-diagonal of the
 // control, at 30% of its size and transparent: over 250ms it grows to full while it slides to the
-// centre, and in 100ms it comes to its opacity (0.25 of the colour; a style doubles it on a light
-// button, as Vuetify's overlay multiplier does). The release fades it out in 300ms, never before
-// 250ms after it started. A finger's ripple waits 80ms, so a scroll that starts on a row does not
-// flash one (a tap released sooner shows it on the release); Enter and Space ripple from the
-// centre. The events are taken on the templated parent, with the pointer captured there on the
-// press, so the release and a scroll's capture loss arrive whatever the pointer was over.
+// centre, and in 100ms it comes to its opacity (Vuetify's 0.25 of the colour unless the theme says
+// otherwise; doubled on a light button, as Vuetify's overlay multiplier does). The release fades
+// it out in 300ms, never before 250ms after it started. A finger's ripple waits 80ms, so a scroll
+// that starts on a row does not flash one (a tap released sooner shows it on the release); Enter
+// and Space ripple from the centre. The events are taken on the templated parent, with the pointer
+// captured there on the press, so the release and a scroll's capture loss arrive whatever the
+// pointer was over.
 public class RippleEffect : Panel
 {
     public static readonly StyledProperty<IBrush?> FillProperty =

@@ -5,7 +5,7 @@
   <!-- The web UI's SettingsItem: a card that opens a page - the title, a chip saying its state or
        its choice, a warning chip when its posture can leak, the crown when it is sold, the subtitle
        and the chevron. The whole card is the button, and the ring is its. -->
-  <Button x:Name="Card" Classes="card-row" Click="OnCardClick" Margin="0,0,0,12">
+  <Button x:Name="Card" Classes="card-row link" Click="OnCardClick" Margin="0,0,0,12">
     <StackPanel Spacing="4">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Orientation="Horizontal" Spacing="8">

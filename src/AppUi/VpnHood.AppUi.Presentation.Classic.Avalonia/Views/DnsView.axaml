@@ -14,7 +14,7 @@
         <TextBlock Classes="card-subtitle" Margin="12,8,12,20" Text="{Binding DnsDesc, Source={x:Static res:Strings.Current}}" />
 
         <!-- Private DNS: the device's setting, read here and set in its own page -->
-        <Button x:Name="PrivateDnsCard" Classes="card-row" Margin="0,0,0,12" Click="OnPrivateDnsClick">
+        <Button x:Name="PrivateDnsCard" Classes="card-row link" Margin="0,0,0,12" Click="OnPrivateDnsClick">
           <StackPanel Spacing="4">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Orientation="Horizontal" Spacing="8">

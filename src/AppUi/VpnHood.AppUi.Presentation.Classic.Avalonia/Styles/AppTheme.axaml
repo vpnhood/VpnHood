@@ -26,7 +26,8 @@
     <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
 
     <!-- The Fluent button template (one content presenter) with v-ripple around the presenter:
-         every button and toggle button takes it below, the location rows their own. -->
+         every button and toggle button takes it below but the card rows, the location rows their
+         own. -->
     <ControlTemplate x:Key="RippleButtonTemplate" TargetType="Button">
       <controls:RippleEffect Fill="{TemplateBinding Foreground}"
                              CornerRadius="{TemplateBinding CornerRadius}"
@@ -44,6 +45,30 @@
                           HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                           VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
       </controls:RippleEffect>
+    </ControlTemplate>
+
+    <!-- A card row's: the presenter without the ripple - a row that opens a page hands it over
+         before a ripple has grown, and a ripple cut off mid-growth reads as a blink - and over it
+         the hover wash and the press's brightness, which the card-row styles light. -->
+    <ControlTemplate x:Key="CardRowTemplate" TargetType="Button">
+      <Panel>
+        <ContentPresenter x:Name="PART_ContentPresenter"
+                          Background="{TemplateBinding Background}"
+                          BorderBrush="{TemplateBinding BorderBrush}"
+                          BorderThickness="{TemplateBinding BorderThickness}"
+                          CornerRadius="{TemplateBinding CornerRadius}"
+                          Foreground="{TemplateBinding Foreground}"
+                          Content="{TemplateBinding Content}"
+                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                          Padding="{TemplateBinding Padding}"
+                          RecognizesAccessKey="True"
+                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+        <Border x:Name="HoverLayer" Background="{TemplateBinding Foreground}"
+                CornerRadius="{TemplateBinding CornerRadius}" IsHitTestVisible="False" />
+        <controls:BrightnessLayer x:Name="PressLayer" CornerRadius="{TemplateBinding CornerRadius}"
+                                  IsHitTestVisible="False" />
+      </Panel>
     </ControlTemplate>
   </Styles.Resources>
 
@@ -703,7 +728,8 @@
   </Style>
 
   <!-- A row of a list (v-list-item): a button the width of its list, a rule under it, its ripple.
-       A card row (SettingsItem, ConfigCard with a click) is the same shape with the card's radius. -->
+       A card row (SettingsItem, ConfigCard with a click) is the same shape with the card's radius
+       and no ripple. -->
   <Style Selector="Button.list-item">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -723,6 +749,7 @@
     <Setter Property="BorderThickness" Value="0" />
   </Style>
   <Style Selector="Button.card-row">
+    <Setter Property="Template" Value="{StaticResource CardRowTemplate}" />
     <Setter Property="Background" Value="{StaticResource ConfigCardBgBrush}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -736,6 +763,27 @@
   </Style>
   <Style Selector="Button.card-row:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Opacity" Value="0.5" />
+  </Style>
+  <!-- A row that opens a page (link) answers the pointer, and no other row does: a 4% wash of its
+       text colour while over it, and the whole card, words and chips too, 35% brighter while held -
+       at once, so it shows before the page goes rather than racing it. Fluent shrinks a pressed
+       button; a card does not. -->
+  <Style Selector="Button.card-row:pressed">
+    <Setter Property="RenderTransform" Value="{x:Null}" />
+  </Style>
+  <Style Selector="Button.card-row /template/ Border#HoverLayer">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="SineEaseInOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.card-row.link:pointerover /template/ Border#HoverLayer">
+    <Setter Property="Opacity" Value="0.04" />
+  </Style>
+  <Style Selector="Button.card-row.link:pressed /template/ controls|BrightnessLayer#PressLayer">
+    <Setter Property="Factor" Value="1.35" />
   </Style>
   <!-- a row on the gradient sheets (card-on-grad-bg at 30%) -->
   <Style Selector="Button.card-on-grad">

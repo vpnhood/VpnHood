@@ -41,14 +41,13 @@ public partial class SignInDialog : DialogBase
                 break;
         }
 
-        // on a TV the email form is not offered - there is nothing to type on - and the phone stands
-        // in for it; elsewhere the form is a step away
+        // the email form a step away; a TV adds the phone under it, for a password too long to type
+        // with a remote
         var hasPassword = VhApp.HasPasswordSignIn;
-        var isPhoneForEmail = VhApp.IsTvUi && hasPassword;
         OrRow.IsVisible = _primaryProviderId != null && hasPassword;
-        PhoneButton.IsVisible = isPhoneForEmail;
-        EmailButton.IsVisible = hasPassword && !isPhoneForEmail;
+        EmailButton.IsVisible = hasPassword;
         EmailScopeHint.IsVisible = EmailButton.IsVisible;
+        PhoneButton.IsVisible = hasPassword && VhApp.IsTvUi;
 
         EmailBox.PlaceholderText = s.Email;
         PasswordBox.PlaceholderText = s.Password;
@@ -57,10 +56,11 @@ public partial class SignInDialog : DialogBase
         ProviderHint.Text = s.SignInProviderHint(PrimaryProviderName());
         // the one place the account website appears - where a browser can open it
         ForgotButton.IsVisible = MainView.IsExternalLinkUsable && VhApp.Features.AccountWebsiteUrl != null;
-        BackButton.IsVisible = _primaryProviderId != null;
-
-        // with no identity provider to choose, the dialog opens on the form itself
-        if (_primaryProviderId == null)
+        // with nothing to choose - no identity provider, and no phone beside the form - the dialog
+        // opens on the form itself, with no chooser to go back to
+        var hasChoice = _primaryProviderId != null || PhoneButton.IsVisible;
+        BackButton.IsVisible = hasChoice;
+        if (!hasChoice)
             ShowStep(PasswordStep);
     }
 
@@ -105,7 +105,6 @@ public partial class SignInDialog : DialogBase
     {
         if (StartStep.IsVisible) {
             if (PrimaryButton.IsVisible) PrimaryButton.LandFocus();
-            else if (PhoneButton.IsVisible) PhoneButton.LandFocus();
             else if (EmailButton.IsVisible) EmailButton.LandFocus();
             else StartCancelButton.LandFocus();
         }

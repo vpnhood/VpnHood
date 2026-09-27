@@ -110,19 +110,13 @@ public partial class HomeView : UserControl, IPage
         _host.Navigate(new ExtendSessionView(_host));
     }
 
-    // The account: signed in, its page; signed out, the sign-in - the chooser where there is one,
-    // the phone where the only way is the email form a remote cannot fill (index.vue's
-    // onAccountClick).
+    // The account: signed in, its page; signed out, the sign-in - the dialog where there is a choice,
+    // as any build with the email form has, else the store's own.
     private async void OnAccountClick(object? sender, RoutedEventArgs e)
     {
         try {
             if (VhApp.Account != null) {
                 _host.Navigate(new AccountView(_host));
-                return;
-            }
-
-            if (VhApp.PrimaryProviderId == null) {
-                _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintSignIn));
                 return;
             }
 

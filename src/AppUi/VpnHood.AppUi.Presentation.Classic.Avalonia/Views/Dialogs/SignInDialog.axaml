@@ -4,8 +4,9 @@
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.SignInDialog">
   <!-- The web UI's SignInDialog: the store's sign-in as the one prominent button, the portal's own
-       email and password beneath it - on a TV, the phone stands in for the form - then the second
-       factor in here, and the new backup code shown exactly once. -->
+       email and password beneath it - on a TV, the phone under that, for a password too long to
+       type with a remote - then the second factor in here, and the new backup code shown exactly
+       once. -->
   <Border Classes="dialog" MaxWidth="420">
     <StackPanel Spacing="12">
 
@@ -25,12 +26,6 @@
           <TextBlock Grid.Column="1" Classes="body-small disabled" Margin="12,0" Text="{Binding Or, Source={x:Static res:Strings.Current}}" />
           <Border Grid.Column="2" Classes="divider" VerticalAlignment="Center" />
         </Grid>
-        <Button x:Name="PhoneButton" Classes="outlined pill block" Height="44" Click="OnPhoneClick" IsVisible="False">
-          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-            <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.CellphoneArrowDown}" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding SignInOnYourPhone, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
         <Button x:Name="EmailButton" Classes="outlined pill block" Height="44" Click="OnEmailClick" IsVisible="False">
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
             <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.EmailOutline}" VerticalAlignment="Center" />
@@ -39,6 +34,12 @@
         </Button>
         <TextBlock x:Name="EmailScopeHint" Classes="body-small disabled" TextWrapping="Wrap" TextAlignment="Center" IsVisible="False"
                    Text="{Binding SignInEmailScopeHint, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="PhoneButton" Classes="outlined pill block" Height="44" Click="OnPhoneClick" IsVisible="False">
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.CellphoneArrowDown}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding SignInOnYourPhone, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
         <Button x:Name="StartCancelButton" Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick"
                 Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
@@ -48,8 +49,11 @@
         <TextBlock Classes="dialog-title" Text="{Binding SignInWithEmail, Source={x:Static res:Strings.Current}}" />
         <TextBlock Classes="dialog-text" Text="{Binding SignInWithEmailDesc, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="ProviderHint" Classes="body-small disabled" TextWrapping="Wrap" IsVisible="False" />
-        <TextBox x:Name="EmailBox" Classes="outlined" TextChanged="OnFieldChanged" />
-        <TextBox x:Name="PasswordBox" Classes="outlined" PasswordChar="•" TextChanged="OnFieldChanged" KeyDown="OnPasswordKeyDown" />
+        <!-- told to the on-screen keyboard: an email layout, and a password it neither suggests
+             nor learns -->
+        <TextBox x:Name="EmailBox" Classes="outlined" TextInputOptions.ContentType="Email" TextChanged="OnFieldChanged" />
+        <TextBox x:Name="PasswordBox" Classes="outlined" PasswordChar="•" TextInputOptions.ContentType="Password"
+                 TextChanged="OnFieldChanged" KeyDown="OnPasswordKeyDown" />
         <Button x:Name="SubmitPasswordButton" Classes="pill block" Height="44" Background="{StaticResource HighlightBrush}" IsEnabled="False"
                 Click="OnSubmitPasswordClick" Content="{Binding SignIn, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="PasswordError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />

@@ -109,7 +109,8 @@ public class RippleEffect : Panel
 
     private void OnHostPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_host is not { IsEffectivelyEnabled: true } host || _layer.IsHolding ||
+        // a ripple of no opacity is none: a style turns the ripple off with it
+        if (_host is not { IsEffectivelyEnabled: true } host || _layer.IsHolding || RippleOpacity <= 0 ||
             !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             return;
 
@@ -140,7 +141,7 @@ public class RippleEffect : Panel
 
     private void OnHostKeyDown(object? sender, KeyEventArgs e)
     {
-        if (_keyHeld || e.Key is not (Key.Enter or Key.Space) || _layer.IsHolding ||
+        if (_keyHeld || e.Key is not (Key.Enter or Key.Space) || _layer.IsHolding || RippleOpacity <= 0 ||
             _host is not { IsEffectivelyEnabled: true })
             return;
 

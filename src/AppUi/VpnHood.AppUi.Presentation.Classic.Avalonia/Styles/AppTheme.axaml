@@ -26,8 +26,8 @@
     <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
 
     <!-- The Fluent button template (one content presenter) with v-ripple around the presenter:
-         every button and toggle button takes it below but the card rows, the location rows their
-         own. -->
+         every button and toggle button takes it below; the rows take RowTemplate, the same with a
+         light for the hover. -->
     <ControlTemplate x:Key="RippleButtonTemplate" TargetType="Button">
       <controls:RippleEffect Fill="{TemplateBinding Foreground}"
                              CornerRadius="{TemplateBinding CornerRadius}"
@@ -47,11 +47,12 @@
       </controls:RippleEffect>
     </ControlTemplate>
 
-    <!-- A card row's: the presenter without the ripple - a row that opens a page hands it over
-         before a ripple has grown, and a ripple cut off mid-growth reads as a blink - and over it
-         the hover wash and the press's brightness, which the card-row styles light. -->
-    <ControlTemplate x:Key="CardRowTemplate" TargetType="Button">
-      <Panel>
+    <!-- A row's - a card row, a list's, a radio's, a home row: the presenter with v-ripple around it
+         and, under the ripple, the light a hover fades in. -->
+    <ControlTemplate x:Key="RowTemplate" TargetType="Button">
+      <controls:RippleEffect Fill="{TemplateBinding Foreground}"
+                             CornerRadius="{TemplateBinding CornerRadius}"
+                             BorderThickness="{TemplateBinding BorderThickness}">
         <ContentPresenter x:Name="PART_ContentPresenter"
                           Background="{TemplateBinding Background}"
                           BorderBrush="{TemplateBinding BorderBrush}"
@@ -64,11 +65,9 @@
                           RecognizesAccessKey="True"
                           HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                           VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-        <Border x:Name="HoverLayer" Background="{TemplateBinding Foreground}"
-                CornerRadius="{TemplateBinding CornerRadius}" IsHitTestVisible="False" />
-        <controls:BrightnessLayer x:Name="PressLayer" CornerRadius="{TemplateBinding CornerRadius}"
+        <controls:BrightnessLayer x:Name="HoverLight" CornerRadius="{TemplateBinding CornerRadius}"
                                   IsHitTestVisible="False" />
-      </Panel>
+      </controls:RippleEffect>
     </ControlTemplate>
   </Styles.Resources>
 
@@ -232,6 +231,26 @@
     <Setter Property="Cursor" Value="Arrow" />
   </Style>
 
+  <!-- The rows - card rows, list rows, radio rows, the home's rows - take RowTemplate: under the
+       pointer a row fades 35% brighter, words and chips too, and a click ripples. Fluent shrinks a
+       pressed button; a row does not. -->
+  <Style Selector="Button.card-row, Button.list-item, Button.option-row, Button.drawer-item, Button.config-item, Button.profile-header, ToggleButton.group-header, ToggleButton.debug-item">
+    <Setter Property="Template" Value="{StaticResource RowTemplate}" />
+  </Style>
+  <Style Selector="Button.card-row:pressed, Button.list-item:pressed, Button.option-row:pressed, Button.drawer-item:pressed, Button.config-item:pressed, Button.profile-header:pressed, ToggleButton.group-header:pressed, ToggleButton.debug-item:pressed">
+    <Setter Property="RenderTransform" Value="{x:Null}" />
+  </Style>
+  <Style Selector=":is(Button) /template/ controls|BrightnessLayer#HoverLight, ListBoxItem /template/ controls|BrightnessLayer#HoverLight">
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Factor" Duration="0:0:0.2" Easing="SineEaseInOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=":is(Button):pointerover /template/ controls|BrightnessLayer#HoverLight, ListBoxItem:pointerover /template/ controls|BrightnessLayer#HoverLight">
+    <Setter Property="Factor" Value="1.35" />
+  </Style>
+
   <!-- #connectBtn: a 180x40 pill, cream on the way in, purple once connected, 0.4s between. -->
   <Style Selector="Button.connect-btn">
     <Setter Property="Background" Value="{StaticResource ConnectBtnBrush}" />
@@ -366,7 +385,6 @@
     <Setter Property="MinWidth" Value="320" />
   </Style>
   <Style Selector="ToggleButton.debug-item">
-    <Setter Property="Template" Value="{StaticResource RippleButtonTemplate}" />
     <Setter Property="FocusAdorner" Value="{x:Null}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="2" />
@@ -382,7 +400,7 @@
     <Setter Property="Foreground" Value="{StaticResource OnBackgroundBrush}" />
   </Style>
   <Style Selector="ToggleButton.debug-item:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#14FFFFFF" />
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{StaticResource OnBackgroundBrush}" />
   </Style>
   <Style Selector="ToggleButton.debug-item:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
@@ -467,7 +485,6 @@
   <!-- A server's row in the client's list (ExpansionPanel.vue's title row): the mark, the name and
        the +/- that opens it. The whole row is the button, as the panel's title is there. -->
   <Style Selector="Button.profile-header">
-    <Setter Property="Template" Value="{StaticResource RippleButtonTemplate}" />
     <Setter Property="FocusAdorner" Value="{x:Null}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="2" />
@@ -506,7 +523,6 @@
 
   <!-- a location group's header: v-list-group's activator, the title with a rule and a chevron -->
   <Style Selector="ToggleButton.group-header">
-    <Setter Property="Template" Value="{StaticResource RippleButtonTemplate}" />
     <Setter Property="FocusAdorner" Value="{x:Null}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
@@ -539,9 +555,10 @@
     <Setter Property="RenderTransform" Value="rotate(180deg)" />
   </Style>
 
-  <!-- The location list: v-list-item rows separated by a rule, each with its ripple; the active one
-       in the active colour; the focused one wears the ring. The Fluent selection colours and its
-       selection pipe are not wanted, so the rows take their own template. -->
+  <!-- The location list: v-list-item rows separated by a rule, each with the other rows' hover
+       light and ripple; the active one in the active colour; the focused one wears the ring. The
+       Fluent selection colours and its selection pipe are not wanted, so the rows take their own
+       template. -->
   <Style Selector="ListBox.locations">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="0" />
@@ -570,6 +587,8 @@
                             Padding="{TemplateBinding Padding}"
                             HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                             VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          <controls:BrightnessLayer x:Name="HoverLight" CornerRadius="{TemplateBinding CornerRadius}"
+                                    IsHitTestVisible="False" />
         </controls:RippleEffect>
       </ControlTemplate>
     </Setter>
@@ -584,7 +603,7 @@
     <Setter Property="Background" Value="Transparent" />
   </Style>
   <Style Selector="ListBox.locations ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#14FFFFFF" />
+    <Setter Property="Background" Value="Transparent" />
   </Style>
   <Style Selector="ListBox.locations ListBoxItem:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="#14FFFFFF" />
@@ -727,9 +746,8 @@
     <Setter Property="MinHeight" Value="0" />
   </Style>
 
-  <!-- A row of a list (v-list-item): a button the width of its list, a rule under it, its ripple.
-       A card row (SettingsItem, ConfigCard with a click) is the same shape with the card's radius
-       and no ripple. -->
+  <!-- A row of a list (v-list-item): a button the width of its list, a rule under it. A card row
+       (SettingsItem, ConfigCard with a click) is the same shape with the card's radius. -->
   <Style Selector="Button.list-item">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -742,14 +760,10 @@
     <Setter Property="BorderThickness" Value="2" />
     <Setter Property="Background" Value="#14FFFFFF" />
   </Style>
-  <Style Selector="Button.list-item:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#14FFFFFF" />
-  </Style>
   <Style Selector="Button.list-item.last">
     <Setter Property="BorderThickness" Value="0" />
   </Style>
   <Style Selector="Button.card-row">
-    <Setter Property="Template" Value="{StaticResource CardRowTemplate}" />
     <Setter Property="Background" Value="{StaticResource ConfigCardBgBrush}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -764,26 +778,12 @@
   <Style Selector="Button.card-row:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Opacity" Value="0.5" />
   </Style>
-  <!-- A row that opens a page (link) answers the pointer, and no other row does: a 4% wash of its
-       text colour while over it, and the whole card, words and chips too, 35% brighter while held -
-       at once, so it shows before the page goes rather than racing it. Fluent shrinks a pressed
-       button; a card does not. -->
-  <Style Selector="Button.card-row:pressed">
-    <Setter Property="RenderTransform" Value="{x:Null}" />
+  <!-- A card that only holds a switch answers neither the pointer nor a click: its switch does. -->
+  <Style Selector="Button.card-row:not(.link):pointerover /template/ controls|BrightnessLayer#HoverLight">
+    <Setter Property="Factor" Value="1" />
   </Style>
-  <Style Selector="Button.card-row /template/ Border#HoverLayer">
-    <Setter Property="Opacity" Value="0" />
-    <Setter Property="Transitions">
-      <Transitions>
-        <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="SineEaseInOut" />
-      </Transitions>
-    </Setter>
-  </Style>
-  <Style Selector="Button.card-row.link:pointerover /template/ Border#HoverLayer">
-    <Setter Property="Opacity" Value="0.04" />
-  </Style>
-  <Style Selector="Button.card-row.link:pressed /template/ controls|BrightnessLayer#PressLayer">
-    <Setter Property="Factor" Value="1.35" />
+  <Style Selector="Button.card-row:not(.link) /template/ controls|RippleEffect">
+    <Setter Property="RippleOpacity" Value="0" />
   </Style>
   <!-- a row on the gradient sheets (card-on-grad-bg at 30%) -->
   <Style Selector="Button.card-on-grad">
@@ -1094,9 +1094,6 @@
     <Setter Property="Opacity" Value="0.8" />
   </Style>
   <Style Selector="Button.drawer-item:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#14FFFFFF" />
-  </Style>
-  <Style Selector="Button.drawer-item:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="#14FFFFFF" />
   </Style>
 

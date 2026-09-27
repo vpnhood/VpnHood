@@ -1,7 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:res="using:VpnHood.AppUi.Common"
-             xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.PremiumFeaturesCarousel">
   <!-- The web UI's PremiumFeaturesCarousel: one premium feature at a time - its picture, name and
        line - with the arrows either side and a dot per slide beneath. Its 380 is the web UI's design
@@ -29,28 +28,26 @@
     </Style>
   </UserControl.Styles>
   <Grid RowDefinitions="*,50" Height="380" MaxWidth="560">
-    <Grid ColumnDefinitions="Auto,*,Auto">
-      <Button x:Name="PrevButton" Classes="icon" VerticalAlignment="Center" Click="OnPrevClick">
-        <TextBlock Classes="mdi highlight" FontSize="28" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
-      </Button>
-      <Grid Grid.Column="1" RowDefinitions="*,Auto,Auto" Margin="8,0">
-        <!-- One drawing at the launch pad's proportions, scaled as a whole, so the smoke stays on the
-             pad's centre and the rocket above it however far the picture yields. -->
-        <Viewbox x:Name="RocketBox" IsVisible="False" MaxHeight="335" Margin="0,0,0,16">
-          <Grid Width="183" Height="220">
-            <Image ui:AppImage.Source="images/rocket-bg.webp" Stretch="Uniform" />
-            <Image x:Name="Rocket" Classes="floating" ui:AppImage.Source="images/rocket.webp" Stretch="Uniform" VerticalAlignment="Top" Height="123" Margin="0,20,0,0" />
-            <Image ui:AppImage.Source="images/rocket-smoke.webp" Stretch="Uniform" VerticalAlignment="Top" Height="77" Margin="0,108,0,0" />
-          </Grid>
-        </Viewbox>
-        <Image x:Name="SlideImage" Grid.Row="0" MaxHeight="200" Stretch="Uniform" Margin="0,0,0,20" />
-        <TextBlock x:Name="TitleText" Grid.Row="1" Classes="h3" TextAlignment="Center" Margin="0,0,0,8" />
-        <TextBlock x:Name="DescriptionText" Grid.Row="2" Classes="label-large" Opacity="0.7" TextWrapping="Wrap" TextAlignment="Center" Margin="12,0" />
-      </Grid>
-      <Button x:Name="NextButton" Grid.Column="2" Classes="icon" VerticalAlignment="Center" Click="OnNextClick">
-        <TextBlock Classes="mdi highlight" FontSize="28" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
-      </Button>
-    </Grid>
+    <!-- the web UI's v-window-x-transition: the two slides move together, 0.3s on Vuetify's curve,
+         across the carousel's whole width - the arrows lie over them, as the web UI's do -->
+    <TransitioningContentControl x:Name="SlideHost" ClipToBounds="True">
+      <TransitioningContentControl.PageTransition>
+        <PageSlide Duration="0:0:0.3" Orientation="Horizontal">
+          <PageSlide.SlideInEasing>
+            <SplineEasing X1="0.25" Y1="0.8" X2="0.5" Y2="1" />
+          </PageSlide.SlideInEasing>
+          <PageSlide.SlideOutEasing>
+            <SplineEasing X1="0.25" Y1="0.8" X2="0.5" Y2="1" />
+          </PageSlide.SlideOutEasing>
+        </PageSlide>
+      </TransitioningContentControl.PageTransition>
+    </TransitioningContentControl>
+    <Button x:Name="PrevButton" Classes="icon" HorizontalAlignment="Left" VerticalAlignment="Center" Click="OnPrevClick">
+      <TextBlock Classes="mdi highlight" FontSize="28" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
+    </Button>
+    <Button x:Name="NextButton" Classes="icon" HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNextClick">
+      <TextBlock Classes="mdi highlight" FontSize="28" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
+    </Button>
     <StackPanel x:Name="Dots" Grid.Row="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center" />
   </Grid>
 </UserControl>

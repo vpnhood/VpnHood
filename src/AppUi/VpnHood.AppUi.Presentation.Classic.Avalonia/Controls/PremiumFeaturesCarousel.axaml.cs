@@ -3,7 +3,6 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
@@ -39,29 +38,30 @@ public partial class PremiumFeaturesCarousel : UserControl
         for (var i = 0; i < _slides.Count; i++) {
             var index = i;
             var dot = new Border { Classes = { "dot" }, Child = new Ellipse() };
-            dot.Tapped += (_, _) => Show(index);
+            dot.Tapped += (_, _) => Show(index, reversed: index < _index);
             Dots.Children.Add(dot);
         }
         Dots.IsVisible = hasMany;
-        Show(0);
+        Show(0, reversed: false);
     }
 
     public Button FirstButton => NextButton;
 
-    private void Show(int index)
+    // The arrows loop, each sliding its own way across the wrap too, so the last slide's Next brings
+    // the first in as the next one; a dot slides by position.
+    private void Show(int index, bool reversed)
     {
         if (_slides.Count == 0)
             return;
-        _index = (index + _slides.Count) % _slides.Count;
-        var (image, title, description) = _slides[_index];
 
-        // the rocket slide is drawn from three pictures; the others from one
-        RocketBox.IsVisible = image == null;
-        SlideImage.IsVisible = image != null;
-        if (image != null)
-            AppImage.SetSource(SlideImage, AppAssets.ImagePath(image));
-        TitleText.Text = title;
-        DescriptionText.Text = description;
+        var next = (index + _slides.Count) % _slides.Count;
+        if (SlideHost.Content != null && next == _index)
+            return;
+
+        SlideHost.IsTransitionReversed = reversed;
+        _index = next;
+        var (image, title, description) = _slides[_index];
+        SlideHost.Content = new PremiumFeatureSlide(image, title, description);
 
         for (var i = 0; i < Dots.Children.Count; i++)
             Dots.Children[i].Classes.Set("active", i == _index);
@@ -69,11 +69,11 @@ public partial class PremiumFeaturesCarousel : UserControl
 
     private void OnPrevClick(object? sender, RoutedEventArgs e)
     {
-        Show(_index - 1);
+        Show(_index - 1, reversed: true);
     }
 
     private void OnNextClick(object? sender, RoutedEventArgs e)
     {
-        Show(_index + 1);
+        Show(_index + 1, reversed: false);
     }
 }

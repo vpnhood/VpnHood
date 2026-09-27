@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.PremiumFeatureSlide">
+  <!-- One slide of PremiumFeaturesCarousel: a feature's picture, name and line. -->
+  <Grid RowDefinitions="*,Auto,Auto">
+    <!-- One drawing at the launch pad's proportions, scaled as a whole, so the smoke stays on the
+         pad's centre and the rocket above it however far the picture yields. -->
+    <Viewbox x:Name="RocketBox" IsVisible="False" MaxHeight="335" Margin="0,0,0,16">
+      <Grid Width="183" Height="220">
+        <Image ui:AppImage.Source="images/rocket-bg.webp" Stretch="Uniform" />
+        <Image Classes="floating" ui:AppImage.Source="images/rocket.webp" Stretch="Uniform" VerticalAlignment="Top" Height="123" Margin="0,20,0,0" />
+        <Image ui:AppImage.Source="images/rocket-smoke.webp" Stretch="Uniform" VerticalAlignment="Top" Height="77" Margin="0,108,0,0" />
+      </Grid>
+    </Viewbox>
+    <Image x:Name="SlideImage" MaxHeight="200" Stretch="Uniform" Margin="0,0,0,20" />
+    <TextBlock x:Name="TitleText" Grid.Row="1" Classes="h3" TextAlignment="Center" Margin="0,0,0,8" />
+    <TextBlock x:Name="DescriptionText" Grid.Row="2" Classes="label-large" Opacity="0.7" TextWrapping="Wrap" TextAlignment="Center" Margin="12,0" />
+  </Grid>
+</UserControl>

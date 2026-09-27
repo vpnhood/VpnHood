@@ -11,7 +11,7 @@ internal static class PageRoutes
         ["/servers"] = host => new LocationsView(host.ViewModel, host),
         ["/servers/extend-session"] = host => new ExtendSessionView(host),
         ["/protocols"] = host => new ProtocolsView(host),
-        ["/protocols/cloak-mode"] = FeaturePages.CloakMode,
+        ["/protocols/cloak-mode"] = host => FeaturePages.CloakMode(host, isPrompt: false),
         ["/split-tunneling"] = host => new SplitTunnelingView(host),
         ["/split-tunneling/split-apps"] = host => new SplitAppsView(host),
         ["/split-tunneling/split-countries"] = host => new SplitCountriesView(host),

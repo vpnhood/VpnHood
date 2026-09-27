@@ -13,5 +13,10 @@ public sealed record FeaturePageOptions
     public bool IsPremium { get; init; }
     public bool IsActionAvailable { get; init; }
     public bool ShowSkip { get; init; }
+
+    // opened on its own by what the person just did, not chosen: it ends with OK, since the back
+    // button would read as undoing that (cloak mode's page, when Cloak is first turned on)
+    public bool IsPrompt { get; init; }
+
     public FeaturePageKind Kind { get; init; } = FeaturePageKind.Steps;
 }

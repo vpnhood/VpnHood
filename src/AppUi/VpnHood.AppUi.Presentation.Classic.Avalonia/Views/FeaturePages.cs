@@ -113,7 +113,7 @@ public static class FeaturePages
         });
     }
 
-    public static FeaturePageView CloakMode(MainView host)
+    public static FeaturePageView CloakMode(MainView host, bool isPrompt)
     {
         var settings = VhApp.UserSettings;
         if (!settings.IsTcpProxyPrompted) {
@@ -124,6 +124,7 @@ public static class FeaturePages
         return new FeaturePageView(host, new FeaturePageOptions {
             Title = S.CloakModeColored,
             Image = "cloak-mode.webp",
+            IsPrompt = isPrompt,
             Kind = FeaturePageKind.CloakMode
         });
     }

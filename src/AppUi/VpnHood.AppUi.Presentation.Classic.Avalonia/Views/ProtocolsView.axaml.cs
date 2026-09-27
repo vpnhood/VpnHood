@@ -105,7 +105,7 @@ public partial class ProtocolsView : UserControl, IPage
         try {
             var settings = VhApp.UserSettings;
             if (!settings.IsTcpProxyPrompted)
-                _host.Navigate(FeaturePages.CloakMode(_host));
+                _host.Navigate(FeaturePages.CloakMode(_host, isPrompt: true));
 
             settings.UseTcpProxy = CloakItem.IsOn;
             await VhApp.SaveUserSettings(settings, CancellationToken.None);
@@ -131,6 +131,6 @@ public partial class ProtocolsView : UserControl, IPage
 
     private void OnLearnMoreClick(object? sender, RoutedEventArgs e)
     {
-        _host.Navigate(FeaturePages.CloakMode(_host));
+        _host.Navigate(FeaturePages.CloakMode(_host, isPrompt: false));
     }
 }

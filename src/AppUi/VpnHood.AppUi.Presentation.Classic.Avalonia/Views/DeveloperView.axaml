@@ -70,8 +70,7 @@
       <TextBlock Classes="body-small muted40" Text="DebugData2" />
       <TextBox x:Name="DebugData2Box" />
 
-      <Button x:Name="LogButton" Classes="action" Content="Open log" Click="OnLogClick"
-              HorizontalAlignment="Right" Margin="0,6,0,0" />
+      <Button x:Name="LogButton" Classes="action block" Content="Open log" Click="OnLogClick" Margin="0,6,0,0" />
 
     </StackPanel>
   </DockPanel>

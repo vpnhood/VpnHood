@@ -29,7 +29,9 @@ public partial class FeaturePageView : UserControl, IPage
         switch (options.Kind) {
             case FeaturePageKind.CloakMode:
                 CloakCard.IsVisible = true;
-                BackButton.IsVisible = false;
+                OkButton.IsVisible = options.IsPrompt;
+                if (options.IsPrompt)
+                    BackButton.IsVisible = false;
                 RichText.Apply(CloakText1, Strings.Current.CloakModeDesc1);
                 break;
 
@@ -70,7 +72,7 @@ public partial class FeaturePageView : UserControl, IPage
     public void FocusDefault()
     {
         if (ActionButton.IsVisible) ActionButton.LandFocus();
-        else if (CloakCard.IsVisible) OkButton.LandFocus();
+        else if (OkButton.IsVisible && CloakCard.IsVisible) OkButton.LandFocus();
         else if (PremiumButton.IsVisible && PremiumCard.IsVisible) PremiumButton.LandFocus();
         else if (TurnOffButton.IsVisible && PrivateDnsCard.IsVisible) TurnOffButton.LandFocus();
         else if (SkipButton.IsVisible) SkipButton.LandFocus();

@@ -2,8 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:res="using:VpnHood.AppUi.Common"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.FeaturePageView">
-  <!-- The web UI's FeaturePageLayout: on the gradient sheet, a back button (not on a TV, nor on
-       cloak mode's page, which ends with OK), the
+  <!-- The web UI's FeaturePageLayout: on the gradient sheet, a back button (not on a TV, nor on a
+       page that opened on its own and ends with OK), the
        title with its coloured word, the description, the feature's picture, and a card - the
        numbered steps to turn the feature on with the button that opens the device's own settings,
        or the Go premium pitch when the feature is sold and this session has not bought it; two
@@ -44,13 +44,13 @@
             </StackPanel>
           </Border>
 
-          <!-- cloak mode: its two paragraphs, and OK in place of the back button - there is nothing
-               to decline, and the page also opens on its own when Cloak is first turned on -->
+          <!-- cloak mode: its two paragraphs, and OK where the page opened on its own
+               (FeaturePageOptions.IsPrompt) -->
           <Border x:Name="CloakCard" Classes="card-on-grad" Padding="16,12" IsVisible="False">
             <StackPanel Spacing="12">
               <TextBlock x:Name="CloakText1" Classes="body-medium" TextWrapping="Wrap" LineHeight="25" />
               <TextBlock Classes="body-medium" TextWrapping="Wrap" LineHeight="25" Text="{Binding CloakModeDesc2, Source={x:Static res:Strings.Current}}" />
-              <Button x:Name="OkButton" Classes="pill btn1 block" Click="OnBackClick"
+              <Button x:Name="OkButton" Classes="pill btn1 block" Click="OnBackClick" IsVisible="False"
                       Content="{Binding Ok, Source={x:Static res:Strings.Current}}" />
             </StackPanel>
           </Border>

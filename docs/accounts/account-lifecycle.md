@@ -68,7 +68,7 @@ Section 8 answers these, in order:
 | Coming back? | A new, empty account — the store is asked at sign-in and gives the subscription back by itself; a code they kept still works | §7 |
 | Blocked where they are, so they cannot sign in? | Connect first on the free or trial path, then sign in through the tunnel. No portal clock removes the applied code; only an access-server refusal starts the ending flow | §8 |
 | Does a refund end a code? | Only if we end it. Revoking is the default; keeping it is a choice | §8 |
-| Can a partner refund a code they sold? | Ending it, any time. Money back as credit, only for a first purchase and only for 3 days after they paid us; a refund always ends the code | §8 |
+| Can a partner refund a code they sold? | Ending it, any time. Money back as credit, only for a first purchase and only for 7 days after they paid us; a refund always ends the code | §8 |
 
 ---
 
@@ -1198,7 +1198,7 @@ promise the partner:
   ended: a terminated or refunded code cannot be suspended, unsuspended or renewed again; the
   partner sells a new one instead.
 - **Getting the money back has a short window.** Inside it, a refund ends the code and returns
-  what the partner paid us for it to their credit balance. The window is **3 days** from the moment
+  what the partner paid us for it to their credit balance. The window is **7 days** from the moment
   the partner paid us, unless we set another. After it the partner can still end the code, but the
   credit stays spent. A refund always ends the code: the money and the service go back together.
 - **Only a code's first purchase.** A renewal is never refunded this way, and a code stops being
@@ -1212,7 +1212,9 @@ promise the partner:
 The two decisions are separate on purpose. Ending a code costs us nothing and protects the
 partner (a chargeback, a fraudulent customer), so it is always open. Money back is instant, since
 a partner pays from credit and no store or payment gateway stands in between, so it is bounded by
-time instead.
+time instead. The window is shorter than a direct customer's 30 days because the two work
+differently: a direct customer's refund is a single request we review by hand, while a partner's
+is instant, unreviewed and available for any number of codes.
 
 This is not the money-back guarantee of a customer who buys directly from us: that one is 30 days,
 on request, never automatic (*They ask for a refund instead*). A partner's customers are the

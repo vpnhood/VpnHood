@@ -145,8 +145,8 @@
   <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Orange100}" />
   <SolidColorBrush x:Key="WarningTonalBrush" Color="#29fb8c00" />
   <SolidColorBrush x:Key="OnWarningBrush" Color="{StaticResource Orange300}" />
-  <SolidColorBrush x:Key="ScrollTrackBrush" Color="{StaticResource Blue20}" />
-  <SolidColorBrush x:Key="ScrollThumbBrush" Color="{StaticResource Gray500}" />
-  <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource Green300}" />
+  <SolidColorBrush x:Key="ScrollTrackBrush" Color="{StaticResource Blue330}" />
+  <SolidColorBrush x:Key="ScrollThumbBrush" Color="{StaticResource Blue200}" />
+  <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource Blue100}" />
 
 </ResourceDictionary>

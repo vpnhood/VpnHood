@@ -8,7 +8,7 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 // there, and what the person sees. A record with value equality, so the view model replaces the
 // list only when a row differs; the flag is looked up on demand, never compared.
 public sealed record LocationItem(
-    Guid ClientProfileId,
+    Guid VpnProfileId,
     string ServerLocation,
     string CountryCode,
     string Name,

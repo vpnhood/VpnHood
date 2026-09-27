@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.App;
-using VpnHood.AppLib.App.ClientProfiles;
+using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.Abstractions;
@@ -21,7 +21,7 @@ public class AppClientServerDom : IAsyncDisposable, IDisposable
     public TestAdProvider TestAdProvider { get; }
     public VpnHoodServer Server { get; }
     public VpnHoodApp App { get; }
-    public ClientProfile ClientProfile { get; }
+    public VpnProfile VpnProfile { get; }
 
     private AppClientServerDom(
         TestAppHelper testAppHelper,
@@ -49,8 +49,8 @@ public class AppClientServerDom : IAsyncDisposable, IDisposable
 
         // create app
         App = testAppHelper.CreateClientApp(device: device, appOptions: appOptions);
-        ClientProfile = App.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        App.UserSettings.ClientProfileId = ClientProfile.ClientProfileId;
+        VpnProfile = App.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        App.UserSettings.VpnProfileId = VpnProfile.VpnProfileId;
         App.SettingsService.Save();
     }
 
@@ -100,7 +100,7 @@ public class AppClientServerDom : IAsyncDisposable, IDisposable
     public Task Connect(ConnectPlanId planId = ConnectPlanId.Normal, CancellationToken cancellationToken = default)
     {
         return App.Connect(
-            clientProfileId: ClientProfile.ClientProfileId, 
+            vpnProfileId: VpnProfile.VpnProfileId, 
             planId: planId, 
             cancellationToken: cancellationToken);
     }

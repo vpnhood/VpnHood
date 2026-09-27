@@ -6,14 +6,14 @@
 // against this runs on the device and in a browser alike, and is the same UI in both.
 public sealed class VpnHoodApi(
     IAppApi app,
-    IClientProfilesApi clientProfiles,
+    IVpnProfilesApi vpnProfiles,
     IAccountApi account,
     IBillingApi billing,
     IIntentsApi intents,
     IProxyEndPointsApi proxyEndPoints)
 {
     public IAppApi App { get; } = app;
-    public IClientProfilesApi ClientProfiles { get; } = clientProfiles;
+    public IVpnProfilesApi VpnProfiles { get; } = vpnProfiles;
     public IAccountApi Account { get; } = account;
     public IBillingApi Billing { get; } = billing;
     public IIntentsApi Intents { get; } = intents;

@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Api.Billing;
 using VpnHood.AppLib.Api.Device;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Sessions;
@@ -20,7 +20,7 @@ public class AppState
     public required CurrentServerLocationInfo? ServerLocationInfo { get; init; }
     public required DateTime? ConnectRequestTime { get; init; }
     public required ApiError? LastError { get; init; }
-    public required ClientProfileBaseInfo? ClientProfile { get; init; }
+    public required VpnProfileBaseInfo? VpnProfile { get; init; }
     public required bool IsIdle { get; init; }
     public required bool PromptForLog { get; init; }
     public required bool LogExists { get; init; }

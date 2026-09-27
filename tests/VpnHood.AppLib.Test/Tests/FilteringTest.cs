@@ -166,7 +166,7 @@ public class FilteringTest : TestAppBase
         // *** TEST ***: Test Include ip filter
         app.SettingsService.SplitIpViaAppSettings.Includes = targetIps1.ToText();
         app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps2.ToText();
-        await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
+        await app.Connect(appDom.VpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
         await TestHelper.Test_Ping(ipAddress: MockEps.PingV4Address1);
 
@@ -179,7 +179,7 @@ public class FilteringTest : TestAppBase
         // *** TEST ***: Reverse include/exclude list, then target1 should be excluded and target2 should be included.
         app.SettingsService.SplitIpViaAppSettings.Includes = targetIps2.ToText();
         app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps1.ToText();
-        await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
+        await app.Connect(appDom.VpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
         Log("Starting IpFilters_TestExclude...");
@@ -206,7 +206,7 @@ public class FilteringTest : TestAppBase
         // ************
         // *** TEST ***: Block target1 IPs via AppBlocks
         app.SettingsService.SplitIpViaAppSettings.Blocks = blockedIps.ToText();
-        await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
+        await app.Connect(appDom.VpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
         // blocked HTTPS should fail
@@ -248,7 +248,7 @@ public class FilteringTest : TestAppBase
         // connect with target1 included, target2 excluded
         app.SettingsService.SplitIpViaAppSettings.Includes = targetIps1.ToText();
         app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps2.ToText();
-        await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
+        await app.Connect(appDom.VpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
         Log("Asserting the initial filters...");

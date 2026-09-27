@@ -1,18 +1,18 @@
 ﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.Utils;
 
 using VpnHood.AppLib.App.DtoConverters;
 
-namespace VpnHood.AppLib.App.ClientProfiles;
+namespace VpnHood.AppLib.App.VpnProfiles;
 
 // A profile as the UIs read it: plain values taken off the stored profile once, so the same object
 // is read back by a UI on the other side of the API. The client country is baked in - the policy
-// and the locations depend on it - which is why ClientProfileService keeps one per profile and
+// and the locations depend on it - which is why VpnProfileService keeps one per profile and
 // region. The token stays here: the contract carries what the token yields, never the token.
-internal static class ClientProfileInfoBuilder
+internal static class VpnProfileInfoBuilder
 {
     // What the engine's ServerLocationInfo.Equals did, now that the contract's shape is flat: the
     // stored selection is normalized through the engine's parser before it is compared, so "us/ca",
@@ -25,38 +25,38 @@ internal static class ClientProfileInfoBuilder
             : locationInfo.ServerLocation == ServerLocationInfo.TryParse(serverLocation)?.ServerLocation;
     }
 
-    public static ClientProfileInfo Build(ClientProfile clientProfile, AppFeatures appFeatures)
+    public static VpnProfileInfo Build(VpnProfile vpnProfile, AppFeatures appFeatures)
     {
-        var token = clientProfile.Token;
+        var token = vpnProfile.Token;
         var clientPolicy = FindClientPolicy(token);
-        var locationInfos = ServerLocationItemBuilder.Build(clientProfile, appFeatures);
+        var locationInfos = ServerLocationItemBuilder.Build(vpnProfile, appFeatures);
 
         // the selected location, else the automatic one, else the first
         var selectedLocationInfo =
-            locationInfos.FirstOrDefault(x => LocationEquals(x, clientProfile.SelectedLocation)) ??
+            locationInfos.FirstOrDefault(x => LocationEquals(x, vpnProfile.SelectedLocation)) ??
             locationInfos.FirstOrDefault(x => x.IsAuto) ??
             locationInfos.FirstOrDefault();
 
-        return new ClientProfileInfo {
-            ClientProfileId = clientProfile.ClientProfileId,
-            ClientProfileName = GetTitle(clientProfile),
+        return new VpnProfileInfo {
+            VpnProfileId = vpnProfile.VpnProfileId,
+            VpnProfileName = GetTitle(vpnProfile),
             SupportId = token.SupportId,
-            CustomData = clientProfile.CustomData,
-            IsPremiumLocationSelected = clientProfile.IsPremiumLocationSelected,
-            IsPremium = clientProfile.IsPremium,
+            CustomData = vpnProfile.CustomData,
+            IsPremiumLocationSelected = vpnProfile.IsPremiumLocationSelected,
+            IsPremium = vpnProfile.IsPremium,
             TokenId = token.TokenId,
             HostNames = GetEndPoints(token.ServerToken),
             IsValidHostName = token.ServerToken.IsValidHostName,
-            IsBuiltIn = clientProfile.IsBuiltIn,
-            AccessCode = AccessCodeUtils.Redact(clientProfile.AccessCode),
-            AccessCodeRefusal = clientProfile.AccessCodeRefusal,
+            IsBuiltIn = vpnProfile.IsBuiltIn,
+            AccessCode = AccessCodeUtils.Redact(vpnProfile.AccessCode),
+            AccessCodeRefusal = vpnProfile.AccessCodeRefusal,
             LocationInfos = locationInfos,
             CanGoPremium = clientPolicy?.PremiumByCode == true || clientPolicy?.PremiumByPurchase == true,
             CanTryPremium = clientPolicy?.PremiumByTrial != null,
             CanImportAccessCode = clientPolicy?.PremiumByCode == true && appFeatures.Premium?.AllowImportAccessCode == true,
             CanViewAccessCode = clientPolicy?.PremiumByCode == true,
-            CustomServerEndpoints = clientProfile.CustomServerEndpoints,
-            IsCustomServerEndpointsEnabled = clientProfile.IsCustomServerEndpointsEnabled,
+            CustomServerEndpoints = vpnProfile.CustomServerEndpoints,
+            IsCustomServerEndpointsEnabled = vpnProfile.IsCustomServerEndpointsEnabled,
             SelectedLocationInfo = selectedLocationInfo,
             ClientPolicy = clientPolicy?.ToAppDto()
         };
@@ -71,12 +71,12 @@ internal static class ClientProfileInfoBuilder
                token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
     }
 
-    private static string GetTitle(ClientProfile clientProfile)
+    private static string GetTitle(VpnProfile vpnProfile)
     {
-        var token = clientProfile.Token;
+        var token = vpnProfile.Token;
 
-        if (!string.IsNullOrWhiteSpace(clientProfile.ClientProfileName))
-            return clientProfile.ClientProfileName;
+        if (!string.IsNullOrWhiteSpace(vpnProfile.VpnProfileName))
+            return vpnProfile.VpnProfileName;
 
         if (!string.IsNullOrWhiteSpace(token.Name))
             return token.Name;

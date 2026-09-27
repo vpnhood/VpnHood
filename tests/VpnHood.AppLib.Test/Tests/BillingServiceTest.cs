@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Accounts;
 using VpnHood.AppLib.Test.Providers;
@@ -303,7 +303,7 @@ public class BillingServiceTest : TestAppBase
         Assert.AreEqual(true, account.Subscription?.IsAutoRenew);
 
         // and the entitlement reaches the connection itself, as an account-sourced access code
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNotNull(profile.AccessCode, "the subscription's own code is what the backend ranked first");
         Assert.IsTrue(profile.IsPremium);
@@ -330,7 +330,7 @@ public class BillingServiceTest : TestAppBase
         Assert.AreEqual(expirationTime, account.Subscription?.ExpirationTime);
         Assert.AreEqual("googleplay", account.Subscription?.StoreId);
 
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsTrue(profile.IsPremium, "cancelling must not take away the period already bought");
 
@@ -368,11 +368,11 @@ public class BillingServiceTest : TestAppBase
         Assert.IsNull(account.Subscription);
         Assert.IsNull(account.Subscription?.ExpirationTime);
 
-        // The spent code STAYS. Taking it off here would drop ClientProfile.IsPremium and demote the
+        // The spent code STAYS. Taking it off here would drop VpnProfile.IsPremium and demote the
         // build to its own free edition — premium locations gone, promotion banner back — with nobody
         // told and nobody having chosen it (keyring plan §8). The account is still here; it simply has
         // nothing ranked, which is not the same as being gone.
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNotNull(profile.AccessCode, "an expired subscription must not silently disarm premium");
         Assert.IsTrue(profile.IsPremium);
@@ -380,9 +380,9 @@ public class BillingServiceTest : TestAppBase
         // Leaving it costs nothing, because the access server is the real gate: the spent code is
         // refused at connect time, and THAT is what the person is told — the same road a refusal
         // already takes, with Restore Premium and (where the build allows codes) Change code.
-        app.ClientProfileService.MarkAccessCodeRefused(profile.ClientProfileId, SessionErrorCode.AccessExpired);
+        app.VpnProfileService.MarkAccessCodeRefused(profile.VpnProfileId, SessionErrorCode.AccessExpired);
 
-        profile = app.CurrentClientProfileInfo;
+        profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.AreEqual(VpnHood.AppLib.Api.Sessions.SessionErrorCode.AccessExpired,
             profile.AccessCodeRefusal?.ErrorCode,
@@ -399,13 +399,13 @@ public class BillingServiceTest : TestAppBase
 
         accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
         await accountService.Refresh(CancellationToken.None);
-        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode);
+        Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
         // the user's own choice, and a reversible one: signing in again fetches the code back, while
         // keeping it would carry paid access into whatever account signs in next
         await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
 
-        Assert.IsNull(app.CurrentClientProfileInfo?.AccessCode);
+        Assert.IsNull(app.CurrentVpnProfileInfo?.AccessCode);
     }
 
     [TestMethod]
@@ -418,7 +418,7 @@ public class BillingServiceTest : TestAppBase
 
         accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
         await accountService.Refresh(CancellationToken.None);
-        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode);
+        Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
         // the account was deleted on ANOTHER device. A signed-in device holds only account state, so
         // premium stops here too — the entitlement still exists at the store and comes back with
@@ -426,7 +426,7 @@ public class BillingServiceTest : TestAppBase
         accountProvider.Account = null;
         await accountService.Refresh(CancellationToken.None);
 
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNull(profile.AccessCode, "premium must not outlive the account that granted it");
     }
@@ -441,13 +441,13 @@ public class BillingServiceTest : TestAppBase
 
         accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
         await accountService.Refresh(CancellationToken.None);
-        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode);
+        Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
         await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
 
         Assert.AreEqual(1, accountProvider.DeleteAccountCalls);
         Assert.IsNull(await accountService.GetAccount(CancellationToken.None));
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNull(profile.AccessCode, "'delete my account' must not leave premium running");
     }
@@ -463,19 +463,19 @@ public class BillingServiceTest : TestAppBase
         // A code uploaded while signed in became the account's (keyring plan §6), so there is nothing
         // to keep back — the person still has it wherever it reached them from. Only a code the
         // account never took stays behind, and this one was taken.
-        // Address the profile directly: CurrentClientProfileInfo needs UserSettings.ClientProfileId,
+        // Address the profile directly: CurrentVpnProfileInfo needs UserSettings.VpnProfileId,
         // which a freshly built test app may not have set yet, while AccountService falls back to the
         // first profile — so asking the app makes this test race its own startup.
-        var profileId = app.ClientProfileService.List().First().ClientProfileId;
-        app.ClientProfileService.Update(profileId,
-            new ClientProfileUpdateParams { AccessCode = new Patch<string?>(TestAppHelper.BuildAccessCode()) });
+        var profileId = app.VpnProfileService.List().First().VpnProfileId;
+        app.VpnProfileService.Update(profileId,
+            new VpnProfileUpdateParams { AccessCode = new Patch<string?>(TestAppHelper.BuildAccessCode()) });
         await accountService.Refresh(CancellationToken.None);
-        Assert.IsNotNull(app.ClientProfileService.Get(profileId).AccessCode);
-        Assert.IsTrue(app.ClientProfileService.Get(profileId).IsAccessCodeSynced);
+        Assert.IsNotNull(app.VpnProfileService.Get(profileId).AccessCode);
+        Assert.IsTrue(app.VpnProfileService.Get(profileId).IsAccessCodeSynced);
 
         await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
 
-        Assert.IsNull(app.ClientProfileService.Get(profileId).AccessCode,
+        Assert.IsNull(app.VpnProfileService.Get(profileId).AccessCode,
             "the account is gone, and a code it had taken goes with it");
     }
 

@@ -96,7 +96,7 @@ public class CheckNewVersionTest : TestAppBase
             CheckInterval = TimeSpan.FromMilliseconds(10)
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // version should be latest
         await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.State.UpdaterStatus?.VersionStatus);
@@ -106,7 +106,7 @@ public class CheckNewVersionTest : TestAppBase
             DateTime.UtcNow, TimeSpan.Zero);
 
         await Task.Delay(100); // wait for CheckInterval
-        await app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(vpnProfile.VpnProfileId);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.UpdaterStatus?.VersionStatus);
     }
 
@@ -160,7 +160,7 @@ public class CheckNewVersionTest : TestAppBase
             CheckInterval = TimeSpan.FromMilliseconds(500)
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         await Task.Delay(1000);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Unknown, () => app.State.UpdaterStatus?.VersionStatus);
@@ -168,7 +168,7 @@ public class CheckNewVersionTest : TestAppBase
         // set new version
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
             DateTime.UtcNow, TimeSpan.Zero);
-        await app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(vpnProfile.VpnProfileId);
         await app.WaitForState(AppConnectionState.Connected);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.UpdaterStatus?.VersionStatus);
     }

@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Accounts;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.Net.Toolkit.Extensions;
@@ -56,7 +56,7 @@ public static class VhApp
     public static AppFeatures Features => Info.Features;
     public static DeviceIntentFeatures Intents => Info.IntentFeatures;
     public static UserSettings UserSettings => Info.UserSettings;
-    public static IReadOnlyList<ClientProfileInfo> ClientProfileInfos => Info.ClientProfileInfos;
+    public static IReadOnlyList<VpnProfileInfo> VpnProfileInfos => Info.VpnProfileInfos;
     public static IReadOnlyList<UiCultureInfo> AvailableCultureInfos => Info.AvailableCultureInfos;
     public static AppState State => _state ?? Info.State;
 
@@ -67,13 +67,13 @@ public static class VhApp
 
     // The profile the app is set to, whole (its locations), off the last configuration read; the
     // state carries its base info.
-    public static ClientProfileInfo? CurrentClientProfileInfo => FindClientProfileInfo(UserSettings.ClientProfileId);
+    public static VpnProfileInfo? CurrentVpnProfileInfo => FindVpnProfileInfo(UserSettings.VpnProfileId);
 
-    public static ClientProfileInfo? FindClientProfileInfo(Guid? clientProfileId)
+    public static VpnProfileInfo? FindVpnProfileInfo(Guid? vpnProfileId)
     {
-        return clientProfileId == null
+        return vpnProfileId == null
             ? null
-            : ClientProfileInfos.FirstOrDefault(x => x.ClientProfileId == clientProfileId);
+            : VpnProfileInfos.FirstOrDefault(x => x.VpnProfileId == vpnProfileId);
     }
 
     public static async Task ReloadState(CancellationToken cancellationToken)
@@ -140,14 +140,14 @@ public static class VhApp
 
     // A build with no premium tier is the full app: nothing sold, no crown, everything allowed.
     public static bool IsPremiumSupported => Features.Premium != null;
-    public static bool IsPremiumUser => State.ClientProfile?.IsPremium == true;
+    public static bool IsPremiumUser => State.VpnProfile?.IsPremium == true;
     public static bool IsPremiumByAccount => IsPremiumUser && Account?.Subscription != null;
     public static bool IsPremiumByCode => IsPremiumUser && !IsPremiumByAccount;
-    public static bool CanImportAccessCode => State.ClientProfile?.CanImportAccessCode == true;
-    public static bool CanViewAccessCode => State.ClientProfile?.CanViewAccessCode == true;
-    public static bool CanTryPremium => State.ClientProfile?.CanTryPremium == true;
-    public static bool CanGoPremium => State.ClientProfile?.CanGoPremium == true;
-    public static Guid? ClientProfileId => State.ClientProfile?.ClientProfileId ?? UserSettings.ClientProfileId;
+    public static bool CanImportAccessCode => State.VpnProfile?.CanImportAccessCode == true;
+    public static bool CanViewAccessCode => State.VpnProfile?.CanViewAccessCode == true;
+    public static bool CanTryPremium => State.VpnProfile?.CanTryPremium == true;
+    public static bool CanGoPremium => State.VpnProfile?.CanGoPremium == true;
+    public static Guid? VpnProfileId => State.VpnProfile?.VpnProfileId ?? UserSettings.VpnProfileId;
 
     public static bool IsPremiumFeature(AppFeature feature)
     {
@@ -191,7 +191,7 @@ public static class VhApp
 
     public static bool IsCustomEndpointActive(AppState state)
     {
-        var profile = state.ClientProfile;
+        var profile = state.VpnProfile;
         return profile is { IsCustomServerEndpointsEnabled: true, CustomServerEndpoints.Length: > 0 };
     }
 

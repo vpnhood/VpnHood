@@ -4,7 +4,7 @@ using Avalonia.Interactivity;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
@@ -12,12 +12,12 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 public partial class CustomEndpointDialog : DialogBase
 {
     private readonly MainView _host;
-    private readonly Guid _clientProfileId;
+    private readonly Guid _vpnProfileId;
 
-    public CustomEndpointDialog(MainView host, ClientProfileInfo profile)
+    public CustomEndpointDialog(MainView host, VpnProfileInfo profile)
     {
         _host = host;
-        _clientProfileId = profile.ClientProfileId;
+        _vpnProfileId = profile.VpnProfileId;
         InitializeComponent();
         EndpointBox.PlaceholderText = Strings.Current.CustomEndpointPlaceHolder;
         EndpointBox.Text = profile.CustomServerEndpoints?.FirstOrDefault()?.ToString();
@@ -72,7 +72,7 @@ public partial class CustomEndpointDialog : DialogBase
         _ = _host;
         var value = EndpointBox.Text?.Trim();
         try {
-            await VhApp.Api.ClientProfiles.Update(_clientProfileId, new ClientProfileUpdateParams {
+            await VhApp.Api.VpnProfiles.Update(_vpnProfileId, new VpnProfileUpdateParams {
                 CustomServerEndpoints = new Patch<string[]?>(string.IsNullOrEmpty(value) ? null : [value]),
                 IsCustomServerEndpointsEnabled = new Patch<bool>(EnabledSwitch.IsChecked == true)
             }, CancellationToken.None);

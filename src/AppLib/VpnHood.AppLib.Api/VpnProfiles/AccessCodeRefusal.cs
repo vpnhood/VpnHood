@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Api.Sessions;
 
-namespace VpnHood.AppLib.Api.ClientProfiles;
+namespace VpnHood.AppLib.Api.VpnProfiles;
 
 /// <summary>
 /// The access server refused this profile's access code (keyring plan §8). The code is KEPT —

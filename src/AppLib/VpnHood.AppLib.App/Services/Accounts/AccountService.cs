@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.App.ClientProfiles;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.App.VpnProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Extensions;
@@ -23,19 +23,19 @@ public class AccountService
     private DateTime _lastRefreshAttemptTime = DateTime.MinValue;
     private readonly AppSettingsService _settingsService;
     private readonly IAccountProvider _accountProvider;
-    private readonly ClientProfileService _clientProfileService;
+    private readonly VpnProfileService _vpnProfileService;
     private readonly string _storageFolderPath;
     private readonly string _accountFilePath;
 
     public AccountService(
         AppSettingsService settingsService,
         IAccountProvider accountProvider,
-        ClientProfileService clientProfileService,
+        VpnProfileService vpnProfileService,
         string storageFolderPath)
     {
         _settingsService = settingsService;
         _accountProvider = accountProvider;
-        _clientProfileService = clientProfileService;
+        _vpnProfileService = vpnProfileService;
         _storageFolderPath = storageFolderPath;
         _accountFilePath = Path.Combine(storageFolderPath, "account.json");
         AuthenticationService = new AuthenticationService(this, accountProvider.AuthenticationProvider);
@@ -197,7 +197,7 @@ public class AccountService
         await _accountProvider.SetAccessCode(currentProfile.AccessCode, cancellationToken).Vhc();
 
         // the account has taken it, so the device owes nothing for it any more
-        _clientProfileService.SetAccountAccessCode(currentProfile.ClientProfileId, currentProfile.AccessCode);
+        _vpnProfileService.SetAccountAccessCode(currentProfile.VpnProfileId, currentProfile.AccessCode);
     }
 
     /// <summary>
@@ -246,7 +246,7 @@ public class AccountService
         // the current profile is what carries premium on this device
         var currentProfile = GetCurrentProfile();
         if (currentProfile is null)
-            throw new InvalidOperationException("Could not refresh account when there is no current client profile.");
+            throw new InvalidOperationException("Could not refresh account when there is no current VPN profile.");
 
         ApplyAccountAccessCode(currentProfile);
     }
@@ -258,7 +258,7 @@ public class AccountService
     /// the winner on every read. A signed-in device holds only account state, so whatever arrives
     /// simply replaces what is on the profile.
     /// </summary>
-    private void ApplyAccountAccessCode(ClientProfile currentProfile)
+    private void ApplyAccountAccessCode(VpnProfile currentProfile)
     {
         // No account at all — deleted here or on another device, or a session the portal no longer
         // honours. Premium must not outlive the account that granted it, and must not be carried into
@@ -270,7 +270,7 @@ public class AccountService
 
         // The account is still here and simply ranked nothing: a subscription ran out, its last code
         // did, or the panel stopped offering it. The code STAYS on the profile (keyring plan §8).
-        // Clearing it would drop ClientProfile.IsPremium and turn the build into its own free edition
+        // Clearing it would drop VpnProfile.IsPremium and turn the build into its own free edition
         // on nobody's decision — premium locations gone, promotion banner back, nobody told. It costs
         // nothing to leave: the access server gates every premium-by-code feature again at connect
         // time, so a spent code opens the local toggles and then fails the connection, which is where
@@ -282,7 +282,7 @@ public class AccountService
 
         // It came from the account, so this device owes nothing for it. Handing the same credential
         // back churns nothing and keeps its refusal — the store compares before it writes.
-        _clientProfileService.SetAccountAccessCode(currentProfile.ClientProfileId, accessCode);
+        _vpnProfileService.SetAccountAccessCode(currentProfile.VpnProfileId, accessCode);
     }
 
     /// <summary>Forget the account on this device, premium included.</summary>
@@ -325,8 +325,8 @@ public class AccountService
         if (!currentProfile.IsAccessCodeSynced)
             return;
 
-        _clientProfileService.Update(currentProfile.ClientProfileId,
-            new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
+        _vpnProfileService.Update(currentProfile.VpnProfileId,
+            new VpnProfileUpdateParams { AccessCode = new Patch<string?>(null) });
     }
 
     /// <summary>
@@ -340,13 +340,13 @@ public class AccountService
     /// answer that costs far more than a loud failure.
     /// </para>
     /// </summary>
-    private ClientProfile? GetCurrentProfile()
+    private VpnProfile? GetCurrentProfile()
     {
-        var selected = _clientProfileService.FindById(_settingsService.UserSettings.ClientProfileId ?? Guid.Empty);
+        var selected = _vpnProfileService.FindById(_settingsService.UserSettings.VpnProfileId ?? Guid.Empty);
         if (selected != null)
             return selected;
 
-        var profiles = _clientProfileService.List();
+        var profiles = _vpnProfileService.List();
         return profiles.Length switch {
             0 => null,
             1 => profiles[0],

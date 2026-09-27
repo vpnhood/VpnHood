@@ -5,7 +5,7 @@ using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -66,14 +66,14 @@ public partial class PremiumCodeDialog : DialogBase
     private async Task Activate()
     {
         var code = CodeBox.Text?.Trim() ?? "";
-        var profileId = VhApp.State.ClientProfile?.ClientProfileId;
+        var profileId = VhApp.State.VpnProfile?.VpnProfileId;
         if (profileId == null) {
             await _host.ShowError(Strings.Current.ProfileIdNotFoundDuringValidationMsg);
             return;
         }
 
         try {
-            await VhApp.Api.ClientProfiles.Update(profileId.Value, new ClientProfileUpdateParams {
+            await VhApp.Api.VpnProfiles.Update(profileId.Value, new VpnProfileUpdateParams {
                 AccessCode = new Patch<string?>(code)
             }, CancellationToken.None);
         }

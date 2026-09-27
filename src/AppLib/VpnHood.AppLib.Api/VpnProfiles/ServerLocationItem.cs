@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.Api.ClientProfiles;
+﻿namespace VpnHood.AppLib.Api.VpnProfiles;
 
 // One location a UI may pick, as the app built it: the country and region, whether it is a country
 // head above its own regions, and what this person may do with it (Options). The names are carried,

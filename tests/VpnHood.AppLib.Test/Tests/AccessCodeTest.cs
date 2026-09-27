@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using VpnHood.AppLib.App.ClientProfiles;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.App.VpnProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -41,13 +41,13 @@ public class AccessCodeTest : TestAppBase
 
         // create access code
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token1.ToAccessKey());
+        app.VpnProfileService.Update(vpnProfile.VpnProfileId, new VpnProfileUpdateParams {
             AccessCode = AccessCodeUtils.Format(accessCode) // make sure it accept format
         });
 
         // connect
-        await app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(vpnProfile.VpnProfileId);
         Assert.AreEqual(6, app.State.SessionInfo?.AccessInfo?.MaxDeviceCount,
             "token2 must be used instead of token1 due the access code.");
     }
@@ -71,29 +71,29 @@ public class AccessCodeTest : TestAppBase
         };
 
         await using var app = TestAppHelper.CreateClientApp(appOptions);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token1.ToAccessKey());
+        app.VpnProfileService.Update(vpnProfile.VpnProfileId, new VpnProfileUpdateParams {
             AccessCode = accessCode
         });
 
         // connect
-        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(clientProfile.ClientProfileId));
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(vpnProfile.VpnProfileId));
         Assert.AreEqual(SessionErrorCode.AccessCodeRejected, ex.SessionResponse.ErrorCode);
 
         // The code is KEPT — refusal never deletes a credential (its issuer may extend it) — but
         // marked refused, so the profile stops claiming premium instead of failing every connect.
-        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
-        Assert.IsNotNull(clientProfile.AccessCode, "A refused access code must be kept on the profile.");
-        Assert.IsNotNull(clientProfile.AccessCodeRefusal, "The refusal must be recorded on the profile.");
+        vpnProfile = app.VpnProfileService.Get(vpnProfile.VpnProfileId);
+        Assert.IsNotNull(vpnProfile.AccessCode, "A refused access code must be kept on the profile.");
+        Assert.IsNotNull(vpnProfile.AccessCodeRefusal, "The refusal must be recorded on the profile.");
         Assert.AreEqual(VpnHood.AppLib.Api.Sessions.SessionErrorCode.AccessCodeRejected,
-            clientProfile.AccessCodeRefusal.ErrorCode);
+            vpnProfile.AccessCodeRefusal.ErrorCode);
 
         // typing a different code is a new credential — the old refusal is not its story
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+        app.VpnProfileService.Update(vpnProfile.VpnProfileId, new VpnProfileUpdateParams {
             AccessCode = TestAppHelper.BuildAccessCode()
         });
-        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
-        Assert.IsNull(clientProfile.AccessCodeRefusal, "A changed code must clear the refused mark.");
+        vpnProfile = app.VpnProfileService.Get(vpnProfile.VpnProfileId);
+        Assert.IsNull(vpnProfile.AccessCodeRefusal, "A changed code must clear the refused mark.");
 
         // code should not exist any return objects
         var hasAccessCode = ex.Data.Contains("AccessCode");
@@ -124,26 +124,26 @@ public class AccessCodeTest : TestAppBase
         };
 
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        app.ClientProfileService.Update(clientProfile.ClientProfileId,
-            new ClientProfileUpdateParams { AccessCode = TestAppHelper.BuildAccessCode() });
-        Assert.IsTrue(app.ClientProfileService.Get(clientProfile.ClientProfileId).IsPremium);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        app.VpnProfileService.Update(vpnProfile.VpnProfileId,
+            new VpnProfileUpdateParams { AccessCode = TestAppHelper.BuildAccessCode() });
+        Assert.IsTrue(app.VpnProfileService.Get(vpnProfile.VpnProfileId).IsPremium);
 
-        app.ClientProfileService.MarkAccessCodeRefused(clientProfile.ClientProfileId,
+        app.VpnProfileService.MarkAccessCodeRefused(vpnProfile.VpnProfileId,
             SessionErrorCode.AccessExpired);
-        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
-        Assert.IsNotNull(clientProfile.AccessCode, "the code itself is kept — a refusal deletes nothing");
-        Assert.IsNotNull(clientProfile.AccessCodeRefusal, "and the refusal is recorded beside it");
-        Assert.IsTrue(clientProfile.IsPremium,
+        vpnProfile = app.VpnProfileService.Get(vpnProfile.VpnProfileId);
+        Assert.IsNotNull(vpnProfile.AccessCode, "the code itself is kept — a refusal deletes nothing");
+        Assert.IsNotNull(vpnProfile.AccessCodeRefusal, "and the refusal is recorded beside it");
+        Assert.IsTrue(vpnProfile.IsPremium,
             "a refusal must NOT flip the local premium gates: doing so turns the build into its own " +
             "free edition — premium locations gone, promotion banner back — on nobody's decision " +
             "(keyring plan §8). The app announces the ending instead.");
 
         // revival proves itself: a successful premium session clears the mark
-        app.ClientProfileService.ClearAccessCodeRefused(clientProfile.ClientProfileId);
-        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
-        Assert.IsNull(clientProfile.AccessCodeRefusal);
-        Assert.IsTrue(clientProfile.IsPremium);
+        app.VpnProfileService.ClearAccessCodeRefused(vpnProfile.VpnProfileId);
+        vpnProfile = app.VpnProfileService.Get(vpnProfile.VpnProfileId);
+        Assert.IsNull(vpnProfile.AccessCodeRefusal);
+        Assert.IsTrue(vpnProfile.IsPremium);
     }
 
     [TestMethod]
@@ -160,15 +160,15 @@ public class AccessCodeTest : TestAppBase
 
         // create access code
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ReSharper disable once AccessToDisposedClosure
-        Assert.ThrowsExactly<ArgumentException>(() => app.ClientProfileService.Update(
-            clientProfile.ClientProfileId, new ClientProfileUpdateParams { AccessCode = accessCode }));
+        Assert.ThrowsExactly<ArgumentException>(() => app.VpnProfileService.Update(
+            vpnProfile.VpnProfileId, new VpnProfileUpdateParams { AccessCode = accessCode }));
     }
 
     [TestMethod]
-    public async Task ClientProfile_with_access_code_must_be_premium()
+    public async Task VpnProfile_with_access_code_must_be_premium()
     {
         await using var server = await TestHelper.CreateServer();
 
@@ -188,18 +188,18 @@ public class AccessCodeTest : TestAppBase
         // create access code
         var accessCode = TestAppHelper.BuildAccessCode();
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        app.VpnProfileService.Update(vpnProfile.VpnProfileId, new VpnProfileUpdateParams {
             AccessCode = accessCode
         });
 
         // check account is 
-        var clientProfileInfo = clientProfile.ToInfo(app.Features);
-        Assert.IsTrue(clientProfileInfo.IsPremium);
-        Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.CanGoPremium);
-        Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByCode);
-        Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByPurchase);
-        Assert.IsNull(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByRewardedAd);
-        Assert.IsNull(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByTrial);
+        var vpnProfileInfo = vpnProfile.ToInfo(app.Features);
+        Assert.IsTrue(vpnProfileInfo.IsPremium);
+        Assert.IsFalse(vpnProfileInfo.SelectedLocationInfo?.Options.CanGoPremium);
+        Assert.IsFalse(vpnProfileInfo.SelectedLocationInfo?.Options.PremiumByCode);
+        Assert.IsFalse(vpnProfileInfo.SelectedLocationInfo?.Options.PremiumByPurchase);
+        Assert.IsNull(vpnProfileInfo.SelectedLocationInfo?.Options.PremiumByRewardedAd);
+        Assert.IsNull(vpnProfileInfo.SelectedLocationInfo?.Options.PremiumByTrial);
     }
 }

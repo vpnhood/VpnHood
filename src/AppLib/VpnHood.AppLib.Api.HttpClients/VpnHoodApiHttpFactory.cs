@@ -15,7 +15,7 @@ public static class VpnHoodApiHttpFactory
     {
         return new VpnHoodApi(
             app: new AppClient(httpClient),
-            clientProfiles: new ClientProfileClient(httpClient),
+            vpnProfiles: new VpnProfileClient(httpClient),
             account: new AccountClient(httpClient),
             billing: new BillingClient(httpClient),
             intents: new IntentClient(httpClient),

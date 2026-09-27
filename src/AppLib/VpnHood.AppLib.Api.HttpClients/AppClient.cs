@@ -65,20 +65,20 @@ internal sealed class AppClient(HttpClient httpClient) : AppApiClientBase(httpCl
         return HttpGetAsync<AppState>(BaseUrl + "state", null, cancellationToken);
     }
 
-    public Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken)
+    public Task Connect(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken)
     {
-        return HttpPostAsync(BaseUrl + "connect", ConnectQuery(clientProfileId, serverLocation, planId), null, cancellationToken);
+        return HttpPostAsync(BaseUrl + "connect", ConnectQuery(vpnProfileId, serverLocation, planId), null, cancellationToken);
     }
 
-    public Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken)
+    public Task Diagnose(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken)
     {
-        return HttpPostAsync(BaseUrl + "diagnose", ConnectQuery(clientProfileId, serverLocation, planId), null, cancellationToken);
+        return HttpPostAsync(BaseUrl + "diagnose", ConnectQuery(vpnProfileId, serverLocation, planId), null, cancellationToken);
     }
 
-    private static Dictionary<string, object?> ConnectQuery(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId)
+    private static Dictionary<string, object?> ConnectQuery(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId)
     {
         return new Dictionary<string, object?> {
-            ["clientProfileId"] = clientProfileId,
+            ["vpnProfileId"] = vpnProfileId,
             ["serverLocation"] = serverLocation,
             ["planId"] = planId
         };

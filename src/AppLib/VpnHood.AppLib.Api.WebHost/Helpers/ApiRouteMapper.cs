@@ -97,7 +97,7 @@ public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin)
     public ApiRouteMapper AddApi(VpnHoodApi api)
     {
         return AddController(new AppController(api.App))
-            .AddController(new ClientProfileController(api.ClientProfiles))
+            .AddController(new VpnProfileController(api.VpnProfiles))
             .AddController(new AccountController(api.Account))
             .AddController(new BillingController(api.Billing))
             .AddController(new IntentsController(api.Intents))

@@ -2,16 +2,16 @@
 using System.Text.Json.Serialization;
 using VpnHood.Net.Toolkit.Converters;
 
-namespace VpnHood.AppLib.Api.ClientProfiles;
+namespace VpnHood.AppLib.Api.VpnProfiles;
 
 // A profile as the UIs read it: plain values taken off the stored profile once, so the same object
 // is read back by a UI on the other side of the API. The client country is baked in - the policy
-// and the locations depend on it - which is why ClientProfileService keeps one per profile and
-// region. Built by the app (ClientProfileInfoBuilder); nothing here reads a token.
-public class ClientProfileInfo
+// and the locations depend on it - which is why VpnProfileService keeps one per profile and
+// region. Built by the app (VpnProfileInfoBuilder); nothing here reads a token.
+public class VpnProfileInfo
 {
-    public required Guid ClientProfileId { get; init; }
-    public required string ClientProfileName { get; init; }
+    public required Guid VpnProfileId { get; init; }
+    public required string VpnProfileName { get; init; }
     public required string? SupportId { get; init; }
     public required string? CustomData { get; init; }
     public required bool IsPremiumLocationSelected { get; init; }

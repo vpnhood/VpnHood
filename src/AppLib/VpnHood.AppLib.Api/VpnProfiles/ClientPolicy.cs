@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using VpnHood.Net.Toolkit.Converters;
 
-namespace VpnHood.AppLib.Api.ClientProfiles;
+namespace VpnHood.AppLib.Api.VpnProfiles;
 
 // What the operator that issued this token allows the people of a set of countries to do. The short
 // JSON names are the token's own - they travel inside the access key, so they are not ours to

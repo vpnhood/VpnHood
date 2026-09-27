@@ -25,9 +25,9 @@ internal static class LocationsCommand
         command.SetAction((parseResult, cancellationToken) => DaemonSession.Run(platform, async (api, token) => {
             var info = await api.App.GetInfo(token).Vhc();
             var named = isAddAccessKeySupported ? parseResult.GetValue(profileOption) : null;
-            var clientProfileId = ProfileLookup.Resolve(info, named, platform.Paths.CommandName);
+            var vpnProfileId = ProfileLookup.Resolve(info, named, platform.Paths.CommandName);
 
-            var profile = await api.ClientProfiles.Get(clientProfileId, token).Vhc();
+            var profile = await api.VpnProfiles.Get(vpnProfileId, token).Vhc();
             if (parseResult.GetValue(jsonOption)) {
                 await CliPrinter.Json(profile.LocationInfos, token).Vhc();
                 return 0;

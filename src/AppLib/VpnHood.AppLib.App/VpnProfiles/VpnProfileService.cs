@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.Exceptions;
@@ -13,12 +13,12 @@ using VpnHood.Net.Toolkit.Utils;
 
 using VpnHood.AppLib.App.DtoConverters;
 
-namespace VpnHood.AppLib.App.ClientProfiles;
+namespace VpnHood.AppLib.App.VpnProfiles;
 
-public class ClientProfileService
+public class VpnProfileService
 {
     private const string FilenameProfiles = "vpn_profiles.json";
-    private List<ClientProfile> _clientProfiles;
+    private List<VpnProfile> _vpnProfiles;
     private readonly Lock _updateByUrlLock = new();
 
     /// <summary>
@@ -33,85 +33,85 @@ public class ClientProfileService
     /// </summary>
     private readonly Lock _storeLock = new();
     private readonly AppFeatures _appFeatures;
-    private ClientProfileInfo? _cashInfo;
+    private VpnProfileInfo? _cashInfo;
     private string? _cashInfoRegion;
 
-    private string ClientProfilesFilePath => GetClientProfilesFilePath(field);
+    private string VpnProfilesFilePath => GetVpnProfilesFilePath(field);
 
-    private static string GetClientProfilesFilePath(string folderPath) => Path.Combine(folderPath, FilenameProfiles);
+    private static string GetVpnProfilesFilePath(string folderPath) => Path.Combine(folderPath, FilenameProfiles);
 
-    public ClientProfileService(string folderPath, AppFeatures appFeatures)
+    public VpnProfileService(string folderPath, AppFeatures appFeatures)
     {
-        ClientProfilesFilePath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
+        VpnProfilesFilePath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
         _appFeatures = appFeatures;
-        _clientProfiles = [.. Load()];
+        _vpnProfiles = [.. Load()];
     }
 
-    public ClientProfileInfo? FindInfo(Guid clientProfileId)
+    public VpnProfileInfo? FindInfo(Guid vpnProfileId)
     {
         lock (_storeLock) {
             // the cached info bakes in the client country (policy & locations), so it is only valid
             // while the region it was built for is still the current one
-            if (_cashInfo?.ClientProfileId == clientProfileId &&
+            if (_cashInfo?.VpnProfileId == vpnProfileId &&
                 _cashInfoRegion == AppRegionInfo.CurrentRegion.Name)
                 return _cashInfo;
 
-            var clientProfile = FindById(clientProfileId);
+            var vpnProfile = FindById(vpnProfileId);
             _cashInfoRegion = AppRegionInfo.CurrentRegion.Name;
-            _cashInfo = clientProfile?.ToInfo(_appFeatures);
+            _cashInfo = vpnProfile?.ToInfo(_appFeatures);
             return _cashInfo;
         }
     }
 
-    public ClientProfileInfo GetInfo(Guid clientProfileId)
+    public VpnProfileInfo GetInfo(Guid vpnProfileId)
     {
-        return FindInfo(clientProfileId)
-               ?? throw new NotExistsException($"Could not find ClientProfile. ClientProfileId={clientProfileId}");
+        return FindInfo(vpnProfileId)
+               ?? throw new NotExistsException($"Could not find VpnProfile. VpnProfileId={vpnProfileId}");
     }
 
-    public ClientProfile? FindById(Guid clientProfileId)
+    public VpnProfile? FindById(Guid vpnProfileId)
     {
         lock (_storeLock)
-            return _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId);
+            return _vpnProfiles.SingleOrDefault(x => x.VpnProfileId == vpnProfileId);
     }
 
-    public ClientProfile? FindByTokenId(string tokenId)
+    public VpnProfile? FindByTokenId(string tokenId)
     {
         lock (_storeLock)
-            return _clientProfiles.SingleOrDefault(x => x.Token.TokenId == tokenId);
+            return _vpnProfiles.SingleOrDefault(x => x.Token.TokenId == tokenId);
     }
 
-    public ClientProfile Get(Guid clientProfileId)
+    public VpnProfile Get(Guid vpnProfileId)
     {
-        return FindById(clientProfileId)
-               ?? throw new NotExistsException($"Could not find ClientProfile. ClientProfileId={clientProfileId}");
+        return FindById(vpnProfileId)
+               ?? throw new NotExistsException($"Could not find VpnProfile. VpnProfileId={vpnProfileId}");
     }
 
     public Token GetToken(string tokenId)
     {
-        var clientProfile = FindByTokenId(tokenId) ??
+        var vpnProfile = FindByTokenId(tokenId) ??
                             throw new NotExistsException($"TokenId does not exist. TokenId: {tokenId}");
-        return clientProfile.Token;
+        return vpnProfile.Token;
     }
 
-    public ClientProfile[] List()
+    public VpnProfile[] List()
     {
         lock (_storeLock)
-            return [.. _clientProfiles];
+            return [.. _vpnProfiles];
     }
 
-    public void Delete(Guid clientProfileId)
+    public void Delete(Guid vpnProfileId)
     {
         lock (_storeLock) {
             var item =
-                _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
+                _vpnProfiles.SingleOrDefault(x => x.VpnProfileId == vpnProfileId)
                 ?? throw new NotExistsException();
 
             // BuiltInToken should not be removed
             if (item.IsBuiltIn)
                 throw new InvalidOperationException("Can not delete built-In tokens.");
 
-            _clientProfiles.Remove(item);
+            _vpnProfiles.Remove(item);
             Save();
         }
     }
@@ -119,9 +119,9 @@ public class ClientProfileService
     public void TryRemoveByTokenId(string tokenId)
     {
         lock (_storeLock) {
-            var items = _clientProfiles.Where(x => x.Token.TokenId == tokenId).ToArray();
+            var items = _vpnProfiles.Where(x => x.Token.TokenId == tokenId).ToArray();
             foreach (var item in items)
-                _clientProfiles.Remove(item);
+                _vpnProfiles.Remove(item);
 
             Save();
         }
@@ -138,10 +138,10 @@ public class ClientProfileService
         return ret;
     }
 
-    public ClientProfile Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    public VpnProfile Update(Guid vpnProfileId, VpnProfileUpdateParams updateParams)
     {
         lock (_storeLock) {
-            var item = ApplyUpdate(clientProfileId, updateParams);
+            var item = ApplyUpdate(vpnProfileId, updateParams);
             Save();
             return item;
         }
@@ -151,17 +151,17 @@ public class ClientProfileService
     /// The account holds this code — it either ranked it for this device, or has just taken the one
     /// typed here — so the device owes no upload for it (keyring plan §6).
     /// <para>
-    /// Deliberately NOT a field on <see cref="ClientProfileUpdateParams" />: those params are
+    /// Deliberately NOT a field on <see cref="VpnProfileUpdateParams" />: those params are
     /// reachable from the web API, and anything able to claim <i>already synced</i> could make a code
     /// typed while the portal was blocked never reach the account at all. Only the account service
     /// knows this, and only it can say it.
     /// </para>
     /// </summary>
-    public void SetAccountAccessCode(Guid clientProfileId, string accessCode)
+    public void SetAccountAccessCode(Guid vpnProfileId, string accessCode)
     {
         lock (_storeLock) {
-            var item = ApplyUpdate(clientProfileId,
-                new ClientProfileUpdateParams { AccessCode = new Patch<string?>(accessCode) });
+            var item = ApplyUpdate(vpnProfileId,
+                new VpnProfileUpdateParams { AccessCode = new Patch<string?>(accessCode) });
 
             // set even when the code did not change: that IS the upload landing on a code already here
             item.IsAccessCodeSynced = true;
@@ -169,18 +169,18 @@ public class ClientProfileService
         }
     }
 
-    private ClientProfile ApplyUpdate(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    private VpnProfile ApplyUpdate(Guid vpnProfileId, VpnProfileUpdateParams updateParams)
     {
-        var item = FindById(clientProfileId)
+        var item = FindById(vpnProfileId)
                    ?? throw new NotExistsException(
-                       "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
+                       "VpnProfile does not exists. VpnProfileId: {vpnProfileId}");
 
         // update name
-        if (updateParams.ClientProfileName != null) {
-            var name = updateParams.ClientProfileName.Value?.Trim();
+        if (updateParams.VpnProfileName != null) {
+            var name = updateParams.VpnProfileName.Value?.Trim();
             if (name == item.Token.Name?.Trim()) name = null; // set default if the name is same as token name
             if (name?.Length == 0) name = null;
-            item.ClientProfileName = name;
+            item.VpnProfileName = name;
         }
 
         if (updateParams.IsFavorite != null)
@@ -238,10 +238,10 @@ public class ClientProfileService
     /// code the server has never heard of. Idempotent; the first refusal's story stands until the
     /// code changes or a connection succeeds.
     /// </summary>
-    public void MarkAccessCodeRefused(Guid clientProfileId, SessionErrorCode errorCode)
+    public void MarkAccessCodeRefused(Guid vpnProfileId, SessionErrorCode errorCode)
     {
         lock (_storeLock) {
-            var item = FindById(clientProfileId);
+            var item = FindById(vpnProfileId);
             if (item?.AccessCode == null || item.AccessCodeRefusal != null)
                 return;
 
@@ -254,10 +254,10 @@ public class ClientProfileService
     /// A connection with this profile's code succeeded — revival proves itself (keyring plan §8):
     /// the refusal mark clears by itself, with nothing to re-enter.
     /// </summary>
-    public void ClearAccessCodeRefused(Guid clientProfileId)
+    public void ClearAccessCodeRefused(Guid vpnProfileId)
     {
         lock (_storeLock) {
-            var item = FindById(clientProfileId);
+            var item = FindById(vpnProfileId);
             if (item?.AccessCodeRefusal == null)
                 return;
 
@@ -266,7 +266,7 @@ public class ClientProfileService
         }
     }
 
-    public ClientProfile ImportAccessKey(string accessKey)
+    public VpnProfile ImportAccessKey(string accessKey)
     {
         try {
             var token = Token.FromAccessKey(accessKey);
@@ -279,58 +279,58 @@ public class ClientProfileService
     }
 
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer,
+    private VpnProfile ImportAccessToken(Token token, bool overwriteNewer,
         bool allowOverwriteBuiltIn,
         bool isBuiltIn = false)
     {
         lock (_storeLock) {
             // make sure no one overwrites built-in tokens
-            if (!allowOverwriteBuiltIn && _clientProfiles.Any(x => x.IsBuiltIn && x.Token.TokenId == token.TokenId))
+            if (!allowOverwriteBuiltIn && _vpnProfiles.Any(x => x.IsBuiltIn && x.Token.TokenId == token.TokenId))
                 throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
 
             // update tokens
-            foreach (var item in _clientProfiles.Where(clientProfile =>
-                         clientProfile.Token.TokenId == token.TokenId)) {
+            foreach (var item in _vpnProfiles.Where(vpnProfile =>
+                         vpnProfile.Token.TokenId == token.TokenId)) {
                 if (overwriteNewer || token.IssuedAt >= item.Token.IssuedAt)
                     item.Token = token;
             }
 
             // add if it is a new token
-            if (_clientProfiles.All(x => x.Token.TokenId != token.TokenId)) {
-                var clientProfile = new ClientProfile {
-                    ClientProfileId = Guid.NewGuid(),
-                    ClientProfileName = token.Name,
+            if (_vpnProfiles.All(x => x.Token.TokenId != token.TokenId)) {
+                var vpnProfile = new VpnProfile {
+                    VpnProfileId = Guid.NewGuid(),
+                    VpnProfileName = token.Name,
                     Token = token,
                     IsBuiltIn = isBuiltIn
                 };
 
-                _clientProfiles.Add(clientProfile);
+                _vpnProfiles.Add(vpnProfile);
             }
 
             // save profiles
             Save();
 
-            var ret = _clientProfiles.First(x => x.Token.TokenId == token.TokenId);
+            var ret = _vpnProfiles.First(x => x.Token.TokenId == token.TokenId);
             return ret;
         }
     }
 
-    internal ClientProfile[] ImportBuiltInAccessKeys(string[] accessKeys)
+    internal VpnProfile[] ImportBuiltInAccessKeys(string[] accessKeys)
     {
         lock (_storeLock) {
             // insert & update new built-in access tokens
             var accessTokens = accessKeys.Select(Token.FromAccessKey);
-            var clientProfiles = accessTokens
+            var vpnProfiles = accessTokens
                 .Select(token =>
                     ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true, isBuiltIn: true))
                 .ToArray();
 
-            // remove old built-in client profiles that does not exist in the new list
-            if (_clientProfiles.RemoveAll(x =>
-                    x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId)) > 0)
+            // remove old built-in VPN profiles that does not exist in the new list
+            if (_vpnProfiles.RemoveAll(x =>
+                    x.IsBuiltIn && vpnProfiles.All(y => y.VpnProfileId != x.VpnProfileId)) > 0)
                 Save();
 
-            return clientProfiles;
+            return vpnProfiles;
         }
     }
 
@@ -428,8 +428,8 @@ public class ClientProfileService
     private void Save()
     {
         lock (_storeLock) {
-            Directory.CreateDirectory(Path.GetDirectoryName(ClientProfilesFilePath)!);
-            File.WriteAllText(ClientProfilesFilePath, JsonSerializer.Serialize(_clientProfiles));
+            Directory.CreateDirectory(Path.GetDirectoryName(VpnProfilesFilePath)!);
+            File.WriteAllText(VpnProfilesFilePath, JsonSerializer.Serialize(_vpnProfiles));
 
             // clear cache
             _cashInfo = null;
@@ -439,17 +439,17 @@ public class ClientProfileService
     public void Reload()
     {
         lock (_storeLock) {
-            _clientProfiles = [.. Load()];
+            _vpnProfiles = [.. Load()];
             _cashInfo = null;
         }
     }
 
-    private IEnumerable<ClientProfile> Load()
+    private IEnumerable<VpnProfile> Load()
     {
         try {
-            var json = File.ReadAllText(ClientProfilesFilePath);
-            var clientProfiles = JsonUtils.Deserialize<ClientProfile[]>(json);
-            return clientProfiles;
+            var json = File.ReadAllText(VpnProfilesFilePath);
+            var vpnProfiles = JsonUtils.Deserialize<VpnProfile[]>(json);
+            return vpnProfiles;
         }
         catch {
             return [];

@@ -16,14 +16,14 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 public partial class PromoteView : UserControl, IPage
 {
     private readonly MainView _host;
-    private readonly Guid _clientProfileId;
+    private readonly Guid _vpnProfileId;
     private readonly string _serverLocation;
     private readonly bool _isPremiumLocation;
 
-    public PromoteView(MainView host, Guid clientProfileId, string serverLocation, bool isPremiumLocation)
+    public PromoteView(MainView host, Guid vpnProfileId, string serverLocation, bool isPremiumLocation)
     {
         _host = host;
-        _clientProfileId = clientProfileId;
+        _vpnProfileId = vpnProfileId;
         _serverLocation = serverLocation;
         _isPremiumLocation = isPremiumLocation;
         InitializeComponent();
@@ -33,7 +33,7 @@ public partial class PromoteView : UserControl, IPage
         RichText.Apply(TitleText, isPremiumLocation ? s.SelectedLocationIsPremium : s.SelectedLocationIsFree);
 
         // the location's options, read again so the page is driven by current server data
-        var info = VhApp.FindClientProfileInfo(clientProfileId);
+        var info = VhApp.FindVpnProfileInfo(vpnProfileId);
         var options = info?.LocationInfos.FirstOrDefault(x => x.ServerLocation == serverLocation)?.Options;
 
         // the picture of the case, and over it the operator's own promotion when the app holds one
@@ -59,7 +59,7 @@ public partial class PromoteView : UserControl, IPage
                 () => Connect(ConnectPlanId.PremiumByTrial)));
         if (options?.PremiumByPurchase == true || options?.PremiumByCode == true)
             PremiumRows.Children.Add(new PromoteRow(Mdi.CrownCircleOutline, s.GoPremium, s.GoPremiumDesc, s.Upgrade, () => {
-                _host.Navigate(new PurchaseSubscriptionView(_host, clientProfileId));
+                _host.Navigate(new PurchaseSubscriptionView(_host, vpnProfileId));
                 return Task.CompletedTask;
             }));
     }
@@ -91,7 +91,7 @@ public partial class PromoteView : UserControl, IPage
     // ConnectWith would send the person to a fresh copy of this page instead of a server.
     private async Task Connect(ConnectPlanId planId)
     {
-        await _host.ViewModel.Connect(new ConnectRequest(_clientProfileId, _serverLocation, _isPremiumLocation, planId));
+        await _host.ViewModel.Connect(new ConnectRequest(_vpnProfileId, _serverLocation, _isPremiumLocation, planId));
     }
 
     private async void OnFreeClick(object? sender, RoutedEventArgs e)

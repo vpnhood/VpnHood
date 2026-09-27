@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.AppLib.App.ClientProfiles;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.App.VpnProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Client.Abstractions.Exceptions;
@@ -30,11 +30,11 @@ public class ClientAppTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.LogServiceOptions.Enabled = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile1 = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ************
         // Test: With diagnose
-        await app.Connect(clientProfile1.ClientProfileId, diagnose: true, cancellationToken: TestContext.CancellationToken);
+        await app.Connect(vpnProfile1.VpnProfileId, diagnose: true, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected, 10000);
         await app.Disconnect();
         await app.WaitForState(AppConnectionState.None);
@@ -49,7 +49,7 @@ public class ClientAppTest : TestAppBase
 
         // ************
         // Test: Without diagnose
-        await app.Connect(clientProfile1.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+        await app.Connect(vpnProfile1.VpnProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
         await app.Disconnect();
         await app.WaitForState(AppConnectionState.None);
@@ -72,8 +72,8 @@ public class ClientAppTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         Assert.IsNull(app.IpRangeLocationProvider);
 
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
         await app.Disconnect();
         await app.WaitForState(AppConnectionState.None);
@@ -92,8 +92,8 @@ public class ClientAppTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.LogServiceOptions.Enabled = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExactlyAsync<UnreachableServerException>(() => app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken));
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await Assert.ThrowsExactlyAsync<UnreachableServerException>(() => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken));
 
         await app.WaitForState(AppConnectionState.None);
         Assert.IsTrue(app.State.LogExists);
@@ -118,8 +118,8 @@ public class ClientAppTest : TestAppBase
         appOptions.Transport.UnstableTimeout = TimeSpan.FromSeconds(1);
         appOptions.Transport.AutoWaitTimeout = TimeSpan.FromSeconds(2);
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
         // dispose server and wait for waiting state
@@ -157,9 +157,9 @@ public class ClientAppTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.ConnectTimeout = TimeSpan.FromSeconds(1);
         await using var app = TestAppHelper.CreateClientApp(appOptions, testDevice);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
-        await Assert.ThrowsExactlyAsync<ConnectionTimeoutException>(() => app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken));
+        await Assert.ThrowsExactlyAsync<ConnectionTimeoutException>(() => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken));
         await app.WaitForState(AppConnectionState.None);
         Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName);
     }
@@ -176,9 +176,9 @@ public class ClientAppTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.LogServiceOptions.Enabled = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestAppHelper.CreateDevice());
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
-        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
         // get data through tunnel
@@ -210,17 +210,17 @@ public class ClientAppTest : TestAppBase
         // create server and app
         await using var server = await TestHelper.CreateServer(accessManager);
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile1 = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // wait for connect
-        await app.Connect(clientProfile1.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+        await app.Connect(vpnProfile1.VpnProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
         Assert.AreEqual(accessManager.ServerConfig.ServerTokenUrls.First(),
-            app.ClientProfileService.GetToken(token.TokenId).ServerToken.Urls?.First());
+            app.VpnProfileService.GetToken(token.TokenId).ServerToken.Urls?.First());
 
         CollectionAssert.AreEqual(accessManager.ServerConfig.ServerSecret,
-            app.ClientProfileService.GetToken(token.TokenId).ServerToken.Secret);
+            app.VpnProfileService.GetToken(token.TokenId).ServerToken.Secret);
 
         // code should not exist any return objects
         Assert.AreNotEqual(true, app.State.LastError?.Data.ContainsKey("AccessCode"));
@@ -240,14 +240,14 @@ public class ClientAppTest : TestAppBase
         // create server and app
         await using var server = await TestHelper.CreateServer(accessManager);
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile1 = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // wait for connect error
-        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(clientProfile1.ClientProfileId, cancellationToken: TestContext.CancellationToken));
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(vpnProfile1.VpnProfileId, cancellationToken: TestContext.CancellationToken));
         Assert.AreEqual(SessionErrorCode.AccessExpired, ex.SessionResponse.ErrorCode);
 
         // token name must be updated
-        var token2 = app.ClientProfileService.GetToken(token.TokenId);
+        var token2 = app.VpnProfileService.GetToken(token.TokenId);
         Assert.AreEqual(orgTokenName, token2.Name);
     }
 
@@ -303,13 +303,13 @@ public class ClientAppTest : TestAppBase
 
         // connect
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token1.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
 
         Assert.IsTrue(isTokenRetrieved);
         Assert.AreNotEqual(token1.ServerToken.CreatedTime, token2.ServerToken.CreatedTime);
         Assert.AreEqual(token2.ServerToken.CreatedTime,
-            app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
+            app.VpnProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
     }
 
@@ -324,13 +324,13 @@ public class ClientAppTest : TestAppBase
 
         // connect
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
-        var clientProfile2 = app.ClientProfileService.ImportAccessKey(token2.ToAccessKey());
+        var vpnProfile1 = app.VpnProfileService.ImportAccessKey(token1.ToAccessKey());
+        var vpnProfile2 = app.VpnProfileService.ImportAccessKey(token2.ToAccessKey());
 
-        await app.Connect(clientProfile1.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+        await app.Connect(vpnProfile1.VpnProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
-        await app.Connect(clientProfile2.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+        await app.Connect(vpnProfile2.VpnProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
@@ -345,11 +345,11 @@ public class ClientAppTest : TestAppBase
         var token = TestHelper.CreateAccessToken(server);
 
         await using var app = TestAppHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, diagnose: true, cancellationToken: TestContext.CancellationToken);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, diagnose: true, cancellationToken: TestContext.CancellationToken);
 
 
-        Assert.IsTrue(app.State.ClientProfile?.IsPremium);
+        Assert.IsTrue(app.State.VpnProfile?.IsPremium);
         Assert.IsTrue(app.State.SessionInfo?.IsPremiumSession);
     }
 
@@ -366,23 +366,23 @@ public class ClientAppTest : TestAppBase
 
         // Create App
         await using var clientApp = TestAppHelper.CreateClientApp();
-        var clientProfile = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        clientApp.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+        var vpnProfile = clientApp.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        clientApp.VpnProfileService.Update(vpnProfile.VpnProfileId, new VpnProfileUpdateParams {
             SelectedLocation = "FR/Paris"
         });
 
         // Connect
         try {
-            await clientApp.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
+            await clientApp.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
             Assert.Fail("SessionException was expected.");
         }
         catch (SessionException ex) {
             Assert.AreEqual(SessionErrorCode.NoServerAvailable, ex.SessionResponse.ErrorCode);
         }
 
-        // reload clientProfile
-        clientProfile = clientApp.ClientProfileService.Get(clientProfile.ClientProfileId);
-        Assert.IsTrue(clientProfile.ToInfo(clientApp.Features).SelectedLocationInfo?.IsAuto);
+        // reload vpnProfile
+        vpnProfile = clientApp.VpnProfileService.Get(vpnProfile.VpnProfileId);
+        Assert.IsTrue(vpnProfile.ToInfo(clientApp.Features).SelectedLocationInfo?.IsAuto);
     }
 
     [TestMethod]
@@ -404,8 +404,8 @@ public class ClientAppTest : TestAppBase
         appOptions.UserReviewProvider = testUserReviewProvider;
         appOptions.AllowRecommendUserReviewByServer = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
 
         // access manager set UserReviewRecommended
         Assert.IsFalse(testUserReviewProvider.IsReviewRequested);
@@ -435,7 +435,7 @@ public class ClientAppTest : TestAppBase
 
         // Connect again then access manager should receive result
         Assert.IsNull(accessManager.UserReview);
-        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         Assert.IsNotNull(accessManager.UserReview);
         Assert.AreEqual(3, accessManager.UserReview.Rating);
         Assert.AreEqual(app.Features.Version, accessManager.UserReview.AppVersion);

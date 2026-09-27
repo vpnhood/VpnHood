@@ -32,13 +32,13 @@ public static class VpnHoodAppExtensions
                 "App state didn't reach the expected value.", timeout);
         }
 
-        public Task Connect(Guid? clientProfileId,
+        public Task Connect(Guid? vpnProfileId,
             ConnectPlanId planId = ConnectPlanId.Normal,
             bool diagnose = false,
             CancellationToken cancellationToken = default)
         {
             return app.Connect(new ConnectOptions {
-                ClientProfileId = clientProfileId,
+                VpnProfileId = vpnProfileId,
                 PlanId = planId,
                 Diagnose = diagnose
             }, cancellationToken);
@@ -46,7 +46,7 @@ public static class VpnHoodAppExtensions
 
         public void UpdateClientCountry(string countryCode)
         {
-            // ClientProfileService detects the region change itself and rebuilds its cached info
+            // VpnProfileService detects the region change itself and rebuilds its cached info
             AppRegionInfo.CurrentRegion = new RegionInfo(countryCode);
         }
     }

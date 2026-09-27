@@ -22,8 +22,8 @@ public interface IAppApi
     Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken);
     Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken);
     Task<AppState> GetState(CancellationToken cancellationToken);
-    Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
-    Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
+    Task Connect(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
+    Task Diagnose(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
     Task Disconnect(CancellationToken cancellationToken);
     Task ClearLastError(CancellationToken cancellationToken);
     Task ClearReconnectRequired(CancellationToken cancellationToken);

@@ -2,7 +2,7 @@ using System.Net;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.Api.HttpClients;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.Exceptions;
@@ -57,8 +57,8 @@ public class AppApiClientTest : TestAppBase
         var config = await api.App.Configure(new ConfigParams { AvailableCultures = ["en", "fa"] }, CancellationToken.None);
         Assert.AreEqual(app.Features.AppId, config.Features.AppId);
         Assert.IsFalse(config.IsRemote, "loopback is the app's own web view");
-        Assert.AreEqual(1, config.ClientProfileInfos.Count);
-        Assert.AreEqual(token.TokenId, config.ClientProfileInfos[0].TokenId);
+        Assert.AreEqual(1, config.VpnProfileInfos.Count);
+        Assert.AreEqual(token.TokenId, config.VpnProfileInfos[0].TokenId);
         CollectionAssert.AreEqual(new[] { "en", "fa" }, config.AvailableCultureInfos.Select(x => x.Code).ToArray());
         Assert.AreEqual(app.State.ConnectionState, config.State.ConnectionState);
 
@@ -71,12 +71,12 @@ public class AppApiClientTest : TestAppBase
         Assert.AreEqual("fa", state.CurrentUiCultureInfo.Code);
 
         // a profile, through its own controller
-        var profileId = config.ClientProfileInfos[0].ClientProfileId;
-        var profile = await api.ClientProfiles.Get(profileId, CancellationToken.None);
-        Assert.AreEqual(token.Name, profile.ClientProfileName);
-        var renamed = await api.ClientProfiles.Update(profileId,
-            new ClientProfileUpdateParams { ClientProfileName = new Patch<string?>("Renamed") }, CancellationToken.None);
-        Assert.AreEqual("Renamed", renamed.ClientProfileName);
+        var profileId = config.VpnProfileInfos[0].VpnProfileId;
+        var profile = await api.VpnProfiles.Get(profileId, CancellationToken.None);
+        Assert.AreEqual(token.Name, profile.VpnProfileName);
+        var renamed = await api.VpnProfiles.Update(profileId,
+            new VpnProfileUpdateParams { VpnProfileName = new Patch<string?>("Renamed") }, CancellationToken.None);
+        Assert.AreEqual("Renamed", renamed.VpnProfileName);
 
         // a split list
         await api.App.SetSplitDomains(new SplitDomains { Excludes = "example.com", Includes = "", Blocks = "" }, CancellationToken.None);
@@ -90,10 +90,10 @@ public class AppApiClientTest : TestAppBase
         // the two replies that are not JSON: the log as text, the promotion image as bytes - while
         // the access code IS json, so a quoted empty string must come back as an empty one
         Assert.IsNotNull(await api.App.Log(CancellationToken.None));
-        Assert.AreEqual(string.Empty, await api.ClientProfiles.GetAccessCode(profileId, CancellationToken.None));
+        Assert.AreEqual(string.Empty, await api.VpnProfiles.GetAccessCode(profileId, CancellationToken.None));
         await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.App.PromotionImage(CancellationToken.None));
 
         // a failure the server reported comes back as the exception it names
-        await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.ClientProfiles.Get(Guid.NewGuid(), CancellationToken.None));
+        await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.VpnProfiles.Get(Guid.NewGuid(), CancellationToken.None));
     }
 }

@@ -163,7 +163,7 @@ public sealed class WindowsAppTray : IDisposable
     // can do something about it.
     private async Task Connect()
     {
-        if (_state?.ClientProfile == null) {
+        if (_state?.VpnProfile == null) {
             await ShowWindow().Vhc();
             return;
         }

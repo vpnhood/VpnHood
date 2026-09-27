@@ -20,16 +20,16 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     private const string OneYear = "P1Y";
 
     private readonly MainView _host;
-    private readonly Guid? _clientProfileId;
+    private readonly Guid? _vpnProfileId;
     private readonly List<(SubscriptionPlan Plan, Button Button)> _planButtons = [];
     private AppPurchaseOptions? _options;
     private SubscriptionPlan? _selectedPlan;
     private double _basePrice;
 
-    public PurchaseSubscriptionView(MainView host, Guid? clientProfileId)
+    public PurchaseSubscriptionView(MainView host, Guid? vpnProfileId)
     {
         _host = host;
-        _clientProfileId = clientProfileId;
+        _vpnProfileId = vpnProfileId;
         InitializeComponent();
         BackButton.IsVisible = !VhApp.IsTvUi;
         TermsLink.IsVisible = VhApp.Features.TermsOfUseUrl != null;
@@ -57,8 +57,8 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         LoadingPanel.IsVisible = true;
         OptionsPanel.IsVisible = false;
         try {
-            var profileId = _clientProfileId ?? VhApp.ClientProfileId ?? throw new InvalidOperationException("Client profile id is required.");
-            _options = await VhApp.Api.ClientProfiles.GetPurchaseOptions(profileId, CancellationToken.None);
+            var profileId = _vpnProfileId ?? VhApp.VpnProfileId ?? throw new InvalidOperationException("VPN profile id is required.");
+            _options = await VhApp.Api.VpnProfiles.GetPurchaseOptions(profileId, CancellationToken.None);
             ShowOptions(_options);
         }
         catch (Exception ex) {

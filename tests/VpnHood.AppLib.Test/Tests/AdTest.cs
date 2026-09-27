@@ -40,8 +40,8 @@ public class AdTest : TestAppBase
         adProvider.FailShow = true; // should not reach this state
 
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
     }
 
     [TestMethod]
@@ -54,9 +54,9 @@ public class AdTest : TestAppBase
 
         // connect
         var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(()
-            => app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt));
+            => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt));
         await app.WaitForState(AppConnectionState.None);
     }
 
@@ -76,8 +76,8 @@ public class AdTest : TestAppBase
 
         // connect
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, planId: ConnectPlanId.PremiumByTrial);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, planId: ConnectPlanId.PremiumByTrial);
         await app.WaitForState(AppConnectionState.Connected);
     }
 
@@ -99,9 +99,9 @@ public class AdTest : TestAppBase
 
         // connect
         var token = accessManager.CreateToken();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(() => app.Connect(new ConnectOptions {
-            ClientProfileId = clientProfile.ClientProfileId,
+            VpnProfileId = vpnProfile.VpnProfileId,
             PlanId = ConnectPlanId.PremiumByRewardedAd
         }));
 
@@ -177,8 +177,8 @@ public class AdTest : TestAppBase
         token.IsPublic = true;
 
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByTrial);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, ConnectPlanId.PremiumByTrial);
 
         // assert
         Assert.IsNotNull(app.State.SessionStatus?.SessionExpirationTime);
@@ -219,8 +219,8 @@ public class AdTest : TestAppBase
         token.IsPublic = true;
 
         // connect
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByTrial);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, ConnectPlanId.PremiumByTrial);
 
         // asserts
         Assert.AreEqual(enable, app.State.SessionStatus?.CanExtendByRewardedAd);
@@ -248,7 +248,7 @@ public class AdTest : TestAppBase
         // create client app
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         var isAdLoadingStatusMet = false;
         app.ConnectionStateChanged += (_, _) => {
             // ReSharper disable once AccessToDisposedClosure
@@ -257,7 +257,7 @@ public class AdTest : TestAppBase
         };
 
         // connect
-        _ = app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt); // don't await as it will wait for ad to load
+        _ = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt); // don't await as it will wait for ad to load
         await app.WaitForState(AppConnectionState.WaitingForAd);
         await AssertEqualsWait(true, () => isAdLoadingStatusMet);
     }
@@ -291,10 +291,10 @@ public class AdTest : TestAppBase
         // create the app
         var device = TestAppHelper.CreateDevice();
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // we add to exclude but all ip should be split by ad
-        _ = app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
+        _ = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.WaitingForAd);
         await AssertEqualsWait(2, () => adProvider.LoadAdCount);
 
@@ -349,8 +349,8 @@ public class AdTest : TestAppBase
 
         // connect
         var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        _ = app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        _ = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
 
         // we don't use tls over dns detection, so the ad should fail after first attempt by checking the provider
         await AssertEqualsWait(1, () => adProvider.LoadAdCount);
@@ -392,9 +392,9 @@ public class AdTest : TestAppBase
         // create client app
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         // connect
-        _ = app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt); // don't await as it will wait for ad to load
+        _ = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt); // don't await as it will wait for ad to load
         await app.WaitForState(AppConnectionState.WaitingForAd);
         await AssertEqualsWait(true, () => app.State.IsWaitingForInternalAd);
         await AssertEqualsWait(2, () => testAdProvider.LoadAdCount,

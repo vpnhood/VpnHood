@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.AppLib.Api.Sessions;

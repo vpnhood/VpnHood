@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Sessions;

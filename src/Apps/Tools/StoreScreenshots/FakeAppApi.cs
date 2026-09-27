@@ -31,7 +31,7 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
             IntentFeatures = Info.IntentFeatures,
             State = Info.State,
             UserSettings = userSettings,
-            ClientProfileInfos = Info.ClientProfileInfos,
+            VpnProfileInfos = Info.VpnProfileInfos,
             AvailableCultureInfos = Info.AvailableCultureInfos,
             IsRemote = Info.IsRemote
         };
@@ -49,8 +49,8 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
     public Task SetSplitIpsViaDevice(SplitIpsViaDevice value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitIpsViaDevice");
     public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetSplitDomains");
     public Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitDomains");
-    public Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Connect");
-    public Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Diagnose");
+    public Task Connect(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Connect");
+    public Task Diagnose(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Diagnose");
     public Task Disconnect(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Disconnect");
     public Task<string> Log(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Log");
     public Task<byte[]> PromotionImage(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.PromotionImage");

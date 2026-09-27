@@ -99,11 +99,11 @@ internal sealed class StoreFixture
         var intents = Section(root, "intentFeatures");
         Fill(intents, "isWebBrowserSupported", true, filled, "intentFeatures");
 
-        if (root["clientProfileInfos"] is JsonArray profiles)
+        if (root["vpnProfileInfos"] is JsonArray profiles)
             for (var i = 0; i < profiles.Count; i++) {
                 if (profiles[i] is not JsonObject profile)
                     continue;
-                var where = $"clientProfileInfos[{i}]";
+                var where = $"vpnProfileInfos[{i}]";
                 Fill(profile, "accessCodeRefusal", null, filled, where);
                 Fill(profile, "canImportAccessCode", false, filled, where);
                 Fill(profile, "canViewAccessCode", false, filled, where);

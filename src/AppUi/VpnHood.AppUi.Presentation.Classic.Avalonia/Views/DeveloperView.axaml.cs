@@ -28,7 +28,7 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         _commands = [.. VhApp.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })];
         _unknown = [.. current.Except(VhApp.Features.DebugCommands)];
 
-        SupportIdText.Text = $"Support ID: {VhApp.State.ClientProfile?.SupportId}";
+        SupportIdText.Text = $"Support ID: {VhApp.State.VpnProfile?.SupportId}";
         CommandList.ItemsSource = _commands;
         DebugData2Box.Text = VhApp.UserSettings.DebugData2;
 

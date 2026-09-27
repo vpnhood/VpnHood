@@ -13,7 +13,7 @@ public class UserSettings
     public bool IsQuickLaunchPrompted { get; set; }
     public string? CultureCode { get; set; }
     public string? CountryCode { get; set; }
-    public Guid? ClientProfileId { get; set; }
+    public Guid? VpnProfileId { get; set; }
     public SplitTunnelingSettings SplitTunneling { get; set; } = new();
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; }

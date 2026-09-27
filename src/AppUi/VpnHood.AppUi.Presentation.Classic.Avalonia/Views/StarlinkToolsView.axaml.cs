@@ -20,13 +20,13 @@ public partial class StarlinkToolsView : UserControl, IPage
     private RelayMode _mode = RelayMode.Disabled;
 
     // the relay belongs to one server profile, whose name the page shows
-    public StarlinkToolsView(MainView host, Guid clientProfileId)
+    public StarlinkToolsView(MainView host, Guid vpnProfileId)
     {
         _host = host;
         InitializeComponent();
         var s = Strings.Current;
-        var profile = VhApp.FindClientProfileInfo(clientProfileId);
-        ScopeText.Text = profile != null ? s.StarlinkToolsProfileScope(profile.ClientProfileName) : null;
+        var profile = VhApp.FindVpnProfileInfo(vpnProfileId);
+        ScopeText.Text = profile != null ? s.StarlinkToolsProfileScope(profile.VpnProfileName) : null;
         ScopeText.IsVisible = profile != null;
 
         DisabledRow.Title = s.StarlinkModeDisabled;

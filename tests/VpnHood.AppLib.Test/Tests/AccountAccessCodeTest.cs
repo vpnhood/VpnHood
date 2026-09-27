@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Accounts;
@@ -80,10 +80,10 @@ public class AccountAccessCodeTest : TestAppBase
         return code;
     }
 
-    private static void TypeAccessCode(VpnHoodApp app, Guid clientProfileId, string? accessCode)
+    private static void TypeAccessCode(VpnHoodApp app, Guid vpnProfileId, string? accessCode)
     {
-        app.ClientProfileService.Update(clientProfileId,
-            new ClientProfileUpdateParams { AccessCode = new Patch<string?>(accessCode) });
+        app.VpnProfileService.Update(vpnProfileId,
+            new VpnProfileUpdateParams { AccessCode = new Patch<string?>(accessCode) });
     }
 
     private static Task SignIn(AccountService accountService)
@@ -102,7 +102,7 @@ public class AccountAccessCodeTest : TestAppBase
 
         await SignIn(accountService);
 
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNotNull(profile.AccessCode,
             "the one code the backend ranked must be applied at sign-in — the app itself never picks");
@@ -120,7 +120,7 @@ public class AccountAccessCodeTest : TestAppBase
 
         await SignIn(accountService);
 
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNull(profile.AccessCode,
             "the backend answered 'nothing' — signed in, not premium, and the app must not invent a code");
@@ -139,13 +139,13 @@ public class AccountAccessCodeTest : TestAppBase
         // code still on the device means the person chose "sign in and sync my code" at the prompt
         // (§6) — choosing "without it" would have removed it first — so the code is theirs to upload,
         // never something the refresh may quietly overwrite.
-        var profileId = app.ClientProfileService.List().First().ClientProfileId;
+        var profileId = app.VpnProfileService.List().First().VpnProfileId;
         TypeAccessCode(app, profileId, typedCode);
 
         await SignIn(accountService);
 
         Assert.AreEqual(typedCode, accountProvider.UploadedAccessCode);
-        var profile = app.ClientProfileService.Get(profileId);
+        var profile = app.VpnProfileService.Get(profileId);
         Assert.AreEqual(typedCode, profile.AccessCode);
         Assert.IsTrue(profile.IsAccessCodeSynced);
     }
@@ -174,7 +174,7 @@ public class AccountAccessCodeTest : TestAppBase
 
         await SignIn(accountService);
 
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNotNull(profile.AccessCode);
         StringAssert.EndsWith(profile.AccessCode, subscriptionCode[^4..],
@@ -188,11 +188,11 @@ public class AccountAccessCodeTest : TestAppBase
         await using var app = CreateAppWithAccount(accountProvider);
         var accountService = GetAccountService(app);
         await SignIn(accountService);
-        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode);
+        Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
         await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
 
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNull(profile.AccessCode,
             "the code came from the account and leaves with it — the farewell mail is the way back, not the device");
@@ -228,7 +228,7 @@ public class AccountAccessCodeTest : TestAppBase
 
         Assert.IsNotNull(accountProvider.TestAuthenticationProvider.UserId,
             "sign-out runs only after the backend agreed");
-        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode, "and premium is untouched");
+        Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode, "and premium is untouched");
     }
 
     [TestMethod]
@@ -238,11 +238,11 @@ public class AccountAccessCodeTest : TestAppBase
         await using var app = CreateAppWithAccount(accountProvider);
         var accountService = GetAccountService(app);
         await SignIn(accountService);
-        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode);
+        Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
         await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
 
-        var profile = app.CurrentClientProfileInfo;
+        var profile = app.CurrentVpnProfileInfo;
         Assert.IsNull(profile?.AccessCode,
             "signing out must take the account's code with it — leaving it would carry premium into whatever account signs in next");
     }
@@ -260,17 +260,17 @@ public class AccountAccessCodeTest : TestAppBase
 
         // The profile is the only door: typing a code makes it work HERE first, and the account hears
         // about it afterwards (keyring plan §6, §7). There is no set-code call on the account API.
-        var profileId = app.ClientProfileService.List().First().ClientProfileId;
+        var profileId = app.VpnProfileService.List().First().VpnProfileId;
         TypeAccessCode(app, profileId, newCode);
-        Assert.IsFalse(app.ClientProfileService.Get(profileId).IsAccessCodeSynced,
+        Assert.IsFalse(app.VpnProfileService.Get(profileId).IsAccessCodeSynced,
             "it works on this device before anyone has told the account");
 
         await accountService.Refresh(CancellationToken.None);
 
         CollectionAssert.AreEqual(new[] { newCode }, accountProvider.SetAccessCodeCalls);
         Assert.AreEqual(newCode, accountProvider.UploadedAccessCode);
-        StringAssert.EndsWith(app.CurrentClientProfileInfo!.AccessCode, newCode[^4..]);
-        Assert.IsTrue(app.ClientProfileService.Get(profileId).IsAccessCodeSynced);
+        StringAssert.EndsWith(app.CurrentVpnProfileInfo!.AccessCode, newCode[^4..]);
+        Assert.IsTrue(app.VpnProfileService.Get(profileId).IsAccessCodeSynced);
     }
 
     [TestMethod]
@@ -285,16 +285,16 @@ public class AccountAccessCodeTest : TestAppBase
 
         // the portal is blocked — which is ordinary where VpnHood is used — so the code is typed here
         // and the account never hears about it
-        var profileId = app.ClientProfileService.List().First().ClientProfileId;
+        var profileId = app.VpnProfileService.List().First().VpnProfileId;
         accountProvider.SetAccessCodeException = new HttpRequestException("portal unreachable");
         TypeAccessCode(app, profileId, typedCode);
-        Assert.IsFalse(app.ClientProfileService.Get(profileId).IsAccessCodeSynced);
+        Assert.IsFalse(app.VpnProfileService.Get(profileId).IsAccessCodeSynced);
 
         // the connection came up, so the portal is reachable again
         accountProvider.SetAccessCodeException = null;
         await accountService.Refresh(CancellationToken.None);
 
-        var profile = app.ClientProfileService.Get(profileId);
+        var profile = app.VpnProfileService.Get(profileId);
         Assert.AreEqual(typedCode, accountProvider.UploadedAccessCode,
             "the refresh must offer the pending code BEFORE reading the account, or it silently " +
             "overwrites a decision the person made");
@@ -310,13 +310,13 @@ public class AccountAccessCodeTest : TestAppBase
         var accountService = GetAccountService(app);
         await SignIn(accountService);
 
-        var profileId = app.ClientProfileService.List().First().ClientProfileId;
+        var profileId = app.VpnProfileService.List().First().VpnProfileId;
         accountProvider.SetAccessCodeException = new HttpRequestException("portal unreachable");
         TypeAccessCode(app, profileId, TestAppHelper.BuildAccessCode());
 
         await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
 
-        Assert.IsNotNull(app.ClientProfileService.Get(profileId).AccessCode,
+        Assert.IsNotNull(app.VpnProfileService.Get(profileId).AccessCode,
             "a code the account never took never became the account's, so it is not the account's to take away");
     }
 
@@ -349,8 +349,8 @@ public class AccountAccessCodeTest : TestAppBase
         var accountService = GetAccountService(app);
         await SignIn(accountService);
 
-        var profileId = app.ClientProfileService.List().First().ClientProfileId;
-        Assert.IsNotNull(app.ClientProfileService.Get(profileId).AccessCode);
+        var profileId = app.VpnProfileService.List().First().VpnProfileId;
+        Assert.IsNotNull(app.VpnProfileService.Get(profileId).AccessCode);
 
         // The app has no way to empty the account's slot: inventory lives in the panel (§5, §7), and
         // there is no Remove at all while signed in. Clearing the profile therefore says nothing to
@@ -358,7 +358,7 @@ public class AccountAccessCodeTest : TestAppBase
         TypeAccessCode(app, profileId, null);
         await accountService.Refresh(CancellationToken.None);
 
-        Assert.AreEqual(accountCode, app.ClientProfileService.Get(profileId).AccessCode);
+        Assert.AreEqual(accountCode, app.VpnProfileService.Get(profileId).AccessCode);
         Assert.IsFalse(accountProvider.SetAccessCodeCalls.Any(x => x == null),
             "nothing in the app may reach for the account's slot");
     }
@@ -385,14 +385,14 @@ public class AccountAccessCodeTest : TestAppBase
         // This device holds a code the access server has never heard of, and the person chose
         // "sign in without it" at the prompt (§6) — which removes it before the sign-in, so there is
         // nothing to upload and nothing dead left to block a working credential.
-        var profileId = app.ClientProfileService.List().First().ClientProfileId;
+        var profileId = app.VpnProfileService.List().First().VpnProfileId;
         TypeAccessCode(app, profileId, unknownCode);
         TypeAccessCode(app, profileId, null);
 
         await SignIn(accountService);
         await app.Connect(profileId);
 
-        var profile = app.ClientProfileService.Get(profileId);
+        var profile = app.VpnProfileService.Get(profileId);
         Assert.AreEqual(AppConnectionState.Connected, app.ConnectionState);
         Assert.AreEqual(accountCode, profile.AccessCode,
             "sign-in put the account's ranked code on the device, so the dead one never reaches a connection");
@@ -418,9 +418,9 @@ public class AccountAccessCodeTest : TestAppBase
         appOptions.Premium = new AppPremiumOptions { AllowImportAccessCode = true };
         await using var app = TestAppHelper.CreateClientApp(appOptions);
 
-        var profileId = app.ClientProfileService.List().First().ClientProfileId;
+        var profileId = app.VpnProfileService.List().First().VpnProfileId;
         await SignIn(GetAccountService(app));
-        Assert.AreEqual(deadCode, app.ClientProfileService.Get(profileId).AccessCode,
+        Assert.AreEqual(deadCode, app.VpnProfileService.Get(profileId).AccessCode,
             "the account handed its code down before anything was tried");
 
         var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(profileId));
@@ -441,7 +441,7 @@ public class AccountAccessCodeTest : TestAppBase
 
         // nothing was deleted anywhere (§3): the code is still in the slot, and still on the device
         Assert.AreEqual(deadCode, accountProvider.UploadedAccessCode);
-        var profile = app.ClientProfileService.Get(profileId);
+        var profile = app.VpnProfileService.Get(profileId);
         Assert.AreEqual(deadCode, profile.AccessCode);
         Assert.IsNotNull(profile.AccessCodeRefusal);
 

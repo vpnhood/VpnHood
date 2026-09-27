@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.Core.Common.Tokens;
 
-namespace VpnHood.AppLib.App.ClientProfiles;
+namespace VpnHood.AppLib.App.VpnProfiles;
 
 // The locations a profile offers, built from its token: the category gaps a UI needs (a country
 // head above its regions, the automatic one above the countries), then what each location costs
@@ -19,10 +19,10 @@ namespace VpnHood.AppLib.App.ClientProfiles;
 // built once, at the end.
 internal static class ServerLocationItemBuilder
 {
-    public static ServerLocationItem[] Build(ClientProfile clientProfile, AppFeatures appFeatures)
+    public static ServerLocationItem[] Build(VpnProfile vpnProfile, AppFeatures appFeatures)
     {
         var clientCountry = AppRegionInfo.CurrentRegion.Name;
-        var token = clientProfile.Token;
+        var token = vpnProfile.Token;
 
         // get country policy
         var policy = token.ClientPolicies?.FirstOrDefault(x =>
@@ -35,7 +35,7 @@ internal static class ServerLocationItemBuilder
         var isManaged = drafts.Any(x => x.Tags.Contains(ServerRegisteredTags.Premium)) || policy != null;
         if (isManaged) {
             foreach (var draft in drafts)
-                RecalculateOptions(draft, policy, clientProfile.IsPremium, appFeatures); // treat non-public as premium
+                RecalculateOptions(draft, policy, vpnProfile.IsPremium, appFeatures); // treat non-public as premium
         }
 
         // show unblockable only if the policy is set

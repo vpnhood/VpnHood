@@ -2,7 +2,7 @@
 using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
-using VpnHood.AppLib.App.ClientProfiles;
+using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.App.Android.Utils;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
@@ -101,14 +101,14 @@ public class AndroidAppMainActivityHandler
 
     protected void ImportAccessKey(string accessKey)
     {
-        var profiles = VpnHoodApp.Instance.ClientProfileService.List();
-        var profileInfo = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo(VpnHoodApp.Instance.Features);
-        VpnHoodApp.Instance.UserSettings.ClientProfileId = profileInfo.ClientProfileId;
+        var profiles = VpnHoodApp.Instance.VpnProfileService.List();
+        var profileInfo = VpnHoodApp.Instance.VpnProfileService.ImportAccessKey(accessKey).ToInfo(VpnHoodApp.Instance.Features);
+        VpnHoodApp.Instance.UserSettings.VpnProfileId = profileInfo.VpnProfileId;
 
-        var isNew = profiles.Any(x => x.ClientProfileId == profileInfo.ClientProfileId);
+        var isNew = profiles.Any(x => x.VpnProfileId == profileInfo.VpnProfileId);
         var message = isNew
-            ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, profileInfo.ClientProfileName)
-            : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, profileInfo.ClientProfileName);
+            ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, profileInfo.VpnProfileName)
+            : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, profileInfo.VpnProfileName);
 
         Toast.MakeText(ActivityEvent.Activity, message, ToastLength.Long)?.Show();
     }

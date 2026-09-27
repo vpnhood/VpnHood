@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.Api.ClientProfiles;
+﻿namespace VpnHood.AppLib.Api.VpnProfiles;
 
 public class ServerLocationOptions
 {

@@ -70,7 +70,7 @@ internal class AppController(IAppApi api) : ControllerBase
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "connect", async ctx => {
             await api.Connect(
-                ctx.GetQueryParameter<Guid?>("clientProfileId", null),
+                ctx.GetQueryParameter<Guid?>("vpnProfileId", null),
                 ctx.GetQueryParameter<string?>("serverLocation", null),
                 ctx.GetQueryParameter("planId", ConnectPlanId.Normal),
                 ctx.Token);
@@ -79,7 +79,7 @@ internal class AppController(IAppApi api) : ControllerBase
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "diagnose", async ctx => {
             await api.Diagnose(
-                ctx.GetQueryParameter<Guid?>("clientProfileId", null),
+                ctx.GetQueryParameter<Guid?>("vpnProfileId", null),
                 ctx.GetQueryParameter<string?>("serverLocation", null),
                 ctx.GetQueryParameter("planId", ConnectPlanId.Normal),
                 ctx.Token);

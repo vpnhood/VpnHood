@@ -57,7 +57,7 @@ internal static class StatusCommand
     {
         var fields = new List<(string, string)> {
             ("State", state.ConnectionState.ToString()),
-            ("Profile", state.ClientProfile?.ClientProfileName ?? "-"),
+            ("Profile", state.VpnProfile?.VpnProfileName ?? "-"),
             ("Location", state.ServerLocationInfo?.ServerLocation ?? "-"),
             ("Protocol", state.ChannelProtocol.ToString())
         };

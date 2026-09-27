@@ -10,7 +10,7 @@ using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
@@ -130,7 +130,7 @@ public partial class LocationsView : UserControl, IPage
         }
 
         _host.GoBack();
-        _ = _viewModel.ConnectToProfile(profile.ClientProfileId);
+        _ = _viewModel.ConnectToProfile(profile.VpnProfileId);
     }
 
     // A vh:// key is a long base64 blob no remote can type, so a TV sends the person to their phone
@@ -194,8 +194,8 @@ public partial class LocationsView : UserControl, IPage
             try {
                 // an empty name gives the server its default name back (SAVE_EMPTY_TO_DISPLAY_DEFAULT_NAME)
                 var name = string.IsNullOrWhiteSpace(dialog.NewName) ? null : dialog.NewName.Trim();
-                await VhApp.Api.ClientProfiles.Update(profile.ClientProfileId, new ClientProfileUpdateParams {
-                    ClientProfileName = new Patch<string?>(name)
+                await VhApp.Api.VpnProfiles.Update(profile.VpnProfileId, new VpnProfileUpdateParams {
+                    VpnProfileName = new Patch<string?>(name)
                 }, CancellationToken.None);
                 await _viewModel.ReloadInfo();
             }
@@ -215,7 +215,7 @@ public partial class LocationsView : UserControl, IPage
             if (ProfileOf(sender) is not { } profile)
                 return;
             _host.GoBack();
-            await _viewModel.ConnectWithProfile(profile.ClientProfileId, isDiagnose: true);
+            await _viewModel.ConnectWithProfile(profile.VpnProfileId, isDiagnose: true);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -226,7 +226,7 @@ public partial class LocationsView : UserControl, IPage
     {
         try {
             CloseMenu(sender);
-            if (ProfileOf(sender) is not { } profile || VhApp.FindClientProfileInfo(profile.ClientProfileId) is not { } info)
+            if (ProfileOf(sender) is not { } profile || VhApp.FindVpnProfileInfo(profile.VpnProfileId) is not { } info)
                 return;
             if (await _host.ShowDialog(new CustomEndpointDialog(_host, info)))
                 await _viewModel.ReloadInfo();
@@ -240,10 +240,10 @@ public partial class LocationsView : UserControl, IPage
     {
         CloseMenu(sender);
         if (ProfileOf(sender) is { } profile)
-            _host.Navigate(new StarlinkToolsView(_host, profile.ClientProfileId));
+            _host.Navigate(new StarlinkToolsView(_host, profile.VpnProfileId));
     }
 
-    // removing the server the app is connected through disconnects first (ClientProfileController.Delete)
+    // removing the server the app is connected through disconnects first (VpnProfileController.Delete)
     private async void OnRemoveClick(object? sender, RoutedEventArgs e)
     {
         try {
@@ -254,7 +254,7 @@ public partial class LocationsView : UserControl, IPage
             if (!await _host.Confirm(s.Warning, $"{s.ConfirmRemoveServer}\n\n{profile.Name}"))
                 return;
             try {
-                await VhApp.Api.ClientProfiles.Delete(profile.ClientProfileId, CancellationToken.None);
+                await VhApp.Api.VpnProfiles.Delete(profile.VpnProfileId, CancellationToken.None);
                 await _viewModel.ReloadInfo();
             }
             catch (Exception ex) {

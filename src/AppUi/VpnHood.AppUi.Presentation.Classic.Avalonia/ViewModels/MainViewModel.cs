@@ -11,7 +11,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 using VpnHood.AppLib.Api.Accounts;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.Net.Toolkit.ApiClients;
@@ -225,7 +225,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty)); // the titles
 
         var state = VhApp.State;
-        var profile = VhApp.CurrentClientProfileInfo;
+        var profile = VhApp.CurrentVpnProfileInfo;
         var connectionState = state.ConnectionState;
 
         // HomeConnectionInfo
@@ -295,7 +295,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             ? location == null ? Strings.Current.NoLocationSelected
             : location.IsAuto ? Strings.Current.AutoSelect
             : LocationDisplay(location.TranslatedCountryName, location is { HasRegion: true, HasMultipleRegions: true } ? location.RegionName : null)
-            : profile?.ClientProfileName ?? Strings.Current.NoServerSelected;
+            : profile?.VpnProfileName ?? Strings.Current.NoServerSelected;
         IsLocationAuto = location == null || location.IsAuto;
         HasLocationFlag = !IsLocationAuto;
         LocationFlagPath = HasLocationFlag ? AppAssets.FlagPath(location?.CountryCode) : null;
@@ -341,7 +341,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             CanExtendByRewardedAd = state.SessionStatus?.CanExtendByRewardedAd == true;
         }
         ShowYouArePremium = !ShowCountdown && VhApp.IsPremiumSupported && VhApp.IsPremiumUser;
-        ShowGoPremium = !ShowCountdown && !ShowYouArePremium && VhApp.IsPremiumSupported && state.ClientProfile?.CanGoPremium == true;
+        ShowGoPremium = !ShowCountdown && !ShowYouArePremium && VhApp.IsPremiumSupported && state.VpnProfile?.CanGoPremium == true;
     }
 
     // HomeBadge: one badge per feature in use (FeatureIcons.ts)
@@ -448,7 +448,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _isReviewShown = false;
     }
 
-    private void RefreshLocations(ClientProfileInfo? profile, bool cultureChanged)
+    private void RefreshLocations(VpnProfileInfo? profile, bool cultureChanged)
     {
         // the client's locations live in its servers' cards, one list per server
         var groups = IsSingleProfileMode ? BuildGroups(profile, isNested: false, isActiveProfile: true) : [];
@@ -466,7 +466,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void RefreshProfiles(bool cultureChanged)
     {
-        IReadOnlyList<ClientProfileInfo> infos = IsSingleProfileMode ? [] : ProfileInfos();
+        IReadOnlyList<VpnProfileInfo> infos = IsSingleProfileMode ? [] : ProfileInfos();
         HasNoServer = !IsSingleProfileMode && CanAddServer && infos.Count == 0;
         var profiles = BuildProfiles(infos);
         if (!cultureChanged && profiles.Count == Profiles.Count &&
@@ -474,31 +474,31 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         foreach (var item in profiles) {
-            var previous = Profiles.FirstOrDefault(x => x.ClientProfileId == item.ClientProfileId);
+            var previous = Profiles.FirstOrDefault(x => x.VpnProfileId == item.VpnProfileId);
             if (previous != null)
                 item.IsExpanded = previous.IsExpanded;
         }
         Profiles = profiles;
     }
 
-    public IReadOnlyList<ClientProfileInfo> ProfileInfos()
+    public IReadOnlyList<VpnProfileInfo> ProfileInfos()
     {
-        return VhApp.ClientProfileInfos;
+        return VhApp.VpnProfileInfos;
     }
 
     // The web UI's ExpansionPanel: every server the app holds, the one it is set to marked, each
     // opened when it is that one or has a single location - nothing to open.
-    private static IReadOnlyList<ProfileItem> BuildProfiles(IReadOnlyList<ClientProfileInfo> infos)
+    private static IReadOnlyList<ProfileItem> BuildProfiles(IReadOnlyList<VpnProfileInfo> infos)
     {
-        var currentId = VhApp.CurrentClientProfileInfo?.ClientProfileId;
+        var currentId = VhApp.CurrentVpnProfileInfo?.VpnProfileId;
         // ReSharper disable once UseCollectionExpression
         return infos
             .Select(x => {
                 var isSingleLocation = x.LocationInfos.Count < 2;
-                var isActive = x.ClientProfileId == currentId;
+                var isActive = x.VpnProfileId == currentId;
                 return new ProfileItem {
-                    ClientProfileId = x.ClientProfileId,
-                    Name = x.ClientProfileName,
+                    VpnProfileId = x.VpnProfileId,
+                    Name = x.VpnProfileName,
                     IsActive = isActive,
                     IsSingleLocation = isSingleLocation,
                     IsBuiltIn = x.IsBuiltIn,
@@ -514,7 +514,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // ExpansionPanelCollapsed.vue: the first flags of a closed server, the fastest choice as the earth
-    private static IReadOnlyList<CollapsedFlag> CollapsedFlags(ClientProfileInfo profile)
+    private static IReadOnlyList<CollapsedFlag> CollapsedFlags(VpnProfileInfo profile)
     {
         return [.. profile.LocationInfos
             .Take(ProfileItem.CollapsedFlagCount + 1)
@@ -523,7 +523,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // Util.calcLocationCount: the countries, without the automatic choice and the regions
-    private static int LocationCount(ClientProfileInfo profile)
+    private static int LocationCount(VpnProfileInfo profile)
     {
         return profile.LocationInfos.Count(x => x.CountryCode != "*" && !x.IsNestedCountry);
     }
@@ -553,7 +553,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The web UI's LocationList: Free and Premium cards when the profile has both and the person is
     // not premium; only the premium rows when the person is; one card of everything otherwise.
-    private static IReadOnlyList<LocationGroup> BuildGroups(ClientProfileInfo? profile, bool isNested, bool isActiveProfile)
+    private static IReadOnlyList<LocationGroup> BuildGroups(VpnProfileInfo? profile, bool isNested, bool isActiveProfile)
     {
         if (profile == null)
             return [];
@@ -574,7 +574,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 IsPremium = isPremiumGroup,
                 IsNested = isNested,
                 Items = [.. locations.Select(x => new LocationItem(
-                    ClientProfileId: profile.ClientProfileId,
+                    VpnProfileId: profile.VpnProfileId,
                     ServerLocation: x.ServerLocation,
                     CountryCode: x.CountryCode,
                     Name: x.IsAuto ? Strings.Current.Fastest : x.IsNestedCountry ? x.RegionName : x.TranslatedCountryName,
@@ -635,7 +635,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ConnectManager.connectWithCurrentProfile: no server chosen yet opens the servers page
     public async Task ConnectWithCurrentProfile(bool isDiagnose = false)
     {
-        if (VhApp.ClientProfileId is not { } profileId) {
+        if (VhApp.VpnProfileId is not { } profileId) {
             Host?.Navigate(new LocationsView(this, Host));
             return;
         }
@@ -644,9 +644,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ConnectManager.connectWithProfile: the server's own choice of location and side, a premium
     // person always on the premium side of the automatic choice
-    public async Task ConnectWithProfile(Guid clientProfileId, bool isDiagnose = false)
+    public async Task ConnectWithProfile(Guid vpnProfileId, bool isDiagnose = false)
     {
-        var info = VhApp.FindClientProfileInfo(clientProfileId);
+        var info = VhApp.FindVpnProfileInfo(vpnProfileId);
         var selected = info?.SelectedLocationInfo;
         var serverLocation = selected?.ServerLocation;
         var isPremium = (info?.IsPremiumLocationSelected ?? false) || selected?.Options is { HasPremium: true, HasFree: false };
@@ -656,7 +656,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             serverLocation = null;
         }
 
-        await ConnectWith(new ConnectRequest(clientProfileId, serverLocation, isPremium, ConnectPlanId.Normal, isDiagnose));
+        await ConnectWith(new ConnectRequest(vpnProfileId, serverLocation, isPremium, ConnectPlanId.Normal, isDiagnose));
     }
 
     // ConnectManager.connectWithLocation: the promote page first when the location asks to be
@@ -681,16 +681,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         try {
             var api = VhApp.Api;
             var connect = request.IsDiagnose
-                ? api.App.Diagnose(request.ClientProfileId, request.ServerLocation, request.PlanId, CancellationToken.None)
-                : api.App.Connect(request.ClientProfileId, request.ServerLocation, request.PlanId, CancellationToken.None);
+                ? api.App.Diagnose(request.VpnProfileId, request.ServerLocation, request.PlanId, CancellationToken.None)
+                : api.App.Connect(request.VpnProfileId, request.ServerLocation, request.PlanId, CancellationToken.None);
 
             // the profile's choice, as the web UI writes it right after asking for the connect
-            await api.ClientProfiles.Update(request.ClientProfileId, new ClientProfileUpdateParams {
+            await api.VpnProfiles.Update(request.VpnProfileId, new VpnProfileUpdateParams {
                 IsPremiumLocationSelected = new Patch<bool>(request.IsPremium),
                 SelectedLocation = new Patch<string?>(request.ServerLocation)
             }, CancellationToken.None);
             var settings = VhApp.UserSettings;
-            settings.ClientProfileId = request.ClientProfileId;
+            settings.VpnProfileId = request.VpnProfileId;
             await VhApp.SaveUserSettings(settings, CancellationToken.None);
 
             await connect;
@@ -710,30 +710,30 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var host = Host;
         if (host == null)
             return false;
-        var info = VhApp.FindClientProfileInfo(request.ClientProfileId);
+        var info = VhApp.FindVpnProfileInfo(request.VpnProfileId);
         var options = info?.LocationInfos.FirstOrDefault(x => x.ServerLocation == request.ServerLocation)?.Options;
         if (options?.Prompt != true)
             return false;
-        host.Navigate(new PromoteView(host, request.ClientProfileId, request.ServerLocation ?? "", request.IsPremium));
+        host.Navigate(new PromoteView(host, request.VpnProfileId, request.ServerLocation ?? "", request.IsPremium));
         return true;
     }
 
     // a location chosen in the list (LocationListItem.internalConnect)
     public async Task ConnectTo(LocationItem location)
     {
-        await ConnectWith(new ConnectRequest(location.ClientProfileId, location.ServerLocation, location.IsPremiumGroup, ConnectPlanId.Normal));
+        await ConnectWith(new ConnectRequest(location.VpnProfileId, location.ServerLocation, location.IsPremiumGroup, ConnectPlanId.Normal));
     }
 
     // a server chosen in the list, or one just added by its key
-    public async Task ConnectToProfile(Guid clientProfileId)
+    public async Task ConnectToProfile(Guid vpnProfileId)
     {
-        await ConnectWithProfile(clientProfileId);
+        await ConnectWithProfile(vpnProfileId);
     }
 
     public async Task Diagnose()
     {
         try {
-            await VhApp.Api.App.Diagnose(VhApp.UserSettings.ClientProfileId, null, ConnectPlanId.Normal, CancellationToken.None);
+            await VhApp.Api.App.Diagnose(VhApp.UserSettings.VpnProfileId, null, ConnectPlanId.Normal, CancellationToken.None);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "The diagnosis failed.");
@@ -760,9 +760,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // and the page that called this says so (INVALID_ACCESS_KEY_FORMAT), as the web UI's dialog does.
     public async Task<Guid> AddAccessKey(string accessKey)
     {
-        var profile = await VhApp.Api.ClientProfiles.AddByAccessKey(accessKey, CancellationToken.None);
+        var profile = await VhApp.Api.VpnProfiles.AddByAccessKey(accessKey, CancellationToken.None);
         await ReloadInfo();
-        return profile.ClientProfileId;
+        return profile.VpnProfileId;
     }
 
     // Why the servers row leads nowhere, when it does: a head that takes no keys can hold nothing
@@ -772,7 +772,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (CanAddServer)
             return null;
 
-        var profiles = VhApp.ClientProfileInfos;
+        var profiles = VhApp.VpnProfileInfos;
         if (profiles.Count == 0)
             return Strings.Current.NoClientProfileAvailable;
 
@@ -878,14 +878,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public async Task RemovePremiumCode()
     {
         var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
-        var profile = VhApp.State.ClientProfile ?? throw new InvalidOperationException("Could not find the profile in the state for remove premium code.");
+        var profile = VhApp.State.VpnProfile ?? throw new InvalidOperationException("Could not find the profile in the state for remove premium code.");
         if (!profile.HasAccessCode)
             throw new InvalidOperationException("The profile does not have a premium code.");
 
         using var loading = host.Loading();
         if (IsConnected)
             await VhApp.Api.App.Disconnect(CancellationToken.None);
-        await VhApp.Api.ClientProfiles.Update(profile.ClientProfileId, new ClientProfileUpdateParams {
+        await VhApp.Api.VpnProfiles.Update(profile.VpnProfileId, new VpnProfileUpdateParams {
             AccessCode = new Patch<string?>(null)
         }, CancellationToken.None);
         await ReloadInfo();

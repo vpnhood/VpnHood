@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Settings;
 
 namespace VpnHood.AppLib.Api.App;
@@ -15,7 +15,7 @@ public class AppInfo
     public required DeviceIntentFeatures IntentFeatures { get; init; }
     public required AppState State { get; init; }
     public required UserSettings UserSettings { get; init; }
-    public required IReadOnlyList<ClientProfileInfo> ClientProfileInfos { get; init; }
+    public required IReadOnlyList<VpnProfileInfo> VpnProfileInfos { get; init; }
     public required IReadOnlyList<UiCultureInfo> AvailableCultureInfos { get; init; }
 
     // Whether this client is another device on the LAN rather than the app itself. Set by

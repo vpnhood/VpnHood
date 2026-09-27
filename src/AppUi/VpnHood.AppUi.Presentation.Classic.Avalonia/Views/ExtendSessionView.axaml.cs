@@ -21,7 +21,7 @@ public partial class ExtendSessionView : UserControl, IPage
         RichText.Apply(TitleText, s.ExtendPremiumSession);
 
         var state = VhApp.State;
-        var options = state.ClientProfile?.SelectedLocationInfo?.Options;
+        var options = state.VpnProfile?.SelectedLocationInfo?.Options;
         if (state.SessionStatus?.CanExtendByRewardedAd == true)
             Rows.Children.Add(new PromoteRow(Mdi.PlayBoxLockOpenOutline, s.WatchRewardedAd,
                 s.ExtendByRewardedAdDesc(options?.PremiumByRewardedAd ?? 0), s.ShowAd, ShowRewardedAd));

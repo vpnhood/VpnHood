@@ -7,12 +7,12 @@ using Microsoft.Extensions.Logging;
 using TaskExtensions = VpnHood.Net.Toolkit.Extensions.TaskExtensions;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.App.ClientProfiles;
+using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.App.ApiImpl;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App.Branding;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.App.Diagnosing;
@@ -87,7 +87,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public UserSettings UserSettings => SettingsService.UserSettings;
     public AppFeatures Features { get; }
     public VpnHoodAppConfig Config { get; }
-    public ClientProfileService ClientProfileService { get; }
+    public VpnProfileService VpnProfileService { get; }
     public Diagnoser Diagnoser { get; } = new();
     public AppResources Resources { get; }
 
@@ -244,19 +244,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ChannelProtocols = [.. protocols.Select(x => x.ToAppDto())]
         };
 
-        ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles), Features);
+        VpnProfileService = new VpnProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles), Features);
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
         // add a default test public server if not added yet
-        var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
+        var builtInProfileIds = VpnProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
 
-        // remove default client profile if not exists
-        if (UserSettings.ClientProfileId != null &&
-            ClientProfileService.FindById(UserSettings.ClientProfileId.Value) == null)
-            UserSettings.ClientProfileId = null;
+        // remove default VPN profile if not exists
+        if (UserSettings.VpnProfileId != null &&
+            VpnProfileService.FindById(UserSettings.VpnProfileId.Value) == null)
+            UserSettings.VpnProfileId = null;
 
         // set first built in profile as default if default is not set
-        UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId;
+        UserSettings.VpnProfileId ??= builtInProfileIds.FirstOrDefault()?.VpnProfileId;
 
         // initialize client manager
         _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);
@@ -278,7 +278,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 : new AccountService(
                     settingsService: settingsService,
                     accountProvider: options.AccountProvider,
-                    clientProfileService: ClientProfileService,
+                    vpnProfileService: VpnProfileService,
                     storageFolderPath: Path.Combine(StorageFolderPath, "account")),
             UpdaterService = options.UpdaterOptions is null
                 ? null
@@ -318,7 +318,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // The API over this app, built last: every service it reaches through must already exist.
         Api = new VpnHoodApi(
             app: new AppApi(this),
-            clientProfiles: new ClientProfilesApi(this),
+            vpnProfiles: new VpnProfilesApi(this),
             account: new AccountApi(this),
             billing: new BillingApi(this),
             intents: new IntentsApi(this),
@@ -407,7 +407,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     splitTunneling.UseIpViaDevice != oldSplitTunneling.UseIpViaDevice ||
                     splitTunneling.AppMode != oldSplitTunneling.AppMode ||
                     !splitTunneling.Apps.SequenceEqual(oldSplitTunneling.Apps) ||
-                    UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
+                    UserSettings.VpnProfileId != oldUserSettings.VpnProfileId ||
                     UserSettings.DnsMode != oldUserSettings.DnsMode ||
                     splitTunneling.DnsMode != oldSplitTunneling.DnsMode ||
                     (splitTunneling.UnroutedIpMode != oldSplitTunneling.UnroutedIpMode &&
@@ -508,8 +508,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _installedApps = null;
     }
 
-    public ClientProfileInfo? CurrentClientProfileInfo =>
-        ClientProfileService.FindInfo(UserSettings.ClientProfileId ?? Guid.Empty);
+    public VpnProfileInfo? CurrentVpnProfileInfo =>
+        VpnProfileService.FindInfo(UserSettings.VpnProfileId ?? Guid.Empty);
 
     public ApiError? LastError {
         get {
@@ -534,7 +534,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public AppState State {
         get {
-            var clientProfileInfo = CurrentClientProfileInfo;
+            var vpnProfileInfo = CurrentVpnProfileInfo;
             var connectionState = ConnectionState;
             var lastConnectionInfo = ConnectionInfo;
             var connectionInfo = connectionState.IsIdle() ? null : lastConnectionInfo;
@@ -544,7 +544,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ConfigTime = Settings.ConfigTime,
                 SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
                 SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
-                ServerLocationInfo = StateHelper.GetServerLocationInfo(connectionInfo?.SessionInfo, clientProfileInfo),
+                ServerLocationInfo = StateHelper.GetServerLocationInfo(connectionInfo?.SessionInfo, vpnProfileInfo),
                 ProxyConnectorStatus = lastConnectionInfo.ProxyConnectorStatus?.ToAppDto(),
                 ConnectionState = connectionState,
                 CanConnect = connectionState.CanConnect(),
@@ -566,7 +566,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PurchaseState = Services.AccountService?.BillingService?.PurchaseState.ToAppDto(),
                 UpdaterStatus = Services.UpdaterService?.Status,
                 LastError = LastError?.ToAppDto(),
-                ClientProfile = clientProfileInfo?.ToBaseInfo(),
+                VpnProfile = vpnProfileInfo?.ToBaseInfo(),
                 ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol.ToAppDto() ??
                                   UserSettings.ChannelProtocol,
                 IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
@@ -593,7 +593,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // check remote settings
         var remoteSettings = SettingsService.RemoteSettings;
-        if (CurrentClientProfileInfo?.IsPremium == true ||
+        if (CurrentVpnProfileInfo?.IsPremium == true ||
             remoteSettings?.PromotionImageUrl is null ||
             remoteSettings.PromotionStartDate < FastDateTime.UtcNow ||
             remoteSettings.PromotionEndDate is null ||
@@ -740,7 +740,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             connectOptions ??= new ConnectOptions();
             VhLogger.Instance.LogInformation(
                 "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}",
-                connectOptions.ClientProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
+                connectOptions.VpnProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
                 connectOptions.Diagnose);
 
             // protect double call
@@ -772,15 +772,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task ConnectInternal1(ConnectOptions connectOptions, CancellationToken cancellationToken)
     {
-        // set use default clientProfile and serverLocation
-        var clientProfileId = connectOptions.ClientProfileId ??
-                              UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set.");
-        var clientProfile = ClientProfileService.Get(clientProfileId);
+        // set use default vpnProfile and serverLocation
+        var vpnProfileId = connectOptions.VpnProfileId ??
+                              UserSettings.VpnProfileId ?? throw new NotExistsException("VpnProfile is not set.");
+        var vpnProfile = VpnProfileService.Get(vpnProfileId);
 
         try {
-            var clientProfileInfo = ClientProfileService.GetInfo(clientProfileId);
+            var vpnProfileInfo = VpnProfileService.GetInfo(vpnProfileId);
             var serverLocation =
-                connectOptions.ServerLocation ?? clientProfileInfo.SelectedLocationInfo?.ServerLocation;
+                connectOptions.ServerLocation ?? vpnProfileInfo.SelectedLocationInfo?.ServerLocation;
 
             // set timeout
             _connectTimeoutCts = new CancellationTokenSource(
@@ -806,11 +806,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _logService.Start(GetLogOptions());
 
             // set the current profile only if it has been updated to avoid unnecessary new config time
-            if (clientProfile.ClientProfileId != UserSettings.ClientProfileId ||
-                serverLocation != clientProfileInfo.SelectedLocationInfo?.ServerLocation) {
-                clientProfile = ClientProfileService.Update(clientProfileId,
-                    new ClientProfileUpdateParams { SelectedLocation = serverLocation });
-                UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+            if (vpnProfile.VpnProfileId != UserSettings.VpnProfileId ||
+                serverLocation != vpnProfileInfo.SelectedLocationInfo?.ServerLocation) {
+                vpnProfile = VpnProfileService.Update(vpnProfileId,
+                    new VpnProfileUpdateParams { SelectedLocation = serverLocation });
+                UserSettings.VpnProfileId = vpnProfile.VpnProfileId;
                 Settings.Save();
             }
 
@@ -832,11 +832,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // connect
             VhLogger.Instance.LogInformation("Client is Connecting ...");
-            await ConnectInternal2(clientProfile.Token,
+            await ConnectInternal2(vpnProfile.Token,
                     serverLocation: serverLocation,
                     userAgent: connectOptions.UserAgent,
                     planId: connectOptions.PlanId,
-                    accessCode: clientProfile.AccessCode,
+                    accessCode: vpnProfile.AccessCode,
                     allowUpdateToken: true,
                     allowAccessCodeRepair: true,
                     cancellationToken: linkedCts.Token)
@@ -867,7 +867,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
         CancellationToken cancellationToken)
     {
-        var profileInfo = CurrentClientProfileInfo ?? throw new NotExistsException("ClientProfile is not set.");
+        var profileInfo = CurrentVpnProfileInfo ?? throw new NotExistsException("VpnProfile is not set.");
 
         try {
             // show token info
@@ -939,7 +939,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     : Core.Common.Tokens.EndPointStrategy.Auto,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2,
-                SessionName = profileInfo.ClientProfileName,
+                SessionName = profileInfo.VpnProfileName,
                 CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview
@@ -976,7 +976,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // update the access token if AccessKey is set
             if (!string.IsNullOrWhiteSpace(connectionInfo.SessionInfo.AccessKey))
-                ClientProfileService.TryUpdateTokenByAccessKey(token.TokenId, connectionInfo.SessionInfo.AccessKey);
+                VpnProfileService.TryUpdateTokenByAccessKey(token.TokenId, connectionInfo.SessionInfo.AccessKey);
 
             // update the client country reported by the server
             if (connectionInfo.SessionInfo.ClientCountry != null)
@@ -999,7 +999,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 // account holds has been refused it hands them out in turns, so chaining repairs
                 // would walk the whole keyring in a single press — and then walk it for ever. The
                 // next press takes the next turn.
-                var repairedProfile = ClientProfileService.FindById(profileInfo.ClientProfileId) ??
+                var repairedProfile = VpnProfileService.FindById(profileInfo.VpnProfileId) ??
                                       throw new NotExistsException("The repaired profile has disappeared.");
                 await ConnectInternal2(token,
                         serverLocation: serverLocation,
@@ -1017,10 +1017,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (ex is not NoInternetException && // diagnoser
                 allowUpdateToken &&
                 !VhUtils.IsNullOrEmpty(token.ServerToken.Urls) &&
-                await ClientProfileService.UpdateServerTokenByUrls(token, cancellationToken).Vhc()) {
+                await VpnProfileService.UpdateServerTokenByUrls(token, cancellationToken).Vhc()) {
                 // reconnect using the new token
                 ReportError(ex, "Could not establish the connection. Reconnecting using the new token...");
-                token = ClientProfileService.GetToken(token.TokenId);
+                token = VpnProfileService.GetToken(token.TokenId);
                 await ConnectInternal2(token,
                         serverLocation: serverLocation,
                         userAgent: userAgent,
@@ -1038,11 +1038,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private async Task<bool> ProcessSessionException(SessionException sessionException,
-        ClientProfileInfo profileInfo, bool allowAccessCodeRepair, CancellationToken cancellationToken)
+        VpnProfileInfo profileInfo, bool allowAccessCodeRepair, CancellationToken cancellationToken)
     {
         // update the access token if AccessKey is set
         if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {
-            ClientProfileService.TryUpdateTokenByAccessKey(profileInfo.TokenId,
+            VpnProfileService.TryUpdateTokenByAccessKey(profileInfo.TokenId,
                 sessionException.SessionResponse.AccessKey);
             sessionException.SessionResponse.AccessKey = null;
         }
@@ -1057,8 +1057,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             case SessionErrorCode.NoServerAvailable or SessionErrorCode.PremiumLocation:
                 VhLogger.Instance.LogWarning(
                     "No server available or premium location required. Resetting selected location.");
-                ClientProfileService.Update(profileInfo.ClientProfileId,
-                    new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
+                VpnProfileService.Update(profileInfo.VpnProfileId,
+                    new VpnProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
                 break;
 
             // An authoritative refusal of the profile's access code (keyring plan §6): KEEP the
@@ -1071,7 +1071,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VhLogger.Instance.LogWarning(
                     "The access server refused the profile's access code. Keeping the code and marking it refused. ErrorCode: {ErrorCode}",
                     sessionException.SessionResponse.ErrorCode);
-                ClientProfileService.MarkAccessCodeRefused(profileInfo.ClientProfileId,
+                VpnProfileService.MarkAccessCodeRefused(profileInfo.VpnProfileId,
                     sessionException.SessionResponse.ErrorCode);
                 // The refusal is REPORTED either way — that report is what moves the account on to
                 // the next code — but only the first refusal of a connect reconnects. Otherwise a
@@ -1087,7 +1087,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // Resolve the account before surfacing a refusal. A different account credential repairs and
     // reconnects immediately; refresh failures and unchanged/refused codes preserve the original
     // authoritative access-server error for the UI.
-    private async Task<bool> TryRepairRefusedAccessCode(ClientProfileInfo refusedProfile,
+    private async Task<bool> TryRepairRefusedAccessCode(VpnProfileInfo refusedProfile,
         CancellationToken cancellationToken)
     {
         var accountService = Services.AccountService;
@@ -1098,14 +1098,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // ranks the same dead code straight back, and every device the person owns keeps meeting it:
         // the account is the only place that can rule a code out for all of them. The refused code
         // is read from the store rather than from refusedProfile, whose AccessCode is redacted.
-        var refusedCode = ClientProfileService.FindById(refusedProfile.ClientProfileId)?.AccessCode;
+        var refusedCode = VpnProfileService.FindById(refusedProfile.VpnProfileId)?.AccessCode;
         if (refusedCode != null)
             await accountService.TryReportAccessCodeRejected(refusedCode, cancellationToken).Vhc();
 
         try {
             await accountService.Refresh(cancellationToken).Vhc();
-            var repaired = ClientProfileService.FindById(refusedProfile.ClientProfileId);
-            // compared against the RAW refused code: ClientProfileInfo.AccessCode is redacted, so
+            var repaired = VpnProfileService.FindById(refusedProfile.VpnProfileId);
+            // compared against the RAW refused code: VpnProfileInfo.AccessCode is redacted, so
             // comparing with it made every refresh look like a repair and reconnected with the same
             // dead credential
             return repaired is { AccessCode: not null, AccessCodeRefusal: null } &&
@@ -1129,7 +1129,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             countryCode);
 
         UserSettings.CountryCode = countryCode;
-        SettingsService.Save(); // ApplySettings applies it to AppRegionInfo; ClientProfileService rebuilds its cache on region change
+        SettingsService.Save(); // ApplySettings applies it to AppRegionInfo; VpnProfileService rebuilds its cache on region change
     }
 
     public bool HasDebugCommand(string command)
@@ -1245,8 +1245,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // with no re-entering. A free session proves nothing about the code and clears nothing.
         if (ConnectionState is AppConnectionState.Connected &&
             ConnectionInfo.SessionInfo?.IsPremiumSession == true &&
-            CurrentClientProfileInfo is { AccessCodeRefusal: not null } refusedProfile) {
-            ClientProfileService.ClearAccessCodeRefused(refusedProfile.ClientProfileId);
+            CurrentVpnProfileInfo is { AccessCodeRefusal: not null } refusedProfile) {
+            VpnProfileService.ClearAccessCodeRefused(refusedProfile.VpnProfileId);
         }
 
         // A code typed while the portal was blocked has been waiting for exactly this moment: we are
@@ -1400,9 +1400,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VhLogger.Instance.LogError(ex, message);
     }
 
-    public async Task<AppPurchaseOptions> GetPurchaseOptions(Guid clientProfileId, CancellationToken cancellationToken)
+    public async Task<AppPurchaseOptions> GetPurchaseOptions(Guid vpnProfileId, CancellationToken cancellationToken)
     {
-        var profileInfo = ClientProfileService.GetInfo(clientProfileId);
+        var profileInfo = VpnProfileService.GetInfo(vpnProfileId);
         var clientPolicy = profileInfo.ClientPolicy;
         var premium = Features.Premium;
 
@@ -1445,21 +1445,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     /// <para>
     /// Best-effort: VpnHood is used where the portal itself is blocked, so an upload that cannot land
     /// is the ordinary case rather than an error. It stays pending for the next refresh or the next
-    /// successful connection. This lives here because <see cref="ClientProfileService" /> cannot
+    /// successful connection. This lives here because <see cref="VpnProfileService" /> cannot
     /// reach the account service — that dependency runs the other way.
     /// </para>
     /// </summary>
-    public async Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId,
-        ClientProfileUpdateParams updateParams, CancellationToken cancellationToken)
+    public async Task<VpnProfileInfo> UpdateVpnProfile(Guid vpnProfileId,
+        VpnProfileUpdateParams updateParams, CancellationToken cancellationToken)
     {
-        ClientProfileService.Update(clientProfileId, updateParams);
+        VpnProfileService.Update(vpnProfileId, updateParams);
 
         var accountService = Services.AccountService;
         if (updateParams.AccessCode != null && accountService?.AuthenticationService.UserId != null)
             await VhUtils.TryInvokeAsync("Handing the typed access code to the account",
                 () => accountService.Refresh(cancellationToken));
 
-        return ClientProfileService.GetInfo(clientProfileId);
+        return VpnProfileService.GetInfo(vpnProfileId);
     }
 
     public bool IsPremiumFeatureAllowed(AppFeature feature)
@@ -1473,7 +1473,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return true;
 
         // check if the current profile is premium
-        return CurrentClientProfileInfo?.IsPremium == true;
+        return CurrentVpnProfileInfo?.IsPremium == true;
     }
 
     public void UpdateUi()

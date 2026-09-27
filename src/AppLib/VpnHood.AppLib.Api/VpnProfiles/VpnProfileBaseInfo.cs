@@ -2,12 +2,12 @@
 using System.Text.Json.Serialization;
 using VpnHood.Net.Toolkit.Converters;
 
-namespace VpnHood.AppLib.Api.ClientProfiles;
+namespace VpnHood.AppLib.Api.VpnProfiles;
 
-public class ClientProfileBaseInfo
+public class VpnProfileBaseInfo
 {
-    public required Guid ClientProfileId { get; init; }
-    public required string ClientProfileName { get; init; }
+    public required Guid VpnProfileId { get; init; }
+    public required string VpnProfileName { get; init; }
     public required string? SupportId { get; init; }
     public required string? CustomData { get; init; }
     public required bool IsPremiumLocationSelected { get; init; }

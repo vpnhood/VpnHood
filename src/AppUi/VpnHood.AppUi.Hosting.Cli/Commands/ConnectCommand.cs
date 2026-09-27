@@ -48,12 +48,12 @@ internal static class ConnectCommand
         bool noWait, CancellationToken cancellationToken)
     {
         // Resolved here rather than left to the app: told nothing, the app connects with the
-        // profile it is set to and fails with "ClientProfile is not set" when it is set to none -
+        // profile it is set to and fails with "VpnProfile is not set" when it is set to none -
         // which is every device that has just had its first key added.
         var info = await api.App.GetInfo(cancellationToken).Vhc();
-        var clientProfileId = ProfileLookup.Resolve(info, profile, commandName);
+        var vpnProfileId = ProfileLookup.Resolve(info, profile, commandName);
 
-        await api.App.Connect(clientProfileId, location, ConnectPlanId.Normal, cancellationToken).Vhc();
+        await api.App.Connect(vpnProfileId, location, ConnectPlanId.Normal, cancellationToken).Vhc();
         if (noWait)
             return 0;
 

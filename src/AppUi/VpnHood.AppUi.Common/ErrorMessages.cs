@@ -64,11 +64,11 @@ public static class ErrorMessages
 
                 // the retry and the trial connect on the profile, so they need one
                 var isAutoLocation = data.TryGetValue("IsAutoLocation", out var auto) && ToBoolean(auto);
-                if (!isAutoLocation && context.HasClientProfile)
+                if (!isAutoLocation && context.HasVpnProfile)
                     return new ErrorMessage.Dialog(strings.UnreachableServerLocationMessageWithChangeToAuto,
                         ErrorAction.ChangeServerToAuto);
 
-                if (context is { HasClientProfile: true, IsPremiumUser: false, CanTryPremium: true })
+                if (context is { HasVpnProfile: true, IsPremiumUser: false, CanTryPremium: true })
                     return new ErrorMessage.Dialog(strings.UnreachableServerLocationMessageWithTryPremium,
                         ErrorAction.TryPremium);
 

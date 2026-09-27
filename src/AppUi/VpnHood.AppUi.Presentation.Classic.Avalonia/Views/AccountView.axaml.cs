@@ -10,7 +10,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Sessions;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
@@ -53,7 +53,7 @@ public partial class AccountView : UserControl, IPage
         var s = Strings.Current;
         var state = VhApp.State;
         var account = VhApp.Account;
-        var profile = state.ClientProfile;
+        var profile = state.VpnProfile;
         var isPremiumUser = VhApp.IsPremiumUser;
         var isPremiumByAccount = VhApp.IsPremiumByAccount;
         var hasCode = profile?.HasAccessCode == true;
@@ -132,7 +132,7 @@ public partial class AccountView : UserControl, IPage
     {
         var s = Strings.Current;
         CodeRows.Children.Clear();
-        var canShowCode = VhApp.CanViewAccessCode && VhApp.State.ClientProfile?.HasAccessCode == true;
+        var canShowCode = VhApp.CanViewAccessCode && VhApp.State.VpnProfile?.HasAccessCode == true;
         if (canShowCode)
             AddCodeRow();
 
@@ -207,13 +207,13 @@ public partial class AccountView : UserControl, IPage
         if (_premiumCode != null)
             return _premiumCode;
 
-        var profileId = VhApp.ClientProfileId;
+        var profileId = VhApp.VpnProfileId;
         if (profileId == null) {
             _premiumCode = Strings.Current.CouldNotGetClientProfileId;
             return null;
         }
 
-        var code = await VhApp.Api.ClientProfiles.GetAccessCode(profileId.Value, CancellationToken.None);
+        var code = await VhApp.Api.VpnProfiles.GetAccessCode(profileId.Value, CancellationToken.None);
         _premiumCode = string.IsNullOrEmpty(code) ? Strings.Current.CouldNotGetPremiumCode : Format.CodeGroups(code);
         return _premiumCode;
     }

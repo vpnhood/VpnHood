@@ -16,7 +16,7 @@ public sealed class ProfileItem : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public required Guid ClientProfileId { get; init; }
+    public required Guid VpnProfileId { get; init; }
     public required string Name { get; init; }
     public required bool IsActive { get; init; }
     public required bool IsSingleLocation { get; init; }
@@ -59,7 +59,7 @@ public sealed class ProfileItem : INotifyPropertyChanged
 
     public bool SameAs(ProfileItem other)
     {
-        return ClientProfileId == other.ClientProfileId && Name == other.Name && IsActive == other.IsActive &&
+        return VpnProfileId == other.VpnProfileId && Name == other.Name && IsActive == other.IsActive &&
                IsSingleLocation == other.IsSingleLocation && SupportIdText == other.SupportIdText &&
                HostName == other.HostName && HasCustomEndpoint == other.HasCustomEndpoint &&
                MoreLocationCount == other.MoreLocationCount && CollapsedFlags.SequenceEqual(other.CollapsedFlags) &&

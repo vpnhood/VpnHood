@@ -61,9 +61,9 @@ public partial class AddServerView : UserControl, IPage
             return;
 
         try {
-            var clientProfileId = await _viewModel.AddAccessKey(accessKey);
+            var vpnProfileId = await _viewModel.AddAccessKey(accessKey);
             _host.GoBack();
-            _ = _viewModel.ConnectToProfile(clientProfileId);
+            _ = _viewModel.ConnectToProfile(vpnProfileId);
         }
         catch {
             ErrorText.Text = Strings.Current.InvalidAccessKeyFormat;

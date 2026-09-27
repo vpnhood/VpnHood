@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
@@ -44,21 +44,21 @@ internal static class StateHelper
 
     public static CurrentServerLocationInfo? GetServerLocationInfo(
         SessionInfo? sessionInfo,
-        ClientProfileInfo? clientProfileInfo)
+        VpnProfileInfo? vpnProfileInfo)
     {
         // get session server location info
         var sessionServerLocationInfo = sessionInfo?.ServerLocationInfo;
         if (sessionServerLocationInfo != null) {
             return sessionServerLocationInfo.ToAppDto(
-                clientProfileInfo?.HasMultipleRegion(sessionServerLocationInfo.CountryCode) == true);
+                vpnProfileInfo?.HasMultipleRegion(sessionServerLocationInfo.CountryCode) == true);
         }
 
         // return user selected
-        if (clientProfileInfo?.SelectedLocationInfo is null)
+        if (vpnProfileInfo?.SelectedLocationInfo is null)
             return null;
 
-        return clientProfileInfo.SelectedLocationInfo.ToAppDto(
-            clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode));
+        return vpnProfileInfo.SelectedLocationInfo.ToAppDto(
+            vpnProfileInfo.HasMultipleRegion(vpnProfileInfo.SelectedLocationInfo.CountryCode));
     }
 
     // The one place that says why a configured feature is not in effect. The gate itself is silent —

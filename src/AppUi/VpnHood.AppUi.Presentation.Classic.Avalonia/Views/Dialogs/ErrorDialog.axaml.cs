@@ -56,7 +56,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnAutoClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.ClientProfileId is not { } profileId)
+            if (VhApp.VpnProfileId is not { } profileId)
                 return;
             await CloseAndClear();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: false, ConnectPlanId.Normal));
@@ -69,7 +69,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnTryPremiumClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.ClientProfileId is not { } profileId)
+            if (VhApp.VpnProfileId is not { } profileId)
                 return;
             await CloseAndClear();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: true, ConnectPlanId.PremiumByTrial));

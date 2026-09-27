@@ -11,12 +11,12 @@ public static class AppErrors
 {
     public static ErrorContext Context => new() {
         HasDiagnoseRequested = VhApp.State.HasDiagnoseRequested,
-        HasClientProfile = VhApp.ClientProfileId != null,
+        HasVpnProfile = VhApp.VpnProfileId != null,
         IsPremiumSupported = VhApp.IsPremiumSupported,
         IsPremiumUser = VhApp.IsPremiumUser,
         IsPremiumByAccount = VhApp.IsPremiumByAccount,
         CanTryPremium = VhApp.CanTryPremium,
-        HasAccessCode = VhApp.State.ClientProfile?.HasAccessCode == true,
+        HasAccessCode = VhApp.State.VpnProfile?.HasAccessCode == true,
         CanImportAccessCode = VhApp.CanImportAccessCode,
         IsCustomDnsPremiumFeature = VhApp.IsPremiumFeature(AppFeature.CustomDns),
         PromptForLog = VhApp.State.PromptForLog

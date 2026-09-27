@@ -1,14 +1,14 @@
 ﻿using VpnHood.AppLib.Api.WebHost.Helpers;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 
 namespace VpnHood.AppLib.Api.WebHost.Controllers;
 
-internal class ClientProfileController(IClientProfilesApi api) : ControllerBase
+internal class VpnProfileController(IVpnProfilesApi api) : ControllerBase
 {
     public override void AddRoutes(IRouteMapper mapper)
     {
-        const string baseUrl = "/api/client-profiles/";
+        const string baseUrl = "/api/vpn-profiles/";
 
         mapper.AddStatic(HttpMethod.PUT, baseUrl + "access-keys", async ctx => {
             var accessKey = ctx.GetQueryParameter<string>("accessKey");
@@ -30,7 +30,7 @@ internal class ClientProfileController(IClientProfilesApi api) : ControllerBase
 
         mapper.AddParam(HttpMethod.PATCH, baseUrl + "{id}", async ctx => {
             var id = ctx.GetRouteParameter<Guid>("id");
-            var body = ctx.ReadJson<ClientProfileUpdateParams>();
+            var body = ctx.ReadJson<VpnProfileUpdateParams>();
             var res = await api.Update(id, body, ctx.Token);
             await ctx.SendJson(res);
         });

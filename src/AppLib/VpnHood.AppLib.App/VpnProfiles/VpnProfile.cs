@@ -1,15 +1,15 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.AppLib.Api.ClientProfiles;
+using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.Converters;
 
-namespace VpnHood.AppLib.App.ClientProfiles;
+namespace VpnHood.AppLib.App.VpnProfiles;
 
-public class ClientProfile
+public class VpnProfile
 {
-    public required Guid ClientProfileId { get; init; }
-    public required string? ClientProfileName { get; set; }
+    public required Guid VpnProfileId { get; init; }
+    public required string? VpnProfileName { get; set; }
     public required Token Token { get; set; }
     public bool IsFavorite { get; set; }
     public string? CustomData { get; set; }

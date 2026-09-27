@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.Api.ClientProfiles;
+﻿namespace VpnHood.AppLib.Api.VpnProfiles;
 
 // A location as a state or a session reports it. The app fills the translated name; the shape
 // carries it, which is what keeps the country database out of the contract. Flat for the same

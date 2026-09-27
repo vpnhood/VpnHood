@@ -25,7 +25,7 @@ public class AppPremiumOptions
     /// A per-build capability, never an OS check — a sideloaded iOS build may lawfully keep the box.
     /// <para>
     /// Importing only. Showing the code this device already holds is the operator's call alone
-    /// (<see cref="ClientProfiles.ClientProfileInfo.CanViewAccessCode" />): a build with no code box
+    /// (<see cref="VpnProfiles.VpnProfileInfo.CanViewAccessCode" />): a build with no code box
     /// still shows the buyer the credential their own purchase produced, because that is what they
     /// carry to the devices where typing it is allowed.
     /// </para>

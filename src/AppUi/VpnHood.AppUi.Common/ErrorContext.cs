@@ -7,7 +7,7 @@ namespace VpnHood.AppUi.Common;
 public sealed record ErrorContext
 {
     public bool HasDiagnoseRequested { get; init; }
-    public bool HasClientProfile { get; init; }
+    public bool HasVpnProfile { get; init; }
     public bool IsPremiumSupported { get; init; }
     public bool IsPremiumUser { get; init; }
     public bool IsPremiumByAccount { get; init; }

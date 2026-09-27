@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.AppLib.App.ClientProfiles;
+using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.Api.Ads;
 using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Device;
@@ -43,7 +43,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
             Features = app.Features,
             IntentFeatures = app.Services.DeviceUiProvider.ToIntentFeatures(app.Services.UserReviewProvider),
             UserSettings = app.UserSettings,
-            ClientProfileInfos = [.. app.ClientProfileService.List().Select(x => x.ToInfo(app.Features))],
+            VpnProfileInfos = [.. app.VpnProfileService.List().Select(x => x.ToInfo(app.Features))],
             State = app.State,
             AvailableCultureInfos = [
                 .. app.Services.CultureProvider.AvailableCultures
@@ -92,23 +92,23 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
         return Task.FromResult(app.State);
     }
 
-    public Task Connect(Guid? clientProfileId,
+    public Task Connect(Guid? vpnProfileId,
         string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken)
     {
         return app.Connect(
             new ConnectOptions {
-                ClientProfileId = clientProfileId,
+                VpnProfileId = vpnProfileId,
                 ServerLocation = serverLocation,
                 PlanId = planId
             }, cancellationToken);
     }
 
-    public Task Diagnose(Guid? clientProfileId, string? serverLocation,
+    public Task Diagnose(Guid? vpnProfileId, string? serverLocation,
         ConnectPlanId planId, CancellationToken cancellationToken)
     {
         return app.Connect(
             new ConnectOptions {
-                ClientProfileId = clientProfileId,
+                VpnProfileId = vpnProfileId,
                 ServerLocation = serverLocation,
                 PlanId = planId,
                 Diagnose = true

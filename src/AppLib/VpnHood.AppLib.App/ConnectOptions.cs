@@ -4,7 +4,7 @@ namespace VpnHood.AppLib.App;
 
 public class ConnectOptions
 {
-    public Guid? ClientProfileId { get; init; }
+    public Guid? VpnProfileId { get; init; }
     public ConnectPlanId PlanId { get; init; } = ConnectPlanId.Normal;
     public string? ServerLocation { get; init; }
     public bool Diagnose { get; init; }

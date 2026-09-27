@@ -20,7 +20,7 @@ public class DiagnoserTest : TestAppBase
         appOptions.AutoDiagnose = true;
         appOptions.ConnectTimeout = TimeSpan.FromSeconds(30);
         await using var clientApp = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        var clientProfile = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = clientApp.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ************
         // NoInternetException
@@ -28,7 +28,7 @@ public class DiagnoserTest : TestAppBase
         clientApp.Diagnoser.TestNsIpEndPoints = [MockEps.HttpV4EndPointInvalid];
         clientApp.Diagnoser.TestPingIpAddresses = [MockEps.IpInvalid];
         await Assert.ThrowsExactlyAsync<NoInternetException>(() =>
-            clientApp.Connect(clientProfile.ClientProfileId));
+            clientApp.Connect(vpnProfile.VpnProfileId));
 
         Assert.AreEqual(nameof(NoInternetException), clientApp.State.LastError?.TypeName);
     }
@@ -39,14 +39,14 @@ public class DiagnoserTest : TestAppBase
         await using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
 
         // change access key endpoint
-        var token = dom.ClientProfile.Token;
+        var token = dom.VpnProfile.Token;
         token.ServerToken.HostEndPoints = [MockEps.HttpV4EndPointInvalid];
-        var clientProfile = dom.App.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var vpnProfile = dom.App.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ************
         // NoInternetException
         await Assert.ThrowsExactlyAsync<UnreachableServerException>(() =>
-            dom.App.Connect(clientProfile.ClientProfileId, diagnose: true));
+            dom.App.Connect(vpnProfile.VpnProfileId, diagnose: true));
 
         Assert.AreEqual(nameof(UnreachableServerException), dom.App.State.LastError?.TypeName);
     }

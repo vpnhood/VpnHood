@@ -221,17 +221,19 @@ public class RippleEffect : Panel
             _frames = null;
         }
 
+        // the clip: the control's background, as CSS's border-radius: inherit gives the ripple
+        // container
         public override void Render(DrawingContext context)
         {
-            var border = owner.BorderThickness;
-            var box = new Rect(Bounds.Size).Deflate(border);
+            var edge = BackgroundEdge.Of(Bounds.Size, owner.CornerRadius, owner.BorderThickness);
+            var box = edge.Rect;
             if (box.Width <= 0 || box.Height <= 0 || owner.Fill is not ISolidColorBrush { Color: var color })
                 return;
 
             var now = _clock.Elapsed;
             var radius = Math.Sqrt(box.Width * box.Width + box.Height * box.Height) / 2;
             var centre = box.Center;
-            using var clip = context.PushClip(InnerEdge(box, owner.CornerRadius, border));
+            using var clip = context.PushClip(edge);
             foreach (var ripple in _ripples) {
                 var age = now - ripple.ShowAt;
                 if (age < TimeSpan.Zero)
@@ -246,23 +248,6 @@ public class RippleEffect : Panel
                 var at = origin + (centre - origin) * grow;
                 var r = radius * (0.3 + 0.7 * grow);
                 context.DrawEllipse(new ImmutableSolidColorBrush(color, opacity), null, at, r, r);
-            }
-        }
-
-        // the clip: the control's rounded box inside its border, as CSS's border-radius: inherit
-        // gives the ripple container
-        private static RoundedRect InnerEdge(Rect box, CornerRadius corner, Thickness border)
-        {
-            return new RoundedRect(box,
-                Radii(corner.TopLeft, Math.Max(border.Left, border.Top)),
-                Radii(corner.TopRight, Math.Max(border.Right, border.Top)),
-                Radii(corner.BottomRight, Math.Max(border.Right, border.Bottom)),
-                Radii(corner.BottomLeft, Math.Max(border.Left, border.Bottom)));
-
-            static Vector Radii(double radius, double inset)
-            {
-                var r = Math.Max(0, radius - inset);
-                return new Vector(r, r);
             }
         }
 

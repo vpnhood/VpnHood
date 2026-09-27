@@ -7,9 +7,10 @@ using Avalonia.Platform;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
-// CSS's filter: brightness(Factor) over whatever is drawn beneath it in its rounded box. A colour
-// dodge divides each channel by one minus the grey over it, so a grey of 1 - 1/Factor multiplies it
-// by Factor; Avalonia blends only bitmaps, so the grey is one stretched pixel. At 1 it draws nothing.
+// CSS's filter: brightness(Factor) over whatever is drawn beneath it, up to the edge of the
+// background it lies on (BackgroundEdge). A colour dodge divides each channel by one minus the grey
+// over it, so a grey of 1 - 1/Factor multiplies it by Factor; Avalonia blends only bitmaps, so the
+// grey is one stretched pixel. At 1 it draws nothing.
 public class BrightnessLayer : Control
 {
     public static readonly StyledProperty<double> FactorProperty =
@@ -18,12 +19,15 @@ public class BrightnessLayer : Control
     public static readonly StyledProperty<CornerRadius> CornerRadiusProperty =
         Border.CornerRadiusProperty.AddOwner<BrightnessLayer>();
 
+    public static readonly StyledProperty<Thickness> BorderThicknessProperty =
+        Border.BorderThicknessProperty.AddOwner<BrightnessLayer>();
+
     private static readonly RenderOptions Dodge = new() { BitmapBlendingMode = BitmapBlendingMode.ColorDodge };
     private static readonly Dictionary<byte, WriteableBitmap> Greys = [];
 
     static BrightnessLayer()
     {
-        AffectsRender<BrightnessLayer>(FactorProperty, CornerRadiusProperty);
+        AffectsRender<BrightnessLayer>(FactorProperty, CornerRadiusProperty, BorderThicknessProperty);
     }
 
     public double Factor {
@@ -36,15 +40,20 @@ public class BrightnessLayer : Control
         set => SetValue(CornerRadiusProperty, value);
     }
 
+    public Thickness BorderThickness {
+        get => GetValue(BorderThicknessProperty);
+        set => SetValue(BorderThicknessProperty, value);
+    }
+
     public override void Render(DrawingContext context)
     {
-        var box = new Rect(Bounds.Size);
-        if (Factor <= 1 || box.Width <= 0 || box.Height <= 0)
+        var edge = BackgroundEdge.Of(Bounds.Size, CornerRadius, BorderThickness);
+        if (Factor <= 1 || edge.Rect.Width <= 0 || edge.Rect.Height <= 0)
             return;
 
-        using var clip = context.PushClip(new RoundedRect(box, CornerRadius));
+        using var clip = context.PushClip(edge);
         using var blend = context.PushRenderOptions(Dodge);
-        context.DrawImage(Grey((byte)Math.Round(255 * (1 - 1 / Factor))), new Rect(0, 0, 1, 1), box);
+        context.DrawImage(Grey((byte)Math.Round(255 * (1 - 1 / Factor))), new Rect(0, 0, 1, 1), edge.Rect);
     }
 
     private static WriteableBitmap Grey(byte value)

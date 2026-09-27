@@ -97,8 +97,6 @@ internal static class Program
 
         // the UI made its window at a television's size (VpnHoodAvaloniaAppBase); the device's is asked for
         var window = lifetime.MainWindow ?? throw new InvalidOperationException("The UI has made no main window.");
-        window.MinWidth = 0;
-        window.MinHeight = 0;
         window.Width = options.Width;
         window.Height = options.Height;
         var view = window.Content as MainView ?? throw new InvalidOperationException("The window does not hold the UI's main view.");

@@ -23,7 +23,7 @@ internal sealed class ShotOptions
     // page would never come to rest for the settle wait. Without the class the control keeps the
     // value the animation starts from. This is the toolkit's reducedMotion: 'reduce'; Avalonia 12
     // keeps its animation clock internal, so there is nothing to pause.
-    public IReadOnlyList<string> Freeze { get; init; } = ["flasher"];
+    public IReadOnlyList<string> Freeze { get; init; } = ["flasher", "floating"];
     // How long a page may keep changing before the capture is taken anyway.
     public TimeSpan SettleTimeout { get; init; } = TimeSpan.FromSeconds(8);
 
@@ -44,7 +44,7 @@ internal sealed class ShotOptions
             Hide = values.TryGetValue("hide", out var hide) ? hide.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) : [],
             Freeze = values.TryGetValue("freeze", out var freeze)
                 ? freeze.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                : ["flasher"],
+                : ["flasher", "floating"],
             SettleTimeout = values.TryGetValue("settle-timeout", out var settle) ? TimeSpan.FromMilliseconds(int.Parse(settle)) : TimeSpan.FromSeconds(8)
         };
     }

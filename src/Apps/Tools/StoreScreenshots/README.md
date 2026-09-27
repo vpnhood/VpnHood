@@ -70,7 +70,7 @@ or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words o
   the run fails rather than shipping it.
 - **An animation caught mid-stroke.** The UI's pulses and spinners run forever, so the same picture
   would differ every run. The classes are taken off before the capture (`--freeze`, default
-  `flasher`) — the toolkit's reduced motion. Avalonia 12 keeps its animation clock internal, so
+  `flasher,floating`) — the toolkit's reduced motion. Avalonia 12 keeps its animation clock internal, so
   there is nothing to pause instead.
 - **Another company's artwork.** The Split Apps screen lists well-known app names over plain tiles
   in the colour each is known by, drawn here; a real icon is its owner's artwork and trademark.

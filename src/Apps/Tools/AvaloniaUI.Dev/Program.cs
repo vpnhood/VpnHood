@@ -3,7 +3,7 @@ using VpnHood.App.Connect;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.App;
-using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Abstractions;
@@ -108,10 +108,10 @@ internal static class Program
             // The UI reaches the app through its API - the same six interfaces a paired browser
             // dials over HTTP, here the app's own controllers in process - and draws from the
             // store's zip beside this executable, which the build placed there (the same files
-            // the web server serves at /assets/). In process the start completes at once.
-            AvaloniaUiHosting.StartAsync<ClassicAvaloniaApp>(app.Api, app.UiAssetProvider, CancellationToken.None)
-                .GetAwaiter().GetResult();
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            // the web server serves at /assets/). It runs in the window a desktop head shows it
+            // in, which is also the app's UI context: a store's sign-in and purchase ask for one.
+            AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, showWindow: true, app.Api, app.UiAssetProvider,
+                exitOnClose: true);
         }
         finally {
             app.Dispose();

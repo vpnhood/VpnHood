@@ -12,7 +12,7 @@
         <TextBlock Classes="dialog-title" FontSize="22" TextAlignment="Center" Text="{Binding Congratulations, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
       <TextBlock Classes="dialog-text" Text="{Binding PremiumCodeProcessIsCompleteMessage, Source={x:Static res:Strings.Current}}" />
-      <Border Background="#17083D" CornerRadius="8" Padding="12,8">
+      <Border Classes="inset" CornerRadius="8" Padding="12,8">
         <StackPanel Spacing="6">
           <TextBlock x:Name="SharedText" Classes="body-small" TextWrapping="Wrap" IsVisible="False"
                      Text="{Binding AlertForUsedPremiumCodeMoreThanOneDevice, Source={x:Static res:Strings.Current}}" />

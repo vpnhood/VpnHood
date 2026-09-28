@@ -1169,7 +1169,17 @@
   </Style>
 
   <!-- Dialogs (v-dialog, VCard rounded xl): the general dialog's card, the alert card, and the
-       text buttons of their actions -->
+       text buttons of their actions - the buttons' general colour first, since a later style wins
+       and each card's own colour must -->
+  <Style Selector="Button.dialog-btn">
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="Padding" Value="16,6" />
+    <Setter Property="Foreground" Value="{StaticResource OnGeneralDialogBrush}" />
+  </Style>
+  <Style Selector="Button.dialog-btn.plain">
+    <Setter Property="Opacity" Value="0.7" />
+  </Style>
   <Style Selector="Border.dialog">
     <Setter Property="Background" Value="{StaticResource GeneralDialogBrush}" />
     <Setter Property="CornerRadius" Value="24" />
@@ -1222,14 +1232,19 @@
   <Style Selector="Border.dialog.active Button.dialog-btn">
     <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
   </Style>
-  <Style Selector="Button.dialog-btn">
-    <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="CornerRadius" Value="20" />
-    <Setter Property="Padding" Value="16,6" />
-    <Setter Property="Foreground" Value="{StaticResource OnGeneralDialogBrush}" />
+  <!-- a dark inset in the active card (the premium code's details): its words white, and each row
+       in its own tone - active, or error for a code in use on other devices - not the card's -->
+  <Style Selector="Border.dialog.active Border.inset">
+    <Setter Property="Background" Value="{StaticResource BackgroundBrush}" />
   </Style>
-  <Style Selector="Button.dialog-btn.plain">
-    <Setter Property="Opacity" Value="0.7" />
+  <Style Selector="Border.dialog.active Border.inset TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+  </Style>
+  <Style Selector="Border.dialog.active Border.inset TextBlock.active">
+    <Setter Property="Foreground" Value="{StaticResource ActiveBrush}" />
+  </Style>
+  <Style Selector="Border.dialog.active Border.inset TextBlock.error">
+    <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
   </Style>
   <!-- the rows of a dialog's list (the badge dialog): a rule between them in the dialog's tone -->
   <Style Selector="Border.dialog Button.list-item">

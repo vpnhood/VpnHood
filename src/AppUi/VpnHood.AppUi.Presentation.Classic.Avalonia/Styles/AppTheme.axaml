@@ -392,6 +392,31 @@
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
 
+  <!-- .config-pill, the TV home's corner (the language, the account): the rows' colours in a small
+       pill -->
+  <Style Selector="Button.config-pill">
+    <Setter Property="Background" Value="{StaticResource HomeConfigBtnBgBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource HomeConfigBtnBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="12,2" />
+  </Style>
+  <!-- the ring's extra pixel comes out of the padding, so a pill keeps its size and its neighbour
+       stays put -->
+  <Style Selector="Button.config-pill:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="Padding" Value="11,1" />
+  </Style>
+  <Style Selector="Button.config-pill TextBlock">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource OnConfigBtnBgBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.config-pill TextBlock.mdi">
+    <Setter Property="FontSize" Value="16" />
+  </Style>
+
   <!-- a page header's back button: 43x43, an 18px radius and a faint border -->
   <Style Selector="Button.back-btn">
     <Setter Property="Width" Value="43" />

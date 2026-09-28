@@ -56,7 +56,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string SplitCountriesTitle => Strings.Current.SplitCountries.ToUpperInvariant();
     public string SplitAppsTitle => Strings.Current.SplitApps.ToUpperInvariant();
     public string ProtocolTitle => Strings.Current.ProtocolTitle.ToUpperInvariant();
-    public string AccountTitle => Strings.Current.Account.ToUpperInvariant();
     public string CloakChipText => Strings.Current.Cloak.ToUpperInvariant();
 
     // Connect ships one server and lets the person pick a location in it; the client keeps a list of
@@ -79,8 +78,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool IsTv => VhApp.IsTvUi;
     public bool IsNotTv => !IsTv;
 
-    // the drawer's door, off the TV; the account row, on it
-    public bool HasAccountRow => IsTv && VhApp.Features.IsAccountSupported;
+    // the drawer's door, off the TV; the account button in the corner, on it
+    public bool HasAccountButton => IsTv && VhApp.Features.IsAccountSupported;
     public bool HasSplitAppsRow => VhApp.Features.IsExcludeAppsSupported || VhApp.Features.IsIncludeAppsSupported;
 
     // A debug field that is set shows on the version chip, and opens the developer page on the
@@ -133,7 +132,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<LocationGroup> LocationGroups { get; private set => Set(ref field, value); } = [];
     public IReadOnlyList<ProfileItem> Profiles { get; private set => Set(ref field, value); } = [];
 
-    // the other rows: the countries split, the apps split, the protocol, the account
+    // the other rows: the countries split, the apps split, the protocol; and the TV's corner
     public string SplitCountryText { get; private set => Set(ref field, value); } = "";
     public bool ShowSplitCountryText { get; private set => Set(ref field, value); } = true;
     public IReadOnlyList<string> SplitCountryFlags { get; private set => Set(ref field, value); } = [];
@@ -141,7 +140,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string SplitAppsText { get; private set => Set(ref field, value); } = "";
     public string ProtocolText { get; private set => Set(ref field, value); } = "";
     public bool IsCloakOn { get; private set => Set(ref field, value); }
-    public string AccountRowValue { get; private set => Set(ref field, value); } = "";
+    public string LanguageText { get; private set => Set(ref field, value); } = "";
+    public string AccountText { get; private set => Set(ref field, value); } = "";
 
     // Nothing to show on the servers page but the way to add one: the web UI's NO_SERVER_AVAILABLE
     // warning, which it shows only where a key can be added at all.
@@ -362,7 +362,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         HasBadges = badges.Count > 0;
     }
 
-    // SplitCountryButton, the apps row, the protocol row and the account row
+    // SplitCountryButton, the apps row, the protocol row, and the TV's corner
     private void RefreshOtherRows(AppState state)
     {
         var split = state.SplitTunnelingState;
@@ -383,7 +383,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SplitAppsText = AppText.SplitAppsStatusText();
         ProtocolText = AppText.ProtocolTitle(VhApp.ActiveProtocol(state));
         IsCloakOn = VhApp.UserSettings.UseTcpProxy;
-        AccountRowValue = VhApp.Account?.Email ?? Strings.Current.SignIn;
+        LanguageText = state.CurrentUiCultureInfo.NativeName;
+        AccountText = VhApp.Account?.Email ?? Strings.Current.SignIn;
     }
 
     private string[]? _flagCodes;

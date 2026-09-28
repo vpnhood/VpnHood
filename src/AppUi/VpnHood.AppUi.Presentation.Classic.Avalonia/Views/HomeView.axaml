@@ -9,11 +9,11 @@
   <!-- The web UI's home (pages/index.vue): the header - the drawer's door off the TV, the app name,
        the build - the badges and the premium mark or the countdown, the hero - the speeds, the
        circle, the Connect pill - and the rows: the server or location, the countries split, the
-       apps split where the device has apps, the protocol, and on a TV the account and Settings,
-       which hand the rest to a phone. Portrait stacks them, header to rows, as the web UI's single
-       column does; over 600 logical px the hero and the rows sit side by side, as its
-       landscape-home grid does. The placement lives in styles, not on the elements: a local value
-       would beat the query. -->
+       apps split where the device has apps, the protocol, and on a TV Settings, which hands the
+       rest to a phone, with the language and the account in the corner under them. Portrait
+       stacks them, header to rows, as the web UI's single column does; over 600 logical px the
+       hero and the rows sit side by side, as its landscape-home grid does. The placement lives in
+       styles, not on the elements: a local value would beat the query. -->
   <UserControl.Styles>
     <Style Selector="StackPanel.hero">
     </Style>
@@ -52,7 +52,7 @@
              Stretch="Uniform" MaxWidth="260" IsVisible="{Binding IsPremiumSession}" />
     </Panel>
 
-    <Grid Classes="page" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto">
+    <Grid Classes="page" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto,Auto">
 
       <!-- HomePageHeader: the drawer's door, the app name in the middle, the build at the end.
            A row of its own height, held at the top: the badges below share this grid row (they are
@@ -240,16 +240,6 @@
           </Grid>
         </Button>
 
-        <!-- Account, TV UI only, for a build with an account -->
-        <Button x:Name="AccountButton" Classes="config-item" Click="OnAccountClick" IsVisible="{Binding HasAccountRow}">
-          <Grid ColumnDefinitions="Auto,Auto,Auto,*">
-            <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.AccountCircle}" />
-            <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding AccountTitle}" />
-            <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
-            <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding AccountRowValue}" />
-          </Grid>
-        </Button>
-
         <!-- Settings, on a TV: everything else is done from a phone -->
         <Button x:Name="PhoneButton" Classes="config-item" Click="OnPhoneClick" IsVisible="{Binding IsTv}">
           <Grid ColumnDefinitions="Auto,Auto,Auto,*">
@@ -262,6 +252,27 @@
 
       </StackPanel>
       <!-- ReSharper restore Xaml.MissingGridIndex -->
+
+      <!-- The TV's corner, under the rows in either layout: the language, which no other page on
+           a TV offers, and the account (for a build with one) - both wanted about once, so neither
+           takes a row. The last row's Down lands here. -->
+      <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8"
+                  HorizontalAlignment="Right" Margin="0,12,0,0" IsVisible="{Binding IsTv}">
+        <Button x:Name="LanguageButton" Classes="config-pill" Click="OnLanguageClick"
+                AutomationProperties.Name="{Binding Language, Source={x:Static res:Strings.Current}}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Classes="mdi" Text="{x:Static res:Mdi.Web}" />
+            <TextBlock Text="{Binding LanguageText}" />
+          </StackPanel>
+        </Button>
+        <Button x:Name="AccountButton" Classes="config-pill" Click="OnAccountClick" IsVisible="{Binding HasAccountButton}"
+                AutomationProperties.Name="{Binding Account, Source={x:Static res:Strings.Current}}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Classes="mdi" Text="{x:Static res:Mdi.AccountCircle}" />
+            <TextBlock Text="{Binding AccountText}" MaxWidth="200" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
     </Grid>
   </Panel>
 </UserControl>

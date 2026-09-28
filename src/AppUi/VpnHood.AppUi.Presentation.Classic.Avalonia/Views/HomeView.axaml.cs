@@ -89,6 +89,11 @@ public partial class HomeView : UserControl, IPage
         _host.Navigate(new PairingView(_host));
     }
 
+    private void OnLanguageClick(object? sender, RoutedEventArgs e)
+    {
+        _host.Navigate(new LanguageView(_host));
+    }
+
     private void OnMenuClick(object? sender, RoutedEventArgs e)
     {
         _host.OpenDrawer();

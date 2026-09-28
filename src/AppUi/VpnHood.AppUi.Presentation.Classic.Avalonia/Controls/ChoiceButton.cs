@@ -4,12 +4,13 @@ using Avalonia.Controls;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
-// The press target of an option row (OptionRow), which a screen reader hears as the row's radio or
-// checkbox, selected or not as its mark shows.
-public class OptionRowButton : Button
+// A button that is one of a group's choices - a radio: an option row, a plan - or a checkbox, which
+// a screen reader hears with its state, selected or not. The page marks the choice (IsChecked) and
+// styles it as before.
+public class ChoiceButton : Button
 {
     public static readonly StyledProperty<bool> IsCheckedProperty =
-        AvaloniaProperty.Register<OptionRowButton, bool>(nameof(IsChecked));
+        AvaloniaProperty.Register<ChoiceButton, bool>(nameof(IsChecked));
 
     protected override Type StyleKeyOverride => typeof(Button);
 
@@ -23,6 +24,6 @@ public class OptionRowButton : Button
 
     protected override AutomationPeer OnCreateAutomationPeer()
     {
-        return new OptionRowAutomationPeer(this);
+        return new ChoiceButtonAutomationPeer(this);
     }
 }

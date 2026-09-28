@@ -5,6 +5,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 using VpnHood.AppLib.Api.Billing;
@@ -22,7 +23,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
     private readonly MainView _host;
     private readonly Guid? _vpnProfileId;
-    private readonly List<(SubscriptionPlan Plan, Button Button)> _planButtons = [];
+    private readonly List<(SubscriptionPlan Plan, ChoiceButton Button)> _planButtons = [];
     private AppPurchaseOptions? _options;
     private SubscriptionPlan? _selectedPlan;
     private double _basePrice;
@@ -120,7 +121,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         ShowSelection();
     }
 
-    private Button BuildPlanButton(SubscriptionPlan plan)
+    private ChoiceButton BuildPlanButton(SubscriptionPlan plan)
     {
         var s = Strings.Current;
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
@@ -162,7 +163,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         Grid.SetColumn(priceColumn, 1);
         row.Children.Add(priceColumn);
 
-        var button = new Button { Content = row };
+        var button = new ChoiceButton { Content = row };
         button.Classes.Add("plan");
         button.Click += (_, _) => {
             _selectedPlan = plan;
@@ -174,8 +175,10 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
     private void ShowSelection()
     {
-        foreach (var (plan, button) in _planButtons)
-            button.Classes.Set("selected", plan == _selectedPlan);
+        foreach (var (plan, button) in _planButtons) {
+            button.IsChecked = plan == _selectedPlan;
+            button.Classes.Set("selected", button.IsChecked);
+        }
         if (_selectedPlan is { } selected)
             AutoRenewText.Text = $"{Strings.Current.AutoRenewAt} {Format.Price(selected.CurrencySymbol, selected.BasePrice)}{PricePeriod(selected.Period)}";
         PurchaseButton.IsEnabled = _selectedPlan != null;

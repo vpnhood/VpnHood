@@ -6,12 +6,13 @@ using Avalonia.LogicalTree;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
-// What a screen reader says for a button or a text box. Avalonia reads a button's lone TextBlock,
-// and for any other content its type ("Avalonia.Controls.Grid"); a text box it reads by no name at
-// all. One without a name of its own is read by the words it shows instead: a button's joined as a
-// web page's reader joins them ("Location, Auto Select"), a text box's placeholder - both kept in
-// step as they change. Icons, hidden parts and a button inside a button are not its words, so a
-// button that shows only an icon, or a box whose placeholder is only an example, names itself.
+// What a screen reader says for a button, a list's item or a text box. Avalonia reads a lone
+// TextBlock, and for any other content its type ("Avalonia.Controls.Grid") or its data's record
+// ("LocationItem { VpnProfileId = ... }"); a text box it reads by no name at all. One without a name
+// of its own is read by the words it shows instead: a button's or an item's joined as a web page's
+// reader joins them ("Location, Auto Select"), a text box's placeholder - kept in step as they
+// change. Icons, hidden parts and a button inside a button are not its words, so a button that
+// shows only an icon, or a box whose placeholder is only an example, names itself.
 internal static class AutomationNames
 {
     // a control whose name came from its words, so a change rewrites it; a name the control was
@@ -22,6 +23,7 @@ internal static class AutomationNames
     public static void Register()
     {
         Control.LoadedEvent.AddClassHandler<Button>((button, _) => Update(button));
+        Control.LoadedEvent.AddClassHandler<ListBoxItem>((item, _) => Update(item));
         TextBlock.TextProperty.Changed.AddClassHandler<TextBlock>((text, _) => UpdateOwner(text));
         Visual.IsVisibleProperty.Changed.AddClassHandler<Control>((control, _) => UpdateOwner(control));
         Control.LoadedEvent.AddClassHandler<TextBox>((textBox, _) => Update(textBox));
@@ -33,14 +35,16 @@ internal static class AutomationNames
 
     private static void UpdateOwner(Control control)
     {
-        if (control.FindLogicalAncestorOfType<Button>() is { IsLoaded: true } button)
-            Update(button);
+        if (control.GetLogicalAncestors().FirstOrDefault(x => x is Button or ListBoxItem) is ContentControl { IsLoaded: true } owner)
+            Update(owner);
     }
 
-    private static void Update(Button button)
+    // a button's or an item's words are those of what it shows: its content, or the template its
+    // data is shown by
+    private static void Update(ContentControl control)
     {
-        if (button.Content is Control content and not TextBlock)
-            SetName(button, string.Join(", ", Words(content)));
+        if ((control.Content as Control ?? control.Presenter?.Child) is { } content and not TextBlock)
+            SetName(control, string.Join(", ", Words(content)));
     }
 
     private static void Update(TextBox textBox)

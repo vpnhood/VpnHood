@@ -5,18 +5,18 @@ using Avalonia.Automation.Provider;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
-// An option row to a screen reader, as Avalonia's own radio button is: a radio, selected or not,
-// or a checkbox, on or off. Choosing it presses the row, as a finger does, and the page marks the
-// choice; the new state is announced as the mark changes.
-internal class OptionRowAutomationPeer : ButtonAutomationPeer, IToggleProvider, ISelectionItemProvider
+// A choice button to a screen reader, as Avalonia's own radio button is: a radio, selected or not,
+// or a checkbox, on or off. Choosing it presses the button, as a finger does, and the page marks
+// the choice; the new state is announced as the mark changes.
+internal class ChoiceButtonAutomationPeer : ButtonAutomationPeer, IToggleProvider, ISelectionItemProvider
 {
-    public OptionRowAutomationPeer(OptionRowButton owner)
+    public ChoiceButtonAutomationPeer(ChoiceButton owner)
         : base(owner)
     {
         owner.PropertyChanged += OnOwnerPropertyChanged;
     }
 
-    public new OptionRowButton Owner => (OptionRowButton)base.Owner;
+    public new ChoiceButton Owner => (ChoiceButton)base.Owner;
 
     public ToggleState ToggleState => ToState(Owner.IsChecked);
 
@@ -38,13 +38,13 @@ internal class OptionRowAutomationPeer : ButtonAutomationPeer, IToggleProvider, 
     public void AddToSelection()
     {
         if (!Owner.IsChecked)
-            throw new InvalidOperationException("A radio row joins the selection by being selected.");
+            throw new InvalidOperationException("A radio joins the selection by being selected.");
     }
 
     public void RemoveFromSelection()
     {
         if (Owner.IsChecked)
-            throw new InvalidOperationException("A radio row leaves the selection when another is selected.");
+            throw new InvalidOperationException("A radio leaves the selection when another is selected.");
     }
 
     protected override AutomationControlType GetAutomationControlTypeCore()
@@ -62,7 +62,7 @@ internal class OptionRowAutomationPeer : ButtonAutomationPeer, IToggleProvider, 
 
     private void OnOwnerPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.Property != OptionRowButton.IsCheckedProperty)
+        if (e.Property != ChoiceButton.IsCheckedProperty)
             return;
 
         var wasChecked = e.OldValue is true;

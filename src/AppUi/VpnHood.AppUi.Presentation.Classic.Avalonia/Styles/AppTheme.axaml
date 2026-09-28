@@ -879,6 +879,11 @@
   <Style Selector="Button.list-item.last">
     <Setter Property="BorderThickness" Value="0" />
   </Style>
+  <!-- a filter list's rows are divided, not underlined: the last has no line on the card's edge
+       (FilterList.vue: border-b while an item follows) -->
+  <Style Selector="ItemsControl.filter-list ContentPresenter:nth-last-child(1) Button.list-item">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
   <Style Selector="Button.card-row">
     <Setter Property="Background" Value="{StaticResource ConfigCardBgBrush}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />

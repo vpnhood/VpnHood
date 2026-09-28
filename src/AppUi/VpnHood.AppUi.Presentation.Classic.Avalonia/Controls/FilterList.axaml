@@ -36,7 +36,7 @@
         <TextBlock Classes="body-small disabled" Text="{Binding PleaseWait, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
       </StackPanel>
 
-      <ItemsControl x:Name="List" Margin="0,4,0,0">
+      <ItemsControl x:Name="List" Classes="filter-list" Margin="0,4,0,0">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:FilterItem">
             <controls:SwitchRow Classes="list-item" Click="OnRowClick">

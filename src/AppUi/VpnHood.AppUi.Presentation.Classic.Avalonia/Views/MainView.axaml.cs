@@ -1,10 +1,12 @@
-﻿using Avalonia;
+﻿using System.Runtime.CompilerServices;
+using Avalonia;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
@@ -21,10 +23,10 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 // bottom. Back - a remote's or a phone's key, which reaches Avalonia as the top level's
 // BackRequested, or Escape and Backspace on a keyboard - closes what is on top: a dialog, the
 // drawer, then the page; on the home view it is left to the host, so Android leaves the app as
-// it should. Every view on the stack takes the input on arrival (FocusDefault): a remote has no
-// pointer to put focus anywhere, and a keyboard should not need a Tab first. The dialogs, the
-// drawer and the snackbar the web UI's App.vue mounts once beside the router live here too, and
-// a page reaches them through its host.
+// it should. Every view on the stack takes the input on arrival (FocusDefault), and back on a view
+// where it last was: a remote has no pointer to put focus anywhere, and a keyboard should not need
+// a Tab first. The dialogs, the drawer and the snackbar the web UI's App.vue mounts once beside
+// the router live here too, and a page reaches them through its host.
 public partial class MainView : UserControl
 {
     private static readonly TimeSpan SnackbarLife = TimeSpan.FromSeconds(3);
@@ -32,6 +34,8 @@ public partial class MainView : UserControl
     private static readonly Easing DrawerEase = new SplineEasing(0.4, 0, 0.2);
 
     private readonly Stack<IPage> _pages = new();
+    // what each page on the stack last gave the focus to; an entry leaves with its page
+    private readonly ConditionalWeakTable<IPage, Control> _lastFocus = new();
     private readonly Stack<DialogBase> _dialogs = new();
     private readonly DispatcherTimer _snackbarTimer;
     private readonly TranslateTransform _drawerOffset = new();
@@ -46,6 +50,7 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
+        Host.AddHandler(GotFocusEvent, OnPageGotFocus);
         // what a television gets and nothing else does - today the overscan inset of every page's
         // root (AppTheme). The device's answer never changes while the app runs, so it is a class,
         // not a binding.
@@ -155,7 +160,7 @@ public partial class MainView : UserControl
 
     // The focus is asked for once the page is laid out: a control that is not yet measured cannot
     // take it, and a remote must find the ring on arrival. The direction picks the transition's
-    // way, as the web UI's router does from the route depth.
+    // way, as the web UI's router does from the route depth, and where the focus lands.
     private void Show(IPage page, bool back)
     {
         // The page on its way out takes no more input. The swap is not instant - the transition
@@ -170,7 +175,28 @@ public partial class MainView : UserControl
 
         Host.IsTransitionReversed = back;
         Host.Content = page;
-        Dispatcher.UIThread.Post(page.FocusDefault, DispatcherPriority.Loaded);
+        Dispatcher.UIThread.Post(() => TakeFocus(page, back), DispatcherPriority.Loaded);
+    }
+
+    // A page back on screen takes the focus where it last had it - the row that opened the page
+    // just left - and otherwise where it starts; so does one whose control is gone since.
+    private void TakeFocus(IPage page, bool back)
+    {
+        if (back && _lastFocus.TryGetValue(page, out var control) && page is Visual root && root.IsVisualAncestorOf(control) &&
+            control is { IsEffectivelyVisible: true, IsEffectivelyEnabled: true, Focusable: true }) {
+            control.LandFocus();
+            return;
+        }
+
+        page.FocusDefault();
+    }
+
+    // the page's own controls only: the dialogs and the drawer live outside the host, and a leaving
+    // page is still in it while it fades
+    private void OnPageGotFocus(object? sender, FocusChangedEventArgs e)
+    {
+        if (Host.Content is IPage page && page is Visual root && e.NewFocusedElement is Control control && root.IsVisualAncestorOf(control))
+            _lastFocus.AddOrUpdate(page, control);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)

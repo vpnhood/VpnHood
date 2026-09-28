@@ -1,6 +1,7 @@
 ﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:res="using:VpnHood.AppUi.Common"
+                    xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.CustomEndpointDialog">
   <!-- The web UI's custom endpoint dialog: an address of the person's own for the server, and the
@@ -8,13 +9,12 @@
   <Border Classes="dialog" MaxWidth="520">
     <StackPanel Spacing="12">
       <TextBlock Classes="dialog-title" Text="{Binding CustomEndpoint, Source={x:Static res:Strings.Current}}" />
-      <!-- the row flips the switch, which only shows: a click on a live switch flipped it twice -->
-      <Button x:Name="EnabledRow" Classes="list-item last" Padding="0,4" Click="OnEnabledClick">
+      <controls:SwitchRow x:Name="EnabledRow" Classes="list-item last" Padding="0,4" Click="OnEnabledClick">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Classes="body-medium" Text="{Binding CustomEndpointEnable, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-          <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" IsHitTestVisible="False" />
+          <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" />
         </Grid>
-      </Button>
+      </controls:SwitchRow>
       <TextBox x:Name="EndpointBox" Classes="outlined" TextChanged="OnEndpointChanged" KeyDown="OnEndpointKeyDown" FlowDirection="LeftToRight" />
       <TextBlock x:Name="ErrorText" Classes="body-small error-text" TextWrapping="Wrap" IsVisible="False" />
       <TextBlock Classes="body-small dialog-text" TextWrapping="Wrap" Text="{Binding CustomEndpointDesc, Source={x:Static res:Strings.Current}}" />

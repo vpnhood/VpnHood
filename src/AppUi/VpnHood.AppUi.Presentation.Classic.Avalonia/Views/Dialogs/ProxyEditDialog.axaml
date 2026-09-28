@@ -1,6 +1,7 @@
 ﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:res="using:VpnHood.AppUi.Common"
+                    xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.ProxyEditDialog">
   <!-- The web UI's AddOrEditProxy sheet: one proxy's fields - or a list to import - and, for one
@@ -16,15 +17,14 @@
           <TextBox x:Name="ListBox" Classes="outlined multiline" MinHeight="150" TextChanged="OnFieldChanged" />
         </StackPanel>
 
-        <!-- ProxyFields: one proxy. A row flips its switch, which only shows: a click on a live
-             switch flipped it twice. -->
+        <!-- ProxyFields: one proxy -->
         <StackPanel x:Name="FieldsPanel" Spacing="10">
-          <Button x:Name="EnabledRow" Classes="list-item last" Padding="0,4" Click="OnEnabledClick">
+          <controls:SwitchRow x:Name="EnabledRow" Classes="list-item last" Padding="0,4" Click="OnEnabledClick">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="body-medium" Text="{Binding Enabled, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-              <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" IsHitTestVisible="False" />
+              <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" />
             </Grid>
-          </Button>
+          </controls:SwitchRow>
           <TextBox x:Name="HostBox" Classes="outlined" TextChanged="OnFieldChanged" LostFocus="OnHostLostFocus" />
           <TextBlock x:Name="HostError" Classes="body-small error-text" IsVisible="False" />
           <TextBox x:Name="PortBox" Classes="outlined" TextChanged="OnFieldChanged" />
@@ -43,12 +43,12 @@
               </Flyout>
             </Button.Flyout>
           </Button>
-          <Button x:Name="AuthRow" Classes="list-item last" Padding="0,4" Click="OnAuthClick">
+          <controls:SwitchRow x:Name="AuthRow" Classes="list-item last" Padding="0,4" Click="OnAuthClick">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="body-medium" Text="{Binding Authentication, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-              <ToggleSwitch x:Name="AuthSwitch" Grid.Column="1" IsHitTestVisible="False" />
+              <ToggleSwitch x:Name="AuthSwitch" Grid.Column="1" />
             </Grid>
-          </Button>
+          </controls:SwitchRow>
           <StackPanel x:Name="AuthPanel" Spacing="10" IsVisible="False">
             <TextBox x:Name="UsernameBox" Classes="outlined" />
             <TextBox x:Name="PasswordBox" Classes="outlined" />

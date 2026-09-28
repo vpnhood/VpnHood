@@ -9,7 +9,8 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <DockPanel Classes="page">
         <Grid DockPanel.Dock="Top" Margin="0,8,0,4" MinHeight="43">
-          <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" Click="OnBackClick">
+          <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" Click="OnBackClick"
+            AutomationProperties.Name="{Binding Back, Source={x:Static res:Strings.Current}}">
             <TextBlock Classes="mdi" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
           </Button>
         </Grid>

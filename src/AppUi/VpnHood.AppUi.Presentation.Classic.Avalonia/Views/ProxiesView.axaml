@@ -47,17 +47,17 @@
           <!-- AddByUrl: a list fetched from an address, on a schedule -->
           <Border Classes="config-card" Padding="16,12">
             <StackPanel Spacing="12">
-              <!-- the row flips the switch, which only shows: a click on a live switch flipped it twice -->
-              <Button x:Name="UrlRow" Classes="list-item last" Padding="0,2" Click="OnUrlSwitchClick">
+              <controls:SwitchRow x:Name="UrlRow" Classes="list-item last" Padding="0,2" Click="OnUrlSwitchClick">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Classes="body-medium" Text="{Binding AddByUrl, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-                  <ToggleSwitch x:Name="UrlSwitch" Grid.Column="1" IsHitTestVisible="False" />
+                  <ToggleSwitch x:Name="UrlSwitch" Grid.Column="1" />
                 </Grid>
-              </Button>
+              </controls:SwitchRow>
               <StackPanel x:Name="UrlPanel" Spacing="12" IsVisible="False">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBox x:Name="UrlBox" Classes="outlined" LostFocus="OnUrlLostFocus" TextChanged="OnUrlChanged" />
-                  <Button x:Name="ReloadButton" Grid.Column="1" Classes="tonal-highlight icon" Margin="8,0,0,0" Click="OnReloadClick">
+                  <Button x:Name="ReloadButton" Grid.Column="1" Classes="tonal-highlight icon" Margin="8,0,0,0" Click="OnReloadClick"
+                          AutomationProperties.Name="{Binding Refresh, Source={x:Static res:Strings.Current}}">
                     <TextBlock x:Name="ReloadIcon" Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.Refresh}" />
                   </Button>
                 </Grid>
@@ -128,7 +128,8 @@
             <StackPanel Spacing="8">
               <Grid ColumnDefinitions="*,Auto" Margin="16,0">
                 <TextBlock Classes="body-medium" Text="{Binding Proxies, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-                <Button x:Name="MenuButton" Grid.Column="1" Classes="icon small" IsVisible="False" Click="OnMenuButtonClick">
+                <Button x:Name="MenuButton" Grid.Column="1" Classes="icon small" IsVisible="False" Click="OnMenuButtonClick"
+                        AutomationProperties.Name="{Binding Menu, Source={x:Static res:Strings.Current}}">
                   <TextBlock Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.DotsVertical}" />
                   <Button.Flyout>
                     <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="menu">
@@ -172,11 +173,11 @@
               <StackPanel x:Name="Pagination" Spacing="8" IsVisible="False">
                 <Border Classes="divider" />
                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
-                  <Button x:Name="FirstPageButton" Classes="icon small" Click="OnFirstPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" /></Button>
-                  <Button x:Name="PrevPageButton" Classes="icon small" Click="OnPrevPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" /></Button>
+                  <Button x:Name="FirstPageButton" Classes="icon small" Click="OnFirstPageClick" AutomationProperties.Name="{Binding FirstPage, Source={x:Static res:Strings.Current}}"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" /></Button>
+                  <Button x:Name="PrevPageButton" Classes="icon small" Click="OnPrevPageClick" AutomationProperties.Name="{Binding Previous, Source={x:Static res:Strings.Current}}"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" /></Button>
                   <TextBlock x:Name="PageText" Classes="body-small highlight" VerticalAlignment="Center" Margin="8,0" />
-                  <Button x:Name="NextPageButton" Classes="icon small" Click="OnNextPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" /></Button>
-                  <Button x:Name="LastPageButton" Classes="icon small" Click="OnLastPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" /></Button>
+                  <Button x:Name="NextPageButton" Classes="icon small" Click="OnNextPageClick" AutomationProperties.Name="{Binding Next, Source={x:Static res:Strings.Current}}"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" /></Button>
+                  <Button x:Name="LastPageButton" Classes="icon small" Click="OnLastPageClick" AutomationProperties.Name="{Binding LastPage, Source={x:Static res:Strings.Current}}"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" /></Button>
                 </StackPanel>
                 <TextBlock x:Name="PaginationText" Classes="body-small disabled" TextAlignment="Center" />
               </StackPanel>

@@ -520,6 +520,27 @@ public sealed partial class Strings
     /// <summary>Back</summary>
     public string Back => Get("BACK");
 
+    /// <summary>Menu</summary>
+    public string Menu => Get("MENU");
+
+    /// <summary>Previous</summary>
+    public string Previous => Get("PREVIOUS");
+
+    /// <summary>Next</summary>
+    public string Next => Get("NEXT");
+
+    /// <summary>First page</summary>
+    public string FirstPage => Get("FIRST_PAGE");
+
+    /// <summary>Last page</summary>
+    public string LastPage => Get("LAST_PAGE");
+
+    /// <summary>Refresh</summary>
+    public string Refresh => Get("REFRESH");
+
+    /// <summary>Bad</summary>
+    public string Bad => Get("BAD");
+
     /// <summary>Confirm</summary>
     public string Confirm => Get("CONFIRM");
 

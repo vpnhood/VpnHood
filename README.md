@@ -35,6 +35,7 @@ Available for Windows, Linux, Android and iOS.
 * Custom DNS
 * Platforms: Windows (10/11 x64), Android (Phone / TV), iOS (iPhone / iPad), Linux
 * Multi-language
+* Screen reader support
 * IPv4 / IPv6
 
 ## Server Features

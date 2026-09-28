@@ -65,7 +65,7 @@
 
       <!-- DebugData2: free text, as the dialog's second field -->
       <TextBlock Classes="body-small muted40" Text="DebugData2" />
-      <TextBox x:Name="DebugData2Box" />
+      <TextBox x:Name="DebugData2Box" AutomationProperties.Name="DebugData2" />
 
       <!-- as wide as the fields, as a page's main button is; on a TV its own size (the code) -->
       <Button x:Name="LogButton" Classes="pill btn1 block" Content="Open log" Click="OnLogClick" Margin="0,6,0,0" />

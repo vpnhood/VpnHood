@@ -6,7 +6,8 @@
        own Back), the page's title over the middle, and the page's icon at the end when it has one
        (a v-card's append-icon). -->
   <Grid Margin="0,8,0,20" Height="43">
-    <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" Click="OnBackClick">
+    <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" Click="OnBackClick"
+            AutomationProperties.Name="{Binding Back, Source={x:Static res:Strings.Current}}">
       <TextBlock Classes="mdi" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
     </Button>
     <!-- as wide as the header allows, clear of the back button on both sides so it stays centred -->

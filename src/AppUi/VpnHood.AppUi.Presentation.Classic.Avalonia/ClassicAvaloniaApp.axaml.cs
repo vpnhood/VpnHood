@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Styles;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
@@ -51,6 +52,9 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
             Resources.MergedDictionaries.Add(themeOverride);
 
         AvaloniaXamlLoader.Load(this);
+
+        // a screen reader hears a button by the words it shows, not by its content's type
+        AutomationNames.Register();
     }
 
     protected override Control CreateMainView()

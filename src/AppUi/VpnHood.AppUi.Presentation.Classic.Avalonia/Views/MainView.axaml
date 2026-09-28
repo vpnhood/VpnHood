@@ -31,7 +31,8 @@
         <Button Grid.Column="1" Classes="alert-link" Click="OnReconnectClick" Margin="8,0">
           <TextBlock Text="{Binding Reconnect, Source={x:Static res:Strings.Current}}" />
         </Button>
-        <Button Grid.Column="2" Classes="icon small" Click="OnReconnectDismissClick">
+        <Button Grid.Column="2" Classes="icon small" Click="OnReconnectDismissClick"
+                AutomationProperties.Name="{Binding Close, Source={x:Static res:Strings.Current}}">
           <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Close}" />
         </Button>
       </Grid>

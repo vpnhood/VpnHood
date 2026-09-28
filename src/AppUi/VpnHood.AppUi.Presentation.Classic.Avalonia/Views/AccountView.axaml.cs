@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -171,6 +172,7 @@ public partial class AccountView : UserControl, IPage
         eye.Classes.Add("small");
         ((TextBlock)eye.Content).Classes.Add("mdi");
         ((TextBlock)eye.Content).Classes.Add("disabled");
+        AutomationProperties.SetName(eye, s.ShowCode);
         eye.Click += async (_, _) => {
             try {
                 await ToggleReveal(eye);
@@ -186,6 +188,7 @@ public partial class AccountView : UserControl, IPage
         copy.Classes.Add("small");
         ((TextBlock)copy.Content).Classes.Add("mdi");
         ((TextBlock)copy.Content).Classes.Add("disabled");
+        AutomationProperties.SetName(copy, s.CopyCode);
         copy.Click += async (_, _) => {
             try {
                 await CopyCode(copy);
@@ -227,6 +230,7 @@ public partial class AccountView : UserControl, IPage
             _codeText.Text = _isCodeRevealed ? _premiumCode ?? MaskedCode : MaskedCode;
         if (eye.Content is TextBlock glyph)
             glyph.Text = _isCodeRevealed ? Mdi.EyeOffOutline : Mdi.EyeOutline;
+        AutomationProperties.SetName(eye, _isCodeRevealed ? Strings.Current.HideCode : Strings.Current.ShowCode);
     }
 
     private async Task CopyCode(Button copy)

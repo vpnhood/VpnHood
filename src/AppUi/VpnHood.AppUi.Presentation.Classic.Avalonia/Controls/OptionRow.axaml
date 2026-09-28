@@ -1,10 +1,11 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.OptionRow">
   <!-- The web UI's radio (and its checkbox): a title over a description with the mark at the
        start, the whole row the thing a remote is on. A button carrying a glyph, so the ring and
        the ripple are the row's, as general.css draws them on a TV. -->
-  <Button x:Name="Row" Classes="option-row" Click="OnRowClick">
+  <controls:OptionRowButton x:Name="Row" Classes="option-row" Click="OnRowClick">
     <Grid ColumnDefinitions="Auto,*">
       <TextBlock x:Name="Mark" Classes="mdi mark" />
       <StackPanel Grid.Column="1" Spacing="2">
@@ -17,5 +18,5 @@
         <TextBlock x:Name="DescriptionText" Classes="option-desc" IsVisible="False" />
       </StackPanel>
     </Grid>
-  </Button>
+  </controls:OptionRowButton>
 </UserControl>

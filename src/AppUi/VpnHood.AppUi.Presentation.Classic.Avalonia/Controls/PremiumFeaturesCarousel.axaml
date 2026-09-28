@@ -42,10 +42,12 @@
         </PageSlide>
       </TransitioningContentControl.PageTransition>
     </TransitioningContentControl>
-    <Button x:Name="PrevButton" Classes="icon" HorizontalAlignment="Left" VerticalAlignment="Center" Click="OnPrevClick">
+    <Button x:Name="PrevButton" Classes="icon" HorizontalAlignment="Left" VerticalAlignment="Center" Click="OnPrevClick"
+            AutomationProperties.Name="{Binding Previous, Source={x:Static res:Strings.Current}}">
       <TextBlock Classes="mdi highlight" FontSize="28" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
     </Button>
-    <Button x:Name="NextButton" Classes="icon" HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNextClick">
+    <Button x:Name="NextButton" Classes="icon" HorizontalAlignment="Right" VerticalAlignment="Center" Click="OnNextClick"
+            AutomationProperties.Name="{Binding Next, Source={x:Static res:Strings.Current}}">
       <TextBlock Classes="mdi highlight" FontSize="28" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
     </Button>
     <StackPanel x:Name="Dots" Grid.Row="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center" />

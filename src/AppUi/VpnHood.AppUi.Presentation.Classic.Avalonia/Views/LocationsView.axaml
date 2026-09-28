@@ -107,7 +107,8 @@
 
                       <!-- the server's menu (ExpansionPanel.vue), off the TV -->
                       <Button Grid.Column="2" Classes="icon small" VerticalAlignment="Center" Margin="0,0,4,0"
-                              IsVisible="{Binding ShowMenu}" Click="OnMenuClick">
+                              IsVisible="{Binding ShowMenu}" Click="OnMenuClick"
+                              AutomationProperties.Name="{Binding Menu, Source={x:Static res:Strings.Current}}">
                         <TextBlock Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.DotsVertical}" />
                         <Button.Flyout>
                           <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="menu">

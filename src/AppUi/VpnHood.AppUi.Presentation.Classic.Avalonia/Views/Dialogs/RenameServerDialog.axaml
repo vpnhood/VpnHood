@@ -7,7 +7,7 @@
   <Border Classes="dialog" MaxWidth="480">
     <StackPanel Spacing="12">
       <TextBlock Classes="dialog-title" Text="{Binding Rename, Source={x:Static res:Strings.Current}}" />
-      <TextBox x:Name="NameBox" Classes="outlined" KeyDown="OnNameKeyDown" />
+      <TextBox x:Name="NameBox" AutomationProperties.Name="{Binding Rename, Source={x:Static res:Strings.Current}}" Classes="outlined" KeyDown="OnNameKeyDown" />
       <TextBlock Classes="body-small disabled" TextWrapping="Wrap" Text="{Binding SaveEmptyToDisplayDefaultName, Source={x:Static res:Strings.Current}}" />
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button Classes="dialog-btn" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />

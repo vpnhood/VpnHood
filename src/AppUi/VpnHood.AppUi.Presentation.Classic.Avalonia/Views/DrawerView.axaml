@@ -26,10 +26,10 @@
       <!-- the foot: the socials and the credit -->
       <StackPanel DockPanel.Dock="Bottom" Spacing="12" Margin="16,12,16,20" HorizontalAlignment="Center">
         <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
-          <Button Classes="icon small tonal-white" Click="OnLinkedInClick">
+          <Button Classes="icon small tonal-white" Click="OnLinkedInClick" AutomationProperties.Name="LinkedIn">
             <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Linkedin}" />
           </Button>
-          <Button Classes="icon small tonal-white" Click="OnInstagramClick">
+          <Button Classes="icon small tonal-white" Click="OnInstagramClick" AutomationProperties.Name="Instagram">
             <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Instagram}" />
           </Button>
           <Button Classes="icon small tonal-white" Click="OnXClick">

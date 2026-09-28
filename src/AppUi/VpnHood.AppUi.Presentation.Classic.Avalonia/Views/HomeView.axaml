@@ -61,7 +61,8 @@
            the screen by half the badges. -->
       <Grid Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,2*,*" Height="48" VerticalAlignment="Top">
         <Button x:Name="MenuButton" Classes="icon" HorizontalAlignment="Left" VerticalAlignment="Center"
-                IsVisible="{Binding IsNotTv}" Click="OnMenuClick">
+                IsVisible="{Binding IsNotTv}" Click="OnMenuClick"
+                AutomationProperties.Name="{Binding Menu, Source={x:Static res:Strings.Current}}">
           <TextBlock Classes="mdi" Text="{x:Static res:Mdi.Menu}" />
         </Button>
         <TextBlock Grid.Column="1" Classes="h4" Text="{Binding AppName}" TextAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight" />
@@ -110,7 +111,7 @@
         <ItemsControl ItemsSource="{Binding Badges}" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding HasBadges}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:FeatureBadge">
-              <Button Classes="badge" Click="OnBadgeClick">
+              <Button Classes="badge" Click="OnBadgeClick" AutomationProperties.Name="{Binding Title}">
                 <Panel Width="28" Height="28">
                   <TextBlock Classes="mdi" Text="{Binding Icon}" />
                   <TextBlock Classes="mdi" FontSize="14" Text="{Binding SecondIcon}" IsVisible="{Binding HasSecondIcon}"

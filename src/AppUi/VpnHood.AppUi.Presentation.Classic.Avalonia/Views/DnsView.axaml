@@ -56,10 +56,10 @@
                  keeps the whole form -->
             <StackPanel x:Name="CustomPanel" Spacing="6" IsVisible="False" Margin="0,8,0,0" FlowDirection="LeftToRight">
               <TextBlock Classes="body-medium" Text="DNS 1" />
-              <TextBox x:Name="Dns1Box" Classes="outlined" PlaceholderText="8.8.8.8" TextChanged="OnDnsChanged" />
+              <TextBox x:Name="Dns1Box" AutomationProperties.Name="DNS 1" Classes="outlined" PlaceholderText="8.8.8.8" TextChanged="OnDnsChanged" />
               <TextBlock x:Name="Dns1Error" Classes="body-small error-text" IsVisible="False" />
               <TextBlock Classes="body-medium" Text="DNS 2" Margin="0,8,0,0" />
-              <TextBox x:Name="Dns2Box" Classes="outlined" PlaceholderText="8.8.4.4" TextChanged="OnDnsChanged" />
+              <TextBox x:Name="Dns2Box" AutomationProperties.Name="DNS 2" Classes="outlined" PlaceholderText="8.8.4.4" TextChanged="OnDnsChanged" />
               <TextBlock x:Name="Dns2Error" Classes="body-small error-text" IsVisible="False" />
             </StackPanel>
           </StackPanel>

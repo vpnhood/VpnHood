@@ -56,17 +56,17 @@ public partial class OptionRow : UserControl
 
     // a checkbox rather than a radio
     public bool IsCheckBox {
-        get;
+        get => Row.IsCheckBox;
         set {
-            field = value;
+            Row.IsCheckBox = value;
             UpdateMark();
         }
     }
 
     public bool IsChecked {
-        get;
+        get => Row.IsChecked;
         set {
-            field = value;
+            Row.IsChecked = value;
             UpdateMark();
         }
     }

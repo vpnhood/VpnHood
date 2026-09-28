@@ -8,10 +8,11 @@
   <Border Classes="dialog" MaxWidth="520">
     <StackPanel Spacing="12">
       <TextBlock Classes="dialog-title" Text="{Binding CustomEndpoint, Source={x:Static res:Strings.Current}}" />
+      <!-- the row flips the switch, which only shows: a click on a live switch flipped it twice -->
       <Button x:Name="EnabledRow" Classes="list-item last" Padding="0,4" Click="OnEnabledClick">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Classes="body-medium" Text="{Binding CustomEndpointEnable, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-          <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" />
+          <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" IsHitTestVisible="False" />
         </Grid>
       </Button>
       <TextBox x:Name="EndpointBox" Classes="outlined" TextChanged="OnEndpointChanged" KeyDown="OnEndpointKeyDown" FlowDirection="LeftToRight" />

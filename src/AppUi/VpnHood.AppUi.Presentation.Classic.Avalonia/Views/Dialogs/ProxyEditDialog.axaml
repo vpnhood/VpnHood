@@ -16,12 +16,13 @@
           <TextBox x:Name="ListBox" Classes="outlined multiline" MinHeight="150" TextChanged="OnFieldChanged" />
         </StackPanel>
 
-        <!-- ProxyFields: one proxy -->
+        <!-- ProxyFields: one proxy. A row flips its switch, which only shows: a click on a live
+             switch flipped it twice. -->
         <StackPanel x:Name="FieldsPanel" Spacing="10">
           <Button x:Name="EnabledRow" Classes="list-item last" Padding="0,4" Click="OnEnabledClick">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="body-medium" Text="{Binding Enabled, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-              <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" />
+              <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" IsHitTestVisible="False" />
             </Grid>
           </Button>
           <TextBox x:Name="HostBox" Classes="outlined" TextChanged="OnFieldChanged" LostFocus="OnHostLostFocus" />
@@ -45,7 +46,7 @@
           <Button x:Name="AuthRow" Classes="list-item last" Padding="0,4" Click="OnAuthClick">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="body-medium" Text="{Binding Authentication, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-              <ToggleSwitch x:Name="AuthSwitch" Grid.Column="1" />
+              <ToggleSwitch x:Name="AuthSwitch" Grid.Column="1" IsHitTestVisible="False" />
             </Grid>
           </Button>
           <StackPanel x:Name="AuthPanel" Spacing="10" IsVisible="False">

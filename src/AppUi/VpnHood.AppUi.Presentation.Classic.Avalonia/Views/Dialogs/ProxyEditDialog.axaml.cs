@@ -17,6 +17,7 @@ public partial class ProxyEditDialog : DialogBase
     private readonly string? _oldId;
     private ProxyProtocol _protocol;
     private bool _isProcessing;
+    private bool _isHostEdited;
 
     // Add: empty fields; AddList: the import box; Edit: the saved proxy's fields and record
     public ProxyEditDialog(MainView host, ProxySheetKind kind, AppProxyEndPointInfo? proxy)
@@ -130,10 +131,16 @@ public partial class ProxyEditDialog : DialogBase
             : HostRule == null && PortRule == null);
     }
 
+    // The host's rule shows once the host has been typed in, as the web UI's field shows it: an
+    // empty new form is not a mistake yet, and Add waits for a host anyway. The fields' first
+    // fill runs before the dialog is loaded.
     private void OnFieldChanged(object? sender, TextChangedEventArgs e)
     {
+        if (sender == HostBox && IsLoaded)
+            _isHostEdited = true;
+
         HostError.Text = HostRule;
-        HostError.IsVisible = HostRule != null && HostBox.Text != null;
+        HostError.IsVisible = HostRule != null && _isHostEdited;
         PortError.Text = PortRule;
         PortError.IsVisible = PortRule != null;
         UpdateSaveButton();

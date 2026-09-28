@@ -47,10 +47,11 @@
           <!-- AddByUrl: a list fetched from an address, on a schedule -->
           <Border Classes="config-card" Padding="16,12">
             <StackPanel Spacing="12">
+              <!-- the row flips the switch, which only shows: a click on a live switch flipped it twice -->
               <Button x:Name="UrlRow" Classes="list-item last" Padding="0,2" Click="OnUrlSwitchClick">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Classes="body-medium" Text="{Binding AddByUrl, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-                  <ToggleSwitch x:Name="UrlSwitch" Grid.Column="1" />
+                  <ToggleSwitch x:Name="UrlSwitch" Grid.Column="1" IsHitTestVisible="False" />
                 </Grid>
               </Button>
               <StackPanel x:Name="UrlPanel" Spacing="12" IsVisible="False">

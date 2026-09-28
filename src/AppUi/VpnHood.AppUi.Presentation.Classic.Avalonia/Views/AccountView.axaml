@@ -19,7 +19,7 @@
             <StackPanel Spacing="4">
               <TextBlock x:Name="UserName" Classes="card-title" IsVisible="False" />
               <TextBlock x:Name="UserEmail" Classes="card-subtitle" />
-              <Button x:Name="SignOutButton" Classes="btn1 small" HorizontalAlignment="Right" Margin="0,8,0,0" Click="OnSignOutClick"
+              <Button x:Name="SignOutButton" Classes="pill btn1 small" HorizontalAlignment="Right" Margin="0,8,0,0" Click="OnSignOutClick"
                       Content="{Binding SignOut, Source={x:Static res:Strings.Current}}" />
             </StackPanel>
           </Border>
@@ -34,7 +34,7 @@
             <StackPanel Spacing="4">
               <TextBlock Classes="card-title" Text="{Binding WouldYouLikeToChange, Source={x:Static res:Strings.Current}}" />
               <TextBlock Classes="card-subtitle" Text="{Binding SignOutToUsePremiumCodeMsg, Source={x:Static res:Strings.Current}}" />
-              <Button Classes="btn1 small" HorizontalAlignment="Right" Margin="0,8,0,0" Click="OnSignOutClick"
+              <Button Classes="pill btn1 small" HorizontalAlignment="Right" Margin="0,8,0,0" Click="OnSignOutClick"
                       Content="{Binding SignOut, Source={x:Static res:Strings.Current}}" />
             </StackPanel>
           </Border>
@@ -42,7 +42,7 @@
             <StackPanel Spacing="4">
               <TextBlock Classes="card-title" Text="{Binding ChangePremiumCode, Source={x:Static res:Strings.Current}}" />
               <TextBlock Classes="card-subtitle" Text="{Binding ChangePremiumCodeDesc, Source={x:Static res:Strings.Current}}" />
-              <Button x:Name="ChangeCodeButton" Classes="btn1 small" HorizontalAlignment="Right" Margin="0,8,0,0" Click="OnChangeCodeClick"
+              <Button x:Name="ChangeCodeButton" Classes="pill btn1 small" HorizontalAlignment="Right" Margin="0,8,0,0" Click="OnChangeCodeClick"
                       Content="{Binding ChangeCode, Source={x:Static res:Strings.Current}}" />
             </StackPanel>
           </Border>
@@ -50,7 +50,7 @@
             <StackPanel Spacing="4">
               <TextBlock Classes="card-title" Text="{Binding RemoveCurrentPremiumCode, Source={x:Static res:Strings.Current}}" />
               <TextBlock Classes="card-subtitle" Text="{Binding RemoveLocalPremiumCodeDesc, Source={x:Static res:Strings.Current}}" />
-              <Button x:Name="RemoveCodeButton" Classes="btn1 small" HorizontalAlignment="Right" Margin="0,8,0,0" Click="OnRemoveCodeClick"
+              <Button x:Name="RemoveCodeButton" Classes="pill btn1 small" HorizontalAlignment="Right" Margin="0,8,0,0" Click="OnRemoveCodeClick"
                       Content="{Binding RemoveCode, Source={x:Static res:Strings.Current}}" />
             </StackPanel>
           </Border>
@@ -60,7 +60,7 @@
             <StackPanel Spacing="8">
               <TextBlock Classes="card-title" Text="{Binding SubscriptionDetails, Source={x:Static res:Strings.Current}}" />
               <StackPanel x:Name="SubscriptionRows" />
-              <Button x:Name="ManageButton" Classes="btn1 small" HorizontalAlignment="Right" Click="OnManageClick" IsVisible="False">
+              <Button x:Name="ManageButton" Classes="pill btn1 small" HorizontalAlignment="Right" Click="OnManageClick" IsVisible="False">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <TextBlock Text="{Binding ManageSubscription, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
                   <TextBlock Classes="mdi" FontSize="16" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
@@ -80,7 +80,7 @@
                 <TextBlock Classes="mdi disabled" FontSize="30" Text="{x:Static res:Mdi.InformationOutline}" HorizontalAlignment="Center" />
                 <TextBlock Classes="body-small disabled" TextWrapping="Wrap" TextAlignment="Center" Text="{Binding DisplayInfoAfterConnection, Source={x:Static res:Strings.Current}}" />
               </StackPanel>
-              <Button x:Name="MoreDetailsButton" Classes="btn1 small" HorizontalAlignment="Right" Click="OnMoreDetailsClick" IsVisible="False">
+              <Button x:Name="MoreDetailsButton" Classes="pill btn1 small" HorizontalAlignment="Right" Click="OnMoreDetailsClick" IsVisible="False">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <TextBlock Text="{Binding MoreDetails, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
                   <TextBlock Classes="mdi" FontSize="16" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
@@ -97,7 +97,7 @@
                 <Image ui:AppImage.Source="images/free-to-premium-account-icon.webp" Width="92" Margin="0,0,16,0" VerticalAlignment="Center" />
                 <TextBlock x:Name="UpgradeText" Grid.Column="1" Classes="body-medium" TextWrapping="Wrap" VerticalAlignment="Center" />
               </Grid>
-              <Button x:Name="GoPremiumButton" Classes="btn1 small" HorizontalAlignment="Right" Click="OnGoPremiumClick">
+              <Button x:Name="GoPremiumButton" Classes="pill btn1 small" HorizontalAlignment="Right" Click="OnGoPremiumClick">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <TextBlock Text="{Binding GoPremium, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
                   <TextBlock Classes="mdi" FontSize="16" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />

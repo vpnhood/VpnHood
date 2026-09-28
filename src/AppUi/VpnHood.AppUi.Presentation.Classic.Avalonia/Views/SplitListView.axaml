@@ -13,7 +13,7 @@
         <controls:SplitDisabledAlert x:Name="DisabledAlert" TurnedOn="OnTurnedOn" />
         <controls:SettingsToggleItem x:Name="EnabledItem" Toggled="OnToggled" />
         <controls:SplitListInput x:Name="Input" Changed="OnInputChanged" />
-        <Button x:Name="RevertButton" Classes="btn3 block" Margin="0,16,0,0" IsVisible="False" Click="OnRevertClick"
+        <Button x:Name="RevertButton" Classes="pill btn3 block" Margin="0,16,0,0" IsVisible="False" Click="OnRevertClick"
                 Content="{Binding Revert, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
     </ScrollViewer>

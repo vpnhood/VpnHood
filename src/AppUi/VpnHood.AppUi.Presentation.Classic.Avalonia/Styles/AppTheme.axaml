@@ -150,6 +150,12 @@
   <Style Selector="TextBlock">
     <Setter Property="Foreground" Value="{StaticResource OnBackgroundBrush}" />
   </Style>
+  <!-- Words inside a button take the button's colour, as a web page's words take their v-btn's
+       (Vuetify's on-colour): the rule above would paint them the page's white on a green button.
+       A word with a colour of its own keeps it, its style coming later. -->
+  <Style Selector="Button TextBlock">
+    <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground, FallbackValue={StaticResource OnBackgroundBrush}}" />
+  </Style>
   <Style Selector="TextBlock.body-small">
     <Setter Property="FontSize" Value="12" />
     <Setter Property="LineHeight" Value="20" />
@@ -1242,6 +1248,10 @@
   </Style>
   <Style Selector="Border.dialog.alert TextBlock">
     <Setter Property="Foreground" Value="{StaticResource DialogAlertTextBrush}" />
+  </Style>
+  <!-- but a button's words are the button's colour here too: Diagnose's tonal dialog-alert-btn -->
+  <Style Selector="Border.dialog.alert Button TextBlock">
+    <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground, FallbackValue={StaticResource DialogAlertTextBrush}}" />
   </Style>
   <Style Selector="Border.dialog.alert Button.dialog-btn">
     <Setter Property="Foreground" Value="{StaticResource OnDialogAlertBrush}" />

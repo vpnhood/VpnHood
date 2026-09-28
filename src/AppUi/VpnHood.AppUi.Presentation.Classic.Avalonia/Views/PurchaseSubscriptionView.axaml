@@ -69,17 +69,19 @@
               <StackPanel x:Name="PlanNotes" Spacing="4" Margin="16,8,0,8" Opacity="0.5">
                 <TextBlock x:Name="AutoRenewText" Classes="body-small" TextWrapping="Wrap" />
                 <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding CancelAnytimeInStore, Source={x:Static res:Strings.Current}}" />
+                <!-- links, but white as the notes are (the web UI's text-white) -->
                 <StackPanel x:Name="LinksRow" Orientation="Horizontal" Spacing="4">
-                  <Button x:Name="TermsLink" Classes="text-highlight" Padding="0" Click="OnTermsClick">
+                  <Button x:Name="TermsLink" Classes="text-highlight" Foreground="{StaticResource WhiteBrush}" Padding="0" Click="OnTermsClick">
                     <TextBlock Classes="body-small" Text="{Binding TermsOfUse, Source={x:Static res:Strings.Current}}" />
                   </Button>
                   <TextBlock x:Name="LinksDot" Classes="body-small" Text="·" VerticalAlignment="Center" />
-                  <Button x:Name="PrivacyLink" Classes="text-highlight" Padding="0" Click="OnPrivacyClick">
+                  <Button x:Name="PrivacyLink" Classes="text-highlight" Foreground="{StaticResource WhiteBrush}" Padding="0" Click="OnPrivacyClick">
                     <TextBlock Classes="body-small" Text="{Binding PrivacyPolicy, Source={x:Static res:Strings.Current}}" />
                   </Button>
                 </StackPanel>
               </StackPanel>
               <Button x:Name="PurchaseButton" Classes="pill block bold" Height="40" Background="{StaticResource PurchaseSubscriptionBtnBrush}"
+                      Foreground="{StaticResource OnPurchaseSubscriptionBtnBrush}"
                       Click="OnPurchaseClick" Content="{Binding Purchase, Source={x:Static res:Strings.Current}}" />
             </StackPanel>
 

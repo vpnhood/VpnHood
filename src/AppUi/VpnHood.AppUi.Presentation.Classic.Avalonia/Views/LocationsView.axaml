@@ -38,11 +38,15 @@
                   <Border Grid.Column="0" Classes="flag" Classes.small="{Binding IsNested}" Margin="0,0,8,0" IsVisible="{Binding !IsAuto}">
                     <Image ui:AppImage.Source="{Binding FlagPath}" />
                   </Border>
-                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                    <TextBlock Classes="location-name" Classes.nested="{Binding IsNested}" Classes.active="{Binding IsActive}" Text="{Binding Name}" />
-                    <TextBlock Classes="body-small disabled flasher" Text="{Binding RecommendedText}" IsVisible="{Binding IsAuto}" VerticalAlignment="Center" />
-                  </StackPanel>
-                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                  <!-- held to its column, so a long language cuts the words short rather than
+                       running them under the chips: "(Recommended)" first, then the name -->
+                  <DockPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Classes="location-name" Classes.nested="{Binding IsNested}" Classes.active="{Binding IsActive}" Text="{Binding Name}"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="body-small disabled flasher" Text="{Binding RecommendedText}" IsVisible="{Binding IsAuto}"
+                               VerticalAlignment="Center" Margin="4,0,0,0" TextTrimming="CharacterEllipsis" />
+                  </DockPanel>
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="8,0,0,0">
                     <Border Classes="chip chip-active" IsVisible="{Binding IsActive}">
                       <TextBlock Text="{Binding ActiveChipText}" />
                     </Border>

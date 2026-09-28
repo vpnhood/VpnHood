@@ -3,13 +3,14 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.SettingsItem">
   <!-- The web UI's SettingsItem: a card that opens a page - the title, a chip saying its state or
-       its choice, a warning chip when its posture can leak, the crown when it is sold, the subtitle
-       and the chevron. The whole card is the button, and the ring is its. -->
+       its choice, a warning chip when its posture can leak (the chips under the title when a long
+       language leaves no room beside it), the crown when it is sold, the subtitle and the chevron.
+       The whole card is the button, and the ring is its. -->
   <Button x:Name="Card" Classes="card-row" Click="OnCardClick" Margin="0,0,0,12">
     <StackPanel Spacing="4">
       <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock x:Name="TitleText" Classes="body-medium" VerticalAlignment="Center" />
+        <WrapPanel ItemSpacing="8" LineSpacing="4" VerticalAlignment="Center">
+          <TextBlock x:Name="TitleText" Classes="body-medium" VerticalAlignment="Center" TextWrapping="Wrap" />
           <Border x:Name="StatusChip" Classes="chip comfortable" IsVisible="False">
             <TextBlock x:Name="StatusText" />
           </Border>
@@ -19,7 +20,7 @@
               <TextBlock x:Name="WarningText" />
             </Border>
           </Button>
-        </StackPanel>
+        </WrapPanel>
         <TextBlock x:Name="Crown" Grid.Column="1" Classes="crown" Text="{x:Static res:Mdi.Crown}" IsVisible="False" />
       </Grid>
       <Grid ColumnDefinitions="*,Auto">

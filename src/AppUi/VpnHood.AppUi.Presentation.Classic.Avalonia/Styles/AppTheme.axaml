@@ -473,16 +473,23 @@
     <Setter Property="BorderThickness" Value="2" />
   </Style>
   <!-- A flyout is a top level of its own, so it takes neither the page's font nor its
-       background: both are set here. -->
+       background: both are set here. The frame is the list's own (commands-list), not the
+       presenter's, so the list can be given the field's width whole; the presenter's own cap on
+       its width goes. -->
   <Style Selector="FlyoutPresenter.commands">
     <Setter Property="FontFamily" Value="fonts:VpnHood#Poppins" />
     <Setter Property="FontWeight" Value="Light" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MaxWidth" Value="Infinity" />
+  </Style>
+  <Style Selector="Border.commands-list">
     <Setter Property="Background" Value="{StaticResource ConfigCardBgBrush}" />
     <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="4" />
-    <Setter Property="MinWidth" Value="320" />
   </Style>
   <Style Selector="ToggleButton.debug-item">
     <Setter Property="Template" Value="{StaticResource RippleButtonTemplate}" />

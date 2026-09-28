@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
@@ -28,9 +29,14 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         _commands = [.. VhApp.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })];
         _unknown = [.. current.Except(VhApp.Features.DebugCommands)];
 
-        SupportIdText.Text = $"Support ID: {VhApp.State.VpnProfile?.SupportId}";
         CommandList.ItemsSource = _commands;
         DebugData2Box.Text = VhApp.UserSettings.DebugData2;
+
+        // a bar the page's width is a finger's target; a remote's is a button of its own size
+        if (VhApp.IsTvUi) {
+            LogButton.HorizontalAlignment = HorizontalAlignment.Right;
+            LogButton.MinWidth = 160;
+        }
 
         foreach (var command in _commands)
             command.PropertyChanged += (_, _) => ShowChosen();
@@ -42,6 +48,12 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
     public void FocusDefault()
     {
         CommandsField.LandFocus();
+    }
+
+    // the list drops from the field as wide as the field, as a combobox's does
+    private void OnCommandsOpening(object? sender, EventArgs e)
+    {
+        CommandsPanel.Width = CommandsField.Bounds.Width;
     }
 
     // The field shows what the list has on, as the combobox shows its chips.

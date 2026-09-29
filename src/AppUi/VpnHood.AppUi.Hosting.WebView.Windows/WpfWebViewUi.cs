@@ -32,7 +32,7 @@ public class WpfWebViewUi : IDesktopUi
         var application = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var window = new VpnHoodWpfMainWindow(new WpfWindowParams {
             Api = uiParams.Api,
-            WebHost = new ExternalAppWebHost(uiParams.WebUrl),
+            WebHost = new ExternalAppWebHost(uiParams.ApiUrlProvider),
             AppName = info.Features.AppName,
             IsTv = info.Features.IsTv,
             Resources = resources,

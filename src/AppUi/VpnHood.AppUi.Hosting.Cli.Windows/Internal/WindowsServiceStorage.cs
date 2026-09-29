@@ -4,7 +4,7 @@ using System.Security.Principal;
 namespace VpnHood.AppUi.Hosting.Cli.Windows.Internal;
 
 // The service's storage under ProgramData, with an ACL of its own: SYSTEM and Administrators change
-// it, and everyone else only reads it - the window reads daemon.json, "service log" reads app.log.
+// it, and everyone else only reads it - "service log" reads app.log.
 // Not what ProgramData passes down, which lets any user add files: the service runs what it stages
 // here (the update, hosting plan §4.5), so a file nobody else could have written is its check. Made
 // right on every start, so a folder an earlier build made, or someone loosened, is brought back.

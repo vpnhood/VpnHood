@@ -28,6 +28,10 @@ public class WindowsCliPaths(string appId) : IAppCliPaths
     public string UiDataPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appId);
 
+    // The app's own key under HKLM, which only administrators write and anyone reads: where the
+    // service records what a client must look up before it can ask it anything - the channel's name.
+    public string RegistryKeyPath => @"SOFTWARE\" + appId;
+
     // What the service runs and an elevated copy of a command is started as: the apphost beside the
     // entry assembly, even when this process is dotnet.
     public string ExecutablePath => Path.Combine(AppContext.BaseDirectory, InstanceName + ".exe");

@@ -1,34 +1,32 @@
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.HttpClients;
+using VpnHood.AppLib.App.WebHosting;
+using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.AppUi.Hosting.Cli.Channel;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Cli;
 
-// The way in for everything that is not the daemon. The window and every command get the app's API
-// here - the same six interfaces the daemon holds in process, over loopback instead. No token is
-// presented and none is asked for: the web host treats a loopback caller as the device itself and
-// never requires pairing (VpnHoodAppWebHost.OnPreRouting).
-//
-// Open waits, and that is the whole reason this is not a one-line factory. Starting the instance
-// returns as soon as the platform has STARTED it, while the address a caller needs is published a
-// few seconds later by the daemon itself, when its listener has actually bound. Without the wait,
-// the first command after an install or a reboot fails on a service that is coming up perfectly -
-// and that is exactly the moment somebody is typing the commands the installer just printed.
-//
-// An instance that is not running at all is not waited for: that is answered at once, with the
-// platform's sentence on how to start it.
-public sealed class DaemonConnection : IDisposable
+// The way in to the daemon's API, followed over the service's channel as it moves. Open waits for a
+// service still coming up - the first command after an install meets one - but not for one stopped.
+public sealed class DaemonConnection : IAsyncDisposable
 {
     private static readonly TimeSpan BindTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
 
+    private readonly IDaemonAnswerProvider _answerProvider;
+    private readonly DaemonApiUrlProvider _apiUrlProvider;
     private readonly HttpClient _httpClient;
 
-    internal DaemonConnection(Uri apiUrl)
+    private DaemonConnection(IDaemonAnswerProvider answerProvider, ILoopbackPeerCheck peerCheck,
+        IAppInstanceController instance, string instanceName)
     {
-        Url = apiUrl;
-        _httpClient = new HttpClient {
-            BaseAddress = new Uri(apiUrl.GetLeftPart(UriPartial.Authority) + "/"),
+        _answerProvider = answerProvider;
+        _apiUrlProvider = new DaemonApiUrlProvider(answerProvider);
+
+        // The base address is a stand-in: the handler puts the latest one on every request.
+        _httpClient = new HttpClient(new DaemonApiHandler(answerProvider, peerCheck, instanceName, instance.NotRunningHint)) {
+            BaseAddress = new Uri("http://127.0.0.1/"),
             Timeout = TimeSpan.FromMinutes(2) // a connect attempt walks a server list and may be slow
         };
 
@@ -37,47 +35,121 @@ public sealed class DaemonConnection : IDisposable
 
     public VpnHoodApi Api { get; }
 
-    // The address the daemon published: its local web host, which serves the page and the API.
-    public Uri Url { get; }
+    // The daemon's API URL, followed as it moves: what a web view loads, token and all.
+    public IDesktopApiUrlProvider ApiUrlProvider => _apiUrlProvider;
 
-    public static async Task<DaemonConnection> Open(CliPlatform platform, CancellationToken cancellationToken)
+    public static Task<DaemonConnection> Open(CliPlatform platform, CancellationToken cancellationToken)
     {
-        var daemonInfo = DaemonInfo.Read(platform.Paths.DaemonInfoFilePath) ??
-                         await WaitForDaemon(platform, cancellationToken).Vhc();
-
-        return new DaemonConnection(daemonInfo.ApiUrl);
+        return Open(platform.Channel, platform.PeerCheck, platform.Instance, platform.Paths, cancellationToken);
     }
 
-    private static async Task<DaemonInfo> WaitForDaemon(CliPlatform platform, CancellationToken cancellationToken)
+    internal static async Task<DaemonConnection> Open(IDaemonChannel channel, ILoopbackPeerCheck peerCheck,
+        IAppInstanceController instance, IAppCliPaths paths, CancellationToken cancellationToken)
     {
-        // Nothing is starting, so there is nothing to wait for.
-        if (!await platform.Instance.IsRunning(cancellationToken).Vhc())
-            throw new DaemonNotRunningException(platform.Instance.NotRunningHint);
+        var answerProvider = new ChannelAnswerProvider(channel, paths.InstanceName);
+        try {
+            await WaitForAnswer(answerProvider, instance, paths, cancellationToken).Vhc();
+            return new DaemonConnection(answerProvider, peerCheck, instance, paths.InstanceName);
+        }
+        catch {
+            await answerProvider.DisposeAsync().Vhc();
+            throw;
+        }
+    }
 
+    // The app in this very process (DevCommand), over its own local web host, which must be started.
+    internal static DaemonConnection CreateInProcess(IAppWebHost webHost, ILoopbackPeerCheck peerCheck,
+        IAppInstanceController instance, string instanceName)
+    {
+        return new DaemonConnection(new InProcessAnswerProvider(webHost), peerCheck, instance, instanceName);
+    }
+
+    private static async Task WaitForAnswer(IDaemonAnswerProvider answerProvider, IAppInstanceController instance,
+        IAppCliPaths paths, CancellationToken cancellationToken)
+    {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(BindTimeout);
 
         try {
             while (true) {
-                await Task.Delay(PollInterval, timeout.Token).Vhc();
-                var daemonInfo = DaemonInfo.Read(platform.Paths.DaemonInfoFilePath);
-                if (daemonInfo != null)
-                    return daemonInfo;
+                if (answerProvider.Refusal is { } refusal)
+                    throw new DaemonRefusedException(refusal);
 
-                // It died while we waited; say that rather than spend the whole timeout on it.
-                if (!await platform.Instance.IsRunning(cancellationToken).Vhc())
-                    throw new DaemonNotRunningException(platform.Instance.NotRunningHint);
+                if (answerProvider.Current != null)
+                    return;
+
+                // Nothing is starting, so there is nothing to wait for; and one that died while we
+                // waited is said so rather than spend the whole timeout on it.
+                if (!await instance.IsRunning(cancellationToken).Vhc())
+                    throw new DaemonNotRunningException(instance.NotRunningHint);
+
+                await WaitForChange(answerProvider, PollInterval, timeout.Token).Vhc();
             }
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
             throw new InvalidOperationException(
-                $"{platform.Paths.InstanceName} is running but has not answered. " +
-                $"See: {platform.Paths.CommandName} service log");
+                $"{paths.InstanceName} is running but has not answered. " +
+                $"See: {paths.CommandName} service log");
         }
     }
 
-    public void Dispose()
+    // Until the answer changes, or the interval passes: the answer is taken the moment it comes.
+    private static async Task WaitForChange(IDaemonAnswerProvider answerProvider, TimeSpan interval,
+        CancellationToken cancellationToken)
+    {
+        var changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void OnChanged(object? sender, EventArgs e) => changed.TrySetResult();
+
+        answerProvider.Changed += OnChanged;
+        try {
+            await Task.WhenAny(changed.Task, Task.Delay(interval, cancellationToken)).Vhc();
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        finally {
+            answerProvider.Changed -= OnChanged;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
     {
         _httpClient.Dispose();
+        _apiUrlProvider.Dispose();
+        await _answerProvider.DisposeAsync().Vhc();
+    }
+
+    // The window's API URL. While nothing answers it is the last one known, which a load fails
+    // against and is tried again on; a new URL is a change, an outage is not.
+    private sealed class DaemonApiUrlProvider : IDesktopApiUrlProvider, IDisposable
+    {
+        private readonly IDaemonAnswerProvider _answerProvider;
+        private Uri _last;
+
+        public DaemonApiUrlProvider(IDaemonAnswerProvider answerProvider)
+        {
+            _answerProvider = answerProvider;
+            _last = answerProvider.Current?.ApiUrl ?? throw new InvalidOperationException("The service has not answered.");
+            _answerProvider.Changed += OnChanged;
+        }
+
+        public Uri Current {
+            get {
+                if (_answerProvider.Current?.ApiUrl is { } url)
+                    _last = url;
+                return _last;
+            }
+        }
+
+        public event EventHandler? Changed;
+
+        private void OnChanged(object? sender, EventArgs e)
+        {
+            if (_answerProvider.Current?.ApiUrl != null)
+                Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void Dispose()
+        {
+            _answerProvider.Changed -= OnChanged;
+        }
     }
 }

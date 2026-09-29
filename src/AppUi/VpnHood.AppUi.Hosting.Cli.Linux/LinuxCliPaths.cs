@@ -43,6 +43,11 @@ public class LinuxCliPaths(string appId) : IAppCliPaths
         }
     }
 
+    // The service's folder under /run, which only root writes: nobody else takes a name in it first.
+    public string RuntimePath => Path.Combine("/run", InstanceName);
+
+    public string ChannelSocketPath => Path.Combine(RuntimePath, "daemon.sock");
+
     // Per user, under XDG's cache: the daemon's storage belongs to root and a desktop session
     // cannot write there.
     public string UiDataPath {

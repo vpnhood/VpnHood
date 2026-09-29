@@ -4,8 +4,7 @@ using VpnHood.AppUi.Hosting.Cli.Windows.Internal;
 namespace VpnHood.AppUi.Hosting.Cli.Windows;
 
 // A Windows head's whole entry point: the machine facts Windows answers (CliPlatform) joined to the
-// product facts the head answers, and the words an earlier release's shortcuts may still pass,
-// caught before the parser sees them. The same synchronous call as every desktop host's, run on the
+// product facts the head answers. The same synchronous call as every desktop host's, run on the
 // head's [STAThread] main thread, which the window gets (CliHost.Run).
 //
 // The app runs in a LocalSystem service, "daemon" under the service control manager; the window and
@@ -16,32 +15,21 @@ public static class WindowsCliHost
     {
         var paths = new WindowsCliPaths(initParams.AppId);
         var setup = new WindowsServiceSetup(paths);
-        var instance = new WindowsInstanceController(paths, setup);
+        var channel = new WindowsDaemonChannel(paths);
+        var instance = new WindowsInstanceController(paths, setup, channel);
         var platform = new CliPlatform {
             Paths = paths,
             Instance = instance,
+            Channel = channel,
+            PeerCheck = new WindowsLoopbackPeerCheck(),
             InstanceSetup = setup,
             CreateTray = trayParams => WindowsAppTray.Start(trayParams.Api, trayParams.UiAssets,
                 trayParams.ShowWindow, trayParams.Exit),
-            CreateDaemonHost = () => WindowsDaemonHost.CreateService(initParams, paths),
-            CreateDevDaemonHost = storagePath => WindowsDaemonHost.CreateDev(initParams, storagePath),
+            DaemonHostFactory = new WindowsDaemonHostFactory(initParams, paths),
             HostDaemon = (run, cancellationToken) =>
                 WindowsDaemonService.Host(paths.InstanceName, run, cancellationToken)
         };
 
-        return CliHost.Run(TranslateLegacy(args), initParams, platform);
-    }
-
-    // Migration (2026-09): drop a few months after it ships.
-    // The flags an earlier release took. Both meant "run the app without showing anything", which is
-    // now the service's job; what is left of them is the tray, with the window closed - and for
-    // /autoconnect, a connect.
-    private static string[] TranslateLegacy(string[] args)
-    {
-        var isAutoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
-        var isNoWindow = args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
-        return isAutoConnect ? ["ui", "--tray", "--connect"]
-            : isNoWindow ? ["ui", "--tray"]
-            : args;
+        return CliHost.Run(args, initParams, platform);
     }
 }

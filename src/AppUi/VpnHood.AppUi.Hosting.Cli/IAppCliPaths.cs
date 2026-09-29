@@ -30,8 +30,4 @@ public interface IAppCliPaths
     // may not write the daemon's: the person's folder of the app, a Debug build's id being its own. A
     // platform whose UI folder is a cache keeps it elsewhere.
     string DevStoragePath => UiDataPath;
-
-    // The address the running daemon publishes and everything else reads. In the storage folder
-    // because that is the one path all three processes agree on without being told.
-    string DaemonInfoFilePath => Path.Combine(StoragePath, "daemon.json");
 }

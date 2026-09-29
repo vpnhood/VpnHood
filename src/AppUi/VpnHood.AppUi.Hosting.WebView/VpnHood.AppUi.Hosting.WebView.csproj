@@ -6,6 +6,8 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+	  <!-- The API URL a desktop host hands a UI (IDesktopApiUrlProvider), which ExternalAppWebHost follows. -->
+	  <ProjectReference Include="..\VpnHood.AppUi.Hosting.Abstractions\VpnHood.AppUi.Hosting.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

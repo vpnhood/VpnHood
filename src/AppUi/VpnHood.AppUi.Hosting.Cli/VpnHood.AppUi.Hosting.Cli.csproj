@@ -9,6 +9,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- the channel's line protocol and the connection's handler, tested with stand-ins; the
+		     Windows pipe itself in the smoke test, which targets Windows -->
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+		<InternalsVisibleTo Include="VpnHood.AppUi.SmokeTest" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<!-- The commands hold no app: they reach the running one over loopback, through the same
 		     generated clients a paired browser uses. -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />

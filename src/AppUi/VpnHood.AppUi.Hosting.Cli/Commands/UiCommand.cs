@@ -26,8 +26,7 @@ internal static class UiCommand
         var command = new Command("ui", "Open the app window. This is what the desktop entry starts.");
 
         // Where a tray keeps the UI, an entry that starts at logon starts it there, with the window
-        // closed; an earlier release's /autoconnect also connects. For the entries an installer
-        // writes, not for a person, so help leaves them out.
+        // closed. For the entries an installer writes, not for a person, so help leaves them out.
         var trayOption = new Option<bool>("--tray") {
             Description = "Start in the tray, with the window closed.",
             Hidden = true
@@ -67,7 +66,7 @@ internal static class UiCommand
                 return 1;
             }
 
-            using var connection = await DaemonConnection.Open(platform, cancellationToken).Vhc();
+            await using var connection = await DaemonConnection.Open(platform, cancellationToken).Vhc();
             await RunWindow(platform, initParams, mainThread, connection, startHidden, connect, cancellationToken).Vhc();
             return 0;
         }
@@ -107,7 +106,7 @@ internal static class UiCommand
         var uiParams = new DesktopUiParams {
             Api = connection.Api,
             UiAssetProvider = uiAssets,
-            WebUrl = connection.Url,
+            ApiUrlProvider = connection.ApiUrlProvider,
             UiDataPath = platform.Paths.UiDataPath,
             ExitOnClose = platform.CreateTray == null,
             StartHidden = startHidden

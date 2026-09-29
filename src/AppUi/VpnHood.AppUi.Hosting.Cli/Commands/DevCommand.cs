@@ -13,30 +13,30 @@ namespace VpnHood.AppUi.Hosting.Cli.Commands;
 // The app keeps its storage in the person's own folder and runs as whoever started it.
 internal static class DevCommand
 {
-    public static Command Create(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread,
-        Func<string, IAppDaemonHost> createDevDaemonHost)
+    public static Command Create(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread)
     {
         var command = new Command("dev", "Run the service and the window in this one process, for a debugger.") {
             Hidden = true
         };
 
-        command.SetAction((_, cancellationToken) =>
-            Run(platform, initParams, mainThread, createDevDaemonHost, cancellationToken));
+        command.SetAction((_, cancellationToken) => Run(platform, initParams, mainThread, cancellationToken));
 
         return command;
     }
 
     private static async Task<int> Run(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread,
-        Func<string, IAppDaemonHost> createDevDaemonHost, CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         try {
-            await using var daemonHost = createDevDaemonHost(platform.Paths.DevStoragePath);
+            await using var daemonHost = platform.DaemonHostFactory.CreateDev(platform.Paths.DevStoragePath);
             var localWebHost = VpnHoodApp.Instance.LocalWebHost ??
                                throw new InvalidOperationException(
                                    "The app has no local web host, so the window could not reach it.");
-            var url = await localWebHost.EnsureStarted(cancellationToken).Vhc();
+            await localWebHost.EnsureStarted(cancellationToken).Vhc();
 
-            using var connection = new DaemonConnection(new Uri(url.GetLeftPart(UriPartial.Authority)));
+            // No channel to ask: the app is here, and so is the process the window's calls must reach.
+            await using var connection = DaemonConnection.CreateInProcess(localWebHost, platform.PeerCheck,
+                platform.Instance, platform.Paths.InstanceName);
             await UiCommand.RunWindow(platform, initParams, mainThread, connection,
                 startHidden: false, connect: false, cancellationToken).Vhc();
             return 0;

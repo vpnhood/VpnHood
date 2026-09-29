@@ -1,6 +1,8 @@
 using System.CommandLine;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.WebHosting;
+using VpnHood.AppUi.Hosting.Cli.Channel;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
@@ -10,50 +12,59 @@ namespace VpnHood.AppUi.Hosting.Cli.Commands;
 // headless. It shows nothing - a display belongs to a session, and this starts before anyone has
 // logged in - and serves its API on loopback, which is how the window and the commands reach it.
 //
-// The platform builds the app (IAppDaemonHost), which is starting it; this binds the API, publishes
-// the address, and waits. It ends when the service manager stops it - by a signal the parser turns
-// into cancellation (CliHost gives the stop time to disconnect), or by a call the platform's host
-// turns into the same (CliPlatform.HostDaemon) - or when the app disposes itself.
+// The platform builds the app (IAppDaemonHost), which is starting it; this binds the API, opens the
+// channel, and waits. It ends when the service manager stops it - by a signal the parser turns into
+// cancellation (CliHost gives the stop time to disconnect), or by a call the platform's host turns
+// into the same (CliPlatform.HostDaemon) - or when the app disposes itself.
 internal static class DaemonCommand
 {
-    public static Command Create(CliPlatform platform, Func<IAppDaemonHost> createDaemonHost)
+    public static Command Create(CliPlatform platform)
     {
         var command = new Command("daemon",
             "Run the VPN service in the foreground. This is what the system's service manager starts.");
 
         command.SetAction((_, cancellationToken) => platform.HostDaemon is { } hostDaemon
-            ? hostDaemon(runCancellationToken => Run(platform, createDaemonHost, runCancellationToken), cancellationToken)
-            : Run(platform, createDaemonHost, cancellationToken));
+            ? hostDaemon(runCancellationToken => Run(platform, runCancellationToken), cancellationToken)
+            : Run(platform, cancellationToken));
 
         return command;
     }
 
-    private static async Task<int> Run(CliPlatform platform, Func<IAppDaemonHost> createDaemonHost,
-        CancellationToken cancellationToken)
+    private static async Task<int> Run(CliPlatform platform, CancellationToken cancellationToken)
     {
         IAppDaemonHost daemonHost;
         try {
             // Building it is starting it; a platform that cannot says why, and that is the answer.
-            daemonHost = createDaemonHost();
+            daemonHost = platform.DaemonHostFactory.CreateService();
         }
         catch (Exception ex) {
             await Console.Error.WriteLineAsync(ex.Message).Vhc();
             return 1;
         }
 
-        var daemonInfoFilePath = platform.Paths.DaemonInfoFilePath;
+        DaemonChannelServer? channel = null;
+        IAppWebHost? localWebHost = null;
+        EventHandler onRestarted = (_, _) => Publish(channel, localWebHost);
         try {
-            // Bind now rather than wait for the first caller: the window and the commands look for
-            // the address this publishes, and an instance that has not bound is one they call dead.
-            var localWebHost = VpnHoodApp.Instance.LocalWebHost ??
-                               throw new InvalidOperationException(
-                                   "The daemon has no local web host, so nothing could reach it.");
+            // Bind now rather than wait for the first caller: the window and the commands ask the
+            // channel for the address, and an instance that has not bound is one they call dead.
+            localWebHost = VpnHoodApp.Instance.LocalWebHost ??
+                           throw new InvalidOperationException(
+                               "The daemon has no local web host, so nothing could reach it.");
             var url = await localWebHost.EnsureStarted(cancellationToken).Vhc();
-            var apiUrl = new Uri(url.GetLeftPart(UriPartial.Authority)); // a browser's URL carries a cache-buster
 
-            await DaemonInfo.Write(daemonInfoFilePath, apiUrl, cancellationToken).Vhc();
+            // never the address as it is: it carries the token, and the log is read by more than
+            // administrators
             VhLogger.Instance.LogInformation("{InstanceName} is listening on {ApiUrl}",
-                platform.Paths.InstanceName, apiUrl);
+                platform.Paths.InstanceName, url.GetLeftPart(UriPartial.Authority));
+
+            // Heard before the first answer is made, and told once more after: a rebind meanwhile
+            // found no channel to tell.
+            localWebHost.Restarted += onRestarted;
+            channel = await DaemonChannelServer.TryStart(platform.Channel,
+                Answer(localWebHost) ?? throw new InvalidOperationException("The local web host has no address."),
+                $"Only administrators can use {platform.Paths.InstanceName} on this computer.", cancellationToken).Vhc();
+            Publish(channel, localWebHost);
 
             // until the app is disposed - by the system's signal, or by itself
             while (VpnHoodApp.IsInit && !cancellationToken.IsCancellationRequested)
@@ -69,10 +80,32 @@ internal static class DaemonCommand
             return 1;
         }
         finally {
-            DaemonInfo.Delete(daemonInfoFilePath);
+            if (localWebHost != null)
+                localWebHost.Restarted -= onRestarted;
+            if (channel != null)
+                await channel.DisposeAsync().Vhc();
             await daemonHost.DisposeAsync().Vhc();
         }
 
         return 0;
+    }
+
+    private static void Publish(DaemonChannelServer? channel, IAppWebHost? localWebHost)
+    {
+        if (channel != null && localWebHost != null && Answer(localWebHost) is { } answer)
+            channel.Publish(answer);
+    }
+
+    // Where the API is now, token and all; null while the host has no address, as it stops.
+    private static DaemonChannelAnswer? Answer(IAppWebHost localWebHost)
+    {
+        var urls = localWebHost.Urls;
+        return urls.Count == 0
+            ? null
+            : new DaemonChannelAnswer {
+                ApiUrl = urls[0],
+                ProcessId = Environment.ProcessId,
+                Version = DaemonChannelAnswer.CurrentVersion
+            };
     }
 }

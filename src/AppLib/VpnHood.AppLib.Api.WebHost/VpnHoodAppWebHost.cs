@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Assets;
+using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Extensions;
@@ -36,6 +37,10 @@ public class VpnHoodAppWebHost : IAppWebHost
     private const string BearerPrefix = "Bearer ";
     private const string PairAlphabet = "abcdefghjkmnpqrstuvwxyz23456789";
     private const int PairTokenLength = 8;
+
+    // The local listener's token, made at each bind and carried after "#" (LocalApiToken); long,
+    // since nobody types it. Nothing asks for it yet.
+    private const int LocalTokenBytes = 32;
 
     // Where the UI's files are served, by name, out of the same provider the app's own UI reads.
     private const string AssetsPrefix = "assets/";
@@ -76,7 +81,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     private IReadOnlyList<Uri> _urls = [];
     private Timer? _watchdogTimer;
     private int _port;
-    private string? _pairToken;
+    private string? _token; // of this host's kind: the pairing, or the local token (the constants above)
     private bool _disposed;
 
     // The app's own API object, put on HTTP by the route table: one instance, every transport, so a
@@ -202,8 +207,9 @@ public class VpnHoodAppWebHost : IAppWebHost
     private void BindListeners(IReadOnlyList<IPAddress> addresses)
     {
         _port = ResolvePort();
-        if (_isRemote && IsPairingRequired)
-            _pairToken ??= CreatePairToken();
+        _token = _isRemote
+            ? IsPairingRequired ? _token ?? CreatePairToken() : null
+            : CreateLocalToken();
 
         var kept = _listeners.Where(x => addresses.Contains(x.Address)).ToList();
         foreach (var listener in _listeners.Except(kept))
@@ -268,14 +274,14 @@ public class VpnHoodAppWebHost : IAppWebHost
     }
 
     // A browser caches by URL, so a value of this run rides along on the local address and a page
-    // it cached in an earlier run is never served again. A phone gets the pairing token instead, once,
-    // from the QR; a developer's listeners ask for none.
+    // it cached in an earlier run is never served again, and the local token rides after "#". A
+    // phone gets the pairing token instead, once, from the QR; a developer's listeners ask for none.
     private Uri BuildUrl(IPAddress address)
     {
         var endPoint = new IPEndPoint(address, _port);
         var query = _isRemote
-            ? IsPairingRequired ? $"?{PairQueryName}={_pairToken}" : ""
-            : $"?nocache={_nocache}";
+            ? IsPairingRequired ? $"?{PairQueryName}={_token}" : ""
+            : $"?nocache={_nocache}{LocalApiToken.Fragment(_token ?? throw new InvalidOperationException("The local listener has no token."))}";
 
         return new Uri($"http://{endPoint}/{query}");
     }
@@ -283,6 +289,11 @@ public class VpnHoodAppWebHost : IAppWebHost
     private static string CreatePairToken()
     {
         return new string(RandomNumberGenerator.GetItems<char>(PairAlphabet, PairTokenLength));
+    }
+
+    private static string CreateLocalToken()
+    {
+        return Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(LocalTokenBytes));
     }
 
     // Recovery for whichever listeners this host has. Armed at the first EnsureStarted and never
@@ -462,7 +473,7 @@ public class VpnHoodAppWebHost : IAppWebHost
             return false;
 
         if (IsPairingRequired) {
-            var pairToken = _pairToken;
+            var pairToken = _token;
             if (ctx.Request.QuerystringExists(PairQueryName) && TokenEquals(ctx.Request.RetrieveQueryValue(PairQueryName), pairToken)) {
                 ctx.Response.StatusCode = (int)HttpStatusCode.Found;
                 ctx.Response.Headers.Add("Set-Cookie", $"{PairCookieName}={pairToken}; Path=/; HttpOnly; SameSite=Lax");

@@ -15,6 +15,9 @@
 		     drives the head the way a person does, through its window, not through its types. -->
 		<ProjectReference Include="..\..\src\Apps\Tools\AvaloniaUI.Dev\VpnHood.App.AvaloniaUI.Dev.csproj"
 						  ReferenceOutputAssembly="false" />
+		<!-- The desktop's Windows half - the service's pipe and the loopback check - which the
+		     platform-free test project cannot reference; the pipe's tests need an elevated run. -->
+		<ProjectReference Include="..\..\src\AppUi\VpnHood.AppUi.Hosting.Cli.Windows\VpnHood.AppUi.Hosting.Cli.Windows.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

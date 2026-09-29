@@ -96,7 +96,6 @@ vhclient status
 | `vhclient service start\|stop\|restart` | Drives the systemd unit. Asks for your password. |
 | `vhclient service status` | What systemd says. No password needed. |
 | `vhclient service log [-f] [-n N]` | The service log, out of the journal. No password needed. |
-| `vhclient stop` | Does nothing. Kept for the units older installers wrote, whose `ExecStop` calls it; systemd stops the service with a signal, and the service disconnects before it exits. |
 
 ### One profile, or many
 
@@ -230,17 +229,19 @@ src/AppUi/
 │   ├── IAppCliPaths.cs               where this install keeps things
 │   ├── IAppInstanceController.cs     the running instance: is it up, start, stop, log
 │   ├── IAppDaemonHost.cs             the app built the way this OS hosts a headless one
-│   ├── DaemonConnection.cs           the API over loopback, waiting for a service that is coming up
-│   ├── DaemonInfo.cs                 the address the daemon publishes (storage/daemon.json)
+│   ├── DaemonConnection.cs           the API over loopback, following the address the channel gives it
+│   ├── Channel/                      the channel the service hands its address over, to administrators
+│   │                                 only: what a platform's pipe or socket implements, its two ends,
+│   │                                 and the answer each call follows
 │   ├── Commands/                     one type per command
-│   └── Internal/                     printer, session, profile lookup
+│   └── Internal/                     printer, session, profile lookup, one window per person
 ├── VpnHood.AppUi.Hosting.Cli.Linux/  systemd, /opt, XDG, root
-│   ├── LinuxCliHost.cs               a Linux head's entry point; catches the old launcher words
+│   ├── LinuxCliHost.cs               a Linux head's entry point
 │   ├── LinuxCliPaths.cs
 │   ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through
 │   └── LinuxDaemonHost.cs            VpnHoodLinuxApp: the service's, root required, or a debugger's
 └── VpnHood.AppUi.Hosting.Cli.Windows/  the same design on Windows: a LocalSystem service, ProgramData
-    ├── WindowsCliHost.cs             a Windows head's entry point; catches /nowindow and /autoconnect
+    ├── WindowsCliHost.cs             a Windows head's entry point
     ├── WindowsCliPaths.cs            ProgramData for the service, the person's local app data for the UI
     ├── WindowsInstanceController.cs  the service control manager; elevates a stop as sudo would
     ├── WindowsServiceSetup.cs        "service install | uninstall"
@@ -270,8 +271,10 @@ first (`VpnHoodClient service uninstall`).
 Points that are easy to get wrong:
 
 1. **The port is not a constant.** The local listener takes 4700 when it is free and whatever the
-   OS gives when it is not (`VpnHoodAppWebHost.ResolvePort`). That is why the service publishes
-   `daemon.json` and nothing dials a hard-coded port.
+   OS gives when it is not (`VpnHoodAppWebHost.ResolvePort`), and the address carries a token made
+   at each bind. That is why the service hands the address over its channel - a Unix socket under
+   `/run/<name>/`, a named pipe on Windows - to an administrator alone, and nothing dials a
+   hard-coded port.
 2. **The UI must not reach for `VpnHoodApp.Instance`.** It gets a `VpnHoodApi` — in process on
    Android and iOS, over loopback here and on Windows — and the presentation layer already knows
    only `VhApp`. `AvaloniaDesktopHost.Run` has an overload for each.

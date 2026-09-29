@@ -11,8 +11,7 @@ namespace VpnHood.AppUi.Hosting.Cli;
 // can give (CliPlatform), and this joins them.
 //
 // Typing the name alone opens the window, because that is what a person who typed it wanted and
-// what a desktop entry means. Anything a platform's old launchers still pass is that platform's
-// to catch before this sees it (LinuxCliHost).
+// what a desktop entry means.
 public static class CliHost
 {
     // The whole run, on the calling thread, which is the host's main thread: the UI gets it (on
@@ -60,13 +59,9 @@ public static class CliHost
         rootCommand.Subcommands.Add(ServiceCommand.Create(platform));
         rootCommand.Subcommands.Add(UiCommand.Create(platform, initParams, mainThread));
 
-        // Only a platform whose instance is this binary run headless has anything for "daemon" to be.
-        if (platform.CreateDaemonHost != null)
-            rootCommand.Subcommands.Add(DaemonCommand.Create(platform, platform.CreateDaemonHost));
-
-        // A debugger's: the daemon and the window in this one process, which help leaves out.
-        if (platform.CreateDevDaemonHost != null)
-            rootCommand.Subcommands.Add(DevCommand.Create(platform, initParams, mainThread, platform.CreateDevDaemonHost));
+        // "dev", a debugger's, runs the daemon's app beside the window; help leaves it out.
+        rootCommand.Subcommands.Add(DaemonCommand.Create(platform));
+        rootCommand.Subcommands.Add(DevCommand.Create(platform, initParams, mainThread));
 
         // SIGTERM - how the service manager stops the daemon - cancels the running command, and the
         // parser then waits this long for it to finish before it ends the process. Its default of

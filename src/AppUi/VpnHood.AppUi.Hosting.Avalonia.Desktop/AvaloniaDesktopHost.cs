@@ -30,7 +30,7 @@ public static class AvaloniaDesktopHost
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
 
     // VpnHoodApp must be up; its web host comes up by itself when a phone pairs. A run that starts
-    // in the background (the head's /nowindow) keeps the window back until ShowMainWindow.
+    // in the background keeps the window back until ShowMainWindow.
     public static void Run<TUi>(string[] args, bool showWindow)
         where TUi : Application, IAvaloniaUi, new()
     {

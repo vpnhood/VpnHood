@@ -284,20 +284,21 @@ fi
 # to work now, and the window would otherwise have to start it on its first launch.
 systemctl restart "$assemblyName.service";
 
-# And waited for. systemctl returns once systemd has STARTED the unit, but the service publishes
-# the address its commands dial a few seconds later, when its listener has bound. Without this the
-# closing message below invites somebody to run a command that is about to fail on a service which
-# is coming up perfectly.
+# And waited for. systemctl returns once systemd has STARTED the unit, but the service opens the
+# channel its commands ask for the address on a few seconds later, when its listener has bound.
+# Without this the closing message below invites somebody to run a command that is about to fail
+# on a service which is coming up perfectly.
+channelSocket="/run/$assemblyName/daemon.sock";
 echo -n "Waiting for the service";
 for _ in $(seq 1 40); do
-	if [ -f "$destinationPath/storage/daemon.json" ]; then
+	if [ -S "$channelSocket" ]; then
 		break;
 	fi
 	echo -n ".";
 	sleep 1;
 done
 echo "";
-if [ ! -f "$destinationPath/storage/daemon.json" ]; then
+if [ ! -S "$channelSocket" ]; then
 	echo "WARNING: The service was started but has not answered yet.";
 	echo "WARNING: Check it with: journalctl -u $assemblyName -n 50";
 fi

@@ -1,5 +1,6 @@
 using System.ServiceProcess;
 using VpnHood.AppLib.App;
+using VpnHood.AppUi.Hosting.Cli.Channel;
 using VpnHood.AppUi.Hosting.Cli.Windows.Internal;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -12,7 +13,8 @@ namespace VpnHood.AppUi.Hosting.Cli.Windows;
 // way to starting it, which is how a window from a zip, or a fork's own packager, gets one; a
 // registered one is never registered again by a start - only an update moves the service (hosting
 // plan §5.5).
-public class WindowsInstanceController(WindowsCliPaths paths, WindowsServiceSetup setup) : IAppInstanceController
+public class WindowsInstanceController(WindowsCliPaths paths, WindowsServiceSetup setup, IDaemonChannel channel)
+    : IAppInstanceController
 {
     private static readonly TimeSpan StatusTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
@@ -81,25 +83,41 @@ public class WindowsInstanceController(WindowsCliPaths paths, WindowsServiceSetu
     }
 
     // What "systemctl status" would say, in its exit code too: 0 running, 3 not.
-    public Task<int> ShowStatus(CancellationToken cancellationToken)
+    public async Task<int> ShowStatus(CancellationToken cancellationToken)
     {
         if (GetStatus() is not { } status) {
             Console.WriteLine($"{paths.InstanceName} is not registered. Register it with: {paths.CommandName} service install");
-            return Task.FromResult(3);
+            return 3;
         }
 
         using var controller = new ServiceController(paths.InstanceName);
         Console.WriteLine($"{controller.ServiceName} - {controller.DisplayName}");
         Console.WriteLine($"  Status:  {status}");
         Console.WriteLine($"  Starts:  {controller.StartType}");
-        if (DaemonInfo.Read(((IAppCliPaths)paths).DaemonInfoFilePath) is { } daemonInfo) {
-            Console.WriteLine($"  Process: {daemonInfo.ProcessId}");
-            Console.WriteLine($"  Version: {daemonInfo.Version}");
-            Console.WriteLine($"  Address: {daemonInfo.ApiUrl}");
-        }
+        if (status == ServiceControllerStatus.Running)
+            await ShowChannel(cancellationToken).Vhc();
 
         Console.WriteLine($"  Storage: {paths.StoragePath}");
-        return Task.FromResult(status == ServiceControllerStatus.Running ? 0 : 3);
+        return status == ServiceControllerStatus.Running ? 0 : 3;
+    }
+
+    // What the service says of itself, to an administrator alone; or why its channel did not answer.
+    private async Task ShowChannel(CancellationToken cancellationToken)
+    {
+        try {
+            var answer = await DaemonChannelClient.AskOnce(channel, cancellationToken).Vhc();
+            if (answer.Refusal != null) {
+                Console.WriteLine($"  Access:  {answer.Refusal}");
+                return;
+            }
+
+            Console.WriteLine($"  Process: {answer.ProcessId}");
+            Console.WriteLine($"  Version: {answer.Version}");
+            Console.WriteLine($"  Address: {answer.ApiUrl?.GetLeftPart(UriPartial.Authority)}"); // never the token
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested) {
+            Console.WriteLine($"  Channel: {ex.Message}");
+        }
     }
 
     // The app's own log in the service's storage, which everyone may read: its last lines, and with

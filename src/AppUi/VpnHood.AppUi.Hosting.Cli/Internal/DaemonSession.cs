@@ -16,7 +16,7 @@ internal static class DaemonSession
         Func<VpnHoodApi, CancellationToken, Task<int>> body, CancellationToken cancellationToken)
     {
         try {
-            using var connection = await DaemonConnection.Open(platform, cancellationToken).Vhc();
+            await using var connection = await DaemonConnection.Open(platform, cancellationToken).Vhc();
             return await body(connection.Api, cancellationToken).Vhc();
         }
         catch (OperationCanceledException) {

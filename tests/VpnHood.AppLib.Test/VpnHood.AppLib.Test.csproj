@@ -15,6 +15,10 @@
 		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
 		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
 		<ProjectReference Include="..\..\src\Net\VpnHood.Net.IpLocations.Providers.SqliteProvider\VpnHood.Net.IpLocations.Providers.SqliteProvider.csproj" />
+		<!-- the desktop's channel and connection, with stand-ins for the platform's half; the Linux
+		     half is plain .NET over /proc, so its check is tested here on Linux -->
+		<ProjectReference Include="..\..\src\AppUi\VpnHood.AppUi.Hosting.Cli\VpnHood.AppUi.Hosting.Cli.csproj" />
+		<ProjectReference Include="..\..\src\AppUi\VpnHood.AppUi.Hosting.Cli.Linux\VpnHood.AppUi.Hosting.Cli.Linux.csproj" />
 		<ProjectReference Include="..\VpnHood.Test\VpnHood.Test.csproj" />
 	</ItemGroup>
 

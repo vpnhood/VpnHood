@@ -15,8 +15,9 @@ public class DesktopUiParams
     // in a service, whose storage the user may not read.
     public required IAssetProvider? UiAssetProvider { get; init; }
 
-    // Where the app's web host serves its page and its API: a web view UI loads the page from here.
-    public required Uri WebUrl { get; init; }
+    // The app's API URL, followed as it moves: a web view UI loads the page from here, and again when
+    // it changes.
+    public required IDesktopApiUrlProvider ApiUrlProvider { get; init; }
 
     // A folder of the person's own the UI may keep files in: a web view's profile. The app's storage
     // is not theirs to write when the app runs in a service.

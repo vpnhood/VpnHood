@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.Net.Toolkit.Logging;
@@ -16,6 +17,7 @@ public sealed class IosWebView : IWebView
     private readonly IosReportViewer _reportViewer;
     private WKWebView? _webView;
     private readonly UIActivityIndicatorView? _spinner;
+    private string? _localToken;
 
     public event EventHandler? PageLoaded;
     public event EventHandler? LoadFailed;
@@ -25,7 +27,7 @@ public sealed class IosWebView : IWebView
     {
         _controller = controller;
         _backgroundColor = backgroundColor;
-        _reportViewer = new IosReportViewer(controller, backgroundColor);
+        _reportViewer = new IosReportViewer(controller, backgroundColor, () => _localToken);
 
         // Loading indicator, centered and shown immediately (SPA zip extraction + socket bind happen
         // before the first navigation). Hidden automatically once stopped.
@@ -100,6 +102,8 @@ public sealed class IosWebView : IWebView
 
     public void Load(Uri url)
     {
+        // the token the page reads after "#", which a loopback link it opens needs too
+        _localToken = LocalApiToken.Read(url);
         _webView?.LoadRequest(new NSUrlRequest(new NSUrl(url.ToString())));
     }
 

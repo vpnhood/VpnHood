@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.Api.HttpClients;
@@ -41,7 +42,8 @@ public class AppApiClientTest : TestAppBase
     [TestMethod]
     public async Task Http_client_reads_and_writes_through_the_web_host()
     {
-        var appOptions = TestAppHelper.CreateAppOptions();
+        // a release build, whose loopback API asks for the token
+        var appOptions = TestAppHelper.CreateAppOptions(isDebugMode: false);
         appOptions.WebHostFactory = new VpnHoodAppWebHostFactory();
         appOptions.WebRootZipAsset = TestAppHelper.CreateWebRootZip("web-root-test");
         var token = CreateToken();
@@ -49,8 +51,11 @@ public class AppApiClientTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions);
         var localHost = app.LocalWebHost ?? throw new InvalidOperationException("The app has no local web host.");
         var localUrl = await localHost.EnsureStarted(CancellationToken.None);
-        // the address without the web view's cache-buster: the client builds its own paths on it
+        // the address without the web view's cache-buster: the client builds its own paths on it, and
+        // sends the token the address carries, as the window does
         using var http = new HttpClient { BaseAddress = new Uri(localUrl.GetLeftPart(UriPartial.Authority) + "/") };
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+            LocalApiToken.Read(localUrl) ?? throw new InvalidOperationException("The local address carries no token."));
         var api = VpnHoodApiHttpFactory.Create(http);
 
         // the configuration, whole: the features, the state, the settings, the profiles, the languages

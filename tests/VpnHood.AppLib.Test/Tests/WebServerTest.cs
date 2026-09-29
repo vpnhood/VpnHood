@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Headers;
+using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.WebHosting;
@@ -26,6 +28,15 @@ public class WebServerTest : TestAppBase
     private static IAppWebHost RequireHost(IAppWebHost? host, string name)
     {
         return host ?? throw new InvalidOperationException($"The app has no {name} web host: was no factory set?");
+    }
+
+    // A call to the local API as the window makes it: with the token the local address carries.
+    private static HttpRequestMessage LocalCall(HttpMethod method, Uri localUrl, string path)
+    {
+        var request = new HttpRequestMessage(method, new Uri(localUrl, path));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer",
+            LocalApiToken.Read(localUrl) ?? throw new InvalidOperationException("The local address carries no token."));
+        return request;
     }
 
     [TestMethod]
@@ -131,30 +142,31 @@ public class WebServerTest : TestAppBase
 
         // the phone knows it is remote, the web view knows it is not
         StringAssert.Contains(await http.GetStringAsync(new Uri(root, "api/app/info")), "\"isRemote\":true");
-        StringAssert.Contains(await http.GetStringAsync(new Uri(localUrl, "api/app/info")), "\"isRemote\":false");
+        using var localInfo = await http.SendAsync(LocalCall(HttpMethod.Get, localUrl, "api/app/info"));
+        StringAssert.Contains(await localInfo.Content.ReadAsStringAsync(), "\"isRemote\":false");
 
-        // the web view's own listener is gated too. CORS hides a reply from another site but does
-        // not stop the request arriving, and these routes take their parameters in the query string,
-        // so an unknown Origin is refused rather than obeyed.
-        using var localCsrf = new HttpRequestMessage(HttpMethod.Post, new Uri(localUrl, "api/app/disconnect"));
+        // the web view's own listener is gated too, the token notwithstanding. CORS hides a reply from
+        // another site but does not stop the request arriving, and these routes take their parameters
+        // in the query string, so an unknown Origin is refused rather than obeyed.
+        using var localCsrf = LocalCall(HttpMethod.Post, localUrl, "api/app/disconnect");
         localCsrf.Headers.Add("Origin", "http://evil.example");
         using var localCsrfResponse = await http.SendAsync(localCsrf);
         Assert.AreEqual(HttpStatusCode.Forbidden, localCsrfResponse.StatusCode);
 
         // and a stranger's name in Host cannot walk a rebound browser in
-        using var localRebound = new HttpRequestMessage(HttpMethod.Get, new Uri(localUrl, "api/app/state"));
+        using var localRebound = LocalCall(HttpMethod.Get, localUrl, "api/app/state");
         localRebound.Headers.Host = "evil.example";
         using var localReboundResponse = await http.SendAsync(localRebound);
         Assert.AreEqual(HttpStatusCode.Forbidden, localReboundResponse.StatusCode);
 
         // what still passes: the app's own page, and the loopback listener dialled by name, which
         // is what a UI's dev server does
-        using var localSelf = new HttpRequestMessage(HttpMethod.Get, new Uri(localUrl, "api/app/state"));
+        using var localSelf = LocalCall(HttpMethod.Get, localUrl, "api/app/state");
         localSelf.Headers.Add("Origin", $"http://{localUrl.Authority}");
         using var localSelfResponse = await http.SendAsync(localSelf);
         Assert.AreEqual(HttpStatusCode.OK, localSelfResponse.StatusCode);
 
-        using var byName = new HttpRequestMessage(HttpMethod.Get, new Uri(localUrl, "api/app/state"));
+        using var byName = LocalCall(HttpMethod.Get, localUrl, "api/app/state");
         byName.Headers.Host = $"localhost:{localUrl.Port}";
         using var byNameResponse = await http.SendAsync(byName);
         Assert.AreEqual(HttpStatusCode.OK, byNameResponse.StatusCode);
@@ -206,6 +218,56 @@ public class WebServerTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task Loopback_api_asks_for_the_token()
+    {
+        // a release build: a loopback call to the API carries the token the local address does
+        var appOptions = CreateWebHostOptions(isDebugMode: false);
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        var local = RequireHost(app.LocalWebHost, "local");
+        var localUrl = await local.EnsureStarted(CancellationToken.None);
+        var token = LocalApiToken.Read(localUrl);
+        Assert.IsNotNull(token, "the local address carries its token after #");
+        using var http = new HttpClient(new HttpClientHandler { UseCookies = false });
+
+        // the page and its files are the install's: no token
+        StringAssert.Contains(await http.GetStringAsync(localUrl), PageTitle);
+
+        // the API: refused without it, with another, or with it only as a cookie
+        using var bare = await http.GetAsync(new Uri(localUrl, "api/app/state"));
+        Assert.AreEqual(HttpStatusCode.Unauthorized, bare.StatusCode);
+        using var wrong = new HttpRequestMessage(HttpMethod.Get, new Uri(localUrl, "api/app/state"));
+        wrong.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "nope");
+        using var wrongResponse = await http.SendAsync(wrong);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, wrongResponse.StatusCode);
+        using var cookie = new HttpRequestMessage(HttpMethod.Get, new Uri(localUrl, "api/app/state"));
+        cookie.Headers.Add("Cookie", $"vh-pair={token}");
+        using var cookieResponse = await http.SendAsync(cookie);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, cookieResponse.StatusCode, "loopback takes no cookie");
+        using var withToken = LocalCall(HttpMethod.Get, localUrl, "api/app/state");
+        using var withTokenResponse = await http.SendAsync(withToken);
+        Assert.AreEqual(HttpStatusCode.OK, withTokenResponse.StatusCode);
+
+        // the promotion image holds nothing secret, and a preflight carries no credentials
+        using var promotion = await http.GetAsync(new Uri(localUrl, "api/app/promotion.jpg"));
+        Assert.AreNotEqual(HttpStatusCode.Unauthorized, promotion.StatusCode);
+        using var preflight = new HttpRequestMessage(HttpMethod.Options, new Uri(localUrl, "api/app/state"));
+        using var preflightResponse = await http.SendAsync(preflight);
+        Assert.AreEqual(HttpStatusCode.OK, preflightResponse.StatusCode);
+
+        // a rebind makes a new token, and the old one is refused from then on
+        ((VpnHoodAppWebHost)local).Rebind();
+        var reboundUrl = local.Urls[0];
+        Assert.AreNotEqual(token, LocalApiToken.Read(reboundUrl));
+        using var stale = new HttpRequestMessage(HttpMethod.Get, new Uri(reboundUrl, "api/app/state"));
+        stale.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var staleResponse = await http.SendAsync(stale);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, staleResponse.StatusCode);
+        using var fresh = LocalCall(HttpMethod.Get, reboundUrl, "api/app/state");
+        using var freshResponse = await http.SendAsync(fresh);
+        Assert.AreEqual(HttpStatusCode.OK, freshResponse.StatusCode);
+    }
+
+    [TestMethod]
     public async Task Remote_access_is_always_on_for_a_developer()
     {
         // a debug build: the LAN listeners come up by themselves at Init and ask for no pairing, so
@@ -233,6 +295,10 @@ public class WebServerTest : TestAppBase
         var localUrl = await local.EnsureStarted(CancellationToken.None);
         Assert.IsTrue(IPAddress.IsLoopback(IPAddress.Parse(localUrl.Host)));
         StringAssert.Contains(await http.GetStringAsync(localUrl), PageTitle);
+
+        // and its API asks for no token either: a developer's build keeps the door open on loopback too
+        using var noToken = await http.GetAsync(new Uri(localUrl, "api/app/state"));
+        Assert.AreEqual(HttpStatusCode.OK, noToken.StatusCode);
 
         // any origin is welcome, echoed as itself, and passes the gate for the same reason: a
         // developer's build is deliberately open to whatever port their dev server is on

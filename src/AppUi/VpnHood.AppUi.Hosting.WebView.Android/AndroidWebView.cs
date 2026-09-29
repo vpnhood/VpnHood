@@ -1,4 +1,5 @@
 ﻿using System.Web;
+using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App;
 using Android.Webkit;
 using VpnHood.AppLib.App.Android.Activities;
@@ -20,6 +21,7 @@ public sealed class AndroidWebView : IWebView
     private readonly AndroidWebViewMainActivityOptions _options;
     private NativeWebView? _webView;
     private bool _webViewShown;
+    private string? _localToken;
 
     private Activity Activity => _activityEvent.Activity;
 
@@ -48,18 +50,20 @@ public sealed class AndroidWebView : IWebView
             _webView.SetBackgroundColor(VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value
                 .ToAndroidColor());
 
-        var webViewClient = new AndroidWebViewClient();
+        var webViewClient = new AndroidWebViewClient(() => _localToken);
         webViewClient.PageLoaded += (_, _) => PageLoaded?.Invoke(this, EventArgs.Empty);
         webViewClient.LoadFailed += OnWebViewLoadFailed;
         webViewClient.RenderProcessGone += OnWebViewRenderProcessGone;
         _webView.SetWebViewClient(webViewClient);
-        _webView.SetWebChromeClient(new AndroidWebChromeClient());
+        _webView.SetWebChromeClient(new AndroidWebChromeClient(() => _localToken));
         if (VpnHoodApp.Instance.Features.IsDebugMode)
             NativeWebView.SetWebContentsDebuggingEnabled(true);
     }
 
     public void Load(Uri url)
     {
+        // the token the page reads after "#", which a loopback link it opens needs too
+        _localToken = LocalApiToken.Read(url);
         _webView?.LoadUrl(ResolveUrl(url).ToString());
     }
 

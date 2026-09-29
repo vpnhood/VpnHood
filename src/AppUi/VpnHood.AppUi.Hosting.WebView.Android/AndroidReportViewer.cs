@@ -12,20 +12,23 @@ namespace VpnHood.AppUi.Hosting.WebView.Android;
 // In-app viewer for the on-device report/log — the loopback URL the SPA opens via window.open (e.g. the
 // "open log" button). Mirrors the iOS report viewer: shows the report in a full-screen dialog WebView with a
 // find-on-page bar (Search) and an export action (Share), instead of kicking the user out to an external
-// browser that can't reach the loopback server. Uses only framework APIs — no extra dependencies.
+// browser that can't reach the loopback server. Every request carries the local token as its header, which
+// the API asks for. Uses only framework APIs — no extra dependencies.
 internal sealed class AndroidReportViewer
 {
     private readonly Activity _activity;
     private readonly Uri _reportUri;
+    private readonly Dictionary<string, string> _headers;
     private readonly NativeWebView _webView;
     private readonly Dialog _dialog;
     private readonly TextView _matchCountView;
     private readonly LinearLayout _findBar;
 
-    private AndroidReportViewer(Activity activity, Uri reportUri)
+    private AndroidReportViewer(Activity activity, Uri reportUri, string? token)
     {
         _activity = activity;
         _reportUri = reportUri;
+        _headers = token != null ? new Dictionary<string, string> { ["Authorization"] = $"Bearer {token}" } : [];
 
         _webView = new NativeWebView(activity);
         _webView.Settings.JavaScriptEnabled = false; // the report is plain text; no JS needed
@@ -46,10 +49,10 @@ internal sealed class AndroidReportViewer
         _dialog.Window?.SetLayout(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
     }
 
-    public static void Show(Activity activity, Uri reportUri)
+    public static void Show(Activity activity, Uri reportUri, string? token)
     {
-        var viewer = new AndroidReportViewer(activity, reportUri);
-        viewer._webView.LoadUrl(reportUri.ToString());
+        var viewer = new AndroidReportViewer(activity, reportUri, token);
+        viewer._webView.LoadUrl(reportUri.ToString(), viewer._headers);
         viewer._dialog.Show();
     }
 
@@ -81,7 +84,7 @@ internal sealed class AndroidReportViewer
         // without closing and reopening the viewer. The WebView loads straight from the URL, so a fresh
         // LoadUrl re-requests it — no separate download step is needed (unlike the iOS viewer).
         var refreshBtn = IconButton(global::Android.Resource.Drawable.IcPopupSync);
-        refreshBtn.Click += (_, _) => _webView.LoadUrl(_reportUri.ToString());
+        refreshBtn.Click += (_, _) => _webView.LoadUrl(_reportUri.ToString(), _headers);
 
         var shareBtn = IconButton(global::Android.Resource.Drawable.IcMenuShare);
         shareBtn.Click += (_, _) => _ = ShareAsync();
@@ -145,32 +148,18 @@ internal sealed class AndroidReportViewer
         _matchCountView.Text = numberOfMatches > 0 ? $"{activeMatchOrdinal + 1}/{numberOfMatches}" : "0/0";
     }
 
-    // Browsers that can open the live log page. Mirrors the iOS viewer's browser list; used to give only these
-    // targets the loopback URL (see ShareAsync).
-    // ReSharper disable StringLiteralTypo
-    private static readonly string[] BrowserPackages = [
-        "com.android.chrome",
-        "org.mozilla.firefox",
-        "com.microsoft.emmx",           // Edge
-        "com.opera.browser",
-        "com.opera.mini.native",
-        "com.brave.browser",
-        "com.duckduckgo.mobile.android",
-        "com.sec.android.app.sbrowser"  // Samsung Internet
-    ];
-    // ReSharper restore StringLiteralTypo
-
     // Export the report as an actual file (content:// via ReportFileProvider), never as raw text: handing over
     // the whole log as Intent.ExtraText makes text-first apps (e.g. Telegram) paste the entire huge log and can
-    // exceed the intent transaction limit. File-consuming apps (Telegram/Mail/Files/Drive) therefore get only
-    // the attached file — the loopback URL is useless off-device. Browsers can't render the file but can open
-    // the live log page, so via ExtraReplacementExtras those targets alone receive the loopback URL.
+    // exceed the intent transaction limit. The loopback address is shared with nobody, a browser included: it
+    // asks for the token, which no browser can send.
     private async Task ShareAsync()
     {
         try {
             // ReSharper disable once ShortLivedHttpClient
-            // we rarely use it and don't want to keep a static instance around; 
+            // we rarely use it and don't want to keep a static instance around;
             using var httpClient = new HttpClient();
+            foreach (var header in _headers)
+                httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
             var content = await httpClient.GetByteArrayAsync(_reportUri);
             var contentUri = ReportFileProvider.SaveAndGetUri(_activity, ReportFileName(), content);
 
@@ -179,17 +168,7 @@ internal sealed class AndroidReportViewer
             intent.PutExtra(Intent.ExtraSubject, ReportFileName());
             intent.PutExtra(Intent.ExtraStream, contentUri);
             intent.AddFlags(ActivityFlags.GrantReadUriPermission);
-
-            var chooser = Intent.CreateChooser(intent, "Share log")!;
-            var replacements = new Bundle();
-            foreach (var package in BrowserPackages) {
-                var extras = new Bundle();
-                extras.PutString(Intent.ExtraText, _reportUri.ToString());
-                replacements.PutBundle(package, extras);
-            }
-            chooser.PutExtra(Intent.ExtraReplacementExtras, replacements);
-
-            _activity.StartActivity(chooser);
+            _activity.StartActivity(Intent.CreateChooser(intent, "Share log"));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Failed to share the report.");

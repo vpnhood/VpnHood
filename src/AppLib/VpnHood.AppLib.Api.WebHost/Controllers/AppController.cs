@@ -11,6 +11,10 @@ namespace VpnHood.AppLib.Api.WebHost.Controllers;
 
 internal class AppController(IAppApi api) : ControllerBase
 {
+    // Under the API, but loopback asks no token for it (VpnHoodAppWebHost): the app downloads it from
+    // its server, and it holds nothing secret.
+    internal const string PromotionImagePath = "/api/app/promotion.jpg";
+
     public override void AddRoutes(IRouteMapper mapper)
     {
         const string baseUrl = "/api/app/";
@@ -128,7 +132,7 @@ internal class AppController(IAppApi api) : ControllerBase
             await ctx.Response.Send(text);
         });
 
-        mapper.AddStatic(HttpMethod.GET, baseUrl + "promotion.jpg", async ctx => {
+        mapper.AddStatic(HttpMethod.GET, PromotionImagePath, async ctx => {
             var imageBytes = await api.PromotionImage(ctx.Token);
             ctx.Response.ContentType = "image/jpeg";
             await ctx.Response.Send(imageBytes);

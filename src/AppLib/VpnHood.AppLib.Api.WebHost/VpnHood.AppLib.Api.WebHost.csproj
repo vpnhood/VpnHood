@@ -9,6 +9,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <!-- The contract this server puts on HTTP, and the in-process host that answers it. The
 	       dependency goes this way only: a UI on the device takes the host without this server. -->
 	  <ProjectReference Include="..\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />

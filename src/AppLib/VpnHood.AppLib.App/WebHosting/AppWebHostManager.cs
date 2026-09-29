@@ -33,7 +33,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     UiAssetProvider = app.UiAssetProvider,
                     WebUiPort = app.Features.WebUiPort,
                     IsAlwaysOn = true, // the app's own UI loads it; nothing ever stops it
-                    IsPairingRequired = true // never asked of it: a loopback caller is not a remote one
+                    IsTokenRequired = !app.Features.IsDebugMode // a debug build keeps its open door here too
                 });
         }
     }
@@ -52,7 +52,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     UiAssetProvider = app.UiAssetProvider,
                     WebUiPort = app.Features.WebUiPort,
                     IsAlwaysOn = _remoteIsDeveloperAccess, // otherwise a pairing screen holds it
-                    IsPairingRequired = !_remoteIsDeveloperAccess
+                    IsTokenRequired = !_remoteIsDeveloperAccess
                 });
             }
         }

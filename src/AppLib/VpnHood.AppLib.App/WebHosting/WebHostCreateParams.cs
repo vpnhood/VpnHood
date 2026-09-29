@@ -32,9 +32,9 @@ public class WebHostCreateParams
     // always on also refuses to stop, since nothing holds it that could let go.
     public required bool IsAlwaysOn { get; init; }
 
-    // Ask a remote caller for the pairing token. False is the developer's open door - a debug build or
-    // /remote-access - where there is no screen to read a token from. It says nothing about the local
-    // host: a loopback request is never remote, so it is never asked. Read once at launch and never
-    // written back to the settings.
-    public required bool IsPairingRequired { get; init; }
+    // Ask a caller for this host's token: the remote host's pairing, and on the local host the token
+    // its own address carries, which an API call sends as a bearer header. False is the developer's
+    // open door: a debug build, and for the remote host /remote-access too, where there is no screen
+    // to read a pairing from. Read once at launch and never written back to the settings.
+    public required bool IsTokenRequired { get; init; }
 }

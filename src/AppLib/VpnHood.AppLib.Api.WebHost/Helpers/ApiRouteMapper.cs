@@ -10,7 +10,9 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.Api.WebHost.Helpers;
 
-public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin)
+// guard: run before every route but a preflight, and true when it answered the request itself (the
+// local token's check, VpnHoodAppWebHost). A preflight carries no credentials, and answers nothing.
+public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin, Func<HttpContextBase, Task<bool>>? guard = null)
     : IRouteMapper
 {
     private Task Options(HttpContextBase ctx)
@@ -27,7 +29,8 @@ public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin)
                 // Add CORS to all requests centrally
                 CorsMiddleware.AddCors(ctx, allowAnyOrigin);
                 DrainBody(ctx);
-                await handler(ctx);
+                if (guard == null || !await guard(ctx))
+                    await handler(ctx);
             }
             catch (Exception ex) {
                 await HandleException(ctx, ex);
@@ -45,7 +48,8 @@ public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin)
                 // Add CORS to all requests centrally
                 CorsMiddleware.AddCors(ctx, allowAnyOrigin);
                 DrainBody(ctx);
-                await handler(ctx);
+                if (guard == null || !await guard(ctx))
+                    await handler(ctx);
             }
             catch (Exception ex) {
                 await HandleException(ctx, ex);

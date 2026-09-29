@@ -5,7 +5,8 @@ using NativeWebView = Android.Webkit.WebView;
 
 namespace VpnHood.AppUi.Hosting.WebView.Android;
 
-internal class AndroidWebChromeClient : WebChromeClient
+// localToken: handed to the window's own client, for the loopback link it opens (AndroidWebViewClient).
+internal class AndroidWebChromeClient(Func<string?> localToken) : WebChromeClient
 {
     public override bool OnCreateWindow(NativeWebView? view, bool isDialog, bool isUserGesture, Message? resultMsg)
     {
@@ -13,7 +14,7 @@ internal class AndroidWebChromeClient : WebChromeClient
             return false;
 
         var newWebView = new NativeWebView(view.Context);
-        newWebView.SetWebViewClient(new AndroidWebViewClient());
+        newWebView.SetWebViewClient(new AndroidWebViewClient(localToken));
         if (resultMsg?.Obj is not NativeWebView.WebViewTransport transport)
             return false;
 

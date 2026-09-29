@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.WebHost.Controllers;
 using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Extensions;
@@ -20,7 +21,7 @@ namespace VpnHood.AppLib.Api.WebHost;
 
 // One host, made twice: the local one binds loopback for the app itself, the remote one binds
 // every advertised LAN address for a phone that paired. They serve the same UI and the same API and
-// differ only in where they bind, whether a pairing is asked, and who ends them - so what they share
+// differ only in where they bind, which token they ask for, and who ends them - so what they share
 // is everything below, and what differs is the flag. The listener state machine itself is
 // WebServerListener, once. Nothing is bound, and nothing is unpacked, until EnsureStarted is called.
 public class VpnHoodAppWebHost : IAppWebHost
@@ -38,8 +39,8 @@ public class VpnHoodAppWebHost : IAppWebHost
     private const string PairAlphabet = "abcdefghjkmnpqrstuvwxyz23456789";
     private const int PairTokenLength = 8;
 
-    // The local listener's token, made at each bind and carried after "#" (LocalApiToken); long,
-    // since nobody types it. Nothing asks for it yet.
+    // The local listener's token, made at each bind and carried after "#" (LocalApiToken), which an
+    // API call sends back as a bearer header; long, since nobody types it.
     private const int LocalTokenBytes = 32;
 
     // Where the UI's files are served, by name, out of the same provider the app's own UI reads.
@@ -92,15 +93,14 @@ public class VpnHoodAppWebHost : IAppWebHost
     // nothing holds it that could let go. The app decides which host gets it, and this one obeys.
     public bool IsAlwaysOn { get; }
 
-    // Whether a remote caller must carry the pairing token. The app's rule, not this host's: false is
-    // the developer's open door, where no screen exists to read a token from. It never applies to the
-    // local listener - a loopback request is not remote, so it is never asked.
-    private bool IsPairingRequired => _createParams.IsPairingRequired;
+    // Whether a caller must carry this host's token: the pairing, or the local token on an API call.
+    // The app's rule, not this host's: false is the developer's open door.
+    private bool IsTokenRequired => _createParams.IsTokenRequired;
 
     // Only where a page may legitimately come from somewhere else: a developer's dev server talking to
     // a device. A screen-held pairing keeps the Origin check, since the phone is served that page by
     // this very address.
-    private bool AllowAnyOrigin => _isRemote && !IsPairingRequired;
+    private bool AllowAnyOrigin => _isRemote && !IsTokenRequired;
 
     public bool IsActive => IsAlwaysOn || _listeners.Count > 0;
 
@@ -208,7 +208,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     {
         _port = ResolvePort();
         _token = _isRemote
-            ? IsPairingRequired ? _token ?? CreatePairToken() : null
+            ? IsTokenRequired ? _token ?? CreatePairToken() : null
             : CreateLocalToken();
 
         var kept = _listeners.Where(x => addresses.Contains(x.Address)).ToList();
@@ -280,7 +280,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     {
         var endPoint = new IPEndPoint(address, _port);
         var query = _isRemote
-            ? IsPairingRequired ? $"?{PairQueryName}={_token}" : ""
+            ? IsTokenRequired ? $"?{PairQueryName}={_token}" : ""
             : $"?nocache={_nocache}{LocalApiToken.Fragment(_token ?? throw new InvalidOperationException("The local listener has no token."))}";
 
         return new Uri($"http://{endPoint}/{query}");
@@ -382,6 +382,18 @@ public class VpnHoodAppWebHost : IAppWebHost
             Restarted?.Invoke(this, EventArgs.Empty);
     }
 
+    // Every listener bound again, as recovery binds a dead one - a new local token, perhaps a new
+    // port: a test's way to a rebind.
+    internal void Rebind()
+    {
+        bool restarted;
+        lock (_lock)
+            restarted = RebindListeners(_listeners);
+
+        if (restarted)
+            Restarted?.Invoke(this, EventArgs.Empty);
+    }
+
     // A remote caller stopping this is cutting its own line, and that is deliberate: it is the "unpair
     // this device" button, and the phone finding the connection gone is the confirmation. A stopped
     // host is not revived by a poll - the caller checks IsActive first - only by an explicit start.
@@ -446,6 +458,9 @@ public class VpnHoodAppWebHost : IAppWebHost
     //    itself served. A cross-site request always carries its real Origin, so this is the line
     //    between the app's own UI and any other tab.
     //
+    // A loopback call to the API must also carry the local token, which the API's routes check
+    // themselves (RefuseWithoutLocalToken), so no path reaches a route without it.
+    //
     // A remote request must also carry the pairing, unless a developer holds the port open. The same
     // token, three ways: in the query once, from the QR, which becomes an HttpOnly cookie for a
     // browser; that cookie afterwards; or a bearer header, for a native client that runs no cookie jar
@@ -472,7 +487,7 @@ public class VpnHoodAppWebHost : IAppWebHost
         if (!ctx.IsRemote())
             return false;
 
-        if (IsPairingRequired) {
+        if (IsTokenRequired) {
             var pairToken = _token;
             if (ctx.Request.QuerystringExists(PairQueryName) && TokenEquals(ctx.Request.RetrieveQueryValue(PairQueryName), pairToken)) {
                 ctx.Response.StatusCode = (int)HttpStatusCode.Found;
@@ -492,6 +507,21 @@ public class VpnHoodAppWebHost : IAppWebHost
             _clients[ipAddress] = DateTime.UtcNow;
 
         return false;
+    }
+
+    // The API routes' guard (ApiRouteMapper): a loopback call carries the local token as a bearer
+    // header, never as a cookie, which ignores ports - any local user listening on another loopback
+    // port could be sent one. The promotion image needs none: the app downloads it from its server, and
+    // it holds nothing secret. A remote call passed its pairing in OnPreRouting. True when it refused.
+    private async Task<bool> RefuseWithoutLocalToken(HttpContextBase ctx)
+    {
+        if (ctx.IsRemote() || !IsTokenRequired || TokenEquals(GetBearerToken(ctx), _token) ||
+            ctx.Request.Url.RawWithoutQuery.Equals(AppController.PromotionImagePath, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        await ctx.SendPlainText("The API needs the app's token, sent as a bearer header.",
+            (int)HttpStatusCode.Unauthorized).Vhc();
+        return true;
     }
 
     // The name the browser asked for, which is the Host header and nothing else: Watson's own
@@ -552,7 +582,7 @@ public class VpnHoodAppWebHost : IAppWebHost
 
         // Every path of the contract, through its controller - CORS is handled centrally in the route mapper
         server
-            .AddRouteMapper(AllowAnyOrigin)
+            .AddRouteMapper(AllowAnyOrigin, RefuseWithoutLocalToken)
             .AddApi(Api);
 
         return server;

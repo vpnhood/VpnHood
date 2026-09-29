@@ -7,7 +7,8 @@ using NativeWebView = Android.Webkit.WebView;
 
 namespace VpnHood.AppUi.Hosting.WebView.Android;
 
-internal class AndroidWebViewClient : WebViewClient
+// localToken: the token of the address the page came from, which a loopback link it opens asks for.
+internal class AndroidWebViewClient(Func<string?> localToken) : WebViewClient
 {
     public event EventHandler? PageLoaded;
     public event EventHandler? LoadFailed;
@@ -31,7 +32,7 @@ internal class AndroidWebViewClient : WebViewClient
         // kicks the user out of the app. Non-loopback links are real external links → system browser.
         if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsLoopback &&
             webView.Context is Activity activity) {
-            AndroidReportViewer.Show(activity, uri);
+            AndroidReportViewer.Show(activity, uri, localToken());
             return true;
         }
 

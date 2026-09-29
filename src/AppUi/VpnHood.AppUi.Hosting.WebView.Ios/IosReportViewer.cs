@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Logging;
 using WebKit;
@@ -7,11 +8,23 @@ namespace VpnHood.AppUi.Hosting.WebView.Ios;
 // Handles the target="_blank"/window.open links the SPA opens (the "open log" button and the error dialog's
 // "Open Report"). Loopback URLs point at the app's own on-device report server, which external Safari can't
 // reach (unreachable cross-process, and torn down the moment the app backgrounds), so the resource is fetched
-// in-app and shown in a modal viewer: the user reads the log inline, searches it with the native find bar, and
-// can Save-to-Files/AirDrop/Mail it via the Share button. Anything non-loopback is a real external link and is
+// in-app, with the local token as its header (localToken: the token of the page's own address), and shown in a
+// modal viewer: the user reads the log inline, searches it with the native find bar, and can
+// Save-to-Files/AirDrop/Mail it via the Share button. Anything non-loopback is a real external link and is
 // handed to the system browser.
-internal sealed class IosReportViewer(UIViewController hostController, UIColor backgroundColor)
+internal sealed class IosReportViewer(UIViewController hostController, UIColor backgroundColor, Func<string?> localToken)
 {
+    // ReSharper disable once ShortLivedHttpClient
+    // we rarely use it and don't want to keep a static instance around
+    private HttpClient CreateHttpClient()
+    {
+        var httpClient = new HttpClient();
+        if (localToken() is { } token)
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        return httpClient;
+    }
+
     public void HandleNewWindow(NSUrl? url)
     {
         if (url?.AbsoluteString is not { } urlString || !Uri.TryCreate(urlString, UriKind.Absolute, out var uri))
@@ -28,9 +41,7 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
     private async Task DownloadAndViewAsync(Uri uri)
     {
         try {
-            // ReSharper disable once ShortLivedHttpClient
-            // we rarely use it and don't want to keep a static instance around; 
-            using var httpClient = new HttpClient();
+            using var httpClient = CreateHttpClient();
             var content = await httpClient.GetByteArrayAsync(uri);
 
             // Keep the served resource's extension (e.g. log.txt) so the viewer renders it as text and the
@@ -79,7 +90,7 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
         var nav = new UINavigationController(viewer);
 
         var shareButton = new UIBarButtonItem(UIBarButtonSystemItem.Action);
-        shareButton.Clicked += (_, _) => PresentShareSheet(filePath, sourceUri, nav, shareButton);
+        shareButton.Clicked += (_, _) => PresentShareSheet(filePath, nav, shareButton);
 
         // Refresh: re-fetch the report from its (loopback) source and reload, so the user can pull the
         // latest log without closing and reopening the viewer. Disabled while a fetch is in flight. The
@@ -88,9 +99,7 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
         refreshButton.Clicked += async (_, _) => {
             refreshButton.Enabled = false;
             try {
-                // ReSharper disable once ShortLivedHttpClient
-                // we rarely use it and don't want to keep a static instance around; 
-                using var httpClient = new HttpClient();
+                using var httpClient = CreateHttpClient();
                 var content = await httpClient.GetByteArrayAsync(sourceUri);
                 await File.WriteAllBytesAsync(filePath, content);
                 webView.LoadFileUrl(NSUrl.FromFilename(filePath),
@@ -150,45 +159,16 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
             scrollView.SetContentOffset(new CGPoint(0, maxOffsetY), animated: true);
     }
 
-    private static void PresentShareSheet(string filePath, Uri sourceUri, UIViewController presenter,
-        UIBarButtonItem anchor)
+    // The local text file, to every target. The loopback address goes to nobody, a browser included: it asks for
+    // the token, which no browser can send.
+    private static void PresentShareSheet(string filePath, UIViewController presenter, UIBarButtonItem anchor)
     {
-        // Per-target payload: browsers get the on-device loopback URL (they can't render a file:// link but can
-        // load the report page while the app's web server is briefly still alive after backgrounding); every
-        // other target gets the local text file.
-        var itemSource = new ReportActivityItemSource(NSUrl.FromFilename(filePath), new NSUrl(sourceUri.AbsoluteUri));
-        var activityController = new UIActivityViewController([itemSource], applicationActivities: null);
+        var activityController = new UIActivityViewController([NSUrl.FromFilename(filePath)], applicationActivities: null);
 
         // iPad requires the share sheet's popover to be anchored — pin it to the Share bar button item.
         if (activityController.PopoverPresentationController is { } popover)
             popover.BarButtonItem = anchor;
 
         presenter.PresentViewController(activityController, animated: true, completionHandler: null);
-    }
-
-    // Supplies the report to the share sheet with a different representation per target (see PresentShareSheet).
-    private sealed class ReportActivityItemSource(NSUrl fileUrl, NSUrl loopbackUrl) : UIActivityItemSource
-    {
-        // The share sheet picks eligible targets from the placeholder's type; the local file keeps both
-        // file-consuming apps (Files/Mail/AirDrop) and browsers in the list.
-        public override NSObject GetPlaceholderData(UIActivityViewController activityViewController) => fileUrl;
-
-        public override NSObject GetItemForActivity(UIActivityViewController activityViewController,
-            NSString? activityType)
-            => IsBrowser(activityType) ? loopbackUrl : fileUrl;
-
-        private static bool IsBrowser(NSString? activityType)
-        {
-            if (activityType is null)
-                return false;
-
-            var id = activityType.ToString();
-            return id.Contains("chrome", StringComparison.OrdinalIgnoreCase)
-                || id.Contains("firefox", StringComparison.OrdinalIgnoreCase)
-                || id.Contains("edge", StringComparison.OrdinalIgnoreCase)
-                || id.Contains("opera", StringComparison.OrdinalIgnoreCase)
-                || id.Contains("brave", StringComparison.OrdinalIgnoreCase)
-                || id.Contains("duckduckgo", StringComparison.OrdinalIgnoreCase);
-        }
     }
 }

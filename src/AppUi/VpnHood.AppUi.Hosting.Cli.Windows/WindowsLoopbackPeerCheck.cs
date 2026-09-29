@@ -1,6 +1,6 @@
 using System.Net;
 using System.Runtime.InteropServices;
-using VpnHood.AppUi.Hosting.Cli.Channel;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Cli.Windows;

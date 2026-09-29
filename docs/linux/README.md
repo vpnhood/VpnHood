@@ -226,15 +226,16 @@ src/AppUi/
 │   ├── CliPlatform.cs                what a platform declares: paths, the instance, how to be the daemon
 │   │                                 (and a debugger's), and what only some have: a tray, "service install",
 │   │                                 an older folder to import
-│   ├── IAppCliPaths.cs               where this install keeps things
-│   ├── IAppInstanceController.cs     the running instance: is it up, start, stop, log
-│   ├── IAppDaemonHost.cs             the app built the way this OS hosts a headless one
 │   ├── DaemonConnection.cs           the API over loopback, following the address the channel gives it
+│   ├── MainThreadQueue.cs            the host's main thread, which the window gets
+│   ├── Abstractions/                 what a platform implements: its paths (IAppCliPaths), the running
+│   │                                 instance (IAppInstanceController), the headless app (IAppDaemonHost
+│   │                                 and its factory), the channel's pipe or socket, the peer check
 │   ├── Channel/                      the channel the service hands its address over, to administrators
-│   │                                 only: what a platform's pipe or socket implements, its two ends,
-│   │                                 and the answer each call follows
-│   ├── Commands/                     one type per command
-│   └── Internal/                     printer, session, profile lookup, one window per person
+│   │                                 only: its two ends, and the answer each call follows
+│   ├── Commands/                     one type per command, and what they share: the printer, the
+│   │                                 session, the profile lookup, one window per person
+│   └── Exceptions/                   the daemon not running, or refusing the caller
 ├── VpnHood.AppUi.Hosting.Cli.Linux/  systemd, /opt, XDG, root
 │   ├── LinuxCliHost.cs               a Linux head's entry point
 │   ├── LinuxCliPaths.cs

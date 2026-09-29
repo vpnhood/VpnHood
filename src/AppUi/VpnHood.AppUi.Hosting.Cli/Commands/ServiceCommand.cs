@@ -1,4 +1,5 @@
 using System.CommandLine;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Cli.Commands;
 

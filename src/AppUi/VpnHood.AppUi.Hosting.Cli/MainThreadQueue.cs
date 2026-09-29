@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace VpnHood.AppUi.Hosting.Cli.Internal;
+namespace VpnHood.AppUi.Hosting.Cli;
 
 // The host's main thread, lent to the one thing that needs it: the UI's window, which on Windows
 // must run on the STA thread Main was given. Everything else - the parser, every command - runs off

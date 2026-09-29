@@ -1,7 +1,7 @@
 using System.Security.AccessControl;
 using System.Security.Principal;
 
-namespace VpnHood.AppUi.Hosting.Cli.Windows.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Windows;
 
 // The service's storage under ProgramData, with an ACL of its own: SYSTEM and Administrators change
 // it, and everyone else only reads it - "service log" reads app.log.

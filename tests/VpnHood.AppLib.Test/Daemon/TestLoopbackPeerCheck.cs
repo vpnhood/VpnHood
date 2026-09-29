@@ -1,5 +1,5 @@
 using System.Net;
-using VpnHood.AppUi.Hosting.Cli.Channel;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 
 namespace VpnHood.AppLib.Test.Daemon;
 

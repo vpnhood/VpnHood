@@ -1,7 +1,7 @@
 using VpnHood.AppLib.Api;
 using VpnHood.Net.Toolkit.Assets;
 
-namespace VpnHood.AppUi.Hosting.Cli;
+namespace VpnHood.AppUi.Hosting.Cli.Abstractions;
 
 // What the window's host hands the platform's tray (CliPlatform.CreateTray): the app it shows, the
 // look it draws with, and the two things only the window's side can do.

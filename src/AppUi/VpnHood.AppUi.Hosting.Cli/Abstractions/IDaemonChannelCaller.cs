@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.Cli.Channel;
+namespace VpnHood.AppUi.Hosting.Cli.Abstractions;
 
 // One caller on the channel: its stream, and who it is, which the platform reads off the connection
 // itself (a pipe names the calling process; a Unix socket gives its user and groups).

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 

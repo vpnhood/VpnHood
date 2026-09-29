@@ -2,7 +2,7 @@ using System.CommandLine;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Hosting.Abstractions;
-using VpnHood.AppUi.Hosting.Cli.Internal;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;

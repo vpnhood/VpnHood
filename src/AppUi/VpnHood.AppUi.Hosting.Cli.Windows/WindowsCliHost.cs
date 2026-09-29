@@ -1,5 +1,4 @@
 using VpnHood.AppLib.App.Windows;
-using VpnHood.AppUi.Hosting.Cli.Windows.Internal;
 
 namespace VpnHood.AppUi.Hosting.Cli.Windows;
 

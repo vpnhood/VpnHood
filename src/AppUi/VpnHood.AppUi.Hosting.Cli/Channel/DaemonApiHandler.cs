@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
+using VpnHood.AppUi.Hosting.Cli.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Cli.Channel;

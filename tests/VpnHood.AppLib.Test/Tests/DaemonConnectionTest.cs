@@ -4,6 +4,7 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Test.Daemon;
 using VpnHood.AppUi.Hosting.Cli;
 using VpnHood.AppUi.Hosting.Cli.Channel;
+using VpnHood.AppUi.Hosting.Cli.Exceptions;
 
 namespace VpnHood.AppLib.Test.Tests;
 

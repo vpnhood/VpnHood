@@ -1,7 +1,7 @@
 using VpnHood.AppLib.Api;
 using VpnHood.Net.Toolkit.Extensions;
 
-namespace VpnHood.AppUi.Hosting.Cli.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Commands;
 
 // What every command that talks to the daemon does around its one interesting line: dial, run,
 // hang up, and turn a failure into a sentence. Here once rather than in eight command bodies, so

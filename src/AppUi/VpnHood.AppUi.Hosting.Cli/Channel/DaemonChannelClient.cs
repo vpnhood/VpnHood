@@ -1,4 +1,5 @@
 using System.Text;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Cli.Channel;

@@ -1,4 +1,4 @@
-using VpnHood.AppUi.Hosting.Cli;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 
 namespace VpnHood.AppLib.Test.Daemon;
 

@@ -3,8 +3,7 @@ using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using Microsoft.Win32;
-using VpnHood.AppUi.Hosting.Cli.Channel;
-using VpnHood.AppUi.Hosting.Cli.Windows.Internal;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 

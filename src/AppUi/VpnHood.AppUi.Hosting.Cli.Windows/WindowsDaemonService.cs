@@ -4,7 +4,7 @@ using System.ServiceProcess;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.AppUi.Hosting.Cli.Windows.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Windows;
 
 // The daemon's run as the service control manager hosts it. The manager stops a service with a call,
 // not a signal, so its Stop - and a shutdown - cancels the run here, and waits while the run

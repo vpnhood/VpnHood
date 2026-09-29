@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.Cli;
+namespace VpnHood.AppUi.Hosting.Cli.Exceptions;
 
 // Nothing to talk to: no daemon has published an address and the platform says none is running.
 // The message is the platform's own sentence (IAppInstanceController.NotRunningHint), because

@@ -1,5 +1,6 @@
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Linux;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Cli.Linux;
 

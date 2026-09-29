@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace VpnHood.AppUi.Hosting.Cli.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Commands;
 
 // How the commands write. Two shapes for every answer: lines for a person, and the API's own object
 // for a script (--json), which is deliberately not a second format invented here - a script that

@@ -2,7 +2,9 @@ using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppLib.App.WebHosting;
 using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 using VpnHood.AppUi.Hosting.Cli.Channel;
+using VpnHood.AppUi.Hosting.Cli.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Cli;

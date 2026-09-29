@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace VpnHood.AppUi.Hosting.Cli.Windows.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Windows;
 
 // A service has no console: what its run writes to stderr - the answer a person would have read -
 // goes to the Application log as an error, under the service's name.

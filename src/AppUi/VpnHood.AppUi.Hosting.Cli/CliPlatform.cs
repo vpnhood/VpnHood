@@ -1,4 +1,4 @@
-using VpnHood.AppUi.Hosting.Cli.Channel;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Cli;
 

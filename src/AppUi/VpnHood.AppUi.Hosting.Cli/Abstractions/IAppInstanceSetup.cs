@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.Cli;
+namespace VpnHood.AppUi.Hosting.Cli.Abstractions;
 
 // Registering the instance with the OS and removing it, where the app does that itself rather than
 // its package's installer (Windows: the service, its start rights, and later the PATH entry). Both

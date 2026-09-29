@@ -4,7 +4,7 @@ using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.AppUi.Hosting.Cli.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Commands;
 
 // One window per person: the open window serves a named pipe of its own person's - .NET's pipes are
 // Unix sockets on Linux, so this one piece serves both desktops - and a second launch by the same

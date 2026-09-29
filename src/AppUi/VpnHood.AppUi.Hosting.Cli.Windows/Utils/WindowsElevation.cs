@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Security.Principal;
 
-namespace VpnHood.AppUi.Hosting.Cli.Windows.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Windows.Utils;
 
 // What sudo is on Linux: a command that needs an administrator, run again as one - one UAC prompt,
 // the same command elevated, its exit code back. The elevated copy has no console of its own to

@@ -1,5 +1,6 @@
 using System.Net.Sockets;
-using VpnHood.AppUi.Hosting.Cli.Channel;
+using VpnHood.AppUi.Hosting.Cli.Abstractions;
+using VpnHood.AppUi.Hosting.Cli.Linux.Utils;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 

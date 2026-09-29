@@ -5,7 +5,7 @@ using System.ServiceProcess;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable IdentifierTypo
-namespace VpnHood.AppUi.Hosting.Cli.Windows.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Windows;
 
 // The service's registration, through the service control manager's own API rather than sc.exe: no
 // console window flashes when the window registers the service, and a failure arrives as the error

@@ -1,7 +1,6 @@
 using System.CommandLine;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Hosting.Cli.Internal;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Cli.Commands;

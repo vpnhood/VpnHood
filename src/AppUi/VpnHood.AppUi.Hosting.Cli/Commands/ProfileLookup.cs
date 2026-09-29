@@ -1,7 +1,7 @@
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.VpnProfiles;
 
-namespace VpnHood.AppUi.Hosting.Cli.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Commands;
 
 // One way to say which profile, used by every command that takes one. A Guid if that is what was
 // typed, otherwise a name - exactly, then as a unique prefix, both ignoring case, because the

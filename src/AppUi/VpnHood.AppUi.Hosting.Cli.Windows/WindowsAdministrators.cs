@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 
-namespace VpnHood.AppUi.Hosting.Cli.Windows.Internal;
+namespace VpnHood.AppUi.Hosting.Cli.Windows;
 
 // Whether a token is an administrator's: UAC leaves Administrators deny-only in an unelevated
 // window's token, so the group is looked for in the full token Windows links to it too.

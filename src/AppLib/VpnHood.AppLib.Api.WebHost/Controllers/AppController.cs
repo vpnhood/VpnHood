@@ -128,7 +128,7 @@ internal class AppController(IAppApi api) : ControllerBase
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "log.txt", async ctx => {
             var text = await api.Log(ctx.Token);
-            ctx.Response.ContentType = "text/plain";
+            ctx.Response.ContentType = "text/plain; charset=utf-8";
             await ctx.Response.Send(text);
         });
 

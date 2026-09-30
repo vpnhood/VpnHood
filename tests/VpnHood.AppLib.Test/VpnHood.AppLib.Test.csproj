@@ -11,6 +11,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<!-- the import of the releases before the Windows service, with the machine handed in -->
+		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.App.Windows\VpnHood.AppLib.App.Windows.csproj" />
 		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
 		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
 		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />

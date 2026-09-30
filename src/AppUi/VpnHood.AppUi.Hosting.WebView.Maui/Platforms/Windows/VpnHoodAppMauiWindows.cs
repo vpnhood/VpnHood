@@ -24,9 +24,10 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
     private VpnHoodAppMauiWindows(AppInitParams initParams)
     {
         // The platform starts the app, as under any other UI - in this process, under the
-        // person's storage folder, until this becomes a window over the service (hosting plan,
-        // step 10) - and it disconnects on the way out.
-        VpnHoodWindowsApp.Init(initParams, initParams.ResolveStoragePath());
+        // person's storage folder, which holds its single-instance lock too, until this becomes a
+        // window over the service (hosting plan, step 10) - and it disconnects on the way out.
+        var storagePath = initParams.ResolveStoragePath();
+        VpnHoodWindowsApp.Init(initParams, storagePath, lockFolderPath: storagePath);
 
         // the tray over the app's own API here; its requests come from its own thread
         _tray = WindowsAppTray.Start(VpnHoodApp.Instance.Api, VpnHoodApp.Instance.UiAssetProvider,

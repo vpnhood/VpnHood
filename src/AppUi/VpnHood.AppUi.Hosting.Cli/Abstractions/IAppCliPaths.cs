@@ -14,8 +14,8 @@ public interface IAppCliPaths
     // binary's name, which on Linux is not on the PATH at all.
     string CommandName { get; }
 
-    // The daemon's: settings.json, the profiles, the log. The person at the window may read it and
-    // may not write it.
+    // The daemon's: settings.json, the profiles, the log, which only it and administrators may open -
+    // not the person at the window, whose commands ask the daemon instead.
     string StoragePath { get; }
 
     // The UI's own folder, per person, because the daemon's storage is not theirs to write: the UI's

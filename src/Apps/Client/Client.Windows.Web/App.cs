@@ -1,5 +1,6 @@
 ﻿using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.AppLib.App.Windows;
 using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Hosting.Cli;
 using VpnHood.AppUi.Hosting.Cli.Windows;

@@ -6,7 +6,7 @@
 #
 # What this writes:
 #   /opt/<name>/<version>/       the self-contained build
-#   /opt/<name>/storage/         settings.json, profiles, the log  (root's)
+#   /opt/<name>/storage/         settings.json, profiles, the log  (root's alone, 700)
 #   /usr/local/bin/<launcher>    so the commands can be typed from anywhere
 #   /etc/systemd/system/<name>.service           the root service, headless
 #   /usr/share/applications/<name>.desktop       the window, in the app grid
@@ -216,9 +216,24 @@ replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
 replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
 chmod +x "$binDir/$assemblyName";
 
-# The storage the service owns. Made here rather than on first run so an advanced user has a
-# folder to drop a settings.json into before anything has started.
-mkdir -p "$destinationPath/storage";
+# The storage the service owns, root's alone. Made here rather than on first run so an advanced
+# user has a folder to drop a settings.json into before anything has started. Earlier releases
+# left it readable by everyone, and a file opened then stays readable through its handle after the
+# mode changes - the profiles and the portal session are rewritten in the same file - so a storage
+# that is not 700 is copied into a fresh folder and the old one removed: an old handle sees only the
+# old files. The service is stopped by now, so nothing writes meanwhile. Not "cp -a": copying the
+# folder's "." would give the fresh folder the old one's mode.
+storagePath="$destinationPath/storage";
+if [ -d "$storagePath" ] && [ "$(stat -c %a "$storagePath")" != "700" ]; then
+	echo "Moving the storage into a folder of root's alone...";
+	rm -rf "$storagePath.new";
+	if ! mkdir -m 700 "$storagePath.new" || ! cp -r --preserve=timestamps "$storagePath/." "$storagePath.new/" ||
+		! rm -rf "$storagePath" || ! mv "$storagePath.new" "$storagePath"; then
+		echo "Could not move the storage into a fresh folder: $storagePath";
+		exit 1;
+	fi
+fi
+mkdir -p -m 700 "$storagePath";
 
 # On the PATH, so "vhclient status" is a command and not a path to remember.
 ln -sf "$destinationPath/$launcher" "/usr/local/bin/$launcher";

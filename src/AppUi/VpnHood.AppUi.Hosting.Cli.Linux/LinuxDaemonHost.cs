@@ -10,10 +10,10 @@ internal sealed class LinuxDaemonHost : IAppDaemonHost
 {
     private readonly VpnHoodLinuxApp _linuxApp;
 
-    public LinuxDaemonHost(AppInitParams initParams, string storagePath)
+    public LinuxDaemonHost(AppInitParams initParams, string storagePath, string lockFolderPath)
     {
         // AnotherInstanceIsRunningException passes through as it is: its message is the answer.
-        _linuxApp = VpnHoodLinuxApp.Init(initParams, storagePath);
+        _linuxApp = VpnHoodLinuxApp.Init(initParams, storagePath, lockFolderPath);
     }
 
     // The stop: the tunnel comes down, then the app.

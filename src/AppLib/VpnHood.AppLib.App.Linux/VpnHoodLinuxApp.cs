@@ -1,6 +1,4 @@
-﻿using System.Net.Sockets;
-using VpnHood.Core.Client.Devices.Linux;
-using VpnHood.Core.Common.Exceptions;
+﻿using VpnHood.Core.Client.Devices.Linux;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
@@ -16,25 +14,29 @@ namespace VpnHood.AppLib.App.Linux;
 // host's (the daemon's folder beside its versions), so the init params name no folder here.
 public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 {
-    private static Socket? _singleInstanceSocket;
+    private static FileStream? _singleInstanceLock;
 
     private VpnHoodLinuxApp(AppOptions appOptions)
     {
         VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath), appOptions);
     }
 
-    public static VpnHoodLinuxApp Init(AppInitParams initParams, string storagePath)
+    // lockFolderPath: where the single-instance lock lives (InstanceLockFile), which the host names -
+    // the service's folder under /run, which only root may write, so nobody takes the lock first, or a
+    // debugger's run's own storage. Not an abstract socket name, which anyone may take first.
+    public static VpnHoodLinuxApp Init(AppInitParams initParams, string storagePath, string lockFolderPath)
     {
-        // this process already holds the lock; binding again would call itself another instance
+        // this process already holds the lock; taking it again would call itself another instance
         if (IsInit)
             return Instance;
 
-        TakeSingleInstanceLock(initParams.AppId);
+        _singleInstanceLock = InstanceLockFile.Take(lockFolderPath, initParams.AppId);
 
         // after the lock, so a tun of this app id is never one another of its instances is using
         LinuxTunVpnAdapter.RemoveLeftovers(initParams.AppId);
 
-        Directory.CreateDirectory(storagePath);
+        // its owner's alone, as the installer makes it; one made here is made so too
+        Directory.CreateDirectory(storagePath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         var context = new AppOptionsContext {
             AppId = initParams.AppId,
             StoragePath = storagePath,
@@ -47,26 +49,6 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
         appOptions.DisconnectOnDispose = true;
 
         return new VpnHoodLinuxApp(appOptions);
-    }
-
-    // An abstract Unix socket - its name starts with '\0' - which the kernel releases with the
-    // process: a crash leaves no stale lock, and a second bind fails while the first process lives.
-    private static void TakeSingleInstanceLock(string appId)
-    {
-        var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-        try {
-            socket.Bind(new UnixDomainSocketEndPoint("\0singleton-" + appId));
-            socket.Listen(1);
-            _singleInstanceSocket = socket;
-        }
-        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse) {
-            socket.Dispose();
-            throw new AnotherInstanceIsRunningException($"Another {appId} instance is already running.", ex);
-        }
-        catch {
-            socket.Dispose();
-            throw;
-        }
     }
 
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.
@@ -84,8 +66,8 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
             if (VpnHoodApp.IsInit)
                 VpnHoodApp.Instance.Dispose();
 
-            _singleInstanceSocket?.Dispose();
-            _singleInstanceSocket = null;
+            _singleInstanceLock?.Dispose();
+            _singleInstanceLock = null;
         }
 
         base.Dispose(disposing);

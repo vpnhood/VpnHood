@@ -15,12 +15,13 @@ public sealed class WindowsDaemonHostFactory(AppInitParams initParams, WindowsCl
                 "The VPN service must run as a service or as an administrator: it creates the network adapter and edits the routes. " +
                 $"Try: {paths.CommandName} service start");
 
-        WindowsServiceStorage.Secure(paths.StoragePath);
-        return new WindowsDaemonHost(initParams, paths.StoragePath);
+        var storagePath = WindowsServiceStorage.Prepare(paths);
+        return new WindowsDaemonHost(initParams, storagePath, lockFolderPath: null);
     }
 
+    // Its lock in its own storage: a run as the person cannot reach the service's.
     public IAppDaemonHost CreateDev(string storagePath)
     {
-        return new WindowsDaemonHost(initParams, storagePath);
+        return new WindowsDaemonHost(initParams, storagePath, lockFolderPath: storagePath);
     }
 }

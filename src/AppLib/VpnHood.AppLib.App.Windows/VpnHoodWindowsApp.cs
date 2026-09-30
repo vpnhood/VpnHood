@@ -1,5 +1,4 @@
 ﻿using VpnHood.Core.Client.Devices.Windows;
-using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
@@ -14,20 +13,24 @@ namespace VpnHood.AppLib.App.Windows;
 // window shows of it - the tray, the window itself - runs in the person's own process, over the API.
 public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
 {
-    private static Semaphore? _singleInstanceLock;
+    private static IDisposable? _singleInstanceLock;
 
     private VpnHoodWindowsApp(AppOptions appOptions)
     {
         VpnHoodApp.Init(new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode), appOptions);
     }
 
-    public static VpnHoodWindowsApp Init(AppInitParams initParams, string storagePath)
+    // lockFolderPath: where a run as the person keeps its single-instance lock, a folder of their own
+    // (InstanceLockFile); null for the service, whose lock only administrators can reach.
+    public static VpnHoodWindowsApp Init(AppInitParams initParams, string storagePath, string? lockFolderPath)
     {
         // this process already holds the lock; taking it again would call itself another instance
         if (IsInit)
             return Instance;
 
-        TakeSingleInstanceLock(initParams.AppId);
+        _singleInstanceLock = lockFolderPath is null
+            ? ServiceInstanceLock.Take(initParams.AppId)
+            : InstanceLockFile.Take(lockFolderPath, initParams.AppId);
 
         Directory.CreateDirectory(storagePath);
         var context = new AppOptionsContext {
@@ -49,29 +52,6 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
         return new VpnHoodWindowsApp(appOptions);
     }
 
-    // A named semaphore rather than a mutex, which belongs to the thread that took it and would be
-    // let go when that pool thread retires. Global, since the service runs in session 0 and a daemon
-    // started by hand runs in a person's session. The kernel drops it with the process, so a crash
-    // leaves no stale lock.
-    private static void TakeSingleInstanceLock(string appId)
-    {
-        Semaphore semaphore;
-        try {
-            semaphore = new Semaphore(1, 1, @"Global\VpnHood-" + appId);
-        }
-        catch (UnauthorizedAccessException ex) {
-            // it exists, and belongs to an instance this process may not even open
-            throw new AnotherInstanceIsRunningException($"Another {appId} instance is already running.", ex);
-        }
-
-        if (!semaphore.WaitOne(TimeSpan.Zero)) {
-            semaphore.Dispose();
-            throw new AnotherInstanceIsRunningException($"Another {appId} instance is already running.");
-        }
-
-        _singleInstanceLock = semaphore;
-    }
-
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.
     public async ValueTask DisposeAsync()
     {
@@ -87,7 +67,6 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
             if (VpnHoodApp.IsInit)
                 VpnHoodApp.Instance.Dispose();
 
-            _singleInstanceLock?.Release();
             _singleInstanceLock?.Dispose();
             _singleInstanceLock = null;
         }

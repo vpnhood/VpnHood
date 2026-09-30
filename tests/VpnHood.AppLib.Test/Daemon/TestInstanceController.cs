@@ -13,5 +13,5 @@ internal sealed class TestInstanceController : IAppInstanceController
     public Task<int> Stop(CancellationToken cancellationToken) => throw new NotSupportedException();
     public Task<int> Restart(CancellationToken cancellationToken) => throw new NotSupportedException();
     public Task<int> ShowStatus(CancellationToken cancellationToken) => throw new NotSupportedException();
-    public Task<int> ShowLog(bool follow, int lines, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task<int> ShowOfflineLog(bool follow, int lines, CancellationToken cancellationToken) => throw new NotSupportedException();
 }

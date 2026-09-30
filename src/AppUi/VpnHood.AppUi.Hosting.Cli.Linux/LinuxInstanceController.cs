@@ -47,7 +47,10 @@ public class LinuxInstanceController(IAppCliPaths paths) : IAppInstanceControlle
     public Task<int> ShowStatus(CancellationToken cancellationToken) =>
         Run(["systemctl", "status", "--no-pager", paths.InstanceName], cancellationToken, elevate: false);
 
-    public Task<int> ShowLog(bool follow, int lines, CancellationToken cancellationToken)
+    // The journal holds the unit's lines, a start that failed before the app opened its log included.
+    // It shows them only to root and to members of adm, wheel or systemd-journal; anyone else gets
+    // journalctl's own hint, and runs it with sudo.
+    public Task<int> ShowOfflineLog(bool follow, int lines, CancellationToken cancellationToken)
     {
         string[] arguments = follow
             ? ["journalctl", "-u", paths.InstanceName, "-n", lines.ToString(), "-f"]

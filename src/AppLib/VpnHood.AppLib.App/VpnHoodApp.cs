@@ -57,6 +57,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 {
     // In the storage folder; public for a reader that holds no app ("service log" on Windows).
     public const string FileNameLog = "app.log";
+
+    // The two parts of the log the API sends (CopyLogToStream), each under a header of its own, at
+    // which "service log -f" tells them apart.
+    public const string LogAppHeader = "VPN App Log";
+    public const string LogVpnServiceHeader = "VPN Service Log";
     private const string FileNamePersistState = "state.json";
     internal const string FolderNameProfiles = "profiles";
     private readonly LogService _logService;
@@ -1358,7 +1363,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         try {
             if (File.Exists(_logService.LogFilePath)) {
                 await write.WriteLineAsync("-----------------------");
-                await write.WriteLineAsync("VPN App Log");
+                await write.WriteLineAsync(LogAppHeader);
                 await write.WriteLineAsync("-----------------------");
                 await write.FlushAsync();
 
@@ -1378,7 +1383,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (File.Exists(_vpnServiceManager.LogFilePath)) {
                 await write.WriteLineAsync("");
                 await write.WriteLineAsync("-----------------------");
-                await write.WriteLineAsync("VPN Service Log");
+                await write.WriteLineAsync(LogVpnServiceHeader);
                 await write.WriteLineAsync("-----------------------");
                 await write.FlushAsync();
 

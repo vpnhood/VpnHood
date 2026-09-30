@@ -17,5 +17,8 @@ public interface IAppInstanceController
     Task<int> Stop(CancellationToken cancellationToken);
     Task<int> Restart(CancellationToken cancellationToken);
     Task<int> ShowStatus(CancellationToken cancellationToken);
-    Task<int> ShowLog(bool follow, int lines, CancellationToken cancellationToken);
+
+    // What the platform keeps of the log itself, for when the service gives none - a start that
+    // failed before the app opened its log, say; the service's own log comes over its API.
+    Task<int> ShowOfflineLog(bool follow, int lines, CancellationToken cancellationToken);
 }

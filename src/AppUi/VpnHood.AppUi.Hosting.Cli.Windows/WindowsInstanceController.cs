@@ -1,3 +1,4 @@
+using System.Diagnostics.Eventing.Reader;
 using System.ServiceProcess;
 using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.Cli.Abstractions;
@@ -19,6 +20,7 @@ public class WindowsInstanceController(WindowsCliPaths paths, WindowsServiceSetu
 {
     private static readonly TimeSpan StatusTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+    private const int EventLogEntryCount = 10;
 
     public string NotRunningHint =>
         $"The {paths.InstanceName} service is not running. Start it with: {paths.CommandName} service start";
@@ -121,21 +123,30 @@ public class WindowsInstanceController(WindowsCliPaths paths, WindowsServiceSetu
         }
     }
 
-    // The app's own log in the service's storage, which everyone may read: its last lines, and with
-    // follow what comes after as it comes, until Ctrl+C.
-    public async Task<int> ShowLog(bool follow, int lines, CancellationToken cancellationToken)
+    // A start that fails before the app opens its log - over the storage or the lock - writes only to
+    // the Application log, which a signed-in administrator may read unelevated: its latest entries under
+    // the service's name. An elevated terminal may open the storage too, so it gets the app's own log.
+    // Nothing is followed: what comes next comes from a service that answers.
+    public async Task<int> ShowOfflineLog(bool follow, int lines, CancellationToken cancellationToken)
     {
-        var logFilePath = Path.Combine(paths.StoragePath, VpnHoodApp.FileNameLog);
-        if (!File.Exists(logFilePath)) {
-            await Console.Error.WriteLineAsync($"There is no log yet: {logFilePath}").Vhc();
-            return 1;
-        }
+        var entries = ReadEventLog(paths.InstanceName, EventLogEntryCount);
+        foreach (var entry in entries)
+            Console.WriteLine($"{entry.TimeCreated:yyyy-MM-dd HH:mm:ss} {entry.Level}: {entry.Message}");
 
-        // the service holds it open for writing, and may replace it
+        if (entries.Count == 0)
+            Console.WriteLine($"The Application log holds nothing from {paths.InstanceName}.");
+
+        if (!WindowsElevation.IsElevated)
+            return 0;
+
+        var logFilePath = Path.Combine(paths.StoragePath, VpnHoodApp.FileNameLog);
+        if (!File.Exists(logFilePath))
+            return 0;
+
+        // the service may hold it open for writing, and may replace it
         await using var stream = new FileStream(logFilePath, FileMode.Open, FileAccess.Read,
             FileShare.ReadWrite | FileShare.Delete);
         using var reader = new StreamReader(stream);
-
         var tail = new Queue<string>();
         while (await reader.ReadLineAsync(cancellationToken).Vhc() is { } line) {
             if (tail.Count == lines)
@@ -143,23 +154,48 @@ public class WindowsInstanceController(WindowsCliPaths paths, WindowsServiceSetu
             tail.Enqueue(line);
         }
 
+        Console.WriteLine($"--- {logFilePath}");
         foreach (var line in tail)
             Console.WriteLine(line);
 
-        if (!follow)
-            return 0;
+        return 0;
+    }
 
+    // The service's latest entries in the Application log, the oldest first.
+    private static IReadOnlyList<(DateTime? TimeCreated, string Level, string Message)> ReadEventLog(
+        string source, int count)
+    {
+        var query = new EventLogQuery("Application", PathType.LogName, $"*[System[Provider[@Name='{source}']]]") {
+            ReverseDirection = true
+        };
+
+        using var reader = new EventLogReader(query);
+        var entries = new List<(DateTime? TimeCreated, string Level, string Message)>();
+        while (entries.Count < count) {
+            using var record = reader.ReadEvent();
+            if (record == null)
+                break;
+
+            var level = record.Level switch { 1 => "Critical", 2 => "Error", 3 => "Warning", _ => "Information" };
+            entries.Add((record.TimeCreated, level, Describe(record)));
+        }
+
+        entries.Reverse();
+        return entries;
+    }
+
+    // The message as the Event Viewer shows it, or its raw strings where the source's message file is gone.
+    private static string Describe(EventRecord record)
+    {
         try {
-            while (true) {
-                if (await reader.ReadLineAsync(cancellationToken).Vhc() is { } line)
-                    Console.WriteLine(line);
-                else
-                    await Task.Delay(PollInterval, cancellationToken).Vhc();
-            }
+            if (record.FormatDescription() is { } description)
+                return description;
         }
-        catch (OperationCanceledException) {
-            return 0;
+        catch (EventLogException) {
+            // the raw strings below say it all the same
         }
+
+        return string.Join(" ", record.Properties.Select(x => x.Value));
     }
 
     // Null when no such service is registered.

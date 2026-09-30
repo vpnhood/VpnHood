@@ -95,7 +95,7 @@ vhclient status
 | `vhclient profile set-default <profile>` *(CLIENT only)* | Chooses the profile `connect` uses when given none. |
 | `vhclient service start\|stop\|restart` | Drives the systemd unit. Asks for your password. |
 | `vhclient service status` | What systemd says. No password needed. |
-| `vhclient service log [-f] [-n N]` | The service log, out of the journal. No password needed. |
+| `vhclient service log [-f] [-n N]` | The service's log, which the service sends: the last N lines of its two parts, the app's and the VPN service's; `-f` follows both. The journal's instead when the service does not answer. No password needed. |
 
 ### One profile, or many
 
@@ -157,7 +157,8 @@ service reads:
 ```
 
 It belongs to root, so edit it with `sudo`, then `sudo vhclient service restart`. Profiles, the log
-and the app's other state live beside it in the same folder.
+and the app's other state live beside it in the same folder, which is root's alone (mode 700): read
+it with `sudo` too, or read the log with `vhclient service log`.
 
 The window and the commands write nothing there. The window keeps its own extracted content under
 `~/.cache/com.vpnhood.client.linux/`, per user and named by the app id — which is what lets it run
@@ -207,8 +208,8 @@ reports honestly.
 | Connects, but no traffic | Check the log: `vhclient service log -n 100`. |
 | `The VPN cannot use its interface name` | Another VPN — or another app built on VpnHood under the same name — has an interface called `VpnHoodClient`. The message says whose it is. Stop that VPN, or, if it is gone and left the interface behind, `sudo ip link delete VpnHoodClient`. |
 
-The service log is the journal's, so everything systemd knows is there too:
-`journalctl -u VpnHoodClient -n 200`.
+The journal holds what systemd knows too, a start that failed before the app opened its log
+included: `journalctl -u VpnHoodClient -n 200`.
 
 ---
 
@@ -265,9 +266,10 @@ with no service installed. The window still reaches the app over loopback, as it
 The app keeps its storage in the person's own folder of the app (`IAppCliPaths.DevStoragePath`:
 `%LOCALAPPDATA%\<app id>`, `~/.local/share/<app id>`; a Debug build's id ends in `.debug`, so it is
 never a release's) and runs as whoever started
-it, so a tunnel needs an administrator or root unless DebugData1 has `/null-capture`. A Debug build
-installed as a service holds the app's single-instance lock and the build's own files: uninstall it
-first (`VpnHoodClient service uninstall`).
+it, so a tunnel needs an administrator or root unless DebugData1 has `/null-capture`. Its
+single-instance lock is a file in that folder too, not where the service's is. A Debug build
+installed as a service from the build's own folder holds the build's files: uninstall it first
+(`VpnHoodClient service uninstall`).
 
 Points that are easy to get wrong:
 

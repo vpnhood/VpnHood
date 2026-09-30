@@ -19,7 +19,7 @@ internal static class ServiceCommand
             Simple("stop", "Stop the VPN service. This disconnects the VPN.", instance.Stop),
             Simple("restart", "Restart the VPN service.", instance.Restart),
             Simple("status", "Show what the system says about the service.", instance.ShowStatus),
-            CreateLog(instance)
+            CreateLog(platform)
         };
 
         // Only where the app registers its service itself; elsewhere the package's installer does,
@@ -41,18 +41,18 @@ internal static class ServiceCommand
         return command;
     }
 
-    private static Command CreateLog(IAppInstanceController instance)
+    private static Command CreateLog(CliPlatform platform)
     {
         var followOption = new Option<bool>("--follow", "-f") {
             Description = "Keep printing as new lines arrive."
         };
         var linesOption = new Option<int>("--lines", "-n") {
-            Description = "How many past lines to print.",
+            Description = "How many past lines of each of its two parts to print.",
             DefaultValueFactory = _ => DefaultLogLines
         };
 
         var command = new Command("log", "Show the service log.") { followOption, linesOption };
-        command.SetAction((parseResult, cancellationToken) => instance.ShowLog(
+        command.SetAction((parseResult, cancellationToken) => ServiceLog.Run(platform,
             parseResult.GetValue(followOption), parseResult.GetValue(linesOption), cancellationToken));
 
         return command;

@@ -9,6 +9,7 @@ public class CommandListener(string commandFilePath) : IDisposable
     private FileSystemWatcher? _fileSystemWatcher;
     public event EventHandler<CommandReceivedEventArgs>? CommandReceived;
     public bool IsStarted => _fileSystemWatcher != null;
+    public string CommandFilePath => commandFilePath;
 
     public void Start()
     {
@@ -16,10 +17,6 @@ public class CommandListener(string commandFilePath) : IDisposable
             throw new Exception("CommandListener is already started!");
 
         try {
-            // delete old command
-            if (File.Exists(commandFilePath))
-                File.Delete(commandFilePath);
-
             var watchFolderPath = Path.GetDirectoryName(commandFilePath)!;
             Directory.CreateDirectory(watchFolderPath);
 
@@ -33,6 +30,11 @@ public class CommandListener(string commandFilePath) : IDisposable
             };
 
             _fileSystemWatcher.Changed += FileSystemWatcher_Changed;
+
+            // A previous run's command goes, but only once the watch is on: a stop command still
+            // waiting sends its command again when it sees the file gone.
+            if (File.Exists(commandFilePath))
+                File.Delete(commandFilePath);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not start CommandListener! ");

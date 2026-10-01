@@ -268,6 +268,12 @@ public class ServerApp : IDisposable
                 return true;
             }
             catch (IOException) when (DateTime.UtcNow < deadline) {
+                // A starting server's listener clears the command file before it listens, so a stop
+                // written in its first moments is sent again. No clock decides: a file a previous
+                // run left is never taken for a new stop.
+                if (!File.Exists(_commandListener.CommandFilePath))
+                    _commandListener.SendCommand("stop");
+
                 await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken).Vhc();
             }
             catch (IOException) {

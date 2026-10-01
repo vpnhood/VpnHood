@@ -144,9 +144,10 @@ Type=simple
 ExecStart="$destinationPath/$launcher"
 ExecStop="$destinationPath/$launcher" stop
 TimeoutStartSec=0
-Restart=always
+Restart=on-failure
 RestartSec=10
 StandardOutput=null
+StandardError=journal
 
 [Install]
 WantedBy=default.target

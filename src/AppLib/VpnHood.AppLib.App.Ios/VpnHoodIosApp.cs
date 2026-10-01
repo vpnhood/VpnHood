@@ -20,8 +20,9 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
         if (VpnHoodApp.IsInit)
             return new VpnHoodIosApp();
 
-        // the app's process has a readable stdout, so a console logger is right here
-        VhLogger.Instance = VhLogger.CreateConsoleLogger();
+        // the app's process has a readable stdout, so its console is a sink, and a debugger is
+        VhLogger.AddProvider(new ConsoleLoggerProvider());
+        VhLogger.AddProvider(new TraceLoggerProvider());
 
         // the bundle is a folder, and the asset packages placed their files in it
         var context = new AppOptionsContext {

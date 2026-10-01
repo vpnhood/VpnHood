@@ -1,41 +1,70 @@
-﻿using System.Text;
+using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Net.Toolkit.Logging;
 
-public class FileLogger(
-    string filePath,
-    bool includeScopes = true,
-    bool autoFlush = false,
-    string? categoryName = null)
-    : TextLogger(includeScopes, categoryName, singleLine: false), IDisposable
+// The process's log file: opened at each start request (Open), in place of what it had or after
+// it, and closed at stop; closed, it takes nothing. Its provider asks TextLogger for entries that
+// keep their lines.
+public sealed class FileLogger(string filePath) : ILogger
 {
     private const int DefaultBufferSize = 1024;
     private readonly Lock _lock = new();
+    private StreamWriter? _writer;
 
-    private readonly StreamWriter _streamWriter = new(
-        new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.Read),
-        Encoding.UTF8, DefaultBufferSize);
+    public string FilePath { get; } = filePath;
+    public bool IsOpen => _writer != null;
 
-    public override void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+    // every line as it comes when true; buffered otherwise, and flushed at an error either way
+    public bool AutoFlush { get; set; }
+
+    public void Open(bool deleteOld)
+    {
+        lock (_lock) {
+            _writer?.Dispose();
+            _writer = null;
+            if (deleteOld && File.Exists(FilePath))
+                File.Delete(FilePath);
+
+            _writer = new StreamWriter(
+                new FileStream(FilePath, FileMode.Append, FileAccess.Write, FileShare.Read),
+                Encoding.UTF8, DefaultBufferSize);
+        }
+    }
+
+    public void Close()
+    {
+        lock (_lock) {
+            _writer?.Dispose();
+            _writer = null;
+        }
+    }
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    {
+        return null;
+    }
+
+    public bool IsEnabled(LogLevel logLevel)
+    {
+        return IsOpen;
+    }
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
-        var text = FormatLog(logLevel, eventId, state, exception, formatter);
         lock (_lock) {
+            if (_writer == null)
+                return;
+
             try {
-                _streamWriter.WriteLine(text);
-                if (autoFlush || logLevel >= LogLevel.Error)
-                    _streamWriter.Flush();
+                _writer.WriteLine(formatter(state, exception));
+                if (AutoFlush || logLevel >= LogLevel.Error)
+                    _writer.Flush();
             }
             catch (Exception ex) {
                 Console.WriteLine($"Error: Could not write the log. {ex.Message}");
             }
         }
-    }
-
-    public void Dispose()
-    {
-        lock (_lock)
-            _streamWriter.Dispose(); //it will handle flush and close the stream
     }
 }

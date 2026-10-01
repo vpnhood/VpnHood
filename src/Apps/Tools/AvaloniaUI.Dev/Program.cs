@@ -30,7 +30,7 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger();
+        VhLogger.AddProvider(new ConsoleLoggerProvider());
         var isTv = args.Contains("--tv");
         var store = ValueOf(args, "--store");
         var isConnect = args.Contains("--connect") || store != null; // only Connect sells

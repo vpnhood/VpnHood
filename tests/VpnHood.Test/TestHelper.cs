@@ -51,10 +51,15 @@ public class TestHelper : IDisposable
     private bool? _isIpV6Supported;
     private int _accessTokenIndex;
 
+    // the sink is the process's, once; the level and the redaction are set again for each test
+    static TestHelper()
+    {
+        VhLogger.AddProvider(new ConsoleLoggerProvider());
+    }
+
     public TestHelper()
     {
         TransportDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(); // min level is controlled by VhLogger.MinLevel
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create(TestIps);

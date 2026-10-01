@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Net;
@@ -6,17 +6,32 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.Toolkit.Logging;
 
+// The process's one log. Its sinks are providers, added once by whoever owns them, before anything
+// logs: the head its console, a service's host its system log, the app its file; .NET's factory
+// fans out to every sink and asks each what it takes. The level is the one filter, read at each
+// line, so no sink is rebuilt when the app's log settings change it.
 public static class VhLogger
 {
-    private static readonly VhLoggerDecorator InstanceDecorator = new();
+    private const string CategoryName = "VpnHood";
 
-    public static event EventHandler<LoggedEventArgs>? Logged;
-    public static ILogger Instance {
-        get => InstanceDecorator;
-        set {
-            // use the decorator to prevent previous assignments losing the instance
-            InstanceDecorator.Logger = value is VhLoggerDecorator vhLoggerDecorator ? vhLoggerDecorator.Logger : value;
-        }
+    // The filter reads MinLogLevel at each line; a matching rule also puts the factory's own default
+    // level, Information, out of play.
+    private static readonly ILoggerFactory Factory = LoggerFactory.Create(builder =>
+        builder.AddFilter((_, logLevel) => logLevel >= MinLogLevel));
+
+    // The same object for the process's life: what the sinks and the level change is behind it.
+    public static ILogger Instance { get; } = Factory.CreateLogger(CategoryName);
+
+    // PreserveTypes carries the types iOS trimming must keep, and the trimmer keeps them only where
+    // the call is reached: here, in the type every process touches.
+    static VhLogger()
+    {
+        AotPreserveHelper.PreserveTypes();
+    }
+
+    public static void AddProvider(ILoggerProvider loggerProvider)
+    {
+        Factory.AddProvider(loggerProvider);
     }
 
     public static EventId TcpCloseEventId { get; set; }
@@ -39,12 +54,6 @@ public static class VhLogger
     }
 
     public static LogLevel MinLogLevel { get; set; } = LogLevel.Information;
-
-
-    public static ILogger CreateConsoleLogger()
-    {
-        return new VhConsoleLogger();
-    }
 
     public static Redactor.RedactedValue<EndPoint> Format(EndPoint? endPoint)
     {
@@ -135,7 +144,7 @@ public static class VhLogger
 
     public static void LogError(EventId eventId, Exception ex, string message, params object?[] args)
     {
-#pragma warning disable CA2254 // it is our log builder, not a simple logging 
+#pragma warning disable CA2254 // it is our log builder, not a simple logging
         if (IsSocketCloseException(ex)) {
             Instance.LogDebug(TcpCloseEventId, message + $" Message: {ex.Message}", args);
             return;
@@ -143,36 +152,5 @@ public static class VhLogger
 
         Instance.LogError(eventId, ex, message, args);
 #pragma warning restore CA2254
-    }
-
-    private class VhLoggerDecorator : ILogger
-    {
-        private readonly AotPreserveHelper _aotPreserveHelper = new();
-
-        // The device log until a caller sets one: no console, which an iOS Network Extension lacks.
-        public ILogger Logger {
-            get => field ??= new VhDeviceLogger();
-            set;
-        }
-
-        public VhLoggerDecorator()
-        {
-            _ = _aotPreserveHelper.PreserveTypes();
-        }
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            if (MinLogLevel > logLevel)
-                return;
-
-            // Fire an event
-            Logged?.Invoke(null, new LoggedEventArgs(logLevel, eventId, formatter(state, exception), exception));
-
-            Logger.Log(logLevel, eventId, state, exception, formatter);
-        }
-
-        public bool IsEnabled(LogLevel logLevel) => Logger.IsEnabled(logLevel);
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => Logger.BeginScope(state);
     }
 }

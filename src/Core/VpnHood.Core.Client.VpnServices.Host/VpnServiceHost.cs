@@ -50,21 +50,17 @@ public class VpnServiceHost : IDisposable
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,
         IMessageListener messageListener,
-        bool withLogger = true,
-        Func<bool, ILoggerProvider>? deviceLoggerProviderFactory = null)
+        bool withLogger = true)
     {
         Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
 
-        // initialize logger. deviceLoggerProviderFactory lets a platform supply its own device log sink
-        // (e.g. os_log on iOS); when null the LogService falls back to its default VhDeviceLoggerProvider.
-        _logService = withLogger ? new LogService(Context.LogFilePath, deviceLoggerProviderFactory) : null;
+        // A log file of its own where the VPN service has a process of its own (withLogger), opened at
+        // each start request; in the app's process its lines go to the app's file, through the same
+        // logger. The process's other sinks are its head's.
+        _logService = withLogger ? new LogService(Context.LogFilePath) : null;
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
-        var serviceOptions = Context.TryReadServiceOptions();
-        if (_logService != null && serviceOptions != null) {
-            _logService.Start(serviceOptions.ClientOptions.LogServiceOptions);
-        }
 
         // start apiController; the transport (IMessageListener) owns endpoint/key concerns
         _apiController = new ApiController(this, messageListener);
@@ -155,16 +151,15 @@ public class VpnServiceHost : IDisposable
             throw new InvalidOperationException("Client is already initialized.");
         
         try {
-            // read client options and start log service
+            // read the client options, and start the log with them: the file holds this session
             var serviceOptions = Context.ReadServiceOptions();
             var clientOptions = serviceOptions.ClientOptions;
-            _logService?.Start(clientOptions.LogServiceOptions, deleteOldReport: false);
+            _logService?.Start(clientOptions.LogServiceOptions);
 
             // check if auto start is allowed
             if (isAlwaysOn && !clientOptions.AllowAlwaysOn)
                 throw new AlwaysOnNotAllowedException("Auto start is only available for premium accounts.");
 
-            // restart the log service
             VhLogger.Instance.LogInformation("VpnService is connecting... ProcessId: {ProcessId}",
                 Process.GetCurrentProcess().Id);
 

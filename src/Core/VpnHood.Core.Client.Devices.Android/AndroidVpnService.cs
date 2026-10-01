@@ -89,11 +89,14 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         Task.Run(async () => {
             try {
                 VhLogger.Instance.LogDebug("Starting VPN service host. AlwaysOn: {AlwaysOn}", alwaysOn);
+                // a log file of its own only in its own process; in the app's (a Debug build) its lines
+                // go to the app's file
                 _vpnServiceHost ??= new VpnServiceHost(
                     configFolder: VpnServiceConfigFolder,
                     vpnServiceHandler: this,
                     socketFactory: new AndroidSocketFactory(),
-                    messageListener: _messageListener);
+                    messageListener: _messageListener,
+                    withLogger: AndroidDevice.IsVpnServiceProcess);
 
                 if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn))
                     StopSelf();

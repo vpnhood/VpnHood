@@ -3,8 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace VpnHood.Net.TcpStack.Abstractions;
 
 /// <summary>
-/// EventIds for TcpStack verbose logging.
-/// Used to filter hot-path trace logs via VhLogger.Logged event.
+/// EventIds for TcpStack verbose logging, so its hot-path traces can be told apart in a log.
 /// </summary>
 public static class TcpStackEventIds
 {

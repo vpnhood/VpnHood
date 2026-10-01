@@ -30,11 +30,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     private Action<NSError>? _startTunnelCompletionHandler;
     private bool _completionFired;
 
-    // os_log subsystem for the host LogService's device sink (IosDeviceLoggerProvider). Read from the running
-    // bundle's identifier (inside an extension process, MainBundle is the .appex, so this is the extension's
+    // os_log subsystem for the extension's sink (IosOsLogLoggerProvider). Read from the running bundle's
+    // identifier (inside an extension process, MainBundle is the .appex, so this is the extension's
     // bundle id) so it stays correct for any extension/product that hosts this provider — no hardcoded id.
-    // Lets LogToDevice output surface in Console.app / `log stream --device` even though the extension's
-    // stdout is /dev/null. The os_log category is taken from each logger's MEL category name.
+    // The lines surface in Console.app / `log stream --device` even though the extension's stdout is
+    // /dev/null. The os_log category is taken from each logger's MEL category name.
     private static string OsLogSubsystem => NSBundle.MainBundle.BundleIdentifier ?? "IosVpnService";
 
 
@@ -82,9 +82,9 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // buffer fills. Console.SetOut(TextWriter.Null) must be the first statement.
         Console.SetOut(TextWriter.Null);
 
-        // VhLogger defaults to NullLogger — no console logger runs in this process.
-        // Force class init now (safe: fast, no LoggerFactory or Console).
-        _ = VhLogger.IsAnonymousMode;
+        // The extension's sink from its first line: os_log, since it has no console. Its log file
+        // is the host's (VpnServiceHost), opened at each start request.
+        VhLogger.AddProvider(new IosOsLogLoggerProvider(OsLogSubsystem));
     }
 
     public override void StartTunnel(
@@ -112,13 +112,10 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                 // memory bound. Read lazily from the host so it reflects the status at each QUIC-client
                 // creation (session build), not the state at factory construction.
                 var sf = new IosSocketFactory(memoryScale: () => _vpnServiceHost?.IsTcpProxy == true ? 1 : 2);
-                // withLogger: true so the host runs the standard LogService (LogToDevice/LogToFile come from
-                // the app's LogServiceOptions). deviceLoggerProviderFactory routes LogToDevice to os_log
-                // (IosDeviceLoggerProvider) instead of the default Trace sink (which is /dev/null in an extension).
+                // withLogger: true - the extension is a process of its own, so the host keeps its own log
+                // file, with the settings the app's LogServiceOptions carry
                 _vpnServiceHost = new VpnServiceHost(configFolder, this, sf,
-                    withLogger: true, messageListener: _messageListener,
-                    deviceLoggerProviderFactory: includeScopes => new IosDeviceLoggerProvider(
-                        OsLogSubsystem, includeScopes));
+                    withLogger: true, messageListener: _messageListener);
                 _ = _vpnServiceHost.TryConnect(true);
             }
             catch (Exception ex) {

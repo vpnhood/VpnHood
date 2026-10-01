@@ -33,13 +33,17 @@ internal static class DaemonCommand
 
     private static async Task<int> Run(CliPlatform platform, CancellationToken cancellationToken)
     {
+        // The platform's console from the first line: a terminal, or the journal. Under the service
+        // control manager there is none, and its host has added the Event Log.
+        VhLogger.AddProvider(platform.CreateConsoleLoggerProvider());
+
         IAppDaemonHost daemonHost;
         try {
             // Building it is starting it; a platform that cannot says why, and that is the answer.
             daemonHost = platform.DaemonHostFactory.CreateService();
         }
         catch (Exception ex) {
-            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            VhLogger.Instance.LogError("{Message}", ex.Message);
             return 1;
         }
 
@@ -75,9 +79,7 @@ internal static class DaemonCommand
             VhLogger.Instance.LogInformation("Exit requested.");
         }
         catch (Exception ex) {
-            // in the app's log while it is still open, and where a person or a service manager reads
             VhLogger.Instance.LogError(ex, "{InstanceName} could not start.", platform.Paths.InstanceName);
-            await Console.Error.WriteLineAsync(ex.Message).Vhc();
             return 1;
         }
         finally {

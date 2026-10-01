@@ -7,7 +7,8 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.App.Server;
 
-public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
+// The manager is asked for when a command runs, not when the command line is parsed: its making logs.
+public class FileAccessManagerCommand(Func<FileAccessManager> getFileAccessManager)
 {
     public void AddCommands(Command rootCommand)
     {
@@ -32,6 +33,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
 
     private async Task PrintToken(string tokenId, CancellationToken cancellationToken)
     {
+        var fileAccessManager = getFileAccessManager();
         var accessTokenData = await fileAccessManager.AccessTokenService.Get(tokenId, cancellationToken).Vhc();
         var token = fileAccessManager.GetToken(accessTokenData.AccessToken);
         if (accessTokenData == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
@@ -89,6 +91,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         command.Add(expirationTimeOption);
 
         command.SetAction(async (parseResult, cancellationToken) => {
+            var fileAccessManager = getFileAccessManager();
             var maxSpeedMbps = parseResult.GetValue(maxSpeedOption);
             var accessToken = fileAccessManager.AccessTokenService.Create(
                 tokenName: parseResult.GetValue(nameOption),

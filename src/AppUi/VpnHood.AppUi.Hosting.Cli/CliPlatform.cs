@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.Cli.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Cli;
@@ -29,6 +30,11 @@ public class CliPlatform
 
     // The app for "daemon", which the systemd unit or the service control manager runs, and for "dev".
     public required IAppDaemonHostFactory DaemonHostFactory { get; init; }
+
+    // The console as this platform has it, for the process that holds the app ("daemon", "dev"),
+    // which adds it to the log before anything logs: the journal's sink where stdout is the journal
+    // (Linux under systemd), a terminal's otherwise.
+    public required Func<ILoggerProvider> CreateConsoleLoggerProvider { get; init; }
 
     // The daemon's run, hosted by a service manager that stops it with a call rather than a signal
     // (Windows: the service control manager, through ServiceBase), which then cancels the run. Null

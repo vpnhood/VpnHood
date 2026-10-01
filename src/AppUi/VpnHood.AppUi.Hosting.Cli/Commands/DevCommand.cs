@@ -26,6 +26,9 @@ internal static class DevCommand
     private static async Task<int> Run(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread,
         CancellationToken cancellationToken)
     {
+        // the platform's console from the first line, as the daemon has it
+        VhLogger.AddProvider(platform.CreateConsoleLoggerProvider());
+
         try {
             await using var daemonHost = platform.DaemonHostFactory.CreateDev(platform.Paths.DevStoragePath);
             var localWebHost = VpnHoodApp.Instance.LocalWebHost ??

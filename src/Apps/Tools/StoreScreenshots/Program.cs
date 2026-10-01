@@ -68,7 +68,7 @@ internal static class Program
     private static int Run(string[] args, ShotOptions options)
     {
         var log = new CapturingLogger();
-        VhLogger.Instance = log;
+        VhLogger.AddProvider(log);
 
         var fixture = StoreFixture.Load(options.FixturePath, options.Culture);
         foreach (var filled in fixture.Filled)

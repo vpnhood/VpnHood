@@ -4,11 +4,11 @@ namespace VpnHood.App.Server;
 
 internal static class Program
 {
-    private static async Task Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         try {
             using var serverApp = new ServerApp();
-            await serverApp.Start(args, CancellationToken.None).Vhc();
+            return await serverApp.Start(args, CancellationToken.None).Vhc();
         }
         catch (Exception ex) {
             throw new Exception(ex.Message);

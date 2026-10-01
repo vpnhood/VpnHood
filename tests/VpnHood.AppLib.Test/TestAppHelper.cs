@@ -77,7 +77,7 @@ public class TestAppHelper : TestHelper
                 AllowedPrivateDnsProviders = ["dns.google", "dns.test"]
             },
             LogServiceOptions = {
-                // apps would fight over the process-wide VhLogger; tests asserting State.LogExists opt back in
+                // every app would add its file to the process's log; tests asserting State.LogExists opt back in
                 Enabled = false,
             }
         };

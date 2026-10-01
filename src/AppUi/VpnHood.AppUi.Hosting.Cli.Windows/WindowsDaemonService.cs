@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.App.Windows;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Cli.Windows;
@@ -32,9 +33,11 @@ internal sealed class WindowsDaemonService : ServiceBase
         if (!IsStartedByServiceManager())
             return run(cancellationToken);
 
-        // Run blocks until the manager has stopped the service; this is the daemon's own thread.
+        // The service's warnings and errors go to the Application log under its name, from before
+        // its run to after it. Run blocks until the manager has stopped the service; this is the
+        // daemon's own thread.
+        VhLogger.AddProvider(new WinEventLogLoggerProvider(serviceName));
         using var service = new WindowsDaemonService(serviceName, run);
-        Console.SetError(new EventLogErrorWriter(service.EventLog));
         Run(service);
         return Task.FromResult(service.ExitCode);
     }

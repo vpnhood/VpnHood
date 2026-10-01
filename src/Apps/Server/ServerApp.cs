@@ -35,13 +35,14 @@ public class ServerApp : IDisposable
     private const string FolderNameStorage = "storage";
     private const string FolderNameInternal = "internal";
     private readonly ITracker _tracker;
+    private readonly Lazy<IAccessManager> _accessManager;
     private readonly CommandListener _commandListener;
     private VpnHoodServer? _vpnHoodServer;
     private FileStream? _lockStream;
     private bool _disposed;
     private readonly string? _downloadsPath;
 
-    public IAccessManager AccessManager { get; }
+    public IAccessManager AccessManager => _accessManager.Value;
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
     public static string AppId => "com.vpnhood.server";
@@ -55,7 +56,6 @@ public class ServerApp : IDisposable
 
     public ServerApp()
     {
-        VhLogger.Instance = new VhConsoleLogger();
         AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
 
         // set storage folder
@@ -90,10 +90,11 @@ public class ServerApp : IDisposable
         _commandListener = new CommandListener(Path.Combine(storagePath, FileNameAppCommand));
         _commandListener.CommandReceived += CommandListener_CommandReceived;
 
-        // create access server
-        AccessManager = AppSettings.HttpAccessManager != null
+        // The access manager is made at its first use, since its making logs: at start after the
+        // log exists, so its lines are in the log; by a token command, on the terminal.
+        _accessManager = new Lazy<IAccessManager>(() => AppSettings.HttpAccessManager != null
             ? CreateHttpAccessManager(AppSettings.HttpAccessManager)
-            : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager, CancellationToken.None).Result;
+            : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager, CancellationToken.None).Result);
 
         // tracker
         var anonyClientId = GetServerId(Path.Combine(InternalStoragePath, "server-id")).ToString();
@@ -106,25 +107,38 @@ public class ServerApp : IDisposable
             IsEnabled = AppSettings.AllowAnonymousTracker,
             UserProperties = new Dictionary<string, object> {
                 { "server_version", VpnHoodServer.ServerVersion },
-                { "access_manager", AccessManager.GetType().Name }
+                { "access_manager", AppSettings.HttpAccessManager != null ? nameof(HttpAccessManager) : nameof(FileAccessManager) }
             }
         };
     }
 
+    // NLog.config is the server's console and its files, loaded here at start and nowhere else: its
+    // log file archives the one it finds when it opens, so a command run beside a running server
+    // would roll that server's log. A file that is missing, unreadable, broken or without rules
+    // leaves the terminal as the log, with the reason, rather than a server without a log.
     private static void InitFileLogger(string storagePath)
     {
         var configFilePath = Path.Combine(StoragePath, "NLog.config");
         if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
-        if (File.Exists(configFilePath)) {
-            using var loggerFactory = LoggerFactory.Create(builder => { builder.AddNLog(configFilePath); });
-            if (LogManager.Configuration != null)
-                LogManager.Configuration.Variables["mydir"] = storagePath;
-            VhLogger.Instance = loggerFactory.CreateLogger("VpnHood");
-            VhLogger.Instance.LogInformation("Logger has been created. ConfigFilePath: {configFilePath}, LogLevel: {LogLevel}", 
+
+        try {
+            LogManager.ThrowConfigExceptions = true;
+            LogManager.Setup().LoadConfigurationFromFile(configFilePath, optional: false);
+            var configuration = LogManager.Configuration ??
+                                throw new NLogConfigurationException("The configuration is empty.");
+            if (configuration.LoggingRules.Count == 0)
+                throw new NLogConfigurationException("The configuration has no logging rules.");
+
+            configuration.Variables["mydir"] = storagePath;
+            VhLogger.AddProvider(new NLogLoggerProvider());
+            VhLogger.Instance.LogInformation("Logger has been created. ConfigFilePath: {configFilePath}, LogLevel: {LogLevel}",
                 configFilePath, VhLogger.MinLogLevel);
         }
-        else {
-            VhLogger.Instance.LogWarning("Could not find NLog file. ConfigFilePath: {configFilePath}", configFilePath);
+        catch (Exception ex) {
+            VhLogger.AddProvider(new ConsoleLoggerProvider());
+            VhLogger.Instance.LogError(ex,
+                "Could not use the NLog configuration, so the log goes to the terminal only. ConfigFilePath: {ConfigFilePath}",
+                configFilePath);
         }
     }
 
@@ -222,8 +236,8 @@ public class ServerApp : IDisposable
         };
 
         command.SetAction(_ => {
-            VhLogger.Instance.LogInformation("Sending GC request...");
-            _commandListener.TrySendCommand("gc");
+            Console.WriteLine("Sending GC request...");
+            _commandListener.SendCommand("gc");
             return Task.CompletedTask;
         });
         return command;
@@ -234,8 +248,8 @@ public class ServerApp : IDisposable
         var command = new Command("stop",
             "Stop all instances of VpnHoodServer that running from this folder");
         command.SetAction(_ => {
-            VhLogger.Instance.LogInformation("Sending stop server request...");
-            _commandListener.TrySendCommand("stop");
+            Console.WriteLine("Sending stop server request...");
+            _commandListener.SendCommand("stop");
             return Task.CompletedTask;
         });
         return command;
@@ -256,15 +270,11 @@ public class ServerApp : IDisposable
             // initialize logger
             InitFileLogger(StoragePath);
 
-            // check FileAccessManager
+            // check FileAccessManager; the access manager's first use, now that the log exists
             if (FileAccessManager != null && await FileAccessManager.AccessTokenService.GetTotalCount() == 0)
                 VhLogger.Instance.LogWarning(
                     "There is no token in the store! Use the following command to create one:\n " +
                     "dotnet VpnHoodServer.dll gen -?");
-
-            // Init logger for http access manager
-            if (AccessManager is HttpAccessManager httpAccessManager)
-                httpAccessManager.Logger = VhLogger.Instance;
 
             // SystemInfoProvider
             ISystemInfoProvider systemInfoProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
@@ -367,7 +377,7 @@ public class ServerApp : IDisposable
         LogManager.Shutdown();
     }
 
-    public async Task Start(string[] args, CancellationToken cancellationToken)
+    public async Task<int> Start(string[] args, CancellationToken cancellationToken)
     {
         // replace "/?"
         for (var i = 0; i < args.Length; i++)
@@ -378,22 +388,29 @@ public class ServerApp : IDisposable
         if (args.Any(arg => arg.Equals("--version", StringComparison.OrdinalIgnoreCase))) {
             Console.WriteLine("Version:");
             Console.WriteLine(VpnHoodServer.ServerVersion.ToString(3));
-            return;
+            return 0;
         }
 
         // set default
         if (args.Length == 0) args = ["start"];
+        var startCommand = CreateStartCommand();
         var rootCommand = new RootCommand($"VpnHood! Server v{VpnHoodServer.ServerVersion.ToString(3)}") {
-            CreateStartCommand(),
+            startCommand,
             CreateStopCommand(),
             CreateGcCommand()
         };
 
-        if (FileAccessManager != null)
-            new FileAccessManagerCommand(FileAccessManager)
+        if (AppSettings.HttpAccessManager == null)
+            new FileAccessManagerCommand(() => FileAccessManager ??
+                                               throw new InvalidOperationException("The access manager is not a FileAccessManager."))
                 .AddCommands(rootCommand);
 
+        // start logs by NLog.config (InitFileLogger); any other command logs to the terminal, so the
+        // person running it sees what its access manager finds. One command per process, never both.
         var parseResult = rootCommand.Parse(args);
-        await parseResult.InvokeAsync(new InvocationConfiguration(), cancellationToken).Vhc();
+        if (parseResult.CommandResult.Command != startCommand)
+            VhLogger.AddProvider(new ConsoleLoggerProvider());
+
+        return await parseResult.InvokeAsync(new InvocationConfiguration(), cancellationToken).Vhc();
     }
 }

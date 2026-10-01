@@ -1,3 +1,7 @@
+using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.App.Linux;
+using VpnHood.Net.Toolkit.Logging;
+
 namespace VpnHood.AppUi.Hosting.Cli.Linux;
 
 // A Linux head's whole entry point: the machine facts Linux answers (CliPlatform) joined to the
@@ -9,13 +13,17 @@ public static class LinuxCliHost
     {
         var paths = new LinuxCliPaths(initParams.AppId);
         // No tray keeps a hidden window, so a closed one is gone; the installer registers the unit;
-        // and systemd's signal stops the daemon.
+        // systemd's signal stops the daemon; and the daemon's console is the journal where stdout is
+        // the journal, so no line reaches it twice.
         var platform = new CliPlatform {
             Paths = paths,
             Instance = new LinuxInstanceController(paths),
             Channel = new LinuxDaemonChannel(paths),
             PeerCheck = new LinuxLoopbackPeerCheck(),
-            DaemonHostFactory = new LinuxDaemonHostFactory(initParams, paths)
+            DaemonHostFactory = new LinuxDaemonHostFactory(initParams, paths),
+            CreateConsoleLoggerProvider = () => LinuxJournalLogger.IsConsole
+                ? new LinuxJournalLoggerProvider()
+                : new ConsoleLoggerProvider()
         };
 
         return CliHost.Run(args, initParams, platform);

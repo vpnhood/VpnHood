@@ -177,8 +177,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
             proxies.Add(udpProxy);
             isNewLocalEndPoint = true;
 
-            // no event id on purpose: named event ids are dropped by the LogService event filter unless
-            // explicitly enabled, and this line must reach Console.app during live diagnostics
+            // this line must reach Console.app during live diagnostics
             if (VhLogger.MinLogLevel <= LogLevel.Debug)
                 VhLogger.Instance.LogDebug(
                     "[VH-UDP] Created UdpProxy. pool={Pool}, workers={WorkerCount}/{MaxWorkers}, footprint={Footprint:F1}MB, " +

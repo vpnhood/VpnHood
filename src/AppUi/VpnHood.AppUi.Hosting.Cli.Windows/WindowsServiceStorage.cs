@@ -1,7 +1,9 @@
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Cli.Windows;
 
@@ -14,7 +16,7 @@ namespace VpnHood.AppUi.Hosting.Cli.Windows;
 // even SYSTEM can move, is passed over for a fresh folder under a name nobody can guess, recorded in
 // the app's HKLM key, which only administrators write; each start looks there first. The access list
 // is made right on every start, so a folder an earlier build made, or someone loosened, is brought back.
-// What it moves or passes over is written to stderr, which a service's run sends to the Event Log.
+// What it moves or passes over is a warning, since the service starts all the same.
 internal static class WindowsServiceStorage
 {
     private const string StoragePathValueName = "StoragePath";
@@ -31,7 +33,8 @@ internal static class WindowsServiceStorage
             throw new InvalidOperationException($"Could not make a storage folder: {freshPath}");
 
         Record(paths.RegistryKeyPath, freshPath);
-        Console.Error.WriteLine($"The storage is now {freshPath}, since {path} could not be moved aside.");
+        VhLogger.Instance.LogWarning("The storage is now {FreshPath}, since {Path} could not be moved aside.",
+            freshPath, path);
         return freshPath;
     }
 
@@ -100,11 +103,13 @@ internal static class WindowsServiceStorage
             else
                 File.Move(path, movedPath);
 
-            Console.Error.WriteLine($"{path} was not the service's, so it was moved to {movedPath}.");
+            VhLogger.Instance.LogWarning("{Path} was not the service's, so it was moved to {MovedPath}.",
+                path, movedPath);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
-            Console.Error.WriteLine($"{path} is not the service's and could not be moved aside: {ex.Message}");
+            VhLogger.Instance.LogWarning("{Path} is not the service's and could not be moved aside: {Message}",
+                path, ex.Message);
             return false;
         }
     }

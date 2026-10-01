@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
 using VpnHood.Net.Toolkit.Converters;
@@ -6,7 +6,7 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.Toolkit;
 
-public class AotPreserveHelper
+public static class AotPreserveHelper
 {
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPEndPoint))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPAddress))]
@@ -28,15 +28,9 @@ public class AotPreserveHelper
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IpNetwork))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IpNetworkConverter))]
 
-
+    // The trimmer reads the attributes, not the body: the types stay wherever this call is kept.
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public string PreserveTypes()
+    public static void PreserveTypes()
     {
-        // DynamicDependency attributes are read statically by the trimmer.
-        // This method just needs to be reachable from a non-trimmed call site.
-        _instanceId ??= Guid.NewGuid().ToString();
-        return _instanceId;
     }
-
-    private string? _instanceId;
 }

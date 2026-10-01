@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App.Windows;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Cli.Windows;
 
@@ -12,6 +14,9 @@ public static class WindowsCliHost
 {
     public static int Run(string[] args, CliInitParams initParams)
     {
+        // every run logs to a debugger; the console is the daemon's and dev's, the Event Log the service's
+        VhLogger.AddProvider(new TraceLoggerProvider());
+
         var paths = new WindowsCliPaths(initParams.AppId);
         var setup = new WindowsServiceSetup(paths);
         var channel = new WindowsDaemonChannel(paths);
@@ -25,6 +30,7 @@ public static class WindowsCliHost
             CreateTray = trayParams => WindowsAppTray.Start(trayParams.Api, trayParams.UiAssets,
                 trayParams.ShowWindow, trayParams.Exit),
             DaemonHostFactory = new WindowsDaemonHostFactory(initParams, paths),
+            CreateConsoleLoggerProvider = () => new ConsoleLoggerProvider(),
             HostDaemon = (run, cancellationToken) =>
                 WindowsDaemonService.Host(paths.InstanceName, run, cancellationToken)
         };

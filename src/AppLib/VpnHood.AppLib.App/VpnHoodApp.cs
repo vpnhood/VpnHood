@@ -719,10 +719,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             LogAnonymous = !isDebug && (appLogOptions.LogAnonymous == true || userSettings.LogAnonymous),
             LogEventNames =
                 [.. LogService.GetLogEventNames(appLogOptions.LogEventNames, userSettings.DebugData1 ?? "")],
-            LogToConsole = appLogOptions.LogToConsole,
             LogToFile = appLogOptions.LogToFile,
-            AutoFlush = appLogOptions.AutoFlush,
-            CategoryName = appLogOptions.CategoryName
+            AutoFlush = appLogOptions.AutoFlush
         };
         return logOptions;
     }

@@ -179,6 +179,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                     GatewayIpV6 = BuildGatewayFromFromNetwork(adapterIpNetworkV6);
                     await AddAddress(adapterIpNetworkV6, cancellationToken).Vhc();
                 }
+                // a cancellation is no IPv6 failure: it passes to the start's own catch, which stops the adapter
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                    throw;
+                }
                 catch (Exception ex) {
                     VhLogger.Instance.LogError(ex,
                         "Failed to add IPv6 address to TUN adapter. AdapterIpNetworkV6: {AdapterIpNetworkV6}",
@@ -257,9 +261,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             VhLogger.Instance.LogInformation("TUN adapter started.");
         }
         catch (Exception ex) {
-            // when a concurrent Stop() tears the adapter down mid-start, the first step to fail is
-            // fallout of that stop, so report the start as canceled rather than broken
-            var isStopped = _isStopping || !IsStarted;
+            // when a concurrent Stop() tears the adapter down mid-start, or the start is cancelled (a
+            // terminal's Ctrl+C also kills the command it runs), the first step to fail is fallout of
+            // that, so report the start as canceled rather than broken
+            var isStopped = _isStopping || !IsStarted || cancellationToken.IsCancellationRequested;
             VhLogger.Instance.Log(ex is OperationCanceledException || isStopped ? LogLevel.Trace : LogLevel.Error,
                 ex, "Failed to start TUN adapter.");
             Stop(false);

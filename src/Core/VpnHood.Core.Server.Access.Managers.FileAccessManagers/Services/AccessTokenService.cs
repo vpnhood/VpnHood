@@ -143,11 +143,13 @@ public class AccessTokenService
 
         var accessTokenData = await GetInternal(tokenId, cancellationToken);
         accessTokenData.AccessToken.Name = tokenName;
+
+        // not cancelled: a write cut off after the truncation would leave the usage empty
         await File
             .WriteAllTextAsync(
-                GetAccessTokenUsageFileName(tokenId), 
-                JsonSerializer.Serialize(accessTokenData.Usage), 
-                cancellationToken)
+                GetAccessTokenUsageFileName(tokenId),
+                JsonSerializer.Serialize(accessTokenData.Usage),
+                CancellationToken.None)
             .Vhc();
 
         return accessTokenData;
@@ -158,6 +160,10 @@ public class AccessTokenService
     {
         try {
             return await Get(tokenId, cancellationToken).Vhc();
+        }
+        // a cancellation passes rather than reading as a missing token
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to get token item. TokenId: {TokenId}", tokenId);
@@ -179,12 +185,12 @@ public class AccessTokenService
         accessTokenData.Usage.Version = 2;
         accessTokenData.Usage.LastUsedTime = DateTime.UtcNow;
 
-        // save to file
+        // save to file; not cancelled: a write cut off after the truncation would leave the usage empty
         await File
             .WriteAllTextAsync(
-                GetAccessTokenUsageFileName(tokenId), 
-                JsonSerializer.Serialize(accessTokenData.Usage), 
-                cancellationToken)
+                GetAccessTokenUsageFileName(tokenId),
+                JsonSerializer.Serialize(accessTokenData.Usage),
+                CancellationToken.None)
             .Vhc();
     }
 

@@ -32,13 +32,22 @@ public class CommandListener(string commandFilePath) : IDisposable
                 EnableRaisingEvents = true
             };
 
-            _fileSystemWatcher.Changed += (_, e) => {
-                var command = ReadAllTextAndWait(e.FullPath);
-                OnCommand([.. VhUtils.ParseArguments(command)]);
-            };
+            _fileSystemWatcher.Changed += FileSystemWatcher_Changed;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not start CommandListener! ");
+        }
+    }
+
+    // a failure here would escape the watcher's thread and end the process
+    private void FileSystemWatcher_Changed(object? sender, FileSystemEventArgs e)
+    {
+        try {
+            var command = ReadAllTextAndWait(e.FullPath);
+            OnCommand([.. VhUtils.ParseArguments(command)]);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not run the command. CommandFile: {CommandFile}", e.FullPath);
         }
     }
 

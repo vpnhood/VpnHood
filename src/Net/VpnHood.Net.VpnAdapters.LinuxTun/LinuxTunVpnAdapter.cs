@@ -212,8 +212,10 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         ClearAdapterName();
 
         // Create and configure tun interface
+        // Never cut off: a tun the command made after the cleanup looked would stay, down, and the
+        // next start refuses a down tun as held.
         VhLogger.Instance.LogDebug("Creating tun adapter...");
-        await ExecuteCommandAsync($"ip tuntap add dev {AdapterName} mode tun", cancellationToken).Vhc();
+        await ExecuteCommandAsync($"ip tuntap add dev {AdapterName} mode tun", CancellationToken.None).Vhc();
         _isAdapterAdded = true;
 
         // The alias derived from the app id lets a later start tell this tun from another app's.
@@ -310,21 +312,23 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             cancellationToken).Vhc();
     }
 
+    // The rules AddNat adds, each by its own spec: restoring a whole table would also drop a rule
+    // another tool, such as a firewall or Docker, adds meanwhile.
     private void TryRemoveNat(IpNetwork ipNetwork)
     {
         var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
+        TryDeleteRule(iptables, $"-t nat -D POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE");
+        TryDeleteRule(iptables, $"-D FORWARD -i {AdapterName} -o {_primaryAdapterName} -j ACCEPT");
+        TryDeleteRule(iptables,
+            $"-D FORWARD -i {_primaryAdapterName} -o {AdapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT");
+    }
 
-        // Remove NAT rule. try until no rule found
-        var res = "ok";
-        while (!string.IsNullOrEmpty(res)) {
-            res = VhUtils.TryInvoke("Remove NAT rule", () =>
-                ExecuteCommand(
-                    $"{iptables} -t nat -D POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE"));
-        }
-
-        // Remove forwarding rules
-        VhUtils.TryInvoke("Remove NAT forwarding rules...", () =>
-            ExecuteCommand($"{iptables}-save | grep -v -w \"{AdapterName}\" | {iptables}-restore"));
+    // every copy: a delete prints nothing, and fails once none is left
+    private static void TryDeleteRule(string iptables, string rule)
+    {
+        string? res = "";
+        while (res != null)
+            res = VhUtils.TryInvoke("Remove NAT rule", () => ExecuteCommand($"{iptables} {rule}"));
     }
 
     protected override async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)

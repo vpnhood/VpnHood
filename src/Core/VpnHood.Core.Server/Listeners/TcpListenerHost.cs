@@ -217,6 +217,7 @@ internal class TcpListenerHost(
             try { await cts.TryCancelAsync().Vhc(); } catch { /* ignore */ }
             try { listener.Stop(); } catch { /* ignore */ }
             try { await listenerTask.Vhc(); }
+            catch (OperationCanceledException) { /* ours, cancelled above */ }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in stopping TcpListener.");
             }

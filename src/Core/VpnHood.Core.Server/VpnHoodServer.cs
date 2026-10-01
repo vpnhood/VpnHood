@@ -109,7 +109,7 @@ public class VpnHoodServer : IAsyncDisposable
         switch (State) {
             case ServerState.Waiting when _configureTask.IsCompleted:
                 if (_configErrorTracker.IsPaused) return;
-                _configureTask = Configure(cancellationToken); // configure does not throw any error
+                _configureTask = Configure(cancellationToken); // throws only a stop's cancellation, which the job swallows
                 await _configureTask.Vhc();
                 return;
 
@@ -159,6 +159,9 @@ public class VpnHoodServer : IAsyncDisposable
             await SessionManager.RecoverSessions(cancellationToken);
             VhLogger.Instance.LogInformation("The old sessions have been recovered. SessionCount: {SessionCount}",
                 SessionManager.Sessions.Count);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not recover old sessions.");
@@ -308,6 +311,10 @@ public class VpnHoodServer : IAsyncDisposable
             VhLogger.Instance.LogError(ex, "Bad Configuration.");
             _configErrorTracker.RecordError(ex);
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
+        }
+        // a stop's cancellation is not a configuration error: it passes, and the job swallows it
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             State = ServerState.Waiting;
@@ -472,9 +479,10 @@ public class VpnHoodServer : IAsyncDisposable
         try {
             var serverConfig = await AccessManager.Server_Configure(serverInfo, cancellationToken).Vhc();
             _isRestarted = false; // is restarted should send once
+            // not cancelled: a write cut off after the truncation would leave no last config for maintenance
             try {
                 await File.WriteAllTextAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig),
-                        cancellationToken)
+                        CancellationToken.None)
                     .Vhc();
             }
             catch {
@@ -492,6 +500,10 @@ public class VpnHoodServer : IAsyncDisposable
                     VhLogger.Instance.LogWarning("Last configuration has been loaded to report Maintenance mode.");
                     return ret;
                 }
+            }
+            // a stop's cancellation passes: the maintenance error rethrown below would record a strike
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                throw;
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogInformation(ex, "Could not load last ServerConfig.");
@@ -556,6 +568,10 @@ public class VpnHoodServer : IAsyncDisposable
             // mark end point statuses as sent so they won't be re-sent until next reconfigure
             if (status.EndPointStatuses != null)
                 _endPointStatusesSent = true;
+        }
+        // a stop's cancellation is not a configuration error: it passes, and the job swallows it
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the server status.");

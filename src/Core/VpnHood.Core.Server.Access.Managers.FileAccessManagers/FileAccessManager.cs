@@ -340,6 +340,10 @@ public class FileAccessManager : IAccessManager
                     responses.Add(SessionService.GetSessionResponse(session.Key, accessTokenData,
                         session.Value.HostEndPoint));
             }
+            // a cancellation is no failure of this session: it passes
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                throw;
+            }
             catch (Exception e) {
                 VhLogger.Instance.LogError(e, "Failed to get session. SessionId: {SessionId}", session.Key);
             }
@@ -377,6 +381,10 @@ public class FileAccessManager : IAccessManager
                 var sessionResponse = await Session_AddUsage(sessionUsage, cancellationToken);
                 ret[sessionUsage.SessionId] = sessionResponse;
             }
+            // a cancellation passes rather than becoming the session's AccessError
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                throw;
+            }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to add usage. SessionId: {SessionId}", sessionUsage.SessionId);
                 ret[sessionUsage.SessionId] = new SessionResponse {
@@ -396,6 +404,10 @@ public class FileAccessManager : IAccessManager
             try {
                 var sessionResponse = await Session_AddUsage(sessionUsage, cancellationToken);
                 ret[sessionUsage.SessionId] = sessionResponse;
+            }
+            // a cancellation passes rather than becoming the session's AccessError
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                throw;
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to add usage. SessionId: {SessionId}", sessionUsage.SessionId);

@@ -276,6 +276,10 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
             return session;
         }
+        // a cancellation, such as a stop's, keeps the record, so the session can recover after a restart
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(GeneralEventId.Session, ex,
                 "Could not recover a session. SessionId: {SessionId}",
@@ -535,7 +539,9 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     public async Task<int> Sync(bool force, CancellationToken cancellationToken)
     {
-        using var lockResult = await _syncLock.LockAsync(TimeSpan.Zero, cancellationToken).Vhc();
+        // a forced sync, such as the last one at shutdown, waits for one in progress instead of skipping
+        using var lockResult = await _syncLock
+            .LockAsync(force ? Timeout.InfiniteTimeSpan : TimeSpan.Zero, cancellationToken).Vhc();
         if (!lockResult.Succeeded)
             return 0;
 

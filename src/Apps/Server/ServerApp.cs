@@ -37,7 +37,10 @@ public class ServerApp : IDisposable
     private readonly ITracker _tracker;
     private readonly Lazy<IAccessManager> _accessManager;
     private readonly CommandListener _commandListener;
+    private readonly CancellationTokenSource _stopCts = new(); // never disposed: a late stop must not hit a disposed source
+    private IReadOnlyList<PosixSignalRegistration> _signalRegistrations = []; // held for the process's life: a collected one unregisters
     private VpnHoodServer? _vpnHoodServer;
+    private IVpnAdapter? _vpnAdapter;
     private FileStream? _lockStream;
     private bool _disposed;
     private readonly string? _downloadsPath;
@@ -56,8 +59,6 @@ public class ServerApp : IDisposable
 
     public ServerApp()
     {
-        AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
-
         // set storage folder
         var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
         var storagePath = parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish))
@@ -142,14 +143,6 @@ public class ServerApp : IDisposable
         }
     }
 
-    private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
-    {
-        if (_vpnHoodServer != null) {
-            VhLogger.Instance.LogInformation("Syncing all sessions and terminating the server...");
-            _vpnHoodServer.Dispose();
-        }
-    }
-
     public static Guid GetServerId(string serverIdFile)
     {
         if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
@@ -203,9 +196,10 @@ public class ServerApp : IDisposable
         if (VhUtils.IsNullOrEmpty(e.Arguments))
             return;
 
+        // it only cancels: the running start command then stops the server, as on a signal
         if (e.Arguments[0] == "stop") {
             VhLogger.Instance.LogInformation("I have received the stop command!");
-            _vpnHoodServer?.Dispose();
+            _stopCts.TryCancel();
         }
 
         if (e.Arguments[0] == "gc") {
@@ -247,18 +241,53 @@ public class ServerApp : IDisposable
     {
         var command = new Command("stop",
             "Stop all instances of VpnHoodServer that running from this folder");
-        command.SetAction(_ => {
+        command.SetAction(async (_, cancellationToken) => {
             Console.WriteLine("Sending stop server request...");
             _commandListener.SendCommand("stop");
-            return Task.CompletedTask;
+
+            // Returns once the server has exited, as systemd expects of ExecStop: right after it,
+            // systemd signals every process left in the unit, the cleanup's ip and iptables too.
+            if (!await WaitForInstanceExit(TimeSpan.FromSeconds(30), cancellationToken).Vhc()) {
+                Console.Error.WriteLine("The server has not stopped within 30 seconds.");
+                return 1;
+            }
+
+            Console.WriteLine("The server has stopped.");
+            return 0;
         });
         return command;
+    }
+
+    // the running start command holds the instance lock until its process ends
+    private async Task<bool> WaitForInstanceExit(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (true) {
+            try {
+                File.OpenWrite(LockFilePath).Dispose();
+                return true;
+            }
+            catch (IOException) when (DateTime.UtcNow < deadline) {
+                await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken).Vhc();
+            }
+            catch (IOException) {
+                return false;
+            }
+        }
     }
 
     private Command CreateStartCommand()
     {
         var command = new Command("start", "Run the server (default command)");
-        command.SetAction(async (_, cancellationToken) => {
+        command.SetAction(async (_, _) => {
+
+            // A signal - SIGTERM, Ctrl+C, a terminal's hang-up - stops the server as the stop command
+            // does, and the process ends once it has stopped. The parser handles no signal (Start).
+            _signalRegistrations = [
+                PosixSignalRegistration.Create(PosixSignal.SIGTERM, OnSignal),
+                PosixSignalRegistration.Create(PosixSignal.SIGINT, OnSignal),
+                PosixSignalRegistration.Create(PosixSignal.SIGHUP, OnSignal)
+            ];
 
             // LogAnonymizer is on by default
             VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizerValue ?? true;
@@ -270,33 +299,67 @@ public class ServerApp : IDisposable
             // initialize logger
             InitFileLogger(StoragePath);
 
-            // check FileAccessManager; the access manager's first use, now that the log exists
-            if (FileAccessManager != null && await FileAccessManager.AccessTokenService.GetTotalCount() == 0)
-                VhLogger.Instance.LogWarning(
-                    "There is no token in the store! Use the following command to create one:\n " +
-                    "dotnet VpnHoodServer.dll gen -?");
+            // from here a stop command ends the start-up too; only the lock's holder may listen, since
+            // starting to listen clears the command file
+            _commandListener.Start();
 
-            // SystemInfoProvider
-            ISystemInfoProvider systemInfoProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new LinuxSystemInfoProvider()
-                : new WinSystemInfoProvider();
+            try {
+                // check FileAccessManager; the access manager's first use, now that the log exists
+                if (FileAccessManager != null && await FileAccessManager.AccessTokenService.GetTotalCount() == 0)
+                    VhLogger.Instance.LogWarning(
+                        "There is no token in the store! Use the following command to create one:\n " +
+                        "dotnet VpnHoodServer.dll gen -?");
 
-            // NetConfigurationProvider
-            INetConfigurationProvider? configurationProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new LinuxNetConfigurationProvider(VhLogger.Instance)
-                : null;
+                await RunServer().Vhc();
+            }
+            catch (Exception ex) {
+                // the parser reports it on stderr, which an installed service discards
+                VhLogger.Instance.LogError(ex, "The server could not start.");
+                throw;
+            }
+        });
 
-            ISwapMemoryProvider? swapMemoryProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new LinuxSwapMemoryProvider(VhLogger.Instance)
-                : null;
+        return command;
+    }
 
+    // the signal is held, so the process stays until the start command has stopped the server
+    private void OnSignal(PosixSignalContext context)
+    {
+        context.Cancel = true;
+        VhLogger.Instance.LogInformation("I have received the {Signal} signal!", context.Signal);
+        _stopCts.TryCancel();
+    }
 
-            // run server
-            var virtualIpNetworkV4 = ServerTransportDefaults.VirtualIpNetworkV4;
-            var virtualIpNetworkV6 = ServerTransportDefaults.VirtualIpNetworkV6;
-            _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
+    // A signal or the stop command cancels _stopCts, which ends the server here, the only place that
+    // disposes it, and then its adapter.
+    private async Task RunServer()
+    {
+        var stopToken = _stopCts.Token;
+
+        // SystemInfoProvider
+        ISystemInfoProvider systemInfoProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            ? new LinuxSystemInfoProvider()
+            : new WinSystemInfoProvider();
+
+        // NetConfigurationProvider
+        INetConfigurationProvider? configurationProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            ? new LinuxNetConfigurationProvider(VhLogger.Instance)
+            : null;
+
+        ISwapMemoryProvider? swapMemoryProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            ? new LinuxSwapMemoryProvider(VhLogger.Instance)
+            : null;
+
+        // run server
+        var virtualIpNetworkV4 = ServerTransportDefaults.VirtualIpNetworkV4;
+        var virtualIpNetworkV6 = ServerTransportDefaults.VirtualIpNetworkV6;
+        try {
+            // a stop that came before: no adapter to build and tear down again
+            stopToken.ThrowIfCancellationRequested();
+            _vpnAdapter = await CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6, stopToken).Vhc();
+            var server = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
-                VpnAdapter = await CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6, cancellationToken),
+                VpnAdapter = _vpnAdapter,
                 SystemInfoProvider = systemInfoProvider,
                 NetConfigurationProvider = configurationProvider,
                 SwapMemoryProvider = swapMemoryProvider,
@@ -307,24 +370,42 @@ public class ServerApp : IDisposable
                 VirtualIpNetworkV4 = virtualIpNetworkV4,
                 VirtualIpNetworkV6 = virtualIpNetworkV6
             });
+            _vpnHoodServer = server;
 
-            // Command listener
-            _commandListener.Start();
-
-            // start server
-            await _vpnHoodServer.Start(cancellationToken).Vhc();
-            while (_vpnHoodServer.State != ServerState.Disposed)
-                await Task.Delay(1000, cancellationToken).Vhc();
-        });
-
-        return command;
+            try {
+                await server.Start(stopToken).Vhc();
+                await Task.Delay(Timeout.Infinite, stopToken).Vhc(); // the server never disposes itself
+            }
+            finally {
+                await DisposeServer(server).Vhc();
+            }
+        }
+        catch (OperationCanceledException) when (stopToken.IsCancellationRequested) {
+            // a stop or a signal, at any point: not a failure
+        }
+        finally {
+            // nothing else removes the tun and its NAT and forwarding rules, and no finalizer runs at exit
+            _vpnAdapter?.Dispose();
+        }
     }
+
+    // logged rather than thrown: a failed disposal must not hide a start-up failure, nor skip the adapter
+    private static async Task DisposeServer(VpnHoodServer server)
+    {
+        try {
+            await server.DisposeAsync().Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not stop the server cleanly.");
+        }
+    }
+
+    private string LockFilePath => Path.Combine(InternalStoragePath, "server.lock");
 
     private bool IsAnotherInstanceRunning()
     {
-        var lockFile = Path.Combine(InternalStoragePath, "server.lock");
         try {
-            _lockStream = File.OpenWrite(lockFile);
+            _lockStream = File.OpenWrite(LockFilePath);
             var stream = new StreamWriter(_lockStream, leaveOpen: true);
             stream.WriteLine(DateTime.UtcNow);
             stream.Dispose();
@@ -335,21 +416,23 @@ public class ServerApp : IDisposable
         }
     }
 
+    // Proxy only where there is no adapter to have: not Linux, or a failure, such as a host without
+    // IPv6, whose probe the constructor runs. A stop is passed on, not taken for a failure.
     private static async Task<IVpnAdapter?> CreateTunProvider(IpNetwork virtualIpNetworkV4,
         IpNetwork virtualIpNetworkV6, CancellationToken cancellationToken)
     {
-        try {
-            var vpnAdapter = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-                ? new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
-                    AdapterName = AppName,
-                    AppId = AppId,
-                    Blocking = false,
-                    AutoDisposePackets = true
-                })
-                : null;
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return null;
 
-            // start the adapter
-            if (vpnAdapter != null) {
+        try {
+            var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
+                AdapterName = AppName,
+                AppId = AppId,
+                Blocking = false,
+                AutoDisposePackets = true
+            });
+
+            try {
                 VhLogger.Instance.LogInformation("Starting VpnAdapter...");
                 await vpnAdapter.Start(new VpnAdapterOptions {
                     SessionName = "VpnHoodServer",
@@ -357,10 +440,17 @@ public class ServerApp : IDisposable
                     UseNat = true,
                     VirtualIpNetworkV4 = virtualIpNetworkV4,
                     VirtualIpNetworkV6 = virtualIpNetworkV6
-                }, cancellationToken);
+                }, cancellationToken).Vhc();
+                return vpnAdapter;
             }
-
-            return vpnAdapter;
+            catch {
+                // a half-made adapter would stay subscribed to address changes and restart itself
+                vpnAdapter.Dispose();
+                throw;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to create the VpnAdapter. Using proxy only.");
@@ -374,6 +464,7 @@ public class ServerApp : IDisposable
             return;
         _disposed = true;
 
+        // the signal registrations stay to the process's end, so a late signal is still held
         LogManager.Shutdown();
     }
 
@@ -394,7 +485,7 @@ public class ServerApp : IDisposable
         // set default
         if (args.Length == 0) args = ["start"];
         var startCommand = CreateStartCommand();
-        var rootCommand = new RootCommand($"VpnHood! Server v{VpnHoodServer.ServerVersion.ToString(3)}") {
+        var rootCommand = new RootCommand($"VpnHood! SERVER v{VpnHoodServer.ServerVersion.ToString(3)}") {
             startCommand,
             CreateStopCommand(),
             CreateGcCommand()
@@ -411,6 +502,10 @@ public class ServerApp : IDisposable
         if (parseResult.CommandResult.Command != startCommand)
             VhLogger.AddProvider(new ConsoleLoggerProvider());
 
-        return await parseResult.InvokeAsync(new InvocationConfiguration(), cancellationToken).Vhc();
+        // No signal handling by the parser: its handler can cancel a source it has just disposed when a
+        // signal lands as a command ends, which crashes the process. start holds its own signals (its
+        // action); a signal ends any other command at once.
+        var invocationConfiguration = new InvocationConfiguration { ProcessTerminationTimeout = null };
+        return await parseResult.InvokeAsync(invocationConfiguration, cancellationToken).Vhc();
     }
 }

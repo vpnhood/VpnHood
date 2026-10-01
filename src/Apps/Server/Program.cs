@@ -6,12 +6,7 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
-        try {
-            using var serverApp = new ServerApp();
-            return await serverApp.Start(args, CancellationToken.None).Vhc();
-        }
-        catch (Exception ex) {
-            throw new Exception(ex.Message);
-        }
+        using var serverApp = new ServerApp();
+        return await serverApp.Start(args, CancellationToken.None).Vhc();
     }
 }

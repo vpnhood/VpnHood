@@ -298,7 +298,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         TryRemoveNat(ipNetwork);
 
         // Configure NAT with iptables
-        var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
+        var iptables = IpTables(ipNetwork);
         await ExecuteCommandAsync(
             $"{iptables} -t nat -A POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE",
             cancellationToken).Vhc();
@@ -317,12 +317,16 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     // another tool, such as a firewall or Docker, adds meanwhile.
     private void TryRemoveNat(IpNetwork ipNetwork)
     {
-        var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
+        var iptables = IpTables(ipNetwork);
         TryDeleteRule(iptables, $"-t nat -D POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE");
         TryDeleteRule(iptables, $"-D FORWARD -i {AdapterName} -o {_primaryAdapterName} -j ACCEPT");
         TryDeleteRule(iptables,
             $"-D FORWARD -i {_primaryAdapterName} -o {AdapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT");
     }
+
+    // -w 5: up to 5 s for the xtables lock another tool, such as a firewall or Docker, may hold, rather
+    // than fail at once; the nft backend has no such lock and accepts it all the same.
+    private static string IpTables(IpNetwork ipNetwork) => ipNetwork.IsV4 ? "iptables -w 5" : "ip6tables -w 5";
 
     // every copy: a delete prints nothing, and fails once none is left
     private static void TryDeleteRule(string iptables, string rule)

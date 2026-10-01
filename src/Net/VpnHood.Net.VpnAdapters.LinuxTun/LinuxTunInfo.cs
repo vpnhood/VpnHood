@@ -3,9 +3,9 @@
 // A tun as sysfs shows it: its name, the tag its creator wrote as its alias, and whether a
 // process holds it open. The tun driver keeps the carrier up exactly while a queue is attached, so
 // carrier 1 is a tun in use and 0 one that no process holds - a leftover. A tun that is down
-// reports no carrier at all; that one is counted as held, since nothing proves it free, and only
-// what is known to be free is ever deleted.
-internal sealed record LinuxTunInfo(string Name, string Alias, bool IsHeld)
+// reports no carrier at all, so whether a process holds it is not known (IsDown): another app's is
+// never deleted, while this app's own, which its single-instance lock proves free, is.
+internal sealed record LinuxTunInfo(string Name, string Alias, bool IsHeld, bool IsDown)
 {
     private const string NetFolder = "/sys/class/net";
 
@@ -21,7 +21,9 @@ internal sealed record LinuxTunInfo(string Name, string Alias, bool IsHeld)
         if (!File.Exists(Path.Combine(folder, "tun_flags")))
             return null;
 
-        return new LinuxTunInfo(name, ReadAlias(folder), ReadIsHeld(folder));
+        var carrier = TryReadCarrier(folder);
+        return new LinuxTunInfo(name, ReadAlias(folder),
+            IsHeld: carrier is not (null or "0"), IsDown: carrier is null);
     }
 
     // The entries are links into /sys/devices, so they are listed as entries, not as folders.
@@ -39,14 +41,14 @@ internal sealed record LinuxTunInfo(string Name, string Alias, bool IsHeld)
         return File.Exists(aliasFile) ? File.ReadAllText(aliasFile).Trim() : "";
     }
 
-    private static bool ReadIsHeld(string folder)
+    // Null when the tun is down (EINVAL), or gone since it was listed.
+    private static string? TryReadCarrier(string folder)
     {
         try {
-            return File.ReadAllText(Path.Combine(folder, "carrier")).Trim() != "0";
+            return File.ReadAllText(Path.Combine(folder, "carrier")).Trim();
         }
         catch (IOException) {
-            // down (EINVAL), or gone since it was listed: not known to be free
-            return true;
+            return null;
         }
     }
 }

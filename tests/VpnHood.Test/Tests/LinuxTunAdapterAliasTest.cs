@@ -52,12 +52,14 @@ public class LinuxTunAdapterAliasTest
     {
         var appId = new string('a', 1000);
         var alias = LinuxTunVpnAdapter.GetAdapterAlias(appId);
-        var own = new LinuxTunInfo("old-tun", alias, false);
+        var own = new LinuxTunInfo("old-tun", alias, IsHeld: false, IsDown: false);
         var foreign = own with { Alias = LinuxTunVpnAdapter.GetAdapterAlias(appId + "other") };
 
         Assert.IsTrue(LinuxTunVpnAdapter.IsOwnLeftover(own, "new-tun", alias));
+        Assert.IsTrue(LinuxTunVpnAdapter.IsOwnLeftover(own with { IsDown = true }, "new-tun", alias));
         Assert.IsFalse(LinuxTunVpnAdapter.IsOwnLeftover(own with { IsHeld = true }, "old-tun", alias));
         Assert.IsFalse(LinuxTunVpnAdapter.IsOwnLeftover(foreign, "old-tun", alias));
+        Assert.IsFalse(LinuxTunVpnAdapter.IsOwnLeftover(foreign with { IsDown = true }, "old-tun", alias));
         Assert.IsFalse(LinuxTunVpnAdapter.IsOwnLeftover(own, "old-tun", null));
     }
 }

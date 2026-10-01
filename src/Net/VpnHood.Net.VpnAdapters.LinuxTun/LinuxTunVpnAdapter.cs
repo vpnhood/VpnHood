@@ -112,7 +112,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     // Whether a tun is one this app left and may clear: nobody holds it, and it carries the app's id,
-    // or, from a version before tags, no tag and this adapter's name.
+    // or, from a version before tags, no tag and this adapter's name. A down one is cleared too: the
+    // app's single-instance lock leaves no other run of it to hold it.
     internal static bool IsOwnLeftover(LinuxTunInfo tun, string adapterName, string? adapterAlias)
     {
         if (tun.IsHeld)
@@ -125,9 +126,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     // At the daemon's start, after its single-instance lock, rather than at the next connect: a crash
-    // leaves its tun with the routes on. Every tun that carries this app's id and no process holds
-    // goes, its DNS entry first; nothing here throws. An untagged one, known only by the adapter's
-    // name, the adapter's own start clears.
+    // leaves its tun with the routes on. Every tun that carries this app's id and no process holds -
+    // a down one too - goes, its DNS entry first; nothing here throws. An untagged one, known only by
+    // the adapter's name, the adapter's own start clears.
     public static void RemoveLeftovers(string appId)
     {
         var adapterAlias = GetAdapterAlias(appId);
@@ -160,7 +161,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     {
         var owner = tun.Alias.Length > 0 ? tun.Alias : "an app that does not tag its tun";
         return tun.IsHeld
-            ? $"the interface {tun.Name} is in use by another VPN ({owner}), or is down. " +
+            ? $"the interface {tun.Name} is in use by another VPN ({owner}). " +
               "Stop that VPN, or give this app another name."
             : $"the interface {tun.Name} belongs to {owner}. " +
               $"If that app is gone, remove it with: sudo ip link delete {tun.Name}";
@@ -212,8 +213,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         ClearAdapterName();
 
         // Create and configure tun interface
-        // Never cut off: a tun the command made after the cleanup looked would stay, down, and the
-        // next start refuses a down tun as held.
+        // Never cut off: a tun the command made after the cleanup looked would stay, down, until the
+        // next start clears it.
         VhLogger.Instance.LogDebug("Creating tun adapter...");
         await ExecuteCommandAsync($"ip tuntap add dev {AdapterName} mode tun", CancellationToken.None).Vhc();
         _isAdapterAdded = true;

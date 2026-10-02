@@ -43,12 +43,11 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
             Features = app.Features,
             IntentFeatures = app.Services.DeviceUiProvider.ToIntentFeatures(app.Services.UserReviewProvider),
             UserSettings = app.UserSettings,
-            VpnProfileInfos = [.. app.VpnProfileService.List().Select(x => x.ToInfo(app.Features))],
+            VpnProfileInfos = app.VpnProfileService.List().Select(x => x.ToInfo(app.Features)).ToArray(),
             State = app.State,
-            AvailableCultureInfos = [
-                .. app.Services.CultureProvider.AvailableCultures
-                    .Select(x => new UiCultureInfo(x))
-            ]
+            AvailableCultureInfos = app.Services.CultureProvider.AvailableCultures
+                .Select(x => new UiCultureInfo(x))
+                .ToArray()
         };
 
         return Task.FromResult(ret);
@@ -182,7 +181,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
     public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
     {
         return Task.FromResult<IReadOnlyList<DeviceAppInfo>>(
-            [.. app.InstalledApps.Select(x => x.ToAppDto())]);
+            app.InstalledApps.Select(x => x.ToAppDto()).ToArray());
     }
 
     public Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken)

@@ -107,15 +107,14 @@ public class ManagedProxyConnector : IProxyConnector
     }
 
     public IReadOnlyList<ProxyEndPointInfo> GetEndPointInfos() =>
-        [.. _proxyEndPointEntries.Select(x => x.Info)];
+        _proxyEndPointEntries.Select(x => x.Info).ToArray();
 
     private async Task<ProxyEndPointEntry[]> LoadEntries()
     {
         var records = await _store.List().Vhc();
-        return [
-            .. records
-                .Select(x => new ProxyEndPointEntry(x.ToInfo()))
-        ];
+        return records
+            .Select(x => new ProxyEndPointEntry(x.ToInfo()))
+            .ToArray();
     }
 
     private async Task ReloadEntries()
@@ -157,7 +156,7 @@ public class ManagedProxyConnector : IProxyConnector
         if (dirtyEntries.Length == 0)
             return;
 
-        await _store.UpdateStatuses([.. dirtyEntries.Select(x => x.Info)]).Vhc();
+        await _store.UpdateStatuses(dirtyEntries.Select(x => x.Info).ToArray()).Vhc();
         await _store.SetQueuePosition(_queuePosition).Vhc();
         foreach (var entry in dirtyEntries)
             entry.IsDirty = false;

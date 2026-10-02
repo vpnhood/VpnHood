@@ -19,7 +19,7 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
     // only report transmitters that are still running; a transmitter that disposed itself
     // (e.g. its socket died) must not be advertised in the Hello response
     public IReadOnlyList<IPEndPoint> EndPoints =>
-        [.. _transmitters.Where(x => x.Connected).Select(x => x.LocalEndPoint)];
+        _transmitters.Where(x => x.Connected).Select(x => x.LocalEndPoint).ToArray();
 
     public Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
         IReadOnlyList<IPEndPoint> ipEndPoints, TransferBufferSize? bufferSize)

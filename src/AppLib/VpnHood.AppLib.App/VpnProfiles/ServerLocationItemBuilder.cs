@@ -40,12 +40,12 @@ internal static class ServerLocationItemBuilder
 
         // show unblockable only if the policy is set
         if (policy?.UnblockableOnly == true)
-            drafts = [.. drafts.Where(x => x.Options.HasUnblockable)];
+            drafts = drafts.Where(x => x.Options.HasUnblockable).ToArray();
 
         // the name a UI shows, in the language the app was told to speak: the shape carries the
         // name, it does not look one up, which is what keeps the country database out of the
         // contract and out of a paired browser's download
-        return [.. drafts.Select(ToItem)];
+        return drafts.Select(ToItem).ToArray();
     }
 
     private static ServerLocationItem ToItem(LocationDraft draft)
@@ -173,17 +173,13 @@ internal static class ServerLocationItemBuilder
 
         // set head sub auto items
         foreach (var draft in results.Where(x => x is { Location.IsAuto: false, Location.RegionName: "*" })) {
-            draft.Tags = [
-                .. CalcCategoryTags(results.Where(x =>
-                    x.Location.CountryCode == draft.Location.CountryCode && x.Location.RegionName != "*"))
-            ];
+            draft.Tags = CalcCategoryTags(results.Where(x =>
+                x.Location.CountryCode == draft.Location.CountryCode && x.Location.RegionName != "*")).ToArray();
         }
 
         // set head the auto after setting all sub auto items. This is to make sure the auto tags are calculated after all sub auto tags are set
         foreach (var draft in results.Where(x => x.Location.IsAuto)) {
-            draft.Tags = [
-                .. CalcCategoryTags(results.Where(x => x.Location.CountryCode != ServerLocationInfo.AutoCountryCode))
-            ];
+            draft.Tags = CalcCategoryTags(results.Where(x => x.Location.CountryCode != ServerLocationInfo.AutoCountryCode)).ToArray();
         }
 
         // What ServerLocationInfo's IComparable and Equals did, said out loud now that the contract's
@@ -197,7 +193,7 @@ internal static class ServerLocationItemBuilder
                 : string.Compare(a.Location.RegionName, b.Location.RegionName, StringComparison.OrdinalIgnoreCase);
         });
 
-        return [.. results.DistinctBy(x => x.Location.ServerLocation)];
+        return results.DistinctBy(x => x.Location.ServerLocation).ToArray();
     }
 
     private static IEnumerable<string> CalcCategoryTags(IEnumerable<LocationDraft> items)

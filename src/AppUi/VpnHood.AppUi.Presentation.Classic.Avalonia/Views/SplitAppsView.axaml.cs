@@ -67,9 +67,10 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
     private static IReadOnlyList<FilterItem> Sort(IReadOnlyList<FilterItem> items)
     {
         var isFutureSelected = items.Any(x => x is { Id: FutureAppsId, IsSelected: true });
-        return [.. items.OrderBy(x => isFutureSelected ? x.IsSelected ? 1 : 0 : x.IsSelected ? 0 : 1)
+        return items.OrderBy(x => isFutureSelected ? x.IsSelected ? 1 : 0 : x.IsSelected ? 0 : 1)
             .ThenBy(x => x.Id == FutureAppsId ? 0 : 1)
-            .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)];
+            .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
     }
 
     private static Bitmap? DecodePng(string base64)
@@ -106,13 +107,13 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
 
             if (items.Any(x => x is { Id: FutureAppsId, IsSelected: true })) {
                 Split.AppMode = SplitAppMode.Exclude;
-                Split.Apps = [.. items.Where(x => !x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id)];
+                Split.Apps = items.Where(x => !x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id).ToArray();
                 await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
                 return;
             }
 
             Split.AppMode = SplitAppMode.Include;
-            Split.Apps = [.. items.Where(x => x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id)];
+            Split.Apps = items.Where(x => x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id).ToArray();
             if (!IsSaveRejected)
                 await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
         }

@@ -46,7 +46,7 @@ public class CommandListener(string commandFilePath) : IDisposable
     {
         try {
             var command = ReadAllTextAndWait(e.FullPath);
-            OnCommand([.. VhUtils.ParseArguments(command)]);
+            OnCommand(VhUtils.ParseArguments(command).ToArray());
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not run the command. CommandFile: {CommandFile}", e.FullPath);

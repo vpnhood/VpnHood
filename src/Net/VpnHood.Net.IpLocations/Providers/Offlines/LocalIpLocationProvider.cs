@@ -19,10 +19,9 @@ public class LocalIpLocationProvider : IIpLocationProvider
 
     public LocalIpLocationProvider(IEnumerable<IpRangeInfo> ipRangeInfos)
     {
-        _ipRangeInfoList = [
-            .. ipRangeInfos
-                .OrderBy(x => x.IpRanges.FirstIpAddress, new IPAddressComparer())
-        ];
+        _ipRangeInfoList = ipRangeInfos
+            .OrderBy(x => x.IpRanges.FirstIpAddress, new IPAddressComparer())
+            .ToList();
     }
 
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)

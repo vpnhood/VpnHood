@@ -39,7 +39,7 @@ public static class DiagnoseUtil
             if (exception == null)
                 return null; //at least one task is success
 
-            tasks = [.. tasks.Where(x => x != task)];
+            tasks = tasks.Where(x => x != task).ToArray();
         }
 
         return exception;

@@ -53,7 +53,7 @@ public static class AppDtoConverterExtensions
             SuppressedTo = sessionInfo.SuppressedTo.ToAppDto(),
             ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress,
             CreatedTime = sessionInfo.CreatedTime,
-            ChannelProtocols = [.. sessionInfo.ChannelProtocols.Select(x => x.ToAppDto())],
+            ChannelProtocols = sessionInfo.ChannelProtocols.Select(x => x.ToAppDto()).ToArray(),
             IsTcpProxySupported = sessionInfo.IsTcpProxySupported,
             IsTcpPacketSupported = sessionInfo.IsTcpPacketSupported
         };

@@ -237,10 +237,9 @@ public class ClientServerTest : TestBase
     public async Task UdpChannel_custom_udp_port()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.UdpEndPoints = [
-            .. fileAccessManagerOptions.UdpEndPoints!
-                .Select(x => VhUtils.GetFreeUdpEndPoint(x.Address))
-        ];
+        fileAccessManagerOptions.UdpEndPoints = fileAccessManagerOptions.UdpEndPoints!
+            .Select(x => VhUtils.GetFreeUdpEndPoint(x.Address))
+            .ToArray();
 
         // Create Server
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
@@ -349,10 +348,9 @@ public class ClientServerTest : TestBase
 
         // make sure the client routes the external host through the vpn by adding the host ip to allowed list
         var clientOptions = TestHelper.CreateClientOptions();
-        clientOptions.IncludeIpRangesByDevice = [
-            .. clientOptions.IncludeIpRangesByDevice
-                .Union(new[] { httpsExternalEndPoint.Address }.ToIpRanges())
-        ];
+        clientOptions.IncludeIpRangesByDevice = clientOptions.IncludeIpRangesByDevice
+            .Union(new[] { httpsExternalEndPoint.Address }.ToIpRanges())
+            .ToArray();
         await using var dom = await ClientServerDom.Create(TestHelper, clientOptions: clientOptions);
 
         using var cts2 = new CancellationTokenSource(2000);

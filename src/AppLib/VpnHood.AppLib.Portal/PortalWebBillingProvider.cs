@@ -52,9 +52,9 @@ public class PortalWebBillingProvider : IBillingProvider
         var plans = await apiClient.ListPlans(StoreIds.Web, _packageName, cancellationToken).Vhc();
 
         // like every store: price exactly what the backend says is sellable, nothing more
-        plans = [.. plans.Where(plan => productIds.Contains(plan.PlanId))];
+        plans = plans.Where(plan => productIds.Contains(plan.PlanId)).ToArray();
 
-        return [.. plans.Select(plan => new SubscriptionPlan {
+        return plans.Select(plan => new SubscriptionPlan {
             PlanToken = plan.PlanId,
             Period = plan.BillingPeriod,
             BasePrice = double.Parse(plan.PriceAmount, CultureInfo.InvariantCulture),
@@ -63,7 +63,7 @@ public class PortalWebBillingProvider : IBillingProvider
             // the portal's own symbol: the checkout renders "{symbol}{amount}", so the card matches it
             CurrencySymbol = plan.PriceCurrencySymbol,
             CheckoutUrl = plan.PurchaseUrl
-        })];
+        }).ToArray();
     }
 
     // The UI opens the plan's checkout page instead; the purchase reaches the account server-side,

@@ -64,7 +64,7 @@ public partial class FilterList : UserControl
         var search = SearchBox.Text?.Trim();
         List.ItemsSource = string.IsNullOrEmpty(search)
             ? _items
-            : [.. _items.Where(x => x.Name.Contains(search, StringComparison.OrdinalIgnoreCase))];
+            : _items.Where(x => x.Name.Contains(search, StringComparison.OrdinalIgnoreCase)).ToArray();
     }
 
     private void OnSearchChanged(object? sender, TextChangedEventArgs e)

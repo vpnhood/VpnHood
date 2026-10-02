@@ -327,7 +327,7 @@ public class TestHelper : IDisposable
             ClientId = clientId ?? Guid.NewGuid().ToString(),
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
-            IncludeIpRangesByDevice = [.. TestIps.AllRemoteTestIps.ToIpRanges()],
+            IncludeIpRangesByDevice = TestIps.AllRemoteTestIps.ToIpRanges().ToArray(),
             SplitLocalNetwork = true,
             Transport = new ClientTransportOptions {
                 TcpConnectTimeout = TimeSpan.FromSeconds(3),

@@ -131,7 +131,7 @@ public class AppProxyEndPointService(
         }).Vhc();
 
         return new ListResult<AppProxyEndPointInfo> {
-            Items = [.. result.Items.Select(ToAppInfo)],
+            Items = result.Items.Select(ToAppInfo).ToArray(),
             TotalCount = result.TotalCount
         };
     }

@@ -85,10 +85,10 @@ public class IpNetworkTest : TestBase
             inverted.ToIpRanges().Invert(true, false).ToIpNetworks().ToArray());
 
         ipNetwork = IpNetwork.AllV4;
-        Assert.IsEmpty([.. ipNetwork.Invert()]);
+        Assert.IsEmpty(ipNetwork.Invert().ToArray());
 
         ipNetwork = IpNetwork.AllV6;
-        Assert.IsEmpty([.. ipNetwork.Invert()]);
+        Assert.IsEmpty(ipNetwork.Invert().ToArray());
 
         CollectionAssert.AreEqual(IpNetwork.All.ToArray(),
             Array.Empty<IpNetwork>().ToIpRanges().Invert().ToIpNetworks().ToArray());

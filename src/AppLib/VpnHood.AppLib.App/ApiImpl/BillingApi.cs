@@ -16,7 +16,7 @@ internal sealed class BillingApi(VpnHoodApp app) : IBillingApi
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         var plans = await BillingService.GetSubscriptionPlans(cancellationToken).Vhc();
-        return [.. plans.Select(x => x.ToAppDto())];
+        return plans.Select(x => x.ToAppDto()).ToArray();
     }
 
     public Task Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)

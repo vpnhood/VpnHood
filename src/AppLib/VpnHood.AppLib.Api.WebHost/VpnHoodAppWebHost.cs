@@ -179,7 +179,7 @@ public class VpnHoodAppWebHost : IAppWebHost
             if (!wasBound || !addresses.ToHashSet().SetEquals(_listeners.Select(x => x.Address)))
                 BindListeners(addresses);
 
-            _urls = [.. _listeners.Select(x => BuildUrl(x.Address))];
+            _urls = _listeners.Select(x => BuildUrl(x.Address)).ToArray();
         }
 
         StartWatchdog();
@@ -334,12 +334,12 @@ public class VpnHoodAppWebHost : IAppWebHost
             "The {Name} web host is short of listeners; binding again. Dead: {Dead}, Alive: {Alive}, Wanted: {Wanted}",
             _isRemote ? "remote" : "local", dead.Length, _listeners.Count, _addresses.Count);
 
-        _listeners = [.. _listeners.Except(dead)];
+        _listeners = _listeners.Except(dead).ToArray();
         foreach (var listener in dead)
             listener.Dispose();
 
         BindListeners(_addresses);
-        _urls = [.. _listeners.Select(x => BuildUrl(x.Address))];
+        _urls = _listeners.Select(x => BuildUrl(x.Address)).ToArray();
         return true;
     }
 
@@ -351,7 +351,7 @@ public class VpnHoodAppWebHost : IAppWebHost
         try {
             bool restarted;
             lock (_lock)
-                restarted = RebindListeners([.. _listeners.Where(x => !x.IsListening)]);
+                restarted = RebindListeners(_listeners.Where(x => !x.IsListening).ToArray());
 
             if (restarted)
                 Restarted?.Invoke(this, EventArgs.Empty);

@@ -57,9 +57,7 @@ public sealed class TcpStackIntegrationTest
                        $"Seq={tcp.SequenceNumber}, AckNum={tcp.AcknowledgmentNumber}, PayloadLen={tcp.Payload.Length}";
 
                 if (tcp.Payload.Length > 0) {
-                    var payloadHex = BitConverter.ToString([
-                        .. tcp.Payload.Span.ToArray().Take(Math.Min(32, tcp.Payload.Length))
-                    ]);
+                    var payloadHex = BitConverter.ToString(tcp.Payload.Span.ToArray().Take(Math.Min(32, tcp.Payload.Length)).ToArray());
                     info += $", PayloadHex={payloadHex}";
                 }
             }
@@ -81,9 +79,7 @@ public sealed class TcpStackIntegrationTest
                        $"Seq={tcp.SequenceNumber}, AckNum={tcp.AcknowledgmentNumber}, PayloadLen={tcp.Payload.Length}";
 
                 if (tcp.Payload.Length > 0) {
-                    var payloadHex = BitConverter.ToString([
-                        .. tcp.Payload.Span.ToArray().Take(Math.Min(32, tcp.Payload.Length))
-                    ]);
+                    var payloadHex = BitConverter.ToString(tcp.Payload.Span.ToArray().Take(Math.Min(32, tcp.Payload.Length)).ToArray());
                     info += $", PayloadHex={payloadHex}";
                 }
             }
@@ -120,7 +116,7 @@ public sealed class TcpStackIntegrationTest
                         lock (serverReceivedData)
                             serverReceivedData.AddRange(buffer.Take(bytesRead));
 
-                        var dataHex = BitConverter.ToString([.. buffer.Take(Math.Min(32, bytesRead))]);
+                        var dataHex = BitConverter.ToString(buffer.Take(Math.Min(32, bytesRead)).ToArray());
                         Console.WriteLine($"[SERVER] Received data (hex): {dataHex}");
 
                         Console.WriteLine($"[SERVER] Echoing {bytesRead} bytes back...");
@@ -184,7 +180,7 @@ public sealed class TcpStackIntegrationTest
             }
 
             Console.WriteLine($"[CLIENT] Total received: {totalReceived} bytes");
-            Console.WriteLine($"[CLIENT] Received data: {BitConverter.ToString([.. receiveBuffer.Take(totalReceived)])}");
+            Console.WriteLine($"[CLIENT] Received data: {BitConverter.ToString(receiveBuffer.Take(totalReceived).ToArray())}");
 
             // Summary
             Console.WriteLine("\n=== PACKET SUMMARY ===");

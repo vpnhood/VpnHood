@@ -246,7 +246,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsRewardedAdSupported = options.AdProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd),
             IsProxySupported = true,
             IsRemoteAccessSupported = options.WebHostFactory != null,
-            ChannelProtocols = [.. protocols.Select(x => x.ToAppDto())]
+            ChannelProtocols = protocols.Select(x => x.ToAppDto()).ToArray()
         };
 
         VpnProfileService = new VpnProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles), Features);
@@ -718,7 +718,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             MinLogLevel = logLevel,
             LogAnonymous = !isDebug && (appLogOptions.LogAnonymous == true || userSettings.LogAnonymous),
             LogEventNames =
-                [.. LogService.GetLogEventNames(appLogOptions.LogEventNames, userSettings.DebugData1 ?? "")],
+                LogService.GetLogEventNames(appLogOptions.LogEventNames, userSettings.DebugData1 ?? "").ToArray(),
             LogToFile = appLogOptions.LogToFile,
             AutoFlush = appLogOptions.AutoFlush
         };
@@ -1428,7 +1428,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         var purchaseOptions = new AppPurchaseOptions {
             IsStoreAvailable = storeInfo.IsAvailable,
-            SubscriptionPlans = [.. storeInfo.SubscriptionPlans.Select(x => x.ToAppDto())],
+            SubscriptionPlans = storeInfo.SubscriptionPlans.Select(x => x.ToAppDto()).ToArray(),
             StoreError = storeInfo.StoreError,
             PurchaseUrl = purchaseUrl,
             // the remote policy offers it; the BUILD must also be allowed to take a typed code at

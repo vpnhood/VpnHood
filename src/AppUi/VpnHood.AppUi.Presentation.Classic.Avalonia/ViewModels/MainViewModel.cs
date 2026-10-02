@@ -376,7 +376,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             : showMyFlag && state.ClientCountryInfo != null ? [state.ClientCountryInfo.CountryCode]
             : [];
         if (flagCodes.Length != SplitCountryFlags.Count || flagCodes.Length > 0 && !ReferenceEquals(_flagCodes, null) && !flagCodes.SequenceEqual(_flagCodes))
-            SplitCountryFlags = [.. flagCodes.Select(AppAssets.FlagPath).OfType<string>()];
+            SplitCountryFlags = flagCodes.Select(AppAssets.FlagPath).OfType<string>().ToArray();
         _flagCodes = flagCodes;
         HasSplitCountryFlags = SplitCountryFlags.Count > 0;
 
@@ -517,10 +517,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ExpansionPanelCollapsed.vue: the first flags of a closed server, the fastest choice as the earth
     private static IReadOnlyList<CollapsedFlag> CollapsedFlags(VpnProfileInfo profile)
     {
-        return [.. profile.LocationInfos
+        return profile.LocationInfos
             .Take(ProfileItem.CollapsedFlagCount + 1)
             .Where(x => !x.IsNestedCountry)
-            .Select(x => new CollapsedFlag(VhApp.IsLocationAutoSelected(x.CountryCode) ? null : x.CountryCode))];
+            .Select(x => new CollapsedFlag(VhApp.IsLocationAutoSelected(x.CountryCode) ? null : x.CountryCode))
+            .ToArray();
     }
 
     // Util.calcLocationCount: the countries, without the automatic choice and the regions
@@ -574,7 +575,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 Title = title,
                 IsPremium = isPremiumGroup,
                 IsNested = isNested,
-                Items = [.. locations.Select(x => new LocationItem(
+                Items = locations.Select(x => new LocationItem(
                     VpnProfileId: profile.VpnProfileId,
                     ServerLocation: x.ServerLocation,
                     CountryCode: x.CountryCode,
@@ -588,7 +589,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                               profile.IsPremiumLocationSelected == isPremiumGroup,
                     IsPremiumGroup: isPremiumGroup,
                     HasUnblockable: x.Options.HasUnblockable && isPremiumGroup,
-                    ShowCrown: isPremiumGroup && !isPremiumUser))]
+                    ShowCrown: isPremiumGroup && !isPremiumUser)).ToArray()
             };
         }
 

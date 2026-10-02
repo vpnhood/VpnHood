@@ -64,7 +64,7 @@ public static class ProxyEndPointUpdater
 
         // Keep first maxItemCount items
         if (result.Count > maxItemCount)
-            result = [.. result.Take(maxItemCount.Value)];
+            result = result.Take(maxItemCount.Value).ToList();
 
         return [.. result];
     }

@@ -66,8 +66,9 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
 
             var onCount = mapped.Count(x => x.IsSelected);
             var isOnMinority = onCount < mapped.Length - onCount;
-            _items = [.. mapped.OrderBy(x => x.IsSelected == isOnMinority ? 0 : 1)
-                .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)];
+            _items = mapped.OrderBy(x => x.IsSelected == isOnMinority ? 0 : 1)
+                .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToArray();
             List.Items = _items;
         }
         catch (Exception ex) {
@@ -101,7 +102,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
     // the setting follows the switches; the save waits for the leave, as it does in the web UI
     private void OnSelectionChanged(object? sender, EventArgs e)
     {
-        Split.Countries = [.. _items.Where(x => !x.IsSelected).Select(x => x.Id)];
+        Split.Countries = _items.Where(x => !x.IsSelected).Select(x => x.Id).ToArray();
     }
 
     private void OnTurnedOn(object? sender, EventArgs e)

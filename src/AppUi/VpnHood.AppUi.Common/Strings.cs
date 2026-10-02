@@ -71,7 +71,7 @@ public sealed partial class Strings : INotifyPropertyChanged
     public static IReadOnlyList<string> AvailableCultures {
         get {
             lock (Sources)
-                return [.. _shippedCultures.Concat(Sources.SelectMany(x => x.Cultures)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
+                return _shippedCultures.Concat(Sources.SelectMany(x => x.Cultures)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
         }
     }
 

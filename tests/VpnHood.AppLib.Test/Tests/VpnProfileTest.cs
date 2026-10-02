@@ -45,7 +45,7 @@ public class VpnProfileTest : TestAppBase
     {
         var appOptions = TestAppHelper.CreateAppOptions();
         var tokens = new[] { CreateToken(), CreateToken() };
-        appOptions.AccessKeys = [.. tokens.Select(x => x.ToAccessKey())];
+        appOptions.AccessKeys = tokens.Select(x => x.ToAccessKey()).ToArray();
 
         await using var app1 = TestAppHelper.CreateClientApp(appOptions: appOptions);
         var vpnProfiles = app1.VpnProfileService.List();
@@ -69,14 +69,14 @@ public class VpnProfileTest : TestAppBase
     {
         var appOptions = TestAppHelper.CreateAppOptions();
         var tokens1 = new[] { CreateToken(), CreateToken() };
-        appOptions.AccessKeys = [.. tokens1.Select(x => x.ToAccessKey())];
+        appOptions.AccessKeys = tokens1.Select(x => x.ToAccessKey()).ToArray();
 
         await using var app1 = TestAppHelper.CreateClientApp(appOptions: appOptions);
         await app1.DisposeAsync();
 
         // create app again
         var tokens2 = new[] { CreateToken(), CreateToken() };
-        appOptions.AccessKeys = [.. tokens2.Select(x => x.ToAccessKey())];
+        appOptions.AccessKeys = tokens2.Select(x => x.ToAccessKey()).ToArray();
         await using var app2 = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         var vpnProfiles = app2.VpnProfileService.List();
@@ -491,7 +491,7 @@ public class VpnProfileTest : TestAppBase
         token.ServerToken.ServerLocations = ["US", "US/california", "uk"];
         vpnProfile = app1.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         vpnProfileInfo = vpnProfile.ToInfo(app1.Features);
-        serverLocations = [.. vpnProfileInfo.LocationInfos.Select(x => x.ServerLocation)];
+        serverLocations = vpnProfileInfo.LocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
         Assert.AreEqual("UK/*", serverLocations[i++]);
@@ -506,7 +506,7 @@ public class VpnProfileTest : TestAppBase
         token.ServerToken.ServerLocations = ["us/virgina", "us/california", "uk/england [#pr]", "uk/region2"];
         vpnProfile = app1.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         vpnProfileInfo = vpnProfile.ToInfo(app1.Features);
-        serverLocations = [.. vpnProfileInfo.LocationInfos.Select(x => x.ServerLocation)];
+        serverLocations = vpnProfileInfo.LocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
         Assert.AreEqual("UK/*", serverLocations[i++]);

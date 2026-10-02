@@ -19,11 +19,11 @@ public class AppAdService(
     private AppCompositeAdService? _currentCompositeAdService;
 
     private readonly AppCompositeAdService _compositeInterstitialAdService = new(
-        [.. adProviderItems.Where(x => x.AdProvider.AdType == AdType.InterstitialAd)],
+        adProviderItems.Where(x => x.AdProvider.AdType == AdType.InterstitialAd).ToArray(),
         tracker);
 
     private readonly AppCompositeAdService _compositeRewardedAdService = new(
-        [.. adProviderItems.Where(x => x.AdProvider.AdType == AdType.RewardedAd)],
+        adProviderItems.Where(x => x.AdProvider.AdType == AdType.RewardedAd).ToArray(),
         tracker);
 
     private InternalInAdProvider? ActiveInternalAdProvider => (InternalInAdProvider?)adProviderItems

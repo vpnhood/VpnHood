@@ -427,7 +427,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             ChannelId = requestId, // use request id as channel id for simplicity
             SessionId = Config.SessionId,
             SessionKey = Config.SessionKey,
-            ActiveChannelIds = [.. _tunnel.PacketChannels.Select(c => c.ChannelId)]
+            ActiveChannelIds = _tunnel.PacketChannels.Select(c => c.ChannelId).ToArray()
         };
 
         var requestResult = await SendRequest<SessionResponse>(request, cancellationToken).Vhc();

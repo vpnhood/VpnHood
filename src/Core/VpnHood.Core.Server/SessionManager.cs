@@ -96,10 +96,10 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             return session;
         }
 
-        session.SessionResponseEx.ErrorMessage = "Could not add session to collection.";
-        session.SessionResponseEx.ErrorCode = SessionErrorCode.SessionError;
+        session.Response.ErrorMessage = "Could not add session to collection.";
+        session.Response.ErrorCode = SessionErrorCode.SessionError;
         session.Dispose();
-        throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponseEx, requestId);
+        throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.Response, requestId);
     }
 
     private Session BuildSessionFromResponseEx(SessionResponseEx sessionResponseEx, bool isRecovery)
@@ -308,8 +308,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             session = await RecoverSession(requestBase, ipEndPointPair, cancellationToken).Vhc();
         }
 
-        if (session.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
-            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponseEx,
+        if (session.Response.ErrorCode != SessionErrorCode.Ok)
+            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.Response,
                 requestBase.RequestId);
 
         // unexpected close (disposed without error code)
@@ -317,13 +317,13 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
                 new SessionResponse {
                     ErrorCode = SessionErrorCode.SessionClosed,
-                    ErrorMessage = session.SessionResponseEx.ErrorMessage,
-                    AccessUsage = session.SessionResponseEx.AccessUsage,
-                    SuppressedBy = session.SessionResponseEx.SuppressedBy,
-                    RedirectServerTokens = session.SessionResponseEx.RedirectServerTokens,
+                    ErrorMessage = session.Response.ErrorMessage,
+                    AccessUsage = session.Response.AccessUsage,
+                    SuppressedBy = session.Response.SuppressedBy,
+                    RedirectServerTokens = session.Response.RedirectServerTokens,
 #pragma warning disable CS0618 // Type or member is obsolete
-                    RedirectHostEndPoint = session.SessionResponseEx.RedirectHostEndPoint,
-                    RedirectHostEndPoints = session.SessionResponseEx.RedirectHostEndPoints,
+                    RedirectHostEndPoint = session.Response.RedirectHostEndPoint,
+                    RedirectHostEndPoints = session.Response.RedirectHostEndPoints,
 #pragma warning restore CS0618 // Type or member is obsolete
                 },
                 requestBase.RequestId);
@@ -351,18 +351,18 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             .Values
             .Where(x =>
                 x is { IsDisposed: false } &&
-                x.SessionResponseEx.ErrorCode == SessionErrorCode.Ok && // a closed one goes through disposal
+                x.Response.ErrorCode == SessionErrorCode.Ok && // a closed one goes through disposal
                 x.LastActivityTime < minSessionActivityTime)
             .ToArray(); // make sure make a copy to avoid modification in the loop
     }
 
-    private Session[] GetFailedSessions()
+    private Session[] GetClosedSessions()
     {
         return Sessions
             .Values
             .Where(x =>
                 x is { IsDisposed: false } &&
-                x.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+                x.Response.ErrorCode != SessionErrorCode.Ok)
             .ToArray();
     }
 
@@ -387,23 +387,23 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         RemoveSessions(idleSessions);
     }
 
-    private void DisposeFailedSessions()
+    private void DisposeClosedSessions()
     {
-        var failedSessions = GetFailedSessions();
-        if (failedSessions.Length == 0)
+        var closedSessions = GetClosedSessions();
+        if (closedSessions.Length == 0)
             return;
 
-        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {FailedSessions} failed sessions...",
-            failedSessions.Length);
-        foreach (var failedSession in failedSessions)
-            DisposeSession(failedSession);
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {ClosedSessions} closed sessions...",
+            closedSessions.Length);
+        foreach (var closedSession in closedSessions)
+            DisposeSession(closedSession);
     }
 
     private void DisposeExpiredSessions()
     {
         var utcNow = DateTime.UtcNow;
         var expiredSessions = Sessions.Values
-            .Where(x => !x.IsDisposed && x.SessionResponseEx.AccessUsage?.ExpirationTime < utcNow)
+            .Where(x => !x.IsDisposed && x.Response.AccessUsage?.ExpirationTime < utcNow)
             .ToArray();
 
         if (expiredSessions.Length == 0)
@@ -421,7 +421,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     private void DisposeSession(Session session, SessionErrorCode closeCode = SessionErrorCode.Ok)
     {
         session.Dispose();
-        _usageReporter.Add(session.SessionId, session.ResetTraffic(), closeCode);
+        _usageReporter.Add(session.SessionId, session.TakeUnreportedTraffic(), closeCode);
     }
 
     // remove sessions that are disposed a long time
@@ -452,7 +452,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             return;
 
         // an open session stays recoverable for when its client comes back; a closed one is gone for good
-        if (session.SessionResponseEx.ErrorCode == SessionErrorCode.Ok)
+        if (session.Response.ErrorCode == SessionErrorCode.Ok)
             _sessionLocalService.Update(session); // let update the last state
         else
             _sessionLocalService.Remove(session.SessionId);
@@ -479,10 +479,10 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         // manager it was still active; a full cache is due at once, and all bytes are when forced
         var minActivityTime = FastDateTime.UtcNow - SessionOptions.SyncIntervalValue;
         foreach (var session in Sessions.Values) {
-            var total = session.Traffic.Total;
+            var total = session.UnreportedTraffic.Total;
             if ((total > 0 && (force || session.LastActivityTime < minActivityTime)) ||
                 total >= SessionOptions.SyncCacheSizeValue)
-                _usageReporter.Add(session.SessionId, session.ResetTraffic());
+                _usageReporter.Add(session.SessionId, session.TakeUnreportedTraffic());
         }
     }
 
@@ -508,7 +508,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     {
         DisposeExpiredSessions(); // first: an expired session that is idle too goes with its close
         RemoveIdleSessions(); // remove idle sessions
-        DisposeFailedSessions(); // dispose failed sessions
+        DisposeClosedSessions(); // dispose closed sessions
         RemoveDisposedSessions(); // remove dead sessions
     }
 

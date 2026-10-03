@@ -64,7 +64,7 @@ public class Session : IDisposable
     public Tunnel Tunnel { get; }
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
-    public SessionResponse SessionResponseEx { get; private set; }
+    public SessionResponse Response { get; private set; }
     public bool IsDisposed => DisposedTime != null;
     public DateTime? DisposedTime { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
@@ -124,7 +124,7 @@ public class Session : IDisposable
         AllowTcpProxy = options.AllowTcpProxyValue;
         ExtraData = extraData;
         VirtualIps = virtualIps;
-        SessionResponseEx = sessionResponseEx;
+        Response = sessionResponseEx;
         ProtocolVersion = sessionResponseEx.ProtocolVersion;
         SessionId = sessionResponseEx.SessionId;
         SessionKey = sessionResponseEx.SessionKey ?? throw new InvalidOperationException(
@@ -150,7 +150,7 @@ public class Session : IDisposable
     }
 
 
-    public Traffic Traffic {
+    public Traffic UnreportedTraffic {
         get {
             // Intentionally Reversed: sending to tunnel means receiving form client,
             // Intentionally Reversed: receiving from tunnel means sending for client
@@ -177,7 +177,7 @@ public class Session : IDisposable
         return _udpChannel.UdpTransport;
     }
 
-    public Traffic ResetTraffic()
+    public Traffic TakeUnreportedTraffic()
     {
         lock (_stateLock) {
             // one read of the meter for both: bytes counted between two reads would never be reported
@@ -185,7 +185,7 @@ public class Session : IDisposable
             var traffic = meterTraffic - _prevTraffic;
             _prevTraffic = meterTraffic;
 
-            // Intentionally Reversed, as in Traffic
+            // Intentionally Reversed, as in UnreportedTraffic
             return new Traffic {
                 Sent = traffic.Received,
                 Received = traffic.Sent
@@ -197,10 +197,10 @@ public class Session : IDisposable
     internal bool TryClose(SessionErrorCode errorCode)
     {
         lock (_stateLock) {
-            if (SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+            if (Response.ErrorCode != SessionErrorCode.Ok)
                 return false;
 
-            SessionResponseEx.ErrorCode = errorCode;
+            Response.ErrorCode = errorCode;
             return true;
         }
     }
@@ -209,11 +209,11 @@ public class Session : IDisposable
     internal bool TryExpire(DateTime utcNow)
     {
         lock (_stateLock) {
-            var expirationTime = SessionResponseEx.AccessUsage?.ExpirationTime;
-            if (SessionResponseEx.ErrorCode != SessionErrorCode.Ok || expirationTime == null || expirationTime >= utcNow)
+            var expirationTime = Response.AccessUsage?.ExpirationTime;
+            if (Response.ErrorCode != SessionErrorCode.Ok || expirationTime == null || expirationTime >= utcNow)
                 return false;
 
-            SessionResponseEx.ErrorCode = SessionErrorCode.SessionExpired;
+            Response.ErrorCode = SessionErrorCode.SessionExpired;
             return true;
         }
     }
@@ -222,10 +222,10 @@ public class Session : IDisposable
     internal bool ApplyResponse(SessionResponse sessionResponse)
     {
         lock (_stateLock) {
-            if (SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+            if (Response.ErrorCode != SessionErrorCode.Ok)
                 return false;
 
-            SessionResponseEx = sessionResponse;
+            Response = sessionResponse;
             return true;
         }
     }
@@ -354,7 +354,7 @@ public class Session : IDisposable
         using var autoDispose = new AutoDispose(() => Interlocked.Decrement(ref _tcpConnectWaitCount));
 
         // send OK reply
-        await streamConnection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
+        await streamConnection.WriteResponseAsync(Response, cancellationToken).Vhc();
 
         // add channel
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
@@ -434,7 +434,7 @@ public class Session : IDisposable
         CancellationToken cancellationToken)
     {
         _ = request;
-        await streamConnection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
+        await streamConnection.DisposeAsync(Response, cancellationToken).Vhc();
     }
 
     internal async Task ProcessRewardedAdRequest(RewardedAdRequest request, IStreamConnection streamConnection,
@@ -443,7 +443,7 @@ public class Session : IDisposable
         var sessionResponse = await _accessManager
             .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData, cancellationToken).Vhc();
         ApplyResponse(sessionResponse);
-        await streamConnection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
+        await streamConnection.DisposeAsync(Response, cancellationToken).Vhc();
     }
 
     internal async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IStreamConnection streamConnection,
@@ -506,7 +506,7 @@ public class Session : IDisposable
 
             // send response, using original cancellation token without timeout
             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-            await streamConnection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
+            await streamConnection.WriteResponseAsync(Response, cancellationToken).Vhc();
 
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
@@ -586,14 +586,14 @@ public class Session : IDisposable
 
         // if there is no reason it is temporary
         var reason = "Cleanup";
-        if (SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
-            reason = SessionResponseEx.ErrorCode == SessionErrorCode.SessionClosed ? "User" : "Access";
+        if (Response.ErrorCode != SessionErrorCode.Ok)
+            reason = Response.ErrorCode == SessionErrorCode.SessionClosed ? "User" : "Access";
 
         // Report removing session
         VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
             "SessionId: {SessionId-5}\t{Mode,-5}\tActor: {Actor,-7}\tSuppressBy: {SuppressedBy,-8}\tErrorCode: {ErrorCode,-20}\tMessage: {message}",
-            SessionId, "Close", reason, SessionResponseEx.SuppressedBy, SessionResponseEx.ErrorCode,
-            SessionResponseEx.ErrorMessage ?? "None");
+            SessionId, "Close", reason, Response.SuppressedBy, Response.ErrorCode,
+            Response.ErrorMessage ?? "None");
 
         // it must be ended to let manager know that session is disposed and finish all tasks
         DisposedTime = DateTime.UtcNow;

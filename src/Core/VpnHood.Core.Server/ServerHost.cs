@@ -463,7 +463,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             "SessionId: {SessionId-5}\t{Mode,-5}\tTokenId: {TokenId}\tClientCount: {ClientCount,-3}\tClientId: {ClientId}\t" +
             "ClientIp: {ClientIp-15}\tVersion: {Version}\tVirtualIp: {VirtualIp}\tOS: {OS}",
             VhLogger.FormatSessionId(session.SessionId), "New", VhLogger.FormatId(request.TokenId),
-            session.SessionResponseEx.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId),
+            session.Response.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId),
             clientIpText, request.ClientInfo.ClientVersion,
             UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent),
             session.VirtualIps.IpV4);

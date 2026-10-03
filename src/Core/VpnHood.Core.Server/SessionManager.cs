@@ -7,6 +7,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Net.Packets;
+using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;
@@ -25,7 +26,7 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;
 
-public class SessionManager : IAsyncDisposable, IDisposable
+public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHandler
 {
     private bool _disposed;
     private readonly IAccessManager _accessManager;
@@ -34,6 +35,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     private readonly TimeSpan _deadSessionTimeout;
     private readonly Job _heartbeatJob;
     private readonly SessionLocalService _sessionLocalService;
+    private readonly SessionUsageReporter _usageReporter;
     private readonly VirtualIpManager _virtualIpManager;
     private byte[] _serverSecret;
 
@@ -68,6 +70,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         _serverSecret = VhUtils.GenerateKey(128);
         _deadSessionTimeout = options.DeadSessionTimeout;
         _sessionLocalService = new SessionLocalService(Path.Combine(storagePath, "sessions"));
+        _usageReporter = new SessionUsageReporter(_accessManager, this);
         _virtualIpManager = new VirtualIpManager(options.VirtualIpNetworkV4, options.VirtualIpNetworkV6,
             Path.Combine(storagePath, "last-virtual-ips.json"));
 
@@ -347,7 +350,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
         return Sessions
             .Values
             .Where(x =>
-                x is { IsDisposed: false, IsSyncRequired: false } &&
+                x is { IsDisposed: false } &&
+                x.SessionResponseEx.ErrorCode == SessionErrorCode.Ok && // a closed one goes through disposal
                 x.LastActivityTime < minSessionActivityTime)
             .ToArray(); // make sure make a copy to avoid modification in the loop
     }
@@ -357,7 +361,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         return Sessions
             .Values
             .Where(x =>
-                x is { IsDisposed: false, IsSyncRequired: false } &&
+                x is { IsDisposed: false } &&
                 x.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
             .ToArray();
     }
@@ -367,9 +371,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         var utcNow = DateTime.UtcNow;
         return Sessions
             .Values
-            .Where(x =>
-                x is { IsDisposed: true, IsSyncRequired: false } &&
-                utcNow - x.DisposedTime > _deadSessionTimeout)
+            .Where(x => x.IsDisposed && utcNow - x.DisposedTime > _deadSessionTimeout)
             .ToArray(); // make sure make a copy to avoid modification in the loop
     }
 
@@ -380,18 +382,9 @@ public class SessionManager : IAsyncDisposable, IDisposable
         if (idleSessions.Length == 0)
             return;
 
-        // 
-        var notSyncedIdleSessions = idleSessions.Where(x => x.Traffic.Total > 0).ToArray();
-        if (notSyncedIdleSessions.Length > 0)
-            VhLogger.Instance.LogDebug(GeneralEventId.Session, "Syncing {IdleSessions} idle sessions...",
-                notSyncedIdleSessions.Length);
-
-        var syncedIdleSessions = idleSessions.Where(x => x.Traffic.Total == 0).ToArray();
-        if (syncedIdleSessions.Length > 0) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {IdleSessions} idle sessions...",
-                syncedIdleSessions.Length);
-            RemoveSessions(syncedIdleSessions);
-        }
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {IdleSessions} idle sessions...",
+            idleSessions.Length);
+        RemoveSessions(idleSessions);
     }
 
     private void DisposeFailedSessions()
@@ -403,7 +396,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {FailedSessions} failed sessions...",
             failedSessions.Length);
         foreach (var failedSession in failedSessions)
-            failedSession.Dispose();
+            DisposeSession(failedSession);
     }
 
     private void DisposeExpiredSessions()
@@ -419,11 +412,16 @@ public class SessionManager : IAsyncDisposable, IDisposable
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {ExpiredSessions} expired sessions...",
             expiredSessions.Length);
         foreach (var session in expiredSessions) {
-            session.SessionResponseEx = new SessionResponse {
-                ErrorCode = SessionErrorCode.SessionExpired
-            };
-            session.Dispose();
+            if (session.TryExpire(utcNow))
+                DisposeSession(session, SessionErrorCode.SessionExpired);
         }
+    }
+
+    // its last bytes go to the reporter, along with the close if the server made one
+    private void DisposeSession(Session session, SessionErrorCode closeCode = SessionErrorCode.Ok)
+    {
+        session.Dispose();
+        _usageReporter.Add(session.SessionId, session.ResetTraffic(), closeCode);
     }
 
     // remove sessions that are disposed a long time
@@ -446,9 +444,19 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     public void RemoveSession(Session session)
     {
-        session.Dispose();
-        Sessions.TryRemove(session.SessionId, out _);
-        _sessionLocalService.Update(session); // let update the last state
+        DisposeSession(session);
+
+        // only the cleanup that removes this very session goes on: a second one at the same time would free
+        // virtual IPs a new session may have taken, or remove a recovered session of the same id
+        if (!Sessions.TryRemove(KeyValuePair.Create(session.SessionId, session)))
+            return;
+
+        // an open session stays recoverable for when its client comes back; a closed one is gone for good
+        if (session.SessionResponseEx.ErrorCode == SessionErrorCode.Ok)
+            _sessionLocalService.Update(session); // let update the last state
+        else
+            _sessionLocalService.Remove(session.SessionId);
+
         _virtualIpManager.Release(session.VirtualIps);
     }
 
@@ -458,76 +466,51 @@ public class SessionManager : IAsyncDisposable, IDisposable
         return session;
     }
 
-    private SessionUsage[] _pendingUsages = [];
-
-    public SessionUsage[] CollectSessionUsages(bool force = false)
+    // the status upload carries the due sessions' usage, along with what failed requests left in the reporter
+    internal Task<ServerCommand> SendStatus(ServerStatus status, CancellationToken cancellationToken)
     {
-        // traffic should be collected if there is some traffic and last activity time is expired
-        // it makes sure that we notify the manager that session was still active
+        CollectSessionUsages(force: false);
+        return _usageReporter.SendStatus(status, cancellationToken);
+    }
+
+    private void CollectSessionUsages(bool force)
+    {
+        // a session's bytes are due once it has been inactive for the sync interval, which tells the access
+        // manager it was still active; a full cache is due at once, and all bytes are when forced
         var minActivityTime = FastDateTime.UtcNow - SessionOptions.SyncIntervalValue;
-
-        // get all sessions and their traffic
-        var usages = Sessions.Values
-            .Where(x =>
-                (x.Traffic.Total > 0 && force) ||
-                (x.Traffic.Total > 0 && x.LastActivityTime < minActivityTime) ||
-                x.Traffic.Total >= SessionOptions.SyncCacheSizeValue ||
-                x.ResetSyncRequired())
-            .Select(x => {
-                var traffic = x.ResetTraffic();
-                return new SessionUsage {
-                    SessionId = x.SessionId,
-                    Received = traffic.Received,
-                    Sent = traffic.Sent,
-                    ErrorCode = x.SessionResponseEx.ErrorCode
-                };
-            })
-            .ToArray();
-
-        // merge to usage list if there is some data from last sync
-        var pendingUsages = _pendingUsages.ToDictionary(x => x.SessionId);
-        foreach (var usage in usages) {
-            if (pendingUsages.TryGetValue(usage.SessionId, out var pendingUsage)) {
-                usage.Received += pendingUsage.Received;
-                usage.Sent += pendingUsage.Sent;
-            }
+        foreach (var session in Sessions.Values) {
+            var total = session.Traffic.Total;
+            if ((total > 0 && (force || session.LastActivityTime < minActivityTime)) ||
+                total >= SessionOptions.SyncCacheSizeValue)
+                _usageReporter.Add(session.SessionId, session.ResetTraffic());
         }
-
-        _pendingUsages = usages;
-        return usages;
     }
 
     public void ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses)
     {
-        // update sessions from the result of access manager
+        // update sessions from the result of access manager; a closed session keeps its code
         foreach (var responsePair in sessionResponses) {
-            if (Sessions.TryGetValue(responsePair.Key, out var session)) {
-                // log for debugging
-                if (responsePair.Value.ErrorCode != SessionErrorCode.Ok)
-                    VhLogger.Instance.LogDebug(GeneralEventId.Session,
-                        "Set Access Manager error response to a session. SessionId: {SessionId}, ErrorCode: {ErrorCode}",
-                        responsePair.Key, responsePair.Value.ErrorCode);
+            if (!Sessions.TryGetValue(responsePair.Key, out var session) ||
+                !session.ApplyResponse(responsePair.Value))
+                continue;
 
-                session.SessionResponseEx = responsePair.Value;
-            }
+            // log for debugging
+            if (responsePair.Value.ErrorCode != SessionErrorCode.Ok)
+                VhLogger.Instance.LogDebug(GeneralEventId.Session,
+                    "Set Access Manager error response to a session. SessionId: {SessionId}, ErrorCode: {ErrorCode}",
+                    responsePair.Key, responsePair.Value.ErrorCode);
         }
 
-        // clear usage if sent successfully
-        _pendingUsages = [];
-
-        // cleanup sessions that are not in the response
         Cleanup();
     }
 
     private void Cleanup()
     {
-        RemoveIdleSessions(); // dispose idle sessions
-        DisposeExpiredSessions(); // dispose expired sessions
+        DisposeExpiredSessions(); // first: an expired session that is idle too goes with its close
+        RemoveIdleSessions(); // remove idle sessions
         DisposeFailedSessions(); // dispose failed sessions
         RemoveDisposedSessions(); // remove dead sessions
     }
-
-    private readonly AsyncLock _syncLock = new();
 
     public Task<int> Sync(CancellationToken cancellationToken)
     {
@@ -536,18 +519,13 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     public async Task<int> Sync(bool force, CancellationToken cancellationToken)
     {
-        // a forced sync, such as the last one at shutdown, waits for one in progress instead of skipping
-        using var lockResult = await _syncLock
-            .LockAsync(force ? Timeout.InfiniteTimeSpan : TimeSpan.Zero, cancellationToken).Vhc();
-        if (!lockResult.Succeeded)
-            return 0;
+        CollectSessionUsages(force);
+        var sessionResponses = await _usageReporter.SendUsages(force, cancellationToken).Vhc();
+        if (sessionResponses != null)
+            return sessionResponses.Count;
 
-        var sessionUsages = CollectSessionUsages(force);
-        var sessionResponses = await _accessManager
-            .Session_AddUsages(sessionUsages, cancellationToken).Vhc();
-
-        ApplySessionResponses(sessionResponses);
-        return sessionResponses.Count;
+        Cleanup(); // nothing to send; the sessions are cleaned up all the same
+        return 0;
     }
 
     public async Task CloseSession(ulong sessionId, CancellationToken cancellationToken)
@@ -555,13 +533,14 @@ public class SessionManager : IAsyncDisposable, IDisposable
         var session = GetSessionById(sessionId)
                       ?? throw new KeyNotFoundException($"Could not find Session. SessionId: {sessionId}");
 
-        // immediately close the session from the access server, to prevent get SuppressByYourself error
-        session.SessionResponseEx.ErrorCode = SessionErrorCode.SessionClosed;
-        session.SetSyncRequired();
-        await Sync(cancellationToken);
-
-        // remove after sync to make sure it is not added by the sync
+        // a closed session is not recovered after a restart
         _sessionLocalService.Remove(session.SessionId);
+        if (!session.TryClose(SessionErrorCode.SessionClosed))
+            return;
+
+        // immediately close the session from the access server, to prevent get SuppressByYourself error
+        DisposeSession(session, SessionErrorCode.SessionClosed);
+        await Sync(cancellationToken).Vhc();
     }
 
     private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
@@ -583,6 +562,11 @@ public class SessionManager : IAsyncDisposable, IDisposable
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
+
+        // stop the sessions first, so the last sync carries all their bytes; they stay open, with code Ok, so
+        // they recover after a restart
+        foreach (var session in Sessions.Values)
+            DisposeSession(session);
 
         // sync sessions
         try {

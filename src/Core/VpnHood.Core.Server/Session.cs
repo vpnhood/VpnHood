@@ -59,11 +59,12 @@ public class Session : IDisposable
     private Traffic _prevTraffic = new();
     private int _tcpConnectWaitCount;
     private int _netScanErrorCount;
+    private readonly Lock _stateLock = new();
 
     public Tunnel Tunnel { get; }
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
-    public SessionResponse SessionResponseEx { get; internal set; }
+    public SessionResponse SessionResponseEx { get; private set; }
     public bool IsDisposed => DisposedTime != null;
     public DateTime? DisposedTime { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
@@ -178,19 +179,55 @@ public class Session : IDisposable
 
     public Traffic ResetTraffic()
     {
-        var traffic = Traffic;
-        _prevTraffic = Tunnel.TrafficMeter.Traffic;
-        return traffic;
+        lock (_stateLock) {
+            // one read of the meter for both: bytes counted between two reads would never be reported
+            var meterTraffic = Tunnel.TrafficMeter.Traffic;
+            var traffic = meterTraffic - _prevTraffic;
+            _prevTraffic = meterTraffic;
+
+            // Intentionally Reversed, as in Traffic
+            return new Traffic {
+                Sent = traffic.Received,
+                Received = traffic.Sent
+            };
+        }
     }
 
-    public void SetSyncRequired() => IsSyncRequired = true;
-    public bool IsSyncRequired { get; private set; }
-
-    public bool ResetSyncRequired()
+    // closes an open session from the server's side: the first close wins, the server's or the access manager's
+    internal bool TryClose(SessionErrorCode errorCode)
     {
-        var oldValue = IsSyncRequired;
-        IsSyncRequired = false;
-        return oldValue;
+        lock (_stateLock) {
+            if (SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+                return false;
+
+            SessionResponseEx.ErrorCode = errorCode;
+            return true;
+        }
+    }
+
+    // checked under the same lock as a reply, which may have extended the time or closed the session meanwhile
+    internal bool TryExpire(DateTime utcNow)
+    {
+        lock (_stateLock) {
+            var expirationTime = SessionResponseEx.AccessUsage?.ExpirationTime;
+            if (SessionResponseEx.ErrorCode != SessionErrorCode.Ok || expirationTime == null || expirationTime >= utcNow)
+                return false;
+
+            SessionResponseEx.ErrorCode = SessionErrorCode.SessionExpired;
+            return true;
+        }
+    }
+
+    // a closed session keeps its code: a reply to a request sent before the close cannot reopen it
+    internal bool ApplyResponse(SessionResponse sessionResponse)
+    {
+        lock (_stateLock) {
+            if (SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+                return false;
+
+            SessionResponseEx = sessionResponse;
+            return true;
+        }
     }
 
     private IPAddress GetClientVirtualIp(IpVersion ipVersion)
@@ -403,8 +440,9 @@ public class Session : IDisposable
     internal async Task ProcessRewardedAdRequest(RewardedAdRequest request, IStreamConnection streamConnection,
         CancellationToken cancellationToken)
     {
-        SessionResponseEx = await _accessManager
+        var sessionResponse = await _accessManager
             .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData, cancellationToken).Vhc();
+        ApplyResponse(sessionResponse);
         await streamConnection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 
@@ -559,7 +597,6 @@ public class Session : IDisposable
 
         // it must be ended to let manager know that session is disposed and finish all tasks
         DisposedTime = DateTime.UtcNow;
-        SetSyncRequired();
     }
 
     private class PacketProxyCallbacks(Session session) : IPacketProxyCallbacks

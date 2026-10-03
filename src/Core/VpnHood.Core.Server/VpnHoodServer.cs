@@ -548,12 +548,10 @@ public class VpnHoodServer : IAsyncDisposable
         try {
             var status = await GetStatus();
             VhLogger.Instance.LogDebug("Sending status to Access... ConfigCode: {ConfigCode}", status.ConfigCode);
-            status.SessionUsages = SessionManager.CollectSessionUsages();
-            var res = await AccessManager.Server_UpdateStatus(status, cancellationToken).Vhc();
-            SessionManager.ApplySessionResponses(res.SessionResponses);
+            var res = await SessionManager.SendStatus(status, cancellationToken).Vhc();
 
-            // reconfigure
-            if (allowConfigure && res.ConfigCode != _lastConfigCode) {
+            // reconfigure, but not while shutting down, which lets an upload under way finish
+            if (allowConfigure && !_disposed && res.ConfigCode != _lastConfigCode) {
                 VhLogger.Instance.LogInformation("Reconfiguration was requested.");
                 await Configure(cancellationToken).Vhc();
             }
@@ -595,6 +593,10 @@ public class VpnHoodServer : IAsyncDisposable
 
         using var scope = VhLogger.Instance.BeginScope("Server");
         VhLogger.Instance.LogInformation("Server is shutting down...");
+
+        // a status upload under way may finish, within the last sync's 7 s: cancelled, its usage would go again
+        // with the last sync, billed twice if the access manager had applied it
+        await Task.WhenAny(_sendStatusTask, Task.Delay(TimeSpan.FromSeconds(7))).Vhc();
 
         // dispose update job
         _configureAndSendStatusJob.Dispose();

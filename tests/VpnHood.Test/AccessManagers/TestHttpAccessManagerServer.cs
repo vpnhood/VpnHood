@@ -30,6 +30,17 @@ public class TestHttpAccessManagerServer : IDisposable
     public Uri BaseUri { get; } = new($"http://{TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback)}");
     public HttpStatusCode? HttpExceptionStatusCode { get; set; }
 
+    // The usage routes - a status and a sync - answer with this code once the access manager has applied
+    // them: a reply lost on its way back, as when a proxy times out waiting for it.
+    public HttpStatusCode? HttpExceptionStatusCodeAfterApply { get; set; }
+
+    // Awaited as a status arrives, before the access manager applies it: a test holds it there, as a slow
+    // access manager would.
+    public Func<Task>? StatusArrived { get; set; }
+
+    // The same for a sync.
+    public Func<Task>? SyncArrived { get; set; }
+
     private WebserverLite CreateServer(Uri url)
     {
         var settings = new WebserverSettings(url.Host, url.Port);
@@ -127,14 +138,20 @@ public class TestHttpAccessManagerServer : IDisposable
 
             mapper.AddStatic(HttpMethod.POST, baseUrl + "sessions/usages", async ctx => {
                 var sessionUsages = ctx.ReadJson<SessionUsage[]>();
+                if (httpAccessManagerServer.SyncArrived != null)
+                    await httpAccessManagerServer.SyncArrived();
+
                 var res = await AccessManager.Session_AddUsages(sessionUsages, ctx.Token);
-                await ctx.SendJson(res);
+                await SendUsageReply(ctx, res);
             });
 
             mapper.AddStatic(HttpMethod.POST, baseUrl + "status", async ctx => {
                 var serverStatus = ctx.ReadJson<ServerStatus>();
+                if (httpAccessManagerServer.StatusArrived != null)
+                    await httpAccessManagerServer.StatusArrived();
+
                 var res = await AccessManager.Server_UpdateStatus(serverStatus, ctx.Token);
-                await ctx.SendJson(res);
+                await SendUsageReply(ctx, res);
             });
 
             mapper.AddStatic(HttpMethod.POST, baseUrl + "configure", async ctx => {
@@ -148,6 +165,17 @@ public class TestHttpAccessManagerServer : IDisposable
                 var res = await AccessManager.Acme_GetHttp01KeyAuthorization(token, ctx.Token);
                 await ctx.SendJson(res);
             });
+        }
+
+        private async Task SendUsageReply(HttpContextBase ctx, object reply)
+        {
+            if (httpAccessManagerServer.HttpExceptionStatusCodeAfterApply is { } statusCode) {
+                ctx.Response.StatusCode = (int)statusCode;
+                await ctx.Response.Send();
+                return;
+            }
+
+            await ctx.SendJson(reply);
         }
     }
 }

@@ -277,7 +277,7 @@ public class VpnHoodServer : IAsyncDisposable
                 UdpEndPoints = serverConfig.UdpEndPointsValue,
                 QuicEndPoints = serverConfig.QuicEndPointsValue,
                 Certificates =
-                    [.. serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null))],
+                    serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null)).ToArray(),
                 UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue
             }).Vhc();
 
@@ -377,17 +377,15 @@ public class VpnHoodServer : IAsyncDisposable
         var dnsServerIpRanges = dnsServers.Select(x => new IpRange(x)).ToOrderedList();
 
         // assign to workers
-        serverHost.NetFilterIncludeIpRanges = [
-            .. netFilterOptions
-                .GetFinalIncludeIpRanges()
-                .Union(dnsServerIpRanges)
-        ];
+        serverHost.NetFilterIncludeIpRanges = netFilterOptions
+            .GetFinalIncludeIpRanges()
+            .Union(dnsServerIpRanges)
+            .ToArray();
 
-        serverHost.NetFilterVpnAdapterIncludeIpRanges = [
-            .. netFilterOptions
-                .GetFinalVpnAdapterIncludeIpRanges()
-                .Union(dnsServerIpRanges)
-        ];
+        serverHost.NetFilterVpnAdapterIncludeIpRanges = netFilterOptions
+            .GetFinalVpnAdapterIncludeIpRanges()
+            .Union(dnsServerIpRanges)
+            .ToArray();
 
         serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
 

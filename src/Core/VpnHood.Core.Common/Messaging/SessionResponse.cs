@@ -38,4 +38,9 @@ public class SessionResponse
 
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? ClientPublicAddress { get; set; }
+
+    // grows with each reply the access manager builds for the session, so a server can skip one that arrived after a
+    // newer one; 0 when the access manager does not send it, as none does yet
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public long Revision { get; set; }
 }

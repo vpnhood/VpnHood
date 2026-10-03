@@ -466,7 +466,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         return session;
     }
 
-    // the status upload carries the due sessions' usage, along with what failed requests left in the reporter
+    // the status upload carries the due sessions' usage, along with the closes failed requests left in the reporter
     internal Task<ServerCommand> SendStatus(ServerStatus status, CancellationToken cancellationToken)
     {
         CollectSessionUsages(force: false);

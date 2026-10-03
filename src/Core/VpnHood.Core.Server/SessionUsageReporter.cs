@@ -9,9 +9,8 @@ namespace VpnHood.Core.Server;
 
 /// <summary>
 /// Sends the sessions' usage to the access manager, one request at a time, and applies each reply before the next
-/// request goes. A failed request's usage merges back and goes with the next one, so an access manager back from
-/// an outage gets one request, not a backlog. A reply lost after the access manager applied its request bills that
-/// usage twice: rare, and accepted.
+/// request goes. A failed request's bytes are dropped, so none is ever billed twice: the user has them free. Its
+/// closes go with the next request, so an access manager back from an outage gets one request, not a backlog.
 /// </summary>
 internal class SessionUsageReporter(IAccessManager accessManager, ISessionResponseHandler sessionResponseHandler)
 {
@@ -69,7 +68,7 @@ internal class SessionUsageReporter(IAccessManager accessManager, ISessionRespon
             return serverCommand;
         }
         catch {
-            MergeBack(status.SessionUsages);
+            MergeBackCloses(status.SessionUsages);
             throw;
         }
     }
@@ -83,18 +82,19 @@ internal class SessionUsageReporter(IAccessManager accessManager, ISessionRespon
             return sessionResponses;
         }
         catch {
-            MergeBack(usages);
+            MergeBackCloses(usages);
             throw;
         }
     }
 
-    // a failed request's usage goes with the next request
-    private void MergeBack(SessionUsage[] usages)
+    // a failed request's closes go with the next request; its bytes are dropped, unbilled, as the access manager
+    // may have billed them already
+    private void MergeBackCloses(SessionUsage[] usages)
     {
         _retryTime = DateTime.UtcNow + RetryDelay;
         lock (_usagesLock)
-            foreach (var usage in usages)
-                Merge(usage);
+            foreach (var usage in usages.Where(x => x.ErrorCode != SessionErrorCode.Ok))
+                Merge(new SessionUsage { SessionId = usage.SessionId, ErrorCode = usage.ErrorCode });
     }
 
     private bool HasUsages()

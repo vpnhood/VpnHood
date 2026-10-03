@@ -594,8 +594,7 @@ public class VpnHoodServer : IAsyncDisposable
         using var scope = VhLogger.Instance.BeginScope("Server");
         VhLogger.Instance.LogInformation("Server is shutting down...");
 
-        // a status upload under way may finish, within the last sync's 7 s: cancelled, its usage would go again
-        // with the last sync, billed twice if the access manager had applied it
+        // a status upload under way may finish, within the last sync's 7 s: cancelled, its usage would be dropped
         await Task.WhenAny(_sendStatusTask, Task.Delay(TimeSpan.FromSeconds(7))).Vhc();
 
         // dispose update job

@@ -16,7 +16,7 @@ namespace VpnHood.Test.Tests;
 public class SessionUsageTest : TestBase
 {
     [TestMethod]
-    public async Task Usage_of_a_failed_request_goes_with_the_next()
+    public async Task Usage_of_a_failed_request_is_dropped()
     {
         using var accessManager = CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -24,7 +24,7 @@ public class SessionUsageTest : TestBase
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
-        // in maintenance, the access manager never gets the request: its usage goes with the next one
+        // in maintenance, the access manager never gets the request: its usage is dropped, the user has it free
         AddTraffic(session, sent: 1000, received: 2000);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
         await Assert.ThrowsExactlyAsync<MaintenanceException>(() => server.SessionManager.Sync(true, TestCt));
@@ -33,37 +33,36 @@ public class SessionUsageTest : TestBase
         AddTraffic(session, sent: 3000, received: 4000);
         await server.SessionManager.Sync(true, TestCt);
 
-        await AssertBilled(server, token, session);
+        await AssertBilled(server, token, session, unbilled: new Traffic(sent: 1000, received: 2000));
     }
 
     [TestMethod]
-    public async Task Usage_after_an_outage_goes_in_one_request()
+    public async Task Closes_of_an_outage_go_in_one_request()
     {
         using var accessManager = CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
-        var session = server.GetSession(client);
+        await using var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: TestHelper.CreateAccessToken(server));
+        await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: TestHelper.CreateAccessToken(server));
+        var session1 = server.GetSession(client1);
+        var session2 = server.GetSession(client2);
 
-        // the requests of an outage fail
+        // in an outage the first bye's sync fails, and the second bye sends nothing
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
-        AddTraffic(session, sent: 1000, received: 2000);
-        await Assert.ThrowsExactlyAsync<MaintenanceException>(() => server.SessionManager.Sync(true, TestCt));
-        AddTraffic(session, sent: 3000, received: 4000);
-        await Assert.ThrowsExactlyAsync<MaintenanceException>(() => server.SessionManager.Sync(true, TestCt));
+        await Assert.ThrowsExactlyAsync<MaintenanceException>(() =>
+            server.SessionManager.CloseSession(session1.SessionId, TestCt));
+        await server.SessionManager.CloseSession(session2.SessionId, TestCt);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = null;
 
-        // back up, the access manager gets their usage merged, in one entry of one request
-        var usage = await SendStatus(server, session);
-        Assert.IsNotNull(usage);
-        Assert.IsGreaterThanOrEqualTo(6000, usage.Sent);
-        Assert.IsGreaterThanOrEqualTo(4000, usage.Received);
-
-        await AssertBilled(server, token, session);
+        // back up, one status upload carries both closes
+        await server.ConfigureAndSendStatus(TestCt);
+        Assert.AreEqual(SessionErrorCode.SessionClosed, GetAccessManagerErrorCode(accessManager, session1));
+        Assert.AreEqual(SessionErrorCode.SessionClosed, GetAccessManagerErrorCode(accessManager, session2));
     }
 
     [TestMethod]
-    public async Task Usage_of_a_lost_reply_goes_again()
+    public async Task Usage_of_a_lost_reply_is_billed_once()
     {
         using var accessManager = CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -72,7 +71,7 @@ public class SessionUsageTest : TestBase
         var session = server.GetSession(client);
         await server.SessionManager.Sync(true, TestCt);
 
-        // applied, then its reply lost: the server cannot tell, so it sends the usage again; it is billed twice
+        // applied, then its reply lost: the server drops the usage, which the access manager has billed
         AddTraffic(session, sent: 1000, received: 2000);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCodeAfterApply = HttpStatusCode.GatewayTimeout;
         await Assert.ThrowsExactlyAsync<ApiException>(() => server.SessionManager.Sync(true, TestCt));
@@ -80,7 +79,7 @@ public class SessionUsageTest : TestBase
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCodeAfterApply = null;
         await server.SessionManager.Sync(true, TestCt);
 
-        await AssertBilled(server, token, session, billedTwice: new Traffic(sent: 1000, received: 2000));
+        await AssertBilled(server, token, session);
     }
 
     [TestMethod]
@@ -325,23 +324,23 @@ public class SessionUsageTest : TestBase
         return serverStatus.SessionUsages.SingleOrDefault(x => x.SessionId == session.SessionId);
     }
 
-    // stopped and its last bytes sent, the token's usage is the session's traffic, plus what was billed twice
-    private async Task AssertBilled(VpnHoodServer server, Token token, Session session, Traffic? billedTwice = null)
+    // stopped and its last bytes sent, the token's usage is the session's traffic, less what was dropped
+    private async Task AssertBilled(VpnHoodServer server, Token token, Session session, Traffic? unbilled = null)
     {
         session.Dispose();
         await server.SessionManager.Sync(true, TestCt);
-        await AssertTokenUsage((TestHttpAccessManager)server.AccessManager, token, session, billedTwice);
+        await AssertTokenUsage((TestHttpAccessManager)server.AccessManager, token, session, unbilled);
     }
 
     private async Task AssertTokenUsage(TestHttpAccessManager accessManager, Token token, Session session,
-        Traffic? billedTwice = null)
+        Traffic? unbilled = null)
     {
         var fileAccessManager = (FileAccessManager)accessManager.HttpAccessManagerServer.BaseAccessManager;
         var accessTokenData = await fileAccessManager.AccessTokenService.Find(token.TokenId, TestCt);
         Assert.IsNotNull(accessTokenData);
 
         // the session counts the client's way: what the server received, the client has sent
-        var traffic = session.Tunnel.TrafficMeter.Traffic + (billedTwice ?? new Traffic());
+        var traffic = session.Tunnel.TrafficMeter.Traffic - (unbilled ?? new Traffic());
         Assert.AreEqual(traffic.Received, accessTokenData.Usage.Sent);
         Assert.AreEqual(traffic.Sent, accessTokenData.Usage.Received);
     }

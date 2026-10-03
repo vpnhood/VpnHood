@@ -486,12 +486,12 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         }
     }
 
-    public void ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses)
+    public void ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses, long requestTimestamp)
     {
-        // update sessions from the result of access manager; a closed session keeps its code
+        // update sessions from the result of access manager; a closed session keeps its code, a stale reply is skipped
         foreach (var responsePair in sessionResponses) {
             if (!Sessions.TryGetValue(responsePair.Key, out var session) ||
-                !session.ApplyResponse(responsePair.Value))
+                !session.ApplyResponse(responsePair.Value, requestTimestamp))
                 continue;
 
             // log for debugging

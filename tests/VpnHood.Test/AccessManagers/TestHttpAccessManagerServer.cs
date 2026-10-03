@@ -41,6 +41,10 @@ public class TestHttpAccessManagerServer : IDisposable
     // The same for a sync.
     public Func<Task>? SyncArrived { get; set; }
 
+    // Awaited with a status's reply once the access manager has built it, before it goes back: a test holds the
+    // reply there, as a slow way back would.
+    public Func<ServerCommand, Task>? StatusApplied { get; set; }
+
     private WebserverLite CreateServer(Uri url)
     {
         var settings = new WebserverSettings(url.Host, url.Port);
@@ -151,6 +155,9 @@ public class TestHttpAccessManagerServer : IDisposable
                     await httpAccessManagerServer.StatusArrived();
 
                 var res = await AccessManager.Server_UpdateStatus(serverStatus, ctx.Token);
+                if (httpAccessManagerServer.StatusApplied != null)
+                    await httpAccessManagerServer.StatusApplied(res);
+
                 await SendUsageReply(ctx, res);
             });
 

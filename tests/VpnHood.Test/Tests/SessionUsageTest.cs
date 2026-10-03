@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using System.Net;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
+using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Net.Toolkit.ApiClients;
@@ -147,7 +150,7 @@ public class SessionUsageTest : TestBase
         AddTraffic(session, sent: 1000, received: 2000);
         server.SessionManager.ApplySessionResponses(new Dictionary<ulong, SessionResponse> {
             [session.SessionId] = new() { ErrorCode = SessionErrorCode.SessionSuppressedBy }
-        });
+        }, Stopwatch.GetTimestamp());
         Assert.IsTrue(session.IsDisposed);
 
         // its last bytes go once, without its close
@@ -192,6 +195,52 @@ public class SessionUsageTest : TestBase
         // the close goes with the next status upload
         await server.ConfigureAndSendStatus(TestCt);
         Assert.AreEqual(SessionErrorCode.SessionClosed, GetAccessManagerErrorCode(accessManager, session));
+    }
+
+    [TestMethod]
+    public async Task Status_reply_that_crossed_an_ad_does_not_undo_it()
+    {
+        using var accessManager = CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // a session that needs a rewarded ad has a short expiration, which the ad clears
+        var clientOptions = TestHelper.CreateClientOptions(TestHelper.CreateAccessToken(server));
+        clientOptions.PlanId = ConnectPlanId.PremiumByRewardedAd;
+        await using var client = await TestHelper.CreateClient(clientOptions, vpnAdapter: new TestNullVpnAdapter(),
+            autoConnect: false);
+        var connectTask = client.Connect(TestCt);
+        await client.WaitForState(ClientState.WaitingForAd);
+        var session = server.GetSession(client);
+
+        // the access manager builds a status reply before the ad, and the reply is held on its way back
+        var statusApplied = new TaskCompletionSource<ServerCommand>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var statusRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        accessManager.HttpAccessManagerServer.StatusApplied = serverCommand => {
+            statusApplied.TrySetResult(serverCommand);
+            return statusRelease.Task;
+        };
+
+        AddTraffic(session, sent: 1000, received: 2000);
+        var statusTask = server.ConfigureAndSendStatus(TestCt).AsTask();
+        try {
+            var staleReply = await statusApplied.Task.WaitAsync(TimeSpan.FromSeconds(30), TestCt);
+            Assert.IsTrue(staleReply.SessionResponses.TryGetValue(session.SessionId, out var staleResponse));
+            Assert.IsNotNull(staleResponse.AccessUsage?.ExpirationTime);
+
+            // the ad goes meanwhile and clears the expiration
+            accessManager.HttpAccessManagerServer.StatusApplied = null;
+            ((TestAccessManager)accessManager.HttpAccessManagerServer.BaseAccessManager).AddAdData("rewarded-ad");
+            await client.RequiredSession.AdHandler.SendRewardedAdData("rewarded-ad", TestCt);
+            Assert.IsNull(session.Response.AccessUsage?.ExpirationTime);
+        }
+        finally {
+            statusRelease.TrySetResult(); // the held reply comes back after the ad's
+        }
+
+        // it is stale, and the ad's stays
+        await statusTask;
+        Assert.IsNull(session.Response.AccessUsage?.ExpirationTime);
+        await connectTask;
     }
 
     [TestMethod]

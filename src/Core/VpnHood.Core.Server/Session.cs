@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
@@ -57,6 +58,7 @@ public class Session : IDisposable
     private readonly EventReporter _filterBadSourceReporter = new("Some packets with invalid sources have been blocked.", GeneralEventId.NetProtect);
 
     private Traffic _prevTraffic = new();
+    private long _responseRequestTimestamp; // when the request whose reply is Response went out
     private int _tcpConnectWaitCount;
     private int _netScanErrorCount;
     private readonly Lock _stateLock = new();
@@ -218,14 +220,20 @@ public class Session : IDisposable
         }
     }
 
-    // a closed session keeps its code: a reply to a request sent before the close cannot reopen it
-    internal bool ApplyResponse(SessionResponse sessionResponse)
+    // a closed session keeps its code: a reply to a request sent before the close cannot reopen it. A reply that
+    // leaves it open is stale if its request went before the applied one's, as a status upload's that crossed an ad;
+    // a close always applies, since the access managers close for good
+    internal bool ApplyResponse(SessionResponse sessionResponse, long requestTimestamp)
     {
         lock (_stateLock) {
             if (Response.ErrorCode != SessionErrorCode.Ok)
                 return false;
 
+            if (sessionResponse.ErrorCode == SessionErrorCode.Ok && requestTimestamp < _responseRequestTimestamp)
+                return false;
+
             Response = sessionResponse;
+            _responseRequestTimestamp = requestTimestamp;
             return true;
         }
     }
@@ -440,9 +448,11 @@ public class Session : IDisposable
     internal async Task ProcessRewardedAdRequest(RewardedAdRequest request, IStreamConnection streamConnection,
         CancellationToken cancellationToken)
     {
+        // it goes at once, stamped, so a reply to a request sent before it cannot undo it
+        var requestTimestamp = Stopwatch.GetTimestamp();
         var sessionResponse = await _accessManager
             .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData, cancellationToken).Vhc();
-        ApplyResponse(sessionResponse);
+        ApplyResponse(sessionResponse, requestTimestamp);
         await streamConnection.DisposeAsync(Response, cancellationToken).Vhc();
     }
 

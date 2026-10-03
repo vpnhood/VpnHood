@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Managers;
@@ -11,6 +12,8 @@ namespace VpnHood.Core.Server;
 /// Sends the sessions' usage to the access manager, one request at a time, and applies each reply before the next
 /// request goes. A failed request's bytes are dropped, so none is ever billed twice: the user has them free. Its
 /// closes go with the next request, so an access manager back from an outage gets one request, not a backlog.
+/// Each reply carries when its request went out, so a session skips it once a later request's reply has applied,
+/// such as a rewarded ad's, which goes on its own.
 /// </summary>
 internal class SessionUsageReporter(IAccessManager accessManager, ISessionResponseHandler sessionResponseHandler)
 {
@@ -42,8 +45,9 @@ internal class SessionUsageReporter(IAccessManager accessManager, ISessionRespon
     {
         using var lockResult = await _sendLock.LockAsync(cancellationToken).Vhc();
         status.SessionUsages = TakeUsages();
+        var requestTimestamp = Stopwatch.GetTimestamp();
         var serverCommand = await UpdateStatus(status, cancellationToken).Vhc();
-        sessionResponseHandler.ApplySessionResponses(serverCommand.SessionResponses);
+        sessionResponseHandler.ApplySessionResponses(serverCommand.SessionResponses, requestTimestamp);
         return serverCommand;
     }
 
@@ -55,8 +59,9 @@ internal class SessionUsageReporter(IAccessManager accessManager, ISessionRespon
         if (!HasUsages() || (!force && DateTime.UtcNow < _retryTime))
             return null;
 
+        var requestTimestamp = Stopwatch.GetTimestamp();
         var sessionResponses = await AddUsages(TakeUsages(), cancellationToken).Vhc();
-        sessionResponseHandler.ApplySessionResponses(sessionResponses);
+        sessionResponseHandler.ApplySessionResponses(sessionResponses, requestTimestamp);
         return sessionResponses;
     }
 

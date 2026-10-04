@@ -6,6 +6,7 @@ using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -35,7 +36,7 @@ public class PortalTest
     public void Initialize()
     {
         _portal = new TestPortalServer();
-        _storageFolder = Path.Combine(Path.GetTempPath(), "vhtest-portal", Guid.NewGuid().ToString("N"));
+        _storageFolder = Path.Combine(TestHelper.AssemblyWorkingPath, "portal", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_storageFolder);
     }
 

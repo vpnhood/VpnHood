@@ -19,7 +19,11 @@ public static class CrossProcessCounter
         }
 
         try {
-            var filePath = Path.Combine(Path.GetTempPath(), $"VpnHood.Test.Counter.{name}.txt");
+            // in the shared temp root, not an assembly's working folder: an assembly cleanup must
+            // not reset a counter another test host is still walking
+            var folderPath = Path.Combine(Path.GetTempPath(), "vh");
+            Directory.CreateDirectory(folderPath);
+            var filePath = Path.Combine(folderPath, $"VpnHood.Test.Counter.{name}.txt");
             var value = first;
             try {
                 value = int.Parse(File.ReadAllText(filePath), CultureInfo.InvariantCulture) + 1;

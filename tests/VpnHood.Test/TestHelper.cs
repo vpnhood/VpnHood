@@ -35,7 +35,8 @@ namespace VpnHood.Test;
 
 public class TestHelper : IDisposable
 {
-    public static string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "VpnHood.Test");
+    // all test temp lives under %TEMP%\vh: one folder to clean
+    public static string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "vh", "VpnHood.Test");
 
     public class TestAppUiContext : IUiContext
     {

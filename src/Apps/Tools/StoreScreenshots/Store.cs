@@ -13,7 +13,7 @@ internal static class Store
         if (Directory.Exists(path))
             return new FolderAssetProvider(path);
         if (File.Exists(path) && Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase))
-            return new ZipAssetProvider(new FileAsset(path), Path.Combine(Path.GetTempPath(), "VpnHoodStoreScreenshots", "store"));
+            return new ZipAssetProvider(new FileAsset(path), Path.Combine(Path.GetTempPath(), "vh", "VpnHoodStoreScreenshots", "store"));
         throw new FileNotFoundException($"--assets must name the store folder or its ui.zip: {path}");
     }
 }

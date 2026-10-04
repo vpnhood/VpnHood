@@ -78,7 +78,7 @@ public class TcpMessageTest
 
     private static string CreateConfigFolder()
     {
-        var path = Path.Combine(Path.GetTempPath(), nameof(TcpMessageTest), Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(TestHelper.AssemblyWorkingPath, nameof(TcpMessageTest), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
     }

@@ -9,7 +9,7 @@ public class TestAssembly
     public static void AssemblyInit(TestContext _)
     {
         // two assembly will be loaded if test run parallel, so overrode to prevent conflict in cleanup
-        TestHelper.AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "VpnHood.AppLib.Test");
+        TestHelper.AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "vh", "VpnHood.AppLib.Test");
     }
 
     [AssemblyCleanup]

@@ -13,7 +13,6 @@ Reference implementation: **`VpnHood.Tools.ResourceTranslator`**. Copy its shape
 | Ships | a library (`lib/`) | an executable (`tools/`) |
 | Consumed with | `dotnet add package` | `dotnet tool install` |
 | Version line | aligned with the monorepo (`8.0.x`) | **independent** (`1.x`) |
-| Publish credential | org `NUGET_API_KEY` | Trusted Publishing (OIDC) |
 
 A tool is not part of the VPN product's release train — nobody's app breaks when it bumps — so it
 keeps its own version and does not adopt the monorepo's. Everything else reuses the module
@@ -128,15 +127,10 @@ silently `--skip-duplicate` into a no-op. Gaps in the sequence are expected.
 
 ## Publishing
 
-Tools publish with [nuget.org Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
-— OIDC, no long-lived key.
-
-> **A tool repo cannot use the `publish_module_nugets.yml` reusable workflow.** The OIDC token's
-> `job_workflow_ref` identifies the workflow that *requests* the token. Requesting it inside the
-> reusable workflow makes nuget.org see `vpnhood/VpnHood` and reject the exchange with
-> `401: No matching trust policy`. The `NuGet/login` step must live in the tool repo — and a `uses:`
-> job cannot have steps. So the tool repo owns its steps and calls the **shared script** directly,
-> exactly like the generated-payload variant in MODULE-REPOS.md.
+Tools publish exactly like module repos ([MODULE-REPOS.md](MODULE-REPOS.md) §4–5):
+[nuget.org Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
+— OIDC, no stored key — with the `NuGet/login` step in the tool repo's own workflow, then the shared
+script, plus `-independentVersion`.
 
 Create the policy on nuget.org (username → Trusted Publishing):
 
@@ -188,11 +182,12 @@ jobs:
 
 Requirements:
 
-- **`NUGET_USER` repository secret** — the nuget.org *profile name*, not an email. It is the only
-  secret a tool repo needs.
+- **`NUGET_USER` repository secret** — the nuget.org *profile name* that created the policy
+  (`trudyhood`), not an email. It is no real secret, so a literal `user: trudyhood` works as well (the
+  module repos use that).
 - **Keep the tool checkout under `module/`.** Packable-project discovery is a recursive `*.csproj`
   glob; a checkout at the workspace root would pack the monorepo too.
-- **Request the key immediately before publishing.** It is valid one hour and single-use.
+- **Request the key immediately before publishing.** It is valid for one hour.
 - **The repo must live under the `vpnhood` org** — the job is gated `if: github.repository_owner ==
   'vpnhood'`, and outside the org it is skipped silently with a green run.
 - **`@develop` is a mutable pin.** A monorepo change can break your publish without warning; that is

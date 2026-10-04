@@ -1,8 +1,8 @@
 # Publishes the NuGet packages of a MODULE repo — a separate vpnhood library repo (e.g.
 # VpnHood.Net.Proxies) that ships its own NuGets on its own cadence but stays version-aligned with
-# the monorepo. Runs in the module repo's CI via the reusable workflow
-# .github/workflows/publish_module_nugets.yml (this script rides the monorepo checkout); can also
-# run locally from a sibling checkout as a -noPush dry run. See pub/RELEASE-STRATEGY.md.
+# the monorepo. Runs in the module repo's own publish workflow, which checks out the monorepo's pub/
+# beside it and logs in to nuget.org with Trusted Publishing (pub/MODULE-REPOS.md); can also run
+# locally from a sibling checkout as a -noPush dry run. See pub/RELEASE-STRATEGY.md.
 #
 # Version rule:
 #   1. Read the monorepo's published version — ALWAYS from `develop` (develop always carries the
@@ -130,10 +130,10 @@ if ($noPush) {
 	return;
 }
 
-# NuGet key: CI injects NUGET_API_KEY; locally fall back to the .user file beside the repos.
-$nugetApiKey = if ($env:NUGET_API_KEY) { $env:NUGET_API_KEY } elseif (Test-Path "$PSScriptRoot/../../../.user/vendors/nuget/nuget_api_key.txt") { "$(Get-Content "$PSScriptRoot/../../../.user/vendors/nuget/nuget_api_key.txt" -Raw)".Trim() } else { "" };
+# NuGet key: the module repo's NuGet/login step (nuget.org Trusted Publishing) passes it as NUGET_API_KEY.
+$nugetApiKey = "$env:NUGET_API_KEY".Trim();
 if ([string]::IsNullOrWhiteSpace($nugetApiKey)) {
-	throw "Publish-ModuleNugetPackages: NuGet API key is missing. Set the NUGET_API_KEY secret (CI) or .user/vendors/nuget/nuget_api_key.txt (local).";
+	throw "Publish-ModuleNugetPackages: NuGet API key is missing. Publish from CI: the module workflow's NuGet/login step (nuget.org Trusted Publishing) provides NUGET_API_KEY.";
 }
 
 # Push everything produced (pushing a .nupkg also pushes its adjacent .snupkg symbols).

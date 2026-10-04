@@ -6,13 +6,9 @@ $pubDir = "$solutionDir/pub";
 if ($env:ProgramFiles) {
 	$msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
 }
-$userDir = "$solutionDir/../.user";
-# Secrets live as discrete files under .user/ (one value per file) so they map 1:1 to GitHub
-# secrets. Android keystores/passwords resolve per-app in Publish-AndroidApp.ps1; here we only
-# need the global NuGet token. Missing file -> empty (a fork without secrets still builds).
-# Wrap in "$(...)" so an empty file (Get-Content -Raw returns $null) coerces to "" instead of
-# throwing "cannot call a method on a null-valued expression" — keeps a keyless fork green.
-$nugetApiKey = if (Test-Path "$userDir/vendors/nuget/nuget_api_key.txt") { "$(Get-Content "$userDir/vendors/nuget/nuget_api_key.txt" -Raw)".Trim() } else { "" };
+# The NuGet key is never stored: nuget.org Trusted Publishing hands CI a short-lived one (the NuGet/login
+# step), passed in as NUGET_API_KEY. Without it -> empty: a fork still builds, and only a push throws.
+$nugetApiKey = "$env:NUGET_API_KEY".Trim();
 $msverbosity = "minimal";
 
 # Version (READ-ONLY). Common never mutates the version — it only reads PubVersion.json and derives

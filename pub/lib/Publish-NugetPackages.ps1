@@ -21,9 +21,9 @@ else {
 	$nugetVersion = "$versionParam";
 }
 
-# Publishing requires a key (the CI job runs only in the vpnhood org where the secret is set).
+# Publishing requires a key (the CI job runs only in the vpnhood org, where Trusted Publishing issues one).
 if ([string]::IsNullOrWhiteSpace($nugetApiKey)) {
-	throw "Publish-NugetPackages: NuGet API key is missing. Set the NUGET_API_KEY secret (CI) or .user/vendors/nuget/nuget_api_key.txt (local).";
+	throw "Publish-NugetPackages: NuGet API key is missing. Publish from CI: its NuGet/login step (nuget.org Trusted Publishing) provides NUGET_API_KEY.";
 }
 
 # Discover packable projects: a project IS a package unless it opts out with <IsPackable>false</IsPackable>.

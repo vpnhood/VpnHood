@@ -32,11 +32,12 @@ jobs:
     # library (VpnHood.AppUi.Hosting.WebView.Windows) need Windows, while the net*-android / net*-ios
     # libraries build via workloads (below). Linux cannot build the Windows/WPF projects.
     runs-on: windows-latest
+    permissions:
+      contents: read
+      id-token: write   # OIDC token for nuget.org Trusted Publishing (the NuGet/login step)
     env:
       DOTNET_NOLOGO: "1"
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-      # Org secret is named NUGET_API_KEY; keep the local env var NUGET_API_KEY for the steps below.
-      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
       # Authenticode signing of the packaged assemblies (SignFiles.ps1) — the same optional
       # all-or-nothing pair as the Windows app build: both present -> signed, both absent ->
       # unsigned (fork-friendly), exactly one -> the publish FAILS.
@@ -45,6 +46,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
+      # The look's package (VpnHood.AppUi.Assets.Classic) is a submodule and ships with the libraries,
+      # at the commit this ref pins; fastlane/, the other submodule, stays out.
+      - name: Check out the asset submodule
+        run: git submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
       # Base SDK pinned by global.json (10.0.x)...
       - uses: actions/setup-dotnet@v5
         with: { global-json-file: global.json }
@@ -61,18 +66,19 @@ jobs:
       - name: Install .NET workloads (android, ios)
         shell: pwsh
         run: dotnet workload install android ios
-      # Publish-NugetPackages.ps1 reads the key from .user/vendors/nuget/nuget_api_key.txt (via Common.ps1). Write
-      # it from the secret. If the secret is somehow empty the publish step throws (it is required in the org).
-      - name: Write NuGet credentials
-        shell: pwsh
-        run: |
-          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/vendors/nuget"
-          New-Item -ItemType Directory -Path $u -Force | Out-Null
-          "$env:NUGET_API_KEY" | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force -NoNewline
+      # nuget.org Trusted Publishing: the job's OIDC token buys a key valid for one hour, so it is
+      # requested right before the publish. The policy (created by trudyhood, package owner vpnhood)
+      # names this repo and this file's NAME - renaming the file breaks publishing until it is updated.
+      - name: NuGet login (Trusted Publishing)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with: { user: trudyhood }
       # In smoke mode Publish-NugetPackages appends github.run_number (ambient $env:GITHUB_RUN_NUMBER on the
       # runner) as the 4th revision segment, so every run gets a unique prerelease version.
       - name: Publish NuGets
         shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
           $smoke = "${{ github.event.inputs.smoke }}" -eq "true"
           & "$env:GITHUB_WORKSPACE/pub/lib/Publish-NugetPackages.ps1" -smoke:$smoke

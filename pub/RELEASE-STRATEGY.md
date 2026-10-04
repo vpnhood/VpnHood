@@ -99,6 +99,9 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
     [pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1) currently packs every discovered project
     with a single `-p:Version` — it must **exclude submodule projects** (or pack them separately) so
     their independent versions are respected.
+  - The first in-tree submodule, the look (`src/AppUi/VpnHood.AppUi.Assets.Classic`, 2026-09-22), takes
+    the simple road instead: `publish_nugets.yml` checks it out and packs it with the libraries, **at
+    their version** (owner, 2026-10-04).
 - **Full per-package independent versioning.** "Bump only the changed package" in a monorepo
   requires a dependency-graph change-detection engine (changed set = directly-changed ∪ all
   transitive dependents) plus per-package tags. High complexity/risk. The suite-level granularity
@@ -261,7 +264,8 @@ unrelated and remain — they are real build logic invoked directly by the app C
   (it never half-publishes) and MSBuild names the culprit.
 - **Publishing is gated to the `vpnhood` org.** The publish job has `if:
   github.repository_owner == 'vpnhood'`, so forks skip it entirely and never push the shared package
-  IDs. Inside the org a missing `NUGET_API_KEY` is a hard error (the publish throws) — no warn-and-skip.
+  IDs. Inside the org the key comes from nuget.org Trusted Publishing (the workflow's `NuGet/login`
+  step, no stored key); without one the publish throws — no warn-and-skip.
 
 ## Server release (done — same split as Connect)
 
@@ -290,14 +294,12 @@ Design + validation notes: [docs/cicd/server-publishing.md](../docs/cicd/server-
 
 Some vpnhood libraries live in their own repos ("module repos", e.g. `VpnHood.Net.Proxies`) and
 ship their own NuGets on their own cadence — while staying **version-aligned** with the monorepo.
-They all publish through ONE shared cross-repo module in this repo, so the logic exists once:
+They all publish through ONE shared script in this repo, so the logic exists once:
 
-- [.github/workflows/publish_module_nugets.yml](../.github/workflows/publish_module_nugets.yml) —
-  reusable workflow the module repo calls with ~10 lines
-  (`uses: vpnhood/VpnHood/.github/workflows/publish_module_nugets.yml@develop`, `secrets: inherit`,
-  `permissions: contents: write`). Internal repos pin `@develop` (lockstep — same rationale as the
-  `publish_app.yml` callers). This is **not** part of the forker/skeleton contract: forkers consume
-  the published NuGets; they never call this.
+- Each module repo's own `publish_nugets.yml` checks out this repo's `pub/` (sparse, `@develop` —
+  lockstep, same rationale as the `publish_app.yml` callers), logs in to nuget.org with Trusted
+  Publishing (`NuGet/login`, which must run in the module repo itself) and runs the script. This is
+  **not** part of the forker/skeleton contract: forkers consume the published NuGets.
 - [pub/lib/Publish-ModuleNugetPackages.ps1](lib/Publish-ModuleNugetPackages.ps1) — the logic. **Version rule:**
   read the monorepo version — **always from `develop`** (develop always carries the highest
   version); if it is ahead of the module's own `pub/PubVersion.json`, **adopt** it, otherwise
@@ -312,8 +314,8 @@ They all publish through ONE shared cross-repo module in this repo, so the logic
 To onboard a module repo: add `pub/PubVersion.json` (`{Version, BumpTime}`, lowercase `pub/` —
 the same layout convention as the monorepo), a root
 `Directory.Build.props` carrying the single `<Version>` (remove per-csproj `<Version>`s so it
-applies), `IsPackable=false` on non-library projects, and the small `publish_nugets.yml`
-dispatcher — see `VpnHood.Net.Proxies` for the reference shape. Optionally a root `_publish.ps1`
+applies), `IsPackable=false` on non-library projects, the `publish_nugets.yml` workflow and its
+nuget.org Trusted Publishing policy — see `VpnHood.Net.Proxies` for the reference shape. Optionally a root `_publish.ps1`
 one-shot trigger (commit pending work → pull → push → `gh workflow run publish_nugets.yml`) so a
 publish is a single local command; the CI still does all the real work.
 

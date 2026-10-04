@@ -131,7 +131,11 @@ public class FilteringTest : TestAppBase
         Log("Testing blocked QUIC domain...");
         var ex = await Assert.ThrowsExactlyAsync<QuicException>(() =>
              TestHelper.Test_QuicEcho(uri: MockEps.QuicUrl1, timeout: TimeSpan.FromSeconds(1)));
-        Assert.AreEqual(QuicError.ConnectionTimeout, ex.QuicError);
+
+        // the handshake gets no answer. .NET's timer reports ConnectionTimeout and MsQuic's, set from the same
+        // timeout, ConnectionIdle: whichever fires first names the error
+        Assert.IsTrue(ex.QuicError is QuicError.ConnectionTimeout or QuicError.ConnectionIdle,
+            $"Unexpected QuicError: {ex.QuicError}");
 
         // non-blocked QUIC should still work
         Log("Testing non-blocked QUIC domain...");

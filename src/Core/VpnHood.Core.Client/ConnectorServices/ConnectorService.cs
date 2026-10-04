@@ -225,12 +225,9 @@ internal class ConnectorService : IDisposable
     private const double ConnectMemoryLimitMb = 41.0;
 
     // a wait this long before a connection even starts stalls the request that asked for it, and the log would
-    // otherwise show only a slow server. Each one is logged at Debug; Information gets a count, once a period at
-    // most and shared like the gate, since the server finder alone makes a connector per endpoint
+    // otherwise show only a slow server. Debug: making such waits in a burst is the gate's job, so they are no
+    // fault, and the server finder alone checks more endpoints at once than the gate admits
     private static readonly TimeSpan LongConnectWaitTime = TimeSpan.FromMilliseconds(500);
-    private static readonly EventReporter LongConnectWaitReporter = new(
-        $"New connections to the server waited {LongConnectWaitTime.TotalMilliseconds} ms or more.",
-        GeneralEventId.Request);
 
     public async Task<IStreamConnection> GetConnectionToServer(string streamId, int contentLength,
         bool isTcpPacketChannel, Action? onConnectAttempt, CancellationToken cancellationToken)
@@ -247,14 +244,12 @@ internal class ConnectorService : IDisposable
                 await Task.Delay(100, cancellationToken).Vhc();
 
             var waitTime = Stopwatch.GetElapsedTime(waitStartTime);
-            if (waitTime >= LongConnectWaitTime) {
+            if (waitTime >= LongConnectWaitTime)
                 VhLogger.Instance.LogDebug(GeneralEventId.Request,
                     "A new connection to the server had to wait. WaitMs: {WaitMs}, SlotWaitMs: {SlotWaitMs}, " +
                     "FreeSlots: {FreeSlots}, ConnectionId: {ConnectionId}",
                     (long)waitTime.TotalMilliseconds, (long)slotWaitTime.TotalMilliseconds,
                     ConnectGate.CurrentCount, streamId);
-                LongConnectWaitReporter.Raise();
-            }
 
             var rawConnection = UseQuic
                 ? await _quicConnectionFactory!.CreateConnection(streamId, cancellationToken).Vhc()

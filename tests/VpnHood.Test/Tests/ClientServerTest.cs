@@ -305,6 +305,50 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    public async Task Client_is_connecting_until_its_adapter_has_started()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // what the client says of itself while its adapter is still starting; by then the server has
+        // answered its first requests
+        using var vpnAdapter = new StartingVpnAdapter();
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter, autoConnect: false);
+        ClientState? stateWhileStarting = null;
+        vpnAdapter.Starting += (_, _) => stateWhileStarting = client.State;
+
+        await client.Connect(TestCt);
+        Assert.AreEqual(ClientState.Connecting, stateWhileStarting);
+        Assert.AreEqual(ClientState.Connected, client.State);
+    }
+
+    [TestMethod]
+    public async Task Request_answered_while_disconnecting_does_not_reconnect()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
+        var session = (VpnHood.Core.Client.ClientSession)client.RequiredSession;
+
+        // the server answers a request right after the session starts closing, before its bye goes
+        var states = new List<ClientState>();
+        var isAnswered = false;
+        session.StateChanged += (_, _) => {
+            lock (states) {
+                states.Add(session.State);
+                if (states.Count > 1)
+                    return;
+            }
+
+            isAnswered = session.UpdateStatus(TestCt).Wait(TimeSpan.FromSeconds(10));
+        };
+
+        await client.DisposeAsync();
+        Assert.IsTrue(isAnswered);
+        CollectionAssert.AreEqual(new[] { ClientState.Disconnecting, ClientState.Disposed }, states);
+    }
+
+    [TestMethod]
     public async Task PacketChannel_after_client_reconnection()
     {
         //create a shared udp client among connection
@@ -697,5 +741,17 @@ public class ClientServerTest : TestBase
         await client.WaitForState(ClientState.Connected);
 
         Assert.IsNotEmpty(client.RequiredSession.Info.DnsConfig.DnsServers);
+    }
+
+    // a null adapter that tells when its start is under way
+    private sealed class StartingVpnAdapter : TestNullVpnAdapter
+    {
+        public event EventHandler? Starting;
+
+        protected override Task AdapterAdd(CancellationToken cancellationToken)
+        {
+            Starting?.Invoke(this, EventArgs.Empty);
+            return base.AdapterAdd(cancellationToken);
+        }
     }
 }

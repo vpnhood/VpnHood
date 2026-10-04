@@ -52,6 +52,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private bool _dropQuic;
     private bool _dropUdp;
     private DateTime? _lastConnectionErrorTime;
+    // the session's own state: State shows WaitingForAd in its place while an ad is awaited
+    private ClientState _state = ClientState.None;
     // AddPacketChannel retry-flood backoff (see ShouldManagePacketChannels): 1s, 2s, 4s ... capped at 15s
     private readonly ExponentialBackoff _packetChannelBackoff = new(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(15));
 
@@ -225,16 +227,21 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     public ClientState State {
         get {
-            if (field is ClientState.Disposed or ClientState.Disconnecting) return field;
+            if (_state is ClientState.Disposed or ClientState.Disconnecting) return _state;
             if (AdHandler.IsWaitingForAd) return ClientState.WaitingForAd;
-            return field;
+            return _state;
         }
         private set {
-            if (field == value) return;
-            field = value;
+            if (_state == value) return;
+
+            // a closing session does not reopen, whatever a request still under way comes back with
+            if (_state is ClientState.Disconnecting or ClientState.Disposed && value is not ClientState.Disposed)
+                return;
+
+            _state = value;
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
-    } = ClientState.None;
+    }
 
     public bool DropUdp {
         get => _dropUdp;
@@ -518,7 +525,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             }
 
             _lastConnectionErrorTime = null;
-            State = ClientState.Connected; // stable state
+
+            // an answered request ends the trouble that failed ones began. It does not connect a session that is
+            // still starting: Start does, once the adapter is up
+            if (_state is ClientState.Unstable or ClientState.Waiting)
+                State = ClientState.Connected;
 
             return requestResult;
         }

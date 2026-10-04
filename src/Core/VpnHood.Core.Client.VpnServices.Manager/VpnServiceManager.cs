@@ -48,8 +48,7 @@ public class VpnServiceManager : IDisposable
         _vpnStatusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         _device = device;
         _messageClient = device.CreateMessageClient();
-        _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath)
-                          ?? BuildConnectionInfo(ClientState.None);
+        _connectionInfo = TryReadConnectionInfo() ?? BuildConnectionInfo(ClientState.None);
 
         _updateConnectionInfoJob = new Job(UpdateConnectionInfoJob,
             eventWatcherInterval ?? TimeSpan.MaxValue, nameof(UpdateConnectionInfoJob));
@@ -74,6 +73,21 @@ public class VpnServiceManager : IDisposable
             ClientStateProgress = null,
             Error = ex?.ToApiError()
         };
+    }
+
+    // The VPN service rewrites the status file at each state change. The read lets writers in: a reader that kept
+    // them out would fail the service's write and lose that state, and a stop would wait out its timeout for a
+    // Disposed that never came. A read that finds no file, or catches it half-written, is null: the next one gets it
+    private ConnectionInfo? TryReadConnectionInfo()
+    {
+        try {
+            using var stream = new FileStream(_vpnStatusFilePath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            return JsonSerializer.Deserialize<ConnectionInfo>(stream);
+        }
+        catch {
+            return null;
+        }
     }
 
     private ConnectionInfo SetConnectionInfo(ClientState clientState, Exception? ex = null)
@@ -129,7 +143,7 @@ public class VpnServiceManager : IDisposable
         }
         catch (Exception ex) {
             // It looks like the service is not running, set the state to disposed if it is still in initializing state
-            var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
+            var connectionInfo = TryReadConnectionInfo();
             if (connectionInfo?.ClientState == ClientState.Initializing)
                 SetConnectionInfo(ClientState.Disposed, ex);
             throw;
@@ -173,13 +187,13 @@ public class VpnServiceManager : IDisposable
 
             // directly read file because UpdateConnection will set the state to disposed if it could not connect to the service
             // UpdateConnection will fail due to it cancellation 
-            var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
+            var connectionInfo = TryReadConnectionInfo();
 
             // wait for vpn service to start
             while (connectionInfo == null ||
                    connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
                 await Task.Delay(_startVpnServicePollInterval, localCts.Token).Vhc();
-                connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
+                connectionInfo = TryReadConnectionInfo();
             }
 
             _connectionInfo = connectionInfo;
@@ -269,7 +283,7 @@ public class VpnServiceManager : IDisposable
         // update from file to make sure there is no error
         // VpnClient always update the file when ConnectionState changes
         // Should send request if service is in initializing state, because SendRequest will set the state to disposed if failed
-        _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? _connectionInfo;
+        _connectionInfo = TryReadConnectionInfo() ?? _connectionInfo;
         _connectionInfoRefreshedTime = FastDateTime.UtcNow;
         if (_isInitializing || _connectionInfo.Error != null || !_connectionInfo.IsStarted()) {
             CheckForEvents();

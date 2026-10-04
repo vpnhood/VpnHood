@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -223,6 +224,14 @@ internal class ConnectorService : IDisposable
     // No memory reader installed (ProcessFootprintMb is null) → comparison is false → no hold.
     private const double ConnectMemoryLimitMb = 41.0;
 
+    // a wait this long before a connection even starts stalls the request that asked for it, and the log would
+    // otherwise show only a slow server. Each one is logged at Debug; Information gets a count, once a period at
+    // most and shared like the gate, since the server finder alone makes a connector per endpoint
+    private static readonly TimeSpan LongConnectWaitTime = TimeSpan.FromMilliseconds(500);
+    private static readonly EventReporter LongConnectWaitReporter = new(
+        $"New connections to the server waited {LongConnectWaitTime.TotalMilliseconds} ms or more.",
+        GeneralEventId.Request);
+
     public async Task<IStreamConnection> GetConnectionToServer(string streamId, int contentLength,
         bool isTcpPacketChannel, Action? onConnectAttempt, CancellationToken cancellationToken)
     {
@@ -230,10 +239,22 @@ internal class ConnectorService : IDisposable
         if (UseQuic && _quicConnectionFactory == null)
             throw new InvalidOperationException("QUIC is not supported by the current socket factory.");
 
+        var waitStartTime = Stopwatch.GetTimestamp();
         await ConnectGate.WaitAsync(cancellationToken).Vhc();
         try {
+            var slotWaitTime = Stopwatch.GetElapsedTime(waitStartTime);
             while (VhMemory.Instance.GetInfo().ProcessFootprintMb >= ConnectMemoryLimitMb)
                 await Task.Delay(100, cancellationToken).Vhc();
+
+            var waitTime = Stopwatch.GetElapsedTime(waitStartTime);
+            if (waitTime >= LongConnectWaitTime) {
+                VhLogger.Instance.LogDebug(GeneralEventId.Request,
+                    "A new connection to the server had to wait. WaitMs: {WaitMs}, SlotWaitMs: {SlotWaitMs}, " +
+                    "FreeSlots: {FreeSlots}, ConnectionId: {ConnectionId}",
+                    (long)waitTime.TotalMilliseconds, (long)slotWaitTime.TotalMilliseconds,
+                    ConnectGate.CurrentCount, streamId);
+                LongConnectWaitReporter.Raise();
+            }
 
             var rawConnection = UseQuic
                 ? await _quicConnectionFactory!.CreateConnection(streamId, cancellationToken).Vhc()

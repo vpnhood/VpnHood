@@ -411,12 +411,16 @@ public class ClientAppTest : TestAppBase
         Assert.IsFalse(testUserReviewProvider.IsReviewRequested);
         accessManager.UserReviewRecommended = 2;
 
-        await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
-        await VhTestUtil.AssertEqualsWait(1, () =>
-            server.SessionManager.Sync(true, TestCt), cancellationToken: TestContext.CancellationToken);
-        await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
-        await VhTestUtil.AssertEqualsWait(1,
-            () => server.SessionManager.Sync(true, TestCt), cancellationToken: TestContext.CancellationToken);
+        // traffic on every try: a request held up past its 100 ms carries none, and the status job (every
+        // 200 ms here) may report the bytes before the forced sync does
+        await VhTestUtil.AssertEqualsWait(1, async () => {
+            await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
+            return await server.SessionManager.Sync(true, TestCt);
+        }, cancellationToken: TestContext.CancellationToken);
+        await VhTestUtil.AssertEqualsWait(1, async () => {
+            await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
+            return await server.SessionManager.Sync(true, TestCt);
+        }, cancellationToken: TestContext.CancellationToken);
         await app.ForceUpdateState(TestCt);
 
         // after client disconnect it should see rating recommended

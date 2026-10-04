@@ -349,6 +349,58 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    public async Task Client_disposed_while_waiting_for_ad_does_not_start_its_adapter()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var token = accessManager.GetToken(accessToken);
+
+        // the client's start waits for an ad that nobody shows
+        using var vpnAdapter = new StartingVpnAdapter();
+        var isAdapterStarted = false;
+        vpnAdapter.Starting += (_, _) => isAdapterStarted = true;
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter, autoConnect: false);
+        var connectTask = client.Connect(TestCt);
+        await client.WaitForState(ClientState.WaitingForAd);
+
+        // the user disconnects meanwhile: the start ends there
+        await client.DisposeAsync();
+        Assert.IsFalse(isAdapterStarted);
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() =>
+            connectTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+        Assert.AreEqual(ClientState.Disposed, client.State);
+    }
+
+    [TestMethod]
+    public async Task Session_closed_by_server_while_waiting_for_ad_fails_the_start_with_its_error()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var token = accessManager.GetToken(accessToken);
+
+        // the client's start waits for an ad that nobody shows
+        using var vpnAdapter = new StartingVpnAdapter();
+        var isAdapterStarted = false;
+        vpnAdapter.Starting += (_, _) => isAdapterStarted = true;
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter, autoConnect: false);
+        var connectTask = client.Connect(TestCt);
+        await client.WaitForState(ClientState.WaitingForAd);
+
+        // the server closes the session meanwhile, and the client's next request finds out
+        await server.SessionManager.CloseSession(client.SessionId, TestCt);
+        await Assert.ThrowsExactlyAsync<SessionException>(() => client.UpdateSessionStatus(TestCt));
+
+        // the start fails with what closed the session, not with a disposed session
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
+            connectTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+        Assert.AreEqual(SessionErrorCode.SessionClosed, ex.SessionResponse.ErrorCode);
+        Assert.AreSame(ex, client.LastException);
+        Assert.IsFalse(isAdapterStarted);
+    }
+
+    [TestMethod]
     public async Task PacketChannel_after_client_reconnection()
     {
         //create a shared udp client among connection

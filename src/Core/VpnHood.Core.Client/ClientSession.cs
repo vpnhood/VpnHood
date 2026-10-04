@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
@@ -197,6 +198,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // manage datagram channels
         await manageChannelsTask.Vhc();
 
+        // closed meanwhile: go no further. The closing ends the ad wait too, and that is no failed ad to retry
+        // once the adapter is up
+        ThrowIfClosing();
+
         // start adapter
         await _vpnAdapter.Start(Config.AdapterOptions, cancellationToken);
 
@@ -207,7 +212,20 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 throw ex;
         }
 
+        // closed while the adapter started or the ad was retried: the caller must not take it for connected
+        ThrowIfClosing();
         State = ClientState.Connected;
+    }
+
+    private bool IsClosing => _state is ClientState.Disconnecting or ClientState.Disposed;
+
+    // a start that its session's closing ends fails with what closed the session, when that was an error
+    private void ThrowIfClosing()
+    {
+        if (IsClosing && LastException != null)
+            ExceptionDispatchInfo.Throw(LastException);
+
+        ObjectDisposedException.ThrowIf(IsClosing, this);
     }
 
     private bool ShouldManagePacketChannels {
@@ -227,7 +245,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     public ClientState State {
         get {
-            if (_state is ClientState.Disposed or ClientState.Disconnecting) return _state;
+            if (IsClosing) return _state;
             if (AdHandler.IsWaitingForAd) return ClientState.WaitingForAd;
             return _state;
         }
@@ -235,7 +253,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             if (_state == value) return;
 
             // a closing session does not reopen, whatever a request still under way comes back with
-            if (_state is ClientState.Disconnecting or ClientState.Disposed && value is not ClientState.Disposed)
+            if (IsClosing && value is not ClientState.Disposed)
                 return;
 
             _state = value;

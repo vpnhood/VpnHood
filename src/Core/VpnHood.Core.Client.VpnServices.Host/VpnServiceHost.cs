@@ -238,8 +238,10 @@ public class VpnServiceHost : IDisposable
         catch (Exception ex) {
             // we do not need to do anything if client is not null because the state changed event
             // will handle the notification and service stopping.
-            // dispose the client in the background
-            VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
+            // dispose the client in the background. A start that a requested disconnect ended is no failure
+            if (!_disconnectRequested)
+                VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
+
             _ = Client?.DisposeAsync();
         }
     }

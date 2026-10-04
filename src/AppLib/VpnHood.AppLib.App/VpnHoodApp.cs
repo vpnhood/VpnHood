@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using Ga4.Trackers;
@@ -81,6 +80,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
     private readonly AppWebHostManager _webHostManager;
+    private readonly AppErrorReporter _errorReporter;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     internal IIpRangeLocationProvider? IpRangeLocationProvider => _ipRangeLocationProvider;
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -267,6 +267,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);
         _vpnServiceManager.StateChanged += VpnService_StateChanged;
 
+        _errorReporter = new AppErrorReporter(tracker);
+
         // initialize services
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new DefaultAppCultureProvider(this),
@@ -446,7 +448,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             InitCulture();
         }
         catch (Exception ex) {
-            ReportError(ex, "Could not apply settings.");
+            _errorReporter.ReportError(ex, "Could not apply settings.");
         }
     }
 
@@ -762,7 +764,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await ConnectInternal1(connectOptions, linkedCts.Token);
         }
         catch (Exception ex) {
-            ReportError(ex, "Could not establish the connection.");
+            _errorReporter.ReportError(ex, "Could not establish the connection.");
             _appPersistState.LastError = ex.ToApiError();
             await TryDisconnect(); // await, to prevent VpnService_StateChanged clear the LastError
             throw;
@@ -1022,7 +1024,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 !VhUtils.IsNullOrEmpty(token.ServerToken.Urls) &&
                 await VpnProfileService.UpdateServerTokenByUrls(token, cancellationToken).Vhc()) {
                 // reconnect using the new token
-                ReportError(ex, "Could not establish the connection. Reconnecting using the new token...");
+                _errorReporter.ReportError(ex,
+                    "Could not establish the connection. Reconnecting using the new token...");
                 token = VpnProfileService.GetToken(token.TokenId);
                 await ConnectInternal2(token,
                         serverLocation: serverLocation,
@@ -1183,7 +1186,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 await Services.DeviceUiProvider.RequestNotification(uiContext, cancellationToken).Vhc();
             }
             catch (Exception ex) {
-                ReportError(ex, "Could not enable Notification.");
+                _errorReporter.ReportError(ex, "Could not enable Notification.");
             }
 
             Settings.IsNotificationRequested = true;
@@ -1395,12 +1398,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await write.WriteLineAsync($"Error: Could not read vpn service log. {ex.Message}");
             await write.FlushAsync();
         }
-    }
-
-    private void ReportError(Exception ex, string? message, [CallerMemberName] string action = "n/a")
-    {
-        _ = Services.Tracker.TryTrackError(ex, message, action);
-        VhLogger.Instance.LogError(ex, message);
     }
 
     public async Task<AppPurchaseOptions> GetPurchaseOptions(Guid vpnProfileId, CancellationToken cancellationToken)

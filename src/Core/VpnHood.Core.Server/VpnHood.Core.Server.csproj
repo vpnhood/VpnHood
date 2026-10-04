@@ -12,4 +12,8 @@
 		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.Abstractions\VpnHood.Net.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.Test" />
+	</ItemGroup>
+
 </Project>

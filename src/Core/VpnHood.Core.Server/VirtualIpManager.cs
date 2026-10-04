@@ -40,9 +40,11 @@ internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, st
     {
         var firstValidIpAddress = IPAddressUtil.Increment(IPAddressUtil.Increment(ipNetwork.FirstIpAddress));
 
+        // start after the last allocation, which its session may not have added yet: sessions created at once never
+        // get the same IPs
         var ipAddress = IPAddressUtil.Compare(lastUsedIpAddress, firstValidIpAddress) < 0
             ? firstValidIpAddress
-            : lastUsedIpAddress;
+            : IPAddressUtil.Increment(lastUsedIpAddress);
 
         for (var i = 0; i < 0xffff; i++) {
             if (ipAddress.Equals(ipNetwork.LastIpAddress))
@@ -57,21 +59,26 @@ internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, st
         throw new Exception("Could not allocate a new virtual IP.");
     }
 
+    // the session manager adds a session's IPs as it builds it and releases them as it disposes it; a failed add
+    // leaves nothing behind
     public void Add(VirtualIpBundle virtualIpBundle, Session session)
     {
         if (!_virtualIps.TryAdd(virtualIpBundle.IpV4, session))
             throw new SessionException(SessionErrorCode.SessionError,
                 $"Could not add virtual IPv4 to collection. IpAddress: {virtualIpBundle.IpV4}");
 
-        if (!_virtualIps.TryAdd(virtualIpBundle.IpV6, session))
+        if (!_virtualIps.TryAdd(virtualIpBundle.IpV6, session)) {
+            _virtualIps.TryRemove(KeyValuePair.Create(virtualIpBundle.IpV4, session));
             throw new SessionException(SessionErrorCode.SessionError,
                 $"Could not add virtual IPv6 to collection. IpAddress: {virtualIpBundle.IpV6}");
+        }
     }
 
-    public void Release(VirtualIpBundle virtualIps)
+    // frees only the IPs the session still holds: a session that took them since keeps them
+    public void Release(VirtualIpBundle virtualIps, Session session)
     {
-        _virtualIps.TryRemove(virtualIps.IpV4, out _);
-        _virtualIps.TryRemove(virtualIps.IpV6, out _);
+        _virtualIps.TryRemove(KeyValuePair.Create(virtualIps.IpV4, session));
+        _virtualIps.TryRemove(KeyValuePair.Create(virtualIps.IpV6, session));
     }
 
     public Session? FindSession(IPAddress virtualIpAddress)

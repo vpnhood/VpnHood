@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Configurations;
@@ -254,6 +255,110 @@ public class ServerTest : TestBase
         );
 
         Assert.AreEqual(1, accessManager.SessionGetCounter, "session must be recovered once.");
+    }
+
+    [TestMethod]
+    public async Task Request_during_an_idle_removal_recovers_the_session()
+    {
+        await using var server = await TestHelper.CreateServer();
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+            vpnAdapter: new TestNullVpnAdapter());
+        var removedSession = server.GetSession(client);
+
+        // an idle removal has stopped the session, still open, and its IPs went back with it; it is still listed
+        server.SessionManager.DisposeSession(removedSession);
+        Assert.IsNull(server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4));
+
+        // the client comes back now: the session is recovered, with its IPs, rather than reported closed
+        await client.UpdateSessionStatus(TestCt);
+        var recoveredSession = server.GetSession(client);
+        Assert.AreNotSame(removedSession, recoveredSession);
+        Assert.AreSame(recoveredSession, server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4));
+
+        // the removal then finishes and leaves the recovered session alone
+        server.SessionManager.RemoveSession(removedSession);
+        Assert.AreSame(recoveredSession, server.GetSession(client));
+        Assert.AreSame(recoveredSession, server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4));
+    }
+
+    [TestMethod]
+    public async Task Virtual_ips_are_released_only_by_the_session_that_holds_them()
+    {
+        await using var server = await TestHelper.CreateServer();
+        await using var client1 = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+            vpnAdapter: new TestNullVpnAdapter());
+        await using var client2 = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+            vpnAdapter: new TestNullVpnAdapter());
+        var session1 = server.GetSession(client1);
+        var session2 = server.GetSession(client2);
+        var virtualIpManager = new VirtualIpManager(IpNetwork.Parse("10.10.0.0/16"), IpNetwork.Parse("fd00::/112"),
+            Path.Combine(TestHelper.WorkingPath, "last_virtual_ips.json"));
+        var virtualIps = virtualIpManager.Allocate();
+
+        // a session keeps its IPs until it releases them
+        virtualIpManager.Add(virtualIps, session1);
+        Assert.ThrowsExactly<SessionException>(() => virtualIpManager.Add(virtualIps, session2));
+        virtualIpManager.Release(virtualIps, session1);
+        Assert.IsNull(virtualIpManager.FindSession(virtualIps.IpV4));
+
+        // once another session holds them, a late release by the first leaves them alone
+        virtualIpManager.Add(virtualIps, session2);
+        virtualIpManager.Release(virtualIps, session1);
+        Assert.AreSame(session2, virtualIpManager.FindSession(virtualIps.IpV4));
+        Assert.AreSame(session2, virtualIpManager.FindSession(virtualIps.IpV6));
+
+        // a failed add leaves nothing behind: an IPv4 taken before its IPv6 is refused goes back
+        var conflictingIps = new VirtualIpBundle { IpV4 = virtualIpManager.Allocate().IpV4, IpV6 = virtualIps.IpV6 };
+        Assert.ThrowsExactly<SessionException>(() => virtualIpManager.Add(conflictingIps, session1));
+        Assert.IsNull(virtualIpManager.FindSession(conflictingIps.IpV4));
+    }
+
+    [TestMethod]
+    public async Task Old_session_records_go_unless_their_session_is_in_memory()
+    {
+        await using var server = await TestHelper.CreateServer();
+        await using var client1 = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+            vpnAdapter: new TestNullVpnAdapter());
+        await using var client2 = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+            vpnAdapter: new TestNullVpnAdapter());
+        var liveSession = server.GetSession(client1);
+        var goneSession = server.GetSession(client2);
+
+        // only the first session is in memory; both records were last written 8 days ago
+        var storagePath = Path.Combine(TestHelper.WorkingPath, "session-records");
+        var liveRecordPath = Path.Combine(storagePath, $"{liveSession.SessionId}.session");
+        var goneRecordPath = Path.Combine(storagePath, $"{goneSession.SessionId}.session");
+        using var sessionLocalService = new SessionLocalService(storagePath,
+            new Dictionary<ulong, Session> { [liveSession.SessionId] = liveSession });
+        sessionLocalService.Update(liveSession);
+        sessionLocalService.Update(goneSession);
+        var oldTime = DateTime.UtcNow.AddDays(-8);
+        File.SetLastWriteTimeUtc(liveRecordPath, oldTime);
+        File.SetLastWriteTimeUtc(goneRecordPath, oldTime);
+        await sessionLocalService.CleanupSessionFiles(TestCt);
+
+        // the live session keeps its record, refreshed, so a restart can recover it; the other's is gone
+        Assert.IsGreaterThan(oldTime.AddDays(7), File.GetLastWriteTimeUtc(liveRecordPath));
+        Assert.IsFalse(File.Exists(goneRecordPath));
+
+        // a record written lately stays, though its session is not in memory: its client may come back
+        sessionLocalService.Update(goneSession);
+        await sessionLocalService.CleanupSessionFiles(TestCt);
+        Assert.IsTrue(File.Exists(goneRecordPath));
+    }
+
+    [TestMethod]
+    public void Sessions_created_at_once_get_different_virtual_ips()
+    {
+        Directory.CreateDirectory(TestHelper.WorkingPath);
+        var virtualIpManager = new VirtualIpManager(IpNetwork.Parse("10.10.0.0/16"), IpNetwork.Parse("fd00::/112"),
+            Path.Combine(TestHelper.WorkingPath, "last_virtual_ips.json"));
+
+        // the first session has not added its IPs yet when the second one allocates
+        var virtualIps1 = virtualIpManager.Allocate();
+        var virtualIps2 = virtualIpManager.Allocate();
+        Assert.AreNotEqual(virtualIps1.IpV4, virtualIps2.IpV4);
+        Assert.AreNotEqual(virtualIps1.IpV6, virtualIps2.IpV6);
     }
 
     [TestMethod]

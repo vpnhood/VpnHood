@@ -1,6 +1,7 @@
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 using VpnHood.Core.Common.Messaging;
@@ -69,7 +70,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         _vpnAdapter = vpnAdapter;
         _serverSecret = VhUtils.GenerateKey(128);
         _deadSessionTimeout = options.DeadSessionTimeout;
-        _sessionLocalService = new SessionLocalService(Path.Combine(storagePath, "sessions"));
+        _sessionLocalService = new SessionLocalService(Path.Combine(storagePath, "sessions"), Sessions);
         _usageReporter = new SessionUsageReporter(_accessManager, this);
         _virtualIpManager = new VirtualIpManager(options.VirtualIpNetworkV4, options.VirtualIpNetworkV6,
             Path.Combine(storagePath, "last-virtual-ips.json"));
@@ -91,15 +92,31 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     {
         // add to sessions
         var session = BuildSessionFromResponseEx(sessionResponseEx, isRecovery: isRecovery);
-        if (Sessions.TryAdd(session.SessionId, session)) {
+        if (TryAddSession(session)) {
             _sessionLocalService.Update(session);
             return session;
         }
 
         session.Response.ErrorMessage = "Could not add session to collection.";
         session.Response.ErrorCode = SessionErrorCode.SessionError;
-        session.Dispose();
+        DisposeSession(session);
         throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.Response, requestId);
+    }
+
+    // a recovered session also replaces the instance an idle removal has disposed but not yet taken off the list
+    private bool TryAddSession(Session session)
+    {
+        if (Sessions.TryAdd(session.SessionId, session))
+            return true;
+
+        return Sessions.TryGetValue(session.SessionId, out var oldSession) && NeedsRecovery(oldSession) &&
+               Sessions.TryUpdate(session.SessionId, session, oldSession);
+    }
+
+    // not in memory, or disposed though still open: an idle removal has stopped it, and its client may come back
+    private static bool NeedsRecovery([NotNullWhen(false)] Session? session)
+    {
+        return session is null or { IsDisposed: true, Response.ErrorCode: SessionErrorCode.Ok };
     }
 
     private Session BuildSessionFromResponseEx(SessionResponseEx sessionResponseEx, bool isRecovery)
@@ -125,8 +142,15 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             extraData: extraData,
             virtualIps: virtualIps);
 
-        // add to virtual IPs
-        _virtualIpManager.Add(virtualIps, session);
+        // it holds its virtual IPs from here until DisposeSession; one that cannot have them is not left half-built
+        try {
+            _virtualIpManager.Add(virtualIps, session);
+        }
+        catch {
+            DisposeSession(session);
+            throw;
+        }
+
         return session;
     }
 
@@ -223,7 +247,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             try {
                 var session = BuildSessionFromResponseEx(responseEx, true);
                 if (!Sessions.TryAdd(session.SessionId, session)) {
-                    session.Dispose();
+                    DisposeSession(session);
                     throw new Exception("Could not add session to collection.");
                 }
             }
@@ -239,8 +263,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         using var recoverLock =
             await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}", cancellationToken).Vhc();
         var session = GetSessionById(sessionRequest.SessionId);
-        if (session != null)
-            return session;
+        if (!NeedsRecovery(session))
+            return session; // a request before this one has recovered it
 
         // Get session from the access server
         VhLogger.Instance.LogDebug(GeneralEventId.Request,
@@ -299,14 +323,12 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     {
         //get session
         var session = GetSessionById(requestBase.SessionId);
-        if (session != null) {
-            if (!requestBase.SessionKey.Span.SequenceEqual(session.SessionKey))
-                throw new ServerUnauthorizedAccessException("Invalid session key.", ipEndPointPair, session);
-        }
-        // try to restore session if not found
-        else {
+        if (session != null && !requestBase.SessionKey.Span.SequenceEqual(session.SessionKey))
+            throw new ServerUnauthorizedAccessException("Invalid session key.", ipEndPointPair, session);
+
+        // try to restore session if not found, or if an idle removal has just stopped it: it is still open
+        if (NeedsRecovery(session))
             session = await RecoverSession(requestBase, ipEndPointPair, cancellationToken).Vhc();
-        }
 
         if (session.Response.ErrorCode != SessionErrorCode.Ok)
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.Response,
@@ -417,9 +439,11 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         }
     }
 
-    // its last bytes go to the reporter, along with the close if the server made one
-    private void DisposeSession(Session session, SessionErrorCode closeCode = SessionErrorCode.Ok)
+    // the one way a session is stopped. Its virtual IPs go back first, so its recovery can take them as soon as it is
+    // seen disposed; its last bytes go to the reporter, along with the close if the server made one
+    internal void DisposeSession(Session session, SessionErrorCode closeCode = SessionErrorCode.Ok)
     {
+        _virtualIpManager.Release(session.VirtualIps, session);
         session.Dispose();
         _usageReporter.Add(session.SessionId, session.TakeUnreportedTraffic(), closeCode);
     }
@@ -444,10 +468,10 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
 
     public void RemoveSession(Session session)
     {
-        DisposeSession(session);
+        DisposeSession(session); // its virtual IPs go back with it
 
-        // only the cleanup that removes this very session goes on: a second one at the same time would free
-        // virtual IPs a new session may have taken, or remove a recovered session of the same id
+        // only the cleanup that removes this very session goes on: one whose session a recovery has replaced would
+        // rewrite or delete the record of the session that holds the id now
         if (!Sessions.TryRemove(KeyValuePair.Create(session.SessionId, session)))
             return;
 
@@ -456,8 +480,6 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             _sessionLocalService.Update(session); // let update the last state
         else
             _sessionLocalService.Remove(session.SessionId);
-
-        _virtualIpManager.Release(session.VirtualIps);
     }
 
     public Session? GetSessionById(ulong sessionId)

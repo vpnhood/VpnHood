@@ -203,7 +203,8 @@ public class AccessTest : TestBase
     public async Task Client_should_not_suppress_itself_after_disconnect()
     {
         // Create Server
-        await using var server = await TestHelper.CreateServer();
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
         // create default token with 2 client count
@@ -213,9 +214,10 @@ public class AccessTest : TestBase
         await client1.DisposeAsync();
         await client1.WaitForState(ClientState.Disposed);
 
-        // wait for the server to close the session before reconnecting with the same clientId;
-        // otherwise the new session may suppress the not-yet-closed one
-        await VhTestUtil.AssertEqualsWait(true, () => serverSession1.IsDisposed, cancellationToken: TestCt);
+        // wait for the access manager to get the close before reconnecting with the same clientId; otherwise the
+        // new session suppresses the not-yet-closed one. The server stops the session before it reports the close
+        await VhTestUtil.AssertEqualsWait(SessionErrorCode.SessionClosed,
+            () => accessManager.SessionService.Sessions[serverSession1.SessionId].ErrorCode, cancellationToken: TestCt);
 
         // suppress by yourself
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),

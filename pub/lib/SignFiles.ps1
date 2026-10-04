@@ -11,13 +11,14 @@
 
 $ErrorActionPreference = "Stop";
 
-# .user/ lives beside the repo checkout (same layout Common.ps1 uses: <solutionDir>/../.user).
-$vhSignUserDir = "$(Split-Path -parent (Split-Path -parent $PSScriptRoot))/../.user";
+# The local signing files sit in .user/vendors/azure; .user/ lives beside the repo checkout (same
+# layout Common.ps1 uses: <solutionDir>/../.user).
+$vhSignUserDir = "$(Split-Path -parent (Split-Path -parent $PSScriptRoot))/../.user/vendors/azure";
 
 # --- Resolve the Azure signing credential from a single consolidated source ----------
 # The Azure service principal is supplied as ONE JSON credential — exactly the file you download
 # from Azure (e.g. `az ad sp create-for-rbac ...`). In CI it arrives as the single
-# AZURE_SIGNING_CREDENTIAL secret; locally it's read from .user/azure_signing_credential.json. It
+# AZURE_SIGNING_CREDENTIAL secret; locally it's read from .user/vendors/azure/azure_signing_credential.json. It
 # carries AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET (any other fields are ignored).
 # The signing target (Endpoint/CodeSigningAccountName/CertificateProfileName) is NOT part of this file and stays
 # separate. Explicit AZURE_* env vars (if already set) win; this only fills them in when absent.
@@ -42,7 +43,7 @@ if (-not ($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_
 # --- Resolve the signing target from a single consolidated source ------------
 # The signing target is supplied as ONE JSON in Azure's own metadata.json schema (the file
 # signtool's dlib consumes): { Endpoint, CodeSigningAccountName, CertificateProfileName }. In CI it
-# arrives as the AZURE_SIGNING_TARGET variable; locally it's read from .user/azure_signing_target.json.
+# arrives as the AZURE_SIGNING_TARGET variable; locally it's read from .user/vendors/azure/azure_signing_target.json.
 # These are identifiers (not the Azure secret).
 $signAccount = $null; $signProfile = $null; $signEndpoint = $null;
 $signTargetRaw =

@@ -25,7 +25,8 @@
 # Deciding per key means a workflow that only signs some apps (e.g. client) gets real signing for
 # those without needing every app's secret.
 #
-# Non-android secrets (NUGET_API_KEY -> .user/nuget_api_key.txt, IP2LOCATION_TOKEN -> .user/ip2location_token.txt)
+# Non-android secrets (NUGET_API_KEY -> .user/vendors/nuget/nuget_api_key.txt,
+# IP2LOCATION_TOKEN -> .user/vendors/ip2location/ip2location_token.txt)
 # are materialized by their own workflow steps, not here.
 #
 # Run AFTER a JDK is on PATH (keytool) and BEFORE the Android _publish.ps1 scripts.

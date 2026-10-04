@@ -113,8 +113,8 @@ secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_GOOGLE_BASE64`)
 .user/<app>/ios/ios_provision_app.mobileprovision           App Store profile, app        — secret IOS_PROVISION_APP_BASE64
 .user/<app>/ios/ios_provision_ext.mobileprovision           App Store profile, extension  — secret IOS_PROVISION_EXT_BASE64
 .user/<app>/ios/ios_signing.json                            local marker ({ "Signed": false } = build unsigned); CI regenerates it from the secrets
-.user/apple_distribution_cert.p12 (+ _password.txt)         ROOT, not per-app: one Apple Distribution cert signs every app — org secret APPLE_DISTRIBUTION_CERT_BASE64/_PASSWORD
-.user/appstore_connect_api_key_<KEYID>.p8 (+ id/issuer txt) ROOT: App Store Connect API key — org secrets APPSTORE_CONNECT_API_KEY/_API_KEY_ID/_ISSUER_ID
+.user/vendors/apple/apple_distribution_cert.p12 (+ _password.txt)         not per-app: one Apple Distribution cert signs every app — org secret APPLE_DISTRIBUTION_CERT_BASE64/_PASSWORD
+.user/vendors/apple/appstore_connect_api_key_<KEYID>.p8 (+ id/issuer txt) not per-app: App Store Connect API key — org secrets APPSTORE_CONNECT_API_KEY/_API_KEY_ID/_ISSUER_ID
 ```
 
 `publish.json` is **all-or-nothing**: its mere presence switches the build into STRICT mode, where
@@ -246,7 +246,7 @@ The `.aip` files themselves carry no signer. To enable it under **your own organ
   principal with the *Trusted Signing Certificate Profile Signer* role, scoped to your signing
   account. Paste the whole file as the secret value (it carries `AZURE_TENANT_ID`,
   `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET`; any extra fields like `subscriptionId` are ignored).
-  Locally, the same file is read from `.user/azure_signing_credential.json`.
+  Locally, the same file is read from `.user/vendors/azure/azure_signing_credential.json`.
 - `AZURE_SIGNING_TARGET` — a single JSON in Azure Trusted Signing's own `metadata.json` schema
   (the file `signtool`'s dlib consumes), not secret:
   - `CodeSigningAccountName` — your Trusted Signing account name.
@@ -257,7 +257,7 @@ The `.aip` files themselves carry no signer. To enable it under **your own organ
   { "Endpoint": "https://wus2.codesigning.azure.net/", "CodeSigningAccountName": "…", "CertificateProfileName": "…" }
   ```
 
-  Locally, the same file is read from `.user/azure_signing_target.json`.
+  Locally, the same file is read from `.user/vendors/azure/azure_signing_target.json`.
 
 Do not reuse a third-party/previous signer — the published identity comes from the
 certificate profile, so verify it resolves to **your** organization before shipping.

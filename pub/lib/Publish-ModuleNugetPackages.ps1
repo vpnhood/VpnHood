@@ -131,9 +131,9 @@ if ($noPush) {
 }
 
 # NuGet key: CI injects NUGET_API_KEY; locally fall back to the .user file beside the repos.
-$nugetApiKey = if ($env:NUGET_API_KEY) { $env:NUGET_API_KEY } elseif (Test-Path "$PSScriptRoot/../../../.user/nuget_api_key.txt") { "$(Get-Content "$PSScriptRoot/../../../.user/nuget_api_key.txt" -Raw)".Trim() } else { "" };
+$nugetApiKey = if ($env:NUGET_API_KEY) { $env:NUGET_API_KEY } elseif (Test-Path "$PSScriptRoot/../../../.user/vendors/nuget/nuget_api_key.txt") { "$(Get-Content "$PSScriptRoot/../../../.user/vendors/nuget/nuget_api_key.txt" -Raw)".Trim() } else { "" };
 if ([string]::IsNullOrWhiteSpace($nugetApiKey)) {
-	throw "Publish-ModuleNugetPackages: NuGet API key is missing. Set the NUGET_API_KEY secret (CI) or .user/nuget_api_key.txt (local).";
+	throw "Publish-ModuleNugetPackages: NuGet API key is missing. Set the NUGET_API_KEY secret (CI) or .user/vendors/nuget/nuget_api_key.txt (local).";
 }
 
 # Push everything produced (pushing a .nupkg also pushes its adjacent .snupkg symbols).

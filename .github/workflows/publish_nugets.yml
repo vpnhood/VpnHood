@@ -61,12 +61,12 @@ jobs:
       - name: Install .NET workloads (android, ios)
         shell: pwsh
         run: dotnet workload install android ios
-      # Publish-NugetPackages.ps1 reads the key from .user/nuget_api_key.txt (via Common.ps1). Write it from the
-      # secret. If the secret is somehow empty the publish step throws (it is required in the org).
+      # Publish-NugetPackages.ps1 reads the key from .user/vendors/nuget/nuget_api_key.txt (via Common.ps1). Write
+      # it from the secret. If the secret is somehow empty the publish step throws (it is required in the org).
       - name: Write NuGet credentials
         shell: pwsh
         run: |
-          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/vendors/nuget"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           "$env:NUGET_API_KEY" | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force -NoNewline
       # In smoke mode Publish-NugetPackages appends github.run_number (ambient $env:GITHUB_RUN_NUMBER on the

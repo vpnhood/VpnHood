@@ -448,7 +448,8 @@ public class Session : IDisposable
     internal async Task ProcessRewardedAdRequest(RewardedAdRequest request, IStreamConnection streamConnection,
         CancellationToken cancellationToken)
     {
-        // it goes at once, stamped, so a reply to a request sent before it cannot undo it
+        // it goes at once, not in the reporter's turn, where a slow status upload would use up the ad's request
+        // timeout; it is stamped, so a reply to a request sent before it cannot undo it
         var requestTimestamp = Stopwatch.GetTimestamp();
         var sessionResponse = await _accessManager
             .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData, cancellationToken).Vhc();

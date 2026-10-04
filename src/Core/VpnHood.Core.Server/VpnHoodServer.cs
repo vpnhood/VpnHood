@@ -550,7 +550,8 @@ public class VpnHoodServer : IAsyncDisposable
             VhLogger.Instance.LogDebug("Sending status to Access... ConfigCode: {ConfigCode}", status.ConfigCode);
             var res = await SessionManager.SendStatus(status, cancellationToken).Vhc();
 
-            // reconfigure, but not while shutting down, which lets an upload under way finish
+            // reconfigure, but not while shutting down, which lets an upload under way finish. The reporter's send
+            // lock is released by now: Configure sends a status of its own
             if (allowConfigure && !_disposed && res.ConfigCode != _lastConfigCode) {
                 VhLogger.Instance.LogInformation("Reconfiguration was requested.");
                 await Configure(cancellationToken).Vhc();

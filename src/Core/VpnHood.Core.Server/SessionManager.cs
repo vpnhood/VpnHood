@@ -409,6 +409,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         RemoveSessions(idleSessions);
     }
 
+    // these are the sessions the access manager closed in a reply: their close is not reported back, only their
+    // last bytes, as each entry costs the access manager a lookup and a usage row
     private void DisposeClosedSessions()
     {
         var closedSessions = GetClosedSessions();
@@ -440,7 +442,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     }
 
     // the one way a session is stopped. Its virtual IPs go back first, so its recovery can take them as soon as it is
-    // seen disposed; its last bytes go to the reporter, along with the close if the server made one
+    // seen disposed; its last bytes go to the reporter, along with the close if the server made one. A proxy copy
+    // still under way may deliver a last chunk it can no longer count: that chunk goes unbilled
     internal void DisposeSession(Session session, SessionErrorCode closeCode = SessionErrorCode.Ok)
     {
         _virtualIpManager.Release(session.VirtualIps, session);
@@ -448,7 +451,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         _usageReporter.Add(session.SessionId, session.TakeUnreportedTraffic(), closeCode);
     }
 
-    // remove sessions that are disposed a long time
+    // a closed session stays listed for the dead-session timeout after it is disposed, so its client gets its real
+    // error rather than a failed recovery; then it goes
     private void RemoveDisposedSessions()
     {
         var deadSessions = GetDeadSessions();

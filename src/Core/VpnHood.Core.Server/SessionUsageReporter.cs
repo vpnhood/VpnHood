@@ -12,6 +12,8 @@ namespace VpnHood.Core.Server;
 /// Sends the sessions' usage to the access manager, one request at a time, and applies each reply before the next
 /// request goes. A failed request's bytes are dropped, so none is ever billed twice: the user has them free. Its
 /// closes go with the next request, so an access manager back from an outage gets one request, not a backlog.
+/// An answered request is delivered as a whole: an entry the access manager left out of its reply, or answered
+/// with an error, is not sent again.
 /// Each reply carries when its request went out, so a session skips it once a later request's reply has applied,
 /// such as a rewarded ad's, which goes on its own.
 /// </summary>
@@ -23,11 +25,16 @@ internal class SessionUsageReporter(IAccessManager accessManager, ISessionRespon
 
     private readonly AsyncLock _sendLock = new();
     private readonly Lock _usagesLock = new();
+
+    // one pending usage per session, in memory only: a session may leave memory while its usage waits here, and
+    // what a stop's last sync cannot send is lost
     private readonly Dictionary<ulong, SessionUsage> _usages = new();
     private DateTime _retryTime = DateTime.MinValue;
 
     public void Add(ulong sessionId, Traffic traffic, SessionErrorCode errorCode = SessionErrorCode.Ok)
     {
+        // nothing to report: an empty entry would still cost the access manager a lookup, and bump the access's
+        // last-used time
         if (traffic.Total == 0 && errorCode == SessionErrorCode.Ok)
             return;
 
@@ -93,7 +100,8 @@ internal class SessionUsageReporter(IAccessManager accessManager, ISessionRespon
     }
 
     // a failed request's closes go with the next request; its bytes are dropped, unbilled, as the access manager
-    // may have billed them already
+    // may have billed them already. No failure is told apart: a timeout, or a proxy's 503, can follow a request
+    // that was applied
     private void MergeBackCloses(SessionUsage[] usages)
     {
         _retryTime = DateTime.UtcNow + RetryDelay;

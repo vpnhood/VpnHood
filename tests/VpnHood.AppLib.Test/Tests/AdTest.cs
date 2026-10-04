@@ -7,6 +7,7 @@ using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -14,6 +15,7 @@ using VpnHood.Core.Common.Tokens;
 using ConnectPlanId = VpnHood.AppLib.Api.App.ConnectPlanId;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 using VpnHood.AppLib.Abstractions.Device;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -260,6 +262,43 @@ public class AdTest : TestAppBase
         _ = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt); // don't await as it will wait for ad to load
         await app.WaitForState(AppConnectionState.WaitingForAd);
         await AssertEqualsWait(true, () => isAdLoadingStatusMet);
+    }
+
+    [TestMethod]
+    [DoNotParallelize] // reads the process-global test tracker, which every tracker creation clears
+    [DataRow(1, "info")]
+    [DataRow(5, "warning")]
+    public async Task Cancelled_connect_is_info_when_quick_and_a_warning_when_late(int waitSeconds,
+        string errorLevel)
+    {
+        // create server
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // the ad's post-load delay keeps the connect waiting
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var token = accessManager.GetToken(accessToken);
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(60);
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) }
+        ];
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+
+        // the person gives up after waiting
+        var connectTask = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.WaitingForAd);
+        await Task.Delay(TimeSpan.FromSeconds(waitSeconds), TestCt);
+        await app.Disconnect();
+        await Assert.ThrowsExactlyAsync<UserCanceledException>(() => connectTask);
+
+        var tracker = (TestTracker)app.Services.Tracker;
+        var trackEvent = tracker.FindEvent("vh_exception", "error_type", nameof(UserCanceledException));
+        Assert.IsNotNull(trackEvent);
+        Assert.AreEqual(errorLevel, trackEvent.Parameters["error_level"]);
+        Assert.IsGreaterThanOrEqualTo(waitSeconds, trackEvent.Parameters["elapsed_seconds"] as int? ?? 0);
     }
 
     [TestMethod]

@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Ga4.Trackers;
@@ -741,6 +742,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task Connect(ConnectOptions? connectOptions = null, CancellationToken cancellationToken = default)
     {
+        var stopwatch = Stopwatch.StartNew(); // a failed connect's report tells how long it ran
         try {
             connectOptions ??= new ConnectOptions();
             VhLogger.Instance.LogInformation(
@@ -764,7 +766,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await ConnectInternal1(connectOptions, linkedCts.Token);
         }
         catch (Exception ex) {
-            _errorReporter.ReportError(ex, "Could not establish the connection.");
+            _errorReporter.ReportConnectError(ex, stopwatch.Elapsed);
             _appPersistState.LastError = ex.ToApiError();
             await TryDisconnect(); // await, to prevent VpnService_StateChanged clear the LastError
             throw;

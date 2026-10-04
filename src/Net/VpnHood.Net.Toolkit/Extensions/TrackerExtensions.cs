@@ -38,21 +38,17 @@ public static class TrackerExtensions
             }
         }
 
-        public Task<bool> TryTrackError(Exception exception, string? message, string action)
+        public Task<bool> TryTrackError(Exception exception, string? message, string action,
+            LogLevel logLevel = LogLevel.Error, TimeSpan? elapsed = null)
         {
-            return tracker.TryTrackError(exception, message, action, false);
-        }
-
-        public Task<bool> TryTrackWarningAsync(Exception exception, string? message, string action)
-        {
-            return tracker.TryTrackError(exception, message, action, true);
-        }
-
-        private Task<bool> TryTrackError(Exception exception, string? message,
-            string action, bool isWarning)
-        {
-            message = string.IsNullOrEmpty(message) 
+            message = string.IsNullOrEmpty(message)
                 ? exception.Message : message + ", " + exception.Message;
+
+            var errorLevel = logLevel switch {
+                >= LogLevel.Error => "error",
+                LogLevel.Warning => "warning",
+                _ => "info"
+            };
 
             var trackEvent = new TrackEvent {
                 EventName = "vh_exception",
@@ -60,11 +56,20 @@ public static class TrackerExtensions
                     { "method", action },
                     { "message", message },
                     { "error_type", exception.GetType().Name },
-                    { "error_level", isWarning ? "warning" : "error" }
+                    { "error_level", errorLevel }
                 }
             };
 
+            // whole seconds: the Firebase tracker sends values as text, and a fraction would follow the device's culture
+            if (elapsed != null)
+                trackEvent.Parameters.Add("elapsed_seconds", (int)elapsed.Value.TotalSeconds);
+
             return tracker.TryTrack([trackEvent]);
+        }
+
+        public Task<bool> TryTrackWarningAsync(Exception exception, string? message, string action)
+        {
+            return tracker.TryTrackError(exception, message, action, LogLevel.Warning);
         }
     }
 }

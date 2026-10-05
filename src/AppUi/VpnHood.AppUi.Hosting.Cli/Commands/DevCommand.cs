@@ -40,7 +40,7 @@ internal static class DevCommand
             await using var connection = DaemonConnection.CreateInProcess(localWebHost, platform.PeerCheck,
                 platform.Instance, platform.Paths.InstanceName);
             await UiCommand.RunWindow(platform, initParams, mainThread, connection,
-                startHidden: false, connect: false, cancellationToken).Vhc();
+                startHidden: false, cancellationToken).Vhc();
             return 0;
         }
         catch (OperationCanceledException) {

@@ -1,11 +1,8 @@
 using System.CommandLine;
-using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.Cli.Abstractions;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
-using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Cli.Commands;
 
@@ -26,31 +23,24 @@ internal static class UiCommand
         var command = new Command("ui", "Open the app window. This is what the desktop entry starts.");
 
         // Where a tray keeps the UI, an entry that starts at logon starts it there, with the window
-        // closed. For the entries an installer writes, not for a person, so help leaves them out.
+        // closed. For the entry an installer writes, not for a person, so help leaves it out.
         var trayOption = new Option<bool>("--tray") {
             Description = "Start in the tray, with the window closed.",
             Hidden = true
         };
-        var connectOption = new Option<bool>("--connect") {
-            Description = "Connect as soon as the service is reached.",
-            Hidden = true
-        };
 
-        if (platform.CreateTray != null) {
+        if (platform.CreateTray != null)
             command.Options.Add(trayOption);
-            command.Options.Add(connectOption);
-        }
 
         command.SetAction((parseResult, cancellationToken) => Run(platform, initParams, mainThread,
             startHidden: platform.CreateTray != null && parseResult.GetValue(trayOption),
-            connect: platform.CreateTray != null && parseResult.GetValue(connectOption),
             cancellationToken));
 
         return command;
     }
 
     private static async Task<int> Run(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread,
-        bool startHidden, bool connect, CancellationToken cancellationToken)
+        bool startHidden, CancellationToken cancellationToken)
     {
         try {
             // One window per person: a second launch brings the open one forward, and that is all it does.
@@ -67,7 +57,7 @@ internal static class UiCommand
             }
 
             await using var connection = await DaemonConnection.Open(platform, cancellationToken).Vhc();
-            await RunWindow(platform, initParams, mainThread, connection, startHidden, connect, cancellationToken).Vhc();
+            await RunWindow(platform, initParams, mainThread, connection, startHidden, cancellationToken).Vhc();
             return 0;
         }
         catch (OperationCanceledException) {
@@ -82,11 +72,8 @@ internal static class UiCommand
     // The window over a connection to the app, until it is gone: the service's app, or the one this
     // process holds itself (DevCommand).
     internal static async Task RunWindow(CliPlatform platform, CliInitParams initParams, MainThreadQueue mainThread,
-        DaemonConnection connection, bool startHidden, bool connect, CancellationToken cancellationToken)
+        DaemonConnection connection, bool startHidden, CancellationToken cancellationToken)
     {
-        if (connect)
-            _ = Connect(connection, cancellationToken);
-
         // The UI's own copy of the content, under this user's cache: the daemon extracted its own
         // under its storage, which a session may not write, and each provider owns its folder.
         var packagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory);
@@ -112,16 +99,5 @@ internal static class UiCommand
             StartHidden = startHidden
         };
         await mainThread.Run(() => initParams.Ui.Run(uiParams, uiCancellation.Token)).Vhc();
-    }
-
-    // Beside the window, which shows how it goes; a connect that fails is the service's to report.
-    private static async Task Connect(DaemonConnection connection, CancellationToken cancellationToken)
-    {
-        try {
-            await connection.Api.App.Connect(null, null, ConnectPlanId.Normal, cancellationToken).Vhc();
-        }
-        catch (Exception ex) when (!cancellationToken.IsCancellationRequested) {
-            VhLogger.Instance.LogWarning(ex, "Could not connect at the window's start.");
-        }
     }
 }

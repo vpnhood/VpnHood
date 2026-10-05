@@ -25,7 +25,7 @@ throughput. See the shared record in the app repo's
 | `IosQuicClient.cs` | `IQuicClient`. `ConnectAsync` stands up the QUIC tunnel: builds `NWParameters.CreateQuic` (ALPN `h3`, **flow-control windows**, pinned-cert TLS bridge), starts an `NWConnectionGroup` over an `NWMultiplexGroup`, waits for `Ready`. |
 | `IosQuicConnection.cs` | `IQuicConnection`. Opens outbound streams (`nw_connection_group_extract_connection` with a NULL endpoint) and accepts inbound (peer-initiated) streams from a channel; brings each up on a queue until `Ready`. |
 | `IosQuicStream.cs` | `Stream` adapter over a single QUIC stream (`NWConnection`). One armed native receive per `ReadAsync`, no read-ahead; per-operation callback state prevents late native completions from completing a later operation. |
-| `ReusableValueTaskSource.cs` | `IValueTaskSource[<T>]` bridge used by read/write operation state to complete Network.framework callbacks as `ValueTask`s. |
+| `ReusableValueTaskSource.cs`, `ReusableValueTaskSource_1.cs` | `IValueTaskSource[<T>]` bridge used by read/write operation state to complete Network.framework callbacks as `ValueTask`s. |
 | `IosQuicTls.cs` | Configures `SecProtocolOptions`: ALPN + the pinned-certificate verify callback bridge. |
 | `IosSocketFactory.cs` | Small factory glue. |
 

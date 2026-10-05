@@ -21,12 +21,15 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
    and our products override it (`VhAppCommandName`).
 8. A library never enforces the app id's format; it derives from it what the OS needs.
 9. A helper is a private method, never a local function inside another method.
+10. A generic type that shares its name with another type has a file of its own, named for its type
+    parameters' count, as .NET's own source does: `TimeoutItem_1.cs` beside `TimeoutItem.cs`. A
+    generic type alone keeps the plain name.
 
 ## Design
 
-10. The access-manager protocol needs to be compatible one way only: the access manager is updated
+11. The access-manager protocol needs to be compatible one way only: the access manager is updated
     first, so a new server may count on it, but the access manager keeps supporting old servers.
-11. The access manager is under heavy load: rather a cost on the server than more requests to it.
+12. The access manager is under heavy load: rather a cost on the server than more requests to it.
     After an outage, the waiting requests are merged, never queued up to bombard it.
-12. The service opens no UI and no links; the UI does, as on iOS.
-13. A Debug build's name must stand out.
+13. The service opens no UI and no links; the UI does, as on iOS.
+14. A Debug build's name must stand out.

@@ -32,7 +32,7 @@ exeFile="$curDir/$exeFileR";
 [ -x "$exeFile" ] || chmod +x "$exeFile" 2>/dev/null;
 
 # The binary cannot know what a person typed to get here - "vhclient" is on the PATH and
-# "VpnHoodClient" is not - so the hints it prints are told (LinuxCliPaths.LauncherNameVariable).
+# "VpnHoodClient" is not - so the hints it prints are told (LinuxDesktopPaths.LauncherNameVariable).
 export VH_LAUNCHER_NAME="$(basename "$0")";
 
 # Executing Module. exec, so the binary takes this process over: under the systemd unit the daemon

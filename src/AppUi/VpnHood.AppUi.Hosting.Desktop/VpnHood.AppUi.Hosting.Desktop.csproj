@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Description>The VpnHood desktop host: the commands that drive a running app over its own API, and the daemon that is that app on a machine with no window. Platform-free - what a service is and where an install keeps things is the platform package's to say (Desktop.Linux, Desktop.Windows)</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.CommandLine" Version="2.0.11" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- the channel's line protocol and the connection's handler, tested with stand-ins; the
+		     Windows pipe itself in the smoke test, which targets Windows -->
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+		<InternalsVisibleTo Include="VpnHood.AppUi.SmokeTest" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The commands hold no app: they reach the running one over loopback, through the same
+		     generated clients a paired browser uses. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
+		<!-- The one command that IS the app - daemon - builds it; the rest never touch this. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<!-- The UI a head names, which the window runs. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Abstractions\VpnHood.AppUi.Hosting.Abstractions.csproj" />
+	</ItemGroup>
+</Project>

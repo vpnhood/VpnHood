@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.Net;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Test.Daemon;
-using VpnHood.AppUi.Hosting.Cli;
-using VpnHood.AppUi.Hosting.Cli.Channel;
-using VpnHood.AppUi.Hosting.Cli.Exceptions;
+using VpnHood.AppUi.Hosting.Desktop;
+using VpnHood.AppUi.Hosting.Desktop.Channel;
+using VpnHood.AppUi.Hosting.Desktop.Exceptions;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -33,7 +33,7 @@ public class DaemonConnectionTest
         TestInstanceController? instance = null)
     {
         return DaemonConnection.Open(channel, peerCheck ?? new TestLoopbackPeerCheck(),
-            instance ?? new TestInstanceController(), new TestCliPaths(), CancellationToken.None);
+            instance ?? new TestInstanceController(), new TestDesktopPaths(), CancellationToken.None);
     }
 
     private static async Task WaitForChange(DaemonConnection connection, Func<Task> change)

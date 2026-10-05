@@ -16,7 +16,7 @@ namespace VpnHood.App.Connect;
 public static class ConnectAppOptions
 {
     // One built-in key and no way to add another, so there is no profile to name. A constant, since
-    // the desktop commands need it before any app exists (CliInitParams).
+    // the desktop commands need it before any app exists (DesktopInitParams).
     public const bool IsAddAccessKeySupported = false;
 
     public static AppOptions Create(AppOptionsContext context, ConnectAppConfigs appConfigs)

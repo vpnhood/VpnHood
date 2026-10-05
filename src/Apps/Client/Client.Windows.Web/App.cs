@@ -2,26 +2,26 @@
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.App.Windows;
 using VpnHood.AppUi.Hosting.Avalonia.Desktop;
-using VpnHood.AppUi.Hosting.Cli;
-using VpnHood.AppUi.Hosting.Cli.Windows;
+using VpnHood.AppUi.Hosting.Desktop;
+using VpnHood.AppUi.Hosting.Desktop.Windows;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 
 namespace VpnHood.App.Client.Windows.Web;
 
-// The Windows head, which is the answers WindowsCliHost cannot give: the app to build when this
+// The Windows head, which is the answers WindowsDesktopHost cannot give: the app to build when this
 // process is the service, and the UI to show when it is the window. Everything else - which of the
 // three this run is, the commands, the service - is the same on both Windows heads and lives in
-// Hosting/Cli.
+// Hosting/Desktop.
 internal static class App
 {
     [STAThread]
     private static int Main(string[] args)
     {
-        return WindowsCliHost.Run(args, new CliInitParams {
+        return WindowsDesktopHost.Run(args, new DesktopInitParams {
             AppId = AppConstants.AppId,
             AppOptionsFactory = CreateAppOptions,
             IsAddAccessKeySupported = ClientAppOptions.IsAddAccessKeySupported,
-            Ui = new AvaloniaDesktopHost<ClassicAvaloniaApp>()
+            Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
         });
     }
 

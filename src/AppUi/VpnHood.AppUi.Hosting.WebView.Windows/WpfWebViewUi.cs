@@ -7,7 +7,7 @@ using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
-// The SPA in a WPF window over WebView2, as a desktop head names its UI (CliInitParams.Ui): the page
+// The SPA in a WPF window over WebView2, as a desktop head names its UI (DesktopInitParams.Ui): the page
 // the app's web host serves - the service's, at the address the host hands over - with the window's
 // look read from the app and from the UI's store. It runs WPF's own Application on the host's STA
 // main thread until the run is cancelled, or, where no tray keeps it, until the window closes.

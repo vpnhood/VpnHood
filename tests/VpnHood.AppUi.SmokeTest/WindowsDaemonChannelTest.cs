@@ -7,8 +7,8 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using VpnHood.AppUi.Hosting.Cli.Channel;
-using VpnHood.AppUi.Hosting.Cli.Windows;
+using VpnHood.AppUi.Hosting.Desktop.Channel;
+using VpnHood.AppUi.Hosting.Desktop.Windows;
 
 namespace VpnHood.AppUi.SmokeTest;
 
@@ -29,7 +29,7 @@ public class WindowsDaemonChannelTest
     public async Task Pipe_is_recorded_first_and_its_own_and_answers_an_administrator()
     {
         RequireElevation();
-        var paths = new WindowsCliPaths(TestAppId);
+        var paths = new WindowsDesktopPaths(TestAppId);
         var channel = new WindowsDaemonChannel(paths);
 
         try {
@@ -71,7 +71,7 @@ public class WindowsDaemonChannelTest
     public async Task A_pipe_someone_else_owns_is_not_trusted()
     {
         RequireElevation();
-        var paths = new WindowsCliPaths(TestAppId);
+        var paths = new WindowsDesktopPaths(TestAppId);
         var name = $"{paths.InstanceName}-squatted-{Guid.NewGuid():N}";
 
         // made as a person would make it: owned by their own account
@@ -100,7 +100,7 @@ public class WindowsDaemonChannelTest
     public async Task Callers_that_leave_at_once_do_not_close_the_channel()
     {
         RequireElevation();
-        var paths = new WindowsCliPaths(TestAppId);
+        var paths = new WindowsDesktopPaths(TestAppId);
         var channel = new WindowsDaemonChannel(paths);
 
         try {
@@ -135,7 +135,7 @@ public class WindowsDaemonChannelTest
                ?? throw new InvalidOperationException("The channel could not be opened.");
     }
 
-    private static string? ReadRecorded(WindowsCliPaths paths)
+    private static string? ReadRecorded(WindowsDesktopPaths paths)
     {
         using var key = Registry.LocalMachine.OpenSubKey(paths.RegistryKeyPath);
         return key?.GetValue("DaemonChannel") as string;

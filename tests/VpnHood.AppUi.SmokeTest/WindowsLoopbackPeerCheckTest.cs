@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.AppUi.Hosting.Cli.Windows;
+using VpnHood.AppUi.Hosting.Desktop.Windows;
 
 namespace VpnHood.AppUi.SmokeTest;
 

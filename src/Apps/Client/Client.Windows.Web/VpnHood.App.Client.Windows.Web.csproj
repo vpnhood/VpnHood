@@ -28,7 +28,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 		<!-- Windows as this head runs on it: the service, the window and its tray, the commands. -->
-		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Cli.Windows\VpnHood.AppUi.Hosting.Cli.Windows.csproj" />
+		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Desktop.Windows\VpnHood.AppUi.Hosting.Desktop.Windows.csproj" />
 		<!-- The UI this head runs, in its own window. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Desktop\VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->

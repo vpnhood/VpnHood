@@ -110,7 +110,7 @@ follows one fact: can this app be given an access key?
 
 On CONNECT there is exactly one profile and nothing to choose between, so those are not printed in
 help, not parsed, and not quietly accepted. It is the same answer the app gives
-`AppOptions.IsAddAccessKeySupported`; a head states it once, in `CliInitParams`.
+`AppOptions.IsAddAccessKeySupported`; a head states it once, in `DesktopInitParams`.
 
 **Naming a profile.** On CLIENT, anywhere a command takes a profile you may give its id or its
 name, and a name may be a prefix — `vhclient connect -p "VpnHood Sam"` is enough. A prefix that
@@ -221,15 +221,15 @@ one small adapter per platform.
 
 ```
 src/AppUi/
-├── VpnHood.AppUi.Hosting.Cli/        the commands, the daemon, the window launcher
-│   ├── CliHost.cs                    builds the command tree and dispatches
-│   ├── CliInitParams.cs              what a head declares: its init params, its UI, whether it takes keys
-│   ├── CliPlatform.cs                what a platform declares: paths, the instance, how to be the daemon
+├── VpnHood.AppUi.Hosting.Desktop/    the commands, the daemon, the window launcher
+│   ├── DesktopHost.cs                builds the command tree and dispatches
+│   ├── DesktopInitParams.cs          what a head declares: its init params, its UI, whether it takes keys
+│   ├── DesktopPlatform.cs            what a platform declares: paths, the instance, how to be the daemon
 │   │                                 (and a debugger's), and what only some have: a tray, "service install",
 │   │                                 an older folder to import
 │   ├── DaemonConnection.cs           the API over loopback, following the address the channel gives it
 │   ├── MainThreadQueue.cs            the host's main thread, which the window gets
-│   ├── Abstractions/                 what a platform implements: its paths (IAppCliPaths), the running
+│   ├── Abstractions/                 what a platform implements: its paths (IAppDesktopPaths), the running
 │   │                                 instance (IAppInstanceController), the headless app (IAppDaemonHost
 │   │                                 and its factory), the channel's pipe or socket, the peer check
 │   ├── Channel/                      the channel the service hands its address over, to administrators
@@ -237,14 +237,14 @@ src/AppUi/
 │   ├── Commands/                     one type per command, and what they share: the printer, the
 │   │                                 session, the profile lookup, one window per person
 │   └── Exceptions/                   the daemon not running, or refusing the caller
-├── VpnHood.AppUi.Hosting.Cli.Linux/  systemd, /opt, XDG, root
-│   ├── LinuxCliHost.cs               a Linux head's entry point
-│   ├── LinuxCliPaths.cs
+├── VpnHood.AppUi.Hosting.Desktop.Linux/  systemd, /opt, XDG, root
+│   ├── LinuxDesktopHost.cs           a Linux head's entry point
+│   ├── LinuxDesktopPaths.cs
 │   ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through
 │   └── LinuxDaemonHost.cs            VpnHoodLinuxApp: the service's, root required, or a debugger's
-└── VpnHood.AppUi.Hosting.Cli.Windows/  the same design on Windows: a LocalSystem service, ProgramData
-    ├── WindowsCliHost.cs             a Windows head's entry point
-    ├── WindowsCliPaths.cs            ProgramData for the service, the person's local app data for the UI
+└── VpnHood.AppUi.Hosting.Desktop.Windows/  the same design on Windows: a LocalSystem service, ProgramData
+    ├── WindowsDesktopHost.cs         a Windows head's entry point
+    ├── WindowsDesktopPaths.cs        ProgramData for the service, the person's local app data for the UI
     ├── WindowsInstanceController.cs  the service control manager; elevates a stop as sudo would
     ├── WindowsServiceSetup.cs        "service install | uninstall"
     └── WindowsDaemonHost.cs          VpnHoodWindowsApp: the service's, in storage only it may write, or a debugger's
@@ -252,10 +252,10 @@ src/AppUi/
 
 A head is then its options — the product's, and its channel's lines — and one line naming its UI,
 an `IDesktopUi` (`VpnHood.AppUi.Hosting.Abstractions`), which the window runs on the host's main
-thread: `static int Main` returns `LinuxCliHost.Run(args, …)` — see
+thread: `static int Main` returns `LinuxDesktopHost.Run(args, …)` — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
-project reads a static or names a platform: every command is handed a `CliPlatform`, and the two
-interfaces on it are what each platform writes. Windows adds the rest of `CliPlatform`: the tray
+project reads a static or names a platform: every command is handed a `DesktopPlatform`, and the two
+interfaces on it are what each platform writes. Windows adds the rest of `DesktopPlatform`: the tray
 that keeps its window, `service install`, the import of the folder each person's release kept
 before the service, and a daemon run the service control manager stops by a call.
 `VpnHood.AppLib.App.Linux` is back to the one thing it always was, `VpnHoodLinuxApp`.
@@ -263,7 +263,7 @@ before the service, and a daemon run the service control manager stops by a call
 **In a debugger** a head runs `dev`, which the desktop heads' launch profiles pass: the daemon and
 the window in one process, so a breakpoint in the app, its tunnel or its UI is reached from one run
 with no service installed. The window still reaches the app over loopback, as it reaches the service.
-The app keeps its storage in the person's own folder of the app (`IAppCliPaths.DevStoragePath`:
+The app keeps its storage in the person's own folder of the app (`IAppDesktopPaths.DevStoragePath`:
 `%LOCALAPPDATA%\<app id>`, `~/.local/share/<app id>`; a Debug build's id ends in `.debug`, so it is
 never a release's) and runs as whoever started
 it, so a tunnel needs an administrator or root unless DebugData1 has `/null-capture`. Its
@@ -283,8 +283,8 @@ Points that are easy to get wrong:
    only `VhApp`. `AvaloniaDesktopHost.Run` has an overload for each.
 3. **The seam is "the running instance", not "the service".** On Linux that is a systemd unit, which
    a signal stops; on Windows a service under the service control manager, which stops it with a
-   call (`CliPlatform.HostDaemon`, `ServiceBase`). A Store build, whose app runs in its own process,
-   is a third `IAppCliPaths` + `IAppInstanceController` pair, not a third design.
+   call (`DesktopPlatform.HostDaemon`, `ServiceBase`). A Store build, whose app runs in its own process,
+   is a third `IAppDesktopPaths` + `IAppInstanceController` pair, not a third design.
 4. **Hints print `CommandName`, not the binary's name.** `vhclient` is on the `PATH`;
    `VpnHoodClient` is not. The launcher script says its own name in `VH_LAUNCHER_NAME`.
 5. **A tun says whose it is.** A tun device outlives a crash with its routes and DNS, and its name

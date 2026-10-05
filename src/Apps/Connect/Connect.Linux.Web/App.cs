@@ -3,8 +3,8 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppUi.Hosting.Avalonia.Desktop;
-using VpnHood.AppUi.Hosting.Cli;
-using VpnHood.AppUi.Hosting.Cli.Linux;
+using VpnHood.AppUi.Hosting.Desktop;
+using VpnHood.AppUi.Hosting.Desktop.Linux;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Net.Toolkit.Logging;
@@ -13,7 +13,7 @@ namespace VpnHood.App.Connect.Linux.Web;
 
 // The Connect head for Linux: the app to build when this process is the service, and the UI to
 // show when it is the window. Everything else - the commands, the service, which of the three
-// this run is - is the same on both Linux heads and lives in Hosting/Cli.
+// this run is - is the same on both Linux heads and lives in Hosting/Desktop.
 internal static class App
 {
     // The product's options, and this channel's lines on top: the package from our site, which
@@ -61,12 +61,12 @@ internal static class App
 
     private static int Main(string[] args)
     {
-        return LinuxCliHost.Run(args, new CliInitParams {
+        return LinuxDesktopHost.Run(args, new DesktopInitParams {
             AppId = AppConstants.AppId,
             AppOptionsFactory = CreateAppOptions,
             // no profile to name: the profile commands and --profile are not offered
             IsAddAccessKeySupported = ConnectAppOptions.IsAddAccessKeySupported,
-            Ui = new AvaloniaDesktopHost<ClassicAvaloniaApp>()
+            Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
         });
     }
 }

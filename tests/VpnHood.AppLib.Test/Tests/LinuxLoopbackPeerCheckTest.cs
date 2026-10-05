@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.AppUi.Hosting.Cli.Linux;
+using VpnHood.AppUi.Hosting.Desktop.Linux;
 
 namespace VpnHood.AppLib.Test.Tests;
 

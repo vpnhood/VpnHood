@@ -153,12 +153,12 @@ ids and names are not among them: they come from the app's identity (below).
 
 | File | What it does |
 | --- | --- |
-| `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params and its UI to the platform's host (`WindowsCliHost.Run`, `LinuxCliHost.Run`), whose service starts the app. Either way the platform builds its own device and starts `VpnHoodApp` |
+| `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params and its UI to the platform's host (`WindowsDesktopHost.Run`, `LinuxDesktopHost.Run`), whose service starts the app. Either way the platform builds its own device and starts `VpnHoodApp` |
 | `_publish.ps1` | the one entry point that builds and packages this head; CI calls exactly this |
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
 hosts it mounts from `AppUi`. A desktop head mounts one more host than a mobile one: its platform's
-`VpnHood.AppUi.Hosting.Cli.Linux` or `.Cli.Windows`, over the shared `VpnHood.AppUi.Hosting.Cli`,
+`VpnHood.AppUi.Hosting.Desktop.Linux` or `.Desktop.Windows`, over the shared `VpnHood.AppUi.Hosting.Desktop`,
 which is the service that holds the app, the window that shows it and the command line in one
 binary — see [linux/](linux/README.md#how-it-fits-together).
 

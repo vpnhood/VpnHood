@@ -52,7 +52,7 @@
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
 		<ProjectReference Include="..\Connect\VpnHood.App.Connect.csproj" />
 		<!-- Windows as this head runs on it: the service, the window and its tray, the commands. -->
-		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Cli.Windows\VpnHood.AppUi.Hosting.Cli.Windows.csproj" />
+		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Desktop.Windows\VpnHood.AppUi.Hosting.Desktop.Windows.csproj" />
 	</ItemGroup>
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way

@@ -3,6 +3,9 @@
 The shared coding conventions and working agreements for this repo. They are the source of
 truth — follow them, and when a new durable convention is agreed, update this file.
 
+The design and code rules agreed while building are in
+[`docs/implementation-rules.md`](docs/implementation-rules.md): read them before implementing.
+
 ## Repo layout
 - Top-level directories are lowercase: `src/`, `tests/`, `samples/`, `docs/`, `pub/`. Shared
   script folders are lowercase too (`pub/lib`, `pub/lib/utils`, `pub/lib/vh-installer`); project

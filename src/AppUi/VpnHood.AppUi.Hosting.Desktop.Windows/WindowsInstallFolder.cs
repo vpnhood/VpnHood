@@ -17,9 +17,11 @@ namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 // read from the access lists alone, which needs no elevation.
 internal static class WindowsInstallFolder
 {
-    // in the folder and below: write or add anything, delete it, or change its access list or owner
+    // in the folder and below: write or add anything, its attributes included, delete it, or change
+    // its access list or owner
     private const FileSystemRights ChangeRights =
-        FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.DeleteSubdirectoriesAndFiles |
+        FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.WriteAttributes |
+        FileSystemRights.WriteExtendedAttributes | FileSystemRights.DeleteSubdirectoriesAndFiles |
         FileSystemRights.Delete | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
 
     // on the way to it: delete or rename a folder or what it holds, or change its access list or owner
@@ -58,6 +60,11 @@ internal static class WindowsInstallFolder
         if (folder.StartsWith(@"\\", StringComparison.Ordinal))
             return $"{folder} is on the network";
 
+        // Each folder on the way is asked itself: in a folder that tells case apart, a link may lead
+        // to a name that differs only in case, which the comparison below takes for the same.
+        if (FindLinkOnTheWay(givenPath) is { } link)
+            return $"{link} is a link; start it from {folder}";
+
         if (!folder.Equals(givenPath, StringComparison.OrdinalIgnoreCase))
             return $"{givenPath} is not where the folder really is, which is {folder}; start it from there";
 
@@ -92,6 +99,17 @@ internal static class WindowsInstallFolder
             IgnoreInaccessible = false
         };
         return Directory.EnumerateFileSystemEntries(folder, "*", options).Prepend(folder);
+    }
+
+    // The first folder on the path, from the folder itself up to the drive, that is a link.
+    private static string? FindLinkOnTheWay(string path)
+    {
+        for (var folder = path; folder != null; folder = Path.GetDirectoryName(folder)) {
+            if (IsLink(folder, isDirectory: true))
+                return folder;
+        }
+
+        return null;
     }
 
     // A symbolic link or a junction. Any other reparse point - a compressed file's, a cloud

@@ -84,15 +84,18 @@ public static class AvaloniaDesktopHost
     public static void RunMessage<TUi>(DesktopUiMessageParams messageParams)
         where TUi : Application, IAvaloniaUi, new()
     {
-        var strings = messageParams.UiAssetProvider is { } assets ? TryLoadStrings<TUi>(assets) : null;
-        var text = strings != null && messageParams.Kind == DesktopUiMessageKind.AdministratorsOnly
-            ? strings.AdministratorsOnly
-            : messageParams.Text;
-
+        // Avalonia before the content, as on Android: the UI then takes its fonts in as they load,
+        // inside TryLoadStrings, so a store whose fonts cannot be read leaves the default ones rather
+        // than failing the setup with no window at all.
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
             ShutdownMode = ShutdownMode.OnExplicitShutdown
         };
         BuildAvaloniaApp<TUi>().SetupWithLifetime(lifetime);
+
+        var strings = messageParams.UiAssetProvider is { } assets ? TryLoadStrings<TUi>(assets) : null;
+        var text = strings != null && messageParams.Kind == DesktopUiMessageKind.AdministratorsOnly
+            ? strings.AdministratorsOnly
+            : messageParams.Text;
 
         var window = new AvaloniaMessageWindow(messageParams.AppName, text, strings?.Close ?? "Close",
             strings?.IsRightToLeft ?? false);
@@ -103,9 +106,10 @@ public static class AvaloniaDesktopHost
         lifetime.Start([]);
     }
 
-    // The words in the device's language: loading them leaves English. Null where they cannot be
-    // loaded - a broken store, a cache that cannot be written - and the message is the host's English:
-    // it is the last word a person gets, and must not fail with what it reports.
+    // The words in the device's language: loading them leaves English. Null where the content cannot
+    // be loaded - a broken store, fonts that cannot be read, a cache that cannot be written - and the
+    // message is the host's English: it is the last word a person gets, and must not fail with what
+    // it reports.
     private static Strings? TryLoadStrings<TUi>(IAssetProvider assets)
         where TUi : IAvaloniaUi
     {

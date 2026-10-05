@@ -36,8 +36,8 @@ public class LinuxInstanceController(IAppDesktopPaths paths) : IAppInstanceContr
     // systemctl alone, as whoever runs this, and polkit asks: the desktop session's agent puts its
     // password box up for the window, which has no terminal for sudo, and systemctl prompts in a
     // terminal itself. Where polkit is missing, systemctl is refused, and the person is told what to
-    // type instead.
-    public async Task Start(CancellationToken cancellationToken)
+    // type instead. The unit is the package installer's, so there is never one to register.
+    public async Task Start(bool mayRegister, CancellationToken cancellationToken)
     {
         if (await Run(["systemctl", "start", paths.InstanceName], cancellationToken, elevate: false) == 0)
             return;

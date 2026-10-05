@@ -4,6 +4,7 @@ using System.ServiceProcess;
 using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Channel;
+using VpnHood.AppUi.Hosting.Desktop.Exceptions;
 using VpnHood.AppUi.Hosting.Desktop.Windows.Utils;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -32,10 +33,14 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
         return Task.FromResult(GetStatus() is ServiceControllerStatus.Running or ServiceControllerStatus.StartPending);
     }
 
-    public async Task Start(CancellationToken cancellationToken)
+    public async Task Start(bool mayRegister, CancellationToken cancellationToken)
     {
-        if (!setup.IsRegistered)
+        if (!setup.IsRegistered) {
+            if (!mayRegister)
+                throw new DaemonNotRunningException(NotRunningHint);
+
             await setup.Register(cancellationToken).Vhc();
+        }
 
         try {
             using var controller = new ServiceController(paths.InstanceName);
@@ -83,7 +88,7 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
         if (stopCode != 0)
             return stopCode;
 
-        await Start(cancellationToken).Vhc();
+        await Start(mayRegister: true, cancellationToken).Vhc();
         return 0;
     }
 

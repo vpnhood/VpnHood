@@ -15,8 +15,10 @@ public interface IAppInstanceController
     Task<bool> IsRunning(CancellationToken cancellationToken);
 
     // Throws, saying why, when it could not start: the window shows that sentence, which nobody would
-    // see printed, and a command prints it.
-    Task Start(CancellationToken cancellationToken);
+    // see printed, and a command prints it. Where the app registers its instance itself (Windows), a
+    // missing one is registered on the way, behind a prompt, if mayRegister: a start nobody asked
+    // for - the tray's, at sign-in - may not, and is told it is not running.
+    Task Start(bool mayRegister, CancellationToken cancellationToken);
 
     Task<int> Stop(CancellationToken cancellationToken);
     Task<int> Restart(CancellationToken cancellationToken);

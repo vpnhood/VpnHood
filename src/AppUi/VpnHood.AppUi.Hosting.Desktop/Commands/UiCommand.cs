@@ -117,11 +117,8 @@ internal static class UiCommand
         if (!platform.IsAdministrator())
             throw new DaemonRefusedException(platform.AdministratorsOnlyMessage);
 
-        if (startHidden && platform.InstanceSetup is { IsRegistered: false })
-            throw new DaemonNotRunningException(platform.Instance.NotRunningHint);
-
         if (!await platform.Instance.IsRunning(cancellationToken).Vhc())
-            await platform.Instance.Start(cancellationToken).Vhc();
+            await platform.Instance.Start(mayRegister: !startHidden, cancellationToken).Vhc();
 
         return await DaemonConnection.Open(platform, cancellationToken).Vhc();
     }

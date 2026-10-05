@@ -16,7 +16,7 @@ internal static class ServiceCommand
         var instance = platform.Instance;
         var command = new Command("service", "Start, stop and inspect the background service.") {
             Simple(platform, "start", "Start the VPN service.", async cancellationToken => {
-                await instance.Start(cancellationToken).Vhc();
+                await instance.Start(mayRegister: true, cancellationToken).Vhc();
                 return 0;
             }),
             Simple(platform, "stop", "Stop the VPN service. This disconnects the VPN.", instance.Stop),

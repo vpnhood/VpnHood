@@ -1948,6 +1948,9 @@ public sealed partial class Strings
     /// <summary>On your phone</summary>
     public string ManageFromYourPhone => Get("MANAGE_FROM_YOUR_PHONE");
 
+    /// <summary>Only administrators can use this app on this computer.</summary>
+    public string AdministratorsOnly => Get("ADMINISTRATORS_ONLY");
+
     /// <summary>Accept and continue</summary>
     public string AcceptAndContinue => Get("ACCEPT_AND_CONTINUE");
 

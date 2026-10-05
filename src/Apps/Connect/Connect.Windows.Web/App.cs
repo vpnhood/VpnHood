@@ -25,7 +25,7 @@ internal static class App
             AppId = AppConstants.AppId,
             AppOptionsFactory = CreateAppOptions,
             IsAddAccessKeySupported = ConnectAppOptions.IsAddAccessKeySupported,
-            Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
+            Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>(AppConstants.AppName)
         });
     }
 

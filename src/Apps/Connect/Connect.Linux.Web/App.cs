@@ -66,7 +66,7 @@ internal static class App
             AppOptionsFactory = CreateAppOptions,
             // no profile to name: the profile commands and --profile are not offered
             IsAddAccessKeySupported = ConnectAppOptions.IsAddAccessKeySupported,
-            Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
+            Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>(AppConstants.AppName)
         });
     }
 }

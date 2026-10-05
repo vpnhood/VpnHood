@@ -38,7 +38,7 @@ jobs:
       contents: write   # push the bump commit to develop + main
       actions: write    # dispatch the downstream publish workflow(s)
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: develop
           fetch-depth: 0            # need history to fast-forward main

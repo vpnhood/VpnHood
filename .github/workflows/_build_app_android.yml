@@ -71,11 +71,11 @@ jobs:
       ACCESS_KEY_PREMIUM: ${{ secrets.ACCESS_KEY_PREMIUM }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with: { global-json-file: code/global.json }
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with: { distribution: temurin, java-version: "17" }
       - name: Resolve module dir
         shell: pwsh

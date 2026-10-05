@@ -44,19 +44,19 @@ jobs:
       AZURE_SIGNING_CREDENTIAL: ${{ secrets.AZURE_SIGNING_CREDENTIAL }}
       AZURE_SIGNING_TARGET: ${{ vars.AZURE_SIGNING_TARGET || secrets.AZURE_SIGNING_TARGET }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
       # The look's package (VpnHood.AppUi.Assets.Classic) is a submodule and ships with the libraries,
       # at the commit this ref pins; fastlane/, the other submodule, stays out.
       - name: Check out the asset submodule
         run: git submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
       # Base SDK pinned by global.json (10.0.x)...
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with: { global-json-file: global.json }
       # ...plus the .NET 11 preview SDK: the net11.0-ios libraries (Quic.Ios, VpnAdapters.IosTun,
       # Client.Devices.Ios, AppLib.Ios.Common) require it. global.json's rollForward=latestMajor then
       # selects 11 for the build, so net10 and net11 projects both compile.
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "11.0"
           dotnet-quality: preview

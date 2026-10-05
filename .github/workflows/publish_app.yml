@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the version file (${{ env.CODE_REPO }})
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: "${{ env.CODE_REPO }}"
           ref: "${{ inputs.code_ref }}"
@@ -115,9 +115,9 @@ jobs:
       PAGE_DIR: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with: { global-json-file: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/global.json }
       - name: Install .NET WebAssembly workload (for the SDK the page's global.json names)
         shell: pwsh
@@ -177,9 +177,9 @@ jobs:
       GOOGLE_PLAY_API_KEY: ${{ secrets.GOOGLE_PLAY_API_KEY }}
     steps:
       - name: Checkout caller repo (fastlane, at root)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Checkout code (${{ env.CODE_REPO }})
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
       - name: Warn if Google Play API key is missing
         if: env.GOOGLE_PLAY_API_KEY == ''
@@ -225,7 +225,7 @@ jobs:
           echo "✅ VersionName=$VERSION_NAME VersionCode=$VERSION_CODE Track=$TRACK Rollout='$ROLLOUT'"
       - name: Set up Java
         if: env.GOOGLE_PLAY_API_KEY != ''
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with: { distribution: temurin, java-version: "17" }
       - name: Set up Ruby
         if: env.GOOGLE_PLAY_API_KEY != ''
@@ -277,7 +277,7 @@ jobs:
       APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERT_BASE64 }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
       - name: Warn if App Store Connect API key is missing
         if: env.APPSTORE_CONNECT_API_KEY == ''
@@ -374,9 +374,9 @@ jobs:
       VH_CONNECT_PUBLISH_REPO: ${{ inputs.app == 'connect' && (vars.VH_CONNECT_PUBLISH_REPO || vars.VH_PUBLISH_REPO || github.repository) || '' }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with: { global-json-file: code/global.json }
       # Stage the artifacts in the EXACT dir Publish-GithubRelease.ps1 reads. pub/lib/Common.ps1 resolves
       # $releaseRootDir to pub/bin/<tag> on a prerelease but pub/bin/latest on a STABLE release (the local

@@ -62,6 +62,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     private readonly bool _isRemote;
     private readonly string _nocache = Environment.TickCount64.ToString();
     private string? _indexHtml;
+    private bool _isIndexHtmlMissing;
 
     // Guards the listeners, their port and token, the advertised addresses and _disposed; each
     // listener locks itself.
@@ -168,8 +169,10 @@ public class VpnHoodAppWebHost : IAppWebHost
         // The page before the socket: an unpacking that fails belongs to whoever called EnsureStarted
         // rather than to whichever request happened to arrive first. The first read of index.html is
         // what extracts the page. A build that placed no page still serves the API, which is all the
-        // window needs; a request for the page then fails naming the missing file.
-        _indexHtml ??= await TryReadIndexHtml(cancellationToken).Vhc();
+        // window needs; a request for the page then fails naming the missing file. The miss is looked
+        // for, and warned about, once.
+        if (_indexHtml == null && !_isIndexHtmlMissing)
+            _indexHtml = await TryReadIndexHtml(cancellationToken).Vhc();
 
         bool wasBound;
         lock (_lock) {
@@ -656,7 +659,10 @@ public class VpnHoodAppWebHost : IAppWebHost
             return await ReadIndexHtml(cancellationToken).Vhc();
         }
         catch (AssetNotFoundException ex) {
-            VhLogger.Instance.LogWarning(ex, "The web host has no page to serve, only its API.");
+            // the message names the missing file; the stack would only show the asset provider
+            VhLogger.Instance.LogWarning("The web host has no page to serve, only its API. Reason: {Reason}",
+                ex.Message);
+            _isIndexHtmlMissing = true;
             return null;
         }
     }

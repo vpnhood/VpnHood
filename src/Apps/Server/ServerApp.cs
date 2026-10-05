@@ -4,8 +4,6 @@ using System.Runtime.InteropServices;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
-using NLog;
-using NLog.Extensions.Logging;
 using VpnHood.App.Server.Providers.Linux;
 using VpnHood.App.Server.Providers.Win;
 using VpnHood.Core.Common;
@@ -42,6 +40,7 @@ public class ServerApp : IDisposable
     private VpnHoodServer? _vpnHoodServer;
     private IVpnAdapter? _vpnAdapter;
     private FileStream? _lockStream;
+    private ServerLog? _serverLog;
     private bool _disposed;
     private readonly string? _downloadsPath;
 
@@ -111,36 +110,6 @@ public class ServerApp : IDisposable
                 { "access_manager", AppSettings.HttpAccessManager != null ? nameof(HttpAccessManager) : nameof(FileAccessManager) }
             }
         };
-    }
-
-    // NLog.config is the server's console and its files, loaded here at start and nowhere else: its
-    // log file archives the one it finds when it opens, so a command run beside a running server
-    // would roll that server's log. A file that is missing, unreadable, broken or without rules
-    // leaves the terminal as the log, with the reason, rather than a server without a log.
-    private static void InitFileLogger(string storagePath)
-    {
-        var configFilePath = Path.Combine(StoragePath, "NLog.config");
-        if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
-
-        try {
-            LogManager.ThrowConfigExceptions = true;
-            LogManager.Setup().LoadConfigurationFromFile(configFilePath, optional: false);
-            var configuration = LogManager.Configuration ??
-                                throw new NLogConfigurationException("The configuration is empty.");
-            if (configuration.LoggingRules.Count == 0)
-                throw new NLogConfigurationException("The configuration has no logging rules.");
-
-            configuration.Variables["mydir"] = storagePath;
-            VhLogger.AddProvider(new NLogLoggerProvider());
-            VhLogger.Instance.LogInformation("Logger has been created. ConfigFilePath: {configFilePath}, LogLevel: {LogLevel}",
-                configFilePath, VhLogger.MinLogLevel);
-        }
-        catch (Exception ex) {
-            VhLogger.AddProvider(new ConsoleLoggerProvider());
-            VhLogger.Instance.LogError(ex,
-                "Could not use the NLog configuration, so the log goes to the terminal only. ConfigFilePath: {ConfigFilePath}",
-                configFilePath);
-        }
     }
 
     public static Guid GetServerId(string serverIdFile)
@@ -303,7 +272,7 @@ public class ServerApp : IDisposable
                 throw new AnotherInstanceIsRunningException();
 
             // initialize logger
-            InitFileLogger(StoragePath);
+            _serverLog = ServerLog.Start(StoragePath, AppFolderPath);
 
             // from here a stop command ends the start-up too; only the lock's holder may listen, since
             // starting to listen clears the command file
@@ -471,7 +440,7 @@ public class ServerApp : IDisposable
         _disposed = true;
 
         // the signal registrations stay to the process's end, so a late signal is still held
-        LogManager.Shutdown();
+        _serverLog?.Dispose();
     }
 
     public async Task<int> Start(string[] args, CancellationToken cancellationToken)
@@ -502,7 +471,7 @@ public class ServerApp : IDisposable
                                                throw new InvalidOperationException("The access manager is not a FileAccessManager."))
                 .AddCommands(rootCommand);
 
-        // start logs by NLog.config (InitFileLogger); any other command logs to the terminal, so the
+        // start logs by NLog.config (ServerLog); any other command logs to the terminal, so the
         // person running it sees what its access manager finds. One command per process, never both.
         var parseResult = rootCommand.Parse(args);
         if (parseResult.CommandResult.Command != startCommand)

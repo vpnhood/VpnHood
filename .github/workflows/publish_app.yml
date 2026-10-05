@@ -457,7 +457,7 @@ jobs:
       - name: Mint a release token for ${{ env.RELEASE_REPO }}
         id: release_token
         if: ${{ env.RELEASE_REPO != github.repository && vars.PUBLISHER_APP_ID != '' }}
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ vars.PUBLISHER_APP_ID }}
           private-key: ${{ secrets.PUBLISHER_APP_PRIVATE_KEY }}

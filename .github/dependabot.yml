@@ -1,0 +1,14 @@
+# Keeps the workflows' actions current: one grouped PR a month when any action has a new version,
+# at least a week after its release. Package dependencies are left to Dependabot's security alerts.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      actions:
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7

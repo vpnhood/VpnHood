@@ -11,6 +11,10 @@ public class AppInitParams
     // single-instance lock on it, and a Linux tun is tagged with it.
     public required string AppId { get; init; }
 
+    // The name people see (AppConstants.AppName). AppOptions carries it, and a desktop host names
+    // its service and its message with it in the processes that never build the options.
+    public required string AppName { get; init; }
+
     // The folder, under the platform's own place for app data, that holds the settings, the
     // profiles and the log. Required where the platform names such a folder (Android, iOS, a
     // Windows desktop app); null where a host lays storage out itself (the Linux daemon). Never

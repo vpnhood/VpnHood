@@ -23,9 +23,10 @@ internal static class App
     {
         return WindowsDesktopHost.Run(args, new DesktopInitParams {
             AppId = AppConstants.AppId,
+            AppName = AppConstants.AppName,
             AppOptionsFactory = CreateAppOptions,
             IsAddAccessKeySupported = ConnectAppOptions.IsAddAccessKeySupported,
-            Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>(AppConstants.AppName)
+            Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
         });
     }
 

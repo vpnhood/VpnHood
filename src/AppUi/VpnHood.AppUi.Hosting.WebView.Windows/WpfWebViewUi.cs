@@ -13,8 +13,9 @@ namespace VpnHood.AppUi.Hosting.WebView.Windows;
 // main thread until the run is cancelled, or, where no tray keeps it, until the window closes.
 public class WpfWebViewUi : IDesktopUi
 {
-    // the running window, which BringToFront reaches from another thread
+    // the running window, which BringToFront reaches from another thread; or the message in its place
     private volatile VpnHoodWpfMainWindow? _window;
+    private volatile WpfMessageWindow? _messageWindow;
 
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
@@ -57,9 +58,27 @@ public class WpfWebViewUi : IDesktopUi
         AppUiContext.Context = null;
     }
 
+    // In the host's own English: the web UI's words are its page's, which the app serves.
+    public void RunMessage(DesktopUiMessageParams messageParams, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return;
+
+        var application = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };
+        var window = new WpfMessageWindow(messageParams.AppName, messageParams.Text);
+        _messageWindow = window;
+        using var registration = cancellationToken.Register(() =>
+            application.Dispatcher.BeginInvoke(() => application.Shutdown()));
+
+        application.Run(window);
+        _messageWindow = null;
+    }
+
     public async Task BringToFront(CancellationToken cancellationToken)
     {
         if (_window is { } window)
             await window.Dispatcher.InvokeAsync(window.ShowOrOpen);
+        else if (_messageWindow is { } messageWindow)
+            await messageWindow.Dispatcher.InvokeAsync(() => messageWindow.Activate());
     }
 }

@@ -20,6 +20,7 @@ public static class LinuxDesktopHost
             Instance = new LinuxInstanceController(paths),
             Channel = new LinuxDaemonChannel(paths),
             PeerCheck = new LinuxLoopbackPeerCheck(),
+            IsAdministrator = LinuxAdministrators.IsCurrentUser,
             DaemonHostFactory = new LinuxDaemonHostFactory(initParams, paths),
             CreateConsoleLoggerProvider = () => LinuxJournalLogger.IsConsole
                 ? new LinuxJournalLoggerProvider()

@@ -12,6 +12,11 @@ public interface IDesktopUi
     // this holds its main thread.
     void Run(DesktopUiParams uiParams, CancellationToken cancellationToken);
 
+    // In place of Run when the host has no app to hand over: one message and a Close button, on the
+    // calling thread as Run is, until the person closes it or the host cancels. Nothing here calls
+    // the app. BringToFront reaches this window too.
+    void RunMessage(DesktopUiMessageParams messageParams, CancellationToken cancellationToken);
+
     // Shows the running UI's window and brings it to the front, from any thread: the tray's Open, a
     // second launch. Nothing while no run has a window.
     Task BringToFront(CancellationToken cancellationToken);

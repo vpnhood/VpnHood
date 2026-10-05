@@ -18,7 +18,7 @@ public static class WindowsDesktopHost
         VhLogger.AddProvider(new TraceLoggerProvider());
 
         var paths = new WindowsDesktopPaths(initParams.AppId);
-        var setup = new WindowsServiceSetup(paths);
+        var setup = new WindowsServiceSetup(paths, initParams.AppName);
         var channel = new WindowsDaemonChannel(paths);
         var instance = new WindowsInstanceController(paths, setup, channel);
         var platform = new DesktopPlatform {
@@ -26,6 +26,7 @@ public static class WindowsDesktopHost
             Instance = instance,
             Channel = channel,
             PeerCheck = new WindowsLoopbackPeerCheck(),
+            IsAdministrator = WindowsAdministrators.IsCurrentUser,
             InstanceSetup = setup,
             CreateTray = trayParams => WindowsAppTray.Start(trayParams.Api, trayParams.UiAssets,
                 trayParams.ShowWindow, trayParams.Exit),

@@ -35,6 +35,7 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
         Directory.CreateDirectory(storagePath);
         var context = new AppOptionsContext {
             AppId = initParams.AppId,
+            AppName = initParams.AppName,
             StoragePath = storagePath,
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };

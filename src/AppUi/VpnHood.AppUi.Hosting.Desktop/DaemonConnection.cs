@@ -40,8 +40,13 @@ public sealed class DaemonConnection : IAsyncDisposable
     // The daemon's API URL, followed as it moves: what a web view loads, token and all.
     public IDesktopApiUrlProvider ApiUrlProvider => _apiUrlProvider;
 
+    // A standard user is refused before the channel is asked: told at once, rather than after a wait
+    // for a service that would only refuse them, or a hint to start one they may not start.
     public static Task<DaemonConnection> Open(DesktopPlatform platform, CancellationToken cancellationToken)
     {
+        if (!platform.IsAdministrator())
+            throw new DaemonRefusedException(platform.AdministratorsOnlyMessage);
+
         return Open(platform.Channel, platform.PeerCheck, platform.Instance, platform.Paths, cancellationToken);
     }
 

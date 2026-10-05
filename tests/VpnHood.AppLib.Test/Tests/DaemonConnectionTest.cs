@@ -137,6 +137,26 @@ public class DaemonConnectionTest
         Assert.AreEqual("Only administrators may use the test app.", refused.Message);
     }
 
+    // Nothing serves the channel and the instance says it runs, so asking would wait out the bind
+    // timeout: the refusal comes first, in the platform's own sentence.
+    [TestMethod]
+    public async Task A_standard_user_is_refused_before_the_channel_is_asked()
+    {
+        var platform = new DesktopPlatform {
+            Paths = new TestDesktopPaths(),
+            Instance = new TestInstanceController(),
+            Channel = new TestDaemonChannel(),
+            PeerCheck = new TestLoopbackPeerCheck(),
+            IsAdministrator = () => false,
+            DaemonHostFactory = new TestDaemonHostFactory(),
+            CreateConsoleLoggerProvider = () => throw new NotSupportedException()
+        };
+
+        var refused = await Assert.ThrowsExactlyAsync<DaemonRefusedException>(() =>
+            DaemonConnection.Open(platform, CancellationToken.None));
+        Assert.AreEqual("Only administrators can use VpnHoodTest on this computer.", refused.Message);
+    }
+
     [TestMethod]
     public async Task Connection_follows_the_address_the_channel_sends()
     {

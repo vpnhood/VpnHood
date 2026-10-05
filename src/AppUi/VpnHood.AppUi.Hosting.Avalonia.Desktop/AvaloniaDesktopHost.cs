@@ -1,26 +1,29 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Branding;
 using VpnHood.AppLib.Api;
 using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Graphics;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
-// An Avalonia UI in a window on a desktop: a Windows or Linux head runs it here in place of the
-// web UI when the app asks (DebugCommands.AvaloniaUi). Which UI is the head's to name, once, as
-// the type argument of Run. Where a tray keeps the UI (Windows), the window hides rather than
-// closes - the app lives on in the tray and asks for the window again through ShowMainWindow - so
-// the run ends only with Shutdown, which the head calls as the app exits. Where none does (Linux,
-// exitOnClose), closing the window ends the run; the service lives on either way. Run takes the
-// calling thread as the UI thread until then.
+// An Avalonia UI in a window on a desktop. Which UI is the head's to name, once, as the type
+// argument of Run. Where a tray keeps the UI (Windows), the window hides rather than closes - the
+// app lives on in the tray and asks for the window again through ShowMainWindow - so the run ends
+// only with Shutdown, which the head calls as the app exits. Where none does (Linux, exitOnClose),
+// closing the window ends the run; the service lives on either way. Run takes the calling thread
+// as the UI thread until then.
 public static class AvaloniaDesktopHost
 {
     private static ClassicDesktopStyleApplicationLifetime? _lifetime;
@@ -29,21 +32,11 @@ public static class AvaloniaDesktopHost
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
 
-    // VpnHoodApp must be up; its web host comes up by itself when a phone pairs. A run that starts
-    // in the background keeps the window back until ShowMainWindow.
-    public static void Run<TUi>(string[] args, bool showWindow)
-        where TUi : Application, IAvaloniaUi, new()
-    {
-        // The UI reaches the app through its API - the same six interfaces a paired browser dials
-        // over HTTP, here the app's own controllers in process; in process both complete at once.
-        Run<TUi>(args, showWindow, VpnHoodApp.Instance.Api, VpnHoodApp.Instance.UiAssetProvider,
-            exitOnClose: false);
-    }
-
-    // The same window, for a head that holds no VpnHoodApp: the API is the one built over HTTP
-    // (VpnHoodApiHttpFactory) against an app running in another process, and the content store is the
-    // head's own - on Linux a user's cache, since the app's storage belongs to root. Nothing below
-    // this line knows which of the two it was given; the pages never did.
+    // The window over whatever app the host hands over. Its API is the one built over HTTP
+    // (VpnHoodApiHttpFactory) against an app running in another process, or an app's own controllers
+    // in this one; the content store is the host's to name - a user's cache where the app's storage
+    // belongs to the service. Nothing below this line knows which it was given; the pages never did.
+    // A run that starts in the background keeps the window back until ShowMainWindow.
     public static void Run<TUi>(string[] args, bool showWindow, VpnHoodApi api,
         IAssetProvider? uiAssetProvider, bool exitOnClose)
         where TUi : Application, IAvaloniaUi, new()
@@ -81,6 +74,50 @@ public static class AvaloniaDesktopHost
         if (!showWindow)
             lifetime.MainWindow = null;
         lifetime.Start(args);
+    }
+
+    // One message and a Close button, in the UI's default look, for a host with no app to give the
+    // UI: whoever runs it may not use the app, or the app could not be started or reached. The words
+    // are the UI's own files in the device's language - the language a person chose is in the app's
+    // settings, which are not to be had - and the rest of the UI's start does not run, since it calls
+    // the app first (StartAsync).
+    public static void RunMessage<TUi>(DesktopUiMessageParams messageParams)
+        where TUi : Application, IAvaloniaUi, new()
+    {
+        var strings = messageParams.UiAssetProvider is { } assets ? TryLoadStrings<TUi>(assets) : null;
+        var text = strings != null && messageParams.Kind == DesktopUiMessageKind.AdministratorsOnly
+            ? strings.AdministratorsOnly
+            : messageParams.Text;
+
+        var lifetime = new ClassicDesktopStyleApplicationLifetime {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown
+        };
+        BuildAvaloniaApp<TUi>().SetupWithLifetime(lifetime);
+
+        var window = new AvaloniaMessageWindow(messageParams.AppName, text, strings?.Close ?? "Close",
+            strings?.IsRightToLeft ?? false);
+        window.Closed += (_, _) => lifetime.Shutdown();
+        lifetime.MainWindow = window;
+        _lifetime = lifetime;
+        _window = window;
+        lifetime.Start([]);
+    }
+
+    // The words in the device's language: loading them leaves English. Null where they cannot be
+    // loaded - a broken store, a cache that cannot be written - and the message is the host's English:
+    // it is the last word a person gets, and must not fail with what it reports.
+    private static Strings? TryLoadStrings<TUi>(IAssetProvider assets)
+        where TUi : IAvaloniaUi
+    {
+        try {
+            TUi.PrepareContentAsync(assets, CancellationToken.None).GetAwaiter().GetResult();
+            Strings.Current.SetCultureAsync(CultureInfo.CurrentUICulture, CancellationToken.None).GetAwaiter().GetResult();
+            return Strings.Current;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not load the UI's words. The message is shown in English.");
+            return null;
+        }
     }
 
     // From any thread: the tray's click, a second launch's command.

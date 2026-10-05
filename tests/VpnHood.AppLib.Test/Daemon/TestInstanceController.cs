@@ -9,7 +9,7 @@ internal sealed class TestInstanceController : IAppInstanceController
     public string NotRunningHint => "The test service is not running. Start it with: vhtest service start";
 
     public Task<bool> IsRunning(CancellationToken cancellationToken) => Task.FromResult(Running);
-    public Task<int> Start(CancellationToken cancellationToken) => throw new NotSupportedException();
+    public Task Start(CancellationToken cancellationToken) => throw new NotSupportedException();
     public Task<int> Stop(CancellationToken cancellationToken) => throw new NotSupportedException();
     public Task<int> Restart(CancellationToken cancellationToken) => throw new NotSupportedException();
     public Task<int> ShowStatus(CancellationToken cancellationToken) => throw new NotSupportedException();

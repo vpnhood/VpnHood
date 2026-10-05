@@ -33,8 +33,19 @@ public class LinuxInstanceController(IAppDesktopPaths paths) : IAppInstanceContr
     public async Task<bool> IsRunning(CancellationToken cancellationToken) =>
         await Run(["systemctl", "is-active", "--quiet", paths.InstanceName], cancellationToken, elevate: false) == 0;
 
-    public Task<int> Start(CancellationToken cancellationToken) =>
-        Run(["systemctl", "start", paths.InstanceName], cancellationToken);
+    // systemctl alone, as whoever runs this, and polkit asks: the desktop session's agent puts its
+    // password box up for the window, which has no terminal for sudo, and systemctl prompts in a
+    // terminal itself. Where polkit is missing, systemctl is refused, and the person is told what to
+    // type instead.
+    public async Task Start(CancellationToken cancellationToken)
+    {
+        if (await Run(["systemctl", "start", paths.InstanceName], cancellationToken, elevate: false) == 0)
+            return;
+
+        throw new InvalidOperationException(LinuxUser.IsRoot
+            ? $"Could not start {paths.InstanceName}. See: {paths.CommandName} service log"
+            : $"Could not start {paths.InstanceName}. Start it with: sudo systemctl start {paths.InstanceName}");
+    }
 
     public Task<int> Stop(CancellationToken cancellationToken) =>
         Run(["systemctl", "stop", paths.InstanceName], cancellationToken);

@@ -27,6 +27,7 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
         // the bundle is a folder, and the asset packages placed their files in it
         var context = new AppOptionsContext {
             AppId = initParams.AppId,
+            AppName = initParams.AppName,
             StoragePath = initParams.ResolveStoragePath(),
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };

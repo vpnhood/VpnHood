@@ -10,7 +10,6 @@ namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 // its name first. A caller must be root or in sudo, wheel or admin; a sudoers line alone is not seen.
 public sealed class LinuxDaemonChannel(LinuxDesktopPaths paths) : IDaemonChannel
 {
-    private static readonly string[] AdminGroups = ["sudo", "wheel", "admin"];
     private const int SolSocket = 1;
     private const int SoPeerCred = 17;
     private const int SoPeerGroups = 59;
@@ -34,7 +33,7 @@ public sealed class LinuxDaemonChannel(LinuxDesktopPaths paths) : IDaemonChannel
                 UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.GroupWrite |
                 UnixFileMode.OtherRead | UnixFileMode.OtherWrite);
             return Task.FromResult<IDaemonChannelListener>(
-                new Listener(socket, paths.ChannelSocketPath, LinuxGroups.Resolve(AdminGroups)));
+                new Listener(socket, paths.ChannelSocketPath, LinuxGroups.Resolve(LinuxAdministrators.Groups)));
         }
         catch {
             socket.Dispose();

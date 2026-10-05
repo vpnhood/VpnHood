@@ -6,7 +6,8 @@ namespace VpnHood.AppUi.Hosting.Desktop.Windows.Utils;
 
 // What sudo is on Linux: a command that needs an administrator, run again as one - one UAC prompt,
 // the same command elevated, its exit code back. The elevated copy has no console of its own to
-// print to, so what it would have printed is the caller's to say.
+// print to, so what it would have printed is the caller's to say. A declined prompt throws, saying
+// so: the window shows that, and a command prints it.
 internal static class WindowsElevation
 {
     private const int ErrorCancelled = 1223;
@@ -37,8 +38,7 @@ internal static class WindowsElevation
             return process.ExitCode;
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled) {
-            await Console.Error.WriteLineAsync("Cancelled: this needs an administrator's approval.").ConfigureAwait(false);
-            return 1;
+            throw new InvalidOperationException("Cancelled: this needs an administrator's approval.", ex);
         }
     }
 

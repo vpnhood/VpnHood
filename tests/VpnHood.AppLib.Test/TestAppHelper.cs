@@ -37,12 +37,12 @@ public class TestAppHelper : TestHelper
         // a storage of its own per app, since tests run many apps side by side
         var context = new AppOptionsContext {
             AppId = "com.vpnhood.client.test",
+            AppName = "VpnHood! Test",
             StoragePath = storagePath ?? Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             PackagedAssetProvider = AssetProvider
         };
 
         var appOptions = new AppOptions(context, isDebugMode) {
-            AppName = "VpnHood! Test",
             PackageTitle = "VpnHoodTest",
             CompanyName = "VpnHood",
             LogoAssetPath = "images/logo-client.png",

@@ -39,6 +39,7 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
         Directory.CreateDirectory(storagePath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         var context = new AppOptionsContext {
             AppId = initParams.AppId,
+            AppName = initParams.AppName,
             StoragePath = storagePath,
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };

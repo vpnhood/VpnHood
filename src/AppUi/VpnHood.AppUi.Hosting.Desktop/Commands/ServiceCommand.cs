@@ -1,5 +1,5 @@
 using System.CommandLine;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 
@@ -15,30 +15,56 @@ internal static class ServiceCommand
     {
         var instance = platform.Instance;
         var command = new Command("service", "Start, stop and inspect the background service.") {
-            Simple("start", "Start the VPN service.", instance.Start),
-            Simple("stop", "Stop the VPN service. This disconnects the VPN.", instance.Stop),
-            Simple("restart", "Restart the VPN service.", instance.Restart),
-            Simple("status", "Show what the system says about the service.", instance.ShowStatus),
+            Simple(platform, "start", "Start the VPN service.", async cancellationToken => {
+                await instance.Start(cancellationToken).Vhc();
+                return 0;
+            }),
+            Simple(platform, "stop", "Stop the VPN service. This disconnects the VPN.", instance.Stop),
+            Simple(platform, "restart", "Restart the VPN service.", instance.Restart),
+            Simple(platform, "status", "Show what the system says about the service.", instance.ShowStatus),
             CreateLog(platform)
         };
 
         // Only where the app registers its service itself; elsewhere the package's installer does,
         // and a command that could only refuse is left out of help altogether.
         if (platform.InstanceSetup is { } setup) {
-            command.Subcommands.Add(Simple("install",
+            command.Subcommands.Add(Simple(platform, "install",
                 "Register the VPN service, started at boot. The installer runs this.", setup.Install));
-            command.Subcommands.Add(Simple("uninstall",
+            command.Subcommands.Add(Simple(platform, "uninstall",
                 "Stop the VPN service and remove it. The uninstaller runs this.", setup.Uninstall));
         }
 
         return command;
     }
 
-    private static Command Simple(string name, string description, Func<CancellationToken, Task<int>> action)
+    private static Command Simple(DesktopPlatform platform, string name, string description,
+        Func<CancellationToken, Task<int>> action)
     {
         var command = new Command(name, description);
-        command.SetAction((_, cancellationToken) => action(cancellationToken));
+        command.SetAction((_, cancellationToken) => Run(platform, action, cancellationToken));
         return command;
+    }
+
+    // A standard user is refused before anything that would ask for elevation; anything thrown is its
+    // sentence on stderr.
+    private static async Task<int> Run(DesktopPlatform platform, Func<CancellationToken, Task<int>> action,
+        CancellationToken cancellationToken)
+    {
+        try {
+            if (!platform.IsAdministrator()) {
+                await Console.Error.WriteLineAsync(platform.AdministratorsOnlyMessage).Vhc();
+                return 1;
+            }
+
+            return await action(cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            return 130;
+        }
+        catch (Exception ex) {
+            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            return 1;
+        }
     }
 
     private static Command CreateLog(DesktopPlatform platform)

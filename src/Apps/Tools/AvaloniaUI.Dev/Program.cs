@@ -51,12 +51,12 @@ internal static class Program
         // this very string), so the window says which product it is running as
         var appOptionsContext = new AppOptionsContext {
             AppId = "com.vpnhood.avalonia.dev",
+            AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
             StoragePath = storageFolderPath,
             PackagedAssetProvider = platformAssets
         };
 
         var appOptions = new AppOptions(appOptionsContext, isDebugMode: true) {
-            AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
             PackageTitle = isConnect ? "VpnHoodConnect" : "VpnHoodClient",
             CompanyName = "VpnHood",
             // the documents the product links to, which every head takes from its appsettings.json:

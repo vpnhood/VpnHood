@@ -9,6 +9,13 @@ internal static class WindowsAdministrators
 {
     private const int TokenLinkedToken = 19;
 
+    // whoever runs this process, elevated or not
+    public static bool IsCurrentUser()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return IsMember(identity);
+    }
+
     public static bool IsMember(WindowsIdentity identity)
     {
         if (IsInRole(identity))

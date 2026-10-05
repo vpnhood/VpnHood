@@ -153,7 +153,7 @@ ids and names are not among them: they come from the app's identity (below).
 
 | File | What it does |
 | --- | --- |
-| `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params and its UI to the platform's host (`WindowsDesktopHost.Run`, `LinuxDesktopHost.Run`), whose service starts the app. Either way the platform builds its own device and starts `VpnHoodApp` |
+| `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id and name, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params and its UI to the platform's host (`WindowsDesktopHost.Run`, `LinuxDesktopHost.Run`), whose service starts the app. Either way the platform builds its own device and starts `VpnHoodApp` |
 | `_publish.ps1` | the one entry point that builds and packages this head; CI calls exactly this |
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
@@ -200,8 +200,10 @@ package reference of it imports) makes the rest, so a head names no id and no na
 - **`AppConstants`**, a class the build writes for the code: `AppId`, `AppName`, `CompanyName`,
   `PackageTitle` and `IsDebugMode`, and
   on iOS `AppGroupId` and `ProviderBundleId`. At run time Android and iOS read the id their package or
-  bundle has; the desktops read `AppConstants.AppId`. The product library gets one too, without the
-  ids, which are each head's own: its options builder reads the rest there, so a head passes none.
+  bundle has; the desktops read `AppConstants.AppId`. Every head states `AppConstants.AppName` beside
+  the id, since a desktop host names its service and its message with it where no options are
+  built. The product library gets one too, without the ids, which are each head's own: its options
+  builder reads the company and the package title there.
 
 What a head states itself is kept. A shipped id never changes - the stores key their listings on it,
 and on Windows and Linux it is part of every install's client id - so a head whose shipped id the

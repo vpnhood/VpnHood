@@ -1,6 +1,7 @@
 using System.CommandLine;
 using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Exceptions;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -15,7 +16,8 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 // so a stopped instance is started here rather than reported: on Linux that is systemctl asking
 // the session's polkit agent, on Windows the service control manager, which lets any signed-in
 // person start the service. Waiting for it to come up is not done here - DaemonConnection.Open
-// waits for any caller.
+// waits for any caller. What stops the window - a person who may not use the app, a service that
+// could not be started or reached - the UI says in one message in its place (IDesktopUi.RunMessage).
 internal static class UiCommand
 {
     public static Command Create(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread)
@@ -49,14 +51,11 @@ internal static class UiCommand
             if (uiInstance == null)
                 return 0;
 
-            if (!await platform.Instance.IsRunning(cancellationToken).Vhc() &&
-                await platform.Instance.Start(cancellationToken).Vhc() != 0) {
-                await Console.Error.WriteLineAsync(
-                    $"Could not start {platform.Paths.InstanceName}.").Vhc();
+            await using var connection = await TryReach(platform, initParams, mainThread, startHidden,
+                cancellationToken).Vhc();
+            if (connection == null)
                 return 1;
-            }
 
-            await using var connection = await DaemonConnection.Open(platform, cancellationToken).Vhc();
             await RunWindow(platform, initParams, mainThread, connection, startHidden, cancellationToken).Vhc();
             return 0;
         }
@@ -69,16 +68,79 @@ internal static class UiCommand
         }
     }
 
+    // The app's API; or null once the person has been told why it cannot be had, in the one message
+    // the UI shows in its place. The tray started at sign-in tells nobody: a standard user's exits
+    // silently (desktop plan §3).
+    private static async Task<DaemonConnection?> TryReach(DesktopPlatform platform, DesktopInitParams initParams,
+        MainThreadQueue mainThread, bool startHidden, CancellationToken cancellationToken)
+    {
+        try {
+            return await Reach(platform, startHidden, cancellationToken).Vhc();
+        }
+        catch (DaemonRefusedException ex) {
+            if (!startHidden)
+                await RunMessage(platform, initParams, mainThread, DesktopUiMessageKind.AdministratorsOnly, ex.Message,
+                    cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
+        }
+        catch (Exception ex) {
+            if (!startHidden)
+                await RunMessage(platform, initParams, mainThread, DesktopUiMessageKind.Failure, ex.Message,
+                    cancellationToken).Vhc();
+        }
+
+        return null;
+    }
+
+    // The UI's one message in the window's place, on the host's main thread as the window would run,
+    // until the person closes it.
+    private static Task RunMessage(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
+        DesktopUiMessageKind kind, string text, CancellationToken cancellationToken)
+    {
+        return mainThread.Run(() => initParams.Ui.RunMessage(new DesktopUiMessageParams {
+            Kind = kind,
+            AppName = initParams.AppName,
+            Text = text,
+            UiAssetProvider = CreateUiAssets(platform, initParams)
+        }, cancellationToken));
+    }
+
+    // The window's own check of the person comes first, so a standard user meets no prompt: neither
+    // the service's start nor its registration, which asks UAC. The tray started at sign-in starts
+    // a stopped service but registers no missing one: nobody opened anything, to be asked. Throws,
+    // saying why, when the app cannot be had.
+    private static async Task<DaemonConnection> Reach(DesktopPlatform platform, bool startHidden,
+        CancellationToken cancellationToken)
+    {
+        if (!platform.IsAdministrator())
+            throw new DaemonRefusedException(platform.AdministratorsOnlyMessage);
+
+        if (startHidden && platform.InstanceSetup is { IsRegistered: false })
+            throw new DaemonNotRunningException(platform.Instance.NotRunningHint);
+
+        if (!await platform.Instance.IsRunning(cancellationToken).Vhc())
+            await platform.Instance.Start(cancellationToken).Vhc();
+
+        return await DaemonConnection.Open(platform, cancellationToken).Vhc();
+    }
+
+    // The UI's own copy of the content, under this user's cache: the daemon extracted its own under
+    // its storage, which a session may not write, and each provider owns its folder.
+    private static IAssetProvider CreateUiAssets(DesktopPlatform platform, DesktopInitParams initParams)
+    {
+        var packagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory);
+        return new ZipAssetProvider(new Asset(packagedAssetProvider, initParams.UiZipAssetPath),
+            platform.Paths.UiContentCachePath);
+    }
+
     // The window over a connection to the app, until it is gone: the service's app, or the one this
     // process holds itself (DevCommand).
     internal static async Task RunWindow(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
         DaemonConnection connection, bool startHidden, CancellationToken cancellationToken)
     {
-        // The UI's own copy of the content, under this user's cache: the daemon extracted its own
-        // under its storage, which a session may not write, and each provider owns its folder.
-        var packagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory);
-        var uiAssets = new ZipAssetProvider(
-            new Asset(packagedAssetProvider, initParams.UiZipAssetPath), platform.Paths.UiContentCachePath);
+        var uiAssets = CreateUiAssets(platform, initParams);
 
         // The UI's run ends with the command - a signal, a logout - or with the tray's Exit.
         using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

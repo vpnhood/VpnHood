@@ -68,7 +68,7 @@ internal static class DaemonCommand
             localWebHost.Restarted += onRestarted;
             channel = await DaemonChannelServer.TryStart(platform.Channel,
                 Answer(localWebHost) ?? throw new InvalidOperationException("The local web host has no address."),
-                $"Only administrators can use {platform.Paths.InstanceName} on this computer.", cancellationToken).Vhc();
+                platform.AdministratorsOnlyMessage, cancellationToken).Vhc();
             Publish(channel, localWebHost);
 
             // until the app is disposed - by the system's signal, or by itself

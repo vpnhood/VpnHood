@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics.Eventing.Reader;
 using System.ServiceProcess;
 using VpnHood.AppLib.App;
@@ -31,13 +32,10 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
         return Task.FromResult(GetStatus() is ServiceControllerStatus.Running or ServiceControllerStatus.StartPending);
     }
 
-    public async Task<int> Start(CancellationToken cancellationToken)
+    public async Task Start(CancellationToken cancellationToken)
     {
-        if (!setup.IsRegistered) {
-            var installCode = await setup.Install(cancellationToken).Vhc();
-            if (installCode != 0)
-                return installCode;
-        }
+        if (!setup.IsRegistered)
+            await setup.Register(cancellationToken).Vhc();
 
         try {
             using var controller = new ServiceController(paths.InstanceName);
@@ -50,11 +48,11 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
                 controller.Start();
 
             await WaitForStatus(controller, ServiceControllerStatus.Running, cancellationToken).Vhc();
-            return 0;
         }
-        catch (InvalidOperationException ex) {
-            await Console.Error.WriteLineAsync(ex.InnerException?.Message ?? ex.Message).Vhc();
-            return 1;
+        catch (InvalidOperationException ex) when (ex.InnerException is Win32Exception inner) {
+            // the service control manager's own refusal, which ServiceController hides under a
+            // sentence of its own
+            throw new InvalidOperationException($"Could not start {paths.InstanceName}: {inner.Message}", ex);
         }
     }
 
@@ -82,7 +80,11 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
             return await WindowsElevation.Run(paths.ExecutablePath, ["service", "restart"], cancellationToken).Vhc();
 
         var stopCode = await Stop(cancellationToken).Vhc();
-        return stopCode != 0 ? stopCode : await Start(cancellationToken).Vhc();
+        if (stopCode != 0)
+            return stopCode;
+
+        await Start(cancellationToken).Vhc();
+        return 0;
     }
 
     // What "systemctl status" would say, in its exit code too: 0 running, 3 not.

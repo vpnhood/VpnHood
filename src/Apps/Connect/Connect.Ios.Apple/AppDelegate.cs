@@ -38,6 +38,7 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
             // the bundle's own id, which the build took from the app's identity
             AppId = NSBundle.MainBundle.BundleIdentifier ??
                     throw new InvalidOperationException("The app's bundle has no identifier."),
+            AppName = AppConstants.AppName,
             StorageFolderName = StorageFolderName,
             AppGroupId = AppConstants.AppGroupId,
             ProviderBundleId = AppConstants.ProviderBundleId,

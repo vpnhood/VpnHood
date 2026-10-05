@@ -18,6 +18,14 @@ public class DesktopPlatform
     // How this OS tells who owns the far end of a loopback connection, checked before a call is sent.
     public required ILoopbackPeerCheck PeerCheck { get; init; }
 
+    // Whether whoever runs this process may use the app: an administrator, by the rule the service
+    // applies to every caller of its channel. The window and the commands ask it first, so a standard
+    // user is told at once, with no prompt and no wait; the service's own check stays the boundary.
+    public required Func<bool> IsAdministrator { get; init; }
+
+    // What a person who may not use the app reads: the service's refusal, and the commands' own.
+    internal string AdministratorsOnlyMessage => $"Only administrators can use {Paths.InstanceName} on this computer.";
+
     // Registering and removing the instance, where the app does it itself (Windows: the service, which
     // "service install" registers); null where the package's installer does (Linux), and then those
     // commands are not offered.

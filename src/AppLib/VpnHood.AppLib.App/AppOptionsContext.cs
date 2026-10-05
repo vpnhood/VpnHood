@@ -8,6 +8,7 @@ namespace VpnHood.AppLib.App;
 public class AppOptionsContext
 {
     public required string AppId { get; init; }
+    public required string AppName { get; init; }
 
     // The folder that holds the settings, the profiles and the log.
     public required string StoragePath { get; init; }

@@ -15,10 +15,11 @@ using VpnHood.AppLib.App.WebHosting;
 
 namespace VpnHood.AppLib.App;
 
-// The app id and the storage path come from the platform's context (AppInitParams), never from a
-// default here: a platform that settled them after the options were built would be too late for
-// the providers the head made with them. Neither can be set after, either: a desktop platform has
-// used both - its lock, its files - before it calls the factory.
+// The app id, its name and the storage path come from the platform's context (AppInitParams),
+// never from a default here: a platform that settled them after the options were built would be
+// too late for the providers the head made with them. None can be set after, either: a desktop
+// platform has used the id and the path - its lock, its files - before it calls the factory, and
+// its host uses the name where no factory runs.
 public class AppOptions(AppOptionsContext context, bool isDebugMode)
 {
     public string AppId => context.AppId;
@@ -36,7 +37,7 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     public AppUpdaterOptions? UpdaterOptions { get; set; }
     // What the ENGINE reads of a head's identity. The look the OS chrome draws with - the colours,
     // the tray icons - is read out of the UI's store (AppBranding, under UiTheme), not handed in.
-    public required string AppName { get; init; }
+    public string AppName => context.AppName;
 
     // The name without spaces, which the release files, a desktop executable and its service, and
     // the VPN adapter are called by: the build's (AppConstants.PackageTitle).

@@ -26,7 +26,6 @@ public static class ClientAppOptions
         var defaultAccessKey = appConfigs.DefaultAccessKey ??
                                (AppConstants.IsDebugMode ? ClientOptions.SampleAccessKey : null);
         return new AppOptions(context, AppConstants.IsDebugMode) {
-            AppName = AppConstants.AppName,
             PackageTitle = AppConstants.PackageTitle,
             CompanyName = AppConstants.CompanyName,
             LogoAssetPath = "images/logo-client.png",

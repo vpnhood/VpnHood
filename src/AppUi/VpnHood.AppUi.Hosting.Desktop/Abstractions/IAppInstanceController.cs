@@ -13,7 +13,11 @@ public interface IAppInstanceController
     string NotRunningHint { get; }
 
     Task<bool> IsRunning(CancellationToken cancellationToken);
-    Task<int> Start(CancellationToken cancellationToken);
+
+    // Throws, saying why, when it could not start: the window shows that sentence, which nobody would
+    // see printed, and a command prints it.
+    Task Start(CancellationToken cancellationToken);
+
     Task<int> Stop(CancellationToken cancellationToken);
     Task<int> Restart(CancellationToken cancellationToken);
     Task<int> ShowStatus(CancellationToken cancellationToken);

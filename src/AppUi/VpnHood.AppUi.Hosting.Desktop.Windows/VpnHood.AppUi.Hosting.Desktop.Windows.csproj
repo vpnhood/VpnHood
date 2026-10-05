@@ -10,6 +10,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- The install folder's rules, tried against real folders by the elevated smoke test. -->
+		<InternalsVisibleTo Include="VpnHood.AppUi.SmokeTest" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop\VpnHood.AppUi.Hosting.Desktop.csproj" />
 		<!-- The app as the service runs it, and the tray the window shows. -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Windows\VpnHood.AppLib.App.Windows.csproj" />

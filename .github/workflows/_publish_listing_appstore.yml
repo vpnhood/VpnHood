@@ -68,13 +68,13 @@ jobs:
       # Bare checkout on purpose: github.repository is the store-asset repo that started the run.
       - name: Checkout the store assets (caller repo)
         if: env.APPSTORE_CONNECT_API_KEY != ''
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # The sync tool ships with the screenshot engine that generates these images. It has no npm
       # dependencies — Node built-ins only — so no install step is needed.
       - name: Checkout the store tooling
         if: env.APPSTORE_CONNECT_API_KEY != ''
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           repository: vpnhood/VpnHood.AppUi.Spa
           ref: ${{ inputs.webui_ref }}
@@ -82,7 +82,7 @@ jobs:
 
       - name: Set up Node.js
         if: env.APPSTORE_CONNECT_API_KEY != ''
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
 

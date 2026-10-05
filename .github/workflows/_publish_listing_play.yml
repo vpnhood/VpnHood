@@ -36,7 +36,7 @@ jobs:
       # Bare checkout on purpose: github.repository is the store-asset repo that started the run.
       - name: Checkout the store assets (caller repo)
         if: env.GOOGLE_PLAY_API_KEY != ''
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up Ruby
         if: env.GOOGLE_PLAY_API_KEY != ''

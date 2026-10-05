@@ -62,7 +62,7 @@ jobs:
       APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Fail loudly and specifically: an absent key here is a setup problem to fix, not a fork that
       # ships elsewhere. Naming the two remedies saves a round-trip to the docs.
@@ -74,7 +74,7 @@ jobs:
 
       # The script uses Node built-ins only (crypto for the ES256 JWT, global fetch) — nothing to install.
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
 

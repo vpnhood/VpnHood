@@ -47,7 +47,7 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | Secret | Used by | Required? | What it is |
 |---|---|---|---|
 | `GITHUB_TOKEN` | all release/publish workflows | Automatic | Provided by GitHub; no action needed. |
-| `PUBLISHER_APP_PRIVATE_KEY` (+ `PUBLISHER_APP_ID` **Variable**) | `publish_app.yml` (release job) | Required only for a **cross-repo release** | Private key + App ID of a GitHub App installed on the release repo with `Contents: Read and write`. Needed only when `VH_PUBLISH_REPO` points somewhere other than the repo running the workflow — `github.token` is scoped to the caller and cannot write a release elsewhere. Set on the **publishing** repo (e.g. `Vpnhood.App.Client`), not on the release repo. Absent while a cross-repo release is requested → the run fails loudly rather than 404-ing inside `gh`. |
+| `PUBLISHER_APP_PRIVATE_KEY` (+ `PUBLISHER_APP_CLIENT_ID` **Variable**) | `publish_app.yml` (release job) | Required only for a **cross-repo release** | Private key + Client ID (the `Iv23…` id on the App's settings page, not the numeric App ID) of a GitHub App installed on the release repo with `Contents: Read and write`. Needed only when `VH_PUBLISH_REPO` points somewhere other than the repo running the workflow — `github.token` is scoped to the caller and cannot write a release elsewhere. Set on the **publishing** repo (e.g. `Vpnhood.App.Client`), not on the release repo. Absent while a cross-repo release is requested → the run fails loudly rather than 404-ing inside `gh`. |
 | `GOOGLE_PLAY_API_KEY` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`), `_publish_listing_play.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → the AAB is published to Play, the Play-signed APK is attached to the release, and the store LISTING can be pushed. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
 | `ADVANCED_INSTALLER_LICENSE` | `publish_client.yml` (in `Vpnhood.App.Client`) | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
 | `AZURE_SIGNING_CREDENTIAL` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (Windows signing) | The single Azure service-principal JSON you download from Azure (contains `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`; other fields ignored). Paste the whole file. Absent **together with** `AZURE_SIGNING_TARGET` → MSI builds unsigned with a warning; present without it → the build **fails** (see the pair rule below). |
@@ -87,7 +87,7 @@ Two things must both be true for that split, and each fails loudly if it is not:
   URLs are written during the per-platform builds. That is why the variable is read in all four
   `_build_app_*` modules — reading it only at release time would ship JSON pointing at a repo with
   no releases, and nothing in the run would go red.
-- **A cross-repo release needs `PUBLISHER_APP_ID` + `PUBLISHER_APP_PRIVATE_KEY`** on the publishing
+- **A cross-repo release needs `PUBLISHER_APP_CLIENT_ID` + `PUBLISHER_APP_PRIVATE_KEY`** on the publishing
   repo (see the table above). `github.token` is scoped to the caller and cannot create a release
   elsewhere.
 

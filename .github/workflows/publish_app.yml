@@ -456,10 +456,10 @@ jobs:
       # configured (or releasing to itself) -> github.token, so every existing caller is untouched.
       - name: Mint a release token for ${{ env.RELEASE_REPO }}
         id: release_token
-        if: ${{ env.RELEASE_REPO != github.repository && vars.PUBLISHER_APP_ID != '' }}
+        if: ${{ env.RELEASE_REPO != github.repository && vars.PUBLISHER_APP_CLIENT_ID != '' }}
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.PUBLISHER_APP_ID }}
+          client-id: ${{ vars.PUBLISHER_APP_CLIENT_ID }}
           private-key: ${{ secrets.PUBLISHER_APP_PRIVATE_KEY }}
           owner: ${{ env.RELEASE_REPO_OWNER }}
           repositories: ${{ env.RELEASE_REPO_NAME }}
@@ -467,9 +467,9 @@ jobs:
       # cross-repo release but has no App credentials would otherwise fall back to github.token and
       # die deep inside gh with a bare 404.
       - name: Require a release token for a cross-repo release
-        if: ${{ env.RELEASE_REPO != github.repository && vars.PUBLISHER_APP_ID == '' }}
+        if: ${{ env.RELEASE_REPO != github.repository && vars.PUBLISHER_APP_CLIENT_ID == '' }}
         run: |
-          echo "::error title=Missing release credentials::VH_PUBLISH_REPO points at $RELEASE_REPO, but this repo has no PUBLISHER_APP_ID/PUBLISHER_APP_PRIVATE_KEY. github.token cannot write to another repository."
+          echo "::error title=Missing release credentials::VH_PUBLISH_REPO points at $RELEASE_REPO, but this repo has no PUBLISHER_APP_CLIENT_ID/PUBLISHER_APP_PRIVATE_KEY. github.token cannot write to another repository."
           exit 1
       - name: Create GitHub release (${{ env.RELEASE_REPO }})
         shell: pwsh

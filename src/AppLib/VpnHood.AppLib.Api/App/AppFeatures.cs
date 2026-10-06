@@ -52,6 +52,11 @@ public class AppFeatures
     public required bool IsTcpProxySupported { get; init; }
     public required bool IsQuicSupported { get; init; }
     public required bool IsSplitDomainSupported { get; init; }
+
+    // Whether this build has the IP-location data (AppOptions.IpLocationZipAsset) a country split
+    // needs. False means a country mode fails the connect, so a UI hides the option rather than
+    // offering it and failing.
+    public required bool IsSplitCountrySupported { get; init; }
     public required bool IsUserReviewSupported { get; init; }
 
     // Whether this build collects anonymous data at all: analytics events, and the crash reports that ride

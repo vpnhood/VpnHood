@@ -195,7 +195,7 @@
         </Button>
 
         <!-- SplitCountryButton: the countries split, with its flags -->
-        <Button x:Name="SplitCountriesButton" Classes="config-item" Click="OnSplitCountriesClick">
+        <Button x:Name="SplitCountriesButton" Classes="config-item" Click="OnSplitCountriesClick" IsVisible="{Binding HasSplitCountriesRow}">
           <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
             <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.CallSplit}" />
             <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding SplitCountriesTitle}" />

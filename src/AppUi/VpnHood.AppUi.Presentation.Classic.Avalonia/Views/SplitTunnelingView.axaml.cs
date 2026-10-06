@@ -81,6 +81,7 @@ public partial class SplitTunnelingView : UserControl, IPage
         CountriesItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.SplitCountry);
         CountriesItem.SetStatus(split.IsCountrySplit, AppText.SplitCountryStatusText(state), s.Off, StatusColor.Switch);
         CountriesItem.IsDisabled = !split.IsEnabled;
+        CountriesItem.IsVisible = features.IsSplitCountrySupported;
 
         DnsSection.Title = s.Dns;
         DnsItem.Title = s.SplitDns;

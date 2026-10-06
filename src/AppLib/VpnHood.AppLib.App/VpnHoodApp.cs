@@ -226,6 +226,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsTcpProxySupported = device.IsTcpProxySupported,
             IsQuicSupported = device.IsQuicSupported,
             IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
+            IsSplitCountrySupported = options.IpLocationZipAsset != null,
             IsUserReviewSupported = options.UserReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
             IsAnonymousTrackerSupported = tracker is not NullTracker,

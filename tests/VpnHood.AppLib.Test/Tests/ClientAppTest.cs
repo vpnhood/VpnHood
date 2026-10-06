@@ -60,7 +60,7 @@ public class ClientAppTest : TestAppBase
     }
 
     // A head whose product names no IP-location data - a fork without the package: the app starts
-    // with no local location lookup, and connects.
+    // with no local location lookup, offers no country split, and connects.
     [TestMethod]
     public async Task Runs_without_ip_location_asset()
     {
@@ -71,6 +71,7 @@ public class ClientAppTest : TestAppBase
         appOptions.IpLocationZipAsset = null;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         Assert.IsNull(app.IpRangeLocationProvider);
+        Assert.IsFalse(app.Features.IsSplitCountrySupported);
 
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);

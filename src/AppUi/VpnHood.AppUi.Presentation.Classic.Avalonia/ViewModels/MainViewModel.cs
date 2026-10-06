@@ -81,6 +81,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // the drawer's door, off the TV; the account button in the corner, on it
     public bool HasAccountButton => IsTv && VhApp.Features.IsAccountSupported;
     public bool HasSplitAppsRow => VhApp.Features.IsExcludeAppsSupported || VhApp.Features.IsIncludeAppsSupported;
+    public bool HasSplitCountriesRow => VhApp.Features.IsSplitCountrySupported;
 
     // A debug field that is set shows on the version chip, and opens the developer page on the
     // first tap rather than the fifth - the web UI's isDebugDataHasValue.

@@ -95,6 +95,8 @@ internal sealed class StoreFixture
         Fill(features, "accountWebsiteUrl", null, filled, "features");
         Fill(features, "isLicenseAgreementRequired", false, filled, "features");
         Fill(features, "isRemoteAccessSupported", false, filled, "features");
+        // both products ship the IP-location data, so their store pages show the country split
+        Fill(features, "isSplitCountrySupported", true, filled, "features");
 
         var intents = Section(root, "intentFeatures");
         Fill(intents, "isWebBrowserSupported", true, filled, "intentFeatures");

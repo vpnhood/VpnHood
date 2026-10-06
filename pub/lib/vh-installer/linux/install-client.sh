@@ -10,6 +10,7 @@
 #   /usr/local/bin/<launcher>    so the commands can be typed from anywhere
 #   /etc/systemd/system/<name>.service           the root service, headless
 #   /usr/share/applications/<name>.desktop       the window, in the app grid
+#   /usr/share/icons/hicolor/256x256/apps/<name>.png   its icon
 #
 # Ubuntu and Debian are what it is tested on; anything with systemd and apt, or systemd and the
 # GUI libraries already present, will do.
@@ -23,7 +24,6 @@ versionTag="$(versionTagParam)";
 assemblyName="$(assemblyNameParam)";
 productName="$(productNameParam)";
 launcher="$(launcherNameParam)";
-logoAssetPath="$(logoAssetPathParam)";
 
 # Calculated path
 destinationPath="/opt/$assemblyName";
@@ -135,7 +135,7 @@ fi
 # already, or one that is not Debian at all, must still finish installing.
 if [ "$withDesktop" == "y" ]; then
 	missing="";
-	for lib in libx11-6 libice6 libsm6 libfontconfig1 unzip xdg-utils; do
+	for lib in libx11-6 libice6 libsm6 libfontconfig1 xdg-utils; do
 		if ! dpkg -s "$lib" >/dev/null 2>&1; then
 			missing="$missing $lib";
 		fi
@@ -324,17 +324,15 @@ fi
 if [ "$withDesktop" == "y" ]; then
 	echo "Adding $productName to the application menu...";
 
-	# The icon comes out of the UI's own asset store - the same picture the window and a paired
-	# phone's page draw - because this repo ships no second copy of it. No unzip, no icon: the
-	# entry is still a working entry, with the desktop's generic one.
+	# The head's own icon, published beside the binary: AppIcon.png, the picture its Windows icon
+	# holds at 256 px, placed at that size. Older installers put the UI's 60 px logo in 512x512, which
+	# the dock blew up into a blur, so it goes. No icon, and the entry is still a working entry, with
+	# the desktop's generic one.
 	iconLine="";
-	iconDir="/usr/share/icons/hicolor/512x512/apps";
-	if command -v unzip >/dev/null 2>&1 && [ -f "$binDir/assets/ui.zip" ]; then
-		mkdir -p "$iconDir";
-		if unzip -o -j -q "$binDir/assets/ui.zip" "$logoAssetPath" -d "$iconDir" 2>/dev/null; then
-			mv -f "$iconDir/$(basename "$logoAssetPath")" "$iconDir/$assemblyName.png";
-			iconLine="Icon=$assemblyName";
-		fi
+	iconDir="/usr/share/icons/hicolor/256x256/apps";
+	rm -f "/usr/share/icons/hicolor/512x512/apps/$assemblyName.png";
+	if [ -f "$binDir/AppIcon.png" ] && mkdir -p "$iconDir" && cp -f "$binDir/AppIcon.png" "$iconDir/$assemblyName.png"; then
+		iconLine="Icon=$assemblyName";
 	fi
 	if [ -z "$iconLine" ]; then
 		echo "WARNING: Could not place the application icon; the menu entry will use a generic one.";

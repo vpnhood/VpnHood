@@ -8,10 +8,7 @@ param(
     # Which install template to fill. The server takes "install"; a desktop client takes
     # "install-client", which writes a headless service, a PATH entry and a desktop entry instead
     # of a server's single daemon. Named rather than switched so a fork can add its own.
-    [Parameter(Mandatory = $false)] [string]$installTemplate = "install",
-    # Where the app's logo sits inside assets/ui.zip, for the desktop entry's icon. Only the client
-    # templates read it; this repo ships no second copy of the picture to point at instead.
-    [Parameter(Mandatory = $false)] [string]$logoAssetPath = ""
+    [Parameter(Mandatory = $false)] [string]$installTemplate = "install"
 )
  
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
@@ -105,7 +102,6 @@ $installScript = $installScript.Replace('$(versionTagParam)', "$versionTag");
 $installScript = $installScript.Replace('$(productNameParam)', "$productName");
 $installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName");
 $installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName");
-$installScript = $installScript.Replace('$(logoAssetPathParam)', "$logoAssetPath");
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
 

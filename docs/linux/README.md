@@ -307,4 +307,5 @@ Points that are easy to get wrong:
 
 The installer is [`pub/lib/vh-installer/linux/install-client.sh`](../../pub/lib/vh-installer/linux/install-client.sh),
 which is **not** the server's `install.sh` next to it. Each head picks its template in its
-`_publish.ps1` (`-installTemplate`, `-logoAssetPath`).
+`_publish.ps1` (`-installTemplate`). The menu entry's icon is the head's `Resources/AppIcon.png`,
+which the build places beside the binary.

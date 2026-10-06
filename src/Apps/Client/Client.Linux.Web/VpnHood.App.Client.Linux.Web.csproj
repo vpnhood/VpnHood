@@ -34,6 +34,12 @@
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 
+	<!-- The app's icon in the desktop's menu and dock: the picture the Windows head's icon holds at
+	     256 px, published beside the binary, where install-client.sh takes it for the icon theme. -->
+	<ItemGroup>
+		<None Update="Resources\AppIcon.png" Link="AppIcon.png" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
 	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
 	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />

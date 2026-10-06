@@ -59,7 +59,8 @@
 * Fix: The Connect APK from GitHub now applies the app's remote settings, as every other Connect build does #android #connect
 * Fix: On Linux, signing in and buying from the app's window work, and the checkout opens in your own browser #linux #connect
 * Fix: On Linux, opening the app again brings its open window forward instead of starting another, and closing the window ends it rather than leaving it running hidden #linux
-* Fix: On a screen without room for the window, such as a 1366x768 laptop's, it opens in landscape, in the middle of the screen: the bottom of a page, the first run's Accept button included, no longer falls under the taskbar #windows #linux
+* Fix: On a screen without room for the window, such as a 1366x768 laptop's, it opens in landscape, in the middle of the screen, and fits the screen again when its resolution changes: the bottom of a page, the first run's Accept button included, no longer falls under the taskbar #windows #linux
+* Fix: On Linux, the app's icon in the dock and the app grid is sharp; it was blurred #linux
 
 # v8.1.849
 

@@ -6,8 +6,8 @@ own (`../../Client/VpnHood.App.Client`), and a fork writes its own of this shape
 
 ## What it is for
 
-Every head under `src/Apps/Connect/` is a thin platform shell: an activity, a view controller, a WPF
-window. What is the same for all of them is decided here, once:
+Every head under `src/Apps/Connect/` is a thin platform shell: an activity, a view controller, a desktop
+`Main`. What is the same for all of them is decided here, once:
 
 | Part | What it decides |
 |---|---|

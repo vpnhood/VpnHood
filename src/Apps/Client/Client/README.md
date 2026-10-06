@@ -6,8 +6,8 @@ is **not** a library, it is not published, and a forker does not use it: VpnHood
 
 ## What it is for
 
-Every head under `src/Apps/Client/` is a thin platform shell: an activity, a view controller, a WPF
-window. What is the same for all of them is decided here, once:
+Every head under `src/Apps/Client/` is a thin platform shell: an activity, a view controller, a desktop
+`Main`. What is the same for all of them is decided here, once:
 
 | Part | What it decides |
 |---|---|

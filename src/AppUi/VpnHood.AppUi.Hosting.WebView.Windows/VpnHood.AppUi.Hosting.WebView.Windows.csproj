@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Hosts the app web UI in a WPF window through WebView2: the IWebView adapter, the main window, and WpfWebViewUi, the UI a Windows head names to show the app that runs in its service</Description>
+		<Description>Hosts the app web UI in a Win32 window through WebView2, with no UI framework: the IWebView adapter, the main window, and WindowsWebViewUi, the UI a Windows head names to show the app that runs in its service</Description>
 		<TargetFramework>net10.0-windows</TargetFramework>
-		<UseWPF>true</UseWPF>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -14,5 +13,14 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
 	</ItemGroup>
+
+	<!-- WebView2's core without its WPF and Windows Forms controls, here and in every app that takes
+	     this package (buildTransitive/). Its whole path in the package: a default None item keeps its
+	     folder, and a folder alone as PackagePath would nest it twice. -->
+	<ItemGroup>
+		<None Update="buildTransitive\VpnHood.AppUi.Hosting.WebView.Windows.targets" Pack="true"
+		      PackagePath="buildTransitive\VpnHood.AppUi.Hosting.WebView.Windows.targets" />
+	</ItemGroup>
+	<Import Project="buildTransitive\VpnHood.AppUi.Hosting.WebView.Windows.targets" />
 
 </Project>

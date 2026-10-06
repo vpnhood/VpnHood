@@ -4,8 +4,8 @@ using VpnHood.AppLib.App.WebHosting;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
-// What the window is drawn with, read from the app before it is made (WpfWebViewUi).
-internal class WpfWindowParams
+// What the window is drawn with, read from the app before it is made (WindowsWebViewUi).
+internal class WebViewWindowParams
 {
     public required VpnHoodApi Api { get; init; }
     public required IAppWebHost WebHost { get; init; }

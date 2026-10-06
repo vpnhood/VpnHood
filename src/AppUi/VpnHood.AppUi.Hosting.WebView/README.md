@@ -14,7 +14,7 @@ extracts the common part so a new platform (MAUI, Mac Catalyst, WinRT, …) is j
 ## Pattern: composition (Bridge), not a base class
 
 Each OS host already inherits a platform type it can't give up (`UIViewController`, an Android
-activity handler, a WPF `Window`, a MAUI `ContentPage`), and C# has no multiple inheritance. So
+activity handler, a MAUI `ContentPage`), and C# has no multiple inheritance. So
 the shared logic is a **controller** (`WebViewHost`) that talks to a per-OS **adapter**
 (`IWebView`). The host creates the adapter + controller and forwards native lifecycle calls.
 
@@ -78,7 +78,7 @@ while the server remains healthy. A full reload resets the current route and uns
 |---|---|---|---|
 | iOS | `IosWebView` (WebView.Ios) | `IosWebViewController` | `WKWebView` |
 | Android | `AndroidWebView` (WebView.Android) | `AndroidWebViewMainActivityHandler` | `Android.Webkit.WebView` |
-| Windows (WPF) | `WpfWebView` (WebView.Windows) | `VpnHoodWpfMainWindow`, run by `WpfWebViewUi` - the `IDesktopUi` a Windows head names - over the service's address | WebView2 |
+| Windows | `WindowsWebView` (WebView.Windows) | `WebViewMainWindow`, run by `WindowsWebViewUi` - the `IDesktopUi` a Windows head names - over the service's address | WebView2 in a Win32 window, no WPF |
 | MAUI | `MauiWebView` (WebView.Maui) | `VpnHoodWebViewPage` | `Microsoft.Maui.Controls.WebView` |
 
 ## A mobile head's classes
@@ -94,9 +94,12 @@ the OS reads - its attributes, its `[Register]` name, its access keys.
 
 - **iOS** — built Release and device-verified (launches, server starts, background→foreground
   recovers).
-- **Windows (WPF)** — `WpfWebViewUi` run over a service on the dev machine (2026-09-23): the window
-  shows the page the service serves, with the app's name and colours read over its API. Still to
-  try: the runtime-missing fallback.
+- **Windows** — WebView2 in a Win32 window, no WPF (2026-10-06): `WindowsWebViewUi` run in `dev` on
+  the dev machine and the Windows VM shows the page with its focus on each activation, opens the
+  log link in a window of its own, minimizes and closes into the tray, comes back when asked, ends
+  on the host's cancel, shows the one message, and fits 1366x768 in landscape. The WPF window it
+  replaced ran over a service (2026-09-23). Still to try: the runtime-missing fallback, a display
+  change, the taskbar badge seen.
 - **Android** — build-verified (adapter + full `Client.Android.Web` app). Still smoke-test on a
   device (content-view swap, hardware back, background→foreground recovery).
 - **MAUI** — build-verified (adapter, both android + windows target frameworks). Greenfield host —

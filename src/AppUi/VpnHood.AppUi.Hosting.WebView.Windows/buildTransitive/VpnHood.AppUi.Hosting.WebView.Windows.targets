@@ -1,0 +1,13 @@
+<Project>
+	<!-- WebView2's package hands every project that has it its WPF and Windows Forms controls as well
+	     as its core, and places both beside the app. This UI hosts WebView2 in a window of its own
+	     (WindowsWebViewUi) and needs neither, and where WPF is not used the WPF control's WindowsBase
+	     conflicts with .NET's own (MSB3277). So a project that uses neither framework keeps the core
+	     only; one that uses either keeps its control. -->
+	<Target Name="VhRemoveWebView2Controls" BeforeTargets="ResolveAssemblyReferences">
+		<ItemGroup>
+			<Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf' And '$(UseWPF)' != 'true'" />
+			<Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.WinForms' And '$(UseWindowsForms)' != 'true'" />
+		</ItemGroup>
+	</Target>
+</Project>

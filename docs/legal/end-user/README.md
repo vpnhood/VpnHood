@@ -30,10 +30,11 @@ Currently here:
 - [vpnhood-client-terms-of-use.md](vpnhood-client-terms-of-use.md) — VpnHood! CLIENT licence and acceptable-use terms
 - [vpnhood-connect-privacy-policy.md](vpnhood-connect-privacy-policy.md) — VpnHood! CONNECT (app **and** our servers, since CONNECT only uses ours)
 - [vpnhood-connect-terms-of-use.md](vpnhood-connect-terms-of-use.md) — VpnHood! CONNECT licence, service, billing, and acceptable-use terms
+- [vpnhood-manager-privacy-policy.md](vpnhood-manager-privacy-policy.md) — VpnHood! MANAGER
+- [vpnhood-manager-terms-of-use.md](vpnhood-manager-terms-of-use.md) — VpnHood! MANAGER terms of use
 
-MANAGER's privacy policy and terms of use still live in the GitHub wiki; the site's build workflow
-fetches those two from the wiki and everything in **this folder from `develop`**, as stated above.
-(Migrating them here is not scheduled — treat the wiki as their home until someone owns that move.)
+The two MANAGER documents moved here from the wiki unchanged, so unlike the others they carry no
+`Effective:` line yet; add one with their next substantive change.
 
 The wiki pages for the migrated policies are now redirect stubs pointing at the published URL —
 leave them that way so old links keep working, and never edit policy text there again.

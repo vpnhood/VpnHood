@@ -38,12 +38,11 @@ internal static class AvaloniaWindowFit
         if ((window.Screens.ScreenFromWindow(window) ?? window.Screens.Primary) is not { } screen)
             return;
 
-        var frame = FrameOf(window);
         var workArea = screen.WorkingArea.ToRect(screen.Scaling);
         var placement = DesktopWindowFit.Fit(new VhRect(workArea.X, workArea.Y, workArea.Width, workArea.Height),
-            frame.Width, frame.Height, phoneSize, isTv);
-        var size = new Size(placement.ContentWidth, placement.ContentHeight);
-        if (isPlaced && size == new Size(window.Width, window.Height))
+            FrameOf(window), phoneSize, isTv);
+        var size = placement.ContentSize;
+        if (isPlaced && size == new VhSize(window.Width, window.Height))
             return;
 
         window.Width = size.Width;
@@ -55,10 +54,10 @@ internal static class AvaloniaWindowFit
 
     // The title bar and the borders, as far as they are known: none before X11's window manager has
     // framed the window.
-    private static Size FrameOf(Window window)
+    private static VhSize FrameOf(Window window)
     {
         return window.FrameSize is { } frameSize
-            ? new Size(frameSize.Width - window.ClientSize.Width, frameSize.Height - window.ClientSize.Height)
+            ? new VhSize(frameSize.Width - window.ClientSize.Width, frameSize.Height - window.ClientSize.Height)
             : default;
     }
 }

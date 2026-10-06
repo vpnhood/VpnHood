@@ -42,19 +42,19 @@ internal static class WpfWindowFit
         });
     }
 
-    private static void Fit(Window window, Size frame, VhSize phoneSize, bool isTv)
+    private static void Fit(Window window, VhSize frame, VhSize phoneSize, bool isTv)
     {
         var workArea = SystemParameters.WorkArea;
         var placement = DesktopWindowFit.Fit(new VhRect(workArea.X, workArea.Y, workArea.Width, workArea.Height),
-            frame.Width, frame.Height, phoneSize, isTv);
+            frame, phoneSize, isTv);
         window.Left = placement.Left;
         window.Top = placement.Top;
-        window.Width = placement.ContentWidth + frame.Width;
-        window.Height = placement.ContentHeight + frame.Height;
+        window.Width = placement.ContentSize.Width + frame.Width;
+        window.Height = placement.ContentSize.Height + frame.Height;
     }
 
     // the window's rectangle less its client area's, in DIPs
-    private static Size FrameOf(Window window, IntPtr hWnd)
+    private static VhSize FrameOf(Window window, IntPtr hWnd)
     {
         var windowRect = new int[4];
         var clientRect = new int[4];
@@ -62,7 +62,7 @@ internal static class WpfWindowFit
             throw new Win32Exception(Marshal.GetLastWin32Error());
 
         var dpi = VisualTreeHelper.GetDpi(window);
-        return new Size(
+        return new VhSize(
             (windowRect[2] - windowRect[0] - clientRect[2]) / dpi.DpiScaleX,
             (windowRect[3] - windowRect[1] - clientRect[3]) / dpi.DpiScaleY);
     }

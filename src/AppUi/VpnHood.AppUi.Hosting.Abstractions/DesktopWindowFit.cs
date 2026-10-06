@@ -12,8 +12,7 @@ public static class DesktopWindowFit
     // Android TV lays out at 960x540 dp - a 1920x1080 panel at xhdpi, a 4K one at twice the density -
     // and a dp is a web view's CSS px and Avalonia's logical px. A desktop's window takes this size to
     // simulate a TV; an actual TV has no window: the view fills the screen, whatever its size.
-    private const double TvWidth = 960;
-    private const double TvHeight = 540;
+    private static readonly VhSize TvSize = new(960, 540);
 
     // A phone-shaped window with no room on its screen opens in landscape instead, as tall as the
     // TV's and only as wide as the classic UI's home needs to show its rows whole in every language
@@ -29,28 +28,23 @@ public static class DesktopWindowFit
     // 1080p at 150% has
     private const double PortraitMargin = 40;
 
-    public static DesktopWindowPlacement Fit(VhRect workArea, double frameWidth, double frameHeight,
-        VhSize phoneSize, bool isTv)
+    public static DesktopWindowPlacement Fit(VhRect workArea, VhSize frame, VhSize phoneSize, bool isTv)
     {
-        var (width, height) = isTv
-            ? (TvWidth, TvHeight)
-            : FitPhone(workArea, frameWidth, frameHeight, phoneSize);
+        var size = isTv ? TvSize : FitPhone(workArea, frame, phoneSize);
         return new DesktopWindowPlacement(
-            Left: workArea.X + (workArea.Width - width - frameWidth) / 2,
-            Top: Math.Max(workArea.Y, workArea.Y + (workArea.Height - height - frameHeight) / 2),
-            ContentWidth: width,
-            ContentHeight: height);
+            Left: workArea.X + (workArea.Width - size.Width - frame.Width) / 2,
+            Top: Math.Max(workArea.Y, workArea.Y + (workArea.Height - size.Height - frame.Height) / 2),
+            ContentSize: size);
     }
 
     // The phone's shape where the work area has room for it, else landscape: smaller where the work
     // area is, though never below MinLandscapeHeight.
-    private static (double Width, double Height) FitPhone(VhRect workArea, double frameWidth, double frameHeight,
-        VhSize phoneSize)
+    private static VhSize FitPhone(VhRect workArea, VhSize frame, VhSize phoneSize)
     {
-        if (workArea.Height >= phoneSize.Height + frameHeight + 2 * PortraitMargin)
-            return (phoneSize.Width, phoneSize.Height);
+        if (workArea.Height >= phoneSize.Height + frame.Height + 2 * PortraitMargin)
+            return phoneSize;
 
-        return (Math.Min(LandscapeWidth, workArea.Width - frameWidth),
-            Math.Max(Math.Min(TvHeight, workArea.Height - frameHeight), MinLandscapeHeight));
+        return new VhSize(Math.Min(LandscapeWidth, workArea.Width - frame.Width),
+            Math.Max(Math.Min(TvSize.Height, workArea.Height - frame.Height), MinLandscapeHeight));
     }
 }

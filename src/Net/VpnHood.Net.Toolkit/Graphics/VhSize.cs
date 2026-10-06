@@ -2,4 +2,4 @@
 
 namespace VpnHood.Net.Toolkit.Graphics;
 
-public record struct VhSize(int Width, int Height);
+public readonly record struct VhSize(double Width, double Height);

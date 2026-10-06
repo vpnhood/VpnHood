@@ -17,7 +17,16 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
-    
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetCurrentPackageFullName(ref int packageFullNameLength, IntPtr packageFullName);
+
+    private const int AppModelErrorNoPackage = 15700;
+
+    // The taskbar badge is a packaged app's: an unpackaged one (WindowsPackageType None) has no identity
+    // to badge, and Windows refuses its updater ("Element not found").
+    private static readonly bool HasPackageIdentity = GetHasPackageIdentity();
+
     protected AppWindow? AppWindow;
     private readonly WindowsAppTray _tray;
 
@@ -100,6 +109,9 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
 
     protected virtual void UpdateIcon()
     {
+        if (!HasPackageIdentity)
+            return;
+
         // update icon and text
         var badgeValue = VpnHoodApp.Instance.State.ConnectionState switch
         {
@@ -118,6 +130,12 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         var badgeNotification = new BadgeNotification(badgeXml);
         var badgeUpdater = BadgeUpdateManager.CreateBadgeUpdaterForApplication();
         badgeUpdater.Update(badgeNotification);
+    }
+
+    private static bool GetHasPackageIdentity()
+    {
+        var length = 0;
+        return GetCurrentPackageFullName(ref length, IntPtr.Zero) != AppModelErrorNoPackage;
     }
 
     protected override void Dispose(bool disposing)

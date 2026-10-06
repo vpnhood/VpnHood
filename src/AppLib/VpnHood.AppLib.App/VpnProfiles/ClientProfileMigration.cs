@@ -6,7 +6,8 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.AppLib.App.VpnProfiles;
 
 // VpnProfile was named ClientProfile, and a file saved before the rename still carries the old keys.
-[Obsolete("Migration (added 2026-09-26): remove after 2027-03, with its two callers.")]
+[Obsolete("Migration (added 2026-09-26): remove after 2027-03, with its two callers and the " +
+          "Load_files_saved_before_the_VpnProfile_rename test.")]
 internal static class ClientProfileMigration
 {
     public static void MigrateProfiles(string filePath)

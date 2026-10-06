@@ -1,0 +1,56 @@
+using Avalonia;
+using Avalonia.Controls;
+using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.Net.Toolkit.Graphics;
+
+namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
+
+// The desktop window at the size and place DesktopWindowFit gives its screen, before it opens, from
+// its frame as far as it is known then: Windows knows it; X11 only once the window manager has
+// framed the window, after it opened, when the window is fitted again.
+internal static class AvaloniaWindowFit
+{
+    public static void Apply(Window window, VhSize phoneSize, bool isTv)
+    {
+        Fit(window, phoneSize, isTv, isRefit: false);
+
+        // the frame goes from unknown to known only once
+        window.PropertyChanged += (_, e) => {
+            if (e.Property == TopLevel.FrameSizeProperty && e.OldValue is null && e.NewValue is not null)
+                Fit(window, phoneSize, isTv, isRefit: true);
+        };
+    }
+
+    // A refit moves the window only with a size that changes: the window manager has placed it by then.
+    // It keeps a window it moves inside the work area at the size the window has at that moment, so
+    // the new size goes to the platform first, or GNOME stops a window about to shrink where its old
+    // size still fits.
+    private static void Fit(Window window, VhSize phoneSize, bool isTv, bool isRefit)
+    {
+        if ((window.Screens.ScreenFromWindow(window) ?? window.Screens.Primary) is not { } screen)
+            return;
+
+        var frame = FrameOf(window);
+        var workArea = screen.WorkingArea.ToRect(screen.Scaling);
+        var placement = DesktopWindowFit.Fit(new VhRect(workArea.X, workArea.Y, workArea.Width, workArea.Height),
+            frame.Width, frame.Height, phoneSize, isTv);
+        var size = new Size(placement.ContentWidth, placement.ContentHeight);
+        if (isRefit && size == new Size(window.Width, window.Height))
+            return;
+
+        window.Width = size.Width;
+        window.Height = size.Height;
+        if (isRefit)
+            window.UpdateLayout();
+        window.Position = PixelPoint.FromPoint(new Point(placement.Left, placement.Top), screen.Scaling);
+    }
+
+    // The title bar and the borders, as far as they are known: none before X11's window manager has
+    // framed the window.
+    private static Size FrameOf(Window window)
+    {
+        return window.FrameSize is { } frameSize
+            ? new Size(frameSize.Width - window.ClientSize.Width, frameSize.Height - window.ClientSize.Height)
+            : default;
+    }
+}

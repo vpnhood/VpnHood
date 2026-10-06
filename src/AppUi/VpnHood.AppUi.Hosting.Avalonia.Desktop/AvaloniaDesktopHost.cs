@@ -43,7 +43,8 @@ public static class AvaloniaDesktopHost
     {
         AvaloniaUiHosting.StartAsync<TUi>(api, uiAssetProvider, CancellationToken.None).GetAwaiter().GetResult();
 
-        // the colours the OS chrome takes, out of the UI's store
+        // the colours the OS chrome takes, out of the UI's store, and the phone's shape the window
+        // opens in
         var resources = new AppResources();
         AppBranding.LoadAsync(resources, uiAssetProvider, VhApp.Features.UiTheme).GetAwaiter().GetResult();
 
@@ -55,6 +56,7 @@ public static class AvaloniaDesktopHost
 
         var window = lifetime.MainWindow ??
                      throw new InvalidOperationException("The UI has made no main window.");
+        AvaloniaWindowFit.Apply(window, resources.WindowSize, VhApp.IsTvUi);
         if (OperatingSystem.IsWindows() && resources.Colors.WindowBackgroundColor is { } titleBarColor)
             SetTitleBarColor(window, titleBarColor);
         if (exitOnClose) {

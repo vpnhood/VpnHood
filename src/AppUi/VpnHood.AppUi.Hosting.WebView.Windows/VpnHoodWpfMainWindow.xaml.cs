@@ -19,10 +19,6 @@ namespace VpnHood.AppUi.Hosting.WebView.Windows;
 // ReSharper disable once RedundantExtendsListEntry
 public partial class VpnHoodWpfMainWindow : Window
 {
-    // Android TV lays out at 960x540 dp (a 1920x1080 panel at xhdpi, the size its design guidance
-    // targets), and a CSS px is a dp, so a web view of this size is the TV's own viewport.
-    private const int TvPanelWidth = 960;
-    private const int TvPanelHeight = 540;
     private static readonly TimeSpan StatePollInterval = TimeSpan.FromSeconds(1);
 
     private readonly WpfWindowParams _params;
@@ -42,19 +38,10 @@ public partial class VpnHoodWpfMainWindow : Window
             Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R,
                 backgroundColor.Value.G, backgroundColor.Value.B));
 
-        // On the TV UI the window is the panel: the web view takes the TV's viewport and the
-        // window wraps it, so the layout is judged here at the TV's shape and measure. Everything
-        // else keeps the phone-shaped window from the resources.
-        if (windowParams.IsTv) {
-            SizeToContent = SizeToContent.WidthAndHeight;
-            MainWebView.Width = TvPanelWidth;
-            MainWebView.Height = TvPanelHeight;
-        }
-        else {
-            Width = resources.WindowSize.Width;
-            Height = resources.WindowSize.Height;
-        }
+        // The TV's viewport, or the phone's shape where the screen has room for it, from the frame
+        // this style gives the window.
         ResizeMode = ResizeMode.CanMinimize;
+        WpfWindowFit.Apply(this, resources.WindowSize, windowParams.IsTv);
         StateChanged += (_, _) => {
             if (WindowState == WindowState.Minimized && !windowParams.ExitOnClose) Hide();
         };

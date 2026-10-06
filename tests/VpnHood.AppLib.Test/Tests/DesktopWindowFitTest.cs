@@ -1,0 +1,50 @@
+using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.Net.Toolkit.Graphics;
+
+namespace VpnHood.AppLib.Test.Tests;
+
+// The window on the screens of the test VMs, with the frames measured there: Windows' title bar and
+// borders take 16x39, GNOME's title bar 37.
+[TestClass]
+public class DesktopWindowFitTest
+{
+    private static readonly VhSize PhoneSize = new(400, 700);
+
+    [TestMethod]
+    public void Phone_shape_where_the_screen_has_room()
+    {
+        // 1080p at 100%, above the taskbar
+        var placement = DesktopWindowFit.Fit(new VhRect(0, 0, 1920, 1040), 16, 39, PhoneSize, isTv: false);
+        Assert.AreEqual(new DesktopWindowPlacement(752, 150.5, 400, 700), placement);
+    }
+
+    [TestMethod]
+    public void Landscape_where_the_phone_shape_fits_with_little_room()
+    {
+        // 1366x768, above the taskbar
+        var placement = DesktopWindowFit.Fit(new VhRect(0, 0, 1366, 728), 16, 39, PhoneSize, isTv: false);
+        Assert.AreEqual(new DesktopWindowPlacement(195, 74.5, 960, 540), placement);
+    }
+
+    [TestMethod]
+    public void Landscape_narrows_to_the_screen()
+    {
+        // Ubuntu at 1024x768, beside the dock and below the top bar
+        var placement = DesktopWindowFit.Fit(new VhRect(66, 32, 958, 736), 0, 37, PhoneSize, isTv: false);
+        Assert.AreEqual(new DesktopWindowPlacement(66, 111.5, 958, 540), placement);
+    }
+
+    [TestMethod]
+    public void Landscape_keeps_its_least_height_and_the_title_bar_on_the_screen()
+    {
+        var placement = DesktopWindowFit.Fit(new VhRect(0, 0, 800, 400), 16, 39, PhoneSize, isTv: false);
+        Assert.AreEqual(new DesktopWindowPlacement(0, 0, 784, 400), placement);
+    }
+
+    [TestMethod]
+    public void Tv_keeps_its_viewport()
+    {
+        var placement = DesktopWindowFit.Fit(new VhRect(0, 0, 1920, 1040), 16, 39, PhoneSize, isTv: true);
+        Assert.AreEqual(new DesktopWindowPlacement(472, 230.5, 960, 540), placement);
+    }
+}

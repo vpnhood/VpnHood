@@ -95,7 +95,7 @@ internal static class Program
             .UseSkia()
             .SetupWithLifetime(lifetime);
 
-        // the UI made its window at a television's size (VpnHoodAvaloniaAppBase); the device's is asked for
+        // the UI made its window (VpnHoodAvaloniaAppBase), with no size: the device's is asked for
         var window = lifetime.MainWindow ?? throw new InvalidOperationException("The UI has made no main window.");
         window.Width = options.Width;
         window.Height = options.Height;

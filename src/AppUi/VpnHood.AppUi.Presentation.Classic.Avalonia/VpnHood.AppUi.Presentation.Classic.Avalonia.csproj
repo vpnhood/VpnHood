@@ -11,8 +11,8 @@
 	     from a browser page. -->
 
 	<ItemGroup>
-		<PackageReference Include="Avalonia" Version="12.1.2" />
-		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+		<PackageReference Include="Avalonia" Version="12.1.3" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
 		<!-- The QR of the pairing address: Android has no encoder of its own and Core Image is tvOS-only,
 		     so one dependency-free .NET encoder serves both (TV plan, Phase 4). -->
 		<PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />

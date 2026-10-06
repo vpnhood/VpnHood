@@ -65,8 +65,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.Firebase.Analytics" Version="123.2.0.1" />
-		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="120.1.0" />
+		<PackageReference Include="Xamarin.Firebase.Analytics" Version="123.2.0.2" />
+		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="120.1.1" />
 	</ItemGroup>
 
 	<ItemGroup>

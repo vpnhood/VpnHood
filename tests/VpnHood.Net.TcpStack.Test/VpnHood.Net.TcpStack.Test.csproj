@@ -1,4 +1,4 @@
-<Project Sdk="MSTest.Sdk/4.3.3">
+<Project Sdk="MSTest.Sdk/4.4.1">
 
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
@@ -7,7 +7,7 @@
 		<!--MSTest.Sdk injects the test packages implicitly; override its bundled versions via these properties, NOT
 		    PackageReference Update (which is a no-op against the SDK's late .targets Include). MSTestVersion defaults to
 		    the SDK's bundled version, so only the VSTest platform needs pinning to the latest.-->
-		<MicrosoftNETTestSdkVersion>18.9.0</MicrosoftNETTestSdkVersion>
+		<MicrosoftNETTestSdkVersion>18.10.1</MicrosoftNETTestSdkVersion>
 	</PropertyGroup>
 
   <ItemGroup>
@@ -16,15 +16,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestAdapter" Version="4.3.0" />
+    <PackageReference Update="MSTest.TestAdapter" Version="4.4.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestFramework" Version="4.3.0" />
+    <PackageReference Update="MSTest.TestFramework" Version="4.4.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.10.1" />
   </ItemGroup>
 
 </Project>

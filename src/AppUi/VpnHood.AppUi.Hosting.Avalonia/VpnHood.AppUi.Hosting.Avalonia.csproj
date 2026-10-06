@@ -9,7 +9,7 @@
 	     word or draws a picture, so nothing here needs them. -->
 
 	<ItemGroup>
-		<PackageReference Include="Avalonia" Version="12.1.2" />
+		<PackageReference Include="Avalonia" Version="12.1.3" />
 	</ItemGroup>
 
 	<ItemGroup>

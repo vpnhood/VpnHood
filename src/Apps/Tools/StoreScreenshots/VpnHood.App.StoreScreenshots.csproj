@@ -10,8 +10,8 @@
 	<ItemGroup>
 		<!-- Avalonia without a window system: a top level that renders into memory, on any CI box. The
 		     drawing is Skia's - the same rasterizer the shipped heads use - not the headless stub. -->
-		<PackageReference Include="Avalonia.Headless" Version="12.1.2" />
-		<PackageReference Include="Avalonia.Skia" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Headless" Version="12.1.3" />
+		<PackageReference Include="Avalonia.Skia" Version="12.1.3" />
 		<!-- The rasterizer Avalonia draws with, used here directly too: the reduction from the
 		     oversized frame to the store's own size, and the PNG encoder that packs it (PngImage).
 		     Pinned to the version Avalonia.Skia brings, so one Skia is loaded, not two. -->

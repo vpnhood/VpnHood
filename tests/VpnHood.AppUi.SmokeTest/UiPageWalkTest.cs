@@ -72,7 +72,7 @@ public class UiPageWalkTest
             Assert.IsNotNull(Session.Driver.TryFind(name, TimeSpan.FromSeconds(5)), $"The home lost '{name}'.");
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("ServersButton", "Location")]
     [DataRow("SplitCountriesButton", "Split Countries")]
     [DataRow("SplitAppsButton", "Split Apps")]
@@ -101,7 +101,7 @@ public class UiPageWalkTest
         OpenSettings();
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("LanguageItem", "Language")]
     [DataRow("ProxiesItem", "Proxies")]
     [DataRow("SplitTunnelingItem", "Split Tunneling")]

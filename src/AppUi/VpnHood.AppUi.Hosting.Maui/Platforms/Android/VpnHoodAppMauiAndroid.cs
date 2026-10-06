@@ -3,7 +3,7 @@ using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
 
 // ReSharper disable once CheckNamespace
-namespace VpnHood.AppUi.Hosting.WebView.Maui;
+namespace VpnHood.AppUi.Hosting.Maui;
 
 internal class VpnHoodAppMauiAndroid : Singleton<VpnHoodAppMauiAndroid>, IVpnHoodAppMaui
 {

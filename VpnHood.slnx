@@ -125,7 +125,7 @@
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView/VpnHood.AppUi.Hosting.WebView.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Android/VpnHood.AppUi.Hosting.WebView.Android.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Windows/VpnHood.AppUi.Hosting.WebView.Windows.csproj" />
-    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Maui/VpnHood.AppUi.Hosting.WebView.Maui.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Maui/VpnHood.AppUi.Hosting.Maui.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Ios/VpnHood.AppUi.Hosting.WebView.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>

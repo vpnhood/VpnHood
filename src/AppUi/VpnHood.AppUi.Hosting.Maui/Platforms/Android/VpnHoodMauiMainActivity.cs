@@ -2,7 +2,7 @@
 using VpnHood.AppLib.App.Android.Activities;
 
 // ReSharper disable once CheckNamespace
-namespace VpnHood.AppUi.Hosting.WebView.Maui;
+namespace VpnHood.AppUi.Hosting.Maui;
 
 public abstract class VpnHoodMauiMainActivity : MauiActivityEvent
 {

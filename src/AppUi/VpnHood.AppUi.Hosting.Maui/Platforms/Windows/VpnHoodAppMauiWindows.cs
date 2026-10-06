@@ -10,7 +10,7 @@ using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
 
 // ReSharper disable once CheckNamespace
-namespace VpnHood.AppUi.Hosting.WebView.Maui;
+namespace VpnHood.AppUi.Hosting.Maui;
 
 internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoodAppMaui
 {
@@ -24,8 +24,10 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
     private VpnHoodAppMauiWindows(AppInitParams initParams)
     {
         // The platform starts the app, as under any other UI - in this process, under the
-        // person's storage folder, which holds its single-instance lock too, until this becomes a
-        // window over the service (hosting plan, step 10) - and it disconnects on the way out.
+        // person's storage folder, which holds its single-instance lock too - and it disconnects on
+        // the way out. In this process on purpose, to keep a MAUI app simple: the tunnel runs here
+        // too, so the app runs elevated. A shipped Windows app keeps the app in the machine service
+        // instead (VpnHood.AppUi.Hosting.Desktop.Windows), its window unelevated.
         var storagePath = initParams.ResolveStoragePath();
         VpnHoodWindowsApp.Init(initParams, storagePath, lockFolderPath: storagePath);
 

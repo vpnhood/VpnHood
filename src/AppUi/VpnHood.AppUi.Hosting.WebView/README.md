@@ -14,7 +14,7 @@ extracts the common part so a new platform (MAUI, Mac Catalyst, WinRT, …) is j
 ## Pattern: composition (Bridge), not a base class
 
 Each OS host already inherits a platform type it can't give up (`UIViewController`, an Android
-activity handler, a MAUI `ContentPage`), and C# has no multiple inheritance. So
+activity handler), and C# has no multiple inheritance. So
 the shared logic is a **controller** (`WebViewHost`) that talks to a per-OS **adapter**
 (`IWebView`). The host creates the adapter + controller and forwards native lifecycle calls.
 
@@ -79,7 +79,6 @@ while the server remains healthy. A full reload resets the current route and uns
 | iOS | `IosWebView` (WebView.Ios) | `IosWebViewController` | `WKWebView` |
 | Android | `AndroidWebView` (WebView.Android) | `AndroidWebViewMainActivityHandler` | `Android.Webkit.WebView` |
 | Windows | `WindowsWebView` (WebView.Windows) | `WebViewMainWindow`, run by `WindowsWebViewUi` - the `IDesktopUi` a Windows head names - over the service's address | WebView2 in a Win32 window, no WPF |
-| MAUI | `MauiWebView` (WebView.Maui) | `VpnHoodWebViewPage` | `Microsoft.Maui.Controls.WebView` |
 
 ## A mobile head's classes
 
@@ -102,10 +101,6 @@ the OS reads - its attributes, its `[Register]` name, its access keys.
   change, the taskbar badge seen.
 - **Android** — build-verified (adapter + full `Client.Android.Web` app). Still smoke-test on a
   device (content-view swap, hardware back, background→foreground recovery).
-- **MAUI** — build-verified (adapter, both android + windows target frameworks). Greenfield host —
-  smoke-test resume delivery and the loading/error visuals on a device.
-
-The three above were compile-checked against the toolchains but not yet runtime-smoke-tested.
 
 ### Per-platform things to verify
 
@@ -117,5 +112,3 @@ The three above were compile-checked against the toolchains but not yet runtime-
 - **Windows** — the WebView2 "runtime missing" fallback (hide the window, open the page in the
   system browser) is `OnWebView2Unavailable`; the window hides rather than closes where the tray
   keeps it, and its web view's profile is under the person's own folder, not the service's.
-- **MAUI** — greenfield (no SPA host existed before). Verify the `Dispatcher` is non-null when the
-  page is constructed, and that resume is delivered (`Window.Resumed` + `OnAppearing`).

@@ -1,7 +1,8 @@
 ﻿using VpnHood.Net.Toolkit.Utils;
+using VpnHood.AppLib.Api;
 using VpnHood.AppLib.App;
 
-namespace VpnHood.AppUi.Hosting.WebView.Maui;
+namespace VpnHood.AppUi.Hosting.Maui;
 
 // The app under a MAUI UI. The app itself is started by the platform's own Init, from the same
 // init params as every head (VpnHoodAndroidApp, VpnHoodWindowsApp): a UI package never starts it.
@@ -13,6 +14,9 @@ public class VpnHoodAppMaui : Singleton<VpnHoodAppMaui>, IVpnHoodAppMaui
     {
         _appMaui = appMaui;
     }
+
+    // What the MAUI pages talk to: the app's API, the contract every UI uses, here in this process.
+    public VpnHoodApi Api => VpnHoodApp.Instance.Api;
 
     public static VpnHoodAppMaui Init(AppInitParams initParams)
     {

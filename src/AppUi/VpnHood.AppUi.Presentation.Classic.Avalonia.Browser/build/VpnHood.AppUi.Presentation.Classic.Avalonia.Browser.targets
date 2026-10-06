@@ -22,10 +22,11 @@
 		<VhWebRootIsBrowserApp Condition="'$(VhWebRootIsApp)' == 'true'">$(TargetFramework.Contains('-browser'))</VhWebRootIsBrowserApp>
 	</PropertyGroup>
 
-	<!-- Android: one entry in base/assets of the package. The folder's name twice on purpose: .NET
-	     for Android takes a leading assets\ in the link as the package's asset root and drops it. -->
+	<!-- Android: one entry in base/assets of the package. The link starts with the project's own
+	     assets folder, which .NET for Android takes as the package's asset root and drops: Assets,
+	     or Platforms\Android\Assets in a MAUI app. -->
 	<ItemGroup Condition="'$(VhWebRootIsAndroidApp)' == 'true' And Exists('$(VhWebRootZip)')">
-		<AndroidAsset Include="$(VhWebRootZip)" Link="assets\assets\web-root.zip" Visible="false" />
+		<AndroidAsset Include="$(VhWebRootZip)" Link="$(MonoAndroidAssetsPrefix)\assets\web-root.zip" Visible="false" />
 	</ItemGroup>
 
 	<!-- iOS and tvOS: a file of the app bundle, read in place. -->

@@ -178,9 +178,8 @@ VPN session too.
 
 | Head | The app's tracker |
 | --- | --- |
-| Client, Google Play, website Android, Windows, Linux | `G-4LE99XKZYE`, [`ClientAppOptions`](../../src/Apps/Client/Client/ClientAppOptions.cs)' own where its settings name none |
+| Client, Google Play, website Android, Windows, Linux; Connect, website Android, Windows, Linux | the id in its private `appsettings.json`, embedded at build (CI writes it from the publishing repo's `APPSETTINGS` variable); endpoint tracking as that file sets it |
 | Connect, Google Play | Firebase's Android SDK ([`FirebaseAnalyticsTracker`](../../src/Apps/Connect/Connect.Android.Google/FirebaseUtils/FirebaseAnalyticsTracker.cs)), in the app's process and in the VPN service's own, each set to the switch; Crashlytics follows the same switch |
-| Connect, website Android, Windows, Linux | the id in its private `appsettings.json`, embedded at build; endpoint tracking as that file sets it |
 | Client and Connect, iOS | none: `NullTrackerFactory` and no endpoint tracking ([`AppDelegate`](../../src/Apps/Client/Client.Ios.Apple/AppDelegate.cs)), until Apple's rules for a VPN app are checked |
 | Any head, Debug build | none |
 

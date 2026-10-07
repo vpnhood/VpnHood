@@ -1,8 +1,8 @@
 param(
 	[Parameter(Mandatory=$true)][object]$distribute,
-	# CI mode: generate ONLY the docker-compose helper files (VpnHoodServer.docker.yml/.sh) into the
-	# module folder and skip the image build/push entirely — the workflow pushes the multi-arch image
-	# with docker/build-push-action. Local runs never set this.
+	# CI mode: the docker-compose helper files (VpnHoodServer.docker.yml/.sh) and the image's build
+	# context (docker-context) only, no image build/push - the workflow builds and pushes the
+	# multi-arch image from that context with docker/build-push-action. Local runs never set this.
 	[object]$generateOnly = "0"
 	);
 
@@ -56,19 +56,9 @@ $linuxScript | Out-File -FilePath "$module_installerFile" -Encoding ASCII -Force
 # copy compose file
 Copy-Item -path "$template_yamlFile" -Destination "$module_yamlFile" -Force;
 
-# CI generate-only mode: the compose helper files are done; the multi-arch image is built/pushed by
-# the workflow's docker/build-push-action, so skip the entire local docker build below.
-if ($generateOnly) {
-	if ($isLatest) {
-		Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
-	}
-	Write-Host "generateOnly: compose files written; skipping local docker build." -ForegroundColor Yellow;
-	return;
-}
-
 # The image's build context, not the source (see the Dockerfile): the release's Linux packages and
 # install scripts, one folder per Docker architecture, beside the two scripts the Dockerfile runs.
-# pub/Server/Publish.ps1 builds the packages first.
+# The packages come first: pub/Server/Publish.ps1 locally, the workflow's build job in CI.
 $serverDockerImage = "vpnhood/vpnhoodserver";
 $contextDir = "$packagesRootDir/$packageServerDirName/docker-context";
 Remove-Item -Path $contextDir -Recurse -Force -ErrorAction Ignore;
@@ -84,6 +74,16 @@ foreach ($arch in @("amd64", "arm64")) {
 foreach ($script in @("$templateDir/vhsupervisor.sh", "$PSScriptRoot/Linux/install-msquic.sh")) {
 	$text = (Get-Content -Path $script -Raw) -replace "`r`n", "`n";
 	[IO.File]::WriteAllText("$contextDir/$(Split-Path $script -Leaf)", $text);
+}
+
+# CI generate-only mode: the compose helper files and the build context are done; the workflow's
+# docker/build-push-action builds and pushes the multi-arch image from that context.
+if ($generateOnly) {
+	if ($isLatest) {
+		Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
+	}
+	Write-Host "generateOnly: compose files and the build context written; skipping local docker build." -ForegroundColor Yellow;
+	return;
 }
 
 # multi-arch build: one buildx run makes both amd64 and arm64, each from its own package

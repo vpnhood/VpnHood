@@ -1,5 +1,22 @@
 # Latest
 
+* Fix: VpnHoodServer shuts down cleanly on systemctl stop, docker stop, Ctrl+C or a dropped terminal, as on its stop command: it sends its last usage report and removes its tun and NAT rules, which a signal used to leave behind, and a stop no longer closes a self-hosted server's sessions for good. The stop command now returns once the server has exited, and a stop sent while the server is starting is no longer lost.
+* Update: On Linux, an installed VpnHoodServer stays down after its stop command; a crash or a failed start still restarts it, and `systemctl restart` restarts it by hand. A crash at start-up is now in its journal (`journalctl -u VpnHoodServer`).
+* Fix: VpnHoodServer exits with code 1 when a command fails; it used to exit 0 after printing the error. A broken NLog.config no longer silences the server: it logs to its console and to storage/logs/server.log, and names the problem.
+* Fix: VpnHoodServer never bills a client's traffic twice: reports to the access server no longer cross, and when one fails its traffic is dropped rather than sent again, so the client has it free.
+* Fix: VpnHoodServer reports a client's disconnect to the access server once, even when another report crosses it, and does not report back a session the access server closed itself.
+* Fix: A rewarded ad's reward is no longer undone by a usage report that crossed it on the server, which could end the session early.
+* Fix: VpnHoodServer no longer fails a connection when two clients connect at the same moment, nor a client that comes back while its idle session is being removed.
+* Fix: VpnHoodServer removes the saved records of sessions whose clients never came back; they used to pile up in its internal/sessions folder.
+* Fix: Session timeouts and cleanup no longer drift with the server's time zone or a daylight-saving change.
+* Fix: On Linux, the server no longer runs proxy-only when a firewall or Docker holds the iptables lock as it starts; it waits up to 5 seconds for the lock.
+* Fix: On Linux, a tun left down by a killed server is cleared at the next start; the server used to refuse it and run proxy-only, with an error suggesting another VPN held it.
+* Fix: On Linux, a stop during an address change no longer leaves a tun or a NAT rule behind.
+* Update: The installed server keeps its versions in the install's bin folder, and an update removes old ones: the three newest stay, and any installed in the last 30 days
+* Fix: On Linux, installing or updating no longer leaves the downloaded package behind; updates left VpnHoodServer-linux.tar.gz in /, which can be deleted
+
+# v8.1.849
+
 * Fix: UDP channel stops working for all sessions after a closing session's packet arrives late
 
 # v8.1.837

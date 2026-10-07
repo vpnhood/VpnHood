@@ -109,27 +109,27 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         base.OnCreate();
     }
 
-    // An ad network whose ids the settings do not name is left out, as a build without the private
-    // settings leaves out the portal.
+    // AdMob's units are settings; where they name none, the head loads Google's test units and warns,
+    // so a build without the private settings still has ads to test with.
     private static AppAdProviderItem[] CreateAppAdProviderItems(ConnectAppConfigs appConfigs)
     {
         var items = new List<AppAdProviderItem>();
 
         // interstitial
-        if (appConfigs.AdMobInterstitialAdUnitId is { } interstitialAdUnitId)
-            items.Add(new AppAdProviderItem {
-                AdProvider = AdMobInterstitialAdProvider.Create(interstitialAdUnitId),
-                ExcludeCountryCodes = ["CN", "RU"],
-                ProviderName = "AdMob"
-            });
+        items.Add(new AppAdProviderItem {
+            AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId ??
+                UseAdMobTestAdUnit(nameof(appConfigs.AdMobInterstitialAdUnitId), AdMobTestAdUnitIds.Interstitial)),
+            ExcludeCountryCodes = ["CN", "RU"],
+            ProviderName = "AdMob"
+        });
 
         // rewarded ad
-        if (appConfigs.AdMobRewardedAdUnitId is { } rewardedAdUnitId)
-            items.Add(new AppAdProviderItem {
-                AdProvider = AdMobRewardedAdProvider.Create(rewardedAdUnitId),
-                ExcludeCountryCodes = ["CN", "RU"],
-                ProviderName = "AdMob-Rewarded"
-            });
+        items.Add(new AppAdProviderItem {
+            AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId ??
+                UseAdMobTestAdUnit(nameof(appConfigs.AdMobRewardedAdUnitId), AdMobTestAdUnitIds.Rewarded)),
+            ExcludeCountryCodes = ["CN", "RU"],
+            ProviderName = "AdMob-Rewarded"
+        });
 
         items.Add(new AppAdProviderItem {
             AdProvider = new InternalInAdProvider(),
@@ -156,6 +156,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         //    });
 
         return [.. items];
+    }
+
+    // a unit the settings do not name: its test one, with a warning that names the setting
+    private static string UseAdMobTestAdUnit(string settingName, string testAdUnitId)
+    {
+        VhLogger.Instance.LogWarning("{SettingName} is not set; AdMob shows Google's test ads.", settingName);
+        return testAdUnitId;
     }
 
     private static IAccountProvider? CreateAppAccountProvider(ConnectAppConfigs appConfigs, AppOptionsContext context)

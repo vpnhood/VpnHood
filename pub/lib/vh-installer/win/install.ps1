@@ -55,6 +55,10 @@ for ($i = 0; $i -lt $args.length; $i++) {
 	}
 	$lastArg = $arg;
 }
+# a last option still waiting for its value, or an unknown last one
+if ("$lastArg" -ne "") {
+	throw "Unknown argument or missing value! argument: $lastArg";
+}
 
 # validate $versionTag
 if ( "$versionTag" -eq "" ) {

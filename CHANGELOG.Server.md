@@ -14,6 +14,10 @@
 * Fix: On Linux, a stop during an address change no longer leaves a tun or a NAT rule behind.
 * Update: The installed server keeps its versions in the install's bin folder, and an update removes old ones: the three newest stay, and any installed in the last 30 days or still running
 * Fix: Installing or updating no longer leaves the downloaded package behind, and removes the one earlier updates left: VpnHoodServer-linux.tar.gz in / on Linux, VpnHoodServer-win.zip in C:\Windows\System32 on Windows
+* Update: The Docker server updates itself, with no Watchtower container: it checks for a new release at start and every 12 hours and installs it in the container, as an installed server does; VH_AUTO_UPDATE=0 turns that off. A release that needs a new image is not installed; the log says "Pull the latest image!". Watchtower, archived, could no longer run on a recent Docker and never updated the server. A server installed with the Docker install script: run the script again, which takes the new image and removes the VpnHoodUpdater container. A container you created yourself: pull the latest image and create it again.
+* Fix: The Docker install script's -install-docker works on Debian and on Ubuntu's and Debian's derivatives, and leaves an installed Docker alone; it used Ubuntu's repository and sudo. The script needs root. A compose file that fails to download no longer replaces the one in place, -composeFile is no longer ignored, and settings given with -httpBaseUrl reach a server that is already running.
+* Fix: The install scripts stop at an unknown option or one missing its value; a last one used to be ignored.
+* Feature: VpnHoodServer takes its settings from the VH_APPSETTINGS environment variable when it is set: the content of an appsettings.json, which then replaces the file, for a Docker-only service with no file to edit. The log names where the settings came from. In a container, run gen and the other token commands with docker exec, as docker exec VpnHoodServer /app/vhsupervisor gen, so they read the same settings.
 
 # v8.1.849
 

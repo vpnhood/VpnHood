@@ -86,6 +86,11 @@ elif [ "$lastArg" != "" ]; then
 fi;
 lastArg=$arg;
 done;
+# a last option still waiting for its value, or an unknown last one
+if [ "$lastArg" != "" ]; then
+	echo "Unknown argument or missing value! argument: $lastArg";
+	exit 1;
+fi
 
 # Root, said here. Everything below writes to /opt, /etc and /usr, and a run that discovers that
 # one directory at a time leaves half an install behind.

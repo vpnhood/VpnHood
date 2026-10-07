@@ -32,6 +32,7 @@ public class ServerApp : IDisposable
     private const string FileNameAppCommand = "appcommand";
     private const string FolderNameStorage = "storage";
     private const string FolderNameInternal = "internal";
+    private const string EnvNameAppSettings = "VH_APPSETTINGS";
     private readonly ITracker _tracker;
     private readonly Lazy<IAccessManager> _accessManager;
     private readonly CommandListener _commandListener;
@@ -43,6 +44,7 @@ public class ServerApp : IDisposable
     private ServerLog? _serverLog;
     private bool _disposed;
     private readonly string? _downloadsPath;
+    private readonly string _appSettingsSource;
 
     public IAccessManager AccessManager => _accessManager.Value;
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
@@ -71,13 +73,7 @@ public class ServerApp : IDisposable
         InternalStoragePath = Path.Combine(storagePath, FolderNameInternal);
         Directory.CreateDirectory(InternalStoragePath);
 
-        // load app settings
-        var appSettingsFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
-        if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
-        if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
-        AppSettings = File.Exists(appSettingsFilePath)
-            ? JsonUtils.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
-            : new AppSettings();
+        (AppSettings, _appSettingsSource) = LoadAppSettings();
 
         // set downloads path for diagnose
         _downloadsPath = AppSettings.DownloadsPath ?? Path.Combine(storagePath, "downloads");
@@ -111,6 +107,29 @@ public class ServerApp : IDisposable
                 { "access_manager", AppSettings.HttpAccessManager != null ? nameof(HttpAccessManager) : nameof(FileAccessManager) }
             }
         };
+    }
+
+    // VH_APPSETTINGS, when set, replaces the settings file whole: a Docker-only service has no installer
+    // to write one. Malformed, it fails the start, as a malformed file does. The source goes to the log,
+    // since a file beside a set variable is ignored.
+    private static (AppSettings AppSettings, string Source) LoadAppSettings()
+    {
+        var appSettingsJson = Environment.GetEnvironmentVariable(EnvNameAppSettings);
+        if (!string.IsNullOrWhiteSpace(appSettingsJson)) {
+            try {
+                return (JsonUtils.Deserialize<AppSettings>(appSettingsJson), EnvNameAppSettings);
+            }
+            catch (Exception ex) {
+                throw new InvalidDataException($"{EnvNameAppSettings} holds no valid settings. {ex.Message}", ex);
+            }
+        }
+
+        var appSettingsFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
+        if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
+        if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
+        return File.Exists(appSettingsFilePath)
+            ? (JsonUtils.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath)), appSettingsFilePath)
+            : (new AppSettings(), "the defaults");
     }
 
     public static Guid GetServerId(string serverIdFile)
@@ -274,6 +293,7 @@ public class ServerApp : IDisposable
 
             // initialize logger
             _serverLog = ServerLog.Start(StoragePath, AppFolderPath);
+            VhLogger.Instance.LogInformation("Settings from {AppSettingsSource}", _appSettingsSource);
 
             // from here a stop command ends the start-up too; only the lock's holder may listen, since
             // starting to listen clears the command file

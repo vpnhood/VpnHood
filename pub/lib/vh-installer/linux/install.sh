@@ -74,6 +74,11 @@ elif [ "$lastArg" != "" ]; then
 fi;
 lastArg=$arg;
 done;
+# a last option still waiting for its value, or an unknown last one
+if [ "$lastArg" != "" ]; then
+	echo "Unknown argument or missing value! argument: $lastArg";
+	exit 1;
+fi
 
 # validate $versionTag
 if [ "$versionTag" == "" ]; then

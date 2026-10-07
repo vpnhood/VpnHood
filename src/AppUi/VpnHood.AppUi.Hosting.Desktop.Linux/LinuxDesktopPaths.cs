@@ -30,7 +30,7 @@ public class LinuxDesktopPaths(string appId) : IAppDesktopPaths
             ? launcher
             : InstanceName;
 
-    // /opt/VpnHoodClient/<version>/VpnHoodClient -> /opt/VpnHoodClient/storage, which is what every
+    // /opt/VpnHoodClient/bin/<version>/VpnHoodClient -> /opt/VpnHoodClient/storage, which is what every
     // release of this package has used and where an advanced user's settings.json already is.
     public string StoragePath {
         get {
@@ -38,8 +38,10 @@ public class LinuxDesktopPaths(string appId) : IAppDesktopPaths
                           throw new InvalidOperationException("The process path is unknown, so the storage folder cannot be found.");
             var versionDir = Path.GetDirectoryName(exePath) ??
                              throw new InvalidOperationException($"The executable has no folder: {exePath}");
-            var installDir = Path.GetDirectoryName(versionDir) ??
-                             throw new InvalidOperationException($"The version folder has no parent: {versionDir}");
+            var binDir = Path.GetDirectoryName(versionDir) ??
+                         throw new InvalidOperationException($"The version folder has no parent: {versionDir}");
+            var installDir = Path.GetDirectoryName(binDir) ??
+                             throw new InvalidOperationException($"The bin folder has no parent: {binDir}");
             return Path.Combine(installDir, "storage");
         }
     }

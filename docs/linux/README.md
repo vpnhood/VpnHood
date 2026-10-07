@@ -29,7 +29,8 @@ sudo bash <(wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/downloa
 
 The installer must run as root and will say so rather than half-install. It:
 
-- unpacks the build under `/opt/VpnHoodClient/<version>/`
+- unpacks the build under `/opt/VpnHoodClient/bin/<version>/`; an update removes old versions,
+  keeping the three newest and any installed in the last 30 days
 - puts `vhclient` on your `PATH` (`/usr/local/bin/vhclient`)
 - writes and starts `VpnHoodClient.service`, enabled at boot unless you answer no
 - on a machine with a graphical target, adds **VpnHood! CLIENT** to the application menu and

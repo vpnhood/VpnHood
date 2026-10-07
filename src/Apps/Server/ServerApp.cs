@@ -58,10 +58,11 @@ public class ServerApp : IDisposable
 
     public ServerApp()
     {
-        // set storage folder
-        var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
-        var storagePath = parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish))
-            ? Path.Combine(parentAppFolderPath, FolderNameStorage)
+        // An installed server runs from <install>/bin/<version>, its install's publish.json and storage
+        // two folders up; any other run, a debugger's say, keeps its storage in the working folder.
+        var installFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(AppFolderPath));
+        var storagePath = installFolderPath != null && File.Exists(Path.Combine(installFolderPath, FileNamePublish))
+            ? Path.Combine(installFolderPath, FolderNameStorage)
             : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
         Directory.CreateDirectory(storagePath);
         Directory.SetCurrentDirectory(storagePath);

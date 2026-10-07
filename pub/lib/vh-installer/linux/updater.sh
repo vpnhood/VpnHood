@@ -1,7 +1,17 @@
 #!/bin/bash
 echo "Updating VpnHood Module for linux...";
-curDir="$(dirname "$0")";
+# absolute: the install script gets this folder as its destination
+curDir="$(dirname "$(readlink -f "$0")")";
 localPublishInfoFile="$curDir/publish.json";
+
+# -container: run by the container's supervisor, where there is no systemd. The install script then
+# writes no units and starts nothing; the supervisor starts the new version.
+container="";
+for arg in "$@"; do
+	if [ "$arg" = "-container" ]; then
+		container="y";
+	fi
+done
 
 # -------------------
 # Functions
@@ -56,7 +66,11 @@ fi
 
 # Compare the update code
 if [ "$localUpdateCode" != "$onlineUpdateCode" ]; then
-    echo "The installed version can not be updated. You need to update it manually!";
+    if [ "$container" = "y" ]; then
+        echo "The installed version can not be updated. Pull the latest image!";
+    else
+        echo "The installed version can not be updated. You need to update it manually!";
+    fi
     exit 1;
 fi
 
@@ -68,6 +82,17 @@ if [ $(version "$localVersion") -ge $(version "$onlineVersion") ]; then
     exit 0;
 fi
 
-# Install the new version
+# Install the new version. The script is downloaded whole before it runs: run from a pipe, a broken
+# download would run as far as it got.
 echo "Installing the latest version";
-bash <( wget -qO- "$onlineInstallScriptUrl") -q -autostart;
+installScriptFile=$(mktemp) || exit 1;
+trap 'rm -f "$installScriptFile"' EXIT;
+if ! wget -qO "$installScriptFile" "$onlineInstallScriptUrl"; then
+    echo "Could not download the install script! Url: $onlineInstallScriptUrl";
+    exit 1;
+fi
+modeArg="-autostart";
+if [ "$container" = "y" ]; then
+    modeArg="-container";
+fi
+bash "$installScriptFile" -q -destination "$curDir" "$modeArg";

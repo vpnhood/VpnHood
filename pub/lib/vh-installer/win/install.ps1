@@ -66,7 +66,7 @@ if ( "$quiet" -ne "y" ) {
 	if ("$autostart" -eq "") { $autostart = Read-Host -Prompt "Auto Start (y/n)?" ; }
 }
 
-$binDir = "$destinationPath/$versionTag";
+$binDir = "$destinationPath/bin/$versionTag";
 
 # download & install
 if ( "$packageFile" -eq "" ) {
@@ -89,8 +89,10 @@ Write-Output "Stopping $jobName (if any)...";
 Start-Process "schtasks" "/end /tn $jobName";
 
 # extracting
-Write-Output "Extracting to $destinationPath";
-Expand-Archive "$packageFile" -DestinationPath "$destinationPath" -Force -ErrorAction Continue;
+Write-Output "Extracting to $binDir";
+Expand-Archive "$packageFile" -DestinationPath "$destinationPath/bin" -Force -ErrorAction Continue;
+# a reinstalled version keeps its folder's old time; the cleanup below goes by when a version was installed
+(Get-Item "$binDir").LastWriteTime = Get-Date;
 
 # Updating shared files...
 Write-Output "Updating shared files...";
@@ -98,6 +100,22 @@ $infoDir = "$binDir/publish_info";
 Copy-Item -path "$infoDir/vhupdate.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/$launcher.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/publish.json" -Destination "$destinationPath/" -Force;
+
+# Old versions go only here, at an update: one stays while it is among the three newest or was
+# installed in the last 30 days. Version folders at the top, from the layout before bin, count too.
+Write-Output "Removing old versions...";
+$versionDirs = @(Get-ChildItem -Directory -Path "$destinationPath/bin", "$destinationPath" |
+	Where-Object { $_.Name -match '^v\d' });
+$newestVersions = @($versionDirs |
+	Sort-Object { [Version]($_.Name -replace '^v' -replace '-.*$') } -Descending |
+	Select-Object -First 3 | ForEach-Object { $_.FullName });
+foreach ($versionDir in $versionDirs) {
+	if ($newestVersions -contains $versionDir.FullName -or $versionDir.LastWriteTime -gt (Get-Date).AddDays(-30)) {
+		continue;
+	}
+	Write-Output "Removing an old version: $($versionDir.FullName)";
+	Remove-Item -Path $versionDir.FullName -Recurse -Force -ErrorAction Continue;
+}
 
 # Write AppSettings
 if ("$httpBaseUrl" -ne "") {

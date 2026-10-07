@@ -66,7 +66,7 @@ $module_InstallerFile = "$moduleDir/$assemblyName-$runtime.$shellExt";
 $module_packageFile = "$moduleDir/$assemblyName-$runtime.$packageFileExt";
 
 $lineEnding = "`n";
-$launcher_exeFile = "$versionTag/$assemblyName";
+$launcher_exeFile = "bin/$versionTag/$assemblyName";
 
 # Calcualted Path
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);

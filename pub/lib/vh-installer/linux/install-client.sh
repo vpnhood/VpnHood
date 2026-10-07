@@ -5,7 +5,7 @@
 # type - and the difference is almost entirely in what gets installed around the binary.
 #
 # What this writes:
-#   /opt/<name>/<version>/       the self-contained build
+#   /opt/<name>/bin/<version>/   the self-contained build, the old ones removed at an update
 #   /opt/<name>/storage/         settings.json, profiles, the log  (root's alone, 700)
 #   /usr/local/bin/<launcher>    so the commands can be typed from anywhere
 #   /etc/systemd/system/<name>.service           the root service, headless
@@ -66,6 +66,12 @@ elif [ "$lastArg" = "-packageFile" ]; then
 	lastArg="";
 	continue;
 
+# The install's folder; the updater passes its own.
+elif [ "$lastArg" = "-destination" ]; then
+	destinationPath=$arg;
+	lastArg="";
+	continue;
+
 elif [ "$lastArg" = "-versionTag" ]; then
 	versionTag=$arg;
 	lastArg="";
@@ -91,7 +97,7 @@ if [ "$versionTag" == "" ]; then
 	echo "Could not find versionTag!";
 	exit 1;
 fi
-binDir="$destinationPath/$versionTag";
+binDir="$destinationPath/bin/$versionTag";
 
 # Run by the updater, this script is inside the updater unit's own cgroup: the old vhupdate runs it
 # inline. Restarting that unit from here would stop this script with it, before the VPN service is
@@ -171,12 +177,18 @@ fi
 # ------------------------------------------------------------------
 # The package
 # ------------------------------------------------------------------
+# Into the install's own folder, not the current one: the updater's is /, where every update used to
+# leave the package. A crashed run's leftover goes first.
+mkdir -p "$destinationPath/bin" || exit 1;
+rm -f "$destinationPath"/bin/.package.*;
+downloadedPackageFile="";
 if [ "$packageFile" = "" ]; then
 	echo "Downloading $productName...";
-	packageFile="$assemblyName-linux.tar.gz";
-	wget -nv -O "$packageFile" "$packageUrl";
-	if [ $? != 0 ]; then
+	packageFile=$(mktemp "$destinationPath/bin/.package.XXXXXX") || exit 1;
+	downloadedPackageFile="$packageFile";
+	if ! wget -nv -O "$packageFile" "$packageUrl"; then
 		echo "Could not download $packageUrl";
+		rm -f "$downloadedPackageFile";
 		exit 1;
 	fi
 fi
@@ -188,13 +200,16 @@ if systemctl is-active --quiet "$assemblyName.service" 2>/dev/null; then
 	systemctl stop "$assemblyName.service";
 fi
 
-echo "Extracting to $destinationPath";
-mkdir -p "$destinationPath";
-tar -xzf "$packageFile" -C "$destinationPath"
+echo "Extracting to $binDir";
+tar -xzf "$packageFile" -C "$destinationPath/bin"
 if [ $? != 0 ]; then
 	echo "Could not extract $packageFile";
+	rm -f "$downloadedPackageFile";
 	exit 1;
 fi
+rm -f "$downloadedPackageFile";
+# tar keeps the build's times; the cleanup below goes by when a version was installed
+touch "$binDir";
 
 # The shared files are replaced by rename, never overwritten in place. The vhupdate running this
 # script is still reading its own file, as the launcher behind an open window is - bash reads a
@@ -215,6 +230,24 @@ replace_file "$infoDir/vhupdate" "$destinationPath/vhupdate" 755;
 replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
 replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
 chmod +x "$binDir/$assemblyName";
+
+# Old versions go only here, at an update: one stays while it is among the three newest or was
+# installed in the last 30 days. Version folders at the top, from the layout before bin, count too.
+function remove_old_versions() {
+	local versionDirs=() versionDir newest;
+	for versionDir in "$destinationPath"/bin/v[0-9]* "$destinationPath"/v[0-9]*; do
+		if [ -d "$versionDir" ]; then versionDirs+=("$versionDir"); fi
+	done
+	newest=$(for versionDir in "${versionDirs[@]}"; do basename "$versionDir"; done | sort -V -r | head -3);
+	for versionDir in "${versionDirs[@]}"; do
+		if grep -qxF "$(basename "$versionDir")" <<< "$newest" || [ -n "$(find "$versionDir" -maxdepth 0 -mtime -30)" ]; then
+			continue;
+		fi
+		echo "Removing an old version: $versionDir";
+		rm -rf "$versionDir" || echo "WARNING: Could not remove $versionDir";
+	done
+}
+remove_old_versions;
 
 # The storage the service owns, root's alone. Made here rather than on first run so an advanced
 # user has a folder to drop a settings.json into before anything has started. Earlier releases

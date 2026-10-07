@@ -1,4 +1,7 @@
 #!/bin/bash
+# One group, which bash reads whole before it runs any of it: the updater of earlier releases pipes
+# this script into bash, and a download cut short would otherwise run as far as it got.
+{
 echo "$(productNameParam) Installation for linux";
 
 # Default arguments
@@ -95,6 +98,9 @@ fi;
 # Best effort: a failure is logged and the server is installed anyway.
 if [ "$container" = "y" ]; then
 	echo "Upgrading the libraries the server runs on...";
+	# dpkg first: a container stopped during an earlier upgrade has left it interrupted, and apt does
+	# nothing until dpkg has finished that
+	DEBIAN_FRONTEND=noninteractive dpkg --force-confdef --force-confold --configure -a;
 	libraries=$(dpkg-query -W -f='${Status} ${Package}\n' 'libssl*' openssl ca-certificates 'libicu*' zlib1g libc6 2>/dev/null |
 		awk '$3 == "installed" { print $4 }');
 	if [ -z "$libraries" ] || ! DEBIAN_FRONTEND=noninteractive apt-get update -qq ||
@@ -146,6 +152,8 @@ else
 	rm -rf "$stagingDir";
 fi
 rm -f "$downloadedPackageFile";
+# the package the updater of earlier releases left in its working folder, /
+rm -f "/$assemblyName-linux.tar.gz";
 
 # The shared files are replaced by rename, never rewritten in place: the vhupdate running this script
 # is still reading its own file, as bash reads a script as it goes. publish.json, which switches the
@@ -166,16 +174,21 @@ replace_file "$infoDir/vhupdate" "$destinationPath/vhupdate" 755;
 replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
 replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
 
-# Old versions go only here, at an update: one stays while it is among the three newest or was
-# installed in the last 30 days. Version folders at the top, from the layout before bin, count too.
+# Old versions go only here, at an update: one stays while it is among the three newest, was
+# installed in the last 30 days or a process still runs from it. Version folders at the top, from the
+# layout before bin, count too; a folder whose name is not a whole version is left alone.
 function remove_old_versions() {
-	local versionDirs=() versionDir newest;
+	local versionDirs=() versionDir newest running versionPattern='^v[0-9]+(\.[0-9]+){1,3}(-.+)?$';
 	for versionDir in "$destinationPath"/bin/v[0-9]* "$destinationPath"/v[0-9]*; do
-		if [ -d "$versionDir" ]; then versionDirs+=("$versionDir"); fi
+		if [ -d "$versionDir" ] && [[ $(basename "$versionDir") =~ $versionPattern ]]; then
+			versionDirs+=("$(readlink -f "$versionDir")");
+		fi
 	done
 	newest=$(for versionDir in "${versionDirs[@]}"; do basename "$versionDir"; done | sort -V -r | head -3);
+	running=$(readlink /proc/[0-9]*/exe 2>/dev/null);
 	for versionDir in "${versionDirs[@]}"; do
-		if grep -qxF "$(basename "$versionDir")" <<< "$newest" || [ -n "$(find "$versionDir" -maxdepth 0 -mtime -30)" ]; then
+		if grep -qxF "$(basename "$versionDir")" <<< "$newest" || [ -n "$(find "$versionDir" -maxdepth 0 -mtime -30)" ] ||
+			grep -qF "$versionDir/" <<< "$running"; then
 			continue;
 		fi
 		echo "Removing an old version: $versionDir";
@@ -254,3 +267,4 @@ fi
 # show final message
 echo "$productName has been installed. Run the following command:";
 echo "$destinationPath/$launcher";
+} # the group opened at the top

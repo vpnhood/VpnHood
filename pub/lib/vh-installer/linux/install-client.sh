@@ -15,6 +15,9 @@
 # Ubuntu and Debian are what it is tested on; anything with systemd and apt, or systemd and the
 # GUI libraries already present, will do.
 
+# One group, which bash reads whole before it runs any of it: the updater of earlier releases pipes
+# this script into bash, and a download cut short would otherwise run as far as it got.
+{
 echo "$(productNameParam) Installation for Linux";
 
 # Default arguments
@@ -178,9 +181,9 @@ fi
 # The package
 # ------------------------------------------------------------------
 # Into the install's own folder, not the current one: the updater's is /, where every update used to
-# leave the package. A crashed run's leftover goes first.
+# leave the package. A crashed run's leftovers go first.
 mkdir -p "$destinationPath/bin" || exit 1;
-rm -f "$destinationPath"/bin/.package.*;
+rm -rf "$destinationPath"/bin/.package.* "$destinationPath"/bin/.staging.*;
 downloadedPackageFile="";
 if [ "$packageFile" = "" ]; then
 	echo "Downloading $productName...";
@@ -193,23 +196,32 @@ if [ "$packageFile" = "" ]; then
 	fi
 fi
 
-# A running service holds the binary it is executing, so it goes down before the files move and
-# comes back at the end - which is also what makes this script an in-place upgrade.
+# extract into a staging folder that is renamed into bin whole, so a version in bin is never half
+# there; one already there is complete and is kept, a running window's files with it
+if [ -d "$binDir" ]; then
+	echo "Already installed: $binDir";
+else
+	echo "Extracting to $binDir";
+	stagingDir=$(mktemp -d "$destinationPath/bin/.staging.XXXXXX") || exit 1;
+	# touch: tar keeps the build's times, and the cleanup below goes by when a version was installed
+	if ! tar -xzf "$packageFile" -C "$stagingDir" || ! touch "$stagingDir/$versionTag" ||
+		! mv "$stagingDir/$versionTag" "$binDir"; then
+		echo "Could not extract $packageFile";
+		rm -rf "$stagingDir" "$downloadedPackageFile";
+		exit 1;
+	fi
+	rm -rf "$stagingDir";
+fi
+rm -f "$downloadedPackageFile";
+# the package the updater of earlier releases left in its working folder, /
+rm -f "/$assemblyName-linux.tar.gz";
+
+# The service goes down for the switch and comes back at the end - which is also what makes this
+# script an in-place upgrade. Not before: a package that does not extract leaves it running.
 if systemctl is-active --quiet "$assemblyName.service" 2>/dev/null; then
 	echo "Stopping the running service...";
 	systemctl stop "$assemblyName.service";
 fi
-
-echo "Extracting to $binDir";
-tar -xzf "$packageFile" -C "$destinationPath/bin"
-if [ $? != 0 ]; then
-	echo "Could not extract $packageFile";
-	rm -f "$downloadedPackageFile";
-	exit 1;
-fi
-rm -f "$downloadedPackageFile";
-# tar keeps the build's times; the cleanup below goes by when a version was installed
-touch "$binDir";
 
 # The shared files are replaced by rename, never overwritten in place. The vhupdate running this
 # script is still reading its own file, as the launcher behind an open window is - bash reads a
@@ -231,16 +243,22 @@ replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
 replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
 chmod +x "$binDir/$assemblyName";
 
-# Old versions go only here, at an update: one stays while it is among the three newest or was
-# installed in the last 30 days. Version folders at the top, from the layout before bin, count too.
+# Old versions go only here, at an update: one stays while it is among the three newest, was
+# installed in the last 30 days or a process still runs from it, such as a window left open across
+# updates. Version folders at the top, from the layout before bin, count too; a folder whose name is
+# not a whole version is left alone.
 function remove_old_versions() {
-	local versionDirs=() versionDir newest;
+	local versionDirs=() versionDir newest running versionPattern='^v[0-9]+(\.[0-9]+){1,3}(-.+)?$';
 	for versionDir in "$destinationPath"/bin/v[0-9]* "$destinationPath"/v[0-9]*; do
-		if [ -d "$versionDir" ]; then versionDirs+=("$versionDir"); fi
+		if [ -d "$versionDir" ] && [[ $(basename "$versionDir") =~ $versionPattern ]]; then
+			versionDirs+=("$(readlink -f "$versionDir")");
+		fi
 	done
 	newest=$(for versionDir in "${versionDirs[@]}"; do basename "$versionDir"; done | sort -V -r | head -3);
+	running=$(readlink /proc/[0-9]*/exe 2>/dev/null);
 	for versionDir in "${versionDirs[@]}"; do
-		if grep -qxF "$(basename "$versionDir")" <<< "$newest" || [ -n "$(find "$versionDir" -maxdepth 0 -mtime -30)" ]; then
+		if grep -qxF "$(basename "$versionDir")" <<< "$newest" || [ -n "$(find "$versionDir" -maxdepth 0 -mtime -30)" ] ||
+			grep -qF "$versionDir/" <<< "$running"; then
 			continue;
 		fi
 		echo "Removing an old version: $versionDir";
@@ -400,3 +418,4 @@ echo "    $launcher profile add <access-key>";
 echo "    $launcher connect";
 echo "    $launcher status";
 echo "    $launcher --help";
+} # the group opened at the top

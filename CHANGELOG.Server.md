@@ -12,8 +12,8 @@
 * Fix: On Linux, the server no longer runs proxy-only when a firewall or Docker holds the iptables lock as it starts; it waits up to 5 seconds for the lock.
 * Fix: On Linux, a tun left down by a killed server is cleared at the next start; the server used to refuse it and run proxy-only, with an error suggesting another VPN held it.
 * Fix: On Linux, a stop during an address change no longer leaves a tun or a NAT rule behind.
-* Update: The installed server keeps its versions in the install's bin folder, and an update removes old ones: the three newest stay, and any installed in the last 30 days
-* Fix: On Linux, installing or updating no longer leaves the downloaded package behind; updates left VpnHoodServer-linux.tar.gz in /, which can be deleted
+* Update: The installed server keeps its versions in the install's bin folder, and an update removes old ones: the three newest stay, and any installed in the last 30 days or still running
+* Fix: Installing or updating no longer leaves the downloaded package behind, and removes the one earlier updates left: VpnHoodServer-linux.tar.gz in / on Linux, VpnHoodServer-win.zip in C:\Windows\System32 on Windows
 
 # v8.1.849
 

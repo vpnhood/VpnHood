@@ -56,8 +56,9 @@
 * Fix: On Linux, opening the app again brings its open window forward instead of starting another, and closing the window ends it rather than leaving it running hidden #linux
 * Fix: On a screen without room for the window, such as a 1366x768 laptop's, it opens in landscape, in the middle of the screen, and fits the screen again when its resolution changes: the bottom of a page, the first run's Accept button included, no longer falls under the taskbar #windows #linux
 * Fix: On Linux, the app's icon in the dock and the app grid is sharp; it was blurred #linux
-* Update: On Linux, an update removes the app's old versions: the three newest stay, and any installed in the last 30 days #linux
-* Fix: On Linux, installing or updating no longer leaves the downloaded package behind; updates left it in / (VpnHoodClient-linux.tar.gz or VpnHoodConnect-linux.tar.gz), which can be deleted #linux
+* Update: On Linux, an update removes the app's old versions: the three newest stay, and any installed in the last 30 days or still running, such as a window left open #linux
+* Fix: On Linux, installing or updating no longer leaves the downloaded package behind, and removes the one earlier updates left in / (VpnHoodClient-linux.tar.gz or VpnHoodConnect-linux.tar.gz) #linux
+* Fix: On Linux, an update whose package does not unpack no longer leaves the VPN service stopped #linux
 
 # v8.1.849
 

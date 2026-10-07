@@ -68,10 +68,15 @@ if ( "$quiet" -ne "y" ) {
 
 $binDir = "$destinationPath/bin/$versionTag";
 
-# download & install
+# download & install. Into the install's own folder, not the current one: the updater's is System32,
+# where every update used to leave the package.
+New-Item -ItemType Directory -Path "$destinationPath/bin" -Force | Out-Null;
+$downloadedPackageFile = "";
 if ( "$packageFile" -eq "" ) {
 	Write-Output "Downloading $assemblyName...";
-	$packageFile = "$assemblyName-win.zip";
+	# .zip: Expand-Archive opens no other name
+	$packageFile = "$destinationPath/bin/.package.zip";
+	$downloadedPackageFile = $packageFile;
 	[Net.ServicePointManager]::SecurityProtocol = "Tls, Tls11, Tls12";
 	$oldProgressPreference = $ProgressPreference;
 	try {
@@ -84,13 +89,15 @@ if ( "$packageFile" -eq "" ) {
 }
 
 # stopping the old service
-New-Item -ItemType Directory -Path $destinationPath -Force | Out-Null;
 Write-Output "Stopping $jobName (if any)...";
 Start-Process "schtasks" "/end /tn $jobName";
 
 # extracting
 Write-Output "Extracting to $binDir";
 Expand-Archive "$packageFile" -DestinationPath "$destinationPath/bin" -Force -ErrorAction Continue;
+if ("$downloadedPackageFile" -ne "") { Remove-Item -Path "$downloadedPackageFile" -Force -ErrorAction Continue; }
+# the package the updater of earlier releases left in its working folder, System32
+Remove-Item -Path "${env:SystemRoot}/System32/$assemblyName-win.zip" -Force -ErrorAction Ignore;
 # a reinstalled version keeps its folder's old time; the cleanup below goes by when a version was installed
 (Get-Item "$binDir").LastWriteTime = Get-Date;
 
@@ -101,16 +108,21 @@ Copy-Item -path "$infoDir/vhupdate.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/$launcher.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/publish.json" -Destination "$destinationPath/" -Force;
 
-# Old versions go only here, at an update: one stays while it is among the three newest or was
-# installed in the last 30 days. Version folders at the top, from the layout before bin, count too.
+# Old versions go only here, at an update: one stays while it is among the three newest, was
+# installed in the last 30 days or a process still runs from it. Version folders at the top, from the
+# layout before bin, count too; a folder whose name is not a whole version is left alone.
 Write-Output "Removing old versions...";
 $versionDirs = @(Get-ChildItem -Directory -Path "$destinationPath/bin", "$destinationPath" |
-	Where-Object { $_.Name -match '^v\d' });
+	Where-Object { $_.Name -match '^v\d+(\.\d+){1,3}(-.+)?$' });
 $newestVersions = @($versionDirs |
 	Sort-Object { [Version]($_.Name -replace '^v' -replace '-.*$') } -Descending |
 	Select-Object -First 3 | ForEach-Object { $_.FullName });
+# full paths, as the folders' are: a process started by a short (8.3) path reports that one
+$runningFiles = @(Get-Process | ForEach-Object { $_.Path } | Where-Object { $_ } |
+	ForEach-Object { try { [IO.Path]::GetFullPath($_) } catch { "" } });
 foreach ($versionDir in $versionDirs) {
-	if ($newestVersions -contains $versionDir.FullName -or $versionDir.LastWriteTime -gt (Get-Date).AddDays(-30)) {
+	$isRunning = @($runningFiles | Where-Object { $_.StartsWith("$($versionDir.FullName)\", [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0;
+	if ($newestVersions -contains $versionDir.FullName -or $versionDir.LastWriteTime -gt (Get-Date).AddDays(-30) -or $isRunning) {
 		continue;
 	}
 	Write-Output "Removing an old version: $($versionDir.FullName)";

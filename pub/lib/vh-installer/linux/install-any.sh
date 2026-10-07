@@ -1,7 +1,11 @@
 #!/bin/bash
 
-# find cpu architecture
+# find cpu architecture. A 32-bit userland on a 64-bit kernel, as Raspberry Pi OS 32-bit has, says
+# aarch64 too, yet runs no arm64 build.
 arch_raw=$(uname -m)
+if [ "$(getconf LONG_BIT 2>/dev/null)" = "32" ]; then
+    arch_raw="$arch_raw with a 32-bit userland"
+fi
 
 if [ "$arch_raw" = "x86_64" ]; then
     script_url="$installerUrl_x64"

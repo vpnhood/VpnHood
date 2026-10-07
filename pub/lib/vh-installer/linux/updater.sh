@@ -41,7 +41,7 @@ function version {
 # -------------------
 
 # load local publish info
-localPublishInfoJson=`cat $localPublishInfoFile`;
+localPublishInfoJson=`cat "$localPublishInfoFile"`;
 localVersion=$(json_extract Version "$localPublishInfoJson");
 localUpdateCode=$(json_extract UpdateCode "$localPublishInfoJson");
 localUpdateInfoUrl=$(json_extract UpdateInfoUrl "$localPublishInfoJson");

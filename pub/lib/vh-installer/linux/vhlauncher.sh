@@ -24,7 +24,7 @@ function json_extract() {
 }
 
 # read publish.json
-publishInfoJson=`cat $publishInfoFile`;
+publishInfoJson=`cat "$publishInfoFile"`;
 exeFileR=$(json_extract ExeFile "$publishInfoJson");
 exeFile="$curDir/$exeFileR";
 # The installer has already done this as root. Here it is a best effort for a build run from a

@@ -141,7 +141,10 @@ else
     # against the current working directory (not -C) and GNU tar (Linux) then
     # fails, silently producing an empty archive. Naming $versionTag is portable
     # across GNU tar and bsdtar (Windows) and keeps the same entry layout.
-    tar -czf "$module_packageFile" -C "$publishDir" "$versionTag";
+    # Root's entries: GNU tar (CI) records the builder's user id otherwise, which root keeps when it
+    # extracts by hand; the install scripts ignore owners. bsdtar on Windows records 0 already.
+    $ownerArgs = if ($IsLinux) { @("--owner=0", "--group=0", "--numeric-owner") } else { @() };
+    tar @ownerArgs -czf "$module_packageFile" -C "$publishDir" "$versionTag";
     if ($LASTEXITCODE -ne 0) { Throw "tar exited with error code: $LASTEXITCODE"; }
 }
 

@@ -59,6 +59,9 @@
 * Update: On Linux, an update removes the app's old versions: the three newest stay, and any installed in the last 30 days or still running, such as a window left open #linux
 * Fix: On Linux, installing or updating no longer leaves the downloaded package behind, and removes the one earlier updates left in / (VpnHoodClient-linux.tar.gz or VpnHoodConnect-linux.tar.gz) #linux
 * Fix: On Linux, an update whose package does not unpack no longer leaves the VPN service stopped #linux
+* Fix: On Linux, the installer installs MsQuic, for the QUIC channel; it looked for MsQuic's installer under the server's name and never found it. Microsoft's package feed, which MsQuic comes from, is removed again unless it was there before #linux
+* Fix: On Linux, the app's installed files belong to root; they kept the user id of the machine that built them, so an account with that id could replace what the VPN service runs as root #linux
+* Fix: On Linux, the install command in the Linux guide works: sudo bash <(…) cannot run the script it is given, so the guide says sudo su -c "bash <(…)", and the installer prints that command when it is run without root #linux
 
 # v8.1.849
 

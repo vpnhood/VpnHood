@@ -90,7 +90,7 @@ install_msquic() {
                 candidates="$candidates $fallback"
             done
         else
-            # RHEL / CentOS — major version only
+            # RHEL / CentOS - major version only
             local major_ver
             major_ver=$(echo "$requested_version" | cut -d. -f1)
             candidates="$major_ver"
@@ -141,10 +141,10 @@ install_msquic() {
         tmp_deb=$(mktemp /tmp/packages-microsoft-prod.XXXXXX.deb)
 
         # Tell apt to WAIT for the dpkg lock instead of failing. apt-get is fail-fast by default, and
-        # on first boot the lock is usually held by unattended-upgrades/cloud-init — that race is what
+        # on first boot the lock is usually held by unattended-upgrades/cloud-init - that race is what
         # makes a fresh install start the server permanently without QUIC. Setting this once as a
         # drop-in applies to every apt-get below, so we don't repeat a flag on each command.
-        # (The feed package is installed via apt-get rather than `dpkg -i` so it honors this too —
+        # (The feed package is installed via apt-get rather than `dpkg -i` so it honors this too -
         # a direct dpkg call does not read apt config.)
         # The drop-in is temporary: the RETURN trap removes it so we don't permanently change apt.
         local apt_lock_conf=/etc/apt/apt.conf.d/99-vpnhood-msquic
@@ -152,30 +152,41 @@ install_msquic() {
         echo 'DPkg::Lock::Timeout "60";' > "$apt_lock_conf"
         trap 'rm -f "$apt_lock_conf"' RETURN
 
-        if wget -nv -O "$tmp_deb" "$feed_url"; then
-            if ! apt-get install -y "$tmp_deb"; then
-                rm -f "$tmp_deb"
-                echo "WARNING: Failed to install Microsoft package feed."
-                return 1
-            fi
-            rm -f "$tmp_deb"
-
-            if ! apt-get update; then
-                echo "WARNING: apt-get update failed after adding Microsoft feed."
-                return 1
-            fi
-
-            if ! apt-get install -y libmsquic; then
-                echo "WARNING: libmsquic package installation failed."
-                return 1
-            fi
-
-            _link_and_register_msquic
-        else
+        if ! wget -nv -O "$tmp_deb" "$feed_url"; then
             rm -f "$tmp_deb"
             echo "WARNING: Failed to download feed package from ${feed_url}."
             return 1
         fi
+
+        # Microsoft's feed serves this install alone: one added here goes again below, so the machine
+        # keeps no feed whose dotnet packages would mix with the distribution's own. One that was
+        # there already stays. Every update runs this script again, which keeps libmsquic current.
+        local feed_added=""
+        if [ "$(dpkg-query -W -f='${db:Status-Status}' packages-microsoft-prod 2>/dev/null)" != "installed" ]; then
+            feed_added="y"
+        fi
+
+        local installed=""
+        if ! apt-get install -y "$tmp_deb"; then
+            echo "WARNING: Failed to install Microsoft package feed."
+        elif ! apt-get update; then
+            echo "WARNING: apt-get update failed after adding Microsoft feed."
+        elif ! apt-get install -y libmsquic; then
+            echo "WARNING: libmsquic package installation failed."
+        else
+            installed="y"
+        fi
+        rm -f "$tmp_deb"
+
+        if [ "$feed_added" = "y" ] && dpkg-query -W packages-microsoft-prod >/dev/null 2>&1 &&
+            ! apt-get purge -y packages-microsoft-prod; then
+            echo "WARNING: Could not remove the Microsoft package feed again."
+        fi
+
+        if [ "$installed" != "y" ]; then
+            return 1
+        fi
+        _link_and_register_msquic
 
     elif [ "$distro" = "rhel" ] || [ "$distro" = "centos" ] || [ "$distro" = "fedora" ]; then
 
@@ -192,20 +203,30 @@ install_msquic() {
             echo "NOTE: No feed for ${distro} ${distro_version}. Falling back to ${distro} ${resolved_version} feed (MsQuic is ABI-compatible)."
         fi
 
+        # Microsoft's feed for this install alone, as on Debian above
+        local feed_added=""
+        if ! rpm -q packages-microsoft-prod >/dev/null 2>&1; then
+            feed_added="y"
+        fi
         rpm -Uvh "$feed_url" 2>/dev/null || true
 
-        if command -v dnf >/dev/null 2>&1; then
-            if ! dnf install -y libmsquic; then
-                echo "WARNING: libmsquic installation failed via dnf."
-                return 1
-            fi
+        local package_manager
+        package_manager=$(command -v dnf >/dev/null 2>&1 && echo dnf || echo yum)
+        local installed=""
+        if "$package_manager" install -y libmsquic; then
+            installed="y"
         else
-            if ! yum install -y libmsquic; then
-                echo "WARNING: libmsquic installation failed via yum."
-                return 1
-            fi
+            echo "WARNING: libmsquic installation failed via $package_manager."
         fi
 
+        if [ "$feed_added" = "y" ] && rpm -q packages-microsoft-prod >/dev/null 2>&1 &&
+            ! rpm -e packages-microsoft-prod; then
+            echo "WARNING: Could not remove the Microsoft package feed again."
+        fi
+
+        if [ "$installed" != "y" ]; then
+            return 1
+        fi
         _link_and_register_msquic
 
     else

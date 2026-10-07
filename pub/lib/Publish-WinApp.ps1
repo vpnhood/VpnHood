@@ -28,11 +28,11 @@ function Write-VhBuildWarning([string]$message, [string]$title = "") {
 	Write-Warning $message;
 }
 
-# Per-app config from .user/<appFolder>/publish.json (RepoUrl + PackageTitle; no packageId on Windows).
-# The optional title override only renames the published artifacts; .user/module lookups stay keyed by
-# $appFolder. See AppPublishConfig.ps1.
+# Per-app config from .user/<appFolder>/publish.json (RepoUrl, InstallationPageUrl; no package id on
+# Windows). The published files are named after $appFolder, the app's package title. See
+# AppPublishConfig.ps1.
 $appConfig = Get-AppPublishConfig $appFolder;
-$packageFileTitle = if ($appConfig.packageFileTitle) { $appConfig.packageFileTitle } else { $appFolder }
+$packageFileTitle = $appFolder;
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
 $installationPageUrl =
 	if ($appConfig.installationPageUrl) { $appConfig.installationPageUrl }

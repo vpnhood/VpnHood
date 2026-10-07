@@ -1,8 +1,8 @@
 param(
 	[Parameter(Mandatory=$true)] [String]$projectDir,
-	# The .user/<appFolder>/ config folder name. Also the bin module dir name and the default artifact
-	# title. packageId, an optional title override, and repo-url are read from that folder; each falls
-	# back to the committed project default when its .user file is absent.
+	# The .user/<appFolder>/ config folder name, the app's package title: also the bin module dir name
+	# and the title of every published file. Repo-url is read from that folder's publish.json, and
+	# falls back to the resolved repo when publish.json is absent.
 	[Parameter(Mandatory=$true)] [String]$appFolder,
 	[Parameter(Mandatory=$true)] [String]$distribution,
 	# Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client; the URL itself is resolved below.
@@ -20,26 +20,17 @@ Get-ChildItem -Path $projectDir -File -Filter "*.tmp.csproj" | Remove-Item -Forc
 
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 
-# Per-app identity from .user/<appFolder>/publish.json (see AppPublishConfig.ps1). publish.json is
-# all-or-nothing: PRESENT -> strict (every needed key must be there or Get-AppPublishConfig / the check
-# below throws); ABSENT -> the committed built-in defaults (the head's own id, resolved repo).
-#   packageId        <- Distributions.<store>.AndroidPackageId  (strict) else the head's ApplicationId,
-#                       as the app's identity makes it (src/Apps/<Product>/Directory.Build.props)
-#   packageFileTitle <- PackageTitle                            (strict) else $appFolder (renames only)
-#   repoUrl          <- RepoUrl                                 (strict) else the resolved publish repo
+# Who the app is comes from the head, how it ships from .user/<appFolder>/publish.json (see
+# AppPublishConfig.ps1; present -> strict, absent -> the resolved repo):
+#   packageId        <- the head's ApplicationId, as the app's identity makes it in Release
+#                       (src/Apps/<Product>/Directory.Build.props)
+#   packageFileTitle <- $appFolder, the app's package title, which names every published file
+#   repoUrl          <- RepoUrl (strict) else the resolved publish repo
 $appUserDir = Join-Path "$solutionDir/../.user/" $appFolder;
 $appConfig = Get-AppPublishConfig $appFolder;
-$packageId = if ($appConfig.exists) {
-		# STRICT: publish.json present -> the store being built MUST declare AndroidPackageId. No fallback
-		# to the head's own id, so a half-filled publish.json can never ship an id nobody named.
-		if (-not $appConfig.packageId[$store]) {
-			Throw "publish.json is present but Distributions.$store.AndroidPackageId is not set; the '$store' store cannot be built in strict mode. Add it, or remove publish.json to build with the head's own id.";
-		}
-		$appConfig.packageId[$store]
-	} else {
-		Get-ProjectProperty $projectFile "ApplicationId"
-	}
-$packageFileTitle = if ($appConfig.packageFileTitle) { $appConfig.packageFileTitle } else { $appFolder }
+$packageId = Get-ProjectProperty $projectFile "ApplicationId";
+if ([string]::IsNullOrWhiteSpace($packageId)) { Throw "The head has no ApplicationId: $projectFile."; }
+$packageFileTitle = $appFolder;
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
 # Strict: in strict mode the app's shared appsettings must exist (no silent Exists() short-circuit).
 Assert-AppSettings $appFolder;

@@ -1,8 +1,8 @@
 param(
 	[Parameter(Mandatory=$true)] [String]$projectDir,
-	# The .user/<appFolder>/ config folder name. Also the bin module dir name and the default artifact
-	# title. packageFileTitle and repo-url are read from that folder's publish.json; each falls back to a
-	# committed default when publish.json is absent. Mirrors Publish-AndroidApp.ps1.
+	# The .user/<appFolder>/ config folder name, the app's package title: also the bin module dir name
+	# and the title of every published file. Repo-url is read from that folder's publish.json, and
+	# falls back to the resolved repo when publish.json is absent. Mirrors Publish-AndroidApp.ps1.
 	[Parameter(Mandatory=$true)] [String]$appFolder,
 	[Parameter(Mandatory=$true)] [String]$distribution,   # "ios"
 	# Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client; the URL itself is resolved below.
@@ -35,7 +35,7 @@ $appUserDir = Join-Path "$solutionDir/../.user/" $appFolder;
 $appConfig = Get-AppPublishConfig $appFolder;
 $packageId = Get-ProjectProperty $projectFile "ApplicationId";
 if ([string]::IsNullOrWhiteSpace($packageId)) { Throw "The head has no ApplicationId: $projectFile."; }
-$packageFileTitle = if ($appConfig.packageFileTitle) { $appConfig.packageFileTitle } else { $appFolder }
+$packageFileTitle = $appFolder;
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
 # iOS installs come from the App Store, so the "installation page" is the store/download page, not the
 # .ipa (which iOS can't sideload). Fall back to the repo release when publish.json has no page.

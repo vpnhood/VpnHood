@@ -34,11 +34,8 @@ Write-Host "*** Publish $packageDirName release to GitHub" -BackgroundColor Blue
 # gh reads its token from the environment: CI passes github.token as GITHUB_TOKEN; locally it uses
 # your `gh auth login` (keyring) or an ambient GITHUB_TOKEN. No token file.
 
+# The app's folder names its files, as the builds named them (Publish-AndroidApp.ps1 and the rest).
 $packageFileTitle = $packageDirName;
-# Honor an optional artifact-title override (publish.json PackageTitle) so the asset file names here
-# match what the build produced. The package DIR stays keyed by the stable folder name.
-$titleOverride = (Get-AppPublishConfig $packageDirName).packageFileTitle;
-if ($titleOverride) { $packageFileTitle = $titleOverride; }
 # $releaseRootDir already resolves to pub/bin/latest on a stable release and pub/bin/<tag> on a
 # prerelease (pub/lib/Common.ps1), so this one path covers both — there is no separate "latest" dir to
 # mirror into here, unlike the per-platform publishers that write pub/bin/<tag> and pub/bin/latest.

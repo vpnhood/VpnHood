@@ -15,22 +15,21 @@
 #                             silently ship the wrong id/repo. Same on GitHub: if the variable exists,
 #                             the build refuses to run half-configured.
 #
-# publish.json shape (Android ids are Android-only — Windows/Linux have no package id):
+# publish.json shape - how a release ships, not who the app is: the ids and the title come from the
+# app's identity (src/Apps/<Product>/Directory.Build.props), the published files are named after the
+# app's folder (.user/<appFolder>), and a PackageTitle or AndroidPackageId left over from before the
+# identity is ignored:
 #   {
 #     "RepoUrl": "https://github.com/owner/repo",        REQUIRED  release repo for this app
-#     "PackageTitle": "VpnHoodClient",                   REQUIRED  artifact title (renames output only)
 #     "InstallationPageUrl": "https://.../download",     REQUIRED  Windows install/download page
 #     "Distributions": {                                 optional per store (google = Play AAB, web = APKs)
-#       "Google": { "AndroidPackageId": "...", "AndroidKeystoreAlias": "" },
-#       "Web":    { "AndroidPackageId": "...", "AndroidKeystoreAlias": "" }
+#       "Google": { "AndroidKeystoreAlias": "" },
+#       "Web":    { "AndroidKeystoreAlias": "" }
 #     }
 #   }
 #
-# A Distributions.<store> block is OPTIONAL (you needn't ship every store), but any block that IS present
-# MUST name AndroidPackageId (the built /p:ApplicationId). AndroidKeystoreAlias stays optional: it's the
-# signing alias, auto-detected from the keystore when omitted (that's derivation from the real key, not a
-# guessed default). The title override renames published artifacts only; .user lookups + the bin module
-# dir stay keyed by the default app folder, and Linux artifact names come from the head's AssemblyName.
+# AndroidKeystoreAlias is optional: it's the signing alias, auto-detected from the keystore when omitted
+# (that's derivation from the real key, not a guessed default).
 
 function Get-AppPublishConfig {
     param([Parameter(Mandatory = $true)][string]$appFolder)
@@ -40,33 +39,27 @@ function Get-AppPublishConfig {
 
     # Same shape regardless of whether the file exists, so callers never null-check the container.
     # `exists` is the strict-mode switch (see header): callers use it to decide default vs throw.
-    $result = @{ exists = $false; repoUrl = $null; packageFileTitle = $null; installationPageUrl = $null;
-                 packageId = @{}; keystoreAlias = @{} };
+    $result = @{ exists = $false; repoUrl = $null; installationPageUrl = $null; keystoreAlias = @{} };
     if (-not (Test-Path $jsonPath)) { return $result; }
     $result.exists = $true;
 
     try { $json = Get-Content $jsonPath -Raw | ConvertFrom-Json; }
     catch { Throw "publish.json is not valid JSON ($jsonPath): $($_.Exception.Message)"; }
 
-    # STRICT top-level: all three are required once publish.json exists (shared by win/linux/android).
-    foreach ($k in @('RepoUrl', 'PackageTitle', 'InstallationPageUrl')) {
+    # STRICT top-level: both are required once publish.json exists (shared by win/linux/android).
+    foreach ($k in @('RepoUrl', 'InstallationPageUrl')) {
         if ([string]::IsNullOrWhiteSpace($json.$k)) {
             Throw "publish.json is present ($jsonPath) but '$k' is missing/empty. In strict mode every key is required (no fallback to defaults). Add '$k', or remove publish.json to build with built-in defaults.";
         }
     }
     $result.repoUrl             = $json.RepoUrl.Trim();
-    $result.packageFileTitle    = $json.PackageTitle.Trim();
     $result.installationPageUrl = $json.InstallationPageUrl.Trim();
 
-    # Distributions keyed by store (google | web); member access is case-insensitive. Any block that is
-    # present must name AndroidPackageId; AndroidKeystoreAlias stays optional (auto-detected otherwise).
+    # Distributions keyed by store (google | web); member access is case-insensitive. AndroidKeystoreAlias
+    # is optional (auto-detected otherwise).
     foreach ($store in @('google', 'web')) {
         $dist = $json.Distributions.$store;
         if ($null -eq $dist) { continue; }
-        if ([string]::IsNullOrWhiteSpace($dist.AndroidPackageId)) {
-            Throw "publish.json ($jsonPath) declares Distributions.$store but 'AndroidPackageId' is missing/empty. Add it — strict mode has no fallback.";
-        }
-        $result.packageId[$store] = $dist.AndroidPackageId.Trim();
         if (-not [string]::IsNullOrWhiteSpace($dist.AndroidKeystoreAlias)) { $result.keystoreAlias[$store] = $dist.AndroidKeystoreAlias.Trim(); }
     }
     return $result;

@@ -31,8 +31,7 @@ $script:LegacyAssetAliasExpiry = [datetime]"2026-12-01";
 
 # Renamed Android distributions, keyed by the CURRENT distribution name -> the retired one. The map is
 # keyed on the distribution segment rather than the whole file name so it holds for any app title: a
-# fork that sets publish.json PackageTitle gets the alias under its own title, which is what a fork
-# that published the old layout needs.
+# fork gets the alias under its own title, which is what a fork that published the old layout needs.
 $script:LegacyAndroidDistributions = @{ "web-arm64" = "arm64-web" };
 
 # The retired update-info file name for an Android distribution, or $null when there is nothing to

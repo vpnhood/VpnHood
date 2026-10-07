@@ -119,35 +119,34 @@ secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_GOOGLE_BASE64`)
 
 `publish.json` is **all-or-nothing**: its mere presence switches the build into STRICT mode, where
 every required key must be there or the build throws. There is no field-level fallback, so a
-half-filled config can never silently ship the wrong id or repo (`pub/lib/AppPublishConfig.ps1`).
+half-filled config can never silently ship to the wrong repo (`pub/lib/AppPublishConfig.ps1`).
+
+It says how a release ships, not who the app is. Every id comes from the app's identity, the
+product's id base with the platform, and `.web` for the website's builds
+(`src/Apps/<Product>/Directory.Build.props`, see
+[source-layout](../source-layout.md#the-apps-identity)); a fork sets its own base there. The published
+files are named after the app's folder here (`VpnHoodClient`), its package title.
 
 ```jsonc
 {
   "RepoUrl": "https://github.com/owner/repo",          // REQUIRED — release repo for this app
-  "PackageTitle": "VpnHoodClient",                     // REQUIRED — renames published artifacts only
   "InstallationPageUrl": "https://.../download",       // REQUIRED — Windows install page
-  "Distributions": {                                   // each block OPTIONAL...
-    "Google": { "AndroidPackageId": "com.x.android",     "AndroidKeystoreAlias": "" },  // google = Play AAB
-    "Web":    { "AndroidPackageId": "com.x.android.web", "AndroidKeystoreAlias": "" }   // web = web + arm64 APKs
+  "Distributions": {                                   // each block OPTIONAL
+    "Google": { "AndroidKeystoreAlias": "" },          // google = Play AAB
+    "Web":    { "AndroidKeystoreAlias": "" }           // web = web + arm64 APKs
   }
 }
 ```
 
-- The three top-level keys are **required once the file exists** — omitting any one throws.
-- `Distributions.<store>` blocks are optional (you needn't ship every store), but a block that IS
-  present **must** name `AndroidPackageId` — the built application id (`/p:ApplicationId`). Absent
-  file entirely = the head's own id, which the app's identity makes: the product's id base with the
-  platform, and `.web` for the website's APK (`src/Apps/<Product>/Directory.Build.props`, see
-  [source-layout](../source-layout.md#the-apps-identity)); a fork sets its own base there. Windows and
-  Linux take their ids from the identity alone.
+- The two top-level keys are **required once the file exists** — omitting either throws.
 - `AndroidKeystoreAlias` — the signing alias (non-secret, hence in the config); optional, absent =
   auto-detect the single key entry, or the optional `ANDROID_KEYSTORE_<NAME>_ALIAS` secret for a
   multi-entry keystore.
-- `PackageTitle` — Linux artifact names come from the head's `AssemblyName` (`VhAppPackageTitle`), so
-  the title does not apply there. Most forks leave it at the default.
+- `PackageTitle` and `AndroidPackageId`, which an older file may still carry, are ignored: the
+  identity gives both.
 
-> **Field names are exact.** `AndroidPackageId` / `AndroidKeystoreAlias` — NOT `PackageId` /
-> `KeystoreAlias`. A misnamed key reads as absent and throws.
+> **Field names are exact.** `AndroidKeystoreAlias` — NOT `KeystoreAlias`. A misnamed key reads as
+> absent.
 
 With **no** `publish.json` at all the build is lenient: built-in csproj defaults, and no `.user` or
 GitHub config is looked up at all — the local/dev quick-build path.

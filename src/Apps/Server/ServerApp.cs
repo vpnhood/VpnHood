@@ -33,6 +33,7 @@ public class ServerApp : IDisposable
     private const string FolderNameStorage = "storage";
     private const string FolderNameInternal = "internal";
     private const string EnvNameAppSettings = "VH_APPSETTINGS";
+    private const string EnvNameLauncherName = "VH_LAUNCHER_NAME";
     private readonly ITracker _tracker;
     private readonly Lazy<IAccessManager> _accessManager;
     private readonly CommandListener _commandListener;
@@ -131,6 +132,15 @@ public class ServerApp : IDisposable
             ? (JsonUtils.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath)), appSettingsFilePath)
             : (new AppSettings(), "the defaults");
     }
+
+    // What a person types to run this server's commands: the launcher that started it, which the
+    // install keeps two folders up (/opt/VpnHoodServer/vhserver, a container's /app/vhserver), whatever
+    // the version; else this executable.
+    private static string CommandName =>
+        Environment.GetEnvironmentVariable(EnvNameLauncherName) is { Length: > 0 } launcherName &&
+        Path.GetDirectoryName(Path.GetDirectoryName(AppFolderPath)) is { } installFolderPath
+            ? Path.Combine(installFolderPath, launcherName)
+            : Environment.ProcessPath ?? AppName;
 
     public static Guid GetServerId(string serverIdFile)
     {
@@ -303,8 +313,8 @@ public class ServerApp : IDisposable
                 // check FileAccessManager; the access manager's first use, now that the log exists
                 if (FileAccessManager != null && await FileAccessManager.AccessTokenService.GetTotalCount() == 0)
                     VhLogger.Instance.LogWarning(
-                        "There is no token in the store! Use the following command to create one:\n " +
-                        "dotnet VpnHoodServer.dll gen -?");
+                        "There is no token in the store! Use the following command to create one:\n {Command} gen -?",
+                        CommandName);
 
                 await RunServer().Vhc();
             }

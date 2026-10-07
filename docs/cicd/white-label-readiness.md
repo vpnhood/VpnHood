@@ -39,23 +39,23 @@ Android's attributes read - so a builder writes that one file, and no head names
 | 2 | **UI theme** (`UiTheme`) | Hardcoded once per product: `Connect/Connect/ConnectAppOptions.cs` (Client keeps the default) | Selects the colour theme; the product's options builder names it beside the logo and the consent summary (`LogoAssetPath` / `PrivacyConsentAssetName`) | Read it from the app's identity or its settings |
 | 3 | **The UI only knows two looks** | `VpnHood.AppUi.Spa` (the SPA, a sample now; the Avalonia UI syncs its themes from it) — themes `blue` / `violet` in `src/theme/themes.ts`, `public/branding/<theme>/` | A third colour set needs a UI release per merchant. The logo and the consent summary no longer do: the product's options builder names them (`LogoAssetPath`, `PrivacyConsentAssetName`) and a fork supplies the files in a zip of its own, named before the store in `AppOptions.UiZipAssets`, with its own names reaching the text as `{appName}` / `{companyName}` | Make the colours data-driven: a theme supplied as assets rather than built in |
 | 4 | **iOS bundle ids** (host + extension) and App Group | *Done (2026-09-24):* built from the app's identity (`VhAppIdBase`), above | — | — |
-| 5 | **AdMob application id** | `src/Apps/Connect/Connect.Android.Google/App.cs` — the `[MetaData]` attribute's value | An attribute takes a constant only; the ad *unit* ids are already overridable | A property of the app's identity, which the constants carry as they carry the name (not yet decided) |
+| 5 | **AdMob application id** | *Done (2026-10-07):* the app's identity (`VhAdMobApplicationId`), above, which `AppConstants` carries to Connect Play's manifest attribute, as it carries the app id; Google's sample app id where the identity names none | — | — |
 | 6 | **Upstream code repo** | `env.CODE_REPO: vpnhood/VpnHood` in `.github/workflows/publish_app.yml` and each `_build_app_*.yml` | No variable override (the server pipeline has one, this does not), so a fork that renames or relocates the monorepo must edit workflow files | Read a `CODE_REPO` variable with the current value as default |
 | 7 | **Store ids in the brand repo** | `fastlane/Appfile` (`package_name`), and the iOS `app_identifier` in that repo's `publish_listing.yml` stub | fastlane reads files, not our variables | Template these from the same variables the builds use |
-| 8 | **Each head's update feed** | every head's `App.cs` (`UpdateInfoUrl`) | It was an `appsettings.json` key; a head now states it in code. (The desktop app ids this row also named come from the app's identity since 2026-09-24) | Build it from `publish.json`'s `RepoUrl` and `PackageTitle`, which already name the release it points at |
+| 8 | **Each head's update feed** | every head's `App.cs` (`UpdateInfoUrl`) | It was an `appsettings.json` key; a head now states it in code. (The desktop app ids this row also named come from the app's identity since 2026-09-24) | Build it from `publish.json`'s `RepoUrl` and the app's package title, which already name the release it points at |
 
 ## Notes for the builder service
 
-- Items 2, 5 and 8 are the same root cause: **values in the code of a head or a product**, one of
-  them in a C# attribute. The app's ids and names had it too, and now come from one file (above);
-  the same move unblocks most of what is left.
+- Items 2 and 8 are the same root cause: **values in the code of a head or a product**. The app's
+  ids, its names and its AdMob application id had it too, and now come from one file (above); the
+  same move unblocks most of what is left.
 - Item 3 is the largest piece of work and the one a merchant notices most, since it is their logo
   and their colours.
 - A **starter repo** consuming NuGet packages sidesteps 6 and 7 by construction (it owns its own
   workflows and store files), and 1 and 4 too: its heads get the identity's build targets through
   `VpnHood.AppLib.App`, so they build from the starter repo's own identity file. All but the iOS
   network extension, which references no AppLib package and must be given those targets another way
-  (not yet decided). It inherits 2, 3 and 5 unless those move into configuration first.
+  (not yet decided). It inherits 2 and 3 unless those move into configuration first.
 - Anything the stores require of the publisher — accounts, agreements, banking, questionnaires,
   submission — stays manual no matter how good the tooling gets. The merchant-facing walkthrough of
   exactly those steps is [publish-your-app](../publish-your-app/README.md); a managed service

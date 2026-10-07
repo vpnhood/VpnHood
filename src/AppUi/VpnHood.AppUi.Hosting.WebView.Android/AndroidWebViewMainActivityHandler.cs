@@ -57,7 +57,9 @@ public class AndroidWebViewMainActivityHandler(
             _host = new WebViewHost(_spaWebView, webHost);
             _host.Start();
 
-            // Register back callback for Android 13+ (API 33+) with default priority (0).
+            // Register back callback for Android 13+ (API 33+) with default priority (0). Android 13-15
+            // call it only when the app's manifest sets android:enableOnBackInvokedCallback="true", as
+            // the SPA sample's does; 16 calls it by default for an app that targets it.
             if (OperatingSystem.IsAndroidVersionAtLeast(33)) {
                 _backInvokedCallback = new AndroidBackInvokedCallback(HandleBackInvoked);
                 ActivityEvent.Activity.OnBackInvokedDispatcher.RegisterOnBackInvokedCallback(priority: 0,

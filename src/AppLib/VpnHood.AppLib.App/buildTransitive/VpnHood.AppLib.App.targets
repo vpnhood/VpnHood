@@ -37,12 +37,15 @@
 		<VhAppPlatform Condition="'$(VhAppPlatform)' == '' And $(TargetFramework.Contains('-windows'))">windows</VhAppPlatform>
 	</PropertyGroup>
 
-	<!-- The app's id. -->
+	<!-- The app's ids: its own, and the AdMob application id that a head showing AdMob ads names in its
+	     manifest - the identity's (VhAdMobApplicationId), else Google's sample app id, under which only
+	     Google's test ad units serve. -->
 	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' != ''">
 		<_VhAppId>$(VhAppIdBase).$(VhAppPlatform)</_VhAppId>
 		<_VhAppId Condition="'$(VhAppIdChannel)' != ''">$(_VhAppId).$(VhAppIdChannel)</_VhAppId>
 		<_VhAppId Condition="'$(VhAppIsDebug)' == 'true' And '$(VhAppPlatform)' != 'ios'">$(_VhAppId).debug</_VhAppId>
 		<ApplicationId Condition="'$(ApplicationId)' == ''">$(_VhAppId)</ApplicationId>
+		<VhAdMobApplicationId Condition="'$(VhAdMobApplicationId)' == ''">ca-app-pub-3940256099942544~3347511713</VhAdMobApplicationId>
 	</PropertyGroup>
 
 	<!-- The name this build shows (VhAppDisplayName), a head's and the product library's alike. Debug
@@ -71,10 +74,10 @@
 		<CustomEntitlements Include="com.apple.security.application-groups" Type="StringArray" Value="$(VhAppGroupId)" />
 	</ItemGroup>
 
-	<!-- What the code reads: AppConstants.AppId, AppName, CompanyName, PackageTitle and IsDebugMode, and on iOS
-	     AppGroupId and ProviderBundleId. The product library - a project of the app that is neither a head nor
-	     the iOS extension - gets the same but the ids, which are each head's own, so its options builder needs
-	     nothing from a head. Constants, because Android's manifest attributes take nothing else. In no
+	<!-- What the code reads: AppConstants.AppId and AdMobApplicationId, AppName, CompanyName, PackageTitle
+	     and IsDebugMode, and on iOS AppGroupId and ProviderBundleId. The product library - a project of
+	     the app that is neither a head nor the iOS extension - gets the same but the ids, which are each
+	     head's own, so its options builder needs nothing from a head. Constants, because Android's manifest attributes take nothing else. In no
 	     namespace, so every file of the app finds it: the Android publish builds a copy of the head's
 	     project under another name, and with it another root namespace. Written before each compile,
 	     and only when it changed; the names go in as verbatim strings, so only a quote is escaped. -->
@@ -93,7 +96,8 @@
 			<_VhAppIsDebugCs Condition="'$(VhAppIsDebug)' == 'true'">true</_VhAppIsDebugCs>
 			<_VhAppIdConstant />
 			<_VhAppIdConstant Condition="'$(VhAppIsApp)' == 'true'">
-    public const string AppId = @"$(ApplicationId.Replace('"', '""'))";</_VhAppIdConstant>
+    public const string AppId = @"$(ApplicationId.Replace('"', '""'))";
+    public const string AdMobApplicationId = @"$(VhAdMobApplicationId.Replace('"', '""'))";</_VhAppIdConstant>
 			<_VhAppIosConstants />
 			<_VhAppIosConstants Condition="'$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' == 'ios'">
     public const string AppGroupId = @"$(VhAppGroupId.Replace('"', '""'))";

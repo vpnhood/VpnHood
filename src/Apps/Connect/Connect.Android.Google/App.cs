@@ -28,8 +28,9 @@ namespace VpnHood.App.Connect.Android.Google;
     SupportsRtl = AndroidAppConstants.SupportsRtl,
     Debuggable = AppConstants.IsDebugMode,
     AllowBackup = AndroidAppConstants.AllowBackup)]
-// AdMob reads its application id from the manifest; the ad unit ids are settings (ConnectAppConfigs).
-[MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = "ca-app-pub-8662231806304184~1740102860")]
+// AdMob reads its application id from the manifest: the app's identity states it, as it states the
+// app (VhAdMobApplicationId); the ad unit ids are settings (ConnectAppConfigs).
+[MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppConstants.AdMobApplicationId)]
 // The Avalonia UI's Application: it starts the app from the params below, then the UI, which
 // MainActivity shows.
 public class App(IntPtr javaReference, JniHandleOwnership transfer)

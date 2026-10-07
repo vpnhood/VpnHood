@@ -186,6 +186,7 @@ Each product folder has a `Directory.Build.props` that states the app once, for 
 | `VhAppName` | `VpnHood! CLIENT` | the name the app shows |
 | `VhAppPackageTitle` | `VpnHoodClient` | the name without spaces: the start of every release file's name, the update feeds' included (`AppConstants.PackageTitle`); the desktop executable, its service or unit, their folders. Taken from the name's letters and digits when not stated; an app that has shipped states it, since installs keep these names |
 | `Company` | `OmegaHood LLC` | the app's maker, as the UI (`AppConstants.CompanyName`) and the executable's details name it, with a copyright made from it where none is stated. The repo's own `Directory.Build.props` states it for every project, so the products do not |
+| `VhAdMobApplicationId` | — | the AdMob application id a head that shows AdMob ads names in its manifest (`AppConstants.AdMobApplicationId`); Connect states it. Google's sample app id when not stated |
 
 A build target in `VpnHood.AppLib.App` (`buildTransitive/VpnHood.AppLib.App.targets`, the file a
 package reference of it imports) makes the rest, so a head names no id and no name:
@@ -197,8 +198,8 @@ package reference of it imports) makes the rest, so a head names no id and no na
 - **the name a build shows**: the app's name, with `(DEBUG)` after it in Debug;
 - **on iOS**, the bundle's display name, the network extension's id (`<base>.ios.networkextension`)
   and the App Group (`group.<base>.ios`), which the build adds to both targets' entitlements;
-- **`AppConstants`**, a class the build writes for the code: `AppId`, `AppName`, `CompanyName`,
-  `PackageTitle` and `IsDebugMode`, and
+- **`AppConstants`**, a class the build writes for the code: `AppId` and `AdMobApplicationId`,
+  `AppName`, `CompanyName`, `PackageTitle` and `IsDebugMode`, and
   on iOS `AppGroupId` and `ProviderBundleId`. At run time Android and iOS read the id their package or
   bundle has; the desktops read `AppConstants.AppId`. Every head states `AppConstants.AppName` beside
   the id, since a desktop host names its service and its message with it where no options are

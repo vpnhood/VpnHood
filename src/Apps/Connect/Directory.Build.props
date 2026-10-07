@@ -11,6 +11,8 @@
     <VhAppIdBase>com.vpnhood.connect</VhAppIdBase>
     <VhAppName>VpnHood! CONNECT</VhAppName>
     <VhAppPackageTitle>VpnHoodConnect</VhAppPackageTitle>
+    <!-- the AdMob application id the Google Play head's manifest names (AppConstants.AdMobApplicationId) -->
+    <VhAdMobApplicationId>ca-app-pub-8662231806304184~1740102860</VhAdMobApplicationId>
   </PropertyGroup>
 
   <!-- After the values, as NuGet imports a package's props after Directory.Build.props: the same file

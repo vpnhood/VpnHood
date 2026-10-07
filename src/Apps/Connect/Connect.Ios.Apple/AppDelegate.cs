@@ -3,8 +3,6 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.App.Utils;
 using Foundation;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.App;
@@ -58,8 +56,7 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         options.WebUiPort = 9581;
 
         // Apple applies an additional privacy rule to VPN apps: the iOS build does not send
-        // analytics or Firebase reports to third parties. Keep unrelated custom data intact.
-        options.CustomData = WithoutFirebaseOptions(appConfigs.CustomData);
+        // analytics to third parties.
         options.Ga4MeasurementId = null;
         options.TrackerFactory = new NullTrackerFactory();
         options.AllowEndPointTracker = false;
@@ -104,16 +101,6 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
             UpdaterProvider = new AppStoreAppUpdaterProvider()
         };
         return options;
-    }
-
-    private static JsonElement? WithoutFirebaseOptions(JsonElement? customData)
-    {
-        if (customData is not { ValueKind: JsonValueKind.Object })
-            return customData?.Clone();
-
-        var result = JsonNode.Parse(customData.Value.GetRawText()) as JsonObject;
-        result?.Remove("firebaseOptions");
-        return result is null ? null : JsonSerializer.SerializeToElement(result);
     }
 
     // Mirrors Connect.Android.Google's CreateAppAccountProvider, with the Apple pieces swapped in:

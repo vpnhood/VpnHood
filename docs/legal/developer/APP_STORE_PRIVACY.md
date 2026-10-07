@@ -22,17 +22,16 @@ own settings. So the id is **random** (derived from nothing about the device or 
 **per-install** (delete and reinstall → new id), and **per-app** (the bundle id is part of the
 hash, so two VpnHood apps on the same phone get unrelated ids).
 
-The official iOS build disables both analytics paths and Firebase report uploads at startup. It
-forces a null native tracker, disables endpoint tracking, and removes `firebaseOptions` before the
-SPA starts. The only off-device use of the Client ID is therefore:
+The official iOS build disables analytics at startup: it forces a null tracker and disables endpoint
+tracking. The only off-device use of the Client ID is therefore:
 
 | Channel | What is sent | When |
 | --- | --- | --- |
 | The VPN server | `clientId` in the session handshake (`ClientInfo`), for session management and abuse prevention | Every connection |
 
 The shared code still supports analytics on other platforms, but the iOS app boundary deliberately
-overrides the shared configuration. Changing an embedded measurement id or Firebase setting alone
-does not re-enable collection on iOS.
+overrides the shared configuration. Changing an embedded measurement id alone does not re-enable
+collection on iOS.
 
 There are **no user accounts** in the app: no login, no names, no emails, no payment collection.
 If an access-key provider ties a key to a purchase on their website, that happens in a browser
@@ -57,8 +56,7 @@ App Store Connect → your app → **App Privacy**.
 
 ### Official iOS build
 
-VpnHood! CLIENT has no accounts and no server of its own. It sends no analytics or Firebase reports
-on iOS. The Client ID still reaches the independent VPN server selected by the user. For the
+VpnHood! CLIENT has no accounts and no server of its own. It sends no analytics on iOS. The Client ID still reaches the independent VPN server selected by the user. For the
 official App Store record, the answer is:
 
 > **"No, we do not collect data from this app."**
@@ -69,7 +67,8 @@ The shipped privacy manifest already matches that answer.
 
 Re-enabling iOS analytics requires changing the iOS app boundary, not merely adding configuration.
 If a fork does so, it must also restore the corresponding manifest entries and App Store Connect
-answers. For the current shared Firebase implementation, use the following inventory:
+answers. The inventory below was written for the web UI's Firebase Analytics, which no build ships
+any more; re-check it against the shared GA4 tracker before relying on it:
 
 1. **"Do you or your third-party partners collect data from this app?"** → **Yes**.
 
@@ -110,15 +109,13 @@ re-litigate from scratch.
 
 - **Device ID: no.** Apple's "Device ID" means the advertising identifier or another
   *device-level* id. The clientId is derived from nothing on the device — it is random, dies with
-  the install, and differs per app. Google's guidance to declare Device ID for the Firebase
-  *installation id* targets the **native** Firebase SDKs; the **web** SDK used here keeps its
-  internal client id in WebView storage, which is app-scoped, not device-scoped.
+  the install, and differs per app.
 - **Coarse Location: not declared.** GA4 derives country/city from the request IP server-side; the
   app itself reads no location API and sends no location field. Declaring it would also mismatch
   the shipped manifest.
-- **Bug reports and ratings: not declared.** Apple's questionnaire lets you omit data that is
-  user-initiated, occasional, and obvious to the user at the point of sending — the Send-report
-  and rating dialogs are exactly that. Nothing uploads automatically.
+- **Ratings: not declared.** Apple's questionnaire lets you omit data that is user-initiated,
+  occasional, and obvious to the user at the point of sending — the rating dialog is exactly that.
+  The app uploads no log or report; a person shares the log themselves.
 - **The VPN-session clientId: covered by "User ID", purpose Analytics is VpnHood's declared
   stance.** If your fork's servers retain per-client records beyond the session (quotas, device
   limits), consider adding the **App Functionality** purpose to User ID — in the panel *and* the
@@ -145,8 +142,7 @@ What iOS Connect sends that Client does not:
   are sent to the account backend, which stores them against the account to grant and restore the
   entitlement.
 
-Like Client, Connect disables the native GA4 tracker, endpoint tracking, SPA Firebase Analytics,
-and Firebase report uploads in its iOS app boundary. The shared configuration used by other
+Like Client, Connect disables the GA4 tracker and endpoint tracking in its iOS app boundary. The shared configuration used by other
 platforms still contains those settings, but the iOS build does not use them.
 
 **Name is NOT collected — deliberate policy (2026-08-09), on BOTH platforms.** On iOS the sign-in
@@ -190,7 +186,7 @@ Types deliberately **not** selected:
 | **Name** | Policy (2026-08-09): iOS requests the email scope only, and the name inside Google's sign-in token is never stored. Applies to both platforms |
 | **Device ID** | Same reasoning as Client — random per-install id; no IDFA, no ATT |
 | **Crash Data** | **No on iOS** — Crashlytics ships only in the Android/Google build. Apple's own Xcode Organizer crash reports are Apple collecting, not you, and never need declaring. Do not pre-declare this "for the future": when iOS gains crash reporting, ship both halves in one release — add the type to the manifest, build, *then* update the panel |
-| **Product Interaction, Other Usage Data, Other Diagnostic Data** | The iOS build disables native GA4, endpoint tracking, SPA Firebase Analytics, and Firebase report uploads |
+| **Product Interaction, Other Usage Data, Other Diagnostic Data** | The iOS build disables the GA4 tracker and endpoint tracking |
 
 **Account deletion becomes mandatory.** Sign in with Apple means the app supports account creation,
 which triggers **Guideline 5.1.1(v)**: deletion must be initiated *inside* the app — sign-out is
@@ -278,8 +274,8 @@ compliance has its own document: [APP_STORE_EXPORT_COMPLIANCE.md](APP_STORE_EXPO
   Apple's standard EULA — LGPL fares better than GPL, but know the debate exists before you rely
   on it.
 - **Trademark.** The license grants code, not the **VpnHood name and logo**. A fork must rebrand —
-  which also keeps it clear of Apple's Guideline 4.1 (copycats). The SPA owns its branding inside
-  `spa.zip`, so rebranding is a resource change, not a code fork.
+  which also keeps it clear of Apple's Guideline 4.1 (copycats). The UI takes its branding from its
+  asset package, so rebranding is a resource change, not a code fork.
 - **Territories.** VPNs are restricted or banned in several countries; Apple removes VPN apps
   from the China and Russia storefronts on government demand. Deselect such territories yourself —
   which ones and why: [APP_STORE_TERRITORIES.md](APP_STORE_TERRITORIES.md).
@@ -291,11 +287,13 @@ compliance has its own document: [APP_STORE_EXPORT_COMPLIANCE.md](APP_STORE_EXPO
 
 Re-open this document when any of these change: an ad or crash-reporting SDK is added, either iOS
 analytics override is removed, login/accounts appear in Client, the Client ID derivation starts
-using device data, or Firebase web SDK behavior changes. Each can invalidate at least one answer.
+using device data, or an analytics SDK is added to the iOS build. Each can invalidate at least one
+answer.
 
 The clientId derivation is worth watching specifically, because it is already **not uniform**: the
-Windows website build derives it from the Windows user account (SID) and the Android website build
-from the device's `ANDROID_ID`, so on those builds the id survives reinstall (it is still hashed
-with the app id and never sent raw). The iOS builds use the random per-install GUID this document
+Android builds derive it from the `ANDROID_ID` Android gives the app, so there the id survives a
+reinstall and changes with a factory reset, and a Windows installation updated from 8.1 keeps the
+one it had, derived from the Windows user account (SID); it is still hashed with the app id and
+never sent raw. The iOS builds use the random per-install GUID this document
 assumes — if that ever changes, the "not a device identifier" reasoning has to be redone, and the
 end-user policies say so per platform.

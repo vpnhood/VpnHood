@@ -9,8 +9,8 @@ public class BuiltInTrackerFactory : ITrackerFactory
 {
     public ITracker CreateTracker(TrackerCreateParams createParams)
     {
-        // A build that names no measurement id collects nothing by design (only the Google Play builds
-        // send analytics), so it gets the null tracker, not a warning at every start and connect.
+        // A build that names no measurement id collects nothing by design (an iOS head, a fork's), so it
+        // gets the null tracker, not a warning at every start and connect.
         if (string.IsNullOrEmpty(createParams.Ga4MeasurementId))
             return NullTrackerFactory.CreateNullTracker(createParams);
 

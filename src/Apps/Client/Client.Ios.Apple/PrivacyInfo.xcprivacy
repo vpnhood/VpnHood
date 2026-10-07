@@ -3,7 +3,7 @@
 <!-- Apple's privacy manifest for the HOST APP. Required since May 2024: App Store Connect scans the
      upload for "required reason" API use and rejects with ITMS-91053 when a use is not declared here.
      The Network Extension is a separate bundle and needs its OWN manifest — see
-     Client.Ios.Extension/PrivacyInfo.xcprivacy. Neither bundle sends analytics or Firebase reports.
+     Client.Ios.Extension/PrivacyInfo.xcprivacy. Neither bundle sends analytics.
 
      Reason codes come from Apple's published lists; they are NOT free text and an unrecognised code
      fails validation. On the first App Store upload, check the Xcode/altool privacy report against
@@ -19,9 +19,8 @@
 	     hard-blocked by the system when the user denies tracking. -->
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
-	<!-- The official iOS Client does not collect data for analytics or third-party report storage.
-	     AppDelegate forces a NullTracker, disables endpoint tracking, and removes firebaseOptions
-	     before the SPA starts. The BYO VPN operator's collection is governed by its own policy. -->
+	<!-- The official iOS Client does not collect data for analytics: AppDelegate forces a NullTracker
+	     and disables endpoint tracking. The BYO VPN operator's collection is governed by its own policy. -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>

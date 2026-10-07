@@ -47,6 +47,7 @@
 * Update: On Windows the VPN runs as a service: it starts with Windows, the connection no longer depends on the window, and the window and its tray no longer ask for administrator rights #windows
 * Update: On Windows, the first time you open this version, your settings, profiles, split lists and sign-in move into the service, and your device keeps its identity #windows
 * Update: On Windows a new version is announced in the app with its download link; the separate updater no longer runs #windows
+* Update: VpnHood! CLIENT on Windows, on Linux and from our website shares anonymous usage data as its Google Play build does, and shows the switch that turns it off in Settings > Privacy #windows #linux #android
 * Update: Starlink Tools — an early preview of the screen #store
 * Fix: Rare crash after a cancelled Google sign-in or when the VPN service answered late #android #connect #store
 * Fix: The system could kill the app ten seconds after a refused VPN service start instead of the service stopping cleanly #android #store

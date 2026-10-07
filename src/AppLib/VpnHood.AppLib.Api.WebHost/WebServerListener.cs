@@ -52,6 +52,8 @@ internal class WebServerListener(string name, IPAddress address, int port, Func<
 
             VhLogger.Instance.LogInformation("Stopping the {Name} web server listener on {EndPoint}...", name, new IPEndPoint(address, port));
             server.TryStop();
+
+            // waits up to 5 s, fixed in Watson, for any request still being handled
             server.Dispose();
             _server = null;
         }

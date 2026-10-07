@@ -113,8 +113,8 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
 
     public LogServiceOptions LogServiceOptions { get; set; } = new();
     public bool AllowEndPointStrategy { get; set; } = true;
-    // JSON the head hands the UI, uninterpreted: the product's own settings (firebaseOptions and
-    // friends) straight out of its appsettings. JsonElement, not object - the contract is serialized
+    // JSON the head hands the UI, uninterpreted: whatever of the product's own settings a UI of its own
+    // reads, straight out of its appsettings. JsonElement, not object - the contract is serialized
     // through a source-generated context on trimmed heads, and "object" means "whatever the head
     // happened to put here", which is how one head ended up passing a JsonObject and another a
     // JsonElement for the same field.

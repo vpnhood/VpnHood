@@ -18,6 +18,10 @@ public static class ClientAppOptions
     // the desktop commands need it before any app exists (DesktopInitParams).
     public const bool IsAddAccessKeySupported = true;
 
+    // Where every Client build reports usage, unless its settings name another: the person turns it
+    // off in Settings > Privacy, and the iOS head names none.
+    private const string DefaultGa4MeasurementId = "G-4LE99XKZYE";
+
     public static AppOptions Create(AppOptionsContext context, ClientAppConfigs appConfigs)
     {
         var packagedAssetProvider = context.PackagedAssetProvider;
@@ -36,7 +40,7 @@ public static class ClientAppOptions
             // an empty key would not parse
             AccessKeys = string.IsNullOrEmpty(defaultAccessKey) ? [] : [defaultAccessKey],
             IsAddAccessKeySupported = IsAddAccessKeySupported,
-            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId ?? DefaultGa4MeasurementId,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AllowEndPointStrategy = appConfigs.AllowEndPointStrategy,

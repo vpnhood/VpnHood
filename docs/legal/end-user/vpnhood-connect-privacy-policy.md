@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-08-31.*
+*Effective: 2026-10-07.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to the official **VpnHood! CONNECT** app and to the VPN servers we operate. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -8,7 +8,7 @@ This policy describes what the app collects, what it never collects, and what ou
 
 ## What VpnHood! CONNECT Collects
 
-Except on iOS, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics through Firebase. It is linked to the Client ID described below, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. The iOS build does not load Google Analytics or Firebase and does not offer Firebase-based report uploads.
+Except on iOS, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics, through Firebase on the Google Play build. It is linked to the Client ID described below, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. The iOS build does not load Google Analytics or Firebase.
 
 Some data depends on **where you installed the app from**, because those builds contain different components:
 
@@ -26,14 +26,14 @@ The app identifies itself with a **Client ID**. It is never your device's serial
 
 What that underlying value is depends on your platform:
 
-- **iOS and Linux** — a random value created inside the app on first launch, so deleting and reinstalling the app produces a brand-new Client ID.
-- **Android and Windows** — derived from an identifier the operating system already provides, so it **stays the same if you reinstall the app**. On Android it changes when the device is factory reset; on Windows it follows your Windows user account.
+- **Android** — derived from the Android ID, a value Android gives the app, so it **stays the same if you reinstall the app** and changes when the device is factory reset.
+- **iOS, Windows, and Linux** — a random value created inside the app when it first runs; on iOS and Linux, deleting and reinstalling the app produces a brand-new Client ID. A Windows installation updated from an earlier version keeps the Client ID it had, which was derived from your Windows user account.
 
 The Client ID labels analytics on builds that support analytics and is sent to our VPN servers for session management, quotas, and abuse prevention.
 
 ### You can turn analytics off
 
-On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches. Turning it off also disables in-app bug-report and feedback sending, since those use the same channel. The iOS build has no analytics collection to turn on.
+On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches. Turning it off also stops the ratings you give in the app, which are sent with the analytics. The iOS build has no analytics collection to turn on.
 
 ### Technical information
 
@@ -48,7 +48,8 @@ On builds with analytics, when analytics is on, the following is collected:
 - Device architecture and browser engine
 - Session start time and duration, and the app screens you visit
 - Connection results — the server location you chose, whether the connection succeeded, and the server address used
-- The amount of traffic (bytes sent and received) and the number of connections, reported periodically while connected
+- Usage totals: the amount of VPN traffic and the number of connections, never what they carried
+- A rating you give in the app, with any text you add
 - Error messages shown by the app (their English technical text)
 
 ### Crash reports (Google Play build)
@@ -153,7 +154,7 @@ record with us.
 
 These companies process data on our behalf or in their own right, and only for the purposes described above:
 
-- **Google LLC** — Google Analytics/Firebase (pseudonymous analytics, non-iOS builds), Firebase Crashlytics (crash reports, Google Play build), Firebase storage (reports and ratings you send from non-iOS builds), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
+- **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, non-iOS builds), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
 - **Apple Inc.** — Sign in with Apple and App Store billing (optional accounts and purchases, App Store build)
 - **AppsFlyer** — install attribution, website build for Android only
 - **Hosting and payment providers** — infrastructure needed to run the VPN and account services, and payment processing for website purchases
@@ -165,13 +166,13 @@ They are obliged not to use the data for any purpose other than the one we assig
 Where data-protection law requires a legal basis, we rely on:
 
 - **performance of a contract** to provide VPN sessions, accounts, subscriptions, support, and purchases you request;
-- **consent**, where the law requires it, for analytics, crash reports, and the reports you choose to send; you may withdraw it at any time by turning analytics off. Where the law permits opt-out analytics instead, we rely on the legitimate interests below;
+- **consent**, where the law requires it, for analytics and crash reports; you may withdraw it at any time by turning analytics off. Where the law permits opt-out analytics instead, we rely on the legitimate interests below;
 - **legitimate interests** in securing the Service, enforcing quotas, preventing fraud and abuse, diagnosing faults, and improving reliability; and
 - **legal obligations and legal claims** for tax and accounting records, lawful requests, preservation duties, and establishing, exercising, or defending claims.
 
 ## How Long We Keep Data
 
-Connection logs are kept for 30 days and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account"; backups roll over within 30 days. Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. A report or message you send is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
+Connection logs are kept for 30 days and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account"; backups roll over within 30 days. Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
 
 ## International Transfers
 
@@ -189,11 +190,11 @@ The `QUERY_ALL_PACKAGES` permission is used to allow the user to select which ap
 
 Our services are not directed to anyone under the age of 18. We do not knowingly collect personal information from anyone under 18. If we discover that a minor has provided us with personal information, we immediately delete it from our servers. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact us so that we can take the necessary actions.
 
-## Client Feedback & Bug Report
+## Client Feedback & the App's Log
 
-On builds where in-app reporting is available, the app lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us. Firebase-based report sending is not available in the iOS build.
+Sending feedback opens our feedback form, on Google Forms, in your browser. The app keeps a diagnostic log file on your device and sends it nowhere: you can read it in the app and share it yourself, for example with our support, to help solve a technical issue.
 
-The log file contains basic technical information and never the content of your traffic. Network addresses in it — yours, and those of the servers your device connected to — are replaced by tokens the same way as on our servers, using a key created inside the app that is never saved and never sent with the file, so the copy you send us cannot be turned back into addresses by us or by anybody else. Local network addresses stay readable, as they identify nobody. If you switch on verbose diagnostics yourself while reproducing a problem, the file can additionally contain host names in a shortened form.
+The log file contains basic technical information and never the content of your traffic. Network addresses in it — yours, and those of the servers your device connected to — are replaced by tokens the same way as on our servers, using a key created inside the app that is never saved and never sent with the file, so a copy you share cannot be turned back into addresses by us or by anybody else. Local network addresses stay readable, as they identify nobody. If you switch on verbose diagnostics yourself while reproducing a problem, the file can additionally contain host names in a shortened form.
 
 ## Changes to This Privacy Policy
 

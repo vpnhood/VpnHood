@@ -3,7 +3,7 @@
 <!-- Apple's privacy manifest for the HOST APP. Required since May 2024: App Store Connect scans the
      upload for "required reason" API use and rejects with ITMS-91053 when a use is not declared here.
      The Network Extension is a separate bundle and needs its OWN manifest — see
-     Connect.Ios.Extension/PrivacyInfo.xcprivacy. Neither bundle sends analytics or Firebase reports.
+     Connect.Ios.Extension/PrivacyInfo.xcprivacy. Neither bundle sends analytics.
 
      Reason codes come from Apple's published lists; they are NOT free text and an unrecognised code
      fails validation. On the first App Store upload, check the Xcode/altool privacy report against
@@ -11,7 +11,7 @@
 
      CONNECT vs CLIENT: this app ships Sign in with Apple + StoreKit billing on the Portal backend,
      so it declares User ID, Email Address, and Purchase History for App Functionality. AppDelegate
-     disables the AppLib GA4 tracker and endpoint tracking and removes the SPA's firebaseOptions.
+     disables the AppLib GA4 tracker and endpoint tracking.
      The accessed-API list is identical because both apps run the same AppLib/iOS code.
 
      The reasoning behind every answer here — and the matching App Store Connect "App Privacy" panel
@@ -33,9 +33,8 @@
 	     hard-blocked by the system when the user denies tracking. -->
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
-	<!-- The account-bound types are used only for App Functionality. The iOS build sends no analytics
-	     or Firebase reports: AppDelegate forces a NullTracker, disables endpoint tracking, and removes
-	     firebaseOptions before the SPA starts. -->
+	<!-- The account-bound types are used only for App Functionality. The iOS build sends no analytics:
+	     AppDelegate forces a NullTracker and disables endpoint tracking. -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
 		<!-- The random per-install clientId travels in the VPN session handshake (ClientInfo), and

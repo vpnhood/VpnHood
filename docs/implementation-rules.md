@@ -36,3 +36,5 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     After an outage, the waiting requests are merged, never queued up to bombard it.
 14. The service opens no UI and no links; the UI does, as on iOS.
 15. A Debug build's name must stand out.
+16. An updater runs apart from what it updates, as a standalone script: an app that fails to run
+    must still get the release that fixes it.

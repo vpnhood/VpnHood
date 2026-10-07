@@ -35,8 +35,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
         var appConfigs = ClientAppConfigs.Load();
-        // this head's own: the Google Play build is the only Client that reports usage
-        appConfigs.Ga4MeasurementId = "G-4LE99XKZYE";
         var options = ClientAppOptions.Create(context, appConfigs);
         // The store already took this acceptance at install - see AppOptions.
         options.IsLicenseAgreementRequired = false;

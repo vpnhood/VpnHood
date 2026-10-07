@@ -6,8 +6,8 @@ report to its own property, or to none.
 
 If you remember one sentence: **the app reports to the id its head names, the VPN server to an id
 fixed in its code, and a server's access manager may name one more; the user's switch, Settings →
-Privacy → "Share anonymous usage data", governs everything the device sends**, apart from the gaps
-listed under [The switch](#the-switch).
+Privacy → "Share anonymous usage data", governs everything the device sends** ([The
+switch](#the-switch)).
 
 ---
 
@@ -157,8 +157,8 @@ as its browser build, or a web UI such as the SPA sample.
 2. It shows the switch on its Privacy page
    ([`PrivacyView`](../../src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/Views/PrivacyView.axaml.cs)),
    and hides it where the build collects nothing.
-3. A web UI may add analytics of its own, set up from `AppFeatures.CustomData`: the SPA sample starts
-   Firebase from `firebaseOptions` there, and only while the switch is on. The Avalonia UI adds none.
+3. It adds no analytics of its own, the Avalonia UI and the SPA sample alike. A web UI of one's own
+   may, set up from `AppFeatures.CustomData`, and only while the switch is on.
 
 ## The switch
 
@@ -178,12 +178,28 @@ VPN session too.
 
 | Head | The app's tracker |
 | --- | --- |
-| Client, Google Play | `G-4LE99XKZYE`, set in its [`App.cs`](../../src/Apps/Client/Client.Android.Google/App.cs) over the loaded settings |
-| Client, website Android, Windows, Linux | none: no id, so the switch is hidden |
+| Client, Google Play, website Android, Windows, Linux | `G-4LE99XKZYE`, [`ClientAppOptions`](../../src/Apps/Client/Client/ClientAppOptions.cs)' own where its settings name none |
 | Connect, Google Play | Firebase's Android SDK ([`FirebaseAnalyticsTracker`](../../src/Apps/Connect/Connect.Android.Google/FirebaseUtils/FirebaseAnalyticsTracker.cs)), in the app's process and in the VPN service's own, each set to the switch; Crashlytics follows the same switch |
 | Connect, website Android, Windows, Linux | the id in its private `appsettings.json`, embedded at build; endpoint tracking as that file sets it |
-| Client and Connect, iOS | none: `NullTrackerFactory`, no endpoint tracking, and `firebaseOptions` removed ([`AppDelegate`](../../src/Apps/Client/Client.Ios.Apple/AppDelegate.cs)) |
+| Client and Connect, iOS | none: `NullTrackerFactory` and no endpoint tracking ([`AppDelegate`](../../src/Apps/Client/Client.Ios.Apple/AppDelegate.cs)), until Apple's rules for a VPN app are checked |
 | Any head, Debug build | none |
+
+## Seeing it on a device
+
+A Debug build shows little of this: it sends nothing, and on Android it keeps the VPN service in the
+app's own process, where a Release build gives it one of its own (`:vpnhood_process`). To watch what
+an Android build sends to Firebase, turn on Firebase's debug mode, whose events stay out of the
+reports, and its log:
+
+```sh
+adb shell setprop debug.firebase.analytics.app <package>
+adb shell setprop log.tag.FA VERBOSE
+adb shell setprop log.tag.FA-SVC VERBOSE
+```
+
+logcat then shows each event as Google Play services' measurement service logs it (`FA-SVC`,
+`Logging event: ... name=...`) and each upload (`Successful upload`), from whichever of the app's
+processes logged it. `adb shell setprop debug.firebase.analytics.app .none.` ends debug mode.
 
 ## For a fork
 

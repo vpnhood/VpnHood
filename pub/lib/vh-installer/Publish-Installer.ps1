@@ -69,16 +69,14 @@ $installAnyContent = $installAnyContent.Replace('$installerUrl_x64', $installerU
 $installAnyContent = $installAnyContent -replace "`r`n", $lineEnding;
 $installAnyContent | Out-File -FilePath $module_installScriptFile -Encoding ASCII -Force -NoNewline;
 
-# copy install-msquic.sh to VpnHoodServer-linux-msquic.sh and remove \r
+# The MsQuic installer, without \r, named after the app as its any-CPU script is: every app's install
+# script downloads <app>-linux-msquic.sh from the app's own release. The copy to latest below takes
+# it along.
 Write-Host "Copying msquic installer..." -ForegroundColor Green
 $msquicSrc = "$solutionDir/src/Apps/Server/pub/Linux/install-msquic.sh";
-$msquicDst = "$moduleDir/VpnHoodServer-linux-msquic.sh";
+$msquicDst = "$moduleDir/$assemblyName-$os-msquic.sh";
 New-Item -ItemType Directory -Path (Split-Path $msquicDst -Parent) -Force | Out-Null
 (Get-Content $msquicSrc -Raw) -replace "`r", "" | Out-File -FilePath $msquicDst -Encoding ASCII -Force -NoNewline
-if ($isLatest)
-{
-    Copy-Item -path "$msquicSrc" -Destination "$moduleDirLatest/VpnHoodServer-linux-msquic.sh" -Force -Recurse
-}
 
 # Copy the installer script to latest
 if ($isLatest)

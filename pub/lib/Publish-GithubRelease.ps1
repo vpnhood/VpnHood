@@ -125,6 +125,8 @@ else {
 		"$packageDir/linux-arm64/$packageFileTitle-linux-arm64.json",
 		"$packageDir/linux-arm64/$packageFileTitle-linux-arm64.sh",
 		"$packageDir/linux-any/$packageFileTitle-linux.sh",
+		# the MsQuic installer each Linux install downloads from its own release
+		"$packageDir/linux-any/$packageFileTitle-linux-msquic.sh",
 
 		"$packageDir/windows-web/$packageFileTitle-win-x64.msi",
 		"$packageDir/windows-web/$packageFileTitle-win-x64.json",

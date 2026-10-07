@@ -174,7 +174,7 @@ if [ "$withDesktop" == "y" ]; then
 fi
 
 # MsQuic, for the QUIC channel. Optional everywhere: without it the client uses TCP.
-msquic_url="$releaseUrl/VpnHoodServer-linux-msquic.sh"
+msquic_url="$releaseUrl/$assemblyName-linux-msquic.sh"
 if ! msquic_script=$(wget -qO- "$msquic_url"); then
 	echo "WARNING: Could not download MsQuic installer from: $msquic_url"
 	echo "WARNING: wget failed. Skipping MsQuic installation."

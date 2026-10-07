@@ -1,4 +1,4 @@
-﻿<Solution>
+<Solution>
   <Configurations>
     <Platform Name="Any CPU" />
     <Platform Name="ARM" />
@@ -246,4 +246,5 @@
     <Project Path="tests/VpnHood.Net.TcpStack.Test/VpnHood.Net.TcpStack.Test.csproj" />
     <Project Path="tests/VpnHood.Test/VpnHood.Test.csproj" />
   </Folder>
+  <Project Path="../VpnHood.App.Template/src/VpnApp.Ios.Extension/VpnApp.Ios.Extension.csproj" />
 </Solution>

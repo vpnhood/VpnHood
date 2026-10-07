@@ -53,9 +53,12 @@ Android's attributes read - so a builder writes that one file, and no head names
   and their colours.
 - A **starter repo** consuming NuGet packages sidesteps 6 and 7 by construction (it owns its own
   workflows and store files), and 1 and 4 too: its heads get the identity's build targets through
-  `VpnHood.AppLib.App`, so they build from the starter repo's own identity file. All but the iOS
-  network extension, which references no AppLib package and must be given those targets another way
-  (not yet decided). It inherits 2 and 3 unless those move into configuration first.
+  `VpnHood.AppLib.App`, so they build from the starter repo's own identity file. The iOS network
+  extension references no AppLib package, so the targets never reach it: its project states its
+  bundle id, its title and the App Group itself, built from the same identity values
+  (`VpnHood.App.Template`'s `VpnApp.Ios.Extension`). That writes the targets' rule a second time,
+  which is safe because a shipped id never changes. It inherits 2 and 3 unless those move into
+  configuration first.
 - Anything the stores require of the publisher — accounts, agreements, banking, questionnaires,
   submission — stays manual no matter how good the tooling gets. The merchant-facing walkthrough of
   exactly those steps is [publish-your-app](../publish-your-app/README.md); a managed service

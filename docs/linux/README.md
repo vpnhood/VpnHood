@@ -225,7 +225,7 @@ src/AppUi/
 ├── VpnHood.AppUi.Hosting.Desktop/    the commands, the daemon, the window launcher
 │   ├── DesktopHost.cs                builds the command tree and dispatches
 │   ├── DesktopInitParams.cs          what a head declares: its init params, its UI, whether it takes keys
-│   ├── DesktopPlatform.cs            what a platform declares: paths, the instance, how to be the daemon
+│   ├── IDesktopPlatform.cs           what a platform declares: paths, the instance, how to be the daemon
 │   │                                 (and a debugger's), and what only some have: a tray, "service install",
 │   │                                 an older folder to import
 │   ├── DaemonConnection.cs           the API over loopback, following the address the channel gives it
@@ -255,8 +255,8 @@ A head is then its options — the product's, and its channel's lines — and on
 an `IDesktopUi` (`VpnHood.AppUi.Hosting.Abstractions`), which the window runs on the host's main
 thread: `static int Main` returns `LinuxDesktopHost.Run(args, …)` — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
-project reads a static or names a platform: every command is handed a `DesktopPlatform`, and the two
-interfaces on it are what each platform writes. Windows adds the rest of `DesktopPlatform`: the tray
+project reads a static or names a platform: every command is handed a `IDesktopPlatform`, and the two
+interfaces on it are what each platform writes. Windows adds the rest of `IDesktopPlatform`: the tray
 that keeps its window, `service install`, the import of the folder each person's release kept
 before the service, and a daemon run the service control manager stops by a call.
 `VpnHood.AppLib.App.Linux` is back to the one thing it always was, `VpnHoodLinuxApp`.
@@ -284,7 +284,7 @@ Points that are easy to get wrong:
    only `VhApp`. `AvaloniaDesktopHost.Run` has an overload for each.
 3. **The seam is "the running instance", not "the service".** On Linux that is a systemd unit, which
    a signal stops; on Windows a service under the service control manager, which stops it with a
-   call (`DesktopPlatform.HostDaemon`, `ServiceBase`). A Store build, whose app runs in its own process,
+   call (`IDesktopPlatform.HostDaemon`, `ServiceBase`). A Store build, whose app runs in its own process,
    is a third `IAppDesktopPaths` + `IAppInstanceController` pair, not a third design.
 4. **Hints print `CommandName`, not the binary's name.** `vhclient` is on the `PATH`;
    `VpnHoodClient` is not. The launcher script says its own name in `VH_LAUNCHER_NAME`.

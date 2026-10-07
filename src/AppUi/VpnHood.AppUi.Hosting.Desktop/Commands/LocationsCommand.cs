@@ -10,7 +10,7 @@ internal static class LocationsCommand
 {
     // isAddAccessKeySupported false is a head with one built-in profile (Connect): --profile is not
     // offered, and the locations listed are always that profile's.
-    public static Command Create(DesktopPlatform platform, bool isAddAccessKeySupported)
+    public static Command Create(IDesktopPlatform platform, bool isAddAccessKeySupported)
     {
         var profileOption = new Option<string?>("--profile", "-p") {
             Description = "The profile to list, by name or id. Defaults to the one the app is set to."

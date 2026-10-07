@@ -22,7 +22,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 // could not be started or reached - the UI says in one message in its place (IDesktopUi.RunMessage).
 internal static class UiCommand
 {
-    public static Command Create(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread)
+    public static Command Create(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread)
     {
         var command = new Command("ui", "Open the app window. This is what the desktop entry starts.");
 
@@ -43,7 +43,7 @@ internal static class UiCommand
         return command;
     }
 
-    private static async Task<int> Run(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
+    private static async Task<int> Run(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
         bool startHidden, CancellationToken cancellationToken)
     {
         // before anything logs: the window has no console, so its warnings and errors go to the
@@ -78,7 +78,7 @@ internal static class UiCommand
     // The app's API; or null once the person has been told why it cannot be had, in the one message
     // the UI shows in its place. The tray started at sign-in tells nobody: a standard user's exits
     // silently (desktop plan §3).
-    private static async Task<DaemonConnection?> TryReach(DesktopPlatform platform, DesktopInitParams initParams,
+    private static async Task<DaemonConnection?> TryReach(IDesktopPlatform platform, DesktopInitParams initParams,
         MainThreadQueue mainThread, bool startHidden, CancellationToken cancellationToken)
     {
         try {
@@ -106,7 +106,7 @@ internal static class UiCommand
 
     // The UI's one message in the window's place, on the host's main thread as the window would run,
     // until the person closes it.
-    private static Task RunMessage(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
+    private static Task RunMessage(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
         DesktopUiMessageKind kind, string text, CancellationToken cancellationToken)
     {
         return mainThread.Run(() => initParams.Ui.RunMessage(new DesktopUiMessageParams {
@@ -121,7 +121,7 @@ internal static class UiCommand
     // the service's start nor its registration, which asks UAC. The tray started at sign-in starts
     // a stopped service but registers no missing one: nobody opened anything, to be asked. Throws,
     // saying why, when the app cannot be had.
-    private static async Task<DaemonConnection> Reach(DesktopPlatform platform, bool startHidden,
+    private static async Task<DaemonConnection> Reach(IDesktopPlatform platform, bool startHidden,
         CancellationToken cancellationToken)
     {
         if (!platform.IsAdministrator())
@@ -135,7 +135,7 @@ internal static class UiCommand
 
     // The UI's own copy of the content, under this user's cache: the daemon extracted its own under
     // its storage, which a session may not write, and each provider owns its folder.
-    private static IAssetProvider CreateUiAssets(DesktopPlatform platform, DesktopInitParams initParams)
+    private static IAssetProvider CreateUiAssets(IDesktopPlatform platform, DesktopInitParams initParams)
     {
         var packagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory);
         return new ZipAssetProvider(new Asset(packagedAssetProvider, initParams.UiZipAssetPath),
@@ -144,7 +144,7 @@ internal static class UiCommand
 
     // The window over a connection to the app, until it is gone: the service's app, or the one this
     // process holds itself (DevCommand).
-    internal static async Task RunWindow(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
+    internal static async Task RunWindow(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
         DaemonConnection connection, bool startHidden, CancellationToken cancellationToken)
     {
         var uiAssets = CreateUiAssets(platform, initParams);

@@ -12,7 +12,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 // access key says what it said in the app.
 internal static class DaemonSession
 {
-    public static async Task<int> Run(DesktopPlatform platform,
+    public static async Task<int> Run(IDesktopPlatform platform,
         Func<VpnHoodApi, CancellationToken, Task<int>> body, CancellationToken cancellationToken)
     {
         try {

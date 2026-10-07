@@ -42,7 +42,7 @@ public sealed class DaemonConnection : IAsyncDisposable
 
     // A standard user is refused before the channel is asked: told at once, rather than after a wait
     // for a service that would only refuse them, or a hint to start one they may not start.
-    public static Task<DaemonConnection> Open(DesktopPlatform platform, CancellationToken cancellationToken)
+    public static Task<DaemonConnection> Open(IDesktopPlatform platform, CancellationToken cancellationToken)
     {
         if (!platform.IsAdministrator())
             throw new DaemonRefusedException(platform.AdministratorsOnlyMessage);

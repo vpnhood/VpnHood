@@ -11,14 +11,14 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 // locations are read.
 internal static class ProfileCommand
 {
-    public static Command Create(DesktopPlatform platform)
+    public static Command Create(IDesktopPlatform platform)
     {
         return new Command("profile", "Manage access keys and the profiles they make.") {
             CreateList(platform), CreateAdd(platform), CreateRemove(platform), CreateSetDefault(platform)
         };
     }
 
-    private static Command CreateList(DesktopPlatform platform)
+    private static Command CreateList(IDesktopPlatform platform)
     {
         var jsonOption = new Option<bool>("--json") { Description = "Print the profiles as JSON." };
         var command = new Command("list", "List the profiles on this device.") { jsonOption };
@@ -49,7 +49,7 @@ internal static class ProfileCommand
         return command;
     }
 
-    private static Command CreateAdd(DesktopPlatform platform)
+    private static Command CreateAdd(IDesktopPlatform platform)
     {
         var keyArgument = new Argument<string>("access-key") {
             Description = "An access key (vh://...), or the path of a file holding one."
@@ -67,7 +67,7 @@ internal static class ProfileCommand
         return command;
     }
 
-    private static Command CreateRemove(DesktopPlatform platform)
+    private static Command CreateRemove(IDesktopPlatform platform)
     {
         var profileArgument = new Argument<string>("profile") {
             Description = "The profile to remove, by name or id."
@@ -85,7 +85,7 @@ internal static class ProfileCommand
         return command;
     }
 
-    private static Command CreateSetDefault(DesktopPlatform platform)
+    private static Command CreateSetDefault(IDesktopPlatform platform)
     {
         var profileArgument = new Argument<string>("profile") {
             Description = "The profile to use when connect is given none, by name or id."

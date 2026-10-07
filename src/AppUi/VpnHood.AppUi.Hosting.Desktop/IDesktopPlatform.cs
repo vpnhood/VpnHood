@@ -7,7 +7,7 @@ namespace VpnHood.AppUi.Hosting.Desktop;
 // app's, and the ones only some platforms have. A platform package (Cli.Linux, Cli.Windows) builds
 // one of these and hands it to DesktopHost with the head's DesktopInitParams; nothing in this project reads
 // a static.
-public class DesktopPlatform
+public class IDesktopPlatform
 {
     public required IAppDesktopPaths Paths { get; init; }
     public required IAppInstanceController Instance { get; init; }

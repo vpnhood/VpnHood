@@ -11,7 +11,7 @@ internal static class ServiceCommand
 {
     private const int DefaultLogLines = 100;
 
-    public static Command Create(DesktopPlatform platform)
+    public static Command Create(IDesktopPlatform platform)
     {
         var instance = platform.Instance;
         var command = new Command("service", "Start, stop and inspect the background service.") {
@@ -37,7 +37,7 @@ internal static class ServiceCommand
         return command;
     }
 
-    private static Command Simple(DesktopPlatform platform, string name, string description,
+    private static Command Simple(IDesktopPlatform platform, string name, string description,
         Func<CancellationToken, Task<int>> action)
     {
         var command = new Command(name, description);
@@ -47,7 +47,7 @@ internal static class ServiceCommand
 
     // A standard user is refused before anything that would ask for elevation; anything thrown is its
     // sentence on stderr.
-    private static async Task<int> Run(DesktopPlatform platform, Func<CancellationToken, Task<int>> action,
+    private static async Task<int> Run(IDesktopPlatform platform, Func<CancellationToken, Task<int>> action,
         CancellationToken cancellationToken)
     {
         try {
@@ -67,7 +67,7 @@ internal static class ServiceCommand
         }
     }
 
-    private static Command CreateLog(DesktopPlatform platform)
+    private static Command CreateLog(IDesktopPlatform platform)
     {
         var followOption = new Option<bool>("--follow", "-f") {
             Description = "Keep printing as new lines arrive."

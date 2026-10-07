@@ -142,7 +142,7 @@ public class DaemonConnectionTest
     [TestMethod]
     public async Task A_standard_user_is_refused_before_the_channel_is_asked()
     {
-        var platform = new DesktopPlatform {
+        var platform = new IDesktopPlatform {
             Paths = new TestDesktopPaths(),
             Instance = new TestInstanceController(),
             Channel = new TestDaemonChannel(),

@@ -5,7 +5,7 @@ namespace VpnHood.AppUi.Hosting.Desktop;
 
 // What a head says for itself, and only that: the init params every platform takes
 // (AppInitParams) and the two answers the commands and the window need. Where the machine keeps
-// things and what "the service" is are the platform's answers, in DesktopPlatform; the daemon's host
+// things and what "the service" is are the platform's answers, in IDesktopPlatform; the daemon's host
 // lays its storage out itself, so a desktop head names no storage folder. The options factory runs
 // once, in the daemon and nowhere else: the window and the commands hold no VpnHoodApp at all.
 public class DesktopInitParams : AppInitParams

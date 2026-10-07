@@ -3,7 +3,7 @@ using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
-// What the window's host hands the platform's tray (DesktopPlatform.CreateTray): the app it shows, the
+// What the window's host hands the platform's tray (IDesktopPlatform.CreateTray): the app it shows, the
 // look it draws with, and the two things only the window's side can do.
 public class DesktopTrayParams
 {

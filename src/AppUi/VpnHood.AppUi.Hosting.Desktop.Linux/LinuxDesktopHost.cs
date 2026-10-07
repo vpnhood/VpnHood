@@ -4,7 +4,7 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 
-// A Linux head's whole entry point: the machine facts Linux answers (DesktopPlatform) joined to the
+// A Linux head's whole entry point: the machine facts Linux answers (IDesktopPlatform) joined to the
 // product facts the head answers (DesktopInitParams). The same synchronous call as every desktop
 // host's, run on the head's main thread (DesktopHost.Run).
 public static class LinuxDesktopHost
@@ -16,7 +16,7 @@ public static class LinuxDesktopHost
         // systemd's signal stops the daemon; the daemon's console is the journal where stdout is the
         // journal, so no line reaches it twice; and the window writes to the journal's socket, under
         // the instance's name, which "service log" reads beside the unit.
-        var platform = new DesktopPlatform {
+        var platform = new IDesktopPlatform {
             Paths = paths,
             Instance = new LinuxInstanceController(paths),
             Channel = new LinuxDaemonChannel(paths),

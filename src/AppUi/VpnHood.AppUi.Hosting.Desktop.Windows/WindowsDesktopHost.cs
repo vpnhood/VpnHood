@@ -4,7 +4,7 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 
-// A Windows head's whole entry point: the machine facts Windows answers (DesktopPlatform) joined to the
+// A Windows head's whole entry point: the machine facts Windows answers (IDesktopPlatform) joined to the
 // product facts the head answers. The same synchronous call as every desktop host's, run on the
 // head's [STAThread] main thread, which the window gets (DesktopHost.Run).
 //
@@ -22,7 +22,7 @@ public static class WindowsDesktopHost
         var setup = new WindowsServiceSetup(paths, initParams.AppName);
         var channel = new WindowsDaemonChannel(paths);
         var instance = new WindowsInstanceController(paths, setup, channel);
-        var platform = new DesktopPlatform {
+        var platform = new IDesktopPlatform {
             Paths = paths,
             Instance = instance,
             Channel = channel,

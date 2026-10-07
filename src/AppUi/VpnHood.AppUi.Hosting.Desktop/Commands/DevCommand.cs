@@ -12,7 +12,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 // The app keeps its storage in the person's own folder and runs as whoever started it.
 internal static class DevCommand
 {
-    public static Command Create(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread)
+    public static Command Create(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread)
     {
         var command = new Command("dev", "Run the service and the window in this one process, for a debugger.") {
             Hidden = true
@@ -23,7 +23,7 @@ internal static class DevCommand
         return command;
     }
 
-    private static async Task<int> Run(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
+    private static async Task<int> Run(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
         CancellationToken cancellationToken)
     {
         // the platform's console from the first line, as the daemon has it

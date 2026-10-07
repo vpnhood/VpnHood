@@ -13,7 +13,7 @@ internal static class ServiceLog
 {
     private static readonly TimeSpan FollowInterval = TimeSpan.FromSeconds(1);
 
-    public static async Task<int> Run(DesktopPlatform platform, bool follow, int lines, CancellationToken cancellationToken)
+    public static async Task<int> Run(IDesktopPlatform platform, bool follow, int lines, CancellationToken cancellationToken)
     {
         try {
             await using var connection = await DaemonConnection.Open(platform, cancellationToken).Vhc();

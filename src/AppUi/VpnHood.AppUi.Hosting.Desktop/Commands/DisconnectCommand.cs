@@ -7,7 +7,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 // to - so this is not "service stop", which is the other command and says so.
 internal static class DisconnectCommand
 {
-    public static Command Create(DesktopPlatform platform)
+    public static Command Create(IDesktopPlatform platform)
     {
         var command = new Command("disconnect", "Disconnect the VPN. The service keeps running.");
 

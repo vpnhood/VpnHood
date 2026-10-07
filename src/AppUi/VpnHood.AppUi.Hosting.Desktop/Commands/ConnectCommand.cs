@@ -17,7 +17,7 @@ internal static class ConnectCommand
 
     // isAddAccessKeySupported false is a head with one built-in profile (Connect): there is nothing
     // to choose between, so --profile is not offered and the app's own profile is always used.
-    public static Command Create(DesktopPlatform platform, bool isAddAccessKeySupported)
+    public static Command Create(IDesktopPlatform platform, bool isAddAccessKeySupported)
     {
         var profileOption = new Option<string?>("--profile", "-p") {
             Description = "The profile to use, by name or id. Defaults to the one the app is set to."

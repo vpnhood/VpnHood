@@ -16,10 +16,10 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 // The platform builds the app (IAppDaemonHost), which is starting it; this binds the API, opens the
 // channel, and waits. It ends when the service manager stops it - by a signal the parser turns into
 // cancellation (DesktopHost gives the stop time to disconnect), or by a call the platform's host turns
-// into the same (DesktopPlatform.HostDaemon) - or when the app disposes itself.
+// into the same (IDesktopPlatform.HostDaemon) - or when the app disposes itself.
 internal static class DaemonCommand
 {
-    public static Command Create(DesktopPlatform platform)
+    public static Command Create(IDesktopPlatform platform)
     {
         var command = new Command("daemon",
             "Run the VPN service in the foreground. This is what the system's service manager starts.");
@@ -31,7 +31,7 @@ internal static class DaemonCommand
         return command;
     }
 
-    private static async Task<int> Run(DesktopPlatform platform, CancellationToken cancellationToken)
+    private static async Task<int> Run(IDesktopPlatform platform, CancellationToken cancellationToken)
     {
         // The platform's console from the first line: a terminal, or the journal. Under the service
         // control manager there is none, and its host has added the Event Log.

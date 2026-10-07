@@ -14,7 +14,7 @@ internal static class StatusCommand
 {
     private const int NotConnectedExitCode = 3;
 
-    public static Command Create(DesktopPlatform platform)
+    public static Command Create(IDesktopPlatform platform)
     {
         var jsonOption = new Option<bool>("--json") {
             Description = "Print the app's full state as JSON."

@@ -7,7 +7,7 @@ namespace VpnHood.AppUi.Hosting.Desktop;
 // One binary, three jobs, chosen by the first word on the command line: the daemon that holds the
 // app, the window that shows it, and the commands that drive it from a shell. A head is then the
 // product facts only it can give (DesktopInitParams), a platform package is the machine facts only it
-// can give (DesktopPlatform), and this joins them.
+// can give (IDesktopPlatform), and this joins them.
 //
 // Typing the name alone opens the window, because that is what a person who typed it wanted and
 // what a desktop entry means.
@@ -16,7 +16,7 @@ public static class DesktopHost
     // The whole run, on the calling thread, which is the host's main thread: the UI gets it (on
     // Windows it must be the STA thread Main was given), and it waits while the parser and every
     // command's work run off it (MainThreadQueue).
-    public static int Run(string[] args, DesktopInitParams initParams, DesktopPlatform platform)
+    public static int Run(string[] args, DesktopInitParams initParams, IDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();
         var run = Task.Run(() => RunAsync(args, initParams, platform, mainThread));
@@ -34,7 +34,7 @@ public static class DesktopHost
         return run.GetAwaiter().GetResult();
     }
 
-    private static async Task<int> RunAsync(string[] args, DesktopInitParams initParams, DesktopPlatform platform,
+    private static async Task<int> RunAsync(string[] args, DesktopInitParams initParams, IDesktopPlatform platform,
         MainThreadQueue mainThread)
     {
         if (args.Length == 0)

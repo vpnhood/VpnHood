@@ -31,7 +31,7 @@ internal sealed class WindowsDaemonService : ServiceBase
         _run = run;
     }
 
-    // DesktopPlatform.HostDaemon
+    // IDesktopPlatform.HostDaemon
     public static Task<int> Host(string serviceName, Func<CancellationToken, Task<int>> run,
         CancellationToken cancellationToken)
     {

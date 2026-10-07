@@ -66,17 +66,27 @@ if ($generateOnly) {
 	return;
 }
 
-# remove old docker containers from local
-$serverDockerImage="vpnhood/vpnhoodserver";
-$oldContainers = docker ps -a -q --filter "ancestor=$serverDockerImage";
-$oldImages = docker images -a -q "$serverDockerImage";
+# The image's build context, not the source (see the Dockerfile): the release's Linux packages and
+# install scripts, one folder per Docker architecture, beside the two scripts the Dockerfile runs.
+# pub/Server/Publish.ps1 builds the packages first.
+$serverDockerImage = "vpnhood/vpnhoodserver";
+$contextDir = "$packagesRootDir/$packageServerDirName/docker-context";
+Remove-Item -Path $contextDir -Recurse -Force -ErrorAction Ignore;
+foreach ($arch in @("amd64", "arm64")) {
+	$rid = if ($arch -eq "amd64") { "linux-x64" } else { "linux-arm64" };
+	$packageFile = "$packagesRootDir/$packageServerDirName/$rid/$packageServerDirName-$rid.tar.gz";
+	if (-not (Test-Path $packageFile)) { Throw "The $rid package is missing; build it first: pub/Server/Publish.ps1"; }
+	New-Item -ItemType Directory -Path "$contextDir/$arch" -Force | Out-Null;
+	Copy-Item -Path $packageFile -Destination "$contextDir/$arch/package.tar.gz";
+	Copy-Item -Path ($packageFile -replace '\.tar\.gz$', '.sh') -Destination "$contextDir/$arch/install.sh";
+}
+# bash in the image reads LF only, whatever line endings the checkout has
+foreach ($script in @("$templateDir/vhsupervisor.sh", "$PSScriptRoot/Linux/install-msquic.sh")) {
+	$text = (Get-Content -Path $script -Raw) -replace "`r`n", "`n";
+	[IO.File]::WriteAllText("$contextDir/$(Split-Path $script -Leaf)", $text);
+}
 
-echo "removing old docker containers and images..."
-if ($oldContainers) { docker rm -vf $oldContainers; }
-if ($oldImages) { docker rmi -f $oldImages; }
-
-# multi-arch build. The Dockerfile is architecture-agnostic (portable .NET + arch-aware
-# libmsquic via apt/dnf), so a single buildx invocation produces both amd64 and arm64.
+# multi-arch build: one buildx run makes both amd64 and arm64, each from its own package
 $platforms = "linux/amd64,linux/arm64";
 
 # tags: always the version tag; add :latest only when this is the latest release
@@ -95,14 +105,14 @@ docker run --privileged --rm tonistiigi/binfmt --install arm64 *> $null;
 if ($distribute)
 {
 	# a multi-arch manifest cannot be loaded into the local daemon; it must be pushed directly
-	docker buildx build "$solutionDir" --no-cache --platform $platforms -f "$projectDir/Dockerfile" @tagArgs --push;
+	docker buildx build "$contextDir" --pull --no-cache --platform $platforms -f "$projectDir/Dockerfile" @tagArgs --push;
 	if (!$?) { Throw("Could not build/push the server docker image."); }
 	echo "The server docker image (amd64 + arm64) has been pushed."
 }
 else
 {
 	# local build: a multi-arch manifest can't be --load'ed, so build the host arch only for testing
-	docker buildx build "$solutionDir" --no-cache -f "$projectDir/Dockerfile" @tagArgs --load;
+	docker buildx build "$contextDir" --pull --no-cache -f "$projectDir/Dockerfile" @tagArgs --load;
 	if (!$?) { Throw("Could not build the server docker."); }
 }
 

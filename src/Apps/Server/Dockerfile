@@ -1,41 +1,15 @@
-#See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
-WORKDIR /app
-COPY ["src/Apps/Server/pub/Linux/install-msquic.sh", "/tmp/install-msquic.sh"]
-RUN apt-get update \
-	&& apt-get install -y wget \
-	&& bash /tmp/install-msquic.sh || true \
-	&& rm -f /tmp/install-msquic.sh \
+# The image is a native Linux install, made by the release's own install script, and vhsupervisor
+# does for it what systemd does for a native install (see vhsupervisor.sh). The build context is not
+# the source but a folder publish_docker.ps1 stages: install-msquic.sh and vhsupervisor.sh, and per
+# Docker architecture (amd64, arm64) the release's package and install script, as package.tar.gz and
+# install.sh. It is bind-mounted rather than copied, so no package stays behind in a layer.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
+ARG TARGETARCH
+RUN --mount=type=bind,target=/context \
+	apt-get update \
+	&& apt-get install -y --no-install-recommends wget \
+	&& (bash /context/install-msquic.sh || true) \
+	&& bash /context/${TARGETARCH}/install.sh -q -destination /app -packageFile /context/${TARGETARCH}/package.tar.gz \
+	&& install -m 755 /context/vhsupervisor.sh /app/vhsupervisor \
 	&& rm -rf /var/lib/apt/lists/*
-
-# Pin the SDK/build stage to the native build host (amd64) so dotnet never runs under
-# QEMU emulation. The publish output is portable IL (no RID), so the same build serves
-# both amd64 and arm64 — only the small runtime image below is built per-arch.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-WORKDIR /src
-COPY ["src/Apps/Server/NLog.xsd", "VpnHood.App.Server.App.Net/"]
-COPY ["src/Apps/Server/NLog.config", "VpnHood.App.Server.Net/"]
-COPY ["src/Apps/Server/VpnHood.App.Server.Net.csproj", "VpnHood.App.Server.Net/"]
-COPY ["src/Net/VpnHood.Net.Toolkit/VpnHood.Net.Toolkit.csproj", "VpnHood.Net.Toolkit/"]
-COPY ["src/Net/VpnHood.Net.VpnAdapters.Abstractions/VpnHood.Net.VpnAdapters.Abstractions.csproj", "VpnHood.Net.VpnAdapters.Abstractions/"]
-COPY ["src/Net/VpnHood.Net.VpnAdapters.LinuxTun/VpnHood.Net.VpnAdapters.LinuxTun.csproj", "VpnHood.Net.VpnAdapters.LinuxTun/"]
-COPY ["src/Core/VpnHood.Core.Common/VpnHood.Core.Common.csproj", "VpnHood.Core.Common/"]
-COPY ["src/Core/VpnHood.Core.Tunneling/VpnHood.Core.Tunneling.csproj", "VpnHood.Core.Tunneling/"]
-COPY ["src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj", "VpnHood.Core.Server/"]
-COPY ["src/Core/VpnHood.Core.Server.Access/VpnHood.Core.Server.Access.csproj", "VpnHood.Core.Server.Access/"]
-RUN dotnet restore "VpnHood.App.Server.Net/VpnHood.App.Server.Net.csproj"
-COPY . .
-# The repo's global.json pins an SDK (11 preview) only needed by the full solution.
-# Everything built here targets net10.0, so drop the pin and use the image's SDK 10.x.
-RUN rm -f global.json
-WORKDIR "/src/src/Apps/Server"
-RUN dotnet build "VpnHood.App.Server.Net.csproj" -c Release -p:SolutionDir=. -p:TargetFramework=net10.0 -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "VpnHood.App.Server.Net.csproj" -c Release -p:SolutionDir=. -p:TargetFramework=net10.0 -o /app/publish
-
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "VpnHoodServer.dll"]
+ENTRYPOINT ["/app/vhsupervisor"]

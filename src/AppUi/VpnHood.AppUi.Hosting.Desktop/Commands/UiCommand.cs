@@ -33,11 +33,11 @@ internal static class UiCommand
             Hidden = true
         };
 
-        if (platform.CreateTray != null)
+        if (platform.IsTraySupported)
             command.Options.Add(trayOption);
 
         command.SetAction((parseResult, cancellationToken) => Run(platform, initParams, mainThread,
-            startHidden: platform.CreateTray != null && parseResult.GetValue(trayOption),
+            startHidden: platform.IsTraySupported && parseResult.GetValue(trayOption),
             cancellationToken));
 
         return command;
@@ -151,7 +151,7 @@ internal static class UiCommand
 
         // The UI's run ends with the command - a signal, a logout - or with the tray's Exit.
         using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        using var tray = platform.CreateTray?.Invoke(new DesktopTrayParams {
+        using var tray = platform.CreateTray(new DesktopTrayParams {
             Api = connection.Api,
             UiAssets = uiAssets,
             ShowWindow = initParams.Ui.BringToFront,
@@ -164,7 +164,7 @@ internal static class UiCommand
             UiAssetProvider = uiAssets,
             ApiUrlProvider = connection.ApiUrlProvider,
             UiDataPath = platform.Paths.UiDataPath,
-            ExitOnClose = platform.CreateTray == null,
+            ExitOnClose = !platform.IsTraySupported,
             StartHidden = startHidden
         };
         await mainThread.Run(() => initParams.Ui.Run(uiParams, uiCancellation.Token)).Vhc();

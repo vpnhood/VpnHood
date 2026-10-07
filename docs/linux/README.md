@@ -225,9 +225,9 @@ src/AppUi/
 ├── VpnHood.AppUi.Hosting.Desktop/    the commands, the daemon, the window launcher
 │   ├── DesktopHost.cs                builds the command tree and dispatches
 │   ├── DesktopInitParams.cs          what a head declares: its init params, its UI, whether it takes keys
-│   ├── IDesktopPlatform.cs           what a platform declares: paths, the instance, how to be the daemon
-│   │                                 (and a debugger's), and what only some have: a tray, "service install",
-│   │                                 an older folder to import
+│   ├── IDesktopPlatform.cs           what a platform implements: paths, the instance, how to be the daemon
+│   │                                 (and a debugger's), its logs, and what only some have: a tray,
+│   │                                 "service install"
 │   ├── DaemonConnection.cs           the API over loopback, following the address the channel gives it
 │   ├── MainThreadQueue.cs            the host's main thread, which the window gets
 │   ├── Abstractions/                 what a platform implements: its paths (IAppDesktopPaths), the running
@@ -240,11 +240,13 @@ src/AppUi/
 │   └── Exceptions/                   the daemon not running, or refusing the caller
 ├── VpnHood.AppUi.Hosting.Desktop.Linux/  systemd, /opt, XDG, root
 │   ├── LinuxDesktopHost.cs           a Linux head's entry point
+│   ├── LinuxDesktopPlatform.cs       what Linux answers, as an IDesktopPlatform
 │   ├── LinuxDesktopPaths.cs
 │   ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through
 │   └── LinuxDaemonHost.cs            VpnHoodLinuxApp: the service's, root required, or a debugger's
 └── VpnHood.AppUi.Hosting.Desktop.Windows/  the same design on Windows: a LocalSystem service, ProgramData
     ├── WindowsDesktopHost.cs         a Windows head's entry point
+    ├── WindowsDesktopPlatform.cs     what Windows answers, as an IDesktopPlatform
     ├── WindowsDesktopPaths.cs        ProgramData for the service, the person's local app data for the UI
     ├── WindowsInstanceController.cs  the service control manager; elevates a stop as sudo would
     ├── WindowsServiceSetup.cs        "service install | uninstall"
@@ -255,10 +257,10 @@ A head is then its options — the product's, and its channel's lines — and on
 an `IDesktopUi` (`VpnHood.AppUi.Hosting.Abstractions`), which the window runs on the host's main
 thread: `static int Main` returns `LinuxDesktopHost.Run(args, …)` — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
-project reads a static or names a platform: every command is handed a `IDesktopPlatform`, and the two
-interfaces on it are what each platform writes. Windows adds the rest of `IDesktopPlatform`: the tray
-that keeps its window, `service install`, the import of the folder each person's release kept
-before the service, and a daemon run the service control manager stops by a call.
+project reads a static or names a platform: every command is handed an `IDesktopPlatform`, which
+each platform implements (`LinuxDesktopPlatform`, `WindowsDesktopPlatform`). Only Windows has a tray
+that keeps its window and `service install`, and a daemon run the service control manager stops by
+a call.
 `VpnHood.AppLib.App.Linux` is back to the one thing it always was, `VpnHoodLinuxApp`.
 
 **In a debugger** a head runs `dev`, which the desktop heads' launch profiles pass: the daemon and

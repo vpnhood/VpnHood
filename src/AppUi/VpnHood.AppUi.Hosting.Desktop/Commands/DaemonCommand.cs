@@ -24,9 +24,8 @@ internal static class DaemonCommand
         var command = new Command("daemon",
             "Run the VPN service in the foreground. This is what the system's service manager starts.");
 
-        command.SetAction((_, cancellationToken) => platform.HostDaemon is { } hostDaemon
-            ? hostDaemon(runCancellationToken => Run(platform, runCancellationToken), cancellationToken)
-            : Run(platform, cancellationToken));
+        command.SetAction((_, cancellationToken) =>
+            platform.HostDaemon(runCancellationToken => Run(platform, runCancellationToken), cancellationToken));
 
         return command;
     }

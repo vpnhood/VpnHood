@@ -142,16 +142,7 @@ public class DaemonConnectionTest
     [TestMethod]
     public async Task A_standard_user_is_refused_before_the_channel_is_asked()
     {
-        var platform = new IDesktopPlatform {
-            Paths = new TestDesktopPaths(),
-            Instance = new TestInstanceController(),
-            Channel = new TestDaemonChannel(),
-            PeerCheck = new TestLoopbackPeerCheck(),
-            IsAdministrator = () => false,
-            DaemonHostFactory = new TestDaemonHostFactory(),
-            CreateConsoleLoggerProvider = () => throw new NotSupportedException(),
-            CreateSystemLogLoggerProvider = () => throw new NotSupportedException()
-        };
+        var platform = new TestDesktopPlatform { IsUserAdministrator = false };
 
         var refused = await Assert.ThrowsExactlyAsync<DaemonRefusedException>(() =>
             DaemonConnection.Open(platform, CancellationToken.None));

@@ -91,7 +91,7 @@ tracker without an id is a `NullTracker`. Nothing is sent then, and the UI hides
 
 | Event | When | Carries |
 | --- | --- | --- |
-| `session_start` | the tracker is made: every app start | — |
+| `session_start` | the tracker is made, with the switch on: every app start | — |
 | `vh_first_launch` | once per install | the client id, the country of the device's region |
 | `vh_exception` | an error the app reports | where it happened, the message, the exception type, error or warning |
 | `vh_user_review` | the user rates the app | the rating and the text |
@@ -104,7 +104,7 @@ and the factory the app hands it in `ClientOptions`
 
 | Event | When | Carries |
 | --- | --- | --- |
-| `session_start` | the tracker is made: each connect | — |
+| `session_start` | the tracker is made, with the switch on: each connect | — |
 | `vh_endpoint_status` | a server endpoint is found reachable or not, with endpoint tracking on | the endpoint, its host name, IPv6 or not, reachable or not |
 | `vh_connect_attempt` | the connect succeeds, or fails with endpoint tracking on | the server location, connected or not, IPv6 support, redirected or not, the endpoint |
 | `vh_usage` | every 25 minutes while connected ([`ClientUsageTracker`](../../src/Core/VpnHood.Core.Client/ClientUsageTracker.cs)) | traffic total, sent and received in MB; request and connection counts |
@@ -162,23 +162,17 @@ as its browser build, or a web UI such as the SPA sample.
 
 ## The switch
 
-`UserSettings.AllowAnonymousTracker` is on by default. A change takes effect at once.
+`UserSettings.AllowAnonymousTracker` is on by default. A change takes effect at once, in a running
+VPN session too.
 
 | Report | Stopped by |
 | --- | --- |
+| Each tracker's `session_start` | `TrackerCreateParams.IsEnabled`: the app and the VPN service make every tracker with the switch, and one made switched off sends nothing |
 | The app's events | `VpnHoodApp.ApplySettings`, which sets the tracker's `IsEnabled` |
+| The VPN service's `vh_usage` | its tracker, made with the switch, and set in a running session by the reconfigure the app sends on every change |
 | A successful `vh_connect_attempt`, and the access manager's `session_start` | `VpnHoodClientConfig.AllowAnonymousTracker` |
 | `vh_endpoint_status`, and a failed `vh_connect_attempt` | endpoint tracking, which runs only with the switch on |
 | A web UI's own analytics | the web UI itself |
-
-**Known gaps.** Three things do not work as the table says yet:
-
-1. The app's `session_start` goes out at every start, while the tracker is made, before
-   `ApplySettings` has read the switch.
-2. The VPN service's `session_start` and `vh_usage` go out with the switch off:
-   `VpnHoodClientFactory.CreateTracker` never reads `ClientOptions.AllowAnonymousTracker`.
-3. On Connect's Google Play head, the VPN service sends nothing at all. The service runs in its own
-   Android process, where nothing enables the Firebase tracker.
 
 ## Per head
 
@@ -186,7 +180,7 @@ as its browser build, or a web UI such as the SPA sample.
 | --- | --- |
 | Client, Google Play | `G-4LE99XKZYE`, set in its [`App.cs`](../../src/Apps/Client/Client.Android.Google/App.cs) over the loaded settings |
 | Client, website Android, Windows, Linux | none: no id, so the switch is hidden |
-| Connect, Google Play | Firebase's Android SDK ([`FirebaseAnalyticsTracker`](../../src/Apps/Connect/Connect.Android.Google/FirebaseUtils/FirebaseAnalyticsTracker.cs)); Crashlytics follows the same switch |
+| Connect, Google Play | Firebase's Android SDK ([`FirebaseAnalyticsTracker`](../../src/Apps/Connect/Connect.Android.Google/FirebaseUtils/FirebaseAnalyticsTracker.cs)), in the app's process and in the VPN service's own, each set to the switch; Crashlytics follows the same switch |
 | Connect, website Android, Windows, Linux | the id in its private `appsettings.json`, embedded at build; endpoint tracking as that file sets it |
 | Client and Connect, iOS | none: `NullTrackerFactory`, no endpoint tracking, and `firebaseOptions` removed ([`AppDelegate`](../../src/Apps/Client/Client.Ios.Apple/AppDelegate.cs)) |
 | Any head, Debug build | none |

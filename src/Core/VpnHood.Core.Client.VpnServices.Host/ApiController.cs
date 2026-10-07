@@ -150,6 +150,10 @@ internal class ApiController : IDisposable
         client.UnroutedIpMode = request.Params.UnroutedIpMode;
         client.UnsupportedIpV6Mode = request.Params.UnsupportedIpV6Mode;
 
+        // the usage-data switch, at once: the session's tracker was made with the one at the connect
+        if (client.Tracker != null)
+            client.Tracker.IsEnabled = request.Params.AllowAnonymousTracker;
+
         // live-swap the split filter gates to the current folder manifests (rewritten by the app before
         // this request); no-op when the db paths did not change
         client.NetFilter.Reconfigure();

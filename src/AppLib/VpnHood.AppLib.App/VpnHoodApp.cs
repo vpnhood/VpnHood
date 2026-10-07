@@ -203,7 +203,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClientId = clientId,
             ClientVersion = appVersion,
             Ga4MeasurementId = options.Ga4MeasurementId,
-            UserAgent = null //not set yet
+            UserAgent = null, //not set yet
+            IsEnabled = UserSettings.AllowAnonymousTracker
         });
 
         var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
@@ -486,6 +487,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
             DropQuic = UserSettings.DropQuic,
             UseTcpProxy = UserSettings.UseTcpProxy,
+            AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
             UnroutedIpMode = splitTunneling.UnroutedIpMode,
             UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,

@@ -9,6 +9,9 @@ public class TrackerCreateParams
     public string? UserAgent { get; set; }
     public string? Ga4MeasurementId { get; set; }
 
+    // The person's usage-data switch: a tracker made switched off sends nothing, its start included.
+    public required bool IsEnabled { get; set; }
+
     [JsonConverter(typeof(VersionConverter))]
     public required Version ClientVersion { get; set; }
 }

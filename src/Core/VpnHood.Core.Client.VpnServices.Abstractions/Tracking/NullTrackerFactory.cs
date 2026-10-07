@@ -11,6 +11,7 @@ public class NullTrackerFactory : ITrackerFactory
             MeasurementId = "NullTracker",
             ClientId = createParams.ClientId,
             SessionId = Guid.NewGuid().ToString(),
+            IsEnabled = createParams.IsEnabled,
             UserProperties = new Dictionary<string, object>
                 { { "client_version", createParams.ClientVersion.ToString(3) } }
         };

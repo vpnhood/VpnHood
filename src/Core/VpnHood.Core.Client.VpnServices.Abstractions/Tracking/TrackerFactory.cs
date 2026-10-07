@@ -19,6 +19,7 @@ public class BuiltInTrackerFactory : ITrackerFactory
             SessionCount = 1,
             ClientId = createParams.ClientId,
             SessionId = Guid.NewGuid().ToString(),
+            IsEnabled = createParams.IsEnabled, // before the session_start below, so a switched-off one sends none
             UserProperties = new Dictionary<string, object>
                 { { "client_version", createParams.ClientVersion.ToString(3) } }
         };

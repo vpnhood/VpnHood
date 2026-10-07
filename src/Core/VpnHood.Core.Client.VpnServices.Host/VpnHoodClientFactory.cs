@@ -91,7 +91,8 @@ public class VpnHoodClientFactory
             ClientId = clientOptions.ClientId,
             ClientVersion = clientOptions.Version,
             Ga4MeasurementId = clientOptions.Ga4MeasurementId,
-            UserAgent = clientOptions.UserAgent
+            UserAgent = clientOptions.UserAgent,
+            IsEnabled = clientOptions.AllowAnonymousTracker
         });
     }
 

@@ -194,13 +194,12 @@ public class VpnHoodAppWebHost : IAppWebHost
 
     // The local host's address never moves, so it is read once. The remote one re-reads every time: a
     // network can change under an open screen. Never 0.0.0.0 - the printed address is the contract, and
-    // the VPN's own tunnel or a phone's cellular interface must not carry a control page. Our own
-    // adapter is "VpnHood.<name>" on Windows (WinTunVpnAdapter); the toolkit already skips tun*.
+    // no VPN's tunnel, the app's own included, may carry a control page: GetLanAddresses knows a tunnel
+    // by its type, whatever the app named its adapter.
     private async Task<IReadOnlyList<IPAddress>> GetAddresses()
     {
         return _isRemote
-            ? await IPAddressUtil.GetLanAddresses(AddressFamily.InterNetwork,
-                [.. IPAddressUtil.VirtualAdapterMarkers, "VpnHood"]).Vhc()
+            ? await IPAddressUtil.GetLanAddresses(AddressFamily.InterNetwork).Vhc()
             : [IPAddress.Loopback];
     }
 

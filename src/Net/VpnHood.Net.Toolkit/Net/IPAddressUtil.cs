@@ -227,8 +227,8 @@ public static class IPAddressUtil
     }
 
     // Hypervisor and container adapters no other device can reach. Matched by name and description
-    // because the OS reports most of them as plain Ethernet. A caller that runs its own VPN adapter
-    // appends that adapter's name; see GetLanAddresses.
+    // because the OS reports most of them as plain Ethernet; a VPN's tunnel needs no marker, being
+    // known by its type (IsVirtualAdapter).
     public static IReadOnlyList<string> VirtualAdapterMarkers { get; } =
         ["Hyper-V", "vEthernet", "VirtualBox", "VMware", "Docker", "WSL"];
 
@@ -236,11 +236,13 @@ public static class IPAddressUtil
     // first. Which network that device is on cannot be known from here, so this is ranking, not
     // proof: the address on the default route (the network with the internet is the one others
     // share), then Wi-Fi and Ethernet, then the rest. Adapters matching excludeAdapterMarkers
-    // (VirtualAdapterMarkers when null), tunnels and tun* interfaces are left out entirely: a PC
-    // holds Hyper-V, VirtualBox or Docker addresses nobody can dial, and while a VPN is connected
-    // its adapter holds the default route on Windows — which is why the probe's answer counts only
-    // when the enumeration also lists it. "Not Down" rather than "Up": an OS that hides operstate
-    // reports Unknown. A phone or TV ends up with one entry; a PC with a few.
+    // (VirtualAdapterMarkers when null), VPN tunnels, Windows' mobile broadband and the loopback
+    // interface are left out entirely: a PC holds Hyper-V, VirtualBox or Docker addresses nobody can
+    // dial, WSL puts 10.255.255.254 on its loopback, and while a VPN is connected its adapter holds
+    // the default route on Windows — which is why the probe's answer counts only when the
+    // enumeration also lists it. Loopback addresses go one by one too, as Android may not type its
+    // interfaces. "Not Down" rather than "Up": an OS that hides operstate reports Unknown. A phone or
+    // TV ends up with one entry; a PC with a few.
     public static async Task<IReadOnlyList<IPAddress>> GetLanAddresses(AddressFamily addressFamily,
         IEnumerable<string>? excludeAdapterMarkers = null)
     {
@@ -251,7 +253,9 @@ public static class IPAddressUtil
             : IpNetwork.LinkLocalNetworkV4;
 
         var addresses = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(x => x.OperationalStatus is not OperationalStatus.Down && !IsVirtualAdapter(x, markers))
+            .Where(x => x.OperationalStatus is not OperationalStatus.Down &&
+                        x.NetworkInterfaceType is not NetworkInterfaceType.Loopback &&
+                        !IsVirtualAdapter(x, markers) && !IsMobileBroadbandAdapter(x))
             .OrderBy(x => x.NetworkInterfaceType is NetworkInterfaceType.Wireless80211 or NetworkInterfaceType.Ethernet ? 0 : 1)
             .SelectMany(x => x.GetIPProperties().UnicastAddresses)
             .Select(x => x.Address)
@@ -267,14 +271,37 @@ public static class IPAddressUtil
         return addresses;
     }
 
-    // tun0 on Android and Linux, whatever the OS itself classifies as a tunnel, and the markers.
+    // IF_TYPE_PROP_VIRTUAL, which .NET passes on from Windows as it is, with no name of its own
+    private const NetworkInterfaceType WindowsProprietaryVirtualType = (NetworkInterfaceType)53;
+
+    // A VPN's tunnel is known by what the OS says it is, never by the name its app gave it: on Windows
+    // a proprietary virtual adapter (WinTun, WireGuard-NT, TAP), on Linux a tun or tap device. Android
+    // reports most types as Unknown, and its VPN's tunnel is always the kernel's tun<n>, so the name
+    // covers it there, as utun<n> on Apple's systems.
     private static bool IsVirtualAdapter(NetworkInterface networkInterface, IReadOnlyList<string> markers)
     {
-        return networkInterface.NetworkInterfaceType is NetworkInterfaceType.Tunnel or NetworkInterfaceType.Ppp ||
+        return networkInterface.NetworkInterfaceType is NetworkInterfaceType.Tunnel or NetworkInterfaceType.Ppp or
+                   WindowsProprietaryVirtualType ||
+               IsLinuxTunDevice(networkInterface.Name) ||
                networkInterface.Name.StartsWith("tun", StringComparison.OrdinalIgnoreCase) ||
+               networkInterface.Name.StartsWith("utun", StringComparison.OrdinalIgnoreCase) ||
                markers.Any(marker =>
                    networkInterface.Name.Contains(marker, StringComparison.OrdinalIgnoreCase) ||
                    networkInterface.Description.Contains(marker, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Every tun and tap device has tun_flags, whatever its name. Linux alone: Android's sandbox may
+    // refuse /sys, and the name settles it there.
+    private static bool IsLinuxTunDevice(string interfaceName)
+    {
+        return OperatingSystem.IsLinux() &&
+               File.Exists(Path.Combine("/sys/class/net", interfaceName, "tun_flags"));
+    }
+
+    // Windows' mobile broadband: a carrier's address, which nothing on the local network can reach
+    private static bool IsMobileBroadbandAdapter(NetworkInterface networkInterface)
+    {
+        return networkInterface.NetworkInterfaceType is NetworkInterfaceType.Wwanpp or NetworkInterfaceType.Wwanpp2;
     }
 
     public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)

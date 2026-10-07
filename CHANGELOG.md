@@ -62,6 +62,7 @@
 * Fix: On Linux, the installer installs MsQuic, for the QUIC channel; it looked for MsQuic's installer under the server's name and never found it. Microsoft's package feed, which MsQuic comes from, is removed again unless it was there before #linux
 * Fix: On Linux, the app's installed files belong to root; they kept the user id of the machine that built them, so an account with that id could replace what the VPN service runs as root #linux
 * Fix: On Linux, the install command in the Linux guide works: sudo bash <(…) cannot run the script it is given, so the guide says sudo su -c "bash <(…)", and the installer prints that command when it is run without root #linux
+* Fix: Pairing never offers a VPN tunnel's address, whatever the app named its adapter: a fork's own tunnel could reach the pairing link and its QR code. IPAddressUtil.GetLanAddresses knows a tunnel by its type - on Windows a WinTun, WireGuard or TAP adapter, on Linux a tun or tap device - and leaves out Windows' mobile broadband too
 
 # v8.1.849
 

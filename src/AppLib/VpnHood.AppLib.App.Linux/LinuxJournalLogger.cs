@@ -26,17 +26,18 @@ public sealed class LinuxJournalLogger : ILogger
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
-        Console.WriteLine(GetLevelPrefix(logLevel) + formatter(state, exception));
+        Console.WriteLine($"<{GetPriority(logLevel)}>" + formatter(state, exception));
     }
 
-    private static string GetLevelPrefix(LogLevel logLevel)
+    // syslog's priority for a level, which the journal files an entry under
+    internal static int GetPriority(LogLevel logLevel)
     {
         return logLevel switch {
-            LogLevel.Critical => "<2>",
-            LogLevel.Error => "<3>",
-            LogLevel.Warning => "<4>",
-            LogLevel.Information => "<6>",
-            _ => "<7>"
+            LogLevel.Critical => 2,
+            LogLevel.Error => 3,
+            LogLevel.Warning => 4,
+            LogLevel.Information => 6,
+            _ => 7
         };
     }
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.ServiceProcess;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Windows.Utils;
@@ -34,6 +35,12 @@ public class WindowsServiceSetup(WindowsDesktopPaths paths, string appName) : IA
         ServiceRegistration.Register(paths.InstanceName, appName,
             description: $"Keeps the {appName} VPN. Its window, its tray and the {paths.CommandName} commands drive it.",
             commandLine: $"\"{paths.ExecutablePath}\" daemon");
+
+        // The window writes under the service's name too, as the person, who may write to a source but
+        // not create one; the service's own first entry would, but a window that could not start it
+        // has to be heard all the same.
+        if (!EventLog.SourceExists(paths.InstanceName))
+            EventLog.CreateEventSource(paths.InstanceName, "Application");
 
         Console.WriteLine($"{paths.InstanceName} is registered, and starts with Windows.");
         return 0;

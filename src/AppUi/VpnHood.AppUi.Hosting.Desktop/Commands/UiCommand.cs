@@ -1,9 +1,11 @@
 using System.CommandLine;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Exceptions;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 
@@ -44,6 +46,10 @@ internal static class UiCommand
     private static async Task<int> Run(DesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
         bool startHidden, CancellationToken cancellationToken)
     {
+        // before anything logs: the window has no console, so its warnings and errors go to the
+        // platform's own log
+        VhLogger.AddProvider(platform.CreateSystemLogLoggerProvider());
+
         try {
             // One window per person: a second launch brings the open one forward, and that is all it does.
             await using var uiInstance = await DesktopUiInstance.TryClaim(platform.Paths.InstanceName, initParams.Ui,
@@ -63,6 +69,7 @@ internal static class UiCommand
             return 130;
         }
         catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "The window ended with an error.");
             await Console.Error.WriteLineAsync(ex.Message).Vhc();
             return 1;
         }
@@ -86,6 +93,9 @@ internal static class UiCommand
             throw;
         }
         catch (Exception ex) {
+            // the log has it whether or not anyone was told, and "service log" shows it while the
+            // service gives none
+            VhLogger.Instance.LogWarning(ex, "The window could not reach the service.");
             if (!startHidden)
                 await RunMessage(platform, initParams, mainThread, DesktopUiMessageKind.Failure, ex.Message,
                     cancellationToken).Vhc();

@@ -95,7 +95,7 @@ vhclient status
 | `vhclient profile set-default <profile>` *(CLIENT only)* | Chooses the profile `connect` uses when given none. |
 | `vhclient service start\|stop\|restart` | Drives the systemd unit. Asks for your password. |
 | `vhclient service status` | What systemd says. No password needed. |
-| `vhclient service log [-f] [-n N]` | The service's log, which the service sends: the last N lines of its two parts, the app's and the VPN service's; `-f` follows both. The journal's instead when the service does not answer. No password needed. |
+| `vhclient service log [-f] [-n N]` | The service's log, which the service sends: the last N lines of its two parts, the app's and the VPN service's; `-f` follows both. The journal's instead when the service does not answer: the unit's lines and the window's. No password needed. |
 
 ### One profile, or many
 
@@ -203,13 +203,14 @@ reports honestly.
 | What you see | What it is |
 | --- | --- |
 | `The VpnHoodClient service is not running.` | Exactly that. `sudo vhclient service start`, then `vhclient service log`. |
-| The menu entry does nothing | The window could not open. Run `vhclient ui` in a terminal to see why — usually a missing GUI library on a machine installed with `-nodesktop`. |
+| The menu entry does nothing | The window could not open. Run `vhclient ui` in a terminal to see why — usually a missing GUI library on a machine installed with `-nodesktop`. Its warnings and errors are in the journal too: `journalctl -t VpnHoodClient`. |
 | `status` says `None` forever | No profile, or none chosen. `vhclient profile list`. |
 | Connects, but no traffic | Check the log: `vhclient service log -n 100`. |
 | `The VPN cannot use its interface name` | Another VPN — or another app built on VpnHood under the same name — has an interface called `VpnHoodClient`. The message says whose it is. Stop that VPN, or, if it is gone and left the interface behind, `sudo ip link delete VpnHoodClient`. |
 
 The journal holds what systemd knows too, a start that failed before the app opened its log
-included: `journalctl -u VpnHoodClient -n 200`.
+included: `journalctl -u VpnHoodClient -n 200`. The window's own warnings and errors are under its
+name: `journalctl -t VpnHoodClient`.
 
 ---
 

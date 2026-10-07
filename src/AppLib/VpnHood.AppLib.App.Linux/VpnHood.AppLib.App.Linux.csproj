@@ -9,4 +9,8 @@
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Linux\VpnHood.Core.Client.Devices.Linux.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+	</ItemGroup>
+
 </Project>

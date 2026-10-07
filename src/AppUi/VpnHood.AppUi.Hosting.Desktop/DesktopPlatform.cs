@@ -44,6 +44,11 @@ public class DesktopPlatform
     // (Linux under systemd), a terminal's otherwise.
     public required Func<ILoggerProvider> CreateConsoleLoggerProvider { get; init; }
 
+    // The platform's own log, for the window, which runs as the person and has no console: its warnings
+    // and errors go where "service log" looks when the service gives no log - the Application log
+    // under the service's name on Windows, the journal under the instance's name on Linux.
+    public required Func<ILoggerProvider> CreateSystemLogLoggerProvider { get; init; }
+
     // The daemon's run, hosted by a service manager that stops it with a call rather than a signal
     // (Windows: the service control manager, through ServiceBase), which then cancels the run. Null
     // where a signal stops it (Linux), which the parser turns into the same cancellation.

@@ -14,7 +14,8 @@ public static class WindowsDesktopHost
 {
     public static int Run(string[] args, DesktopInitParams initParams)
     {
-        // every run logs to a debugger; the console is the daemon's and dev's, the Event Log the service's
+        // every run logs to a debugger; the console is the daemon's and dev's, the Event Log the
+        // service's and the window's
         VhLogger.AddProvider(new TraceLoggerProvider());
 
         var paths = new WindowsDesktopPaths(initParams.AppId);
@@ -32,6 +33,7 @@ public static class WindowsDesktopHost
                 trayParams.ShowWindow, trayParams.Exit),
             DaemonHostFactory = new WindowsDaemonHostFactory(initParams, paths),
             CreateConsoleLoggerProvider = () => new ConsoleLoggerProvider(),
+            CreateSystemLogLoggerProvider = () => new WinEventLogLoggerProvider(paths.InstanceName),
             HostDaemon = (run, cancellationToken) =>
                 WindowsDaemonService.Host(paths.InstanceName, run, cancellationToken)
         };

@@ -13,8 +13,9 @@ public static class LinuxDesktopHost
     {
         var paths = new LinuxDesktopPaths(initParams.AppId);
         // No tray keeps a hidden window, so a closed one is gone; the installer registers the unit;
-        // systemd's signal stops the daemon; and the daemon's console is the journal where stdout is
-        // the journal, so no line reaches it twice.
+        // systemd's signal stops the daemon; the daemon's console is the journal where stdout is the
+        // journal, so no line reaches it twice; and the window writes to the journal's socket, under
+        // the instance's name, which "service log" reads beside the unit.
         var platform = new DesktopPlatform {
             Paths = paths,
             Instance = new LinuxInstanceController(paths),
@@ -24,7 +25,8 @@ public static class LinuxDesktopHost
             DaemonHostFactory = new LinuxDaemonHostFactory(initParams, paths),
             CreateConsoleLoggerProvider = () => LinuxJournalLogger.IsConsole
                 ? new LinuxJournalLoggerProvider()
-                : new ConsoleLoggerProvider()
+                : new ConsoleLoggerProvider(),
+            CreateSystemLogLoggerProvider = () => new LinuxJournalSocketLoggerProvider(paths.InstanceName)
         };
 
         return DesktopHost.Run(args, initParams, platform);

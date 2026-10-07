@@ -149,7 +149,8 @@ public class DaemonConnectionTest
             PeerCheck = new TestLoopbackPeerCheck(),
             IsAdministrator = () => false,
             DaemonHostFactory = new TestDaemonHostFactory(),
-            CreateConsoleLoggerProvider = () => throw new NotSupportedException()
+            CreateConsoleLoggerProvider = () => throw new NotSupportedException(),
+            CreateSystemLogLoggerProvider = () => throw new NotSupportedException()
         };
 
         var refused = await Assert.ThrowsExactlyAsync<DaemonRefusedException>(() =>

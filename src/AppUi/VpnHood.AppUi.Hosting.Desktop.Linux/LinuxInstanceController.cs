@@ -58,16 +58,27 @@ public class LinuxInstanceController(IAppDesktopPaths paths) : IAppInstanceContr
     public Task<int> ShowStatus(CancellationToken cancellationToken) =>
         Run(["systemctl", "status", "--no-pager", paths.InstanceName], cancellationToken, elevate: false);
 
-    // The journal holds the unit's lines, a start that failed before the app opened its log included.
-    // It shows them only to root and to members of adm, wheel or systemd-journal; anyone else gets
-    // journalctl's own hint, and runs it with sudo.
+    // The journal holds the unit's lines, a start that failed before the app opened its log included,
+    // and the window's, filed under the instance's name (LinuxDesktopHost). It shows them only to root
+    // and to members of adm, wheel or systemd-journal; anyone else gets journalctl's own hint, and runs
+    // it with sudo.
     public Task<int> ShowOfflineLog(bool follow, int lines, CancellationToken cancellationToken)
     {
-        string[] arguments = follow
-            ? ["journalctl", "-u", paths.InstanceName, "-n", lines.ToString(), "-f"]
-            : ["journalctl", "-u", paths.InstanceName, "-n", lines.ToString(), "--no-pager"];
-
+        string[] arguments = ["journalctl", "-n", lines.ToString(), follow ? "-f" : "--no-pager", .. GetLogMatches()];
         return Run(arguments, cancellationToken, elevate: false);
+    }
+
+    // What -u matches - the unit's own lines, systemd's about it, its core dumps - or the window's:
+    // terms joined by "+", journalctl's OR, since -u beside -t would AND them.
+    private string[] GetLogMatches()
+    {
+        var unit = $"{paths.InstanceName}.service";
+        return [
+            $"_SYSTEMD_UNIT={unit}", "+",
+            "_PID=1", $"UNIT={unit}", "+",
+            $"COREDUMP_UNIT={unit}", "+",
+            $"SYSLOG_IDENTIFIER={paths.InstanceName}"
+        ];
     }
 
     private static async Task<int> Run(IReadOnlyList<string> arguments, CancellationToken cancellationToken,

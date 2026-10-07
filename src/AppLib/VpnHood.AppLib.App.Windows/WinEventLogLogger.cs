@@ -5,9 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.AppLib.App.Windows;
 
-// A Windows service's warnings and errors in the Application log, as .NET's own hosts send them
-// there; the rest stays in the app's log, since any signed-in user can read this one. The log stamps
-// each entry and shows its level, so its provider asks TextLogger for neither.
+// Warnings and errors in the Application log: a Windows service's, as .NET's own hosts send them
+// there, and its window's. The rest stays out - the service's in the app's log - since any signed-in
+// user can read this one. The log stamps each entry and shows its level, so its provider asks
+// TextLogger for neither.
 public sealed class WinEventLogLogger(EventLog eventLog) : ILogger
 {
     private const int MaxMessageLength = 31839; // the most one entry takes

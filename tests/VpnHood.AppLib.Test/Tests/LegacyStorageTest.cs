@@ -42,6 +42,10 @@ public class LegacyStorageTest : TestAppBase
         Assert.AreEqual(AdminSid, settings["ClientId"]?.GetValue<string>());
         Assert.AreEqual("admin", File.ReadAllText(Path.Combine(storagePath, "profiles", "vpn_profiles.json")));
 
+        // the sign-in comes along, so a signed-in person stays signed in
+        Assert.AreEqual("admin", File.ReadAllText(Path.Combine(storagePath, "account", "portalSession.json")));
+        Assert.AreEqual("admin", File.ReadAllText(Path.Combine(storagePath, "account", "account.json")));
+
         // a person's debug commands stay behind; their other settings come along
         var userSettings = settings["UserSettings"]?.AsObject();
         Assert.IsNotNull(userSettings);
@@ -67,13 +71,17 @@ public class LegacyStorageTest : TestAppBase
         Assert.IsFalse(Directory.Exists(storagePath));
     }
 
-    // A profile folder with an earlier release's files; its profiles file holds the profile's name.
+    // A profile folder with an earlier release's files; its profiles and account files hold the
+    // profile's name.
     private static string CreateProfile(string root, string name, DateTime settingsTime)
     {
         var profilePath = Path.Combine(root, name);
         var folderPath = Path.Combine(profilePath, "AppData", "Local", LegacyFolderName);
         Directory.CreateDirectory(Path.Combine(folderPath, "profiles"));
         File.WriteAllText(Path.Combine(folderPath, "profiles", "vpn_profiles.json"), name);
+        Directory.CreateDirectory(Path.Combine(folderPath, "account"));
+        File.WriteAllText(Path.Combine(folderPath, "account", "portalSession.json"), name);
+        File.WriteAllText(Path.Combine(folderPath, "account", "account.json"), name);
 
         var settingsFilePath = Path.Combine(folderPath, "settings.json");
         File.WriteAllText(settingsFilePath,

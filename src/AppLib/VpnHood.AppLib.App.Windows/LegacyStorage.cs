@@ -23,7 +23,9 @@ public static class LegacyStorage
         @"profiles\vpn_profiles.json",
         @"splits\ips_via_app\includes.txt", @"splits\ips_via_app\excludes.txt", @"splits\ips_via_app\blocks.txt",
         @"splits\ips_via_device\includes.txt", @"splits\ips_via_device\excludes.txt",
-        @"splits\domains\includes.txt", @"splits\domains\excludes.txt", @"splits\domains\blocks.txt"
+        @"splits\domains\includes.txt", @"splits\domains\excludes.txt", @"splits\domains\blocks.txt",
+        // the sign-in, where the app has one (the portal's session), and the account it last read
+        @"account\portalSession.json", @"account\account.json"
     ];
 
     // A person's debug commands stay behind: the service is every administrator's.

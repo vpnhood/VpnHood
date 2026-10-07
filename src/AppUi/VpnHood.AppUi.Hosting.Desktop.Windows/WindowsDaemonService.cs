@@ -23,6 +23,11 @@ internal sealed class WindowsDaemonService : ServiceBase
         ServiceName = serviceName;
         CanStop = true;
         CanShutdown = true;
+
+        // No "Service started/stopped successfully" in the Application log: the service control
+        // manager records each start and stop in the System log, and here they were nine entries in
+        // ten, pushing the warnings out of what "service log" shows of this log.
+        AutoLog = false;
         _run = run;
     }
 

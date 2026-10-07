@@ -23,6 +23,7 @@ public sealed class WebViewHost : IDisposable
     private Uri? _launchUrl;
     private bool _viewInitialized;
     private bool _reloadPending;
+    private bool _isLoadFailing;
     private bool _disposed;
 
     public WebViewHost(IWebView view, IAppWebHost webHost, WebViewHostOptions? options = null)
@@ -96,12 +97,16 @@ public sealed class WebViewHost : IDisposable
 
     private void OnPageLoaded(object? sender, EventArgs e)
     {
+        _isLoadFailing = false;
         _view.SetLoading(false);
     }
 
+    // A warning once per outage: the reload repeats every second while the page is unreachable, and
+    // its repeats are debug.
     private void OnLoadFailed(object? sender, EventArgs e)
     {
-        VhLogger.Instance.LogWarning("SPA web view load failed; reloading.");
+        VhLogger.Instance.Log(_isLoadFailing ? LogLevel.Debug : LogLevel.Warning, "SPA web view load failed; reloading.");
+        _isLoadFailing = true;
         ReloadAfterDelay();
     }
 

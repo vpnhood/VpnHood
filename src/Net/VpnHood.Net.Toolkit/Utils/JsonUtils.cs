@@ -42,6 +42,10 @@ public static class JsonUtils
     public static T? TryDeserializeFile<T>(string filePath, JsonSerializerOptions? options = null,
         ILogger? logger = null)
     {
+        // no file yet is the normal case, a first run's, not an error to log
+        if (!File.Exists(filePath))
+            return default;
+
         try {
             return DeserializeFile<T>(filePath, options);
         }

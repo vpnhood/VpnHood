@@ -19,6 +19,7 @@ public partial class PairingView : UserControl, IPage, IDisposable
     private readonly MainView _host;
     private readonly DispatcherTimer _timer;
     private bool _isAlwaysOn;
+    private bool _isRefreshFailing;
     private bool _disposed;
 
     // The hint is what the web UI's dialog shows when it was opened for a job a remote cannot do -
@@ -69,9 +70,13 @@ public partial class PairingView : UserControl, IPage, IDisposable
             return;
         try {
             Apply(await VhApp.Api.App.GetRemoteAccess(CancellationToken.None));
+            _isRefreshFailing = false;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not refresh remote access.");
+            // a warning once per outage; the timer's repeats as debug
+            VhLogger.Instance.Log(_isRefreshFailing ? LogLevel.Debug : LogLevel.Warning, ex,
+                "Could not refresh remote access.");
+            _isRefreshFailing = true;
         }
     }
 

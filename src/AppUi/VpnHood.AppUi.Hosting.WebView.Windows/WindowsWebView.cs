@@ -108,15 +108,20 @@ internal sealed class WindowsWebView(WebView2Window window, string userDataPath,
 
         // Only connection-level failures mean the loopback server is unreachable. OperationCanceled
         // is our own superseding Navigate (the WebView2 twin of iOS NSUrlError.Cancelled) and must
-        // not trigger a reload, or the reload would keep cancelling itself.
-        VhLogger.Instance.LogWarning("WebView2 navigation failed: {Status}", e.WebErrorStatus);
-        if (e.WebErrorStatus is CoreWebView2WebErrorStatus.ServerUnreachable
+        // not trigger a reload, or the reload would keep cancelling itself. Both are debug: the host
+        // warns of an unreachable server once per outage (WebViewHost), and a cancel is ours.
+        var isUnreachable = e.WebErrorStatus is CoreWebView2WebErrorStatus.ServerUnreachable
             or CoreWebView2WebErrorStatus.Timeout
             or CoreWebView2WebErrorStatus.ConnectionAborted
             or CoreWebView2WebErrorStatus.ConnectionReset
             or CoreWebView2WebErrorStatus.Disconnected
             or CoreWebView2WebErrorStatus.CannotConnect
-            or CoreWebView2WebErrorStatus.HostNameNotResolved)
+            or CoreWebView2WebErrorStatus.HostNameNotResolved;
+
+        VhLogger.Instance.Log(isUnreachable || e.WebErrorStatus == CoreWebView2WebErrorStatus.OperationCanceled
+            ? LogLevel.Debug
+            : LogLevel.Warning, "WebView2 navigation failed: {Status}", e.WebErrorStatus);
+        if (isUnreachable)
             LoadFailed?.Invoke(this, EventArgs.Empty);
     }
 

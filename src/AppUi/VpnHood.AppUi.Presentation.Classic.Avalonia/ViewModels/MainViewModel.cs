@@ -35,6 +35,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private readonly DispatcherTimer _timer;
     private bool _isReloading;
+    private bool _isStateReadFailing;
     private bool _disposed;
     private DateTime _noticeUntil;
     private string? _shownErrorMessage;
@@ -163,7 +164,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The state, read again from the app and shown: the clock's beat, and every action's last step.
     // One read at a time - over HTTP a read can outlast the beat - and a read that fails is logged
-    // and tried again at the next beat, as the web UI's reloadState is.
+    // and tried again at the next beat, as the web UI's reloadState is. A warning once per outage,
+    // the beat's repeats as debug: a service that is down would be one a second in the system log.
     public async Task Reload()
     {
         if (_disposed || _isReloading)
@@ -172,11 +174,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _isReloading = true;
         try {
             await VhApp.ReloadState(CancellationToken.None);
+            _isStateReadFailing = false;
             if (!_disposed)
                 Refresh();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not read the app's state.");
+            VhLogger.Instance.Log(_isStateReadFailing ? LogLevel.Debug : LogLevel.Warning, ex,
+                "Could not read the app's state.");
+            _isStateReadFailing = true;
         }
         finally {
             _isReloading = false;

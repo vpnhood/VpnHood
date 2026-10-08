@@ -598,13 +598,13 @@ public sealed partial class Strings
     /// <summary>Delete my account</summary>
     public string DeleteMyAccount => Get("DELETE_MY_ACCOUNT");
 
-    /// <summary>Permanently delete your account and personal data from our servers.</summary>
+    /// <summary>Permanently delete your account, with its sign-in and email address.</summary>
     public string DeleteMyAccountDesc => Get("DELETE_MY_ACCOUNT_DESC");
 
     /// <summary>This cannot be undone</summary>
     public string ConfirmDeleteAccountTitle => Get("CONFIRM_DELETE_ACCOUNT_TITLE");
 
-    /// <summary>Your account and personal data will be permanently deleted, and every signed-in device is signed out and loses premium.</summary>
+    /// <summary>Your account, its sign-in and its email address will be permanently deleted, and every signed-in device is signed out...</summary>
     public string ConfirmDeleteAccountDesc => Get("CONFIRM_DELETE_ACCOUNT_DESC");
 
     /// <summary>We cannot recover your premium codes after this, so save any you still need. Deleting does not cancel a code. One you...</summary>
@@ -1879,7 +1879,7 @@ public sealed partial class Strings
     /// <summary>Privacy</summary>
     public string Privacy => Get("PRIVACY");
 
-    /// <summary>Control anonymous usage data and read our privacy policy.</summary>
+    /// <summary>Control the usage data the app sends and read our privacy policy.</summary>
     public string PrivacyDesc => Get("PRIVACY_DESC");
 
     /// <summary>Privacy Policy</summary>
@@ -1948,7 +1948,7 @@ public sealed partial class Strings
     /// <summary>Share anonymous usage data</summary>
     public string AllowAnonymousTracker => Get("ALLOW_ANONYMOUS_TRACKER");
 
-    /// <summary>Help us improve the app by sending anonymous usage and diagnostic data.</summary>
+    /// <summary>Help us improve the app by sending pseudonymous usage and diagnostic data.</summary>
     public string AllowAnonymousTrackerDesc => Get("ALLOW_ANONYMOUS_TRACKER_DESC");
 
     /// <summary>We never log your browsing activity, the sites you visit, or the content of your traffic. When this is on, the app se...</summary>

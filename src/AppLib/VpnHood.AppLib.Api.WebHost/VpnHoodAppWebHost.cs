@@ -635,7 +635,8 @@ public class VpnHoodAppWebHost : IAppWebHost
             return;
         }
 
-        context.Response.ContentType = "text/html";
+        // the charset said here too: a page without its own meta would garble a non-ASCII app name
+        context.Response.ContentType = "text/html; charset=utf-8";
         await context.Response.Send(_indexHtml ?? await ReadIndexHtml(CancellationToken.None).Vhc());
     }
 
@@ -666,11 +667,18 @@ public class VpnHoodAppWebHost : IAppWebHost
         }
     }
 
-    // The one file every unmatched path falls back to, so the UI can route itself.
+    // The one file every unmatched path falls back to, so the UI can route itself. The page is every
+    // app's, so the app's name and logo go into it here ({appName}, {logoUrl}): the tab shows them
+    // before any of the page has run.
     private async Task<string> ReadIndexHtml(CancellationToken cancellationToken)
     {
         await using var stream = await _webRoot.OpenReadAsync("index.html", cancellationToken).Vhc();
         using var reader = new StreamReader(stream);
-        return await reader.ReadToEndAsync(cancellationToken).Vhc();
+        var html = await reader.ReadToEndAsync(cancellationToken).Vhc();
+        var logoUrl = "/" + AssetsPrefix + string.Join('/',
+            _createParams.LogoAssetPath.TrimStart('/').Split('/').Select(Uri.EscapeDataString));
+        return html
+            .Replace("{appName}", WebUtility.HtmlEncode(_createParams.AppName))
+            .Replace("{logoUrl}", WebUtility.HtmlEncode(logoUrl));
     }
 }

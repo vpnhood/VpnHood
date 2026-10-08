@@ -10,7 +10,10 @@ public interface IVpnAdapter : IPacketTransport
     event EventHandler? Disposed;
     event EventHandler? PrimaryAdapterIpChanged;
     bool IsStarted { get; }
-    bool IsNatSupported { get; }
+    /// <summary>
+    /// Whether the adapter's NAT translates this IP version; a server sends one it does not by its proxy.
+    /// </summary>
+    bool IsNatSupported(IpVersion ipVersion);
     bool CanProtectSocket { get; }
     bool ProtectSocket(Socket socket);
     bool ProtectSocket(Socket socket, IPAddress ipAddress);

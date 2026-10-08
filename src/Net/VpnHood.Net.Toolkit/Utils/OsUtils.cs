@@ -9,6 +9,12 @@ public static class OsUtils
 {
     public static string ExecuteCommand(string fileName, string command)
     {
+        return ExecuteCommand(fileName, command, Timeout.InfiniteTimeSpan);
+    }
+
+    // a command still running at the timeout is killed
+    public static string ExecuteCommand(string fileName, string command, TimeSpan timeout)
+    {
         VhLogger.Instance.LogDebug($"Executing: {fileName} {command}");
         var processInfo = new ProcessStartInfo {
             FileName = fileName,
@@ -23,10 +29,17 @@ public static class OsUtils
         process.StartInfo = processInfo;
         process.Start();
 
-        var error = process.StandardError.ReadToEnd();
-        var output = process.StandardOutput.ReadToEnd();
+        // both streams at once: reading one to its end first stalls a command that fills the other's pipe
+        var errorTask = process.StandardError.ReadToEndAsync();
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        if (!process.WaitForExit(timeout)) {
+            process.Kill(entireProcessTree: true);
+            throw new TimeoutException(
+                $"The command has not finished in {timeout.TotalSeconds} seconds. Command: {fileName} {command}.");
+        }
 
-        process.WaitForExit();
+        var error = errorTask.GetAwaiter().GetResult();
+        var output = outputTask.GetAwaiter().GetResult();
         if (process.ExitCode != 0)
             throw new ExternalException(error, process.ExitCode);
 
@@ -50,8 +63,11 @@ public static class OsUtils
         process.StartInfo = processInfo;
         process.Start();
 
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+        // both streams at once, as in ExecuteCommand
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var error = await errorTask;
+        var output = await outputTask;
 
         await WaitForExitAsync(process, cancellationToken);
         if (process.ExitCode != 0) {

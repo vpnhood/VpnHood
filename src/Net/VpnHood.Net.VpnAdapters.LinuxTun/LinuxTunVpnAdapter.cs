@@ -44,7 +44,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     protected override bool IsSocketProtectedByBind => true;
     public override bool CanProtectSocket => !string.IsNullOrEmpty(_primaryAdapterName);
 
-    public override bool IsNatSupported => true;
+    public override bool IsNatSupported(IpVersion ipVersion) => true;
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
     protected override bool RestartAfterNetworkAddressChanged => true;

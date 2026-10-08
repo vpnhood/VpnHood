@@ -61,7 +61,7 @@ public class IosVpnAdapter(
     // IosTunDiagnostics and are maintained only when IosTunDiagnostics.Enabled — see the call sites below.
 
     protected override bool RestartAfterNetworkAddressChanged => false;
-    public override bool IsNatSupported => false;
+    public override bool IsNatSupported(IpVersion ipVersion) => false;
     public override bool IsAppFilterSupported => false;
     protected override bool IsSocketProtectedByBind => false;
 

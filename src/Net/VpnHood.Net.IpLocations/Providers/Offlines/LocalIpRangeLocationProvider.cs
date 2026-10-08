@@ -15,10 +15,12 @@ namespace VpnHood.Net.IpLocations.Providers.Offlines;
 
 // Every country's IP ranges, out of one zip the caller names: an entry per country ({code}.ips),
 // read on the first lookup that needs it and kept open for the rest, since a lookup walks many
-// countries and each is a few hundred KB.
+// countries and each is a few hundred KB. userAgent is what the current location's public-IP lookup
+// calls the app (IPAddressUtil.GetPublicIpAddress).
 public class LocalIpRangeLocationProvider(
     IAsset zipAsset,
-    Func<string?> currentCountryCodeFunc)
+    Func<string?> currentCountryCodeFunc,
+    string? userAgent = null)
     : IIpRangeLocationProvider
 {
     private readonly AsyncLock _lock = new();
@@ -73,8 +75,8 @@ public class LocalIpRangeLocationProvider(
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var ipAddress =
-            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).Vhc()
-            ?? await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken).Vhc()
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, userAgent, cancellationToken).Vhc()
+            ?? await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, userAgent, cancellationToken).Vhc()
             ?? throw new Exception("Could not find any public ip address.");
 
         var ipLocation = await GetLocation(ipAddress, cancellationToken);

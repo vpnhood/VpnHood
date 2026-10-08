@@ -38,7 +38,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     // ReSharper disable once FieldCanBeMadeReadOnly.Local
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
-    public abstract bool IsNatSupported { get; }
+    public abstract bool IsNatSupported(IpVersion ipVersion);
     public virtual bool CanProtectSocket => true;
     protected abstract bool IsSocketProtectedByBind { get; }
     protected abstract string? AppPackageId { get; }
@@ -122,7 +122,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
         _startOptions = options;
 
-        if (UseNat && !IsNatSupported)
+        if (options.UseNat && !IsNatSupported(IpVersion.IPv4))
             throw new NotSupportedException("NAT is not supported by this adapter.");
 
         try {
@@ -236,13 +236,13 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             if (adapterIpNetworkV6 != null)
                 await AddRouteHelper(includeNetworks, AddressFamily.InterNetworkV6, cancellationToken).Vhc();
 
-            // add NAT
+            // add NAT, for each IP version the adapter's NAT translates
             if (UseNat) {
                 VhLogger.Instance.LogDebug("Adding NAT...");
-                if (adapterIpNetworkV4 != null && primaryAdapterIpV4 != null)
+                if (adapterIpNetworkV4 != null && primaryAdapterIpV4 != null && IsNatSupported(IpVersion.IPv4))
                     await AddNat(adapterIpNetworkV4, cancellationToken).Vhc();
 
-                if (adapterIpNetworkV6 != null && primaryAdapterIpV6 != null)
+                if (adapterIpNetworkV6 != null && primaryAdapterIpV6 != null && IsNatSupported(IpVersion.IPv6))
                     await AddNat(adapterIpNetworkV6, cancellationToken).Vhc();
             }
 

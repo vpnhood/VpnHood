@@ -109,8 +109,8 @@ public static class IPAddressUtil
         var ret = new List<IPAddress>();
 
         //note: api.ipify.org may not work in parallel call
-        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).Vhc();
-        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken).Vhc();
+        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, userAgent: null, cancellationToken).Vhc();
+        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, userAgent: null, cancellationToken).Vhc();
 
         if (ipV4Task != null) ret.Add(ipV4Task);
         if (ipV6Task != null) ret.Add(ipV6Task);
@@ -118,14 +118,20 @@ public static class IPAddressUtil
         return [.. ret];
     }
 
-    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily,
+    // What a public-IP lookup calls itself where the caller names no app: the engine, whose name an
+    // app built on it carries in its assemblies anyway.
+    private const string DefaultUserAgent = "VpnHood";
+
+    // userAgent is the name the asking app gives the services, its package title; null sends
+    // DefaultUserAgent.
+    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, string? userAgent,
         CancellationToken cancellationToken)
     {
         try {
             // create linked cancellation token of max 5 seconds
             using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             linkedToken.CancelAfter(TimeSpan.FromSeconds(5));
-            return await GetPublicIpAddressByCloudflare(addressFamily, linkedToken.Token);
+            return await GetPublicIpAddressByCloudflare(addressFamily, userAgent, linkedToken.Token);
         }
         catch {
             /* continue next service */
@@ -134,7 +140,7 @@ public static class IPAddressUtil
         try {
             using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             linkedToken.CancelAfter(TimeSpan.FromSeconds(5));
-            return await GetPublicIpAddressByIpify(addressFamily, linkedToken.Token);
+            return await GetPublicIpAddressByIpify(addressFamily, userAgent, linkedToken.Token);
         }
         catch {
             /* ignore */
@@ -144,7 +150,7 @@ public static class IPAddressUtil
     }
 
     private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily,
-        CancellationToken cancellationToken)
+        string? userAgent, CancellationToken cancellationToken)
     {
         var url = "https://www.cloudflare.com/cdn-cgi/trace";
 
@@ -162,8 +168,7 @@ public static class IPAddressUtil
             }
         };
 
-        using var httpClient = new HttpClient(handler);
-        httpClient.DefaultRequestHeaders.Add("User-Agent", "VpnHood");
+        using var httpClient = CreateHttpClient(handler, userAgent);
         var content = await httpClient
             .GetStringAsync(url, cancellationToken)
             .Vhc();
@@ -175,7 +180,7 @@ public static class IPAddressUtil
     }
 
     private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily,
-        CancellationToken cancellationToken)
+        string? userAgent, CancellationToken cancellationToken)
     {
         //var url = addressFamily == AddressFamily.InterNetwork
         //    ? "https://api.ipify.org?format=json"
@@ -186,8 +191,7 @@ public static class IPAddressUtil
             : "https://api6.my-ip.io/v2/ip.json";
 
         var handler = new HttpClientHandler { AllowAutoRedirect = true };
-        using var httpClient = new HttpClient(handler);
-        httpClient.DefaultRequestHeaders.Add("User-Agent", "VpnHood");
+        using var httpClient = CreateHttpClient(handler, userAgent);
         var json = await httpClient
             .GetStringAsync(url, cancellationToken)
             .Vhc();
@@ -196,6 +200,14 @@ public static class IPAddressUtil
         var ipString = document.RootElement.GetProperty("ip").GetString();
         var ipAddress = IPAddress.Parse(ipString ?? throw new InvalidOperationException());
         return ipAddress.AddressFamily == addressFamily ? ipAddress : null;
+    }
+
+    // Unvalidated: a package title is the caller's to choose, and not every one is an HTTP token
+    private static HttpClient CreateHttpClient(HttpMessageHandler handler, string? userAgent)
+    {
+        var httpClient = new HttpClient(handler);
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", userAgent ?? DefaultUserAgent);
+        return httpClient;
     }
 
     public static Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)

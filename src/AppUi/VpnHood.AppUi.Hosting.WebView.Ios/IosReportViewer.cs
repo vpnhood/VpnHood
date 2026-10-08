@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.App;
 using VpnHood.Net.Toolkit.Logging;
 using WebKit;
 
@@ -49,7 +50,8 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
             var fileName = Path.GetFileName(uri.LocalPath);
             if (string.IsNullOrEmpty(fileName))
                 fileName = "report.txt";
-            var filePath = Path.Combine(Path.GetTempPath(), "VpnHood-" + fileName);
+            // after the app, so a shared copy says whose log it is
+            var filePath = Path.Combine(Path.GetTempPath(), $"{VpnHoodApp.Instance.Features.PackageTitle}-{fileName}");
             await File.WriteAllBytesAsync(filePath, content);
 
             hostController.BeginInvokeOnMainThread(() => PresentReportViewer(filePath, uri));

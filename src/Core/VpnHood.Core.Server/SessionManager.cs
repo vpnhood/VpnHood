@@ -47,6 +47,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     public SessionOptions SessionOptions { get; set; } = new();
     public ITracker? Tracker { get; }
     public bool IsVpnAdapterSupported => _vpnAdapter != null;
+    public bool IsVpnAdapterIpV6Supported => _vpnAdapter?.IsIpVersionSupported(IpVersion.IPv6) == true;
     public IpNetwork VirtualIpNetworkV4 => _virtualIpManager.IpNetworkV4;
     public IpNetwork VirtualIpNetworkV6 => _virtualIpManager.IpNetworkV6;
 

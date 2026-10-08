@@ -16,19 +16,23 @@ public class LocalIpLocationProvider : IIpLocationProvider
     }
 
     private readonly List<IpRangeInfo> _ipRangeInfoList;
+    private readonly string? _userAgent;
 
-    public LocalIpLocationProvider(IEnumerable<IpRangeInfo> ipRangeInfos)
+    // userAgent is what the current location's public-IP lookup calls the app
+    // (IPAddressUtil.GetPublicIpAddress).
+    public LocalIpLocationProvider(IEnumerable<IpRangeInfo> ipRangeInfos, string? userAgent = null)
     {
         _ipRangeInfoList = ipRangeInfos
             .OrderBy(x => x.IpRanges.FirstIpAddress, new IPAddressComparer())
             .ToList();
+        _userAgent = userAgent;
     }
 
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var ipAddress =
-            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).Vhc() ??
-            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken)
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, _userAgent, cancellationToken).Vhc() ??
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, _userAgent, cancellationToken)
                 .Vhc() ??
             throw new Exception("Could not find any public ip address.");
 
@@ -104,7 +108,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
         }
     }
 
-    public static LocalIpLocationProvider Deserialize(Stream stream)
+    public static LocalIpLocationProvider Deserialize(Stream stream, string? userAgent = null)
     {
         using var reader = new BinaryReader(stream);
         var length = reader.ReadInt32();
@@ -123,7 +127,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
             };
         }
 
-        return new LocalIpLocationProvider(ipRangeInfos);
+        return new LocalIpLocationProvider(ipRangeInfos, userAgent);
     }
 
     public void Dispose()

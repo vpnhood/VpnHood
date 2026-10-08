@@ -465,8 +465,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
             VhLogger.FormatSessionId(session.SessionId), "New", VhLogger.FormatId(request.TokenId),
             session.Response.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId),
             clientIpText, request.ClientInfo.ClientVersion,
-            UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent),
-            session.VirtualIps.IpV4);
+            session.VirtualIps.IpV4,
+            UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent));
 
         // report in track log
         if (_sessionManager.TrackingOptions.IsEnabled) {
@@ -482,6 +482,11 @@ public class ServerHost : IDisposable, IAsyncDisposable
         // find udp/quic port that matches the same local IP address family
         var udpPort = FindMatchingPort(_udpListenerHost.EndPoints, streamConnection, "UDP");
         var quicPort = FindMatchingPort(_quicListenerHost.EndPoints, streamConnection, "QUIC");
+
+        // A TCP packet has no way out but the adapter, so a session that may send them is offered IPv6
+        // only where the adapter carries it: a Windows server's WinNAT translates no IPv6.
+        var isTcpPacketSupported = _sessionManager.IsVpnAdapterSupported && session.AllowTcpPacket;
+        var isIpV6Supported = IsIpV6Supported && (!isTcpPacketSupported || _sessionManager.IsVpnAdapterIpV6Supported);
 
         var helloResponse = new HelloResponse {
             ErrorCode = sessionResponseEx.ErrorCode,
@@ -500,7 +505,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             MaxPacketChannelCount = session.Tunnel.MaxPacketChannelCount,
             IncludeIpRanges = NetFilterIncludeIpRanges,
             VpnAdapterIncludeIpRanges = NetFilterVpnAdapterIncludeIpRanges,
-            IsIpV6Supported = IsIpV6Supported,
+            IsIpV6Supported = isIpV6Supported,
             // client should wait more to get session exception replies
             RequestTimeout = _sessionManager.SessionOptions.TcpConnectTimeoutValue +
                              ServerTransportDefaults.ClientRequestTimeoutDelta,
@@ -513,7 +518,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             ServerLocation = sessionResponseEx.ServerLocation,
             ServerTags = sessionResponseEx.ServerTags,
             AccessInfo = sessionResponseEx.AccessInfo,
-            IsTcpPacketSupported = _sessionManager.IsVpnAdapterSupported && session.AllowTcpPacket,
+            IsTcpPacketSupported = isTcpPacketSupported,
             IsTcpProxySupported = session.AllowTcpProxy,
             ClientPublicAddress = clientIp,
             ClientCountry = sessionResponseEx.ClientCountry,

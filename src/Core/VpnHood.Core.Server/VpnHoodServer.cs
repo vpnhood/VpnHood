@@ -62,7 +62,7 @@ public class VpnHoodServer : IAsyncDisposable
         if (options.SocketFactory == null)
             throw new ArgumentNullException(nameof(options.SocketFactory));
 
-        if (options.VpnAdapter is { IsNatSupported: false })
+        if (options.VpnAdapter?.IsNatSupported(IpVersion.IPv4) == false)
             throw new InvalidProgramException("VpnAdapter must support NAT to work with VpnServer.");
 
         AccessManager = accessManager;

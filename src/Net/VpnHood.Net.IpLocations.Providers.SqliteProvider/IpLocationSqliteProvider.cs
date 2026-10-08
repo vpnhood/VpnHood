@@ -12,31 +12,37 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
 {
     private readonly Lazy<SqliteConnection> _connection;
     private readonly bool _disposeConnection;
+    private readonly string? _userAgent;
 
-    private IpLocationSqliteProvider(string dbPath)
+    private IpLocationSqliteProvider(string dbPath, string? userAgent)
     {
         _disposeConnection = true;
         _connection = new Lazy<SqliteConnection>(() => OpenConnection(dbPath));
+        _userAgent = userAgent;
     }
 
-    private IpLocationSqliteProvider(SqliteConnection connection, bool disposeConnection)
+    private IpLocationSqliteProvider(SqliteConnection connection, bool disposeConnection, string? userAgent)
     {
         _disposeConnection = disposeConnection;
         _connection = new Lazy<SqliteConnection>(() => connection);
+        _userAgent = userAgent;
     }
 
-    public static async Task<IpLocationSqliteProvider> Open(string dbPath)
+    // userAgent is what the current location's public-IP lookup calls the app
+    // (IPAddressUtil.GetPublicIpAddress).
+    public static async Task<IpLocationSqliteProvider> Open(string dbPath, string? userAgent = null)
     {
-        var provider = new IpLocationSqliteProvider(dbPath);
+        var provider = new IpLocationSqliteProvider(dbPath, userAgent);
         await provider._connection.Value.OpenAsync();
         return provider;
     }
 
-    public static async Task<IpLocationSqliteProvider> Open(SqliteConnection connection, bool leaveOpen = false)
+    public static async Task<IpLocationSqliteProvider> Open(SqliteConnection connection, bool leaveOpen = false,
+        string? userAgent = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
 
-        var provider = new IpLocationSqliteProvider(connection, disposeConnection: !leaveOpen);
+        var provider = new IpLocationSqliteProvider(connection, disposeConnection: !leaveOpen, userAgent);
         if (connection.State != ConnectionState.Open)
             await connection.OpenAsync();
 
@@ -70,8 +76,8 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var ipAddress =
-            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, cancellationToken).Vhc()
-            ?? await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, cancellationToken).Vhc()
+            await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, _userAgent, cancellationToken).Vhc()
+            ?? await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, _userAgent, cancellationToken).Vhc()
             ?? throw new Exception("Could not find any public ip address.");
 
         return await GetLocation(ipAddress, cancellationToken);

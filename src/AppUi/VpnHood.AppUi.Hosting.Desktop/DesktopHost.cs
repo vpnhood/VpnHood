@@ -43,7 +43,7 @@ public static class DesktopHost
         // Added in the order they are meant to be read, since this is also the order help prints
         // them in: what a person does to the connection, then to their profiles, then to the
         // install itself.
-        var rootCommand = new RootCommand($"{platform.Paths.InstanceName} - VpnHood at the command line");
+        var rootCommand = new RootCommand($"{platform.Paths.InstanceName} - {initParams.AppName} at the command line");
         rootCommand.Subcommands.Add(ConnectCommand.Create(platform, initParams.IsAddAccessKeySupported));
         rootCommand.Subcommands.Add(DisconnectCommand.Create(platform));
         rootCommand.Subcommands.Add(StatusCommand.Create(platform));

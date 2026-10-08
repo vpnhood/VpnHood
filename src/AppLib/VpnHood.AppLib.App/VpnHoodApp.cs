@@ -167,7 +167,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _ipRangeLocationProvider = options.IpLocationZipAsset is { } ipLocationZipAsset
             ? new LocalIpRangeLocationProvider(
                 ipLocationZipAsset,
-                () => AppRegionInfo.CurrentRegion.Name)
+                () => AppRegionInfo.CurrentRegion.Name,
+                userAgent: options.PackageTitle)
             : null;
 
         // each split service owns its whole activity decision: its settings gate + the premium plan

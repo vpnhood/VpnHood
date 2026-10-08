@@ -1167,9 +1167,11 @@ no account behind.
 ### They ask for a refund instead
 
 Separate path, and separate from deletion. For a store purchase, the store decides. For a website
-purchase, we decide — and if we refund, we keep an anonymous one-way fingerprint of the refunded
-account for up to 24 months, purely to judge future refund requests. It cannot be turned back into
-an address and it survives deletion; this is disclosed at refund time.
+purchase, we decide — and a full refund leaves a pseudonymous one-way hash of the refunded
+account's email address, kept for up to 24 months, purely so that whoever decides a later refund
+request from the same address is warned that it was refunded before. It cannot be turned back into
+an address, it survives deletion, and the privacy policy discloses it. A partial refund (the
+goodwill case below) and a store refund leave no such record.
 
 **Refunding money does not switch a code off.** A code stops on its expiry date, and a refund is not
 an expiry date — so unless someone ends the code, a refunded customer keeps working service until the

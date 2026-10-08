@@ -69,18 +69,16 @@ internal sealed class StoreFixture
     // it links to - is never invented here. A fixture without them would render the other product's
     // brand, and that screenshot looks right while showing the wrong app. Every product sets these in
     // its options builder (src/Apps/<product>/<product>/<Product>AppOptions.cs), the two documents from
-    // its private appsettings; AvaloniaUI.Dev's Program.cs lists one product's values side by side,
-    // which is the easiest place to copy them from.
+    // its private appsettings (Links); AvaloniaUI.Dev's Program.cs lists one product's values side by
+    // side, which is the easiest place to copy them from.
     private static readonly string[] ProductIdentity =
-        ["uiTheme", "logoAssetPath", "privacyConsentAssetName", "privacyPolicyUrl", "termsOfUseUrl"];
+        ["uiTheme", "logoAssetPath", "privacyConsentAssetName", "links.privacyPolicy", "links.termsOfUse"];
 
     private static void FillDefaults(JsonObject root, List<string> filled)
     {
         var features = Section(root, "features");
 
-        var missing = features.Where(x => x.Value is null).Select(x => x.Key)
-            .Concat(ProductIdentity.Where(name => !features.ContainsKey(name)))
-            .Intersect(ProductIdentity).Order().ToArray();
+        var missing = ProductIdentity.Where(path => ValueAt(features, path) is null).ToArray();
         if (missing.Length > 0)
             throw new InvalidOperationException(
                 $"The fixture does not say which product it is: features has no {string.Join(", ", missing)}. " +
@@ -118,6 +116,15 @@ internal sealed class StoreFixture
             return;
         obj[name] = value;
         filled.Add($"{where}.{name}");
+    }
+
+    // A dotted path's value ("links.privacyPolicy"), or null where any step of it is missing or null.
+    private static JsonNode? ValueAt(JsonObject obj, string path)
+    {
+        JsonNode? node = obj;
+        foreach (var name in path.Split('.'))
+            node = (node as JsonObject)?[name];
+        return node;
     }
 
     private static JsonObject Section(JsonObject root, string name)

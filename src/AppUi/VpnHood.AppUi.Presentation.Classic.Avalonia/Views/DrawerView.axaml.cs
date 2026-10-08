@@ -49,6 +49,8 @@ public partial class DrawerView : UserControl
         InstagramItem.IsVisible = links.Instagram != null;
         XItem.IsVisible = links.X != null;
         SocialsRow.IsVisible = LinkedInItem.IsVisible || InstagramItem.IsVisible || XItem.IsVisible;
+        PoweredByItem.IsVisible = features.ShowPoweredBy;
+        Foot.IsVisible = SocialsRow.IsVisible || PoweredByItem.IsVisible;
     }
 
     // the website as people write it: its host, without "www."

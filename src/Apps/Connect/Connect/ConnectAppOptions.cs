@@ -32,6 +32,7 @@ public static class ConnectAppOptions
             LogoAssetPath = "images/logo-connect.png",
             PrivacyConsentAssetName = "privacy-consent-connect",
             Links = appConfigs.Links,
+            ShowPoweredBy = appConfigs.ShowPoweredBy,
             CustomData = appConfigs.CustomData,
             UiTheme = "violet",
             // an empty key would not parse

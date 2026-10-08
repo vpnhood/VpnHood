@@ -132,6 +132,10 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // rejection rather than by a test.
     public AppLinks Links { get; set; } = new();
 
+    // The menu's "Powered by VpnHood! ENGINE", the engine's credit: every app shows it unless its
+    // settings turn it off (AppConfigs.ShowPoweredBy).
+    public bool ShowPoweredBy { get; set; } = true;
+
     // The two things the UI shows that carry the product's own word, named by the head as the links
     // above are, and neither the look's (UiTheme) to decide: a fork keeps our violet under its own
     // name and its own promises.

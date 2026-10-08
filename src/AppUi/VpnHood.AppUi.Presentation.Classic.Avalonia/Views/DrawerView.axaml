@@ -24,7 +24,7 @@
       </Border>
 
       <!-- the foot: the socials and the credit -->
-      <StackPanel DockPanel.Dock="Bottom" Spacing="12" Margin="16,12,16,20" HorizontalAlignment="Center">
+      <StackPanel x:Name="Foot" DockPanel.Dock="Bottom" Spacing="12" Margin="16,12,16,20" HorizontalAlignment="Center">
         <StackPanel x:Name="SocialsRow" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
           <Button x:Name="LinkedInItem" Classes="icon small tonal-white" Click="OnLinkedInClick" AutomationProperties.Name="LinkedIn">
             <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Linkedin}" />
@@ -36,7 +36,7 @@
             <TextBlock FontSize="14" FontWeight="Bold" Text="X" />
           </Button>
         </StackPanel>
-        <Button Classes="text-highlight" Padding="4" Click="OnPoweredByClick">
+        <Button x:Name="PoweredByItem" Classes="text-highlight" Padding="4" Click="OnPoweredByClick">
           <StackPanel Spacing="2" HorizontalAlignment="Center">
             <TextBlock Classes="body-small highlight" TextAlignment="Center" Text="{Binding PoweredBy, Source={x:Static res:Strings.Current}}" />
             <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">

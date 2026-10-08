@@ -31,6 +31,7 @@ public static class ClientAppOptions
             LogoAssetPath = "images/logo-client.png",
             PrivacyConsentAssetName = "privacy-consent-client",
             Links = appConfigs.Links,
+            ShowPoweredBy = appConfigs.ShowPoweredBy,
             CustomData = appConfigs.CustomData,
             // an empty key would not parse
             AccessKeys = string.IsNullOrEmpty(defaultAccessKey) ? [] : [defaultAccessKey],

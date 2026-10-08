@@ -20,7 +20,8 @@ alias per distribution. `appsettings.json` via the `APPSETTINGS` variable — th
 (`AppConfigs` and each product's own keys): `PortalBaseUri`, `RemoteSettingsUrl`,
 `GoogleSignInClientId`, the pages the app links to (`Links`: its privacy policy and terms of use,
 its website, "What's new", feedback, personal-server and social pages; one unset hides its link),
-the analytics id, and the ad **unit** ids. The embedded default server key via `ACCESS_KEY_AD` /
+the menu's engine credit (`ShowPoweredBy`, shown unless false), the analytics id, and the ad
+**unit** ids. The embedded default server key via `ACCESS_KEY_AD` /
 `ACCESS_KEY_PREMIUM`.
 
 ## Written once, in the app's identity

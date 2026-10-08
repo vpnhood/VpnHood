@@ -8,6 +8,7 @@ namespace VpnHood.AppLib.App.Utils;
 public class AppConfigs
 {
     public AppLinks Links { get; set; } = new();
+    public bool ShowPoweredBy { get; set; } = true;
     public Uri? RemoteSettingsUrl { get; set; }
     public string? Ga4MeasurementId { get; set; }
     public bool AllowEndPointTracker { get; set; }

@@ -41,6 +41,8 @@ public class AppFeatures
 
     // See AppOptions.Links. A null link reaches the UI as "hide the link", never as a guess.
     public required AppLinks Links { get; init; }
+    // See AppOptions.ShowPoweredBy.
+    public required bool ShowPoweredBy { get; init; }
 
     // See AppOptions.LogoAssetPath and PrivacyConsentAssetName: the head's word for whose logo and
     // whose promises this build shows, both addressing the UI's store - a whole path for the one

@@ -42,8 +42,10 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
 
     public event EventHandler? Disposed;
     public event EventHandler? PrimaryAdapterIpChanged;
+    public event EventHandler<Exception>? Failed { add { } remove { } } // never raised
     public bool IsStarted { get; private set; }
-    public bool IsNatSupported(IpVersion ipVersion) => true;
+    public bool IsNatIpV6Supported { get; init; } = true; // false acts as WinNAT, which translates no IPv6
+    public bool IsNatSupported(IpVersion ipVersion) => ipVersion == IpVersion.IPv4 || IsNatIpV6Supported;
     public bool CanProtectSocket => false;
     public bool ProtectSocket(Socket socket) => false;
     public bool ProtectSocket(Socket socket, IPAddress ipAddress) => false;

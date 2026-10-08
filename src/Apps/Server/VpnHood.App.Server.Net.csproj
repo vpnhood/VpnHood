@@ -34,6 +34,7 @@
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
 		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.LinuxTun\VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.WinTun\VpnHood.Net.VpnAdapters.WinTun.csproj" />
 	</ItemGroup>
 
 </Project>

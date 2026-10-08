@@ -225,10 +225,9 @@ public class IosVpnAdapter(
 
     protected override void AdapterClose()
     {
-        // Clearing the config means a bare AdapterClose -> AdapterOpen (base RestartAdapter) would
-        // apply EMPTY settings. That path is unreachable on iOS: the batched SendPacketsAsync and
-        // the callback reader bypass the base I/O error counters that trigger it. A full Restart
-        // re-runs Start, which rebuilds these lists before AdapterOpen.
+        // Clearing the config means a bare AdapterClose -> AdapterOpen would apply EMPTY settings.
+        // The base never does that: its only recovery is a full Restart, which re-runs Start, and
+        // that rebuilds these lists before AdapterOpen.
         _ipv4Networks.Clear();
         _ipv6Networks.Clear();
         _ipv4Routes.Clear();

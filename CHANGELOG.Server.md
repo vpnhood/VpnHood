@@ -21,7 +21,10 @@
 * Fix: On Linux, the install script stops at once when not run as root, and removes Microsoft's package feed again after installing MsQuic, unless the feed was there before. After a boot the updater's first check waits for the network; it used to fail and wait 12 hours.
 * Fix: With no token in its store, VpnHoodServer names the command that creates one as it is run here, such as /opt/VpnHoodServer/vhserver gen; it said dotnet VpnHoodServer.dll gen.
 * Fix: On Windows 10 and 11, the installed server updates itself; its updater task stopped at Windows' default script policy on every run. Windows Server was not affected. A server installed before this updates once by hand: run its vhupdate.ps1, or install the new release.
+* Fix: The session log shows a new session's virtual IP and its OS each under its own name; the two were swapped.
 * Feature: VpnHoodServer takes its settings from the VH_APPSETTINGS environment variable when it is set: the content of an appsettings.json, which then replaces the file, for a Docker-only service with no file to edit. The log names where the settings came from. In a container, run gen and the other token commands with docker exec, as docker exec VpnHoodServer /app/vhsupervisor gen, so they read the same settings.
+* Feature: On Windows Server, VpnHoodServer forwards its clients' traffic through its own adapter and Windows' NAT, as it does on Linux, so clients may send TCP as packets, not only through the TCP proxy. Windows' NAT carries IPv4 only, so IPv6 TCP still goes through the TCP proxy; an older client's IPv6 TCP does not work there, and its device falls back to IPv4. Where the adapter cannot start, the server runs as before, with the TCP proxy only.
+* Fix: When its adapter fails to start again after a network change, VpnHoodServer brings it back by itself and offers new clients the TCP proxy meanwhile; it used to stay without the adapter until restarted, and clients that sent TCP as packets lost their TCP. It also notices an adapter that the system disabled or took down under it, and brings it back the same way.
 
 # v8.1.849
 

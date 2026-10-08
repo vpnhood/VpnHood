@@ -782,6 +782,22 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    public async Task ServerVpnAdapter_without_IpV6_NAT_takes_TCP_packets_of_IpV4_only()
+    {
+        // a server adapter whose NAT translates IPv4 only, as WinNAT does
+        using var vpnAdapter = new TestUdpServerVpnAdapter { IsNatIpV6Supported = false };
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
+
+        // the client sends IPv4 TCP as packets, and IPv6 TCP by its proxy
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpProxy: false));
+        Assert.IsTrue(client.RequiredSession.Info.IsTcpPacketIpV4Supported);
+        Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV6Supported);
+        Assert.IsFalse(client.RequiredSession.Status.IsTcpProxy);
+    }
+
+    [TestMethod]
     public async Task Set_DnsServer_to_vpnAdapter()
     {
         // Create Server

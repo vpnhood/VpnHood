@@ -30,9 +30,14 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     private readonly Lock _stopLock = new();
     private bool _isStarting;
-    private bool _isRestartingAdapter;
     private bool _isStopping;
     private VpnAdapterOptions? _startOptions;
+
+    // The owner wants the adapter started: set by its Start, cleared by its Stop and Dispose. A restart
+    // and a retry start nothing without it, and its source cancels the ones under way. The source is
+    // replaced per start and never disposed: it has no timer, and a token in flight may still read it.
+    private volatile bool _keepStarted;
+    private CancellationTokenSource _keepStartedCts = new();
     protected IPAddress? ServerIp => _startOptions?.ServerIp;
 
     // ReSharper disable once FieldCanBeMadeReadOnly.Local
@@ -59,6 +64,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected abstract void WaitForTunRead();
     protected abstract bool RestartAfterNetworkAddressChanged { get; }
 
+    // the wait before AutoRestart tries a failed restart again
+    protected virtual TimeSpan AutoRestartDelay => TimeSpan.FromSeconds(10);
+
     /// <summary>
     /// Return false if there is no packet
     /// </summary>
@@ -69,6 +77,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
 
     public event EventHandler? Disposed;
+    public event EventHandler<Exception>? Failed;
     public string AdapterName { get; }
     public IPAddress? PrimaryAdapterIpV4 { get; private set; } = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
     public IPAddress? PrimaryAdapterIpV6 { get; private set; } = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
@@ -100,6 +109,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         _autoMetric = adapterSettings.AutoMetric;
         AdapterName = adapterSettings.AdapterName;
         NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
     }
 
     public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
@@ -120,6 +130,25 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
+
+        // the owner's start: from here the adapter keeps itself started, until the owner's Stop or Dispose
+        _keepStarted = true;
+        _keepStartedCts = new CancellationTokenSource();
+        try {
+            await StartCore(options, cancellationToken).Vhc();
+        }
+        catch {
+            _keepStarted = false; // the caller has the exception: nothing to keep started
+            throw;
+        }
+
+        // an address change during the start was left to it: see it now
+        CheckPrimaryAdapterAddresses();
+    }
+
+    // The start itself, for the owner's Start and for a restart
+    private async Task StartCore(VpnAdapterOptions options, CancellationToken cancellationToken)
+    {
         _startOptions = options;
 
         if (options.UseNat && !IsNatSupported(IpVersion.IPv4))
@@ -128,10 +157,17 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         try {
             VhLogger.Instance.LogInformation("Starting the VPN adapter. AdapterName: {AdapterName}", AdapterName);
 
-            // We must set the started at first, to let clean-up be done stop via any exception. 
+            // We must set the started at first, to let clean-up be done stop via any exception.
             // We hope client await the start otherwise we need different state for adapters
             _isStarting = true;
-            IsStarted = true;
+            lock (_stopLock) {
+                // a disposal or a stop that got here first found nothing to stop, so nothing may start after it
+                ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
+                if (!_keepStarted)
+                    throw new OperationCanceledException("The VPN adapter has been stopped while starting.");
+                IsStarted = true;
+            }
+            _ioErrorCount = 0; // a new run, not the errors that ended the last one
 
             // get the WAN adapter IP (lets do it again)
             // A concurrent Stop() clears the adapter properties when the user disconnects mid-start,
@@ -336,22 +372,34 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
+        // first: a restart under way starts nothing after its stop, and a pending retry ends
+        _keepStarted = false;
+        _keepStartedCts.TryCancel();
         using var restartLock = WaitForRestart();
         Stop(throwException: true);
     }
 
-    private void Stop(bool throwException)
+    // Returns whether this call stopped it: not when it was not started, or another call is stopping it.
+    // The call that passes the guard owns the stop: the adapter counts as stopped whatever its teardown
+    // did, as the next start removes a leftover, and a stop that went unnoticed would be the worse.
+    private bool Stop(bool throwException)
     {
         lock (_stopLock) {
             if (!IsStarted || _isStopping)
-                return;
+                return false;
 
+            VhLogger.Instance.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
+            _isStopping = true;
             try {
-                VhLogger.Instance.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
-                _isStopping = true;
                 AdapterClose();
                 AdapterRemove();
-
+                VhLogger.Instance.LogInformation("TUN adapter stopped.");
+            }
+            catch (Exception ex) when (!throwException) {
+                VhLogger.Instance.LogError(ex, "Failed to stop the TUN adapter. AdapterName: {AdapterName}",
+                    AdapterName);
+            }
+            finally {
                 PrimaryAdapterIpV4 = null;
                 PrimaryAdapterIpV6 = null;
                 AdapterIpNetworkV4 = null;
@@ -359,18 +407,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 GatewayIpV4 = null;
                 GatewayIpV6 = null;
                 IsStarted = false;
-                VhLogger.Instance.LogInformation("TUN adapter stopped.");
-            }
-            catch (Exception ex) {
-                if (throwException)
-                    throw;
-                // log exception if it does not throw
-                VhLogger.Instance.LogError(ex, "Failed to stop the TUN adapter. AdapterName: {AdapterName}",
-                    AdapterName);
-            }
-            finally {
                 _isStopping = false;
             }
+
+            return true;
         }
     }
 
@@ -510,19 +550,14 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             SendPacketInternal(ipPacket);
             _ioErrorCount = 0;
         }
-        catch (Exception) when (!_isRestartingAdapter) {
+        catch (Exception ex) {
             _ioErrorCount++;
-            if (_ioErrorCount < MaxIoErrorCount || _isRestartingAdapter)
+            if (_ioErrorCount < MaxIoErrorCount)
                 throw;
 
-            // restart if the maximum I/O error count is exceeded
-            if (_autoRestart) {
-                _ = RestartAdapter(CancellationToken.None);
-                throw;
-            }
-
-            // stop the adapter if not restarting
-            Stop(false);
+            // too many errors in a row: the adapter is broken, so stop it, and recover or tell the owner
+            if (Stop(false))
+                OnUnrequestedStop(ex);
             throw;
         }
     }
@@ -560,17 +595,15 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         // Read packets from TUN adapter
         while (IsReady) {
             try {
-                // read next packet
+                // read next packet; no packet: wait before retrying
                 var packet = ReadPacket(_mtu);
-
-                // reset error counters if not exception
-                _ioErrorCount = 0;
-
-                // no packet available, wait before retrying
-                if (packet == null) {
+                if (packet == null)
                     WaitForTunRead();
+
+                // reset error counters if not exception, the wait's included
+                _ioErrorCount = 0;
+                if (packet == null)
                     continue;
-                }
 
                 // process the packet
                 OnPacketReceived(packet);
@@ -581,18 +614,14 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in reading packets from TUN adapter.");
                 _ioErrorCount++;
-                if (_ioErrorCount < MaxIoErrorCount || _isRestartingAdapter)
+                if (_ioErrorCount < MaxIoErrorCount)
                     continue;
 
-                // restart if the maximum I/O error count is exceeded
-                if (_autoRestart) {
-                    _ = RestartAdapter(CancellationToken.None);
-                    continue;
-                }
-
-                // Stop the adapter if not restarting. Only here: a reader that ends with its run's stop
-                // may end late, after a restart has started another run, which it must leave be.
-                Stop(false);
+                // Too many errors in a row: the adapter is broken, so stop it, and recover or tell the
+                // owner. Only here, not after the loop: a reader that ends with its run's stop may end
+                // late, after a restart has started another run, which it must leave be.
+                if (Stop(false))
+                    OnUnrequestedStop(ex);
                 break;
             }
         }
@@ -630,27 +659,87 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     private void NetworkChange_NetworkAddressChanged(object? sender, EventArgs e)
     {
-        // Do not update the primary adapter IPs if the adapter is stopping or disposed
-        // it will be updated on the next start
-        if (_isStarting || _isStopping || IsDisposing || _restartLock.IsLocked ||
-            _isRestartingAdapter || IsDisposed )
+        _ = CheckAdapterInterface();
+        CheckPrimaryAdapterAddresses();
+    }
+
+    // a link set down on Linux keeps its address, so only this event tells of it
+    private void NetworkChange_NetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+    {
+        _ = CheckAdapterInterface();
+    }
+
+    // The OS says its network moved: is our own interface still there and up? A disabled adapter gives
+    // no I/O error, its reads just stop, so these events are the one signal of it. Under the restart
+    // lock, so no restart runs between the look and the stop; one under way looks for itself. Only from
+    // the OS events: a fresh interface may not report up yet at a start's end. Never throws.
+    private async Task CheckAdapterInterface()
+    {
+        if (!RestartAfterNetworkAddressChanged || !IsStarted || !_keepStarted || _isStarting ||
+            IsDisposing || IsDisposed)
             return;
 
-        // check if primary adapter addresses actually changed
-        var currentAddresses = GetPrimaryAdapterAddresses();
-        if (currentAddresses.SetEquals(_lastPrimaryAdapterAddresses))
-            return;
-        _lastPrimaryAdapterAddresses = currentAddresses;
-        
-        // do not restart adapter if there is no primary network adapter up
-        if (currentAddresses.Count == 0)
+        try {
+            using var lockScope = await _restartLock.LockAsync(TimeSpan.Zero, CancellationToken.None).Vhc();
+            if (!lockScope.Succeeded || !IsStarted || !_keepStarted || _isStarting || IsDisposing || IsDisposed)
+                return;
+
+            if (IsAdapterInterfaceUp())
+                return;
+
+            VhLogger.Instance.LogWarning("The VPN adapter's interface is gone or down.");
+            if (Stop(false))
+                OnUnrequestedStop(new InvalidOperationException("The VPN adapter's interface is gone or down."));
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not check the VPN adapter's interface.");
+        }
+    }
+
+    // Our interface, by our name or our address, present and not down. A tun may report Unknown while up.
+    private bool IsAdapterInterfaceUp()
+    {
+        var adapterAddresses = new[] { AdapterIpNetworkV4?.Prefix, AdapterIpNetworkV6?.Prefix }.OfType<IPAddress>().ToArray();
+        return NetworkInterface.GetAllNetworkInterfaces()
+            .Where(ni => ni.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase) ||
+                         ni.GetIPProperties().UnicastAddresses.Any(a => adapterAddresses.Contains(a.Address)))
+            .Any(ni => ni.OperationalStatus is not (OperationalStatus.Down or OperationalStatus.LowerLayerDown or OperationalStatus.NotPresent));
+    }
+
+    // Restarts, or rediscovers the primary IPs, where the host's addresses moved since the last look.
+    // Never throws: the OS raises it on a thread of its own, and a start that succeeded must not fail by it.
+    private void CheckPrimaryAdapterAddresses()
+    {
+        if (_isStarting || _isStopping || _restartLock.IsLocked || IsDisposing || IsDisposed)
             return;
 
-        VhLogger.Instance.LogInformation("Network address changed.");
-        if (RestartAfterNetworkAddressChanged)
-            Task.Run(() => Restart(CancellationToken.None));
-        else
-            DiscoverPrimaryAdapterIps(true);
+        try {
+            // check if primary adapter addresses actually changed
+            var currentAddresses = GetPrimaryAdapterAddresses();
+            if (currentAddresses.SetEquals(_lastPrimaryAdapterAddresses))
+                return;
+            _lastPrimaryAdapterAddresses = currentAddresses;
+
+            // do not restart adapter if there is no primary network adapter up
+            if (currentAddresses.Count == 0)
+                return;
+
+            VhLogger.Instance.LogInformation("Network address changed.");
+            if (!RestartAfterNetworkAddressChanged) {
+                DiscoverPrimaryAdapterIps(true);
+                return;
+            }
+
+            // a restart is for a started adapter: a stopped one waits for its retry, or for its owner.
+            // On the pool: the lock is free, so the restart's stop would run here, inside a start's end
+            if (IsStarted && _keepStarted) {
+                var keepStartedToken = _keepStartedCts.Token; // this run's, not a later one's
+                _ = Task.Run(() => RunRestart(keepStartedToken));
+            }
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not check the primary adapter addresses.");
+        }
     }
 
     private static bool IsPrimaryAdapter(NetworkInterface networkInterface)
@@ -660,44 +749,125 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                !networkInterface.Description.Contains("Virtual", StringComparison.OrdinalIgnoreCase);
     }
 
+    // The host's addresses, less our own adapter's: Windows and Linux name it after us, but Android's
+    // tun0 and iOS's utunN are known by their address alone. By the address, not the network: a client's
+    // virtual network is the server's whole pool, which a LAN may share.
     private HashSet<IPAddress> GetPrimaryAdapterAddresses()
     {
+        var adapterAddresses = new[] { AdapterIpNetworkV4?.Prefix, AdapterIpNetworkV6?.Prefix }.OfType<IPAddress>().ToArray();
         return NetworkInterface.GetAllNetworkInterfaces()
             .Where(IsPrimaryAdapter)
             .Where(ni => ni.OperationalStatus == OperationalStatus.Up)
             .Where(ni => !ni.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase))
-            .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
-            .Select(a => a.Address)
+            .Select(ni => ni.GetIPProperties().UnicastAddresses.Select(a => a.Address).ToArray())
+            .Where(addresses => !addresses.Any(adapterAddresses.Contains))
+            .SelectMany(addresses => addresses)
             .ToHashSet();
     }
 
     private readonly AsyncLock _restartLock = new();
+
+    /// <summary>
+    /// Stops and starts the adapter again with its start options. A failed start leaves it stopped,
+    /// and the adapter answers that itself: it retries with AutoRestart, else raises Failed.
+    /// </summary>
     public async Task Restart(CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(_startOptions);
+        var startOptions = _startOptions ?? throw new InvalidOperationException("The adapter has not been started.");
+
+        // the owner's stop ends this restart too, whatever token the caller passed; only that stop
+        // makes a stopped adapter nobody's concern
+        var keepStartedToken = _keepStartedCts.Token;
+        if (!_keepStarted || keepStartedToken.IsCancellationRequested)
+            return; // the owner stopped it: nothing to restart
+
+        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, keepStartedToken);
+        await RestartUnderLock(startOptions, keepStartedToken, cancellationTokenSource.Token).Vhc();
+
+        // an address change during the restart was left to it: see it now, outside the lock
+        CheckPrimaryAdapterAddresses();
+    }
+
+    private async Task RestartUnderLock(VpnAdapterOptions startOptions, CancellationToken keepStartedToken,
+        CancellationToken cancellationToken)
+    {
         using var lockScope = await _restartLock.LockAsync(TimeSpan.Zero, cancellationToken).Vhc();
         if (!lockScope.Succeeded)
             return; // already in progress
 
-        // A stop or a disposal waits for this lock and then stops the adapter, so a restart that sees
-        // the disposal begun starts nothing; one already starting runs to its end, for that stop.
-        if (IsDisposing || IsDisposed)
+        // A stop or a disposal clears the keep flag, waits for this lock and then stops the adapter, so a
+        // restart that sees the stop begun starts nothing; one already starting runs to its end, for that stop.
+        if (!_keepStarted || IsDisposing || IsDisposed)
             return;
 
         VhLogger.Instance.LogInformation("Restarting VPN Adapter");
+        try {
+            // stop the adapter first, make sure ip discovery use correct routes
+            Stop(throwException: true);
+            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken).Vhc();
+            if (!_keepStarted || IsDisposing || IsDisposed)
+                return;
 
-        // stop the adapter first, make sure ip discovery use correct routes
-        Stop(throwException: true);
-        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken).Vhc();
-        if (IsDisposing || IsDisposed)
+            // rediscover the primary adapter IPs, in case they are changed during the stop-start process.
+            // adapter is off so should not protect
+            DiscoverPrimaryAdapterIps(protect: false);
+
+            // start the adapter with the same options
+            await StartCore(startOptions, cancellationToken).Vhc();
+        }
+        // this restart's own failure, not the owner's stop ending it: the adapter answers it
+        catch (Exception ex) when (!keepStartedToken.IsCancellationRequested) {
+            OnUnrequestedStop(ex);
+            throw;
+        }
+    }
+
+    // The adapter stopped on its own: by I/O errors, or by a restart whose start failed. With AutoRestart
+    // it starts itself again after the delay, as long as its owner keeps it started; else the owner hears
+    // Failed and must act, as nothing else starts it again.
+    private void OnUnrequestedStop(Exception ex)
+    {
+        // still up: a caller's own cancellation ended its restart before the stop
+        if (IsStarted || !_keepStarted || IsDisposing || IsDisposed)
             return;
 
-        // rediscover the primary adapter IPs, in case they are changed during the stop-start process.
-        // adapter is off so should not protect
-        DiscoverPrimaryAdapterIps(protect: false);
+        if (_autoRestart) {
+            VhLogger.Instance.LogWarning(ex, "The VPN adapter is down. Restarting it in {Delay} seconds...",
+                AutoRestartDelay.TotalSeconds);
+            _ = RetryRestart(_keepStartedCts.Token);
+            return;
+        }
 
-        // start the adapter with the same options
-        await Start(_startOptions, cancellationToken).Vhc();
+        // on a task of its own: a subscriber ends its session and disposes this adapter, which must not
+        // run on the adapter's I/O thread, nor under the restart lock
+        VhLogger.Instance.LogError(ex, "The VPN adapter is down and stays down.");
+        var failed = Failed; // this run's subscribers, not a later one's
+        Task.Run(() => VhUtils.TryInvoke("Failed", () => failed?.Invoke(this, ex)));
+    }
+
+    // A restart on a task of its own. Its failure is logged and answered by Restart.
+    private async Task RunRestart(CancellationToken cancellationToken)
+    {
+        try {
+            await Restart(cancellationToken).Vhc();
+        }
+        catch (Exception) {
+            // logged and answered by Restart
+        }
+    }
+
+    // The retry of a failed restart, unless something started the adapter meanwhile
+    private async Task RetryRestart(CancellationToken cancellationToken)
+    {
+        try {
+            await Task.Delay(AutoRestartDelay, cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            return; // the owner's stop
+        }
+
+        if (!IsStarted)
+            await RunRestart(cancellationToken).Vhc();
     }
 
     // A restart runs on a task of its own and would go on making what a stop removes, so a stop
@@ -707,32 +877,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return Task.Run(() => _restartLock.LockAsync(CancellationToken.None)).GetAwaiter().GetResult();
     }
 
-
-    // Under the restart's lock too, so a stop waits for this reopen; skipped while a restart or a
-    // stop has the adapter.
-    private async Task RestartAdapter(CancellationToken cancellationToken)
-    {
-        using var lockScope = await _restartLock.LockAsync(TimeSpan.Zero, cancellationToken).Vhc();
-        if (!lockScope.Succeeded || !IsReady)
-            return;
-
-        VhLogger.Instance.LogWarning("Restarting the adapter.");
-        try {
-            _isRestartingAdapter = true;
-            AdapterClose();
-            await AdapterOpen(cancellationToken).Vhc();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Failed to restart the adapter.");
-            throw;
-        }
-        finally {
-            _isRestartingAdapter = false;
-        }
-    }
-
     protected sealed override void PreDispose()
     {
+        _keepStarted = false;
+        _keepStartedCts.TryCancel();
         using var restartLock = WaitForRestart();
         Stop(false);
         base.PreDispose();
@@ -742,6 +890,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     {
         // notify the subscribers that the adapter is disposed
         NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged -= NetworkChange_NetworkAvailabilityChanged;
         Disposed?.Invoke(this, EventArgs.Empty);
         Disposed = null;
 

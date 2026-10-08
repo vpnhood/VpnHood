@@ -92,9 +92,24 @@ if ( "$packageFile" -eq "" ) {
 	}
 }
 
-# stopping the old service
+# Stopping the old server by its stop command, as systemd's stop does on Linux: a server that is
+# ended keeps no chance to remove its NAT. The task is disabled first, or its repetition starts the old
+# version again; one that does not stop is ended, and its files are free before they are replaced.
 Write-Output "Stopping $jobName (if any)...";
-Start-Process "schtasks" "/end /tn $jobName";
+$isTaskEnabled = (Get-ScheduledTask -TaskName $jobName -ErrorAction Ignore).State -notin @($null, "Disabled");
+Disable-ScheduledTask -TaskName $jobName -ErrorAction Ignore | Out-Null;
+if (Test-Path "$destinationPath/$launcher.ps1") {
+	# a native command's stderr is an error here
+	try { & "$destinationPath/$launcher.ps1" stop | Out-Null; }
+	catch { Write-Output "$jobName did not stop by its stop command: $_"; }
+}
+Start-Process "schtasks" "/end /tn $jobName" -Wait;
+$installFullPath = [IO.Path]::GetFullPath($destinationPath);
+for ($i = 0; $i -lt 60; $i++) {
+	$running = @(Get-Process -Name $assemblyName -ErrorAction Ignore | Where-Object { $_.Path -and $_.Path.StartsWith("$installFullPath\", [StringComparison]::OrdinalIgnoreCase) });
+	if ($running.Count -eq 0) { break; }
+	Start-Sleep -Milliseconds 500;
+}
 
 # extracting
 Write-Output "Extracting to $binDir";
@@ -157,7 +172,7 @@ if ($autostart -eq "y") {
 	$trigger2 = New-ScheduledTaskTrigger -once -RepetitionInterval "00:01:00" -At (Get-Date);
 	$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Seconds 0);
 	$task = New-ScheduledTask -Action $action -Trigger @($trigger1, $trigger2) -Settings $settings;
-	Register-ScheduledTask -User "System" -TaskName "$jobName" -InputObject $task -Force -AsJob | Out-Null;
+	$registerJob = Register-ScheduledTask -User "System" -TaskName "$jobName" -InputObject $task -Force -AsJob;
 
 	Write-Output "creating auto update service... Name: ${jobName}Updater";
 	# Bypass: a client edition's default execution policy runs no script, and the task then failed
@@ -167,5 +182,12 @@ if ($autostart -eq "y") {
 	$task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings;
 	Register-ScheduledTask -User "System" -TaskName "${jobName}Updater" -InputObject $task -Force | Out-Null;
 
+	# run once the task is the new version's, and enabled again
+	Wait-Job $registerJob -Timeout 60 | Out-Null;
+	Start-Process "schtasks" "/run /tn $jobName";
+}
+elseif ($isTaskEnabled) {
+	# the task of an earlier install, stopped above, runs again
+	Enable-ScheduledTask -TaskName $jobName | Out-Null;
 	Start-Process "schtasks" "/run /tn $jobName";
 }

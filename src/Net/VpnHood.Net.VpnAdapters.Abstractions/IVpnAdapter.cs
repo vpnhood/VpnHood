@@ -9,6 +9,12 @@ public interface IVpnAdapter : IPacketTransport
 {
     event EventHandler? Disposed;
     event EventHandler? PrimaryAdapterIpChanged;
+    /// <summary>
+    /// The adapter stopped on its own, by I/O errors or a restart that could not start it again, and
+    /// stays down, as nothing else starts it: its owner must act, a client by ending its session. Not
+    /// raised with AutoRestart, where the adapter retries instead.
+    /// </summary>
+    event EventHandler<Exception>? Failed;
     bool IsStarted { get; }
     /// <summary>
     /// Whether the adapter's NAT translates this IP version; a server sends one it does not by its proxy.

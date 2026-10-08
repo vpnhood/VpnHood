@@ -4,13 +4,22 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.VpnAdapters.Abstractions;
 
-public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
-    TunVpnAdapter(new VpnAdapterSettings {
-        AdapterName = "NullAdapter",
-        Blocking = blocking,
-        AutoDisposePackets = autoDisposePackets
-    })
+public class NullVpnAdapter : TunVpnAdapter
 {
+    public NullVpnAdapter(bool autoDisposePackets, bool blocking)
+        : this(new VpnAdapterSettings {
+            AdapterName = "NullAdapter",
+            Blocking = blocking,
+            AutoDisposePackets = autoDisposePackets
+        })
+    {
+    }
+
+    protected NullVpnAdapter(VpnAdapterSettings adapterSettings)
+        : base(adapterSettings)
+    {
+    }
+
     protected override bool RestartAfterNetworkAddressChanged => false;
     public override bool IsAppFilterSupported => true;
     public override bool IsNatSupported(IpVersion ipVersion) => true;

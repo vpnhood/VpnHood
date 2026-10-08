@@ -88,6 +88,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _vpnAdapter = options.VpnAdapter;
         _vpnAdapter.PrimaryAdapterIpChanged += VpnAdapter_PrimaryAdapterIpChanged;
         _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
+        _vpnAdapter.Failed += VpnAdapter_Failed;
 
         // Tunnel
         _tunnel = new Tunnel(new TunnelOptions {
@@ -373,6 +374,13 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         UpdateConfig();
     }
 
+    // The adapter stopped on its own and stays down. Without it, the device's traffic bypasses the
+    // tunnel, so the session ends with the error rather than staying connected in name.
+    private void VpnAdapter_Failed(object? sender, Exception ex)
+    {
+        _ = DisposeAsync(new InvalidOperationException($"The VPN adapter has stopped. {ex.Message}", ex));
+    }
+
     private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
         // stop traffic if the client has been disposed
@@ -649,11 +657,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         VhLogger.Instance.LogInformation("Session is closing...");
         State = ClientState.Disconnecting;
 
-        // stop adapter and events before sending bye request to free client from VPN as fast as possible and 
+        // stop adapter and events before sending bye request to free client from VPN as fast as possible and
         // Do not dispose VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
-        // network change events can cause problems too
-        if (_vpnAdapter.IsStarted)
-            VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
+        // network change events can cause problems too. Always: one down for a restart would come back otherwise
+        VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
 
         // dispose async resources
 
@@ -700,13 +707,13 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         // stop adapter and events before sending bye request
         // Do not dispose VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
-        // network change events can cause problems too
-        if (_vpnAdapter.IsStarted)
-            VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
+        // network change events can cause problems too. Always: one down for a restart would come back otherwise
+        VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
 
         // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;
         _vpnAdapter.PrimaryAdapterIpChanged -= VpnAdapter_PrimaryAdapterIpChanged;
+        _vpnAdapter.Failed -= VpnAdapter_Failed;
         _tunnel.PacketReceived -= Tunnel_PacketReceived;
         _clientTcpHost.PacketReceived -= ClientTcpHostPacketReceived;
         _proxyManager.PacketReceived -= Proxy_PacketReceived;

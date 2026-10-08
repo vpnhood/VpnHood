@@ -12,6 +12,9 @@ public class VpnAdapterSettings : PacketTransportOptions
     public string? AppId { get; init; }
 
     public TimeSpan MaxPacketSendDelay { get; init; } = TimeSpan.FromMilliseconds(500);
+
+    // The adapter keeps itself started: after I/O errors, or a restart whose start failed, it restarts
+    // itself after a delay, until its Stop or Dispose. Without it such a stop raises Failed.
     public bool AutoRestart { get; init; }
 
     /// <summary>

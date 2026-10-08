@@ -48,7 +48,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     public ITracker? Tracker { get; }
     // Whether TCP packets of the version have a way out now: the adapter carries the version and its NAT
     // translates it. WinNAT translates no IPv6; an adapter on a host whose address of the version is not
-    // up yet, or that is restarting, carries none.
+    // up yet, or one down after a failed restart, carries none.
     public bool IsVpnAdapterSupported(IpVersion ipVersion) =>
         _vpnAdapter != null && _vpnAdapter.IsNatSupported(ipVersion) && _vpnAdapter.IsIpVersionSupported(ipVersion);
 

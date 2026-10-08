@@ -22,6 +22,7 @@ using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.LinuxTun;
+using VpnHood.Net.VpnAdapters.WinTun;
 using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.App.Server;
@@ -422,21 +423,16 @@ public class ServerApp : IDisposable
         }
     }
 
-    // Proxy only where there is no adapter to have: not Linux, or a failure, such as a host without
-    // IPv6, whose probe the constructor runs. A stop is passed on, not taken for a failure.
+    // Proxy only where there is no adapter to have: neither Linux nor Windows, or a failure, such as a
+    // host without IPv6, whose probe the constructor runs, or a Windows without WinNAT. A stop is passed
+    // on, not taken for a failure.
     private static async Task<IVpnAdapter?> CreateTunProvider(IpNetwork virtualIpNetworkV4,
         IpNetwork virtualIpNetworkV6, CancellationToken cancellationToken)
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            return null;
-
         try {
-            var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
-                AdapterName = AppName,
-                AppId = AppId,
-                Blocking = false,
-                AutoDisposePackets = true
-            });
+            var vpnAdapter = CreateVpnAdapter();
+            if (vpnAdapter == null)
+                return null;
 
             try {
                 VhLogger.Instance.LogInformation("Starting VpnAdapter...");
@@ -462,6 +458,32 @@ public class ServerApp : IDisposable
             VhLogger.Instance.LogError(ex, "Failed to create the VpnAdapter. Using proxy only.");
             return null;
         }
+    }
+
+    // AutoRestart: an address change restarts the adapter, and a restart whose start fails would leave it
+    // down for good, the server offering no TCP packets meanwhile; so the adapter retries by itself.
+    private static IVpnAdapter? CreateVpnAdapter()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
+                AdapterName = AppName,
+                AppId = AppId,
+                Blocking = false,
+                AutoDisposePackets = true,
+                AutoRestart = true
+            });
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return new WinTunVpnAdapter(new WinVpnAdapterSettings {
+                AdapterName = AppName,
+                AppId = AppId,
+                Blocking = false,
+                AutoDisposePackets = true,
+                AutoRestart = true,
+                AutoMetric = false // as on Linux: the server routes nothing through its adapter
+            });
+
+        return null;
     }
 
     public void Dispose()

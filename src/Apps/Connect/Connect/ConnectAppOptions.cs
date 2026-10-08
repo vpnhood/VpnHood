@@ -33,6 +33,13 @@ public static class ConnectAppOptions
             PrivacyConsentAssetName = "privacy-consent-connect",
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
+            WebsiteUrl = appConfigs.WebsiteUrl,
+            WhatsNewUrl = appConfigs.WhatsNewUrl,
+            FeedbackUrl = appConfigs.FeedbackUrl,
+            PersonalServerUrl = appConfigs.PersonalServerUrl,
+            LinkedInUrl = appConfigs.LinkedInUrl,
+            InstagramUrl = appConfigs.InstagramUrl,
+            XUrl = appConfigs.XUrl,
             CustomData = appConfigs.CustomData,
             UiTheme = "violet",
             // an empty key would not parse

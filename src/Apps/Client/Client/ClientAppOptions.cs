@@ -32,6 +32,13 @@ public static class ClientAppOptions
             PrivacyConsentAssetName = "privacy-consent-client",
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
             TermsOfUseUrl = appConfigs.TermsOfUseUrl,
+            WebsiteUrl = appConfigs.WebsiteUrl,
+            WhatsNewUrl = appConfigs.WhatsNewUrl,
+            FeedbackUrl = appConfigs.FeedbackUrl,
+            PersonalServerUrl = appConfigs.PersonalServerUrl,
+            LinkedInUrl = appConfigs.LinkedInUrl,
+            InstagramUrl = appConfigs.InstagramUrl,
+            XUrl = appConfigs.XUrl,
             CustomData = appConfigs.CustomData,
             // an empty key would not parse
             AccessKeys = string.IsNullOrEmpty(defaultAccessKey) ? [] : [defaultAccessKey],

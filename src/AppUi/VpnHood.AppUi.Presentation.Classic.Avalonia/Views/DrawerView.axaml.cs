@@ -10,13 +10,7 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
 public partial class DrawerView : UserControl
 {
-    private const string ChangelogUrl = "https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md";
-    private const string PersonalServerUrl = "https://github.com/vpnhood/VpnHood/wiki/VpnHood-Manager";
-    private const string WebsiteUrl = "https://www.vpnhood.com/";
     private const string EngineUrl = "https://github.com/vpnhood/VpnHood";
-    private const string LinkedInUrl = "https://www.linkedin.com/company/vpnhood";
-    private const string InstagramUrl = "https://www.instagram.com/vpnhood/";
-    private const string XUrl = "https://x.com/vpnhood";
 
     private readonly MainView _host;
 
@@ -43,8 +37,24 @@ public partial class DrawerView : UserControl
         DiagnoseItem.IsEnabled = state.CanDiagnose;
         // the updater is the capability signal: null exactly when no updater was configured
         UpdateItem.IsVisible = state.UpdaterStatus != null;
-        PersonalServerItem.IsVisible = features.IsAddAccessKeySupported; // one you add the key of
+        // the product's links, each shown only where the app names it
+        WhatsNewItem.IsVisible = features.WhatsNewUrl != null;
+        FeedbackItem.IsVisible = features.FeedbackUrl != null;
+        PersonalServerItem.IsVisible = features.IsAddAccessKeySupported && features.PersonalServerUrl != null; // one you add the key of
+        WebsiteItem.IsVisible = features.WebsiteUrl != null;
+        WebsiteText.Text = features.WebsiteUrl is { } websiteUrl ? GetWebsiteLabel(websiteUrl) : null;
         PrivacyItem.IsVisible = features.PrivacyPolicyUrl != null;
+        LinkedInItem.IsVisible = features.LinkedInUrl != null;
+        InstagramItem.IsVisible = features.InstagramUrl != null;
+        XItem.IsVisible = features.XUrl != null;
+        SocialsRow.IsVisible = LinkedInItem.IsVisible || InstagramItem.IsVisible || XItem.IsVisible;
+    }
+
+    // the website as people write it: its host, without "www."
+    private static string GetWebsiteLabel(Uri websiteUrl)
+    {
+        var host = websiteUrl.Host;
+        return host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? host[4..] : host;
     }
 
     // "Sign in with Google" for the one store method, plain "Sign in" with a chooser or none
@@ -138,7 +148,8 @@ public partial class DrawerView : UserControl
     private async void OnWhatsNewClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Open(ChangelogUrl, Strings.Current.WhatsNew);
+            if (VhApp.Features.WhatsNewUrl is { } url)
+                await Open(url.AbsoluteUri, Strings.Current.WhatsNew);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -148,7 +159,8 @@ public partial class DrawerView : UserControl
     private async void OnFeedbackClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Open(Strings.Current.SendFeedbackUrl, Strings.Current.SendFeedback);
+            if (VhApp.Features.FeedbackUrl is { } url)
+                await Open(url.AbsoluteUri, Strings.Current.SendFeedback);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -158,7 +170,8 @@ public partial class DrawerView : UserControl
     private async void OnPersonalServerClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Open(PersonalServerUrl, Strings.Current.CreatePersonalServer);
+            if (VhApp.Features.PersonalServerUrl is { } url)
+                await Open(url.AbsoluteUri, Strings.Current.CreatePersonalServer);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -168,7 +181,8 @@ public partial class DrawerView : UserControl
     private async void OnWebsiteClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Open(WebsiteUrl, "vpnhood.com");
+            if (VhApp.Features.WebsiteUrl is { } url)
+                await Open(url.AbsoluteUri, GetWebsiteLabel(url));
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -189,7 +203,8 @@ public partial class DrawerView : UserControl
     private async void OnLinkedInClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Open(LinkedInUrl, "LinkedIn");
+            if (VhApp.Features.LinkedInUrl is { } url)
+                await Open(url.AbsoluteUri, "LinkedIn");
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -199,7 +214,8 @@ public partial class DrawerView : UserControl
     private async void OnInstagramClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Open(InstagramUrl, "Instagram");
+            if (VhApp.Features.InstagramUrl is { } url)
+                await Open(url.AbsoluteUri, "Instagram");
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -209,7 +225,8 @@ public partial class DrawerView : UserControl
     private async void OnXClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Open(XUrl, "X");
+            if (VhApp.Features.XUrl is { } url)
+                await Open(url.AbsoluteUri, "X");
         }
         catch (Exception ex) {
             await this.ReportError(ex);

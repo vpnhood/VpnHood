@@ -135,6 +135,18 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     public Uri? PrivacyPolicyUrl { get; set; }
     public Uri? TermsOfUseUrl { get; set; }
 
+    // The menu's links: the product's website, its "What's new" page, where to send feedback, the
+    // guide to a server of one's own (shown only where keys can be added, IsAddAccessKeySupported)
+    // and its social pages. From the product's appsettings as the documents above; one left null
+    // hides its item.
+    public Uri? WebsiteUrl { get; set; }
+    public Uri? WhatsNewUrl { get; set; }
+    public Uri? FeedbackUrl { get; set; }
+    public Uri? PersonalServerUrl { get; set; }
+    public Uri? LinkedInUrl { get; set; }
+    public Uri? InstagramUrl { get; set; }
+    public Uri? XUrl { get; set; }
+
     // The two things the UI shows that carry the product's own word, named by the head as the URLs
     // above are, and neither the look's (UiTheme) to decide: a fork keeps our violet under its own
     // name and its own promises.

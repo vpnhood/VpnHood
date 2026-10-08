@@ -25,14 +25,14 @@
 
       <!-- the foot: the socials and the credit -->
       <StackPanel DockPanel.Dock="Bottom" Spacing="12" Margin="16,12,16,20" HorizontalAlignment="Center">
-        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
-          <Button Classes="icon small tonal-white" Click="OnLinkedInClick" AutomationProperties.Name="LinkedIn">
+        <StackPanel x:Name="SocialsRow" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+          <Button x:Name="LinkedInItem" Classes="icon small tonal-white" Click="OnLinkedInClick" AutomationProperties.Name="LinkedIn">
             <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Linkedin}" />
           </Button>
-          <Button Classes="icon small tonal-white" Click="OnInstagramClick" AutomationProperties.Name="Instagram">
+          <Button x:Name="InstagramItem" Classes="icon small tonal-white" Click="OnInstagramClick" AutomationProperties.Name="Instagram">
             <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Instagram}" />
           </Button>
-          <Button Classes="icon small tonal-white" Click="OnXClick">
+          <Button x:Name="XItem" Classes="icon small tonal-white" Click="OnXClick">
             <TextBlock FontSize="14" FontWeight="Bold" Text="X" />
           </Button>
         </StackPanel>
@@ -83,13 +83,15 @@
             </StackPanel>
           </Button>
 
-          <Button Classes="drawer-item minor" Margin="0,16,0,0" Click="OnWhatsNewClick">
+          <!-- the minor items' gap, kept when the app names no "What's new" page -->
+          <Panel Height="16" />
+          <Button x:Name="WhatsNewItem" Classes="drawer-item minor" Click="OnWhatsNewClick">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <TextBlock Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.Bullhorn}" />
               <TextBlock Text="{Binding WhatsNew, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <Button Classes="drawer-item minor" Click="OnFeedbackClick">
+          <Button x:Name="FeedbackItem" Classes="drawer-item minor" Click="OnFeedbackClick">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <TextBlock Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.MessageAlert}" />
               <TextBlock Text="{Binding SendFeedback, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
@@ -101,10 +103,10 @@
               <TextBlock Text="{Binding CreatePersonalServer, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <Button Classes="drawer-item minor" Click="OnWebsiteClick">
+          <Button x:Name="WebsiteItem" Classes="drawer-item minor" Click="OnWebsiteClick">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <TextBlock Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.Web}" />
-              <TextBlock Text="vpnhood.com" VerticalAlignment="Center" />
+              <TextBlock x:Name="WebsiteText" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
           <Button x:Name="PrivacyItem" Classes="drawer-item minor" Click="OnPrivacyClick">

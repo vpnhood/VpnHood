@@ -43,6 +43,15 @@ public class AppFeatures
     public required Uri? PrivacyPolicyUrl { get; init; }
     public required Uri? TermsOfUseUrl { get; init; }
 
+    // See AppOptions.WebsiteUrl: the menu's links, each null hiding its item.
+    public required Uri? WebsiteUrl { get; init; }
+    public required Uri? WhatsNewUrl { get; init; }
+    public required Uri? FeedbackUrl { get; init; }
+    public required Uri? PersonalServerUrl { get; init; }
+    public required Uri? LinkedInUrl { get; init; }
+    public required Uri? InstagramUrl { get; init; }
+    public required Uri? XUrl { get; init; }
+
     // See AppOptions.LogoAssetPath and PrivacyConsentAssetName: the head's word for whose logo and
     // whose promises this build shows, both addressing the UI's store - a whole path for the one
     // asset, a name the UI completes per language for the other. Never derived from UiTheme.

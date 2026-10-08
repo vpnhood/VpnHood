@@ -60,15 +60,22 @@ internal static class Program
         var appOptions = new AppOptions(appOptionsContext, isDebugMode: true) {
             PackageTitle = isConnect ? "VpnHoodConnect" : "VpnHoodClient",
             CompanyName = "VpnHood",
-            // the documents the product links to, which every head takes from its appsettings.json:
-            // without them the pages that link to them - Settings > Privacy, the paywall, the
-            // drawer - have nothing to show, which is a look at a build no one ships
+            // the documents and the menu's links the product shows, which every head takes from its
+            // appsettings.json: without them the pages that link to them - Settings > Privacy, the
+            // paywall, the drawer - have nothing to show, which is a look at a build no one ships
             PrivacyPolicyUrl = new Uri(isConnect
                 ? "https://www.vpnhood.com/vpnhood-connect-privacy-policy"
                 : "https://www.vpnhood.com/vpnhood-client-privacy-policy"),
             TermsOfUseUrl = new Uri(isConnect
                 ? "https://www.vpnhood.com/legal/vpnhood-connect-terms-of-use"
                 : "https://www.vpnhood.com/legal/vpnhood-client-terms-of-use"),
+            WebsiteUrl = new Uri("https://www.vpnhood.com/"),
+            WhatsNewUrl = new Uri("https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md"),
+            FeedbackUrl = new Uri("https://docs.google.com/forms/d/e/1FAIpQLSd5AQesTSbDo23_4CkNiKmSPtPBaZIuFjAFnjqLo6XGKG5gyg/viewform?usp=sf_link"),
+            PersonalServerUrl = new Uri("https://github.com/vpnhood/VpnHood/wiki/VpnHood-Manager"),
+            LinkedInUrl = new Uri("https://www.linkedin.com/company/vpnhood"),
+            InstagramUrl = new Uri("https://www.instagram.com/vpnhood/"),
+            XUrl = new Uri("https://x.com/vpnhood"),
             // the product's own word in the UI - its logo, its consent summary - as a head of that
             // product names them in the store
             LogoAssetPath = isConnect ? "images/logo-connect.png" : "images/logo-client.png",

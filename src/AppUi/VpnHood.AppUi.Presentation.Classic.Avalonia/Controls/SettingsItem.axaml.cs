@@ -1,15 +1,11 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppUi.Hosting.Avalonia;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
 public partial class SettingsItem : UserControl
 {
-    private const string LanguagesUrl = "https://github.com/vpnhood/VpnHood.AppUi.Spa/tree/main/src/VpnHood.AppUi.Presentation.Classic.Spa/src/locales";
-
     public event EventHandler? Clicked;
     public event EventHandler? WarningClicked;
 
@@ -42,11 +38,6 @@ public partial class SettingsItem : UserControl
     public bool IsDisabled {
         get => !Card.IsEnabled;
         set => Card.IsEnabled = !value;
-    }
-
-    public bool ShowLanguageMore {
-        get => LanguageMore.IsVisible;
-        set => LanguageMore.IsVisible = value;
     }
 
     // the state chip: on in the colour named (the healthy green unless the on-state weakens
@@ -84,18 +75,5 @@ public partial class SettingsItem : UserControl
     {
         e.Handled = true;
         WarningClicked?.Invoke(this, EventArgs.Empty);
-    }
-
-    private async void OnLanguageLinkClick(object? sender, RoutedEventArgs e)
-    {
-        try {
-            e.Handled = true;
-            var host = this.FindHost();
-            if (host != null)
-                await host.OpenLink(new Uri(LanguagesUrl), Title);
-        }
-        catch (Exception ex) {
-            await this.ReportError(ex);
-        }
     }
 }

@@ -38,8 +38,6 @@ public partial class SettingsView : UserControl, IPage
         LanguageItem.Title = s.Language;
         LanguageItem.Subtitle = s.AppLanguageDesc;
         LanguageItem.SetStatus(settings.CultureCode != null, state.CurrentUiCultureInfo.NativeName, s.SystemDefaultLanguage);
-        // the web UI asks its resolved locale, which is plain 'en' for any English culture
-        LanguageItem.ShowLanguageMore = !state.CurrentUiCultureInfo.Code.StartsWith("en", StringComparison.OrdinalIgnoreCase);
 
         NotificationsItem.Title = s.Notifications;
         NotificationsItem.Subtitle = s.NotificationsDesc;

@@ -8,6 +8,13 @@ public class AppConfigs
 {
     public Uri? PrivacyPolicyUrl { get; set; }
     public Uri? TermsOfUseUrl { get; set; }
+    public Uri? WebsiteUrl { get; set; }
+    public Uri? WhatsNewUrl { get; set; }
+    public Uri? FeedbackUrl { get; set; }
+    public Uri? PersonalServerUrl { get; set; }
+    public Uri? LinkedInUrl { get; set; }
+    public Uri? InstagramUrl { get; set; }
+    public Uri? XUrl { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
     public string? Ga4MeasurementId { get; set; }
     public bool AllowEndPointTracker { get; set; }

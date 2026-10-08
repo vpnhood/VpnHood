@@ -266,11 +266,14 @@ fi
 
 # init service. The paths are quoted: the install's folder may hold a space.
 if [ "${autostart,,}" = "y" ] && [ "$container" != "y" ]; then
+	# network-online: at boot the server would otherwise start before there is a route, find no primary
+	# adapter, and run without its tun (proxy only) until restarted
 	echo "creating autostart service... Name: $assemblyName";
 	service="
 [Unit]
 Description=$productName
-After=network.target
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=simple

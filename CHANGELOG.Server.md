@@ -25,6 +25,7 @@
 * Feature: VpnHoodServer takes its settings from the VH_APPSETTINGS environment variable when it is set: the content of an appsettings.json, which then replaces the file, for a Docker-only service with no file to edit. The log names where the settings came from. In a container, run gen and the other token commands with docker exec, as docker exec VpnHoodServer /app/vhsupervisor gen, so they read the same settings.
 * Feature: On Windows Server, VpnHoodServer forwards its clients' traffic through its own adapter and Windows' NAT, as it does on Linux, so clients may send TCP as packets, not only through the TCP proxy. Windows' NAT carries IPv4 only, so IPv6 TCP still goes through the TCP proxy; an older client's IPv6 TCP does not work there, and its device falls back to IPv4. Where the adapter cannot start, the server runs as before, with the TCP proxy only.
 * Fix: When its adapter fails to start again after a network change, VpnHoodServer brings it back by itself and offers new clients the TCP proxy meanwhile; it used to stay without the adapter until restarted, and clients that sent TCP as packets lost their TCP. It also notices an adapter that the system disabled or took down under it, and brings it back the same way.
+* Fix: On Linux, an installed VpnHoodServer waits for the network at boot (network-online.target, where the system's wait-online service is enabled). It could start before the default route existed, find no network adapter, and then run without its tun (TCP by the TCP proxy only) until restarted by hand.
 
 # v8.1.849
 

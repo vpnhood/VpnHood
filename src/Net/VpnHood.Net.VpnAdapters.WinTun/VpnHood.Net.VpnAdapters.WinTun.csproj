@@ -8,20 +8,12 @@
 	  <ProjectReference Include="..\VpnHood.Net.VpnAdapters.Abstractions\VpnHood.Net.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 
+	<!-- WinTun's DLLs as wintun.net ships them, embedded and installed at run time into a protected folder
+	     of their own (WindowsCommonFiles): nothing beside the app, and signing our assembly leaves them as
+	     they are, which their license requires. -->
 	<ItemGroup>
-	  <Compile Update="Resources.Designer.cs">
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>Resources.resx</DependentUpon>
-	  </Compile>
+		<EmbeddedResource Include="Resources\wintun-x64.dll" LogicalName="wintun-x64.dll" />
+		<EmbeddedResource Include="Resources\wintun-arm64.dll" LogicalName="wintun-arm64.dll" />
 	</ItemGroup>
-
-	<ItemGroup>
-	  <EmbeddedResource Update="Resources.resx">
-	    <Generator>ResXFileCodeGenerator</Generator>
-	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-	  </EmbeddedResource>
-	</ItemGroup>
-
 
 </Project>

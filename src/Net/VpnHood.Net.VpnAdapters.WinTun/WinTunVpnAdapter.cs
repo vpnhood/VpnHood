@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.ComponentModel;
-using System.IO.Compression;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -28,6 +27,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private IntPtr _tunSession;
     private IntPtr _readEvent;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
+    private static readonly Lock WinTunDllLock = new();
+    private static IntPtr _winTunDll; // the one wintun.dll of the process, once loaded
 
     // _tunAdapter is a raw native pointer freed by WintunCloseAdapter; passing it to
     // WintunStartSession after (or while) it is freed corrupts the process. This lock makes
@@ -38,7 +39,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
     protected override bool IsSocketProtectedByBind => true;
-    public override bool IsNatSupported => true;
+    // WinNAT translates IPv4 only: New-NetNat answers "IPV6 is not supported."
+    public override bool IsNatSupported(IpVersion ipVersion) => ipVersion == IpVersion.IPv4;
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
     protected override bool RestartAfterNetworkAddressChanged => true;
@@ -123,15 +125,16 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             }
         }
 
-        // Remove previous NAT iptables record
+        // WinNAT keeps the NAT after the process, so a removal that fails is worth a warning
         if (UseNat) {
-            VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...",
-                AdapterName);
-            if (AdapterIpNetworkV4 != null)
-                TryRemoveNat(AdapterIpNetworkV4);
-
-            if (AdapterIpNetworkV6 != null)
-                TryRemoveNat(AdapterIpNetworkV6);
+            VhLogger.Instance.LogDebug("Removing the NAT of the {AdapterName} TUN adapter...", AdapterName);
+            try {
+                RemoveNat();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex,
+                    "Could not remove the NAT {NatName}; the next start removes it.", NatName);
+            }
         }
 
         _adapterIndex = 0;
@@ -324,49 +327,43 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         }
     }
 
+    private string NatName => $"{AdapterName}Nat";
+    private static readonly TimeSpan NatAddTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan NatRemoveTimeout = TimeSpan.FromSeconds(15);
+
     protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        // Remove previous NAT if any
-        TryRemoveNat(ipNetwork);
+        // WinNAT keeps a NAT after its process, so one a killed run left goes first; a failure here
+        // shows in New-NetNat's own
+        VhUtils.TryInvoke("remove the NAT a previous run left", RemoveNat);
 
-        // Configure NAT with iptables
-        if (ipNetwork.IsV4) {
-            // let's throw error in ipv4
-            var natName = $"{AdapterName}Nat";
-            await ExecutePowerShellCommandAsync(
-                $"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
-                cancellationToken).Vhc();
-        }
-
-        if (ipNetwork.IsV6) {
-            var natName = $"{AdapterName}NatIpV6";
-
-            // ignore exception in ipv6 on windows
-            await VhUtils.TryInvokeAsync("Configuring NAT for IPv6", () =>
-                ExecutePowerShellCommandAsync(
-                    $"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
-                    cancellationToken));
-        }
+        // Never cut off by a stop once begun, only by its own time limit: a NAT the command made after
+        // the start's cleanup looked would stay.
+        cancellationToken.ThrowIfCancellationRequested();
+        using var timeoutCts = new CancellationTokenSource(NatAddTimeout);
+        await ExecutePowerShellCommandAsync(
+            $"New-NetNat -Name '{NatName}' -InternalIPInterfaceAddressPrefix '{ipNetwork}'",
+            timeoutCts.Token).Vhc();
     }
 
-    private static void TryRemoveNat(IpNetwork ipNetwork)
+    // by the name alone: a NAT of this adapter's name is its own, whatever network a run gave it
+    private void RemoveNat()
     {
-        // Remove NAT rule. try until no rule found
-        VhUtils.TryInvoke("Remove NAT rule", () =>
-            ExecutePowerShellCommand(
-                $"Get-NetNat | Where-Object {{ $_.InternalIPInterfaceAddressPrefix -eq '{ipNetwork}' }} | Remove-NetNat -Confirm:$false"));
+        ExecutePowerShellCommand(
+            $"Get-NetNat | Where-Object {{ $_.Name -eq '{NatName}' }} | Remove-NetNat -Confirm:$false",
+            NatRemoveTimeout);
     }
 
     private static Task<string> ExecutePowerShellCommandAsync(string command, CancellationToken cancellationToken)
     {
-        var ps = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"";
+        var ps = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"{command}\"";
         return OsUtils.ExecuteCommandAsync("powershell.exe", ps, cancellationToken);
     }
 
-    private static string ExecutePowerShellCommand(string command)
+    private static string ExecutePowerShellCommand(string command, TimeSpan timeout)
     {
-        var ps = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"";
-        return OsUtils.ExecuteCommand("powershell.exe", ps);
+        var ps = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"{command}\"";
+        return OsUtils.ExecuteCommand("powershell.exe", ps, timeout);
     }
 
     protected override void WaitForTunRead()
@@ -443,29 +440,44 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return true;
     }
 
-    // Note: System may load driver into memory and lock it, so we'd better to copy it into a temporary folder 
+    // The embedded wintun.dll, installed into a protected folder of its own under Common Files, not the
+    // temp folder, which on some Windows ordinary users write and SYSTEM loads from. Every WinTun import
+    // binds to this one module, never to a DLL of that name a search or another load may find; its
+    // dependencies come from System32 and its own folder.
     private static void LoadWinTunDll()
     {
-        var isWin = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-        var cpuArchitecture = RuntimeInformation.OSArchitecture switch {
-            Architecture.Arm64 when isWin => "arm64",
-            Architecture.X64 when isWin => "x64",
-            _ => throw new NotSupportedException("WinTun is not supported on this OS.")
-        };
+        lock (WinTunDllLock) {
+            if (_winTunDll != IntPtr.Zero)
+                return;
 
-        var destinationFolder = Path.Combine(Path.GetTempPath(), "VpnHood", "WinTun", "0.14.1");
-        var requiredFiles = new[] { Path.Combine("bin", cpuArchitecture, "wintun.dll") };
-        var checkFiles = requiredFiles.Select(x => Path.Combine(destinationFolder, x));
-        if (checkFiles.Any(x => !File.Exists(x))) {
-            using var memStream = new MemoryStream(Resources.WinTunZip);
-            using var zipArchive = new ZipArchive(memStream);
-            zipArchive.ExtractToDirectory(destinationFolder, true);
+            if (!OperatingSystem.IsWindows())
+                throw new PlatformNotSupportedException("WinTun runs on Windows only.");
+
+            // the DLL matches the process, which may be x64 on ARM64 Windows; WinTun installs its own driver
+            var architecture = RuntimeInformation.ProcessArchitecture switch {
+                Architecture.X64 => "x64",
+                Architecture.Arm64 => "arm64",
+                _ => throw new NotSupportedException("WinTun runs in an x64 or arm64 process only.")
+            };
+
+            using var dllResource = OpenResource($"wintun-{architecture}.dll");
+            var folderPath = WindowsCommonFiles.Install($"WinTun-{architecture}", new Dictionary<string, Stream> {
+                ["wintun.dll"] = dllResource
+            });
+
+            var assembly = typeof(WinTunVpnAdapter).Assembly;
+            var winTunDll = NativeLibrary.Load(Path.Combine(folderPath, "wintun.dll"), assembly,
+                DllImportSearchPath.System32 | DllImportSearchPath.UseDllDirectoryForDependencies);
+            NativeLibrary.SetDllImportResolver(assembly,
+                (libraryName, _, _) => libraryName == "wintun.dll" ? winTunDll : IntPtr.Zero);
+            _winTunDll = winTunDll;
         }
+    }
 
-        // Load the DLL
-        var dllFile = Path.Combine(destinationFolder, "bin", cpuArchitecture, "wintun.dll");
-        if (Kernel32.LoadLibrary(dllFile) == IntPtr.Zero)
-            throw new Win32Exception("Failed to load WinTun DLL.");
+    private static Stream OpenResource(string name)
+    {
+        return typeof(WinTunVpnAdapter).Assembly.GetManifestResourceStream(name) ??
+               throw new InvalidOperationException($"The embedded {name} is missing.");
     }
 
     protected override void DisposeUnmanaged()

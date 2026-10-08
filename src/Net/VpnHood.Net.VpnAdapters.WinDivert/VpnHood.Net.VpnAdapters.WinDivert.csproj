@@ -12,23 +12,12 @@
 		<ProjectReference Include="..\VpnHood.Net.VpnAdapters.Abstractions\VpnHood.Net.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 
+	<!-- WinDivert's DLL and driver as its release ships them (x64 only), embedded and installed at run time
+	     into a protected folder of their own (WindowsCommonFiles): the driver holds its file until a reboot,
+	     which there blocks no update or cleanup, and signing our assembly leaves the driver's signature. -->
 	<ItemGroup>
-	  <Compile Update="Resources.Designer.cs">
-	    <DependentUpon>Resources.resx</DependentUpon>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <EmbeddedResource Update="Resources.resx">
-	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-	    <Generator>ResXFileCodeGenerator</Generator>
-	  </EmbeddedResource>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Resources\" />
+		<EmbeddedResource Include="Resources\WinDivert.dll" LogicalName="WinDivert.dll" />
+		<EmbeddedResource Include="Resources\WinDivert64.sys" LogicalName="WinDivert64.sys" />
 	</ItemGroup>
 
 </Project>

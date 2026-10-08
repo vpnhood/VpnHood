@@ -1,5 +1,4 @@
-﻿using System.IO.Compression;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
@@ -10,6 +9,7 @@ using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Collections;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Net.VpnAdapters.WinDivert;
@@ -17,9 +17,8 @@ namespace VpnHood.Net.VpnAdapters.WinDivert;
 public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     TunVpnAdapter(adapterSettings)
 {
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern IntPtr LoadLibrary(string lpFileName);
-
+    private static readonly Lock WinDivertDllLock = new();
+    private static IntPtr _winDivertDll; // the one WinDivert.dll of the process, once loaded
     private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
     private readonly List<IpNetwork> _includeIpNetworks = [];
@@ -37,19 +36,19 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     public const short ProtectedTtl = 111;
     public override bool IsAppFilterSupported => false;
     protected override bool IsSocketProtectedByBind => false;
-    public override bool IsNatSupported => false;
+    public override bool IsNatSupported(IpVersion ipVersion) => false;
     protected override string? AppPackageId => null;
     protected override bool RestartAfterNetworkAddressChanged => false;
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
+        // load WinDivert before anything may call it
+        LoadWinDivertDll();
+
         // initialize devices
         _device = new WinDivertDevice { Flags = 0 };
 
         // clean old configs
         _includeIpNetworks.Clear();
-
-        // manage WinDivert file
-        SetWinDivertDllFolder();
         return Task.CompletedTask;
     }
 
@@ -328,23 +327,39 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     }
 
 
-    // WARNING: System may load WinDivert driver into memory and lock it, so we'd better to copy it into a temporary folder 
-    // We don't rely on WinDiver anymore so we ignore this problem
-    private static void SetWinDivertDllFolder()
+    // The embedded DLL and driver, installed into a protected folder of their own under Common Files: the
+    // DLL starts the driver from the file beside it, which then stays in use until a reboot or
+    // "sc stop WinDivert", and there blocks no app's update or cleanup. A driver already running is used
+    // as it is, wherever it came from; it is shared, so never stopped here. SharpPcap's imports bind to
+    // this module by name: they are its own, so no resolver of ours ties them.
+    private static void LoadWinDivertDll()
     {
-        // I got sick trying to add it to nuget as a native library in (x86/x64) folder, OOF!
-        var destinationFolder = Path.Combine(Path.GetTempPath(), "VpnHood", "WinDivert", "2.2.2");
-        var requiredFiles = new[] { "WinDivert.dll", "WinDivert64.sys" };
+        lock (WinDivertDllLock) {
+            if (_winDivertDll != IntPtr.Zero)
+                return;
 
-        // extract WinDivert
-        var checkFiles = requiredFiles.Select(x => Path.Combine(destinationFolder, x));
-        if (checkFiles.Any(x => !File.Exists(x))) {
-            using var memStream = new MemoryStream(Resources.WinDivertLibZip);
-            using var zipArchive = new ZipArchive(memStream);
-            zipArchive.ExtractToDirectory(destinationFolder, true);
+            // a driver matches Windows itself, not only the process, and this one is x64 only
+            if (!OperatingSystem.IsWindows() || RuntimeInformation.OSArchitecture != Architecture.X64 ||
+                RuntimeInformation.ProcessArchitecture != Architecture.X64)
+                throw new PlatformNotSupportedException("WinDivert runs on x64 Windows, in an x64 process, only.");
+
+            using var dllResource = OpenResource("WinDivert.dll");
+            using var driverResource = OpenResource("WinDivert64.sys");
+            var folderPath = WindowsCommonFiles.Install("WinDivert-x64", new Dictionary<string, Stream> {
+                ["WinDivert.dll"] = dllResource,
+                ["WinDivert64.sys"] = driverResource
+            });
+
+            _winDivertDll = NativeLibrary.Load(Path.Combine(folderPath, "WinDivert.dll"),
+                typeof(WinDivertVpnAdapter).Assembly,
+                DllImportSearchPath.System32 | DllImportSearchPath.UseDllDirectoryForDependencies);
         }
+    }
 
-        LoadLibrary(Path.Combine(destinationFolder, "WinDivert.dll"));
+    private static Stream OpenResource(string name)
+    {
+        return typeof(WinDivertVpnAdapter).Assembly.GetManifestResourceStream(name) ??
+               throw new InvalidOperationException($"The embedded {name} is missing.");
     }
 
     protected override void DisposeManaged()

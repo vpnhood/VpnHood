@@ -19,12 +19,6 @@ public sealed partial class Strings
     /// <summary>VpnHood!</summary>
     public string EngineName => Get("ENGINE_NAME");
 
-    /// <summary>VpnHood! CLIENT</summary>
-    public string VpnHoodAppName => Get("VPN_HOOD_APP_NAME");
-
-    /// <summary>VpnHood! CONNECT</summary>
-    public string VpnHoodConnectAppName => Get("VPN_HOOD_CONNECT_APP_NAME");
-
     /// <summary>Settings</summary>
     public string Settings => Get("SETTINGS");
 
@@ -277,7 +271,7 @@ public sealed partial class Strings
     /// <summary>Overcomes VPN blocks by disguising your VPN traffic as regular web traffic, making it resistant to deep packet inspec...</summary>
     public string CloakModeDesc1 => Get("CLOAK_MODE_DESC_1");
 
-    /// <summary>Cloak mode ensures reliable access in restricted networks. This mode is exclusive to VpnHood.</summary>
+    /// <summary>Cloak mode ensures reliable access in restricted networks.</summary>
     public string CloakModeDesc2 => Get("CLOAK_MODE_DESC_2");
 
     /// <summary>Overcomes VPN blocks by disguising your VPN traffic as regular web traffic.</summary>
@@ -319,8 +313,8 @@ public sealed partial class Strings
     /// <summary>You have been disconnected because another device connected with your server key!</summary>
     public string SessionSuppressedByOther => Get("SESSION_SUPPRESSED_BY_OTHER");
 
-    /// <summary>Your VpnHood app is deprecated and will stop working sooner or later! Consider upgrading as soon as possible.</summary>
-    public string VersionIsDeprecated => Get("VERSION_IS_DEPRECATED");
+    /// <summary>Your {appName} app is deprecated and will stop working sooner or later! Consider upgrading as soon as possible.</summary>
+    public string VersionIsDeprecated(object appName) => Get("VERSION_IS_DEPRECATED", ("appName", appName));
 
     /// <summary>There is a new version available to install.</summary>
     public string VersionIsOld => Get("VERSION_IS_OLD");
@@ -627,9 +621,6 @@ public sealed partial class Strings
 
     /// <summary>Support ID</summary>
     public string SupportId => Get("SUPPORT_ID");
-
-    /// <summary>Could not found VpnHood Global Servers profile.</summary>
-    public string CouldNotFoundGlobalServersProfile => Get("COULD_NOT_FOUND_GLOBAL_SERVERS_PROFILE");
 
     /// <summary>Warning</summary>
     public string Warning => Get("WARNING");
@@ -1735,8 +1726,8 @@ public sealed partial class Strings
     /// <summary>Feedback</summary>
     public string Feedback => Get("FEEDBACK");
 
-    /// <summary>Your feedback motivates us to keep making VpnHood better. How would you rate your experience?</summary>
-    public string FeedbackDesc => Get("FEEDBACK_DESC");
+    /// <summary>Your feedback motivates us to keep making {appName} better. How would you rate your experience?</summary>
+    public string FeedbackDesc(object appName) => Get("FEEDBACK_DESC", ("appName", appName));
 
     /// <summary>Submit</summary>
     public string Submit => Get("SUBMIT");
@@ -1906,8 +1897,8 @@ public sealed partial class Strings
     /// <summary>Remote Access</summary>
     public string RemoteAccess => Get("REMOTE_ACCESS");
 
-    /// <summary>Manage VpnHood from your phone or computer: scan this code, or type the address into a browser on the same network.</summary>
-    public string RemoteAccessDesc => Get("REMOTE_ACCESS_DESC");
+    /// <summary>Manage {appName} from your phone or computer: scan this code, or type the address into a browser on the same network.</summary>
+    public string RemoteAccessDesc(object appName) => Get("REMOTE_ACCESS_DESC", ("appName", appName));
 
     /// <summary>Other addresses:</summary>
     public string RemoteAccessOtherAddresses => Get("REMOTE_ACCESS_OTHER_ADDRESSES");
@@ -1981,8 +1972,8 @@ public sealed partial class Strings
     /// <summary>Automatic IP Detection Due to High User Density</summary>
     public string LearnMoreFreeServersDisruptions3 => Get("LEARN_MORE_FREE_SERVERS_DISRUPTIONS_3");
 
-    /// <summary>Although VpnHood is equipped with DPI Proof (Deep Packet Inspection), free servers, due to their public nature, host ...</summary>
-    public string LearnMoreFreeServersDisruptions4 => Get("LEARN_MORE_FREE_SERVERS_DISRUPTIONS_4");
+    /// <summary>Although {appName} is equipped with DPI Proof (Deep Packet Inspection), free servers, due to their public nature, hos...</summary>
+    public string LearnMoreFreeServersDisruptions4(object appName) => Get("LEARN_MORE_FREE_SERVERS_DISRUPTIONS_4", ("appName", appName));
 
     /// <summary>Differences in ISP-Level Filtering</summary>
     public string LearnMoreFreeServersDisruptions5 => Get("LEARN_MORE_FREE_SERVERS_DISRUPTIONS_5");

@@ -21,6 +21,7 @@ public partial class UserReviewDialog : DialogBase
         _host = host;
         _recommendation = recommendation;
         InitializeComponent();
+        FeedbackDescText.Text = Strings.Current.FeedbackDesc(VhApp.Features.AppName);
         var isIos = VhApp.Features.OsType == AppOsType.Ios;
         LaterButton.IsVisible = isIos;
         LaterButton.Content = Strings.Current.Later;

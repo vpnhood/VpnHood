@@ -16,7 +16,7 @@
       <!-- step 1: the faces -->
       <StackPanel x:Name="RateStep" Spacing="16">
         <TextBlock Classes="h3" TextAlignment="Center" Text="{Binding Feedback, Source={x:Static res:Strings.Current}}" />
-        <TextBlock Classes="body-large dialog-text" TextAlignment="Center" Text="{Binding FeedbackDesc, Source={x:Static res:Strings.Current}}" />
+        <TextBlock x:Name="FeedbackDescText" Classes="body-large dialog-text" TextAlignment="Center" />
         <StackPanel Orientation="Horizontal" Spacing="28" HorizontalAlignment="Center">
           <Button x:Name="Rate1" Classes="icon" Width="60" Height="60" CornerRadius="30" Click="OnRate1Click"
                   AutomationProperties.Name="{Binding Bad, Source={x:Static res:Strings.Current}}">

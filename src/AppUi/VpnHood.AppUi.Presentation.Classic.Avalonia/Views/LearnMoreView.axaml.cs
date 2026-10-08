@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Media;
 using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Avalonia;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
@@ -15,7 +16,7 @@ public partial class LearnMoreView : UserControl, IPage
 
         var s = Strings.Current;
         AddSection(s.LearnMoreFreeServersDisruptions1, s.LearnMoreFreeServersDisruptions2);
-        AddSection(s.LearnMoreFreeServersDisruptions3, s.LearnMoreFreeServersDisruptions4);
+        AddSection(s.LearnMoreFreeServersDisruptions3, s.LearnMoreFreeServersDisruptions4(VhApp.Features.AppName));
         AddSection(s.LearnMoreFreeServersDisruptions5, s.LearnMoreFreeServersDisruptions6);
         AddSection(s.LearnMoreFreeServersDisruptions7, s.LearnMoreFreeServersDisruptions8);
         AddTitle(s.LearnMoreFreeServersDisruptions9);

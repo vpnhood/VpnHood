@@ -64,6 +64,7 @@
 * Fix: On Linux, the install command in the Linux guide works: sudo bash <(…) cannot run the script it is given, so the guide says sudo su -c "bash <(…)", and the installer prints that command when it is run without root #linux
 * Fix: Pairing never offers a VPN tunnel's address, whatever the app named its adapter: a fork's own tunnel could reach the pairing link and its QR code. Nor a mobile broadband address; and pairing starts in a Windows virtual machine under Hyper-V, where it found no address. IPAddressUtil.GetLanAddresses changes with it
 * Fix: The menu's website, social, What's new, feedback and personal-server links are the app's own, from its settings (Links in AppConfigs and AppOptions); one left unset hides its item. Every app built on VpnHood showed VpnHood's. The language setting no longer invites translations to a folder that moved
+* Fix: The update warning, the pairing page, the rating prompt and the page on free servers name the app itself, where every app built on VpnHood named VpnHood; cloak mode's description no longer calls it exclusive to VpnHood
 
 # v8.1.849
 

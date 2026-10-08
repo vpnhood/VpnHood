@@ -394,7 +394,9 @@ public partial class MainView : UserControl
         var isDeprecated = status.VersionStatus == VersionStatus.Deprecated;
         UpdateNotice.Classes.Set("update-warning", isDeprecated);
         UpdateNotice.Classes.Set("update-alert", !isDeprecated);
-        UpdateNoticeText.Text = isDeprecated ? Strings.Current.VersionIsDeprecated : Strings.Current.VersionIsOld;
+        UpdateNoticeText.Text = isDeprecated
+            ? Strings.Current.VersionIsDeprecated(VhApp.Features.AppName)
+            : Strings.Current.VersionIsOld;
         UpdateStoreButton.IsVisible = publish.GooglePlayUrl != null;
         UpdateDirectButton.IsVisible = publish.GooglePlayUrl == null;
         UpdateNoStoreButton.IsVisible = publish.GooglePlayUrl != null;

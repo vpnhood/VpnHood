@@ -46,7 +46,7 @@
       <!-- ReSharper disable Xaml.MissingGridIndex -->
       <StackPanel Classes="text-pane" Spacing="14" VerticalAlignment="Center">
         <TextBlock Classes="title" Text="{Binding RemoteAccess, Source={x:Static res:Strings.Current}}" />
-        <TextBlock Classes="body" Text="{Binding RemoteAccessDesc, Source={x:Static res:Strings.Current}}" />
+        <TextBlock x:Name="RemoteAccessDescText" Classes="body" />
         <!-- where to go on the phone, when this page was opened for something a remote cannot do -->
         <TextBlock x:Name="HintText" Classes="body" IsVisible="False" />
         <Border Classes="note">

@@ -65,6 +65,7 @@
 * Fix: Pairing never offers a VPN tunnel's address, whatever the app named its adapter: a fork's own tunnel could reach the pairing link and its QR code. Nor a mobile broadband address; and pairing starts in a Windows virtual machine under Hyper-V, where it found no address. IPAddressUtil.GetLanAddresses changes with it
 * Fix: The menu's website, social, What's new, feedback and personal-server links are the app's own, from its settings (Links in AppConfigs and AppOptions); one left unset hides its item. Every app built on VpnHood showed VpnHood's. The language setting no longer invites translations to a folder that moved
 * Fix: The update warning, the pairing page, the rating prompt and the page on free servers name the app itself, where every app built on VpnHood named VpnHood; cloak mode's description no longer calls it exclusive to VpnHood
+* Fix: A paired browser's tab and the command line's help name the app, not VpnHood
 
 # v8.1.849
 

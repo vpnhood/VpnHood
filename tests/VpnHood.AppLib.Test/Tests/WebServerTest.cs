@@ -218,6 +218,20 @@ public class WebServerTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task Page_names_the_app_that_serves_it()
+    {
+        // the page is every app's: the host writes the app's name and logo into it as it serves it
+        var appOptions = CreateWebHostOptions(isDebugMode: false);
+        appOptions.WebRootZipAsset = TestAppHelper.CreateWebRootZip("{appName}|{logoUrl}");
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        var localUrl = await RequireHost(app.LocalWebHost, "local").EnsureStarted(CancellationToken.None);
+        using var http = new HttpClient();
+
+        StringAssert.Contains(await http.GetStringAsync(localUrl),
+            $"<title>{app.Features.AppName}|/assets/{app.Features.LogoAssetPath}</title>");
+    }
+
+    [TestMethod]
     public async Task Loopback_api_asks_for_the_token()
     {
         // a release build: a loopback call to the API carries the token the local address does

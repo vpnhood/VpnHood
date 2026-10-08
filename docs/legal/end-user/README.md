@@ -1,28 +1,29 @@
 # End-user legal documents
 
-The documents in this folder are **binding, user-facing legal texts** — the ones users are shown,
-not developer guidance (that lives in [../developer/](../developer/)). The website builds its
-legal pages from these files: `www.vpnhood.com/<slug>` is rendered from `<slug>.md` here, fetched
-from the `develop` branch (this repo's default branch) at site-build time (see `jekyll.yml` in the
-VpnHood.www repo). **Merging to `develop` is publication.**
+The privacy policies and terms of use VpnHood's own apps show their users: **binding, user-facing
+legal texts**, not developer guidance (that lives in [../developer/](../developer/)). They describe
+VpnHood's apps, servers and analytics, under VpnHood's name.
 
-Rules for editing:
+**Forkers:** these are not yours to ship. Your app needs its own privacy policy and terms of use, on
+your own website, describing what your build sends and to whom; the app links to them from its
+settings (`Links.PrivacyPolicy` and `Links.TermsOfUse` in its appsettings).
+[../developer/APP_STORE_PRIVACY.md](../developer/APP_STORE_PRIVACY.md) walks through the store
+questionnaires.
 
-- **PR only, never a direct push.** These files change what VpnHood promises its users; every
-  change deserves a reviewer.
-- **Bump the `Effective:` date** in the same PR as any substantive change. Stores and regulators
-  care about *when* a policy changed; the git history is the audit trail, the Effective line is
-  what users see.
-- **Keep the text true to the code.** When a change to the apps alters what is collected or sent,
-  update the affected policy in the *same PR* — that is why these files live in the code repo.
-  The developer-facing analysis of what the Client actually collects is in
-  [../developer/APP_STORE_PRIVACY.md](../developer/APP_STORE_PRIVACY.md); the two must never
-  disagree.
-- **File name = website slug.** Renaming a file breaks its public URL; don't.
+Whoever keeps a policy, VpnHood or a fork, keeps two places true together, the website and the app:
 
-**Forkers:** these are VpnHood's policies, describing VpnHood's servers and analytics under
-VpnHood's name. Your fork must publish its own policy at its own URL — see
-[../developer/APP_STORE_PRIVACY.md](../developer/APP_STORE_PRIVACY.md).
+- **The policy follows the code.** When a change alters what the app collects or sends, the policy
+  changes with it, and so does its `Effective:` date: stores and regulators care about *when* a
+  policy changed. [../developer/APP_STORE_PRIVACY.md](../developer/APP_STORE_PRIVACY.md) analyses
+  what the app actually collects; the two must never disagree.
+- **The app's own words follow the policy.** The app describes its data in its own words too, and a
+  fork shows VpnHood's until it replaces them: the Privacy page's notice and the settings'
+  descriptions (`ANONYMOUS_TRACKER_NOTICE`, `ALLOW_ANONYMOUS_TRACKER_DESC`, `PRIVACY_DESC`), the
+  account-deletion words (`DELETE_MY_ACCOUNT_DESC`, `CONFIRM_DELETE_ACCOUNT_DESC`, the
+  `DELETE_ACCOUNT_*` notes) and the first-run summary the app names by `PrivacyConsentAssetName`
+  (`privacy-consent-client.md`, `privacy-consent-connect.md`). A zip of the fork's own ahead of the
+  UI's (`AppOptions.UiZipAssets`) replaces them, file by file. A summary may leave things out; it
+  never says otherwise.
 
 Currently here:
 
@@ -32,9 +33,3 @@ Currently here:
 - [vpnhood-connect-terms-of-use.md](vpnhood-connect-terms-of-use.md) — VpnHood! CONNECT licence, service, billing, and acceptable-use terms
 - [vpnhood-manager-privacy-policy.md](vpnhood-manager-privacy-policy.md) — VpnHood! MANAGER
 - [vpnhood-manager-terms-of-use.md](vpnhood-manager-terms-of-use.md) — VpnHood! MANAGER terms of use
-
-The two MANAGER documents moved here from the wiki unchanged, so unlike the others they carry no
-`Effective:` line yet; add one with their next substantive change.
-
-The wiki pages for the migrated policies are now redirect stubs pointing at the published URL —
-leave them that way so old links keep working, and never edit policy text there again.

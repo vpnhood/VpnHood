@@ -56,9 +56,11 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         options.Ga4MeasurementId = null;
         options.TrackerFactory = new NullTrackerFactory();
         options.AllowEndPointTracker = false;
-        // Not appConfigs.TermsOfUseUrl: a purchase here is governed by Apple's standard EULA while
-        // no custom EULA is registered in App Store Connect. Delete this line once one is.
-        options.TermsOfUseUrl = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+        // Not appConfigs' TermsOfUse: a purchase here is governed by Apple's standard EULA while
+        // no custom EULA is registered in App Store Connect. Delete this once one is.
+        options.Links = options.Links with {
+            TermsOfUse = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")
+        };
         // The store already took this acceptance at install - see AppOptions.
         options.IsLicenseAgreementRequired = false;
         // Native in-app rating dialog (parity with Client.Android.Google's Google Play provider).

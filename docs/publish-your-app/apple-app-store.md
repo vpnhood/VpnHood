@@ -207,11 +207,11 @@ A reviewer will not go looking on your store listing. App Review **3.1.2** wants
 asked for. This project's own CONNECT app was rejected on that point with a listing that already
 carried both links, so treat the two fields above as necessary and not sufficient.
 
-Both addresses are settings, not code — `PrivacyPolicyUrl` and `TermsOfUseUrl` in your app settings
-([deployment](../cicd/deployment.md)). Leave one empty and the app simply shows no link for it,
-which for the Privacy Policy is a rejection. The App Store build is the one exception: it always
-links Apple's standard EULA whatever `TermsOfUseUrl` says, because that is the agreement a buyer
-there actually accepts for as long as no custom EULA is registered in App Information above.
+Both addresses are settings, not code — `PrivacyPolicy` and `TermsOfUse` under `Links` in your app
+settings ([deployment](../cicd/deployment.md)). Leave one empty and the app simply shows no link for
+it, which for the Privacy Policy is a rejection. The App Store build is the one exception: it always
+links Apple's standard EULA whatever `TermsOfUse` says, because that is the agreement a buyer there
+actually accepts for as long as no custom EULA is registered in App Information above.
 
 ---
 

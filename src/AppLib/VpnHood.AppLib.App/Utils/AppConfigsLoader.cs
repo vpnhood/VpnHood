@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using VpnHood.AppLib.Api.App;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Utils;
@@ -7,10 +8,11 @@ namespace VpnHood.AppLib.App.Utils;
 // Fills a product's settings from the appsettings its project embeds from the private ".user"
 // folder: "AppSettings.json", then "AppSettings_Environment.json" (the build configuration's), each
 // overriding by name and skipping a key the type does not have. Both are optional: a fork without
-// them builds, and its settings stay unset. The type's properties are kept for the trimmer, since
-// nothing but reflection sets them.
+// them builds, and its settings stay unset. The type's properties, and those of AppLinks within it,
+// are kept for the trimmer, since nothing but reflection sets them.
 public static class AppConfigsLoader
 {
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(AppLinks))]
     public static T Load<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T>()
         where T : AppConfigs, new()
     {

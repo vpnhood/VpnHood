@@ -21,8 +21,8 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
         _host = host;
         InitializeComponent();
         _ = LoadDocument(VhApp.Features.PrivacyConsentAssetName);
-        TermsButton.IsVisible = VhApp.Features.TermsOfUseUrl != null;
-        PrivacyButton.IsVisible = VhApp.Features.PrivacyPolicyUrl != null;
+        TermsButton.IsVisible = VhApp.Features.Links.TermsOfUse != null;
+        PrivacyButton.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
     }
 
     // The document as the store hands it over - in the app's language, with the product's own
@@ -67,7 +67,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     private async void OnTermsClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.TermsOfUseUrl is { } url)
+            if (VhApp.Features.Links.TermsOfUse is { } url)
                 await _host.OpenLink(url, Strings.Current.TermsOfUse);
         }
         catch (Exception ex) {
@@ -78,7 +78,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.PrivacyPolicyUrl is { } url)
+            if (VhApp.Features.Links.PrivacyPolicy is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

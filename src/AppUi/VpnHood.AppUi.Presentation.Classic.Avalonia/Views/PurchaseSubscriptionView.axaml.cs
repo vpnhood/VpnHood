@@ -36,8 +36,8 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         BackButton.IsVisible = !VhApp.IsTvUi;
         // on a TV the row holds nothing and would only push the centred page down
         HeaderRow.IsVisible = BackButton.IsVisible;
-        TermsLink.IsVisible = VhApp.Features.TermsOfUseUrl != null;
-        PrivacyLink.IsVisible = VhApp.Features.PrivacyPolicyUrl != null;
+        TermsLink.IsVisible = VhApp.Features.Links.TermsOfUse != null;
+        PrivacyLink.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
         LinksDot.IsVisible = TermsLink.IsVisible && PrivacyLink.IsVisible;
         LinksRow.IsVisible = TermsLink.IsVisible || PrivacyLink.IsVisible;
         if (VhApp.IsTvUi)
@@ -394,7 +394,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     private async void OnTermsClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.TermsOfUseUrl is { } url)
+            if (VhApp.Features.Links.TermsOfUse is { } url)
                 await _host.OpenLink(url, Strings.Current.TermsOfUse);
         }
         catch (Exception ex) {
@@ -405,7 +405,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.PrivacyPolicyUrl is { } url)
+            if (VhApp.Features.Links.PrivacyPolicy is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {

@@ -122,32 +122,17 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     public bool AllowRecommendUserReviewByServer { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
 
-    // The two legal documents this build links to - from the paywall, from Settings > Privacy, and
-    // from the first-run screen where that is shown. Every head fills them in from its product's
-    // appsettings (AppConfigs), exactly like Ga4MeasurementId and RemoteSettingsUrl above, so a fork points
-    // at its own documents without editing code. The App Store heads are the one exception: they
-    // hardcode TermsOfUseUrl to Apple's standard EULA, the agreement actually governing a purchase
-    // made there while no custom EULA is registered with Apple.
-    // Null means the build ships no such document, and the UI hides the link rather than guess an
-    // address. Keep this the only place either URL is set: a second source would have to be resolved
-    // against this one, and the symptom of getting that wrong is the wrong EULA on a paywall, found
-    // by a store rejection rather than by a test.
-    public Uri? PrivacyPolicyUrl { get; set; }
-    public Uri? TermsOfUseUrl { get; set; }
+    // The pages this build links to (AppLinks): its legal documents and the menu's links. Every head
+    // fills them in from its product's appsettings (AppConfigs.Links), exactly like Ga4MeasurementId
+    // and RemoteSettingsUrl above, so a fork points at its own pages without editing code. The App
+    // Store heads are the one exception: they set TermsOfUse to Apple's standard EULA, the agreement
+    // actually governing a purchase made there while no custom EULA is registered with Apple.
+    // Keep this the only place a link is set: a second source would have to be resolved against this
+    // one, and the symptom of getting that wrong is the wrong EULA on a paywall, found by a store
+    // rejection rather than by a test.
+    public AppLinks Links { get; set; } = new();
 
-    // The menu's links: the product's website, its "What's new" page, where to send feedback, the
-    // guide to a server of one's own (shown only where keys can be added, IsAddAccessKeySupported)
-    // and its social pages. From the product's appsettings as the documents above; one left null
-    // hides its item.
-    public Uri? WebsiteUrl { get; set; }
-    public Uri? WhatsNewUrl { get; set; }
-    public Uri? FeedbackUrl { get; set; }
-    public Uri? PersonalServerUrl { get; set; }
-    public Uri? LinkedInUrl { get; set; }
-    public Uri? InstagramUrl { get; set; }
-    public Uri? XUrl { get; set; }
-
-    // The two things the UI shows that carry the product's own word, named by the head as the URLs
+    // The two things the UI shows that carry the product's own word, named by the head as the links
     // above are, and neither the look's (UiTheme) to decide: a fork keeps our violet under its own
     // name and its own promises.
     //

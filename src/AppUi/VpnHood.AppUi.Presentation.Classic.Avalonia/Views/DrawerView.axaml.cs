@@ -38,15 +38,16 @@ public partial class DrawerView : UserControl
         // the updater is the capability signal: null exactly when no updater was configured
         UpdateItem.IsVisible = state.UpdaterStatus != null;
         // the product's links, each shown only where the app names it
-        WhatsNewItem.IsVisible = features.WhatsNewUrl != null;
-        FeedbackItem.IsVisible = features.FeedbackUrl != null;
-        PersonalServerItem.IsVisible = features.IsAddAccessKeySupported && features.PersonalServerUrl != null; // one you add the key of
-        WebsiteItem.IsVisible = features.WebsiteUrl != null;
-        WebsiteText.Text = features.WebsiteUrl is { } websiteUrl ? GetWebsiteLabel(websiteUrl) : null;
-        PrivacyItem.IsVisible = features.PrivacyPolicyUrl != null;
-        LinkedInItem.IsVisible = features.LinkedInUrl != null;
-        InstagramItem.IsVisible = features.InstagramUrl != null;
-        XItem.IsVisible = features.XUrl != null;
+        var links = features.Links;
+        WhatsNewItem.IsVisible = links.WhatsNew != null;
+        FeedbackItem.IsVisible = links.Feedback != null;
+        PersonalServerItem.IsVisible = features.IsAddAccessKeySupported && links.PersonalServer != null; // one you add the key of
+        WebsiteItem.IsVisible = links.Website != null;
+        WebsiteText.Text = links.Website is { } websiteUrl ? GetWebsiteLabel(websiteUrl) : null;
+        PrivacyItem.IsVisible = links.PrivacyPolicy != null;
+        LinkedInItem.IsVisible = links.LinkedIn != null;
+        InstagramItem.IsVisible = links.Instagram != null;
+        XItem.IsVisible = links.X != null;
         SocialsRow.IsVisible = LinkedInItem.IsVisible || InstagramItem.IsVisible || XItem.IsVisible;
     }
 
@@ -148,7 +149,7 @@ public partial class DrawerView : UserControl
     private async void OnWhatsNewClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.WhatsNewUrl is { } url)
+            if (VhApp.Features.Links.WhatsNew is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.WhatsNew);
         }
         catch (Exception ex) {
@@ -159,7 +160,7 @@ public partial class DrawerView : UserControl
     private async void OnFeedbackClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.FeedbackUrl is { } url)
+            if (VhApp.Features.Links.Feedback is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.SendFeedback);
         }
         catch (Exception ex) {
@@ -170,7 +171,7 @@ public partial class DrawerView : UserControl
     private async void OnPersonalServerClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.PersonalServerUrl is { } url)
+            if (VhApp.Features.Links.PersonalServer is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.CreatePersonalServer);
         }
         catch (Exception ex) {
@@ -181,7 +182,7 @@ public partial class DrawerView : UserControl
     private async void OnWebsiteClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.WebsiteUrl is { } url)
+            if (VhApp.Features.Links.Website is { } url)
                 await Open(url.AbsoluteUri, GetWebsiteLabel(url));
         }
         catch (Exception ex) {
@@ -192,7 +193,7 @@ public partial class DrawerView : UserControl
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.PrivacyPolicyUrl is { } url)
+            if (VhApp.Features.Links.PrivacyPolicy is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.PrivacyPolicy);
         }
         catch (Exception ex) {
@@ -203,7 +204,7 @@ public partial class DrawerView : UserControl
     private async void OnLinkedInClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.LinkedInUrl is { } url)
+            if (VhApp.Features.Links.LinkedIn is { } url)
                 await Open(url.AbsoluteUri, "LinkedIn");
         }
         catch (Exception ex) {
@@ -214,7 +215,7 @@ public partial class DrawerView : UserControl
     private async void OnInstagramClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.InstagramUrl is { } url)
+            if (VhApp.Features.Links.Instagram is { } url)
                 await Open(url.AbsoluteUri, "Instagram");
         }
         catch (Exception ex) {
@@ -225,7 +226,7 @@ public partial class DrawerView : UserControl
     private async void OnXClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.XUrl is { } url)
+            if (VhApp.Features.Links.X is { } url)
                 await Open(url.AbsoluteUri, "X");
         }
         catch (Exception ex) {

@@ -18,9 +18,9 @@ work.
 `publish.json` via the `PUBLISH` variable — release repo, Windows install page and the signing
 alias per distribution. `appsettings.json` via the `APPSETTINGS` variable — the product's settings
 (`AppConfigs` and each product's own keys): `PortalBaseUri`, `RemoteSettingsUrl`,
-`GoogleSignInClientId`, the `PrivacyPolicyUrl` / `TermsOfUseUrl` the app links to, the menu's links
-(`WebsiteUrl`, `WhatsNewUrl`, `FeedbackUrl`, `PersonalServerUrl`, `LinkedInUrl`, `InstagramUrl`,
-`XUrl`; one unset hides its item), the analytics id, and the ad **unit** ids. The embedded default server key via `ACCESS_KEY_AD` /
+`GoogleSignInClientId`, the pages the app links to (`Links`: its privacy policy and terms of use,
+its website, "What's new", feedback, personal-server and social pages; one unset hides its link),
+the analytics id, and the ad **unit** ids. The embedded default server key via `ACCESS_KEY_AD` /
 `ACCESS_KEY_PREMIUM`.
 
 ## Written once, in the app's identity

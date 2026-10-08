@@ -39,18 +39,8 @@ public class AppFeatures
     // See AppOptions.IsLicenseAgreementRequired. Never derive this from which product is running.
     public required bool IsLicenseAgreementRequired { get; init; }
 
-    // See AppOptions.PrivacyPolicyUrl. Null reaches the UI as "hide the link", never as a guess.
-    public required Uri? PrivacyPolicyUrl { get; init; }
-    public required Uri? TermsOfUseUrl { get; init; }
-
-    // See AppOptions.WebsiteUrl: the menu's links, each null hiding its item.
-    public required Uri? WebsiteUrl { get; init; }
-    public required Uri? WhatsNewUrl { get; init; }
-    public required Uri? FeedbackUrl { get; init; }
-    public required Uri? PersonalServerUrl { get; init; }
-    public required Uri? LinkedInUrl { get; init; }
-    public required Uri? InstagramUrl { get; init; }
-    public required Uri? XUrl { get; init; }
+    // See AppOptions.Links. A null link reaches the UI as "hide the link", never as a guess.
+    public required AppLinks Links { get; init; }
 
     // See AppOptions.LogoAssetPath and PrivacyConsentAssetName: the head's word for whose logo and
     // whose promises this build shows, both addressing the UI's store - a whole path for the one

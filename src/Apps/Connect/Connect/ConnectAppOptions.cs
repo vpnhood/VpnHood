@@ -34,7 +34,7 @@ public static class ConnectAppOptions
             Links = appConfigs.Links,
             ShowPoweredBy = appConfigs.ShowPoweredBy,
             CustomData = appConfigs.CustomData,
-            UiTheme = "violet",
+            UiTheme = appConfigs.UiTheme,
             // an empty key would not parse
             AccessKeys = string.IsNullOrEmpty(defaultAccessKey) ? [] : [defaultAccessKey],
             IsAddAccessKeySupported = IsAddAccessKeySupported,
@@ -44,7 +44,7 @@ public static class ConnectAppOptions
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AllowEndPointStrategy = appConfigs.AllowEndPointStrategy,
-            WebUiPort = AppConstants.IsDebugMode ? 7701 : 7770,
+            WebUiPort = appConfigs.WebUiPort,
             IpLocationZipAsset = new Asset(packagedAssetProvider, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(packagedAssetProvider, "assets/ui.zip")],
             // the page a paired phone opens: this same UI, as its browser build

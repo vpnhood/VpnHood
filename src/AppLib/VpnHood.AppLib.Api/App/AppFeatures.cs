@@ -80,7 +80,6 @@ public class AppFeatures
     public required bool AllowEndPointStrategy { get; init; }
     public required bool IsAdSupported { get; set; }
     public required bool IsRewardedAdSupported { get; init; }
-    public required int? WebUiPort { get; set; }
     public required IReadOnlyList<ChannelProtocol> ChannelProtocols { get; init; }
     public required JsonElement? CustomData { get; init; }
 

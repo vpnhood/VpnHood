@@ -140,8 +140,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // folder each under its storage, so no two of them can be handed the same one. The UI's are
         // one provider over all the head named, in the order it named them.
         UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAssets, StorageFolderPath, "ui");
-        _webHostManager = new AppWebHostManager(this, options.WebHostFactory, 
-            AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, StorageFolderPath, "web-root"));
+        _webHostManager = new AppWebHostManager(this, options.WebHostFactory,
+            AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, StorageFolderPath, "web-root"),
+            options.WebUiPort);
 
         // The look the OS chrome draws with, out of the UI's store, read while the rest of the app
         // comes up; whatever draws with it waits for ResourcesLoaded, not for this line.
@@ -232,7 +233,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsUserReviewSupported = options.UserReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
             IsAnonymousTrackerSupported = tracker is not NullTracker,
-            WebUiPort = options.WebUiPort,
             ClientId = clientId,
             AppId = options.AppId,
             AppName = options.AppName,

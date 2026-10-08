@@ -46,9 +46,6 @@ public class VpnHoodAppWebHost : IAppWebHost
     // Where the UI's files are served, by name, out of the same provider the app's own UI reads.
     private const string AssetsPrefix = "assets/";
 
-    // What both listeners want when nothing else is configured.
-    private const int DefaultPort = 9090;
-
     // A file whose name carries a hash of its content: Vite's "name-<8>.ext", the .NET browser build's
     // "name.<10>.ext" (dotnet.native.<hash>.wasm). index.html, main.js and dotnet.js keep their names.
     private static readonly Regex FingerprintRegex = new(@"(-[a-z0-9_-]{8}|\.[a-z0-9]{10})\.[a-z0-9]+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -228,7 +225,7 @@ public class VpnHoodAppWebHost : IAppWebHost
         if (_isRemote && kept.Count == 0 && added.Count == 0 && wanted.Length > 0) {
             _port = VhUtils.GetFreeTcpEndPoint(wanted[0]).Port;
             VhLogger.Instance.LogWarning("Remote access could not take port {ConfiguredPort}; using {Port} instead.",
-                _createParams.WebUiPort ?? DefaultPort, _port);
+                _createParams.WebUiPort, _port);
             added = TryBind(wanted, _port, out lastError);
         }
 
@@ -268,7 +265,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     // and only when no address at all could take it.
     private int ResolvePort()
     {
-        var configuredPort = _createParams.WebUiPort ?? DefaultPort;
+        var configuredPort = _createParams.WebUiPort;
         if (!_isRemote)
             return VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, configuredPort).Port;
 

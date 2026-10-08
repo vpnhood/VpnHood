@@ -115,7 +115,7 @@ internal static class Program
         try {
             // the phone's half of the pairing: the server the pairing page hands out the address of,
             // and - a debug build - the address a browser on this PC can open to see the same UI
-            // served as a page (http://<lan-ip>:9090/)
+            // served as a page (http://<lan-ip>:9091/)
             // The UI reaches the app through its API - the same six interfaces a paired browser
             // dials over HTTP, here the app's own controllers in process - and draws from the
             // store's zip beside this executable, which the build placed there (the same files

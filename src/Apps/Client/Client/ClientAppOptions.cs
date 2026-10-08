@@ -33,6 +33,7 @@ public static class ClientAppOptions
             Links = appConfigs.Links,
             ShowPoweredBy = appConfigs.ShowPoweredBy,
             CustomData = appConfigs.CustomData,
+            UiTheme = appConfigs.UiTheme,
             // an empty key would not parse
             AccessKeys = string.IsNullOrEmpty(defaultAccessKey) ? [] : [defaultAccessKey],
             IsAddAccessKeySupported = IsAddAccessKeySupported,
@@ -40,7 +41,7 @@ public static class ClientAppOptions
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AllowEndPointStrategy = appConfigs.AllowEndPointStrategy,
-            WebUiPort = AppConstants.IsDebugMode ? 4701 : 4700,
+            WebUiPort = appConfigs.WebUiPort,
             IpLocationZipAsset = new Asset(packagedAssetProvider, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(packagedAssetProvider, "assets/ui.zip")],
             // the page a paired phone opens: this same UI, as its browser build

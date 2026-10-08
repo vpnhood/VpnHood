@@ -30,7 +30,7 @@ public class WebHostCreateParams
     public required string LogoAssetPath { get; init; }
 
     // What the local host binds when it is free, and what the remote one is pinned to.
-    public required int? WebUiPort { get; init; }
+    public required int WebUiPort { get; init; }
 
     // Stay up for the life of the process, whether or not anything asked: true for the local host,
     // which the app's own UI loads, and for remote access when a developer opened it. A host that is

@@ -47,10 +47,6 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         var appConfigs = ClientAppConfigs.Load();
         var options = ClientAppOptions.Create(context, appConfigs);
 
-        // The loopback port of the in-process web host, distinct from the Connect app's so both can
-        // run on one device.
-        options.WebUiPort = 9580;
-
         // Apple applies an additional privacy rule to VPN apps: the iOS build does not send
         // analytics to third parties.
         options.Ga4MeasurementId = null;

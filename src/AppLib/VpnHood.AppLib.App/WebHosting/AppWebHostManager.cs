@@ -15,7 +15,8 @@ namespace VpnHood.AppLib.App.WebHosting;
 // asks from its own thread while the API answers on another, one host built twice would leave the
 // loser bound and unreachable, and Dispose reads the fields - building a host in order to dispose it
 // would be absurd on a head that never opened one.
-internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IAssetProvider? webRoot) : IDisposable
+internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IAssetProvider? webRoot,
+    int? webUiPort) : IDisposable
 {
     private readonly Lock _lock = new();
     private IAppWebHost? _local;
@@ -33,7 +34,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     UiAssetProvider = app.UiAssetProvider,
                     AppName = app.Features.AppName,
                     LogoAssetPath = app.Features.LogoAssetPath,
-                    WebUiPort = app.Features.WebUiPort,
+                    WebUiPort = WebUiPort,
                     IsAlwaysOn = true, // the app's own UI loads it; nothing ever stops it
                     IsTokenRequired = !app.Features.IsDebugMode // a debug build keeps its open door here too
                 });
@@ -54,7 +55,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     UiAssetProvider = app.UiAssetProvider,
                     AppName = app.Features.AppName,
                     LogoAssetPath = app.Features.LogoAssetPath,
-                    WebUiPort = app.Features.WebUiPort,
+                    WebUiPort = WebUiPort,
                     IsAlwaysOn = _remoteIsDeveloperAccess, // otherwise a pairing screen holds it
                     IsTokenRequired = !_remoteIsDeveloperAccess
                 });
@@ -67,6 +68,9 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
     private IAssetProvider WebRoot => webRoot ?? throw new InvalidOperationException(
         $"The head has set {nameof(AppOptions)}.{nameof(AppOptions.WebHostFactory)} but no " +
         $"{nameof(AppOptions.WebRootZipAsset)}: a web host has no page to serve.");
+
+    // The head's port, or the default AppOptions.WebUiPort promises when it names none.
+    private int WebUiPort => webUiPort ?? (app.Features.IsDebugMode ? 9091 : 9090);
 
     // The developer's open door: remote access comes up without a screen and asks for no pairing, so a
     // UI developer can reach a device from their own machine. A host keeps what it was told when it was

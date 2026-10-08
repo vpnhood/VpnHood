@@ -170,8 +170,9 @@ what its private appsettings can say (`ClientAppConfigs`, `ConnectAppConfigs`, o
 `VpnHood.AppLib.App`), with the files from `.user/<product>` embedded here once for every head —
 the packages the product pins (today the IP-location database), the app framework and web host its
 heads build on, and any product-wide constant — Connect's premium feature list lives there. A
-setting has no value in code: one the appsettings do not name stays null, and what needs it is off
-or fails where it is used.
+setting the appsettings do not name takes its default: a switch and the look have one in code
+(`ShowPoweredBy` on, `UiTheme` blue), the web UI's port is 9090, or 9091 in a Debug build, and an
+address, an id or a key stays null, so what needs it is off or fails where it is used.
 
 It is deliberately small. Everything that varies per platform stays in the head, and everything
 that a fork would want different stays out of the libraries underneath.
@@ -266,15 +267,14 @@ run; the app then has a web host with no page to serve.
 
 Copy one product folder — `Client/` or `Connect/` — and it becomes a third sibling. Inside it:
 rename the folders and projects to your product, put your app's id base and name in the product's
-`Directory.Build.props` (see [the app's identity](#the-apps-identity)) and each head's update feed in
-its `App.cs`, your logo and consent summary in the product's options builder, your settings - links, analytics, portal, ad ids - in your own private
-appsettings, and pin your own asset package if you are replacing the artwork. Everything else is
-consumed from NuGet.
+`Directory.Build.props` (see [the app's identity](#the-apps-identity)), your logo and consent
+summary in the product's options builder, your settings - links, analytics, portal, ad ids, the
+update feed's address - in your own private appsettings, and pin your own asset package if you are
+replacing the artwork. Everything else is consumed from NuGet.
 
 Nothing beneath `src/Apps/` may be edited for a fork, and nothing beneath it may depend on anything
 inside it. If you find yourself wanting to change a library to brand your app, that is a bug in the
-library's shape — see
-[cicd/white-label-readiness.md](cicd/white-label-readiness.md) for what is still hardcoded.
+library's shape.
 
 ## See also
 

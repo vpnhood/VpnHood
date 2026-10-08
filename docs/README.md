@@ -65,7 +65,6 @@ Store policy and legal checkpoints a publisher must clear:
 | --- | --- |
 | [cicd/deployment.md](cicd/deployment.md) | Secrets, variables, and how a fork configures its own app. |
 | [cicd/server-publishing.md](cicd/server-publishing.md) | How the VpnHood server is released. |
-| [cicd/white-label-readiness.md](cicd/white-label-readiness.md) | What is still hardcoded per brand — the task list for a no-code white-label builder. |
 
 Release *engineering* runbooks live next to the scripts they describe, not here:
 [`pub/RELEASE-STRATEGY.md`](../pub/RELEASE-STRATEGY.md) (versioning and release model),

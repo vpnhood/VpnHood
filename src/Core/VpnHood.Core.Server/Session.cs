@@ -274,8 +274,9 @@ public class Session : IDisposable
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-        // filter requests
-        var virtualIp = GetClientVirtualIp(ipPacket.Version);
+        // filter requests; the version is read once, as each read decodes the packet's first byte
+        var ipVersion = ipPacket.Version;
+        var virtualIp = GetClientVirtualIp(ipVersion);
 
         // reject if packet source does not match client internal ip
         if (!ipPacket.SourceAddress.Equals(virtualIp)) {
@@ -304,8 +305,8 @@ public class Session : IDisposable
             ipPacket.UpdateAllChecksums();
         }
 
-        // send using tunnel or proxy
-        if (_vpnAdapter?.IsIpVersionSupported(ipPacket.Version) == true)
+        // send by the adapter where its NAT translates the version, else by the proxy
+        if (_vpnAdapter != null && _vpnAdapter.IsNatSupported(ipVersion) && _vpnAdapter.IsIpVersionSupported(ipVersion))
             _vpnAdapter.SendPacketQueued(ipPacket);
         else
             _proxyManager.SendPacketQueued(ipPacket);

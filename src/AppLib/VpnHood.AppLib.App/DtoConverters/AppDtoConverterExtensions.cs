@@ -55,7 +55,7 @@ public static class AppDtoConverterExtensions
             CreatedTime = sessionInfo.CreatedTime,
             ChannelProtocols = sessionInfo.ChannelProtocols.Select(x => x.ToAppDto()).ToArray(),
             IsTcpProxySupported = sessionInfo.IsTcpProxySupported,
-            IsTcpPacketSupported = sessionInfo.IsTcpPacketSupported
+            IsTcpPacketSupported = sessionInfo.IsTcpPacketIpV4Supported // the TCP proxy switch's, as in StateHelper
         };
     }
 

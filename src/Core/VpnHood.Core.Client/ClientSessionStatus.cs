@@ -41,9 +41,9 @@ internal class ClientSessionStatus(
         streamHandler.Stat.TcpPassthruCount + domainFilteringService.QuicStat.ExcludeCount;
     public int ActivePacketChannelCount => tunnel.PacketChannelCount;
     public bool IsDropQuic => packetHandler.DropQuic; // This is current, don't use session property
-    public bool IsTcpProxy => packetHandler.UseTcpProxy; // This is current, don't use session property
-    public bool CanChangeTcpProxy =>
-        session.Info is { IsTcpProxySupported: true, IsTcpPacketSupported: true } && !domainFilteringService.IsEnabled;
+    public bool IsTcpProxy => packetHandler.UseTcpProxyIpV4; // This is current, don't use session property
+    public bool CanChangeTcpProxy => // the switch acts on IPv4: IPv6 may go by the proxy anyway
+        session.Info is { IsTcpProxySupported: true, IsTcpPacketIpV4Supported: true } && !domainFilteringService.IsEnabled;
     public ChannelProtocol ChannelProtocol => session.ChannelProtocol;
     public int UnstableCount { get; set; }
     public int WaitingCount { get; set; }

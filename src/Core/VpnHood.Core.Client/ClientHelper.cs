@@ -5,6 +5,7 @@ using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
+using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
 // ReSharper disable PossibleMultipleEnumeration
@@ -223,5 +224,23 @@ internal static class ClientHelper
         includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
         return includeIpRanges; //sort and unify
+    }
+
+    // throws where the client and the server share no way for TCP; warns where the server overrides the proxy switch
+    public static void ValidateTcpSupport(HelloResponse helloResponse, VpnHoodClientConfig config)
+    {
+        if (helloResponse is { IsTcpPacketIpV4Supported: false, IsTcpProxySupported: false })
+            throw new NotSupportedException(
+                "The server does not support any protocol to support TCP. Please contact support.");
+
+        if (!helloResponse.IsTcpPacketIpV4Supported && !config.IsTcpProxySupported)
+            throw new NotSupportedException(
+                "The server does not support any protocol to support your client. Please contact support.");
+
+        if (!helloResponse.IsTcpPacketIpV4Supported && !config.UseTcpProxy)
+            VhLogger.Instance.LogWarning("TCP Proxy enabled because the server does not support TCP packets.");
+
+        if (!helloResponse.IsTcpProxySupported && config.UseTcpProxy)
+            VhLogger.Instance.LogWarning("TCP Proxy disabled because the server does not support it.");
     }
 }

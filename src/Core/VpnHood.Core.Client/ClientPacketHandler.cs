@@ -25,7 +25,8 @@ internal class ClientPacketHandler(
     public bool IsSecureDnsDetected { get; private set; }
     public bool DropQuic { get; set; }
     public bool DropUdp { get; set; }
-    public bool UseTcpProxy { get; set; }
+    public bool UseTcpProxyIpV4 { get; set; }
+    public bool UseTcpProxyIpV6 { get; set; }
     public bool IsIpV6SupportedByClient { get; set; }
     public bool IsIpV6SupportedByServer => isIpV6SupportedByServer;
 
@@ -106,12 +107,22 @@ internal class ClientPacketHandler(
 
     private void ProcessOutgoingPacketInclude(IpPacket ipPacket)
     {
-        if (ipPacket.IsV6() && !IsIpV6SupportedByServer)
-            throw new PacketDropException("A protected IPv6 packet is dropped because server can not handle it.");
+        // Tcp, by the version's own proxy choice; a branch per version, so no packet pays a check more
+        if (ipPacket.IsV6()) {
+            if (!IsIpV6SupportedByServer)
+                throw new PacketDropException("A protected IPv6 packet is dropped because server can not handle it.");
 
-        // Tcp
-        if (ipPacket.Protocol == IpProtocol.Tcp) {
-            if (UseTcpProxy)
+            if (ipPacket.Protocol == IpProtocol.Tcp) {
+                if (UseTcpProxyIpV6)
+                    clientTcpHost.ProcessOutgoingPacket(ipPacket);
+                else
+                    tunnel.SendPacketQueued(ipPacket);
+
+                return;
+            }
+        }
+        else if (ipPacket.Protocol == IpProtocol.Tcp) {
+            if (UseTcpProxyIpV4)
                 clientTcpHost.ProcessOutgoingPacket(ipPacket);
             else
                 tunnel.SendPacketQueued(ipPacket);

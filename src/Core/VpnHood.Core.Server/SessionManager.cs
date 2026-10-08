@@ -46,8 +46,12 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
     public ITracker? Tracker { get; }
-    public bool IsVpnAdapterSupported => _vpnAdapter != null;
-    public bool IsVpnAdapterIpV6Supported => _vpnAdapter?.IsIpVersionSupported(IpVersion.IPv6) == true;
+    // Whether TCP packets of the version have a way out now: the adapter carries the version and its NAT
+    // translates it. WinNAT translates no IPv6; an adapter on a host whose address of the version is not
+    // up yet, or that is restarting, carries none.
+    public bool IsVpnAdapterSupported(IpVersion ipVersion) =>
+        _vpnAdapter != null && _vpnAdapter.IsNatSupported(ipVersion) && _vpnAdapter.IsIpVersionSupported(ipVersion);
+
     public IpNetwork VirtualIpNetworkV4 => _virtualIpManager.IpNetworkV4;
     public IpNetwork VirtualIpNetworkV6 => _virtualIpManager.IpNetworkV6;
 

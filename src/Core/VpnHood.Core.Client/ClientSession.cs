@@ -297,7 +297,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         }
     }
 
-    private bool CalcUseTcpProxy()
+    private bool CalcUseTcpProxy(bool isTcpPacketSupported)
     {
         // client does not support tcp proxy
         if (!Config.IsTcpProxySupported)
@@ -309,7 +309,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             return false;
 
         // server does not support tcp packets so only tcp proxy can work
-        if (Info is { IsTcpPacketSupported: false })
+        if (!isTcpPacketSupported)
             return true;
 
         // DomainFilter needs TcpProxy
@@ -322,14 +322,15 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     private void UpdateConfig()
     {
-        // UseTcp
-        var useTcpProxy = CalcUseTcpProxy();
+        // UseTcp, by IP version: a server may carry IPv6 TCP only by the proxy
+        var useTcpProxyIpV4 = CalcUseTcpProxy(Info.IsTcpPacketIpV4Supported);
+        var useTcpProxyIpV6 = CalcUseTcpProxy(Info.IsTcpPacketIpV6Supported);
 
         // DropQuic is useful only if we use tcp proxy
-        var dropQuic = _dropQuic && useTcpProxy;
+        var dropQuic = _dropQuic && useTcpProxyIpV4;
 
         // DropUdp is useful only if we use tcp proxy
-        var dropUdp = _dropUdp && useTcpProxy;
+        var dropUdp = _dropUdp && useTcpProxyIpV4;
 
         // ChannelProtocol
         _channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, Info);
@@ -344,8 +345,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
         }
 
-        if (useTcpProxy != _useTcpProxy)
-            VhLogger.Instance.LogWarning("UseTcpProxy is changed to {UseTcpProxy} because of config or capability change.", _packetHandler.UseTcpProxy);
+        if (useTcpProxyIpV4 != _useTcpProxy)
+            VhLogger.Instance.LogWarning("UseTcpProxy is changed to {UseTcpProxy} because of config or capability change.", _packetHandler.UseTcpProxyIpV4);
 
         if (dropQuic != _dropQuic)
             VhLogger.Instance.LogWarning("DropQuic is changed to {DropQuic} because client can not use TcpProxy.", _packetHandler.DropQuic);
@@ -354,7 +355,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             VhLogger.Instance.LogWarning("DropUdp is changed to {DropUdp} because client can not use TcpProxy.", dropUdp);
 
         // update handlers
-        _packetHandler.UseTcpProxy = useTcpProxy;
+        _packetHandler.UseTcpProxyIpV4 = useTcpProxyIpV4;
+        _packetHandler.UseTcpProxyIpV6 = useTcpProxyIpV6;
         _packetHandler.DropQuic = dropQuic;
         _packetHandler.DropUdp = dropUdp;
         _dropQuic = dropQuic;

@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-10-07.*
+*Effective: 2026-10-08.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to the official **VpnHood! CONNECT** app and to the VPN servers we operate. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -135,19 +135,19 @@ What deletion does **not** do:
   they were issued with, frozen exactly as issued. They are kept because tax law requires it, for
   as long as that law requires, and are used for nothing else: not for support, not for marketing,
   only to satisfy that legal obligation.
-- **It does not erase everything the same instant.** Residual copies may remain for up to **30 days**
-  after deletion, after which they expire: connection records already written to our server log
-  files run out their own 30 days, and our database backups roll over within the same period.
-  Records held under a legal preservation request are the one exception, and are kept until the
-  matter is resolved.
+- **It does not erase everything the same instant.** Connection records already written to our
+  server log files run out their own 30 days, and residual copies may remain in our backups and
+  system logs for a limited period. Records held under a legal preservation request are kept until
+  the matter is resolved.
 
 Companies that processed your data in their own right — your sign-in provider, the app store that
 billed you, and payment processors — retain their own records under their own published policies.
 
-Separately from deletion: if we process a refund for a purchase made **on our website**, we keep an
-anonymous one-way hash of the refunded account's email address for up to **24 months**, used only to
-evaluate future refund requests (fraud prevention). It cannot be turned back into your address and
-survives account deletion. Refunds of app-store purchases are decided by the store and leave no such
+Separately from deletion: if we refund a purchase made **on our website** in full, we keep a
+pseudonymous one-way hash of the refunded account's email address for up to **24 months**, used only
+to evaluate future refund requests (fraud prevention). It cannot be turned back into your address; it
+can only show whether an address was refunded before. It survives account deletion. Partial refunds
+are not recorded, and refunds of app-store purchases are decided by the store and leave no such
 record with us.
 
 ## Service Providers
@@ -172,7 +172,7 @@ Where data-protection law requires a legal basis, we rely on:
 
 ## How Long We Keep Data
 
-Connection logs are kept for 30 days and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account"; backups roll over within 30 days. Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
+Connection logs are kept for 30 days and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account". Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
 
 ## International Transfers
 

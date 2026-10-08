@@ -102,8 +102,9 @@ internal static class StateHelper
         if (!appFeatures.IsTcpProxySupported)
             return TcpProxyUsageReason.ClientNotSupported;
 
-        // server requires TcpProxy because it cannot deliver raw TCP packets
-        if (sessionInfo is { IsTcpPacketSupported: false })
+        // server requires TcpProxy because it cannot deliver raw TCP packets (IPv4's: the switch acts on it,
+        // while IPv6 may go by the proxy anyway)
+        if (sessionInfo is { IsTcpPacketIpV4Supported: false })
             return TcpProxyUsageReason.ServerRequiredOn;
 
         // server does not support TcpProxy

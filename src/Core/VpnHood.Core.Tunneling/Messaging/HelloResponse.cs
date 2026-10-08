@@ -38,12 +38,11 @@ public class HelloResponse : SessionResponse
     public string[] ServerTags { get; set; } = [];
     public AccessInfo? AccessInfo { get; set; }
     public bool IsTcpProxySupported { get; set; } = true;
-    public bool IsTcpPacketSupported { get; set; }
+    public bool IsTcpPacketIpV4Supported { get; set; }
+    public bool IsTcpPacketIpV6Supported { get; set; }
     public int Mtu { get; set; } = TransportDefaults.MtuServer;
 
-    [Obsolete("Use IsTcpPacketSupported")]
-    public bool IsTunProviderSupported {
-        get => IsTcpPacketSupported;
-        init => IsTcpPacketSupported = value;
-    }
+    [Obsolete("Deprecated on 2026-10-08: use IsTcpPacketIpV4Supported and IsTcpPacketIpV6Supported. Still " +
+              "sent for older clients and read from older servers, for which it meant both IP versions.")]
+    public bool IsTcpPacketSupported { get; set; }
 }

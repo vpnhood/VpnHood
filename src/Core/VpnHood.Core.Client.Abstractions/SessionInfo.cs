@@ -13,7 +13,8 @@ public class SessionInfo
     public required DateTime CreatedTime { get; set; }
     public required bool IsUdpChannelSupported { get; init; }
     public required bool IsQuicChannelSupported { get; init; }
-    public required bool IsTcpPacketSupported { get; init; }
+    public required bool IsTcpPacketIpV4Supported { get; init; }
+    public required bool IsTcpPacketIpV6Supported { get; init; }
     public required bool IsTcpProxySupported { get; init; }
     public required bool IsLocalNetworkAllowed { get; set; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }

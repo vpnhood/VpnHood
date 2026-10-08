@@ -137,6 +137,12 @@ internal class ClientSessionBuilder(
             if (helloResponse.ClientPublicAddress is null)
                 throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
 
+            // a server before the per-version flags sends only this one, and means both IP versions by it
+#pragma warning disable CS0618
+            if (helloResponse is { IsTcpPacketSupported: true, IsTcpPacketIpV4Supported: false, IsTcpPacketIpV6Supported: false })
+                helloResponse.IsTcpPacketIpV4Supported = helloResponse.IsTcpPacketIpV6Supported = true;
+#pragma warning restore CS0618
+
             var serverIncludeIpRangesByApp = helloResponse.IncludeIpRanges?.ToOrderedList() ?? IpNetwork.All.ToIpRanges();
             var serverIncludeIpRangesByDevice = helloResponse.VpnAdapterIncludeIpRanges?.ToOrderedList() ?? IpNetwork.All.ToIpRanges();
             var serverIncludeIpRanges = serverIncludeIpRangesByApp.Intersect(serverIncludeIpRangesByDevice);
@@ -151,7 +157,8 @@ internal class ClientSessionBuilder(
                 $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}, " +
                 $"UdpPort: {helloResponse.UdpPort}, " +
                 $"QuicPort: {helloResponse.QuicPort}, " +
-                $"IsTcpPacketSupported: {helloResponse.IsTcpPacketSupported}, " +
+                $"IsTcpPacketIpV4Supported: {helloResponse.IsTcpPacketIpV4Supported}, " +
+                $"IsTcpPacketIpV6Supported: {helloResponse.IsTcpPacketIpV6Supported}, " +
                 $"IsTcpProxySupported: {helloResponse.IsTcpProxySupported}, " +
                 $"IsLocalNetworkAllowed: {serverAllowedLocalNetworks.Any()}, " +
                 $"NetworkV4: {helloResponse.VirtualIpNetworkV4}, " +
@@ -219,19 +226,7 @@ internal class ClientSessionBuilder(
             if (hostUdpEndPoint is null)
                 VhLogger.Instance.LogWarning("The server does not support UDP channel.");
 
-            if (helloResponse is { IsTcpPacketSupported: false, IsTcpProxySupported: false })
-                throw new NotSupportedException(
-                    "The server does not support any protocol to support TCP. Please contact support.");
-
-            if (!helloResponse.IsTcpPacketSupported && !config.IsTcpProxySupported)
-                throw new NotSupportedException(
-                    "The server does not support any protocol to support your client. Please contact support.");
-
-            if (!helloResponse.IsTcpPacketSupported && !config.UseTcpProxy)
-                VhLogger.Instance.LogWarning("TCP Proxy enabled because the server does not support TCP packets.");
-
-            if (!helloResponse.IsTcpProxySupported && config.UseTcpProxy)
-                VhLogger.Instance.LogWarning("TCP Proxy disabled because the server does not support it.");
+            ClientHelper.ValidateTcpSupport(helloResponse, config);
 
             // Server splitting the user should hear about: public space the declarations leave out.
             // Local/special carve-outs (the usual LAN skip) cannot expose the public IP, and an entirely
@@ -261,7 +256,8 @@ internal class ClientSessionBuilder(
                 SuppressedTo = helloResponse.SuppressedTo,
                 AdRequirement = helloResponse.AdRequirement,
                 CreatedTime = FastDateTime.UtcNow,
-                IsTcpPacketSupported = helloResponse.IsTcpPacketSupported,
+                IsTcpPacketIpV4Supported = helloResponse.IsTcpPacketIpV4Supported,
+                IsTcpPacketIpV6Supported = helloResponse.IsTcpPacketIpV6Supported,
                 IsTcpProxySupported = helloResponse.IsTcpProxySupported,
                 IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.IsQuicSupported,
                 ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse, socketFactory.IsQuicSupported),

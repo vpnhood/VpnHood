@@ -483,10 +483,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var udpPort = FindMatchingPort(_udpListenerHost.EndPoints, streamConnection, "UDP");
         var quicPort = FindMatchingPort(_quicListenerHost.EndPoints, streamConnection, "QUIC");
 
-        // A TCP packet has no way out but the adapter, so a session that may send them is offered IPv6
-        // only where the adapter carries it: a Windows server's WinNAT translates no IPv6.
-        var isTcpPacketSupported = _sessionManager.IsVpnAdapterSupported && session.AllowTcpPacket;
-        var isIpV6Supported = IsIpV6Supported && (!isTcpPacketSupported || _sessionManager.IsVpnAdapterIpV6Supported);
+        // A TCP packet has no way out but the adapter's NAT, so each IP version is offered them on its own:
+        // a Windows server's WinNAT translates no IPv6, and there a client sends IPv6 TCP by its TCP proxy.
+        var isTcpPacketIpV4Supported = session.AllowTcpPacket && _sessionManager.IsVpnAdapterSupported(IpVersion.IPv4);
+        var isTcpPacketIpV6Supported = session.AllowTcpPacket && _sessionManager.IsVpnAdapterSupported(IpVersion.IPv6);
 
         var helloResponse = new HelloResponse {
             ErrorCode = sessionResponseEx.ErrorCode,
@@ -505,7 +505,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             MaxPacketChannelCount = session.Tunnel.MaxPacketChannelCount,
             IncludeIpRanges = NetFilterIncludeIpRanges,
             VpnAdapterIncludeIpRanges = NetFilterVpnAdapterIncludeIpRanges,
-            IsIpV6Supported = isIpV6Supported,
+            IsIpV6Supported = IsIpV6Supported,
             // client should wait more to get session exception replies
             RequestTimeout = _sessionManager.SessionOptions.TcpConnectTimeoutValue +
                              ServerTransportDefaults.ClientRequestTimeoutDelta,
@@ -518,7 +518,12 @@ public class ServerHost : IDisposable, IAsyncDisposable
             ServerLocation = sessionResponseEx.ServerLocation,
             ServerTags = sessionResponseEx.ServerTags,
             AccessInfo = sessionResponseEx.AccessInfo,
-            IsTcpPacketSupported = isTcpPacketSupported,
+            IsTcpPacketIpV4Supported = isTcpPacketIpV4Supported,
+            IsTcpPacketIpV6Supported = isTcpPacketIpV6Supported,
+            // an older client knows only this one, IPv4's: its IPv6 TCP fails where NAT has no IPv6
+#pragma warning disable CS0618
+            IsTcpPacketSupported = isTcpPacketIpV4Supported,
+#pragma warning restore CS0618
             IsTcpProxySupported = session.AllowTcpProxy,
             ClientPublicAddress = clientIp,
             ClientCountry = sessionResponseEx.ClientCountry,

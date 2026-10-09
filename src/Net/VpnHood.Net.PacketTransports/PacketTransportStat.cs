@@ -11,8 +11,8 @@ public class PacketTransportStat
     // counted by the sender and by a writer whose packet pushed the oldest out of a full queue
     public int DroppedPackets => _droppedPackets;
     public void AddDroppedPacket() => Interlocked.Increment(ref _droppedPackets);
-    public int SentBytes { get; set; }
-    public int ReceivedBytes { get; set; }
+    public long SentBytes { get; set; }
+    public long ReceivedBytes { get; set; }
     public DateTime CreatedTime { get; set; } = FastDateTime.UtcNow;
     public DateTime LastSentTime { get; set; } = FastDateTime.UtcNow;
     public DateTime LastReceivedTime { get; set; } = FastDateTime.UtcNow;

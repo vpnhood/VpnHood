@@ -5,11 +5,12 @@ namespace VpnHood.Test.Providers;
 // A packet's memory that records its disposal, so a test can see whether a transport disposed the packet
 public class TestMemoryOwner(byte[] buffer) : IMemoryOwner<byte>
 {
-    public bool IsDisposed { get; private set; }
+    private int _disposeCount;
+    public bool IsDisposed => Volatile.Read(ref _disposeCount) > 0;
     public Memory<byte> Memory => buffer;
 
     public void Dispose()
     {
-        IsDisposed = true;
+        Interlocked.Increment(ref _disposeCount);
     }
 }

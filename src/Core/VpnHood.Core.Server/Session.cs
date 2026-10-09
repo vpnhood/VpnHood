@@ -324,7 +324,7 @@ public class Session : IDisposable
 
         if (!_trackingOptions.TrackTcpValue && protocol is IpProtocol.Tcp ||
             !_trackingOptions.TrackUdpValue && protocol is IpProtocol.Udp ||
-            !_trackingOptions.TrackUdpValue && protocol is IpProtocol.IcmpV4 or IpProtocol.IcmpV6)
+            !_trackingOptions.TrackIcmpValue && protocol is IpProtocol.IcmpV4 or IpProtocol.IcmpV6)
             return;
 
         var mode = (isNewLocal ? "L" : "") + (isNewRemote ? "R" : "");
@@ -338,11 +338,13 @@ public class Session : IDisposable
             localPortStr = _trackingOptions.TrackLocalPortValue ? localEndPoint.Value.Port.ToString() : "*";
 
         if (destinationEndPoint != null) {
-            // Redacted unless the log is running non-anonymous, unlike the client IP in the session log,
-            // which is recorded as-is because tracing a connection back to whoever made it is the entire
-            // reason that record exists. A destination never serves that purpose — an abuse report already
-            // names its target — so all anyone needs here is to tell one destination from another.
-            destinationIpStr = VhLogger.Redactor.RedactIpAddress(destinationEndPoint.Value.Address);
+            // A token even with the anonymizer off, unlike the client IP in the session log, which is
+            // recorded as-is because tracing a connection back to whoever made it is the entire reason that
+            // record exists. A destination never serves that purpose — an abuse report already names its
+            // target — so all anyone needs here is to tell one destination from another.
+            destinationIpStr = _trackingOptions.TrackDestinationIpValue
+                ? Redactor.Always.RedactIpAddress(destinationEndPoint.Value.Address)
+                : "*";
             destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Value.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint.Value).ToString() ?? "*";
         }

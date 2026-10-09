@@ -53,6 +53,17 @@ public class PacketTest : TestBase
     }
 
     [TestMethod]
+    public void Disposed_packet_is_named_without_its_buffer()
+    {
+        // error paths log a packet another owner has disposed
+        var ipPacket = PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("10.0.0.3"), 1, 53,
+            new byte[16]);
+        ipPacket.Dispose();
+
+        Assert.AreEqual("Disposed, TotalLength:44", ipPacket.ToString());
+    }
+
+    [TestMethod]
     public void IPv4()
     {
         var sourceIp = IPAddress.Parse("1.2.3.4");

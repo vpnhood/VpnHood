@@ -104,7 +104,8 @@ public class Tunnel : PacketTransportBase
         }
     }
 
-    // a packet that cannot go is disposed here, as no one else holds it
+    // a packet that cannot go is disposed here, as no one else holds it; one a channel refused is disposed
+    // already, and a second Dispose does nothing
     private bool SendPacketToChannel(IpPacket ipPacket)
     {
         try {

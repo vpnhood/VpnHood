@@ -17,11 +17,25 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
     private readonly List<int> _sentPorts = [];
     private int _sendsStarted;
     private int _preDisposeCount;
+    private int _disposeUnmanagedCount;
     public volatile bool IsBatchHeld;
 
     // set, logging a packet the queue drops throws, as a failing logger would
     public volatile bool FailDropLog;
+
+    // set, logging a packet a send failed on throws, as a failing logger would
+    public volatile bool FailSendErrorLog;
+
+    // set, a batch holding a packet from this UDP source port fails to send
+    public volatile int FailSendPort;
+
+    // set, the disposal hooks throw
+    public volatile bool FailPreDispose;
+    public volatile bool FailDisposeManaged;
+
     public int PreDisposeCount => Volatile.Read(ref _preDisposeCount);
+    public int DisposeUnmanagedCount => Volatile.Read(ref _disposeUnmanagedCount);
+    public bool IsTransportDisposed => IsDisposed;
 
     // set, a send past its disposed check waits here before it writes to the queue
     public ManualResetEventSlim? SendGate { get; set; }
@@ -37,11 +51,20 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
         }
     }
 
+    // a packet arriving from the other side
+    public void Receive(IpPacket ipPacket)
+    {
+        OnPacketReceived(ipPacket);
+    }
+
     protected override async ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         IsBatchHeld = !_release.Task.IsCompleted;
         await _release.Task;
         IsBatchHeld = false;
+        if (ipPackets.Any(ipPacket => ipPacket.ExtractUdp().SourcePort == FailSendPort))
+            throw new InvalidOperationException("Test: the send failed.");
+
         lock (_sentPorts)
             foreach (var ipPacket in ipPackets)
                 _sentPorts.Add(ipPacket.ExtractUdp().SourcePort);
@@ -59,6 +82,9 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
         if (FailDropLog && message.StartsWith("Dropping the oldest packet", StringComparison.Ordinal))
             throw new InvalidOperationException("Test: the logger failed.");
 
+        if (FailSendErrorLog && message == "Error in sending packet via channel.")
+            throw new InvalidOperationException("Test: the logger failed.");
+
         base.LogPacket(ipPacket, logLevel, exception, message, args);
     }
 
@@ -71,11 +97,21 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
     {
         Interlocked.Increment(ref _preDisposeCount);
         base.PreDispose();
+        if (FailPreDispose)
+            throw new InvalidOperationException("Test: the hook failed.");
     }
 
     protected override void DisposeManaged()
     {
         _release.TrySetResult();
         base.DisposeManaged();
+        if (FailDisposeManaged)
+            throw new InvalidOperationException("Test: the managed cleanup failed.");
+    }
+
+    protected override void DisposeUnmanaged()
+    {
+        Interlocked.Increment(ref _disposeUnmanagedCount);
+        base.DisposeUnmanaged();
     }
 }

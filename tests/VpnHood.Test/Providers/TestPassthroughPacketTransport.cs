@@ -9,6 +9,9 @@ public class TestPassthroughPacketTransport : PassthroughPacketTransport
 {
     private readonly List<int> _sentPorts = [];
 
+    // set, a packet from this UDP source port is refused before it is handed on
+    public volatile int FailPort;
+
     public IReadOnlyList<int> SentPorts {
         get {
             lock (_sentPorts)
@@ -18,7 +21,11 @@ public class TestPassthroughPacketTransport : PassthroughPacketTransport
 
     protected override void SendPacket(IpPacket ipPacket)
     {
+        var sourcePort = ipPacket.ExtractUdp().SourcePort;
+        if (sourcePort == FailPort)
+            throw new InvalidOperationException("Test: no one takes this packet.");
+
         lock (_sentPorts)
-            _sentPorts.Add(ipPacket.ExtractUdp().SourcePort);
+            _sentPorts.Add(sourcePort);
     }
 }

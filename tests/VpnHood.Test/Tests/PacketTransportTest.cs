@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Threading.Channels;
 using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
@@ -179,6 +180,7 @@ public class PacketTransportTest : TestBase
 
         Assert.IsFalse(await sendTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
         Assert.IsTrue(memory.IsDisposed);
+        Assert.AreEqual(1, transport.PacketStat.DroppedPackets);
         GC.KeepAlive(ipPacket);
     }
 
@@ -225,6 +227,7 @@ public class PacketTransportTest : TestBase
         await AssertEqualsWait(true, () => leftMemory.IsDisposed);
         await AssertEqualsWait(1, () => transport.SentPorts.Count);
         Assert.IsFalse(deliveredMemory.IsDisposed);
+        await AssertEqualsWait(2L, () => transport.PacketStat.DroppedPackets);
         GC.KeepAlive(deliveredPacket);
         GC.KeepAlive(droppedPacket);
         GC.KeepAlive(leftPacket);
@@ -257,7 +260,8 @@ public class PacketTransportTest : TestBase
             }
         }, TestCt)).ToArray();
 
-        await Task.Delay(50, TestCt);
+        // disposed while every sender is under way
+        await AssertEqualsWait(true, () => memories.Count >= 2000);
         transport.Dispose();
         await Task.WhenAll(senders).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
 
@@ -295,11 +299,154 @@ public class PacketTransportTest : TestBase
     }
 
     [TestMethod]
-    public void Passthrough_send_that_does_not_complete_at_once_is_waited_out_before_the_error()
+    public async Task Passthrough_send_that_does_not_complete_at_once_throws_and_keeps_to_its_own_packet()
     {
-        using var transport = new TestDelayedPassthroughPacketTransport(TimeSpan.FromMilliseconds(200));
+        using var transport = new TestDelayedPassthroughPacketTransport();
 
-        Assert.ThrowsExactly<InvalidOperationException>(() => transport.SendPacketQueued(BuildPacket(1)));
-        Assert.IsTrue(transport.IsSendFinished);
+        // the error comes at once, with no wait for the send
+        var delayedMemory = BuildPacketMemory(1);
+        var delayedPacket = PacketBuilder.Attach(delayedMemory);
+        var sendTask = Task.Run(() => transport.SendPacketQueued(delayedPacket), TestCt);
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            sendTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
+
+        // the next sender's packet goes, and is disposed, by its own send
+        var nextMemory = BuildPacketMemory(2);
+        var nextPacket = PacketBuilder.Attach(nextMemory);
+        Assert.IsTrue(transport.SendPacketQueued(nextPacket));
+        Assert.IsTrue(nextMemory.IsDisposed);
+
+        // the first send ends with its own packet, not the next one's
+        Assert.IsFalse(delayedMemory.IsDisposed);
+        transport.Release();
+        await AssertEqualsWait(true, () => delayedMemory.IsDisposed);
+        await AssertEqualsWait(2L, () => transport.PacketStat.SentPackets);
+        GC.KeepAlive(delayedPacket);
+        GC.KeepAlive(nextPacket);
+    }
+
+    [TestMethod]
+    public void Passthrough_transport_that_hands_packets_on_disposes_what_it_does_not_hand_on()
+    {
+        var transport = new TestPassthroughPacketTransport { FailPort = 1 };
+
+        // one no one takes
+        var refusedMemory = BuildPacketMemory(1);
+        var refusedPacket = PacketBuilder.Attach(refusedMemory);
+        Assert.IsFalse(transport.SendPacketQueued(refusedPacket));
+        Assert.IsTrue(refusedMemory.IsDisposed);
+
+        // one handed on is no longer the transport's
+        var sentMemory = BuildPacketMemory(2);
+        var sentPacket = PacketBuilder.Attach(sentMemory);
+        Assert.IsTrue(transport.SendPacketQueued(sentPacket));
+        Assert.IsFalse(sentMemory.IsDisposed);
+
+        // one sent to it once disposed
+        transport.Dispose();
+        var lateMemory = BuildPacketMemory(3);
+        var latePacket = PacketBuilder.Attach(lateMemory);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => transport.SendPacketQueued(latePacket));
+        Assert.IsTrue(lateMemory.IsDisposed);
+        Assert.AreEqual(2, transport.PacketStat.DroppedPackets);
+        GC.KeepAlive(refusedPacket);
+        GC.KeepAlive(sentPacket);
+        GC.KeepAlive(latePacket);
+    }
+
+    [TestMethod]
+    public void Received_packet_the_transport_cannot_deliver_is_disposed()
+    {
+        // a transport that hands its packets on: only the rule for an undelivered packet disposes these
+        var transport = new TestHeldPacketTransport(queueCapacity: 1, autoDisposePackets: false);
+
+        // with no handler
+        var unhandledMemory = BuildPacketMemory(1);
+        var unhandledPacket = PacketBuilder.Attach(unhandledMemory);
+        transport.Receive(unhandledPacket);
+        Assert.IsTrue(unhandledMemory.IsDisposed);
+
+        // given back by a handler that threw; one the handler takes is its own
+        transport.PacketReceived += (_, ipPacket) => {
+            if (ipPacket.ExtractUdp().SourcePort == 2)
+                throw new InvalidOperationException("Test: the handler failed.");
+        };
+        var givenBackMemory = BuildPacketMemory(2);
+        var givenBackPacket = PacketBuilder.Attach(givenBackMemory);
+        transport.Receive(givenBackPacket);
+        Assert.IsTrue(givenBackMemory.IsDisposed);
+        var takenMemory = BuildPacketMemory(3);
+        var takenPacket = PacketBuilder.Attach(takenMemory);
+        transport.Receive(takenPacket);
+        Assert.IsFalse(takenMemory.IsDisposed);
+
+        // refused once the transport is disposed
+        transport.Dispose();
+        var refusedMemory = BuildPacketMemory(4);
+        var refusedPacket = PacketBuilder.Attach(refusedMemory);
+        transport.Receive(refusedPacket);
+        Assert.IsTrue(refusedMemory.IsDisposed);
+        GC.KeepAlive(unhandledPacket);
+        GC.KeepAlive(givenBackPacket);
+        GC.KeepAlive(takenPacket);
+        GC.KeepAlive(refusedPacket);
+    }
+
+    [TestMethod]
+    public async Task Failed_send_is_counted_and_disposed_and_the_queue_goes_on()
+    {
+        using var transport = new TestHeldPacketTransport(queueCapacity: 4) { FailSendPort = 1 };
+        transport.Release();
+
+        var failedMemory = BuildPacketMemory(1);
+        var failedPacket = PacketBuilder.Attach(failedMemory);
+        Assert.IsTrue(transport.SendPacketQueued(failedPacket));
+        await AssertEqualsWait(1L, () => transport.PacketStat.DroppedPackets);
+        Assert.IsTrue(failedMemory.IsDisposed);
+
+        Assert.IsTrue(transport.SendPacketQueued(BuildPacket(2)));
+        await AssertEqualsWait(1, () => transport.SentPorts.Count);
+        Assert.AreEqual(2, transport.SentPorts[0]);
+        GC.KeepAlive(failedPacket);
+    }
+
+    [TestMethod]
+    public async Task Send_loop_whose_cleanup_fails_disposes_its_batch_and_the_transport()
+    {
+        using var transport = new TestHeldPacketTransport(queueCapacity: 4) {
+            FailSendPort = 1,
+            FailSendErrorLog = true
+        };
+        transport.Release();
+
+        // the send fails, and so does logging it: the packet is disposed all the same, and the loop that cannot go
+        // on leaves the transport disposed, so later sends fail loud
+        var memory = BuildPacketMemory(1);
+        var ipPacket = PacketBuilder.Attach(memory);
+        Assert.IsTrue(transport.SendPacketQueued(ipPacket));
+        await AssertEqualsWait(true, () => transport.IsTransportDisposed);
+        Assert.IsTrue(memory.IsDisposed);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => transport.SendPacketQueued(BuildPacket(2)));
+        GC.KeepAlive(ipPacket);
+    }
+
+    [TestMethod]
+    public void Dispose_whose_hooks_throw_still_disposes()
+    {
+        var transport = new TestHeldPacketTransport(queueCapacity: 1) {
+            FailPreDispose = true,
+            FailDisposeManaged = true
+        };
+
+        // the failure surfaces, and the transport is disposed all the same, its unmanaged part too
+        Assert.ThrowsExactly<InvalidOperationException>(transport.Dispose);
+        Assert.IsTrue(transport.IsTransportDisposed);
+        Assert.AreEqual(1, transport.DisposeUnmanagedCount);
+
+        var memory = BuildPacketMemory(1);
+        var ipPacket = PacketBuilder.Attach(memory);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => transport.SendPacketQueued(ipPacket));
+        Assert.IsTrue(memory.IsDisposed);
+        GC.KeepAlive(ipPacket);
     }
 }

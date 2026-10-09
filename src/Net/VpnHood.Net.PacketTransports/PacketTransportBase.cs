@@ -21,24 +21,32 @@ public abstract class PacketTransportBase : IPacketTransport
     private readonly PacketTransportStat _stat = new();
     private bool _isSending;
 
-    // A packet the transport does not deliver (dropped, refused, failed, or left in the queue at the end) is
-    // disposed whenever the transport queues, as no one else holds it any more; a delivered one only with
-    // AutoDisposePackets, as a transport that hands its packets on (a throttled tunnel) must not dispose them
+    // The transport takes every packet it is given. One it drops or refuses went to no one, so it is disposed in
+    // any mode. One a send failed on, or left in the queue at the end, is disposed whenever the transport queues,
+    // as no one else holds it; in passthrough mode only with AutoDisposePackets, as the subclass may have handed
+    // it on. A delivered one only with AutoDisposePackets, as a transport that hands its packets on (a throttled
+    // tunnel) must not dispose them
     private readonly bool _disposeUnsentPackets;
     protected bool IsDisposed => _disposed;
+
+    // set once disposal begins, and stays set
     protected bool IsDisposing => _disposing;
 
     // Sends a batch, one packet in single mode. It must end once the transport is disposed, as the queue's
-    // last packets wait on it. A transport that hands packets on must not throw after handing one on: a throw
-    // counts the whole batch dropped and disposes it. In passthrough mode it must complete at once and never
-    // send on its own transport, whose one-packet buffer the outer send still uses
+    // last packets wait on it. A throw counts the whole batch dropped and, by the rule above, disposes it, so a
+    // send must not throw after handing a packet on; a passthrough send without AutoDisposePackets disposes
+    // itself what it does not hand on. In passthrough mode it must complete at once and never send on its own
+    // transport, whose one-packet buffer the outer send still uses
     protected abstract ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets);
     protected virtual string Name => VhLogger.FormatType(this);
 
     public event EventHandler<IpPacket>? PacketReceived;
     public ReadOnlyPacketTransportStat PacketStat { get; }
     public int QueueLength => _sendChannel.Reader.Count;
-    public bool IsSending => Volatile.Read(ref _isSending) || QueueLength > 0;
+
+    // the flag is read again after the queue: the loop marks a batch before it empties the queue, so a batch
+    // taken between the first two reads still shows
+    public bool IsSending => Volatile.Read(ref _isSending) || QueueLength > 0 || Volatile.Read(ref _isSending);
 
     // the batch in flight, for a stop that waits for it; read fresh each time
     protected bool IsSendingBatch => Volatile.Read(ref _isSending);
@@ -66,6 +74,8 @@ public abstract class PacketTransportBase : IPacketTransport
         Task.Run(StartSendingPacketsAsync);
     }
 
+    // The handler takes a received packet. One the transport cannot deliver (refused once disposed, with no
+    // handler, or given back by a handler that threw) went to no one, so it is disposed here in any mode
     protected virtual void OnPacketReceived(IpPacket ipPacket)
     {
         try {
@@ -75,20 +85,29 @@ public abstract class PacketTransportBase : IPacketTransport
             _stat.ReceivedBytes += ipPacket.PacketLength;
             _stat.ReceivedPackets++;
             LogPacket(ipPacket, "Received a packet.");
-            PacketReceived?.Invoke(this, ipPacket);
+            var packetReceived = PacketReceived;
+            if (packetReceived == null) {
+                ipPacket.Dispose();
+                return;
+            }
+
+            packetReceived.Invoke(this, ipPacket);
         }
         catch (Exception ex) {
-            LogPacket(ipPacket, ex, "Error while invoking the received packets.");
-            if (_autoDisposePackets)
+            try {
+                LogPacket(ipPacket, ex, "Error while invoking the received packets.");
+            }
+            finally {
                 ipPacket.Dispose();
+            }
         }
     }
 
     public ValueTask SendPacketQueuedAsync(IpPacket ipPacket)
     {
         // A passthrough send completes at once (see SendPacketQueued), under the lock its one-packet buffer
-        // needs. One that fails is a drop, logged and counted as a full queue's is, so the call completes: only
-        // a refusal, by a closed transport, throws
+        // needs. One that fails is a drop, logged and counted as a full queue's is, so the call completes: it
+        // throws only for a disposed transport or a send that broke the passthrough rule
         if (_passthrough) {
             SendPacketQueued(ipPacket);
             return default;
@@ -115,7 +134,8 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
-    private readonly IpPacket[] _singlePacketBuffer = new IpPacket[1];
+    private readonly object _singlePacketLock = new();
+    private IpPacket[] _singlePacketBuffer = new IpPacket[1];
 
     public bool SendPacketQueued(IpPacket ipPacket)
     {
@@ -124,15 +144,15 @@ public abstract class PacketTransportBase : IPacketTransport
 
         LogPacket(ipPacket, "Sending a packet to queue.");
         if (_passthrough) {
-            lock (_singlePacketBuffer) {
+            lock (_singlePacketLock) {
                 _singlePacketBuffer[0] = ipPacket;
                 var ret = SendPacketsInternalAsync(_singlePacketBuffer);
                 if (ret.IsCompleted)
                     return ret.GetAwaiter().GetResult();
 
-                // a passthrough send must complete at once; one that does not is waited out, still under the
-                // lock, before the error, so its end does not run over the buffer the next sender fills
-                ret.AsTask().GetAwaiter().GetResult();
+                // a passthrough send must complete at once. One that does not keeps its buffer to its end, and the
+                // next sender gets a new one, so the end of this send never counts or disposes another's packet
+                _singlePacketBuffer = new IpPacket[1];
                 throw new InvalidOperationException("A passthrough PacketTransport should not return an incomplete task.");
             }
         }
@@ -156,7 +176,8 @@ public abstract class PacketTransportBase : IPacketTransport
             _sendChannel.Writer.WriteAsync(ipPacket).VhBlock();
             return true;
         }
-        catch {
+        catch (ChannelClosedException) {
+            // closed while waiting. Any other error leaves the packet alone: its write may still be pending
             DropRefusedPacket(ipPacket);
             return false;
         }
@@ -170,13 +191,17 @@ public abstract class PacketTransportBase : IPacketTransport
         throw new ObjectDisposedException(GetType().FullName);
     }
 
-    // a packet the closed queue refused, in any mode; the caller is told so
+    // a packet the closed queue refused, in any mode: it went to no one, so it is disposed, even when the logger
+    // fails; the caller is told so
     private void DropRefusedPacket(IpPacket ipPacket)
     {
-        LogPacket(ipPacket, LogLevel.Debug, null, "Dropping a packet. Send queue is closed.");
-        _stat.AddDroppedPacket();
-        if (_disposeUnsentPackets)
+        try {
+            LogPacket(ipPacket, LogLevel.Debug, null, "Dropping a packet. Send queue is closed.");
+        }
+        finally {
+            _stat.AddDroppedPacket();
             ipPacket.Dispose();
+        }
     }
 
     // called by the queue for the packet it drops to make room, inside the write that took the new one: nothing
@@ -207,15 +232,18 @@ public abstract class PacketTransportBase : IPacketTransport
                 while (ipPackets.Count < ipPackets.Capacity && _sendChannel.Reader.TryRead(out var ipPacket))
                     ipPackets.Add(ipPacket);
 
-                // send packets
+                // send packets; a failed send is handled there, so a fault here is one whose cleanup failed too
                 var task = SendPacketsInternalAsync(ipPackets);
-                if (!task.IsCompleted)
+                if (!task.IsCompletedSuccessfully)
                     await task;
             }
         }
         catch (Exception ex) {
+            // a loop that cannot go on leaves the transport disposed, so its senders fail loud rather than being
+            // refused for good
             VhLogger.Instance.LogError(ex, "Error in SendingPacketsAsync loop. Type: {Type}",
                 VhLogger.FormatType(this));
+            Dispose();
         }
         finally {
             // close the queue before emptying it, so no packet gets in after the last read: a send waiting for
@@ -244,36 +272,47 @@ public abstract class PacketTransportBase : IPacketTransport
             _isSending = true;
             _stat.LastSentTime = FastDateTime.UtcNow;
 
-            // Send packets asynchronously
+            // Send packets asynchronously, not resuming on the sender's context
             var task = SendPacketsAsync(ipPackets);
             if (!task.IsCompletedSuccessfully)
-                await task;
-
-            // ReSharper disable once ForCanBeConvertedToForeach
-            // passthrough mode does not dispose packets
-            for (var i = 0; i < ipPackets.Count; i++) {
-                _stat.SentBytes += ipPackets[i].PacketLength;
-                _stat.SentPackets++;
-                if (_autoDisposePackets)
-                    ipPackets[i].Dispose();
-            }
-
-            return true;
+                await task.Vhc();
         }
         catch (Exception ex) {
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < ipPackets.Count; i++) {
-                LogPacket(ipPackets[i], ex, "Error in sending packet via channel.");
-
-                _stat.AddDroppedPacket();
-                if (_disposeUnsentPackets)
-                    ipPackets[i].Dispose();
-            }
-
+            DropFailedPackets(ipPackets, ex);
             return false;
         }
         finally {
             _isSending = false;
+        }
+
+        // delivered ones, outside the send's try: a failing dispose is not a failed send
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++) {
+            _stat.SentBytes += ipPackets[i].PacketLength;
+            _stat.SentPackets++;
+            if (_autoDisposePackets)
+                ipPackets[i].Dispose();
+        }
+
+        return true;
+    }
+
+    // a batch the send failed on: every packet is counted and, by the rule above, disposed, even when the logger
+    // fails
+    private void DropFailedPackets(IReadOnlyList<IpPacket> ipPackets, Exception exception)
+    {
+        try {
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < ipPackets.Count; i++)
+                LogPacket(ipPackets[i], exception, "Error in sending packet via channel.");
+        }
+        finally {
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < ipPackets.Count; i++) {
+                _stat.AddDroppedPacket();
+                if (_disposeUnsentPackets)
+                    ipPackets[i].Dispose();
+            }
         }
     }
 
@@ -322,11 +361,14 @@ public abstract class PacketTransportBase : IPacketTransport
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        if (disposing)
-            DisposeManaged();
-
-        DisposeUnmanaged();
-        _disposing = false;
+        // unmanaged resources, native handles among them, go even when the managed cleanup throws
+        try {
+            if (disposing)
+                DisposeManaged();
+        }
+        finally {
+            DisposeUnmanaged();
+        }
     }
 
     protected virtual void PreDispose()

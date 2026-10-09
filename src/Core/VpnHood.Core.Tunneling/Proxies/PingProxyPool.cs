@@ -91,15 +91,16 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
         if (isNewRemoteEndPoint)
             _packetProxyCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint.ToValue());
 
-        // send to a ping proxy
+        // raise new endpoint event before the packet goes: once handed on, it is the proxy's, which may have sent and
+        // disposed it already
         var pingProxy = GetFreePingProxy(out var isNewLocalEndPoint);
-        pingProxy.SendPacketQueued(ipPacket);
-
-        // raise new endpoint event
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
             _packetProxyCallbacks?.OnConnectionEstablished(ipPacket.Protocol,
                 new IpEndPointValue(ipPacket.SourceAddress, 0), new IpEndPointValue(ipPacket.DestinationAddress, 0),
                 isNewLocalEndPoint, isNewRemoteEndPoint);
+
+        // send to a ping proxy
+        pingProxy.SendPacketQueued(ipPacket);
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)

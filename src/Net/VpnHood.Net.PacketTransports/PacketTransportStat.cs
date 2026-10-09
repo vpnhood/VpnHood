@@ -2,14 +2,17 @@
 
 namespace VpnHood.Net.PacketTransports;
 
+// The packet path counts with plain writes, no fence per packet: on a 32-bit platform a reader may see a torn
+// value as a low word wraps, and receivers on several threads may lose an increment. Drops are rare, so they
+// are counted exactly
 public class PacketTransportStat
 {
-    private int _droppedPackets;
-    public int SentPackets { get; set; }
-    public int ReceivedPackets { get; set; }
+    private long _droppedPackets;
+    public long SentPackets { get; set; }
+    public long ReceivedPackets { get; set; }
 
     // counted by the sender and by a writer whose packet pushed the oldest out of a full queue
-    public int DroppedPackets => _droppedPackets;
+    public long DroppedPackets => Volatile.Read(ref _droppedPackets);
     public void AddDroppedPacket() => Interlocked.Increment(ref _droppedPackets);
     public long SentBytes { get; set; }
     public long ReceivedBytes { get; set; }

@@ -79,6 +79,10 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
 
     public override string ToString()
     {
+        // a disposed packet's buffer is gone; error paths still log a packet another owner has disposed
+        if (_disposed)
+            return $"Disposed, TotalLength:{PacketLength}";
+
         var builder = new StringBuilder();
         builder.Append($"Src={SourceAddress}, Dst={DestinationAddress}, Proto={Protocol}, ");
         builder.Append($"TotalLength:{Buffer.Length}, PayloadLen={Payload.Length}");

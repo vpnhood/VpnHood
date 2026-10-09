@@ -10,7 +10,8 @@ namespace VpnHood.App.Server;
 // since its log file archives the one it finds when it opens, so a command run beside a running server
 // would roll that server's log. A file that is missing, unreadable, broken or without rules leaves the
 // terminal and the shipped config's own log file as the log, with the reason, rather than a server
-// without a log: an installed unit sends the terminal nowhere.
+// without a log: an installed unit sends the terminal nowhere. That log has no tracking or session
+// lines (NoTrackingLogger).
 internal sealed class ServerLog : IDisposable
 {
     private readonly FileLogger? _fallbackFileLogger;
@@ -40,7 +41,7 @@ internal sealed class ServerLog : IDisposable
             return new ServerLog(fallbackFileLogger: null);
         }
         catch (Exception ex) {
-            VhLogger.AddProvider(new ConsoleLoggerProvider());
+            VhLogger.AddProvider(new TextLoggerProvider(new NoTrackingLogger(new ConsoleLogger())));
             var logFolderPath = Path.Combine(storagePath, "logs");
             var fileLogger = new FileLogger(Path.Combine(logFolderPath, "server.log"));
             VhUtils.TryInvoke("Open the fallback log file", () => {
@@ -49,7 +50,7 @@ internal sealed class ServerLog : IDisposable
             });
 
             if (fileLogger.IsOpen)
-                VhLogger.AddProvider(new TextLoggerProvider(fileLogger, singleLine: false));
+                VhLogger.AddProvider(new TextLoggerProvider(new NoTrackingLogger(fileLogger), singleLine: false));
 
             VhLogger.Instance.LogError(ex,
                 "Could not use the NLog configuration, so the log goes to {LogDestination}. ConfigFilePath: {ConfigFilePath}",

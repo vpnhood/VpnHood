@@ -320,7 +320,8 @@ public class ServerApp : IDisposable
                 await RunServer().Vhc();
             }
             catch (Exception ex) {
-                // the parser reports it on stderr, which an installed service discards
+                // the parser reports it on stderr, which an installed service keeps in no log file: a Linux
+                // unit sends it to the system journal, a Windows task nowhere
                 VhLogger.Instance.LogError(ex, "The server could not start.");
                 throw;
             }

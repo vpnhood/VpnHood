@@ -33,7 +33,7 @@ The Client ID labels analytics on builds that support analytics and is sent to o
 
 ### You can turn analytics off
 
-On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches. Turning it off also stops the ratings you give in the app, which are sent with the analytics. The iOS build has no analytics collection to turn on.
+On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches. Turning it off also keeps the ratings you give in the app out of the analytics; your last rating, without any text you added, still reaches our servers with your next connection, so the app stops asking for one (see [Log Data](#log-data-our-vpn-servers)). The iOS build has no analytics collection to turn on.
 
 ### Technical information
 
@@ -73,6 +73,8 @@ You can use the app without an account. Signing in is only ever needed to buy or
 
 In every case we store that email address with your account so your subscription follows you across your devices, and you can delete it at any time — see [Delete Your Account](#delete-your-account).
 
+When the app talks to our account website, the website logs each request with its time and your IP address, and keeps that log for **90 days** to protect sign-in against abuse and to look into faults.
+
 ### Install attribution (website build for Android, China only)
 
 The Android build downloaded from our website contains **AppsFlyer**, which tells us which campaign or link an install came from — necessary where Google Play is unavailable. It starts **only if your device region is China**; everywhere else it is skipped and sends nothing. Advertising identifiers are explicitly disabled for it. The App Store, Google Play, Windows, and Linux builds do not contain it.
@@ -83,6 +85,7 @@ When you connect, our servers record what any VPN server must see to run the ser
 
 - Your Client ID and the access your app uses to connect
 - The technical information listed above
+- The rating you last gave in the app, if any, without its text, so the app stops asking for one
 - The amount of traffic (bytes sent and received), used for accounting and quotas
 - Your IP address and connection activity — the time, your client endpoint (IP address & port), and the port each connection goes to — kept in server log files for **31 days** from the moment each entry is written, then deleted. These log files are never backed up. If our hosting provider forwards a "Notice of Claimed Infringement," we use them to trace the connection back to whoever made it, so we can notify or suspend them. Free use has no account behind it to suspend, so there the address itself is the only thing that lets us stop the abuse — which is why we keep it.
 
@@ -174,7 +177,7 @@ Where data-protection law requires a legal basis, we rely on:
 
 ## How Long We Keep Data
 
-Connection logs are kept for 31 days and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account". Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
+Connection logs are kept for 31 days, diagnostic server logs for 14 days and the account website's request log for 90 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account". Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
 
 ## International Transfers
 

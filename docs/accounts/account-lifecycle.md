@@ -230,9 +230,12 @@ Before anything is erased, we tell them what it means (§10). Then, in this orde
 4. **Cut the account free from its premium code.** The code is kept on our side, but it now belongs
    to nobody.
 5. **Freeze the invoices, then erase the customer.** Each invoice is archived exactly as it was
-   issued — buyer's name included — and the customer record and client-area login are then
-   overwritten. The person disappears from the live system; the financial documents keep the
-   identity the law requires them to carry. See below for why this replaced anonymising them.
+   issued — buyer's name and address included, not the email, which no invoice shows — and the
+   customer record and client-area login are then overwritten. WHMCS's own traces of the person go
+   with them: its mail log, its activity log, and the addresses of the last sign-ins and of the
+   orders. A login that cannot be overwritten stops the deletion, so a re-run tries it again. The
+   person disappears from the live system; the financial documents keep the identity the law
+   requires them to carry. See below for why this replaced anonymising them.
 6. **Write the journal entry** — numeric ids and the gateway's agreement reference, no personal data
    — so the anonymisation can be re-applied after a backup restore, and so a stray charge can still
    be traced to an agreement someone can cancel.
@@ -317,9 +320,10 @@ whole thing aborts with a message rather than half-deleting.
 
 ### The one thing a deletion may not do: break a legal hold
 
-Our servers keep connection records — the time and the client endpoint — for 30 days, counted from
-when each entry is written. They are not part of the account, they are not in the database, and
-deletion does not reach into them: they simply run out their own 30 days and expire, which is what
+Our servers keep connection records — the time, the client endpoint and the port each connection
+goes to — for 31 days, counted from when each entry is written. They are not part of the account,
+they are not in the database, and deletion does not reach into them: they simply run out their own
+31 days and expire, which is what
 the privacy policy discloses.
 
 **A preservation request suspends that expiry.** If an authority formally asks us to preserve
@@ -386,7 +390,7 @@ connect.
   do leave the person's own signed-in devices with the account — re-entering a kept code is what
   brings one back; §8.)
 - **It does not erase everything the same instant.** Connection records already written to our
-  server log files run out their own 30 days, and database backups roll over within the same
+  server log files run out their own 31 days, and database backups roll over within the same
   period. After that they expire.
 - **It does not break a legal hold.** Records covered by a preservation request or a live claim
   stop expiring until the matter is resolved — the one thing that outlives an erasure, and the one
@@ -1425,7 +1429,7 @@ These came up and are now settled — kept here only so they are not re-opened.
 | Can we stop a store charging them? | We do not try, on any store. Signing in again gives the subscription back, so cancelling it on the way out would destroy what we would otherwise return — §8 |
 | Can we refuse a renewal as it happens? | No. The money moves before we are told. Cancelling beforehand is the only lever — §8 |
 | A device that never comes back online | Not a leak. A code only acts at the moment of connecting, and connecting is the check — §5 |
-| Does deletion erase our connection logs? | No, and it does not need to. They run out their own 30 days and expire — §5, §6 |
+| Does deletion erase our connection logs? | No, and it does not need to. They run out their own 31 days and expire — §5, §6 |
 | Can a deletion destroy records under a preservation request? | No. A legal hold suspends expiry until the matter is resolved, and it outranks every retention rule here — §5 |
 | Is a bulk order revocable? | Yes, by an administrator, by hand. The system refuses loudly rather than pretending it worked. Automating it is not worth the volume — §8 |
 | When does a code start counting down? | A prepaid one-time code on first use; anything billed on a cycle expires with the cycle — §4 |

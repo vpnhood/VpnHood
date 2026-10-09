@@ -5,5 +5,11 @@ services:
     network_mode: "host"
     restart: always
     stop_grace_period: 30s
+    # the console log, capped: Docker keeps it forever otherwise; the server's own logs are in storage
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
         - /opt/VpnHoodServer/storage:/app/storage

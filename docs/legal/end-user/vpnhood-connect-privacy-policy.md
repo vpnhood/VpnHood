@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-10-08.*
+*Effective: 2026-10-09.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to the official **VpnHood! CONNECT** app and to the VPN servers we operate. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -18,7 +18,6 @@ Some data depends on **where you installed the app from**, because those builds 
 | Crash reports | no | no | yes | no |
 | Advertisements | no | no | yes | no |
 | Optional sign-in and purchases | yes | yes | yes | yes |
-| Install attribution | no | no | no | in China only |
 
 ### Your Client ID
 
@@ -57,7 +56,7 @@ On builds with analytics, when analytics is on, the following is collected:
 
 The Google Play build sends automatic crash reports through Google Firebase Crashlytics. A crash report contains the technical details of the failure and device information; it never includes your browsing activity or the content of your traffic.
 
-Crash reports follow the same switch as analytics, and your choice is remembered from one launch to the next. The single exception is the very first start of a fresh install: the crash handler has to be in place before your settings can be read, so a crash during that first startup — exactly the kind we most need to fix — is still reported.
+Crash reports follow the same switch as analytics, though turning it off takes effect for them the next time the app starts. Your choice is remembered from one launch to the next. The single exception is the very first start of a fresh install: the crash handler has to be in place before your settings can be read, so a crash during that first startup — exactly the kind we most need to fix — is still reported.
 
 ### Advertisements (Google Play build)
 
@@ -74,10 +73,6 @@ You can use the app without an account. Signing in is only ever needed to buy or
 In every case we store that email address with your account so your subscription follows you across your devices, and you can delete it at any time — see [Delete Your Account](#delete-your-account).
 
 When the app talks to our account website, the website logs each request with its time and your IP address, and keeps that log for **90 days** to protect sign-in against abuse and to look into faults.
-
-### Install attribution (website build for Android, China only)
-
-The Android build downloaded from our website contains **AppsFlyer**, which tells us which campaign or link an install came from — necessary where Google Play is unavailable. It starts **only if your device region is China**; everywhere else it is skipped and sends nothing. Advertising identifiers are explicitly disabled for it. The App Store, Google Play, Windows, and Linux builds do not contain it.
 
 ## Log Data (our VPN servers)
 
@@ -161,7 +156,6 @@ These companies process data on our behalf or in their own right, and only for t
 
 - **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, non-iOS builds), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
 - **Apple Inc.** — Sign in with Apple and App Store billing (optional accounts and purchases, App Store build)
-- **AppsFlyer** — install attribution, website build for Android only
 - **Hosting and payment providers** — infrastructure needed to run the VPN and account services, and payment processing for website purchases
 
 They are obliged not to use the data for any purpose other than the one we assign them, except where they act as independent controllers under their own published policies (advertising and payments).

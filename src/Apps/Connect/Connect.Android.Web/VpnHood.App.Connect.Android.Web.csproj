@@ -56,7 +56,6 @@
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
 		<ProjectReference Include="..\Connect\VpnHood.App.Connect.csproj" />
-		<PackageReference Include="AppsFlyerXamarinBindingAndroid" Version="6.18.1" />
 	</ItemGroup>
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way

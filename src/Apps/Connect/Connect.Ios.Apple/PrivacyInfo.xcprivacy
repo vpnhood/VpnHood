@@ -21,7 +21,7 @@
 <plist version="1.0">
 <dict>
 	<!-- No cross-app/cross-site tracking: no IDFA, no ATTrackingManager, and no ad or attribution SDK is
-	     linked into the iOS Connect app. The AdMob / Chartboost / InMobi / AppsFlyer keys that appear in
+	     linked into the iOS Connect app. The AdMob / Chartboost / InMobi keys that appear in
 	     .user/VpnHoodConnect/appsettings.json are ANDROID-only — ConnectAppConfigs loads them on every
 	     head, but nothing in the iOS head reads them, and no ad package is referenced by
 	     VpnHood.App.Connect.Ios.csproj. false here is what keeps the app out of the App Tracking

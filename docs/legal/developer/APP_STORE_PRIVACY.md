@@ -129,9 +129,8 @@ key to its own servers — the model is "our app, our servers", the opposite of 
 
 **iOS Connect ships with in-app purchases and Sign in with Apple.** That is the decisive difference
 from Client, and it means Connect **cannot** reuse Client's "no identity, nothing linked" answers.
-It does *not*, however, inherit the rest of the Android/Google stack: AdMob, Google Sign-In,
-Firebase Crashlytics and (in the website build) AppsFlyer are wired in the Android app projects
-only. App Privacy is answered per app record, so none of those Android SDKs belong in the iOS
+It does *not*, however, inherit the rest of the Android/Google stack: AdMob, Google Sign-In and
+Firebase Crashlytics are wired in the Android app projects only. App Privacy is answered per app record, so none of those Android SDKs belong in the iOS
 panel — and with no ad SDK on iOS, `NSPrivacyTracking` stays **false** and ATT never applies.
 
 What iOS Connect sends that Client does not:

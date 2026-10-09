@@ -9,7 +9,6 @@ using VpnHood.AppUi.Hosting.Avalonia.Android;
 using VpnHood.AppLib.App.Android.Constants;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Updaters;
-using VpnHood.App.Connect.Android.Web.AppsFlyerUtils;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Android.Web;
@@ -48,7 +47,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         // own shop.
         options.Premium = ConnectAppOptions.CreatePremium(allowImportAccessCode: true, isPurchaseUrlSupported: true);
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
-        options.TrackerFactories = [..options.TrackerFactories, new AppsFlyerTrackerFactory { DevKey = appConfigs.AppsFlyerDevKey }];
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "android-web"),
             PromptDelay = TimeSpan.FromDays(1)

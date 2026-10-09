@@ -4,8 +4,8 @@ using VpnHood.AppLib.App.Utils;
 namespace VpnHood.App.Connect;
 
 // Connect's settings: what its private appsettings can say (AppConfigs), which this project embeds
-// once for every head, and Connect's own keys - the portal and its sign-in, the ad networks' ids,
-// the install attribution key. A head reads the ones it uses; none has a value in code.
+// once for every head, and Connect's own keys - the portal and its sign-in, the ad networks' ids.
+// A head reads the ones it uses; none has a value in code.
 public class ConnectAppConfigs : AppConfigs
 {
     public Uri? PortalBaseUri { get; set; }
@@ -17,7 +17,6 @@ public class ConnectAppConfigs : AppConfigs
     public string? ChartboostAdLocation { get; set; }
     public string? InmobiAccountId { get; set; }
     public string? InmobiPlacementId { get; set; }
-    public string? AppsFlyerDevKey { get; set; }
 
     // Connect's settings, with the built-in key a head embeds as access_key_default.txt in place of
     // the one the appsettings name. The key is the head's own file, from a secret: only the

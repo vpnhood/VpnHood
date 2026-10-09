@@ -4,13 +4,12 @@ using VpnHood.Net.PacketTransports;
 
 namespace VpnHood.Test.Providers;
 
-// A transport that does not block, whose batches are held at a barrier until Release: a queue whose
-// connection stopped moving
-public class TestHeldPacketTransport(int queueCapacity)
+// A transport whose batches are held at a barrier until Release: a queue whose connection stopped moving
+public class TestHeldPacketTransport(int queueCapacity, bool blocking = false)
     : PacketTransport(new PacketTransportOptions {
         QueueCapacity = queueCapacity,
         AutoDisposePackets = true,
-        Blocking = false
+        Blocking = blocking
     })
 {
     private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);

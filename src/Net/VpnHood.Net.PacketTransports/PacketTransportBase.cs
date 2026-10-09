@@ -78,19 +78,35 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
-    private async ValueTask SendPacketQueuedPassthroughAsync(IpPacket ipPacket)
-    {
-        ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
-
-        _singlePacketBuffer[0] = ipPacket;
-        await SendPacketsInternalAsync(_singlePacketBuffer);
-    }
-
     public ValueTask SendPacketQueuedAsync(IpPacket ipPacket)
     {
-        ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
+        // a passthrough send completes at once (see SendPacketQueued), under the lock its one-packet buffer needs
+        if (_passthrough) {
+            SendPacketQueued(ipPacket);
+            return default;
+        }
 
-        return _passthrough ? SendPacketQueuedPassthroughAsync(ipPacket) : _sendChannel.Writer.WriteAsync(ipPacket);
+        ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
+        LogPacket(ipPacket, "Sending a packet to queue.");
+
+        // waits for room in blocking mode; a queue that drops its oldest takes the packet at once
+        var writeTask = _sendChannel.Writer.WriteAsync(ipPacket);
+        return writeTask.IsCompletedSuccessfully ? default : WaitForQueueAsync(writeTask, ipPacket);
+    }
+
+    // a packet a closed queue refuses is handled as SendPacketQueuedBlocking handles it, then the failure thrown
+    private async ValueTask WaitForQueueAsync(ValueTask writeTask, IpPacket ipPacket)
+    {
+        try {
+            await writeTask.Vhc();
+        }
+        catch (Exception ex) {
+            LogPacket(ipPacket, ex, "Dropping packet. Could not write the packet to queue.");
+            if (_autoDisposePackets)
+                ipPacket.Dispose();
+
+            throw;
+        }
     }
 
     private readonly IpPacket[] _singlePacketBuffer = new IpPacket[1];
@@ -118,9 +134,10 @@ public abstract class PacketTransportBase : IPacketTransport
         if (_blocking)
             return SendPacketQueuedBlocking(ipPacket);
 
-        // a queue that drops its oldest refuses only once it is closed
+        // a queue that drops its oldest refuses only once it is closed; the caller, told so, keeps the packet
+        // unless the transport disposes what it is given, as in blocking mode
         LogPacket(ipPacket, LogLevel.Debug, null, "Dropping a packet. Send queue is closed.");
-        if (_disposeUnsentPackets)
+        if (_autoDisposePackets)
             ipPacket.Dispose();
 
         return false;
@@ -171,6 +188,11 @@ public abstract class PacketTransportBase : IPacketTransport
                 VhLogger.FormatType(this));
         }
         finally {
+            // close the queue before emptying it, so no packet gets in after the last read: a send waiting for
+            // room, or a later one, is refused at once instead of waiting forever, and none is left unsent
+            // and undisposed
+            _sendChannel.Writer.TryComplete();
+
             // dispose remaining packets
             if (_disposeUnsentPackets)
                 while (_sendChannel.Reader.TryRead(out var ipPacket))

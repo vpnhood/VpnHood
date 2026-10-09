@@ -30,4 +30,11 @@
 		<_VhAppHasCompany Condition="'$(Company)' != ''">true</_VhAppHasCompany>
 		<Copyright Condition="'$(Copyright)' == '' And '$(Company)' != ''">&#169; $(Company). All rights reserved.</Copyright>
 	</PropertyGroup>
+
+	<!-- .NET's own messages in words. A trimmed build - Android's and iOS's Release - would otherwise ship
+	     only their resource keys ("ObjectDisposed_Generic"), and the app shows an error's message as it
+	     is. Set before the SDK's targets give it their default; an app may still say true. -->
+	<PropertyGroup>
+		<UseSystemResourceKeys Condition="'$(UseSystemResourceKeys)' == ''">false</UseSystemResourceKeys>
+	</PropertyGroup>
 </Project>

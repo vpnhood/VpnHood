@@ -69,6 +69,7 @@ public static class AvaloniaDesktopHost
             };
         }
         AppUiContext.Context = new AvaloniaUiContext(window);
+        window.Activated += (_, _) => AppUiContext.NotifyResumed();
         _lifetime = lifetime;
         _window = window;
 

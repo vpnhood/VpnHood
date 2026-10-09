@@ -1,5 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.iOS;
+using Foundation;
+using UIKit;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Ios;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
@@ -17,6 +19,8 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Ios;
 public abstract class IosAvaloniaAppDelegate<TUi> : AvaloniaAppDelegate<TUi>
     where TUi : Application, IAvaloniaUi, new()
 {
+    private NSObject? _foregroundObserver; // kept for the app's life, as the observation is
+
     // The head's init params: the app's, and the two iOS facts the platform builds its device from.
     protected abstract IosInitParams CreateInitParams();
 
@@ -26,6 +30,8 @@ public abstract class IosAvaloniaAppDelegate<TUi> : AvaloniaAppDelegate<TUi>
         AvaloniaUiHosting.StartAsync<TUi>(VpnHoodApp.Instance.Api, VpnHoodApp.Instance.UiAssetProvider,
             CancellationToken.None).GetAwaiter().GetResult();
         AppUiContext.Context = new IosUiContext();
+        _foregroundObserver = UIApplication.Notifications.ObserveWillEnterForeground(
+            (_, _) => AppUiContext.NotifyResumed());
         return base.CreateAppBuilder();
     }
 }

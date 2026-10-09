@@ -9,6 +9,7 @@ using AvaloniaApplication = Avalonia.Application;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppLib.App;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Android;
@@ -100,6 +101,7 @@ public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityE
     {
         base.OnResume();
         ResumeEvent?.Invoke(this, EventArgs.Empty);
+        AppUiContext.NotifyResumed();
     }
 
     protected override void OnPause()

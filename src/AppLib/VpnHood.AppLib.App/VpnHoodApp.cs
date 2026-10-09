@@ -503,8 +503,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ActiveUiContext_OnResumed(object? sender, EventArgs e)
     {
         // the user may have installed or removed an app while we were in the background. this runs
-        // on the platform resume hook, so it must stay a cheap assignment and never block
+        // on the platform resume hook, so it must stay cheap and never block
         _installedApps = null;
+
+        // an ad that came while the window was in the background could not show and still waits; the
+        // window was there all along, so its return to the front is what shows it
+        if (ConnectionState is AppConnectionState.WaitingForAd)
+            _ = TryShowAd();
     }
 
     public VpnProfileInfo? CurrentVpnProfileInfo =>
@@ -1282,8 +1287,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         catch (ShowAdNoUiException) when (!_isConnecting) {
             // No connect of this process is waiting for the ad: the session is the quick-settings tile's,
             // always-on's, or this app's from before its process restarted, and the person opens the app to
-            // watch it. It keeps waiting, and the window's arrival shows the ad. A connect running here
-            // fails instead, as it always did
+            // watch it. It keeps waiting, and the window's arrival, or its return to the front, shows the
+            // ad. A connect running here fails instead, as it always did
             VhLogger.Instance.LogInformation("The ad waits for a window to show it in.");
         }
         catch (Exception ex) {

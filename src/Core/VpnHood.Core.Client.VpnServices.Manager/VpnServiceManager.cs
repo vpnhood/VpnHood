@@ -26,7 +26,7 @@ public class VpnServiceManager : IDisposable
 
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
     private readonly IDevice _device;
-    private readonly string _vpnConfigFilePath;
+    private readonly VpnServiceOptionsFile _serviceOptionsFile;
     private readonly string _vpnStatusFilePath;
     private ConnectionInfo _connectionInfo;
     private DateTime? _connectionInfoRefreshedTime;
@@ -44,7 +44,7 @@ public class VpnServiceManager : IDisposable
     public VpnServiceManager(IDevice device, TimeSpan? eventWatcherInterval)
     {
         Directory.CreateDirectory(device.VpnServiceConfigFolder);
-        _vpnConfigFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnConfigFileName);
+        _serviceOptionsFile = new VpnServiceOptionsFile(device.VpnServiceConfigFolder);
         _vpnStatusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         _device = device;
         _messageClient = device.CreateMessageClient();
@@ -124,8 +124,7 @@ public class VpnServiceManager : IDisposable
             _connectionInfo = SetConnectionInfo(ClientState.Initializing);
 
             // save vpn config
-            await File.WriteAllTextAsync(_vpnConfigFilePath, 
-                JsonSerializer.Serialize(serviceOptions), cancellationToken).Vhc();
+            await _serviceOptionsFile.Write(serviceOptions, cancellationToken).Vhc();
 
             // prepare vpn service
             VhLogger.Instance.LogInformation("Requesting VpnService...");
@@ -159,7 +158,7 @@ public class VpnServiceManager : IDisposable
     /// <summary>
     /// True when a previous session has left a configuration the VPN service can start from.
     /// </summary>
-    public bool IsConfigured => File.Exists(_vpnConfigFilePath);
+    public bool IsConfigured => _serviceOptionsFile.Exists;
 
     /// <summary>
     /// Start the VPN service from its last persisted configuration without touching it — the same
@@ -170,7 +169,7 @@ public class VpnServiceManager : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         // load the last configuration and start the service
-        var serviceOptions = JsonUtils.TryDeserializeFile<VpnServiceOptions>(_vpnConfigFilePath);
+        var serviceOptions = _serviceOptionsFile.TryRead();
         return serviceOptions != null 
             ? Start(serviceOptions, cancellationToken) 
             : throw new InvalidOperationException("There is no previous VPN configuration to start from.");
@@ -453,14 +452,18 @@ public class VpnServiceManager : IDisposable
 
     public bool IsReconfiguring { get; private set; }
 
+    // The saved options, connected or not, which a later start without the app runs with; then a
+    // running session, at once.
     public async Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
     {
+        await _serviceOptionsFile.Reconfigure(reconfigureParams, cancellationToken).Vhc();
+        if (!IsStarted)
+            return;
+
         IsReconfiguring = true;
         try {
-            if (IsStarted) {
-                await SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken);
-                Reconfigured?.Invoke(this, reconfigureParams);
-            }
+            await SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken);
+            Reconfigured?.Invoke(this, reconfigureParams);
         }
         finally {
             IsReconfiguring = false;

@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using TaskExtensions = VpnHood.Net.Toolkit.Extensions.TaskExtensions;
 using VpnHood.AppLib.Abstractions.Ads;
@@ -25,6 +24,7 @@ using VpnHood.AppLib.App.Services;
 using VpnHood.AppLib.App.Services.Accounts;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.App.Services.Proxies;
+using VpnHood.AppLib.App.Services.Trackers;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.App.Settings;
 using VpnHood.AppLib.App.Utils;
@@ -33,7 +33,6 @@ using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -45,7 +44,6 @@ using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
-using VpnHood.Net.Toolkit.Trackers;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App.WebHosting;
 using VpnHood.Net.Toolkit.Assets;
@@ -150,8 +148,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _device = device;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _logService = logService;
-        var trackerFactory = options.TrackerFactory ??
-                             (options.IsDebugMode ? new NullTrackerFactory() : new BuiltInTrackerFactory());
 
         Config = new VpnHoodAppConfig {
             DisconnectOnDispose = options.DisconnectOnDispose,
@@ -160,7 +156,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowRecommendUserReviewByServer = options.AllowRecommendUserReviewByServer,
             ConnectTimeout = options.ConnectTimeout,
             LogServiceOptions = options.LogServiceOptions,
-            TrackerFactoryAssemblyQualifiedName = trackerFactory.GetType().AssemblyQualifiedName,
             Transport = options.Transport,
             AdapterName = options.AdapterName ?? AppUtils.GetAdapterName(options.PackageTitle, options.IsDebugMode)
         };
@@ -198,15 +193,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_device.IsQuicSupported)
             protocols.Add(ChannelProtocol.Quic);
 
-        // Created before the features because only the tracker knows whether this build collects anything:
-        // a missing measurement id or a debug build collapses to a NullTracker.
+        // Created before the features because only the trackers know whether this build collects anything.
         var clientId = AppUtils.CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId);
-        var tracker = trackerFactory.TryCreateTracker(new TrackerCreateParams {
+        var trackerService = new AppTrackerService(settingsService, new AppTrackerServiceParams {
+            TrackerFactories = options.TrackerFactories,
+            IsDebugMode = options.IsDebugMode,
+            IsLicenseAgreementRequired = options.IsLicenseAgreementRequired,
             ClientId = clientId,
-            ClientVersion = appVersion,
-            Ga4MeasurementId = options.Ga4MeasurementId,
-            UserAgent = null, //not set yet
-            IsEnabled = UserSettings.AllowAnonymousTracker
+            AppVersion = appVersion
         });
 
         var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
@@ -231,8 +225,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
             IsSplitCountrySupported = options.IpLocationZipAsset != null,
             IsUserReviewSupported = options.UserReviewProvider != null,
-            GaMeasurementId = options.Ga4MeasurementId,
-            IsAnonymousTrackerSupported = tracker is not NullTracker,
+            IsAnonymousTrackerSupported = trackerService.IsSupported,
             ClientId = clientId,
             AppId = options.AppId,
             AppName = options.AppName,
@@ -271,14 +264,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);
         _vpnServiceManager.StateChanged += VpnService_StateChanged;
 
-        _errorReporter = new AppErrorReporter(tracker);
+        _errorReporter = new AppErrorReporter(trackerService.Tracker);
 
         // initialize services
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new DefaultAppCultureProvider(this),
             UserReviewProvider = options.UserReviewProvider,
             DeviceUiProvider = deviceUiProvider,
-            Tracker = tracker,
+            TrackerService = trackerService,
             SplitCountryService = splitCountryService,
             SplitIpViaAppService = splitIpViaAppService,
             SplitDomainService = splitDomainService,
@@ -310,7 +303,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             adProviderItems: options.AdProviderItems,
             loadAdTimeout: options.AdOptions.LoadAdTimeout,
             loadAdPostDelay: options.AdOptions.LoadAdPostDelay,
-            tracker: tracker);
+            tracker: trackerService.Tracker);
 
         AdManager = new AppAdManager(
             adService,
@@ -350,18 +343,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         CleanupLegacyTempFolder();
 
-        // track first launch with the locale-based country
-        try {
-            if (!SettingsService.Settings.IsStartupTrackerSent) {
-                var countryCode = AppRegionInfo.CurrentRegion.Name;
-                await Services.Tracker.Track(AppTrackerBuilder.BuildFirstLaunch(Features.ClientId, countryCode));
-                SettingsService.Settings.IsStartupTrackerSent = true;
-                SettingsService.Settings.Save();
-            }
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
-        }
+        await Services.TrackerService.TrackFirstLaunch();
 
         await _webHostManager.StartAlwaysOn(CancellationToken.None).Vhc();
 
@@ -396,12 +378,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UserSettings.DnsMode = DnsMode.Default;
             }
 
-            // reconfigure if connected
-            if (ConnectionInfo.IsStarted()) {
-                // it is not important to take effect immediately
-                // clear all services pending state after reconfigure
-                _ = VhUtils.TryInvokeAsync("Reconfigure after settings change", () => ReconfigureVpnService(CancellationToken.None));
+            // Reconfigure, not awaited: a running session at once, and either way the saved options a start
+            // without the app runs with (always-on, the quick-settings tile).
+            _ = VhUtils.TryInvokeAsync("Reconfigure after settings change", () => ReconfigureVpnService(CancellationToken.None));
 
+            if (ConnectionInfo.IsStarted()) {
                 // Settings that only apply at connect, judged on EFFECTIVE split values so flipping the
                 // split-tunneling toggle asks for a reconnect only when it changes something the adapter
                 // enforces. The app-level splits (country, via-app ip, domain) are NOT here: they
@@ -442,8 +423,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VhUtils.TryInvoke("Apply the client country",
                     () => AppRegionInfo.CurrentRegion = new RegionInfo(UserSettings.CountryCode));
 
-            // Enable trackers
-            Services.Tracker.IsEnabled = UserSettings.AllowAnonymousTracker;
+            // the trackers follow the first-run terms and the usage-data switch
+            Services.TrackerService.ApplySettings();
 
             // sync culture to app settings
             Services.CultureProvider.SelectedCultures =
@@ -473,22 +454,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     // Live-apply reconfigurable settings to the running session, including the split filters: the dbs
     // are rebuilt (or reused) under signature-versioned names, published through the folder manifests,
-    // and the service swaps its gates to them without disconnecting. Triggered by a UserSettings save
+    // and the service swaps its gates to them without disconnecting. Connected or not, the saved options
+    // take the settings too, for a start without the app. Triggered by a UserSettings save
     // (ApplySettings) and by the split text-file settings' change events (wired in the ctor).
     public async Task ReconfigureVpnService(CancellationToken cancellationToken)
     {
-        if (!ConnectionInfo.IsStarted())
-            return;
-
-        // publish the current db set BEFORE signaling: the service reads the manifests, not the request
-        await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
+        // publish the current db set BEFORE signaling a running session: it reads the manifests, not the
+        // request; while disconnected, the next connect publishes them
+        if (ConnectionInfo.IsStarted())
+            await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
 
         var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
         var reconfigureParams = new ClientReconfigureParams {
             ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
             DropQuic = UserSettings.DropQuic,
             UseTcpProxy = UserSettings.UseTcpProxy,
-            AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
+            AllowAnonymousTracker = Services.TrackerService.IsVpnServiceTrackerAllowed,
             DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
             UnroutedIpMode = splitTunneling.UnroutedIpMode,
             UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
@@ -808,9 +789,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
 
             // initialize built-in tracker after acquire userAgent
-            if (Services.Tracker is TrackerBase trackerBase && UserSettings.AllowAnonymousTracker &&
-                !string.IsNullOrEmpty(connectOptions.UserAgent))
-                trackerBase.UserAgent = connectOptions.UserAgent;
+            Services.TrackerService.SetUserAgent(connectOptions.UserAgent);
 
             //logOptions.
             VhLogger.Instance.LogDebug("Starting the log service...");
@@ -914,6 +893,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // create clientOptions
             var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
+            var isTrackerAllowed = Services.TrackerService.IsVpnServiceTrackerAllowed;
             var clientOptions = new ClientOptions {
                 AdapterName = Config.AdapterName,
                 AppId = Features.AppId,
@@ -934,16 +914,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PlanId = planId.ToEngine(),
                 AccessCode = accessCode,
                 IsTcpProxySupported = Features.IsTcpProxySupported,
-                AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
-                AllowEndPointTracker = UserSettings.AllowAnonymousTracker && Config.AllowEndPointTracker,
+                AllowAnonymousTracker = isTrackerAllowed,
+                AllowEndPointTracker = isTrackerAllowed && Config.AllowEndPointTracker,
                 AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
                 ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude ? [.. splitTunneling.Apps] : null,
                 IncludeApps = splitTunneling.AppMode == SplitAppMode.Include ? [.. splitTunneling.Apps] : null,
                 DnsServers = dnsServers,
                 LogServiceOptions = GetLogOptions(),
-                Ga4MeasurementId = Features.GaMeasurementId,
                 Version = Features.Version,
-                TrackerFactoryAssemblyQualifiedName = Config.TrackerFactoryAssemblyQualifiedName,
+                TrackerFactoryInfos = Services.TrackerService.TrackerFactoryInfos,
                 UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
                 EndPointStrategy = Features.AllowEndPointStrategy
                     ? UserSettings.EndPointStrategy.ToEngine()
@@ -1233,7 +1212,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Time = FastDateTime.UtcNow
         };
 
-        _ = Services.Tracker.TryTrack(
+        _ = Services.TrackerService.Tracker.TryTrack(
             AppTrackerBuilder.BuildUserReview(rating, reviewText));
     }
 

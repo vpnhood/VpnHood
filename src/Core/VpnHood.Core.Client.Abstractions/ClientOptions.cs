@@ -68,11 +68,8 @@ public class ClientOptions
     public bool UseNullCapture { get; set; }
     public LogServiceOptions LogServiceOptions { get; set; } = new();
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string? Ga4MeasurementId { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string? TrackerFactoryAssemblyQualifiedName { get; set; }
+    // The app's tracker factories, which the VPN service makes again in its own process.
+    public IReadOnlyList<TrackerFactoryInfo> TrackerFactoryInfos { get; set; } = [];
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DebugData1 { get; set; }

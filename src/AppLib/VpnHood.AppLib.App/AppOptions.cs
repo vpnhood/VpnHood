@@ -72,9 +72,6 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // are named once; the app itself never reads it. Required by a head that sets WebHostFactory.
     public IAsset? WebRootZipAsset { get; set; }
 
-    // The GA4 id the app's tracker reports to. Null, the default, sends nothing: a head that means to
-    // report names its own.
-    public string? Ga4MeasurementId { get; set; }
     // The look, as the UI's store carries it: "blue" or "violet" - the theme's own name, never a
     // product's, since what a product IS is the features above. It picks the palette the UI draws
     // and branding/<theme>/ in the store for the OS chrome.
@@ -91,7 +88,10 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     public IAccountProvider? AccountProvider { get; set; }
     public IAppUserReviewProvider? UserReviewProvider { get; set; }
     public IReadOnlyList<AppAdProviderItem> AdProviderItems { get; set; } = [];
-    public ITrackerFactory? TrackerFactory { get; set; }
+    // The trackers the app and its VPN service report through, one from each factory (see
+    // ITrackerFactory): none by default, so a head that means to report names its own, such as
+    // Ga4TrackerFactory with its id. The app decides when they report, and a Debug build makes none.
+    public IReadOnlyList<ITrackerFactory> TrackerFactories { get; set; } = [];
 
     // What a paired phone loads, built on the app itself - so the head
     // hands in a factory rather than an instance. Null means this head runs no web host, and
@@ -123,8 +123,8 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     public Uri? RemoteSettingsUrl { get; set; }
 
     // The pages this build links to (AppLinks): its legal documents and the menu's links. Every head
-    // fills them in from its product's appsettings (AppConfigs.Links), exactly like Ga4MeasurementId
-    // and RemoteSettingsUrl above, so a fork points at its own pages without editing code. The App
+    // fills them in from its product's appsettings (AppConfigs.Links), exactly like the GA4 id and
+    // RemoteSettingsUrl above, so a fork points at its own pages without editing code. The App
     // Store heads are the one exception: they set TermsOfUse to Apple's standard EULA, the agreement
     // actually governing a purchase made there while no custom EULA is registered with Apple.
     // Keep this the only place a link is set: a second source would have to be resolved against this

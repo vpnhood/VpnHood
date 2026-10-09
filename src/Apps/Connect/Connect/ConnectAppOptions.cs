@@ -2,6 +2,7 @@
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.App;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.App.Connect;
@@ -40,7 +41,7 @@ public static class ConnectAppOptions
             IsAddAccessKeySupported = IsAddAccessKeySupported,
             AllowRecommendUserReviewByServer = true,
             Premium = CreatePremium(allowImportAccessCode: false, isPurchaseUrlSupported: false),
-            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            TrackerFactories = [new Ga4TrackerFactory { MeasurementId = appConfigs.Ga4MeasurementId }],
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AllowEndPointStrategy = appConfigs.AllowEndPointStrategy,

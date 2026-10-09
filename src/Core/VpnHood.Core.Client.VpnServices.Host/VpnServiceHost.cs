@@ -152,7 +152,7 @@ public class VpnServiceHost : IDisposable
         
         try {
             // read the client options, and start the log with them: the file holds this session
-            var serviceOptions = Context.ReadServiceOptions();
+            var serviceOptions = Context.ServiceOptionsFile.Read();
             var clientOptions = serviceOptions.ClientOptions;
             _logService?.Start(clientOptions.LogServiceOptions);
 

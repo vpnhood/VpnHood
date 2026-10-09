@@ -278,13 +278,15 @@ public class AdTest : TestAppBase
         // the ad's post-load delay keeps the connect waiting
         var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
-        var appOptions = TestAppHelper.CreateAppOptions();
+        var appOptions = TestAppHelper.CreateAppOptions(isDebugMode: false); // a Debug build makes no tracker
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(60);
         appOptions.AdProviderItems = [
             new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) }
         ];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        app.UserSettings.IsLicenseAccepted = true; // as the first-run page does, so the tracker reports
+        app.SettingsService.Save();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // the person gives up after waiting
@@ -294,7 +296,8 @@ public class AdTest : TestAppBase
         await app.Disconnect();
         await Assert.ThrowsExactlyAsync<UserCanceledException>(() => connectTask);
 
-        var tracker = (TestTracker)app.Services.Tracker;
+        // one factory, so the app's tracker is the one it made
+        var tracker = (TestTracker)app.Services.TrackerService.Tracker;
         var trackEvent = tracker.FindEvent("vh_exception", "error_type", nameof(UserCanceledException));
         Assert.IsNotNull(trackEvent);
         Assert.AreEqual(errorLevel, trackEvent.Parameters["error_level"]);

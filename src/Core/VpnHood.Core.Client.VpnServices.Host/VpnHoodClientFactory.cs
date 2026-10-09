@@ -1,5 +1,4 @@
 using Ga4.Trackers;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Filtering.Abstractions;
@@ -9,7 +8,6 @@ using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.Net.Toolkit.Extensions;
-using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
@@ -83,36 +81,20 @@ public class VpnHoodClientFactory
         };
     }
 
+    // The app's trackers, made again here from their factories' types: null when there are none.
     protected virtual ITracker? CreateTracker(VpnHoodClientParams clientParams)
     {
         var clientOptions = clientParams.ServiceOptions.ClientOptions;
-        var trackerFactory = TryCreateTrackerFactory(clientOptions.TrackerFactoryAssemblyQualifiedName);
-        return trackerFactory?.TryCreateTracker(new TrackerCreateParams {
+        var trackerFactories = clientOptions.TrackerFactoryInfos
+            .Select(TrackerFactorySerializer.TryDeserialize)
+            .OfType<ITrackerFactory>()
+            .ToArray();
+
+        return trackerFactories.TryCreateTracker(new TrackerCreateParams {
             ClientId = clientOptions.ClientId,
             ClientVersion = clientOptions.Version,
-            Ga4MeasurementId = clientOptions.Ga4MeasurementId,
             UserAgent = clientOptions.UserAgent,
             IsEnabled = clientOptions.AllowAnonymousTracker
         });
-    }
-
-    private static ITrackerFactory? TryCreateTrackerFactory(string? assemblyQualifiedName)
-    {
-        if (string.IsNullOrEmpty(assemblyQualifiedName))
-            return null;
-
-        try {
-            var type = Type.GetType(assemblyQualifiedName);
-            if (type == null)
-                return null;
-
-            var trackerFactory = Activator.CreateInstance(type) as ITrackerFactory;
-            return trackerFactory;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not create tracker factory. ClassName: {className}",
-                assemblyQualifiedName);
-            return null;
-        }
     }
 }

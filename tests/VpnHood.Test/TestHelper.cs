@@ -377,7 +377,7 @@ public class TestHelper : IDisposable
             socketFactory: new TestSocketFactory(),
             netFilter: ClientNetFilter,
             proxyConnector: await CreateProxyConnector(clientOptions, proxyOptions),
-            new TestTracker(),
+            new TestTracker { IsEnabled = clientOptions.AllowAnonymousTracker },
             clientOptions);
 
         // test starting the client

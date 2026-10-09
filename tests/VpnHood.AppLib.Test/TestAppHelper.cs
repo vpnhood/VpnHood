@@ -29,8 +29,9 @@ public class TestAppHelper : TestHelper
     // the tests run beside their own files, so the plain provider is the right one
     public static readonly IAssetProvider AssetProvider = new FolderAssetProvider(AppContext.BaseDirectory);
 
-    // isDebugMode: false stands for a release build where the test needs the difference, e.g. the web
-    // server's remote access. The tracker and log options below are explicit, so the flag changes nothing else.
+    // isDebugMode: false stands for a release build where the test needs the difference: the web
+    // server's remote access, or trackers, which a Debug build never makes. The log options below are
+    // explicit, so the flag changes nothing else.
     // storagePath: another app's, for a test that reopens what it saved.
     public AppOptions CreateAppOptions(bool isDebugMode = true, string? storagePath = null)
     {
@@ -58,8 +59,7 @@ public class TestAppHelper : TestHelper
             },
             DeviceUiProvider = new TestDeviceUiProvider(),
             EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no SPA in test, so we need to use event watcher
-            Ga4MeasurementId = null,
-            TrackerFactory = new TestTrackerFactory(),
+            TrackerFactories = [new TestTrackerFactory()],
             AllowEndPointTracker = true,
             AutoDiagnose = false,
             DisconnectOnDispose = true,

@@ -14,8 +14,8 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Android;
 // API handed to the UI (AvaloniaUiHosting.InitAsync), then Avalonia. The OS makes it in every
 // process of the package - the VPN service's and the Quick Settings tile's too - where the platform
 // starts no app and the UI is given no API, so no view is made there (VpnHoodAvaloniaAppBase). A
-// head that must do something before all of this - an analytics SDK that reports from every
-// process - overrides OnCreate and calls this one after.
+// head that must do something before all of this - a crash reporter that starts in every process -
+// overrides OnCreate and calls this one after; its trackers it lists in AppOptions.TrackerFactories.
 public abstract class AndroidAvaloniaApplication<TUi>(IntPtr javaReference, JniHandleOwnership transfer)
     : AvaloniaAndroidApplication<TUi>(javaReference, transfer)
     where TUi : AvaloniaApplication, IAvaloniaUi, new()

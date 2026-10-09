@@ -1,6 +1,7 @@
 ﻿using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.App;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.App.Client;
@@ -37,7 +38,7 @@ public static class ClientAppOptions
             // an empty key would not parse
             AccessKeys = string.IsNullOrEmpty(defaultAccessKey) ? [] : [defaultAccessKey],
             IsAddAccessKeySupported = IsAddAccessKeySupported,
-            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            TrackerFactories = [new Ga4TrackerFactory { MeasurementId = appConfigs.Ga4MeasurementId }],
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AllowEndPointStrategy = appConfigs.AllowEndPointStrategy,

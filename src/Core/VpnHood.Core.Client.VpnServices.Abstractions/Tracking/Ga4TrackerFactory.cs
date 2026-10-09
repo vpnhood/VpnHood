@@ -1,21 +1,23 @@
-﻿using Ga4.Trackers;
+using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 
-public class BuiltInTrackerFactory : ITrackerFactory
+// The library's own tracker: GA4 over its tag endpoint, to the measurement id it is given.
+public class Ga4TrackerFactory : ITrackerFactory
 {
+    // Null sends nothing: a build that names no id collects nothing by design (an iOS head, a fork's).
+    public string? MeasurementId { get; init; }
+
     public ITracker CreateTracker(TrackerCreateParams createParams)
     {
-        // A build that names no measurement id collects nothing by design (an iOS head, a fork's), so it
-        // gets the null tracker, not a warning at every start and connect.
-        if (string.IsNullOrEmpty(createParams.Ga4MeasurementId))
+        if (string.IsNullOrEmpty(MeasurementId))
             return NullTrackerFactory.CreateNullTracker(createParams);
 
         var ga4TagTracker = new Ga4TagTracker {
-            MeasurementId = createParams.Ga4MeasurementId,
+            MeasurementId = MeasurementId,
             SessionCount = 1,
             ClientId = createParams.ClientId,
             SessionId = Guid.NewGuid().ToString(),

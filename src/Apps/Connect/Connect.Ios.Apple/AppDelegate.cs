@@ -12,7 +12,6 @@ using VpnHood.AppLib.App.Ios;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Ios.Apple;
@@ -53,8 +52,7 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
 
         // Apple applies an additional privacy rule to VPN apps: the iOS build does not send
         // analytics to third parties.
-        options.Ga4MeasurementId = null;
-        options.TrackerFactory = new NullTrackerFactory();
+        options.TrackerFactories = [];
         options.AllowEndPointTracker = false;
         // Not appConfigs' TermsOfUse: a purchase here is governed by Apple's standard EULA while
         // no custom EULA is registered in App Store Connect. Delete this once one is.

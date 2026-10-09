@@ -15,7 +15,6 @@ using VpnHood.AppLib.Stores.GooglePlay;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.App.Services.Updaters;
-using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Android.Google;
@@ -79,7 +78,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         options.UserReviewProvider = new GooglePlayInAppUserReviewProvider();
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
         options.AdProviderItems = CreateAppAdProviderItems(appConfigs);
-        options.TrackerFactory = IsDebug ? new NullTrackerFactory() : new FirebaseAnalyticsTrackerFactory();
+        options.TrackerFactories = [new FirebaseAnalyticsTrackerFactory()];
         // Nothing forbids a typed code on this channel (App Review 3.1.1 binds the App Store head
         // only). The outside shop stays off: Play forbids steering a buyer to one, so no operator
         // token may raise a web-purchase link in this build.

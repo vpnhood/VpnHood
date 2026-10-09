@@ -5,7 +5,7 @@ using VpnHood.Net.Toolkit.Trackers;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 
-public static class BuiltInTrackerFactoryExtensions
+public static class TrackerFactoryExtensions
 {
     public static ITracker TryCreateTracker(this ITrackerFactory trackerFactory, TrackerCreateParams createParams)
     {

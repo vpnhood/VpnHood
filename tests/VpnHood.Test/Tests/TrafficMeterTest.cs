@@ -115,8 +115,6 @@ public class TrafficMeterTest : TestBase
         const long maxSpeed = 125_000;
         using var tunnel = new Tunnel(new TunnelOptions {
             MaxPacketChannelCount = 1,
-            PacketQueueCapacity = TransportDefaults.TunnelPacketQueueCapacity,
-            AutoDisposePackets = true,
             Mtu = TransportDefaults.MtuClient,
             MaxSpeed = new Traffic(sent: maxSpeed, received: 0),
             MaxSpeedBurst = new Traffic(sent: 16 * 1024, received: 0)

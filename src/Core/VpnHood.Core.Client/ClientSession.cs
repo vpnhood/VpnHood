@@ -93,8 +93,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // Tunnel; the client limits only what it sends: the server shapes the download already, and a
         // second limit here would only drop what the server let through
         _tunnel = new Tunnel(new TunnelOptions {
-            AutoDisposePackets = true,
-            PacketQueueCapacity = TransportDefaults.TunnelPacketQueueCapacity,
             MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
             Mtu = config.Mtu,
             MaxSpeed = new Traffic(sent: (config.MaxSpeedMbps?.Sent ?? 0) * 1_000_000 / 8, received: 0)
@@ -380,9 +378,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
-        // stop traffic if the client has been disposed
-        if (_disposed)
+        // stop traffic if the client has been disposed; the packet is this handler's, so it goes here
+        if (_disposed) {
+            ipPacket.Dispose();
             return;
+        }
 
         // stop traffic if the client is paused and unpause after AutoPauseTimeout
         if (_autoWaitTime != null) {

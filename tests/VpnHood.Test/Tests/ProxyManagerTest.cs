@@ -95,6 +95,32 @@ public class ProxyManagerTest
         Assert.AreEqual(0, proxyManager.TcpConnectionCount);
     }
 
+    [TestMethod]
+    public async Task Closing_channel_ends_its_wait_on_the_speed_limit()
+    {
+        // the host's bytes wait on a limit that pays them off in about two seconds
+        using var trafficMeter = new TrafficMeter {
+            MaxSpeed = new Traffic(sent: 1000, received: 0),
+            MaxSpeedBurst = new Traffic(sent: 0, received: 0)
+        };
+        var hostIn = new System.IO.Pipelines.Pipe();
+        var hostOut = new System.IO.Pipelines.Pipe();
+        var tunnelIn = new System.IO.Pipelines.Pipe();
+        var tunnelOut = new System.IO.Pipelines.Pipe();
+        using var channel = new ProxyChannel("throttled-channel",
+            new TestStreamConnection(new DuplexStream(hostIn.Reader.AsStream(), hostOut.Writer.AsStream())),
+            new TestStreamConnection(new DuplexStream(tunnelIn.Reader.AsStream(), tunnelOut.Writer.AsStream())),
+            new TransferBufferSize(4096, 4096), trafficMeter);
+        channel.Start();
+        await hostIn.Writer.WriteAsync(new byte[2048]);
+        await Task.Delay(200); // the host's pump has read them and waits on the limit
+
+        // the tunnel's side ends: the channel closes at once, not once the wait is over
+        await tunnelIn.Writer.CompleteAsync();
+        await WaitFor(() => channel.State == PacketChannelState.Disposed,
+            "The channel should close without waiting out the limit.", timeoutMs: 1000);
+    }
+
     private sealed class TestStreamConnection(Stream stream) : IStreamConnection
     {
         public string ConnectionId { get; set; } = Guid.NewGuid().ToString();

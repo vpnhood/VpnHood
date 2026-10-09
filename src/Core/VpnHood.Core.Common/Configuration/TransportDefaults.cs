@@ -24,7 +24,6 @@ public static class TransportDefaults
     public const int MaxPacketChannelCount = 8;
     public const int StreamSmallReadCacheSize = 512;
     public const int ProxyPacketQueueCapacity = 200;
-    public const int TunnelPacketQueueCapacity = 200;
     public const int MaxUdpClientCount = 100;
     // DNS workers are small (4 KB) and recycle every UdpDnsTimeout, so a session needs far fewer
     // of them than general UDP workers

@@ -137,8 +137,6 @@ public class Session : IDisposable
         var maxSpeedMbps = sessionResponseEx.AccessInfo?.MaxSpeedMbps ?? new Traffic();
         Tunnel = new Tunnel(new TunnelOptions {
             MaxPacketChannelCount = options.MaxPacketChannelCountValue,
-            PacketQueueCapacity = TransportDefaults.TunnelPacketQueueCapacity,
-            AutoDisposePackets = true,
             Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu),
             MaxSpeed = new Traffic(
                 sent: maxSpeedMbps.Received * 1_000_000 / 8,

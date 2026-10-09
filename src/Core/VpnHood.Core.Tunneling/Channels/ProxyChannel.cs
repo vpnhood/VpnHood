@@ -27,6 +27,11 @@ public class ProxyChannel : IProxyChannel
     private bool _isTunnelReadTaskFinished;
     private readonly Job _checkAliveJob;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
+
+    // ends a pump's wait on the speed limit once the channel closes; the pumps' own token would also cancel a
+    // pending TLS read, which leaves the stream unusable and its connection never reused
+    private readonly CancellationTokenSource _throttleCancellationTokenSource = new();
+    private readonly CancellationToken _throttleCancellationToken;
     private bool IsDisposed => _disposed;
 
     public DateTime LastActivityTime { get; private set; } = FastDateTime.UtcNow;
@@ -40,6 +45,7 @@ public class ProxyChannel : IProxyChannel
         _tunnelStreamConnection = tunnelStreamConnection;
         _tunnelBufferSize = tunnelBufferSize;
         _trafficMeter = trafficMeter;
+        _throttleCancellationToken = _throttleCancellationTokenSource.Token;
         VhTypeTracker.Track(this);
 
         if (_tunnelBufferSize.Receive is < BufferSizeMin or > BufferSizeMax)
@@ -101,6 +107,9 @@ public class ProxyChannel : IProxyChannel
 
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).Vhc();
             _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
+
+            // the other pump's wait on the speed limit ends at once: its bytes have nowhere to go
+            _throttleCancellationTokenSource.TryCancel();
 
             // just to ensure that both tasks are completed gracefully, Connection should also handle it
             await Task.WhenAll(
@@ -225,11 +234,18 @@ public class ProxyChannel : IProxyChannel
             if (bytesRead == 0)
                 break;
 
-            // the limit is paid before the bytes go on, so a stream never runs ahead of it
-            if (_trafficMeter != null)
-                await (isSendingToTunnel
-                    ? _trafficMeter.ThrottleSendAsync(bytesRead, sourceCt)
-                    : _trafficMeter.ThrottleReceiveAsync(bytesRead, sourceCt)).Vhc();
+            // the limit is paid before the bytes go on, so a stream never runs ahead of it; a wait the channel's
+            // close ends drops the bytes, as they have nowhere to go
+            if (_trafficMeter != null) {
+                try {
+                    await (isSendingToTunnel
+                        ? _trafficMeter.ThrottleSendAsync(bytesRead, _throttleCancellationToken)
+                        : _trafficMeter.ThrottleReceiveAsync(bytesRead, _throttleCancellationToken)).Vhc();
+                }
+                catch (OperationCanceledException) when (_throttleCancellationToken.IsCancellationRequested) {
+                    break;
+                }
+            }
 
             // write to destination
             if (destinationPreserved != null)
@@ -290,6 +306,8 @@ public class ProxyChannel : IProxyChannel
 
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
+        _throttleCancellationTokenSource.Cancel();
+        _throttleCancellationTokenSource.Dispose();
         _checkAliveJob.Dispose();
         _started = false;
         _hostStreamConnection.Dispose();

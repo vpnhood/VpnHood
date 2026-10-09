@@ -1,5 +1,10 @@
 # Latest
 
+* Fix: VpnHoodServer's tracking log writes no destination address when destination tracking is off; when it is on, it writes a token in place of each address, even with the log anonymizer off. Its ICMP lines follow the ICMP switch; they used to follow the UDP one.
+* Update: VpnHoodServer's console no longer prints the session lines, which carry the client IP; they stay in server.log and sessions.log.
+* Update: VpnHoodServer's server.log starts a new file every day as well as at 10 MB, and the shipped NLog.config keeps its archives 12 days and the session and track archives 29, so no line is older than 14 or 31 days when it goes.
+* Fix: When its NLog.config cannot be used, VpnHoodServer's fallback log leaves out the tracking and session lines, which carry client IPs; that log never rolls.
+* Update: The Docker compose file caps the container's console log at three files of 10 MB.
 * Fix: VpnHoodServer shuts down cleanly on systemctl stop, docker stop, Ctrl+C or a dropped terminal, as on its stop command: it sends its last usage report and removes its tun and NAT rules, which a signal used to leave behind, and a stop no longer closes a self-hosted server's sessions for good. The stop command now returns once the server has exited, and a stop sent while the server is starting is no longer lost.
 * Update: On Linux, an installed VpnHoodServer stays down after its stop command; a crash or a failed start still restarts it, and `systemctl restart` restarts it by hand. A crash at start-up is now in its journal (`journalctl -u VpnHoodServer`).
 * Fix: VpnHoodServer exits with code 1 when a command fails; it used to exit 0 after printing the error. A broken NLog.config no longer silences the server: it logs to its console and to storage/logs/server.log, and names the problem.

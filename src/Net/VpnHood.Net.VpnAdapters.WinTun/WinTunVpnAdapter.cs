@@ -30,11 +30,15 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private static readonly Lock WinTunDllLock = new();
     private static IntPtr _winTunDll; // the one wintun.dll of the process, once loaded
 
-    // _tunAdapter is a raw native pointer freed by WintunCloseAdapter; passing it to
-    // WintunStartSession after (or while) it is freed corrupts the process. This lock makes
-    // AdapterOpen atomic against AdapterRemove, which can run concurrently when the user
-    // disconnects while a connection is still setting up the adapter.
+    // _tunAdapter and _tunSession are raw native pointers freed by WintunCloseAdapter and
+    // WintunEndSession; passing one after (or while) it is freed corrupts the process. This lock makes
+    // AdapterOpen atomic against AdapterClose and AdapterRemove, which can run concurrently when the
+    // user disconnects while a connection is still setting up the adapter.
     private readonly Lock _adapterLock = new();
+
+    // Ending a session frees its rings, so the reader and the batch being sent are waited for first: a
+    // stop pays it, never a packet. Past this limit the session ends anyway, with a warning.
+    private static readonly TimeSpan StopWaitTimeout = TimeSpan.FromSeconds(1);
 
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
@@ -164,13 +168,32 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override void AdapterClose()
     {
-        // Zero the fields first so concurrent readers/writers see the session as closed,
-        // then end the session to signal blocked WintunReceivePacket calls.
-        var session = Interlocked.Exchange(ref _tunSession, IntPtr.Zero);
-        _readEvent = IntPtr.Zero;
+        lock (_adapterLock) {
+            // The fields first, with a full fence: from here the reader and the sender find no session
+            var session = Interlocked.Exchange(ref _tunSession, IntPtr.Zero);
+            var readEvent = Interlocked.Exchange(ref _readEvent, IntPtr.Zero);
+            if (session == IntPtr.Zero)
+                return;
 
-        if (session != IntPtr.Zero)
+            // then what may still hold the session leaves before it is freed: the reader, woken from
+            // its wait, and the batch being sent. A finalizer has neither.
+            if (!IsDisposed) {
+                if (!Kernel32.SetEvent(readEvent))
+                    VhLogger.Instance.LogWarning(new Win32Exception(), "Could not wake the WinTun reader.");
+
+                if (!WaitForReader(StopWaitTimeout))
+                    VhLogger.Instance.LogWarning(
+                        "The WinTun reader did not end in {Timeout} seconds; its session ends anyway.",
+                        StopWaitTimeout.TotalSeconds);
+
+                if (!WaitForSender(StopWaitTimeout))
+                    VhLogger.Instance.LogWarning(
+                        "The WinTun sender did not end its batch in {Timeout} seconds; its session ends anyway.",
+                        StopWaitTimeout.TotalSeconds);
+            }
+
             WinTunApi.WintunEndSession(session);
+        }
     }
 
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)

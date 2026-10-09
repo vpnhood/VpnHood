@@ -1,6 +1,6 @@
 # VpnHood! CLIENT - Privacy Policy
 
-*Effective: 2026-10-07.*
+*Effective: 2026-10-08.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy.
 This policy applies only to the official **VpnHood! CLIENT** app.
@@ -11,20 +11,21 @@ Except on iOS, the app sends **pseudonymous usage and diagnostic data** to Googl
 is linked to a Client ID, not to your name or contact details. It may include:
 
 - the Client ID;
+- a country, from your device's region setting or your connection, never a precise location;
 - app version, language, operating system, device model, and browser engine;
 - app launches, screens used, session duration, and connection results;
 - usage totals: the amount of VPN traffic and the number of connections, never what they carried;
 - a rating you give in the app, with any text you add; and
 - technical error messages shown by the app.
 
-Google may derive a general location, such as country, from the IP address used to send an analytics
-event. We do not send browsing history, websites visited, or traffic content to Google Analytics.
+We do not send browsing history, websites visited, or traffic content to Google Analytics.
 
 The **Client ID** is a one-way hash that includes the app's identity. It is not a serial number,
 phone number, or advertising ID. On Android, it is derived from the Android ID, a value Android gives
 the app that changes when the device is factory reset, so it may remain the same after reinstalling
 the app. On iOS, Windows, and Linux, it is based on a random value the app creates when it first
-runs; on iOS and Linux, reinstalling the app produces a new Client ID. A Windows installation updated
+runs; on iOS, reinstalling the app produces a new Client ID, while Windows and Linux keep it with the
+app's data, so updating or reinstalling the app keeps it. A Windows installation updated
 from an earlier version keeps the Client ID it had, which was derived from your Windows user account.
 
 Analytics is controlled by **Settings → Privacy → "Share anonymous usage data"**. Turning it off
@@ -46,6 +47,10 @@ stay readable, as they identify nobody.
 VpnHood! CLIENT includes no VPN server or access key. The independent operator of the server you
 choose handles the VPN connection under its own terms and privacy policy. We do not receive, control,
 or retain that operator's server data through CLIENT.
+
+To connect, the app sends that server the access key you added, the Client ID, the app version, your
+operating system, and the rating you last gave in the app, if any; like any server you connect to, it
+also sees your IP address.
 
 ## Why We Process Data
 

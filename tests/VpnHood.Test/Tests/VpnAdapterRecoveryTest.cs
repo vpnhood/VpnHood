@@ -1,4 +1,7 @@
+using System.Diagnostics;
+using System.Net;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Test.Device;
@@ -17,6 +20,11 @@ public class VpnAdapterRecoveryTest : TestBase
             IncludeNetworks = [IpNetwork.AllV4],
             DnsServers = []
         };
+    }
+
+    private static IpPacket BuildPacket()
+    {
+        return PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("10.0.0.3"), 1000, 53, new byte[16]);
     }
 
     private static async Task<Exception> WaitForFailed(TestFaultyVpnAdapter adapter, Func<Task> action)
@@ -149,6 +157,79 @@ public class VpnAdapterRecoveryTest : TestBase
         await AssertEqualsWait(2, () => adapter.OpenCount, timeout: 10000);
         Assert.IsTrue(adapter.IsStarted);
         Assert.AreEqual(2, adapter.StartCount);
+    }
+
+    [TestMethod]
+    public async Task Stop_waits_for_the_reader()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        adapter.HoldReader = true;
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+        await AssertEqualsWait(true, () => adapter.IsReaderHeld);
+
+        // the stop waits while the reader is held, and ends once the reader has left
+        var stopTask = Task.Run(adapter.Stop, TestCt);
+        await Task.Delay(500, TestCt);
+        Assert.IsFalse(stopTask.IsCompleted);
+        adapter.ReleaseReader();
+        await stopTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsTrue(adapter.ReaderEndedAtClose);
+        Assert.IsFalse(adapter.WasReadingAtClose);
+        Assert.IsFalse(adapter.IsStarted);
+    }
+
+    [TestMethod]
+    public async Task Reader_stop_does_not_wait_for_itself()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+        await AssertEqualsWait(true, () => adapter.IsReading);
+
+        // the read errors stop the adapter on the reader's thread: at once, not after the wait's 5 s
+        adapter.FailRead = true;
+        var stopwatch = Stopwatch.StartNew();
+        await AssertEqualsWait(false, () => adapter.IsStarted, timeout: 3000);
+        Assert.IsTrue(stopwatch.Elapsed < TimeSpan.FromSeconds(3));
+        Assert.IsTrue(adapter.ReaderEndedAtClose);
+        Assert.IsTrue(adapter.WasReadingAtClose);
+    }
+
+    [TestMethod]
+    public async Task Stop_waits_for_the_sender()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // a packet whose write is held: the stop waits for its batch, and ends once the batch has
+        adapter.HoldSender = true;
+        adapter.SendPacketQueued(BuildPacket());
+        await AssertEqualsWait(true, () => adapter.IsSenderHeld);
+        var stopTask = Task.Run(adapter.Stop, TestCt);
+        await Task.Delay(500, TestCt);
+        Assert.IsFalse(stopTask.IsCompleted);
+        adapter.ReleaseSender();
+        await stopTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsTrue(adapter.SenderEndedAtClose);
+        Assert.IsFalse(adapter.IsStarted);
+    }
+
+    [TestMethod]
+    public async Task Sender_stop_does_not_wait_for_itself()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // the write errors stop the adapter on the sender's thread: at once, not after the wait's 5 s.
+        // One packet at a time: a batch ends at its first error, so each counts one
+        adapter.FailWrite = true;
+        var stopwatch = Stopwatch.StartNew();
+        for (var i = 0; i < 30 && adapter.IsStarted; i++) {
+            adapter.SendPacketQueued(BuildPacket());
+            await Task.Delay(10, TestCt);
+        }
+        await AssertEqualsWait(false, () => adapter.IsStarted, timeout: 3000);
+        Assert.IsTrue(stopwatch.Elapsed < TimeSpan.FromSeconds(3));
+        Assert.IsTrue(adapter.SenderEndedAtClose);
     }
 
     [TestMethod]

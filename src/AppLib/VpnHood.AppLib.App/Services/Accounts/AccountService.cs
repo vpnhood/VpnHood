@@ -143,7 +143,7 @@ public class AccountService
     /// account-granted premium included. The refresh below is what strips the account-applied access
     /// code — whichever channel delivered it — because an account-applied
     /// code leaves with its account (lifecycle §8). Only a code the person typed themselves survives;
-    /// the farewell mail is the way back for the rest.
+    /// for the rest, the order email or the client area is the way back.
     /// <para>
     /// The paid entitlement itself is not destroyed: the store still owns that subscription, the
     /// backend deliberately does not cancel it, and signing in again brings it back by itself.

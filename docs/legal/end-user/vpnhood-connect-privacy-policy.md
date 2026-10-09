@@ -17,7 +17,7 @@ Some data depends on **where you installed the app from**, because those builds 
 | Pseudonymous analytics | no | yes | yes | yes |
 | Crash reports | no | no | yes | no |
 | Advertisements | no | no | yes | no |
-| Optional sign-in and purchases | yes | no | yes | no |
+| Optional sign-in and purchases | yes | yes | yes | yes |
 | Install attribution | no | no | no | in China only |
 
 ### Your Client ID
@@ -27,7 +27,7 @@ The app identifies itself with a **Client ID**. It is never your device's serial
 What that underlying value is depends on your platform:
 
 - **Android** — derived from the Android ID, a value Android gives the app, so it **stays the same if you reinstall the app** and changes when the device is factory reset.
-- **iOS, Windows, and Linux** — a random value created inside the app when it first runs; on iOS and Linux, deleting and reinstalling the app produces a brand-new Client ID. A Windows installation updated from an earlier version keeps the Client ID it had, which was derived from your Windows user account.
+- **iOS, Windows, and Linux** — a random value created inside the app when it first runs. On iOS, deleting and reinstalling the app produces a brand-new Client ID; on Windows and Linux it is kept with the app's data, so updating or reinstalling the app keeps it. A Windows installation updated from an earlier version keeps the Client ID it had, which was derived from your Windows user account.
 
 The Client ID labels analytics on builds that support analytics and is sent to our VPN servers for session management, quotas, and abuse prevention.
 
@@ -41,7 +41,7 @@ On builds with analytics, when analytics is on, the following is collected:
 
 - Client ID (the identifier described above)
 - VpnHood version
-- Country (derived by Google from the connection, not reported by the app)
+- Country, from your device's region setting or your connection — never a precise location
 - Language
 - OS name and version
 - Device model (if applicable)
@@ -49,6 +49,7 @@ On builds with analytics, when analytics is on, the following is collected:
 - Session start time and duration, and the app screens you visit
 - Connection results — the server location you chose, whether the connection succeeded, and the server address used
 - Usage totals: the amount of VPN traffic and the number of connections, never what they carried
+- Ad results, on the Google Play build: which ad network served an ad, and whether it was shown, clicked, closed, or failed
 - A rating you give in the app, with any text you add
 - Error messages shown by the app (their English technical text)
 
@@ -60,16 +61,17 @@ Crash reports follow the same switch as analytics, and your choice is remembered
 
 ### Advertisements (Google Play build)
 
-The Google Play build shows advertisements, including rewarded ads you may choose to watch to extend a session. Ads are delivered by **Google AdMob**, which collects its own data under Google's policies to select and measure ads. Advertising is not part of the pseudonymous analytics above and is not controlled by the analytics switch. Ads are not shown in every country. You can limit ad personalisation in your Google account settings and in your device's ads settings.
+The Google Play build shows advertisements, including rewarded ads you may choose to watch to extend a session. Ads are delivered by **Google AdMob**, which collects its own data under Google's policies to select and measure ads. AdMob's own data collection is not controlled by the analytics switch; the ad results our analytics record (above) are. Ads are not shown in every country. You can limit ad personalisation in your Google account settings and in your device's ads settings.
 
-### Optional sign-in and purchases (App Store and Google Play builds)
+### Optional sign-in and purchases
 
-You can use the app without an account. Signing in is only ever needed to buy or restore a subscription, and each build offers the one sign-in its platform provides:
+You can use the app without an account. Signing in is only ever needed to buy or restore a subscription. Every build can sign in with an email address and a password on our account website, and the store builds also offer their platform's own sign-in:
 
 - **App Store build (iOS)** — **Sign in with Apple**. We receive your **email address**, which may be a private relay address that Apple generates for you (`…@privaterelay.appleid.com`) if you choose to hide your real one; a relay address works exactly as well for us. Payments are processed by **Apple**; we never see your card details.
 - **Google Play build (Android)** — **Sign in with Google**. We receive your **email address and basic public profile information** from Google. Payments are processed by **Google Play**; we never see your card details.
+- **Windows, Linux, and our website's Android build** — the email address and password of your account on our website. The app lists the plans and you buy on our website, where payments are processed by our payment providers; we never see your card details.
 
-Either way we store that email address with your account so your subscription follows you across your devices, and you can delete it at any time — see [Delete Your Account](#delete-your-account). The Windows and Linux builds have no sign-in and no in-app purchases.
+In every case we store that email address with your account so your subscription follows you across your devices, and you can delete it at any time — see [Delete Your Account](#delete-your-account).
 
 ### Install attribution (website build for Android, China only)
 
@@ -82,10 +84,9 @@ When you connect, our servers record what any VPN server must see to run the ser
 - Your Client ID and the access your app uses to connect
 - The technical information listed above
 - The amount of traffic (bytes sent and received), used for accounting and quotas
-- Your email address, if you have signed in
-- Your IP address and connection activity — the time and your client endpoint (IP address & port) — kept in server log files for **30 days** from the moment each entry is written, then deleted. These log files are never backed up. If our hosting provider forwards a "Notice of Claimed Infringement," we use them to trace the connection back to whoever made it, so we can notify or suspend them. Free use has no account behind it to suspend, so there the address itself is the only thing that lets us stop the abuse — which is why we keep it.
+- Your IP address and connection activity — the time and your client endpoint (IP address & port) — kept in server log files for **31 days** from the moment each entry is written, then deleted. These log files are never backed up. If our hosting provider forwards a "Notice of Claimed Infringement," we use them to trace the connection back to whoever made it, so we can notify or suspend them. Free use has no account behind it to suspend, so there the address itself is the only thing that lets us stop the abuse — which is why we keep it.
 
-**One exception to the 30 days.** If we receive a legal preservation request, or a claim we have to defend, the records it covers stop expiring until the matter is resolved. That is the only thing that keeps an entry past its 30 days, and it applies whether or not the account behind it still exists — destroying records after being formally put on notice is not something we are permitted to do.
+**One exception to the 31 days.** If we receive a legal preservation request, or a claim we have to defend, the records it covers stop expiring until the matter is resolved. That is the only thing that keeps an entry past its 31 days, and it applies whether or not the account behind it still exists — destroying records after being formally put on notice is not something we are permitted to do.
 
 **Important!** We do not record your browsing. Our servers never inspect your traffic for the domains or URLs you visit, and we do not record the addresses your connections go to. There is nothing about your destinations to log, store, or hand over. Our code is open source, so you can verify this for yourself.
 
@@ -136,7 +137,7 @@ What deletion does **not** do:
   as long as that law requires, and are used for nothing else: not for support, not for marketing,
   only to satisfy that legal obligation.
 - **It does not erase everything the same instant.** Connection records already written to our
-  server log files run out their own 30 days, and residual copies may remain in our backups and
+  server log files run out their own 31 days, and residual copies may remain in our backups and
   system logs for a limited period. Records held under a legal preservation request are kept until
   the matter is resolved.
 
@@ -145,8 +146,9 @@ billed you, and payment processors — retain their own records under their own 
 
 Separately from deletion: if we refund a purchase made **on our website** in full, we keep a
 pseudonymous one-way hash of the refunded account's email address for up to **24 months**, used only
-to evaluate future refund requests (fraud prevention). It cannot be turned back into your address; it
-can only show whether an address was refunded before. It survives account deletion. Partial refunds
+to evaluate future refund requests (fraud prevention). It is a one-way hash: it cannot be turned back
+into your address, but checked against a given address it shows whether that address was refunded
+before. It survives account deletion. Partial refunds
 are not recorded, and refunds of app-store purchases are decided by the store and leave no such
 record with us.
 
@@ -172,7 +174,7 @@ Where data-protection law requires a legal basis, we rely on:
 
 ## How Long We Keep Data
 
-Connection logs are kept for 30 days and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account". Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
+Connection logs are kept for 31 days and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account". Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
 
 ## International Transfers
 

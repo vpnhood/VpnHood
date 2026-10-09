@@ -20,9 +20,12 @@ public class TestFaultyVpnAdapter(bool autoRestart)
     public volatile bool FailWrite;
     public volatile bool HoldReader; // the reader's next wait holds until ReleaseReader
     public volatile bool HoldSender; // the next write holds until ReleaseSender
+    public volatile bool StopAfterOpen; // the owner's stop overtakes the start, between its open and its reader
     public volatile bool IsReaderHeld;
     public volatile bool IsSenderHeld;
     public volatile bool IsReading;
+    public int ReadingCount; // readers running, this run's and any that outlived their stop
+    public TimeSpan ReaderWaitTimeout = TimeSpan.FromSeconds(5); // the stop's wait for the reader
     public int StartCount; // starts tried
     public int OpenCount; // starts completed: IsStarted is true from a start's first step on
     public bool? ReaderEndedAtClose; // what the stop's wait for the reader answered
@@ -39,17 +42,21 @@ public class TestFaultyVpnAdapter(bool autoRestart)
             : base.AdapterAdd(cancellationToken);
     }
 
-    protected override Task AdapterOpen(CancellationToken cancellationToken)
+    protected override async Task AdapterOpen(CancellationToken cancellationToken)
     {
         Interlocked.Increment(ref OpenCount);
-        return base.AdapterOpen(cancellationToken);
+        await base.AdapterOpen(cancellationToken);
+        if (StopAfterOpen)
+            Stop();
     }
 
     protected override void StartReadingPackets()
     {
+        Interlocked.Increment(ref ReadingCount);
         IsReading = true;
         base.StartReadingPackets();
         IsReading = false;
+        Interlocked.Decrement(ref ReadingCount);
     }
 
     protected override bool ReadPacket(byte[] buffer)
@@ -101,7 +108,7 @@ public class TestFaultyVpnAdapter(bool autoRestart)
     // as WinTun's: the reader and the batch being sent leave before what they use is freed
     protected override void AdapterClose()
     {
-        ReaderEndedAtClose = WaitForReader(TimeSpan.FromSeconds(5));
+        ReaderEndedAtClose = WaitForReader(ReaderWaitTimeout);
         WasReadingAtClose = IsReading;
         SenderEndedAtClose = WaitForSender(TimeSpan.FromSeconds(5));
         base.AdapterClose();

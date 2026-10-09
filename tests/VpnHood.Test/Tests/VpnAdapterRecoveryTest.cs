@@ -195,6 +195,44 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     [TestMethod]
+    public async Task Reader_that_outlived_its_stop_leaves_the_next_run()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) {
+            ReaderWaitTimeout = TimeSpan.FromMilliseconds(100)
+        };
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // the reader is held past its stop's wait, and the next run starts beside it
+        adapter.HoldReader = true;
+        await AssertEqualsWait(true, () => adapter.IsReaderHeld);
+        adapter.Stop();
+        Assert.IsFalse(adapter.ReaderEndedAtClose);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+        await AssertEqualsWait(2, () => adapter.ReadingCount);
+
+        // once released, the old reader finds its run retired and leaves; the new one reads on
+        adapter.ReleaseReader();
+        await AssertEqualsWait(1, () => adapter.ReadingCount);
+        await Task.Delay(200, TestCt);
+        Assert.AreEqual(1, adapter.ReadingCount);
+        Assert.IsTrue(adapter.IsStarted);
+    }
+
+    [TestMethod]
+    public async Task Start_overtaken_by_a_stop_starts_no_reader()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) { StopAfterOpen = true };
+
+        // the owner's stop lands between the start's open and its reader: the start reports the stop,
+        // and no reader runs on the stopped adapter
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() =>
+            adapter.Start(CreateAdapterOptions(), TestCt));
+        await Task.Delay(200, TestCt);
+        Assert.AreEqual(0, adapter.ReadingCount);
+        Assert.IsFalse(adapter.IsStarted);
+    }
+
+    [TestMethod]
     public async Task Stop_waits_for_the_sender()
     {
         using var adapter = new TestFaultyVpnAdapter(autoRestart: false);

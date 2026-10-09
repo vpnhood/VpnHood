@@ -40,10 +40,13 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private volatile bool _keepStarted;
     private CancellationTokenSource _keepStartedCts = new();
 
-    // This run's reader, which a stop may wait for (WaitForReader). The sender is waited for by the
-    // transport's own sending flag (WaitForSender), so nothing is added per batch; only the adapter whose
-    // sender is stopping it on its own errors is marked, on that thread.
+    // This run's reader, which a stop may wait for (WaitForReader), and the run it reads for, by its task's
+    // id: a stop retires it, so a reader that outlives the stop leaves instead of reading the next run's
+    // session. The sender is waited for by the transport's own sending flag (WaitForSender), so nothing
+    // is added per batch; only the adapter whose sender is stopping it on its own errors is marked, on
+    // that thread.
     private volatile Task _readerTask = Task.CompletedTask;
+    private volatile int _readerRunId;
     private volatile int _readerThreadId;
     [ThreadStatic] private static TunVpnAdapter? _senderErrorStopAdapter;
 
@@ -300,12 +303,19 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             await AdapterOpen(cancellationToken).Vhc();
 
             // start reading packets; the task is published before it runs, so a stop from here waits
-            // for this run's reader, not the last one's. On the default scheduler, as Task.Run: never
-            // on a caller's own scheduler, which the blocking reader would hold
+            // for this run's reader, not the last one's. Under the stop lock: a stop that overtook this
+            // start has retired its run, and no reader may start after it. On the default scheduler, as
+            // Task.Run: never on a caller's own scheduler, which the blocking reader would hold
             var readerTask = new Task(RunReader, TaskCreationOptions.DenyChildAttach);
-            _readerThreadId = 0;
-            _readerTask = readerTask;
-            readerTask.Start(TaskScheduler.Default);
+            lock (_stopLock) {
+                if (!IsStarted)
+                    throw new OperationCanceledException("The VPN adapter has been stopped while starting.");
+
+                _readerThreadId = 0;
+                _readerTask = readerTask;
+                _readerRunId = readerTask.Id;
+                readerTask.Start(TaskScheduler.Default);
+            }
 
             VhLogger.Instance.LogInformation("TUN adapter started.");
         }
@@ -404,6 +414,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             VhLogger.Instance.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
             _isStopping = true;
+            _readerRunId = 0; // this run's reader leaves, even one that outlives the stop's wait
             try {
                 AdapterClose();
                 AdapterRemove();
@@ -577,16 +588,32 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     }
 
     // the stop runs inside the sender's batch, so it must not wait for that batch; the previous mark is
-    // restored, as this stop may run inside another adapter's
+    // restored, as this stop may run inside another adapter's. The sender's errors are the current run's.
     private bool StopBySender()
     {
         var previous = _senderErrorStopAdapter;
         _senderErrorStopAdapter = this;
         try {
-            return Stop(false);
+            return StopOnIoErrors(_readerRunId);
         }
         finally {
             _senderErrorStopAdapter = previous;
+        }
+    }
+
+    // The reader's or the sender's stop on its own I/O errors never waits for the stop lock: a stop that
+    // holds it may be waiting for that very thread, and the teardown is that stop's anyway. It stops only
+    // the run the errors came from, checked under the lock: a stop and a restart may have replaced it.
+    private bool StopOnIoErrors(int runId)
+    {
+        if (!_stopLock.TryEnter())
+            return false;
+
+        try {
+            return _readerRunId == runId && Stop(false);
+        }
+        finally {
+            _stopLock.Exit();
         }
     }
 
@@ -675,8 +702,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     protected virtual void StartReadingPackets()
     {
-        // Read packets from TUN adapter
-        while (IsReady) {
+        // Read packets from TUN adapter while this reader's run is the current one: a stop retires it, so
+        // a reader held in a subscriber past its stop's wait leaves instead of joining the next run
+        var runId = Task.CurrentId ?? -1;
+        while (_readerRunId == runId) {
             try {
                 // read next packet; no packet: wait before retrying
                 var packet = ReadPacket(_mtu);
@@ -691,7 +720,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 // process the packet
                 OnPacketReceived(packet);
             }
-            catch (Exception) when (!IsReady) {
+            catch (Exception) when (_readerRunId != runId) {
                 break; // normal stop
             }
             catch (Exception ex) {
@@ -702,10 +731,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
                 // Too many errors in a row: the adapter is broken, so stop it, and recover or tell the
                 // owner. Only here, not after the loop: a reader that ends with its run's stop may end
-                // late, after a restart has started another run, which it must leave be.
-                if (Stop(false))
+                // late, after a restart has started another run, which it must leave be. The loop's
+                // check ends it: this stop, or another one under way, has retired its run.
+                if (StopOnIoErrors(runId))
                     OnUnrequestedStop(ex);
-                break;
             }
         }
 

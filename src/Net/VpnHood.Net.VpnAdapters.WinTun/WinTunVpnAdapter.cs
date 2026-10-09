@@ -38,8 +38,12 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private readonly Lock _adapterLock = new();
 
     // Ending a session frees its rings, so the reader and the batch being sent are waited for first: a
-    // stop pays it, never a packet. Past this limit the session ends anyway, with a warning.
+    // stop pays it, never a packet. Past the limit the session is left allocated, never ended. The batch
+    // may be asleep in the send backoff, whose longest sleep is under twice MaxPacketSendDelay. A thread
+    // held off the CPU with the stop's own (a VM pause) resumes with it, so a late one gets a moment more.
     private static readonly TimeSpan StopWaitTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan StopRewaitTimeout = TimeSpan.FromMilliseconds(100);
+    private readonly TimeSpan _senderStopWaitTimeout = StopWaitTimeout + adapterSettings.MaxPacketSendDelay * 2;
 
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
@@ -118,9 +122,10 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     protected override void AdapterRemove()
     {
         lock (_adapterLock) {
-            // WinTun requires ending sessions before closing the adapter. A live session may still
-            // exist here when AdapterOpen raced a concurrent Stop and won, so end it here rather
-            // than relying on callers to close before remove.
+            // A session ends before its adapter's close, never after: the close removes the device, whose
+            // driver then closes the session's device handle, so a later end would close a handle value
+            // the process may have reused. A live session may still exist here when AdapterOpen raced a
+            // concurrent Stop and won, so it is closed here too.
             AdapterClose();
 
             // close the adapter
@@ -177,24 +182,35 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                 return;
 
             // then what may still hold the session leaves before it is freed: the reader, woken from
-            // its wait, and the batch being sent. A finalizer has neither.
-            if (!IsDisposed) {
-                if (!Kernel32.SetEvent(readEvent))
-                    VhLogger.Instance.LogWarning(new Win32Exception(), "Could not wake the WinTun reader.");
-
-                if (!WaitForReader(StopWaitTimeout))
-                    VhLogger.Instance.LogWarning(
-                        "The WinTun reader did not end in {Timeout} seconds; its session ends anyway.",
-                        StopWaitTimeout.TotalSeconds);
-
-                if (!WaitForSender(StopWaitTimeout))
-                    VhLogger.Instance.LogWarning(
-                        "The WinTun sender did not end its batch in {Timeout} seconds; its session ends anyway.",
-                        StopWaitTimeout.TotalSeconds);
-            }
+            // its wait, and the batch being sent. A finalizer has neither. One that does not leave in
+            // time may still be inside a WinTun call, so the session is left allocated, never freed
+            // under it; the adapter's removal closes its device handle and ends its rings' use.
+            if (!IsDisposed && !WaitForSessionThreads(readEvent))
+                return;
 
             WinTunApi.WintunEndSession(session);
         }
+    }
+
+    // Whether the reader and the batch being sent have left the session
+    private bool WaitForSessionThreads(IntPtr readEvent)
+    {
+        if (!Kernel32.SetEvent(readEvent))
+            VhLogger.Instance.LogWarning(new Win32Exception(), "Could not wake the WinTun reader.");
+
+        var readerEnded = WaitForReader(StopWaitTimeout);
+        var senderEnded = WaitForSender(_senderStopWaitTimeout);
+        readerEnded = readerEnded || WaitForReader(StopRewaitTimeout);
+        senderEnded = senderEnded || WaitForSender(StopRewaitTimeout);
+        if (readerEnded && senderEnded)
+            return true;
+
+        VhLogger.Instance.LogError(
+            "The WinTun {Thread} did not leave the session in time, so it stays allocated, " +
+            "{Size:F1} MiB, until the process exits.",
+            senderEnded ? "reader" : readerEnded ? "sender" : "reader and sender",
+            2 * (_ringCapacity + 0x10000) / 1048576.0);
+        return false;
     }
 
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)

@@ -1,4 +1,5 @@
 using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.Configuration;
 
@@ -44,4 +45,8 @@ public static class TransportDefaults
     public static TimeSpan TcpCheckInterval { get; set; } = TimeSpan.FromMinutes(15);
     public static TimeSpan TcpGracefulTimeout { get; set; } = TimeSpan.FromSeconds(15);
     public static TimeSpan ByeTimeout { get; set; } = TimeSpan.FromSeconds(2);
+
+    // What a speed-limited session may send at full speed after a pause, each way, as cable ISPs allow a
+    // burst: short use such as a page load runs at full speed, and heavy use is held to the limit
+    public static long MaxSpeedBurst { get; set; } = VhUtils.FromMB(10);
 }

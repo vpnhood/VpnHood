@@ -4,9 +4,10 @@ using VpnHood.Net.Toolkit.Utils;
 namespace VpnHood.Core.Tunneling;
 
 /// <summary>
-/// Tracks tunnel traffic as two independent directions.
-/// Throttling policy is intentionally applied by transport implementations, not by <see cref="Tunnel"/>:
-/// async stream/proxy transports await to slow down naturally, while UDP transports drop packets when over limit.
+/// Tracks tunnel traffic as two independent directions, and holds the session's speed limit: one bucket per
+/// direction, which every path of the session charges, so the limit covers all of its traffic. A sender
+/// waits on it (the tunnel's queue for packets, each proxy stream for its reads); a receiver only enforces
+/// it, slowing a stream or dropping a datagram the peer sent past the limit.
 /// For session-facing limits, server download maps to send and server upload maps to receive.
 /// </summary>
 public class TrafficMeter : IDisposable
@@ -37,14 +38,24 @@ public class TrafficMeter : IDisposable
     public DateTime LastActivityTime { get; private set; } = FastDateTime.UtcNow;
 
     /// <summary>
-    /// Gets or sets the maximum allowed speed (bytes per second) for throttling.
-    /// Null means unlimited.
+    /// The maximum allowed speed (bytes per second) for throttling; 0 means unlimited.
     /// </summary>
     public Traffic MaxSpeed {
         get => new(_sent.MaxSpeed, _received.MaxSpeed);
-        set {
+        init {
             _sent.MaxSpeed = value.Sent;
             _received.MaxSpeed = value.Received;
+        }
+    }
+
+    /// <summary>
+    /// What may pass at full speed after a pause (bytes), before the limit holds.
+    /// </summary>
+    public Traffic MaxSpeedBurst {
+        get => new(_sent.Burst, _received.Burst);
+        init {
+            _sent.Burst = value.Sent;
+            _received.Burst = value.Received;
         }
     }
 
@@ -73,35 +84,29 @@ public class TrafficMeter : IDisposable
         LastActivityTime = FastDateTime.UtcNow;
     }
 
-    public bool ShouldThrottleSend()
+    /// <summary>
+    /// Charges bytes to the send limit, and waits while the session is past it.
+    /// </summary>
+    public ValueTask ThrottleSendAsync(long bytes, CancellationToken cancellationToken)
     {
-        return _sent.ShouldThrottle();
+        return _sent.ThrottleAsync(bytes, cancellationToken);
     }
 
-    public bool ShouldThrottleReceive()
+    /// <summary>
+    /// Charges bytes to the receive limit, and waits while the session is past it.
+    /// </summary>
+    public ValueTask ThrottleReceiveAsync(long bytes, CancellationToken cancellationToken)
     {
-        return _received.ShouldThrottle();
+        return _received.ThrottleAsync(bytes, cancellationToken);
     }
 
-    public ValueTask ThrottleSendAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// For a receiver that cannot wait: charges bytes to the receive limit, or returns true, charging nothing,
+    /// when they are past it and should be dropped.
+    /// </summary>
+    public bool ShouldThrottleReceive(long bytes)
     {
-        return _sent.ThrottleAsync(cancellationToken);
-    }
-
-    public ValueTask ThrottleReceiveAsync(CancellationToken cancellationToken)
-    {
-        return _received.ThrottleAsync(cancellationToken);
-    }
-
-    public bool ShouldThrottle()
-    {
-        return ShouldThrottleSend() || ShouldThrottleReceive();
-    }
-
-    public async ValueTask ThrottleAsync(CancellationToken cancellationToken)
-    {
-        await ThrottleSendAsync(cancellationToken);
-        await ThrottleReceiveAsync(cancellationToken);
+        return _received.ShouldThrottle(bytes);
     }
 
     public void Dispose()

@@ -47,14 +47,6 @@ public class UdpChannel : PacketChannel
                 var ipPacket = ipPackets[i];
                 var packetBytes = ipPacket.Buffer;
 
-                // UDP has no natural backpressure, so throttled packets are dropped instead of queued.
-                if (trafficMeter != null && trafficMeter.ShouldThrottleSend()) {
-                    VhLogger.Instance.LogDebug(GeneralEventId.Udp,
-                        "Dropping a UDP packet due to send throttle. ChannelId: {ChannelId}, PacketLength: {PacketLength}",
-                        ChannelId, packetBytes.Length);
-                    continue;
-                }
-
                 // flush buffer if this packet does not fit
                 if (bufferIndex > 0 &&
                     bufferIndex + packetBytes.Length > _buffer.Length - UdpTransport.OverheadLength) {
@@ -114,10 +106,10 @@ public class UdpChannel : PacketChannel
             var ipPacket = ReadNextPacketKeepMemory(buffer[bufferIndex..]);
             bufferIndex += ipPacket.PacketLength;
 
-            // UDP has no natural backpressure, so received packets are dropped when the configured receiving limit is exceeded.
-            // Client does not throttle receive so it should set it to 0
+            // UDP has no natural backpressure, so received packets are dropped past the receiving limit, never
+            // waited on: on a server, one read loop serves every session. Only a server limits what it receives
             if (TrafficMeter != null &&
-                TrafficMeter.ShouldThrottleReceive()) {
+                TrafficMeter.ShouldThrottleReceive(ipPacket.PacketLength)) {
                 PacketLogger.LogPacket(ipPacket, $"Dropping a UDP packet due to receive throttle. ChannelId: {ChannelId}",
                     eventId: GeneralEventId.Udp);
                 ipPacket.Dispose();

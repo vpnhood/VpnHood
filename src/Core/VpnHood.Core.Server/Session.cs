@@ -132,17 +132,21 @@ public class Session : IDisposable
         SessionKey = sessionResponseEx.SessionKey ?? throw new InvalidOperationException(
             $"{nameof(sessionResponseEx)} does not have {nameof(sessionResponseEx.SessionKey)}!");
 
+        // the server shapes what it sends, the client's download; what it receives it only enforces, a little
+        // looser than the client shapes it, so an honest client is never held
+        var maxSpeedMbps = sessionResponseEx.AccessInfo?.MaxSpeedMbps ?? new Traffic();
         Tunnel = new Tunnel(new TunnelOptions {
             MaxPacketChannelCount = options.MaxPacketChannelCountValue,
             PacketQueueCapacity = TransportDefaults.TunnelPacketQueueCapacity,
             AutoDisposePackets = true,
-            Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu)
+            Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu),
+            MaxSpeed = new Traffic(
+                sent: maxSpeedMbps.Received * 1_000_000 / 8,
+                received: (long)(maxSpeedMbps.Sent * 1_000_000d / 8 * ReceiveSpeedGrace)),
+            MaxSpeedBurst = new Traffic(
+                sent: TransportDefaults.MaxSpeedBurst,
+                received: (long)(TransportDefaults.MaxSpeedBurst * ReceiveSpeedGrace))
         });
-
-        if (sessionResponseEx.AccessInfo?.MaxSpeedMbps?.Sent > 0 || sessionResponseEx.AccessInfo?.MaxSpeedMbps?.Received > 0)
-            Tunnel.TrafficMeter.MaxSpeed = new Traffic(
-                sent: sessionResponseEx.AccessInfo.MaxSpeedMbps.Value.Received * 1_000_000 / 8,
-                received: (long)(sessionResponseEx.AccessInfo.MaxSpeedMbps.Value.Sent * 1_000_000d / 8 * ReceiveSpeedGrace));
 
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 

@@ -154,6 +154,10 @@ internal class ClientStreamHandler(
         // before sending the TLS hello, so there is no initial data to prefetch
         var initContents = await ReadInitContents(streamConnection.Stream, TimeSpan.FromMilliseconds(100), cancellationToken);
 
+        // they leave with the request, outside the proxy channel, so the speed limit is paid for them here
+        if (initContents.Length > 0)
+            await tunnel.TrafficMeter.ThrottleSendAsync(initContents.Length, cancellationToken).Vhc();
+
         // read the response
         var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
         var requestResult = await session.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();

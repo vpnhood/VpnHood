@@ -78,6 +78,7 @@ public class TestHelper : IDisposable
         };
 
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
+        TransportDefaults.MaxSpeedBurst = 16 * 1024; // a throttled test's few hundred KB then run at its limit
         JobOptions.DefaultInterval = TimeSpan.FromMilliseconds(1000);
         JobRunner.SlowInstance.Interval = TimeSpan.FromMilliseconds(200);
         JobRunner.FastInstance.Interval = TimeSpan.FromMilliseconds(200);

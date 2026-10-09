@@ -1,25 +1,42 @@
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
 internal sealed class TrafficMeterItem : IDisposable
 {
-    private static readonly TimeSpan MaxThrottleDelay = TimeSpan.FromSeconds(2);
+    private const long NanosecondsPerMillisecond = 1_000_000;
+
+    // A taker waits once its debt reaches this; a smaller debt carries to its next charge, so small charges
+    // cost a timer every 20 ms at most, not one each
+    private const long MinWaitNanoseconds = 20 * NanosecondsPerMillisecond;
+
+    // The police lets bytes through while the debt stays within this: a taker that waits on the same bucket
+    // keeps a debt of up to its threshold and one charge, and must not starve the police's packets
+    private const long PoliceSlackNanoseconds = 100 * NanosecondsPerMillisecond;
+
+    // A longer wait is cut here; the debt behind it carries to the next charge
+    private const long MaxWaitNanoseconds = 24 * 60 * 60 * 1000 * NanosecondsPerMillisecond;
+
     private long _total;
     private long _lastTotal;
-    private long _windowTotal;
     private DateTime _lastSpeedUpdateTime = FastDateTime.UtcNow;
-    private DateTime _windowStartTime = FastDateTime.UtcNow;
     private long _speed;
     private readonly Lock _speedLock = new();
-    private readonly SemaphoreSlim _throttleSemaphore = new(1, 1);
     private bool _disposed;
+
+    // The limit as virtual time: the moment by which all the bytes charged so far have passed at the limit,
+    // on the monotonic tick clock in nanoseconds. Idle time moves it back no further than the burst, so a
+    // pause saves at most the burst. The clock's 10-16 ms steps stay within the wait threshold
+    private long _paidUntil = long.MinValue;
 
     public required TimeSpan SpeedInterval { get; init; }
 
-    /// <remarks>Unit: bytes per second.</remarks>
+    /// <remarks>Unit: bytes per second; 0 means no limit.</remarks>
     public long MaxSpeed { get; set; }
+
+    /// <remarks>Unit: bytes; what may pass at full speed after a pause.</remarks>
+    public long Burst { get; set; }
+
     public long Traffic => Interlocked.Read(ref _total);
 
     /// <remarks>Unit: bytes per second.</remarks>
@@ -35,55 +52,48 @@ internal sealed class TrafficMeterItem : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         Interlocked.Add(ref _total, bytes);
-        Interlocked.Add(ref _windowTotal, bytes);
     }
 
-    public bool ShouldThrottle()
+    // charges the bytes, then waits while the debt is past the threshold
+    public ValueTask ThrottleAsync(long bytes, CancellationToken cancellationToken)
     {
-        return GetThrottleDelay() > TimeSpan.Zero;
+        if (MaxSpeed <= 0)
+            return default;
+
+        TryCharge(bytes, long.MaxValue, out var debt);
+        return debt < MinWaitNanoseconds
+            ? default
+            : new ValueTask(Task.Delay(TimeSpan.FromTicks(Math.Min(debt, MaxWaitNanoseconds) / 100),
+                cancellationToken));
     }
 
-    public async ValueTask ThrottleAsync(CancellationToken cancellationToken)
+    // the police, for a path that cannot wait: charges the bytes, or refuses them uncharged
+    public bool ShouldThrottle(long bytes)
     {
-        var delay = GetThrottleDelay();
-        if (delay <= TimeSpan.Zero)
-            return;
+        return MaxSpeed > 0 && !TryCharge(bytes, PoliceSlackNanoseconds, out _);
+    }
 
-        await _throttleSemaphore.WaitAsync(cancellationToken).Vhc();
-        try {
-            delay = GetThrottleDelay();
-            if (delay <= TimeSpan.Zero)
-                return;
+    private bool TryCharge(long bytes, long maxDebt, out long debt)
+    {
+        var cost = ToNanoseconds(bytes);
+        var burstTime = ToNanoseconds(Burst);
+        while (true) {
+            var now = Environment.TickCount64 * NanosecondsPerMillisecond;
+            var paidUntil = Volatile.Read(ref _paidUntil);
+            var next = Math.Max(paidUntil, now - burstTime) + cost;
+            debt = next - now;
+            if (debt > maxDebt)
+                return false;
 
-            await Task.Delay(delay, cancellationToken).Vhc();
-            var now = FastDateTime.UtcNow;
-            var totalElapsed = (now - _windowStartTime).TotalSeconds;
-            var allowed = (long)(MaxSpeed * totalElapsed);
-            var current = Interlocked.Read(ref _windowTotal);
-            var carry = Math.Max(0, current - allowed);
-            Interlocked.Exchange(ref _windowTotal, carry);
-            _windowStartTime = now;
+            if (Interlocked.CompareExchange(ref _paidUntil, next, paidUntil) == paidUntil)
+                return true;
         }
-        finally {
-            _throttleSemaphore.Release();
-        }
     }
 
-    private TimeSpan GetThrottleDelay()
+    // the time the bytes take at the limit; a charge is never free
+    private long ToNanoseconds(long bytes)
     {
-        if (_disposed || MaxSpeed is 0)
-            return TimeSpan.Zero;
-
-        var now = FastDateTime.UtcNow;
-        var elapsed = (now - _windowStartTime).TotalSeconds;
-        if (elapsed < 0.1)
-            elapsed = 0.1;
-
-        var targetTime = Interlocked.Read(ref _windowTotal) / (double)MaxSpeed;
-        var delaySeconds = targetTime - elapsed;
-        return delaySeconds > 0
-            ? TimeSpan.FromSeconds(Math.Min(delaySeconds, MaxThrottleDelay.TotalSeconds))
-            : TimeSpan.Zero;
+        return Math.Max(1, (long)Math.Min(bytes * 1e9 / MaxSpeed, 1e17));
     }
 
     private void UpdateSpeed()
@@ -103,10 +113,6 @@ internal sealed class TrafficMeterItem : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
-
         _disposed = true;
-        _throttleSemaphore.Dispose();
     }
 }

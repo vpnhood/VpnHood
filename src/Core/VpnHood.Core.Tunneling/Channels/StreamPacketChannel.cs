@@ -51,17 +51,11 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
             await WriteBuffer(buffer[..bufferIndex], cancellationToken);
     }
 
+    // the send limit is not waited on here: a throttled tunnel paces its packets before they reach a channel
     private async ValueTask WriteBuffer(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
     {
-        var trafficMeter = TrafficMeter;
-        if (trafficMeter != null) {
-            var throttleTask = trafficMeter.ThrottleSendAsync(cancellationToken);
-            if (!throttleTask.IsCompleted)
-                await throttleTask.Vhc();
-        }
-
         await _streamConnection.Stream.WriteAsync(buffer, cancellationToken).Vhc();
-        trafficMeter?.OnSent(buffer.Length);
+        TrafficMeter?.OnSent(buffer.Length);
     }
 
     protected override async Task StartReadTask()
@@ -79,11 +73,19 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
                 break;
             }
 
+            // the receive limit, enforced by reading slower; a packet whose wait is cut is not delivered
             TrafficMeter?.OnReceived(ipPacket.PacketLength);
             if (TrafficMeter != null) {
-                var throttleTask = TrafficMeter.ThrottleReceiveAsync(cancellationToken);
-                if (!throttleTask.IsCompleted)
-                    await throttleTask.Vhc();
+                var throttleTask = TrafficMeter.ThrottleReceiveAsync(ipPacket.PacketLength, cancellationToken);
+                if (!throttleTask.IsCompletedSuccessfully) {
+                    try {
+                        await throttleTask.Vhc();
+                    }
+                    catch {
+                        ipPacket.Dispose();
+                        throw;
+                    }
+                }
             }
 
             OnPacketReceived(ipPacket);

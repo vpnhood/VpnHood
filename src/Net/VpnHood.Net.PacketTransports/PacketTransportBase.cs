@@ -19,6 +19,11 @@ public abstract class PacketTransportBase : IPacketTransport
     private bool _disposing;
     private readonly PacketTransportStat _stat = new();
     private bool _isSending;
+
+    // A packet the queue drops, fails to send or still holds at the end is disposed whenever the transport
+    // queues: no one else holds it any more. A sent one only with AutoDisposePackets, as a transport that
+    // hands its packets on (a throttled tunnel) must not
+    private readonly bool _disposeUnsentPackets;
     protected bool IsDisposed => _disposed;
     protected bool IsDisposing => _disposing;
     protected abstract ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets);
@@ -37,16 +42,19 @@ public abstract class PacketTransportBase : IPacketTransport
         if (passthrough && !singleMode)
             throw new ArgumentException("Passthrough mode should be used with single mode only.", nameof(passthrough));
 
-        _queueCapacity = options.QueueCapacity ?? 255;
+        _queueCapacity = options.QueueCapacity ?? PacketTransportOptions.DefaultQueueCapacity;
         _autoDisposePackets = options.AutoDisposePackets;
+        _disposeUnsentPackets = options.AutoDisposePackets || !passthrough;
         _blocking = options.Blocking;
         _singleMode = singleMode;
         _passthrough = passthrough;
-        _sendChannel = Channel.CreateBounded<IpPacket>(new BoundedChannelOptions(_queueCapacity) {
+
+        // a full queue that does not block drops its oldest packet, so the newer ones behind it show the loss
+        _sendChannel = Channel.CreateBounded(new BoundedChannelOptions(_queueCapacity) {
             SingleReader = true,
             SingleWriter = false,
-            FullMode = options.Blocking ? BoundedChannelFullMode.Wait : BoundedChannelFullMode.DropWrite
-        });
+            FullMode = options.Blocking ? BoundedChannelFullMode.Wait : BoundedChannelFullMode.DropOldest
+        }, options.Blocking ? null : (Action<IpPacket>)DropQueuedPacket);
 
         PacketStat = new ReadOnlyPacketTransportStat(_stat);
         Task.Run(StartSendingPacketsAsync);
@@ -110,9 +118,9 @@ public abstract class PacketTransportBase : IPacketTransport
         if (_blocking)
             return SendPacketQueuedBlocking(ipPacket);
 
-        // dispose the packet
-        LogPacket(ipPacket, LogLevel.Debug, null, "Dropping a packet. Send queue is full.");
-        if (_autoDisposePackets)
+        // a queue that drops its oldest refuses only once it is closed
+        LogPacket(ipPacket, LogLevel.Debug, null, "Dropping a packet. Send queue is closed.");
+        if (_disposeUnsentPackets)
             ipPacket.Dispose();
 
         return false;
@@ -133,6 +141,14 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
+    // called by the queue for the packet it drops to make room; it has accepted the new one by then
+    private void DropQueuedPacket(IpPacket ipPacket)
+    {
+        LogPacket(ipPacket, LogLevel.Debug, null, "Dropping the oldest packet. Send queue is full.");
+        _stat.AddDroppedPacket();
+        ipPacket.Dispose();
+    }
+
     private async Task StartSendingPacketsAsync()
     {
         try {
@@ -149,15 +165,16 @@ public abstract class PacketTransportBase : IPacketTransport
                 if (!task.IsCompleted)
                     await task;
             }
-
-            // dispose remaining packets
-            if (_autoDisposePackets)
-                while (_sendChannel.Reader.TryRead(out var ipPacket))
-                    ipPacket.Dispose();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error in SendingPacketsAsync loop. Type: {Type}",
                 VhLogger.FormatType(this));
+        }
+        finally {
+            // dispose remaining packets
+            if (_disposeUnsentPackets)
+                while (_sendChannel.Reader.TryRead(out var ipPacket))
+                    ipPacket.Dispose();
         }
     }
 
@@ -194,8 +211,8 @@ public abstract class PacketTransportBase : IPacketTransport
             for (var i = 0; i < ipPackets.Count; i++) {
                 LogPacket(ipPackets[i], ex, "Error in sending packet via channel.");
 
-                _stat.DroppedPackets++;
-                if (_autoDisposePackets)
+                _stat.AddDroppedPacket();
+                if (_disposeUnsentPackets)
                     ipPackets[i].Dispose();
             }
 

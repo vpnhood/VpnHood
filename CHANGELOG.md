@@ -71,6 +71,8 @@
 * Fix: The menu's website, social, What's new, feedback and personal-server links are the app's own, from its settings (Links in AppConfigs and AppOptions); one left unset hides its item. Every app built on VpnHood showed VpnHood's. The language setting no longer invites translations to a folder that moved
 * Fix: The update warning, the pairing page, the rating prompt and the page on free servers name the app itself, where every app built on VpnHood named VpnHood; cloak mode's description no longer calls it exclusive to VpnHood
 * Fix: A paired browser's tab and the command line's help name the app, not VpnHood
+* Update: On a plan with a speed limit, the first megabytes after a pause go at full speed, so pages load quickly, and only steady heavy use is held to the limit
+* Fix: A big upload over a slow connection no longer holds up the device's other traffic, such as browsing
 
 # v8.1.849
 

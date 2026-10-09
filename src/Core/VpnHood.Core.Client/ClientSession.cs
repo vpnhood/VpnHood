@@ -90,18 +90,15 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
         _vpnAdapter.Failed += VpnAdapter_Failed;
 
-        // Tunnel
+        // Tunnel; the client limits only what it sends: the server shapes the download already, and a
+        // second limit here would only drop what the server let through
         _tunnel = new Tunnel(new TunnelOptions {
             AutoDisposePackets = true,
             PacketQueueCapacity = TransportDefaults.TunnelPacketQueueCapacity,
             MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
-            Mtu = config.Mtu
+            Mtu = config.Mtu,
+            MaxSpeed = new Traffic(sent: (config.MaxSpeedMbps?.Sent ?? 0) * 1_000_000 / 8, received: 0)
         });
-
-        if (config.MaxSpeedMbps?.Sent > 0 || config.MaxSpeedMbps?.Received > 0)
-            _tunnel.TrafficMeter.MaxSpeed = new Traffic(
-                sent: config.MaxSpeedMbps.Value.Sent * 1_000_000 / 8,
-                received: config.MaxSpeedMbps.Value.Received * 1_000_000 / 8);
 
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
@@ -477,13 +474,14 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             // generic proxy/control pool. This also keeps a finite channel lifespan meaningful.
             requestResult.StreamConnection.PreventReuse();
 
-            // add the new channel
+            // add the new channel; it never holds the adapter's reader, which carries all the device's
+            // traffic: a full queue drops its oldest packet, as a router on the path would
             var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
                 StreamConnection = requestResult.StreamConnection,
                 BufferSize = Config.Transport.PacketChannelBufferSize,
                 ChannelId = request.ChannelId,
                 RequestTime = request.RequestTime,
-                Blocking = true,
+                Blocking = false,
                 AutoDisposePackets = true,
                 Lifespan = lifespan,
                 TrafficMeter = _tunnel.TrafficMeter
@@ -514,7 +512,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         var udpChannel = new UdpChannel(_udpTransmitter.UdpTransport, new UdpChannelOptions {
             AutoDisposePackets = true,
             LeaveUdpTransportOpen = true,
-            Blocking = true,
+            Blocking = false,
             ChannelId = Guid.NewGuid().ToString(),
             Lifespan = null,
             TrafficMeter = _tunnel.TrafficMeter

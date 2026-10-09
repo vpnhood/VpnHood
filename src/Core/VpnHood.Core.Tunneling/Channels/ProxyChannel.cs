@@ -206,15 +206,30 @@ public class ProxyChannel : IProxyChannel
         VhTypeTracker.Track(readBufferOwner);
         if (MemoryMarshal.TryGetArray<byte>(readBufferOwner.Memory, out var segment) && segment.Array != null)
             VhTypeTracker.Track(segment.Array);
+
+        // throttled, a read takes at most a twentieth of a second of the limit, so the session's streams and
+        // its packets take turns at the limit finely
+        var maxSpeed = _trafficMeter == null ? 0
+            : isSendingToTunnel ? _trafficMeter.MaxSpeed.Sent : _trafficMeter.MaxSpeed.Received;
+        var readLength = maxSpeed > 0
+            ? (int)Math.Min(Math.Max(maxSpeed / 20, BufferSizeMin), bufferSize - preserveCount)
+            : bufferSize - preserveCount;
+
         while (!sourceCt.IsCancellationRequested && !destinationCt.IsCancellationRequested) {
             // read from source
             var bytesRead = await source
-                .ReadAsync(readBuffer[preserveCount..], sourceCt)
+                .ReadAsync(readBuffer.Slice(preserveCount, readLength), sourceCt)
                 .Vhc();
 
             // check end of the stream
             if (bytesRead == 0)
                 break;
+
+            // the limit is paid before the bytes go on, so a stream never runs ahead of it
+            if (_trafficMeter != null)
+                await (isSendingToTunnel
+                    ? _trafficMeter.ThrottleSendAsync(bytesRead, sourceCt)
+                    : _trafficMeter.ThrottleReceiveAsync(bytesRead, sourceCt)).Vhc();
 
             // write to destination
             if (destinationPreserved != null)
@@ -235,16 +250,12 @@ public class ProxyChannel : IProxyChannel
                 LastActivityTime = FastDateTime.UtcNow;
             }
 
-            // notify traffic meter and throttle if needed
+            // notify traffic meter
             if (_trafficMeter != null) {
-                if (isSendingToTunnel) {
+                if (isSendingToTunnel)
                     _trafficMeter.OnSent(bytesRead);
-                    await _trafficMeter.ThrottleSendAsync(sourceCt).Vhc();
-                }
-                else {
+                else
                     _trafficMeter.OnReceived(bytesRead);
-                    await _trafficMeter.ThrottleReceiveAsync(sourceCt).Vhc();
-                }
             }
         }
     }

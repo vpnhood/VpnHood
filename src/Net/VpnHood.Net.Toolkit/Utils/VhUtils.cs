@@ -302,6 +302,12 @@ public static class VhUtils
         return "0";
     }
 
+    // megabytes to bytes, 1 MB being 1024 * 1024 bytes
+    public static long FromMB(long megabytes)
+    {
+        return megabytes * 1024 * 1024;
+    }
+
     public static string FormatMegaBytes(long sizeMb, bool use1024 = false, bool round = false)
     {
         var divisor = use1024 ? 1024L : 1000L;

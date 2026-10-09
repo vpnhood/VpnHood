@@ -364,12 +364,13 @@ public class ClientServerTest : TestBase
         var connectTask = client.Connect(TestCt);
         await client.WaitForState(ClientState.WaitingForAd);
 
-        // the user disconnects meanwhile: the start ends there
+        // the user disconnects meanwhile: the start ends there, and no error is left to show
         await client.DisposeAsync();
         Assert.IsFalse(isAdapterStarted);
         await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() =>
             connectTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
         Assert.AreEqual(ClientState.Disposed, client.State);
+        Assert.IsNull(client.LastException);
     }
 
     [TestMethod]

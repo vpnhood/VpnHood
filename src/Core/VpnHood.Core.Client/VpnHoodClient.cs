@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
@@ -22,6 +23,7 @@ namespace VpnHood.Core.Client;
 public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
     private bool _disposed;
+    private volatile bool _isDisposing; // a start that a shutdown ends failed at nothing
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly IVpnAdapter _vpnAdapter;
     private readonly ISocketFactory _socketFactory;
@@ -209,11 +211,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await Connect2(cancellationToken);
         }
         catch (Exception ex) {
-            LastException = ex;
+            // What closed the session, when an error did, says more than how the start found out - often a
+            // disposed session. A shutdown asked for meanwhile, a disconnect say, leaves no error to show.
+            var sessionException = _session?.LastException;
+            if (sessionException == null && !_isDisposing)
+                LastException = ex;
+
             await DisposeAsync();
+            if (sessionException != null && sessionException != ex)
+                ExceptionDispatchInfo.Throw(sessionException);
+
             throw;
         }
-
     }
 
     public async Task Connect2(CancellationToken cancellationToken = default)
@@ -273,6 +282,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _isDisposing = true;
         VhLogger.Instance.LogInformation("Client is shutting down asynchronously...");
 
         if (_session != null) {
@@ -289,6 +299,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
+        _isDisposing = true;
         lock (_disposeLock) {
             if (_disposed) return;
             _disposed = true;

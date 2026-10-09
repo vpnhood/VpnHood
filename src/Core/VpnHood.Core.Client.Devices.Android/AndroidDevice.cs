@@ -32,8 +32,19 @@ public class AndroidDevice : IDevice
     public bool IsTcpProxySupported => true;
     public bool IsQuicSupported => AndroidQuicClient.IsSupported;
     public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+    public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
+        Platform = $"Linux; Android {Build.VERSION.Release}",
+        Model = Build.Model,
+        Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: IsPhone())
+    };
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
     public bool IsTv => AndroidUtils.IsTv();
+
+    // a phone as Chrome tells one, by its "Mobile": no TV, and narrower than a tablet's 600 dp
+    private static bool IsPhone()
+    {
+        return !AndroidUtils.IsTv() && Application.Context.Resources?.Configuration?.SmallestScreenWidthDp < 600;
+    }
 
     public static AndroidDevice Create()
     {

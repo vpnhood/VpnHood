@@ -10,4 +10,5 @@ public class AppTrackerServiceParams
     public required bool IsLicenseAgreementRequired { get; init; }
     public required string ClientId { get; init; }
     public required Version AppVersion { get; init; }
+    public required string UserAgent { get; init; }
 }

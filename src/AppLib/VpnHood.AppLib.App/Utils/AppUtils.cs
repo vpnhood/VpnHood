@@ -1,6 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Api.App;
+using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppLib.App.Utils;
@@ -38,6 +39,27 @@ public static class AppUtils
     public static string GetAdapterName(string packageTitle, bool isDebugMode)
     {
         return isDebugMode ? $"{packageTitle}_dbg" : packageTitle;
+    }
+
+    // The user agent of a browser on this device, which Google Analytics parses the OS, the device and
+    // the browser from, with the app after it: "Mozilla/5.0 (Linux; Android 14; Pixel 5) AppleWebKit/537.36
+    // (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36 VpnHoodConnect/8.2.854". The model only when
+    // asked for: the trackers get it, the server - which logs what it gets, whatever the usage-data
+    // switch says - does not.
+    public static string BuildUserAgent(DeviceUserAgentInfo device, string packageTitle, Version version,
+        bool includeModel)
+    {
+        var model = includeModel ? ToUserAgentComment(device.Model) : "";
+        var platform = model.Length > 0 ? $"{device.Platform}; {model}" : device.Platform;
+        return $"Mozilla/5.0 ({platform}) {device.Browser} {packageTitle}/{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}";
+    }
+
+    // The device maker's text as a user agent's comment may hold it - printable ASCII, without the
+    // brackets and separators of its own - or the trackers' HttpHeaders refuses the whole user agent.
+    private static string ToUserAgentComment(string? text)
+    {
+        var kept = new string((text ?? "").Where(c => c is >= ' ' and <= '~' and not ('(' or ')' or ';' or '\\')).ToArray());
+        return string.Join(' ', kept.Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
     // Mac Catalyst is checked BEFORE iOS on purpose: OperatingSystem.IsIOS() reports true for Catalyst

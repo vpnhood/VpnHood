@@ -13,6 +13,7 @@ public interface IDevice : IDisposable
     bool IsTcpProxySupported { get; }
     bool IsQuicSupported { get; }
     string OsInfo { get; }
+    DeviceUserAgentInfo UserAgentInfo { get; }
     DeviceMemInfo? MemInfo { get; }
     IReadOnlyList<DeviceAppInfo> InstalledApps { get; }
     Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken);

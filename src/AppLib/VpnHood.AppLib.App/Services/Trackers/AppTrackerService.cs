@@ -24,8 +24,9 @@ public class AppTrackerService
     // whether this build collects anything: a tracker that is not a null one
     public bool IsSupported { get; }
 
-    // the factories as the VPN service makes them again, in its own process
+    // the factories as the VPN service makes them again, in its own process, and the user agent they send
     public IReadOnlyList<TrackerFactoryInfo> TrackerFactoryInfos { get; }
+    public string UserAgent { get; }
 
     public AppTrackerService(AppSettingsService settingsService, AppTrackerServiceParams serviceParams)
     {
@@ -36,11 +37,12 @@ public class AppTrackerService
         // a Debug build reports nothing, whatever the head lists
         IReadOnlyList<ITrackerFactory> factories = serviceParams.IsDebugMode ? [] : serviceParams.TrackerFactories;
         TrackerFactoryInfos = factories.Select(TrackerFactorySerializer.Serialize).ToArray();
+        UserAgent = serviceParams.UserAgent;
 
         var createParams = new TrackerCreateParams {
             ClientId = serviceParams.ClientId,
             ClientVersion = serviceParams.AppVersion,
-            UserAgent = null, // the UI gives it at the connect (SetUserAgent)
+            UserAgent = UserAgent,
             IsEnabled = IsAllowed
         };
         Tracker = factories.TryCreateTracker(createParams) ?? NullTrackerFactory.CreateNullTracker(createParams);
@@ -88,19 +90,5 @@ public class AppTrackerService
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the first launch.");
         }
-    }
-
-    // The built-in trackers send the UI's user agent, once the UI has given it, while the switch is on.
-    public void SetUserAgent(string? userAgent)
-    {
-        if (string.IsNullOrEmpty(userAgent) || !_settingsService.UserSettings.AllowAnonymousTracker)
-            return;
-
-        IReadOnlyList<ITracker> trackers = Tracker is CompositeTracker compositeTracker
-            ? compositeTracker.Trackers
-            : [Tracker];
-
-        foreach (var trackerBase in trackers.OfType<TrackerBase>())
-            trackerBase.UserAgent = userAgent;
     }
 }

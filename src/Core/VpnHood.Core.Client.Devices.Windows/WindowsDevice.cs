@@ -10,6 +10,13 @@ public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
     private WindowsVpnService? _vpnService;
     public bool IsBindProcessToVpnSupported => false;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+
+    // as Chrome says it here, whose NT version reads 10.0 on Windows 11 too
+    public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
+        Platform = $"Windows NT {Environment.OSVersion.Version.ToString(2)}" +
+                   (Environment.Is64BitOperatingSystem ? "; Win64; x64" : ""),
+        Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: false)
+    };
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
     public bool IsExcludeAppsSupported => isDebugMode;
     public bool IsIncludeAppsSupported => isDebugMode;

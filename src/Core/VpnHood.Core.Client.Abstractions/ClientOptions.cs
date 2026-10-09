@@ -68,8 +68,10 @@ public class ClientOptions
     public bool UseNullCapture { get; set; }
     public LogServiceOptions LogServiceOptions { get; set; } = new();
 
-    // The app's tracker factories, which the VPN service makes again in its own process.
+    // The app's tracker factories, which the VPN service makes again in its own process, and the user
+    // agent they send: UserAgent, which the server gets, with the device's model too.
     public IReadOnlyList<TrackerFactoryInfo> TrackerFactoryInfos { get; set; } = [];
+    public string TrackerUserAgent { get; set; } = Environment.OSVersion.ToString();
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DebugData1 { get; set; }

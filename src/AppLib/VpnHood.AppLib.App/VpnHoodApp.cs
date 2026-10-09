@@ -67,6 +67,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly IDevice _device;
+    private readonly string _userAgent; // the server's: the trackers' without the device's model
     private readonly IIpRangeLocationProvider? _ipRangeLocationProvider;
     private bool _isDisconnecting;
     private bool _disposed;
@@ -196,12 +197,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // Created before the features because only the trackers know whether this build collects anything.
         var clientId = AppUtils.CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId);
+        _userAgent = AppUtils.BuildUserAgent(device.UserAgentInfo, options.PackageTitle, appVersion, includeModel: false);
         var trackerService = new AppTrackerService(settingsService, new AppTrackerServiceParams {
             TrackerFactories = options.TrackerFactories,
             IsDebugMode = options.IsDebugMode,
             IsLicenseAgreementRequired = options.IsLicenseAgreementRequired,
             ClientId = clientId,
-            AppVersion = appVersion
+            AppVersion = appVersion,
+            UserAgent = AppUtils.BuildUserAgent(device.UserAgentInfo, options.PackageTitle, appVersion, includeModel: true)
         });
 
         var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
@@ -799,9 +802,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _appPersistState.ConnectRequestTime = DateTime.UtcNow;
             FireConnectionStateChanged();
 
-            // initialize built-in tracker after acquire userAgent
-            Services.TrackerService.SetUserAgent(connectOptions.UserAgent);
-
             //logOptions.
             VhLogger.Instance.LogDebug("Starting the log service...");
             _logService.Start(GetLogOptions());
@@ -820,7 +820,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 GetType().Assembly.GetName().Version, Features.AppId);
             VhLogger.Instance.LogInformation("Time: {Time}", DateTime.UtcNow.ToString("u", new CultureInfo("en-US")));
             VhLogger.Instance.LogInformation("OS: {OsInfo}", _device.OsInfo);
-            VhLogger.Instance.LogInformation("UserAgent: {userAgent}", connectOptions.UserAgent);
+            VhLogger.Instance.LogInformation("UserAgent: {UserAgent}", Services.TrackerService.UserAgent);
             VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
             if (connectOptions.Diagnose) // log country name
@@ -835,7 +835,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogInformation("Client is Connecting ...");
             await ConnectInternal2(vpnProfile.Token,
                     serverLocation: serverLocation,
-                    userAgent: connectOptions.UserAgent,
                     planId: connectOptions.PlanId,
                     accessCode: vpnProfile.AccessCode,
                     allowUpdateToken: true,
@@ -864,7 +863,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent,
+    private async Task ConnectInternal2(Token token, string? serverLocation,
         Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
         CancellationToken cancellationToken)
     {
@@ -934,7 +933,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LogServiceOptions = GetLogOptions(),
                 Version = Features.Version,
                 TrackerFactoryInfos = Services.TrackerService.TrackerFactoryInfos,
-                UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
+                TrackerUserAgent = Services.TrackerService.UserAgent,
+                UserAgent = _userAgent,
                 EndPointStrategy = Features.AllowEndPointStrategy
                     ? UserSettings.EndPointStrategy.ToEngine()
                     : Core.Common.Tokens.EndPointStrategy.Auto,
@@ -1004,7 +1004,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                                       throw new NotExistsException("The repaired profile has disappeared.");
                 await ConnectInternal2(token,
                         serverLocation: serverLocation,
-                        userAgent: userAgent,
                         planId: planId,
                         accessCode: repairedProfile.AccessCode,
                         allowUpdateToken: false,
@@ -1025,7 +1024,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 token = VpnProfileService.GetToken(token.TokenId);
                 await ConnectInternal2(token,
                         serverLocation: serverLocation,
-                        userAgent: userAgent,
                         planId: planId,
                         accessCode: accessCode,
                         allowUpdateToken: false,

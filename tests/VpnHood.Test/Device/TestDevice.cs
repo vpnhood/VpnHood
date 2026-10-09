@@ -23,6 +23,10 @@ public class TestDevice(
     public bool IsQuicSupported => SocketFactory.IsQuicSupported;
     public bool IsBindProcessToVpnSupported => true;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+    public DeviceUserAgentInfo UserAgentInfo { get; init; } = new() {
+        Platform = "X11; Linux x86_64",
+        Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: false)
+    };
     public string VpnServiceConfigFolder { get; } = Path.Combine(testHelper.WorkingPath, "VpnService");
     public bool IsTv => false;
     public bool IsExcludeAppsSupported => false;

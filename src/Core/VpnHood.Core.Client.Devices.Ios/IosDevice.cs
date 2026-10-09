@@ -64,9 +64,23 @@ public class IosDevice : IDevice
     public bool IsIncludeAppsSupported => false;
     public bool IsAlwaysOnSupported => false;
     public string OsInfo { get; } = $"{UIDevice.CurrentDevice.SystemName}: {UIDevice.CurrentDevice.Model}, iOS: {UIDevice.CurrentDevice.SystemVersion}";
+    public DeviceUserAgentInfo UserAgentInfo { get; } = CreateUserAgentInfo();
     public bool IsTv => false;
     public DeviceMemInfo? MemInfo => null;
     public static bool IsVpnServiceProcess => true; // iOS always runs in the VPN service process.
+
+    // as Safari says it, which names no model: "(iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15
+    // (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", an iPad "iPad; CPU OS 18_0 like Mac OS X"
+    private static DeviceUserAgentInfo CreateUserAgentInfo()
+    {
+        var version = UIDevice.CurrentDevice.SystemVersion;
+        var osVersion = version.Replace('.', '_');
+        var isPad = UIDevice.CurrentDevice.UserInterfaceIdiom == UIUserInterfaceIdiom.Pad;
+        return new DeviceUserAgentInfo {
+            Platform = isPad ? $"iPad; CPU OS {osVersion} like Mac OS X" : $"iPhone; CPU iPhone OS {osVersion} like Mac OS X",
+            Browser = $"AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{version} Mobile/15E148 Safari/604.1"
+        };
+    }
 
     public void BindProcessToVpn(bool value)
     {

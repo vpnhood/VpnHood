@@ -8,5 +8,4 @@ public class ConnectOptions
     public ConnectPlanId PlanId { get; init; } = ConnectPlanId.Normal;
     public string? ServerLocation { get; init; }
     public bool Diagnose { get; init; }
-    public string? UserAgent { get; init; }
 }

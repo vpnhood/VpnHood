@@ -59,6 +59,8 @@ public partial class MainView : UserControl
         ViewModel.PropertyChanged += (_, e) => {
             if (e.PropertyName is nameof(MainViewModel.IsReconnectRequired) or "")
                 ReconnectBar.IsVisible = ViewModel.IsReconnectRequired;
+            if (e.PropertyName is nameof(MainViewModel.SystemBarsTopHeight) or nameof(MainViewModel.SystemBarsBottomHeight) or "")
+                ApplySystemBars();
         };
         Navigate(new HomeView(ViewModel, this));
         ViewModel.Host = this;
@@ -207,7 +209,17 @@ public partial class MainView : UserControl
             _topLevel.BackRequested += OnBackRequested;
             _topLevel.AddHandler(KeyDownEvent, OnTopLevelKeyDown);
         }
+        ApplySystemBars();
         Dispatcher.UIThread.Post(_pages.Peek().FocusDefault, DispatcherPriority.Loaded);
+    }
+
+    // The window goes under the system bars - Android's status and navigation bars, the iPhone's notch and
+    // home indicator - and the platform no longer pads for them, so the pages, the drawer and the dialogs
+    // keep clear of them here, the background showing beneath. The heights come in device pixels.
+    private void ApplySystemBars()
+    {
+        var scaling = _topLevel?.RenderScaling ?? 1;
+        Padding = new Thickness(0, ViewModel.SystemBarsTopHeight / scaling, 0, ViewModel.SystemBarsBottomHeight / scaling);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

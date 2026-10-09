@@ -114,6 +114,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool IsConnectEnabled { get; private set => Set(ref field, value); } = true;
     public bool IsReconnectRequired { get; private set => Set(ref field, value); }
 
+    // the system bars drawn over the window, in device pixels: MainView keeps clear of them
+    public int SystemBarsTopHeight { get; private set => Set(ref field, value); }
+    public int SystemBarsBottomHeight { get; private set => Set(ref field, value); }
+
     // GoPremiumButton: the countdown of a timed session, "You are premium", or the pitch
     public bool ShowCountdown { get; private set => Set(ref field, value); }
     public string CountdownText { get; private set => Set(ref field, value); } = "";
@@ -289,6 +293,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             };
         IsConnectEnabled = connectionState == AppConnectionState.None || state.CanDisconnect;
         IsReconnectRequired = state.IsReconnectRequired && IsConnected;
+        SystemBarsTopHeight = state.SystemBarsInfo.TopHeight;
+        SystemBarsBottomHeight = state.SystemBarsInfo.BottomHeight;
 
         HasDebugData = VhApp.UserSettings.DebugData1 != null || VhApp.UserSettings.DebugData2 != null;
 

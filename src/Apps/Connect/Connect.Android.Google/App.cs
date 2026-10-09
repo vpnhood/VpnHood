@@ -102,8 +102,15 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         // call would be the whole Firebase start-up cost inside the tile's executing-service window
         // (Play ANR group "Executing service …QuickLaunchTileService"). The VPN service process keeps
         // it on purpose: this same call is what gives Crashlytics crash reporting there.
-        if (!FirebaseAnalyticsTracker.IsInit && !IsDebug && !QuickLaunchTileService.IsTileProcess)
+        if (!FirebaseAnalyticsTracker.IsInit && !QuickLaunchTileService.IsTileProcess) {
             FirebaseAnalyticsTracker.Init();
+
+            // A Debug build runs Firebase as Release does, so what Firebase brings shows in Debug too,
+            // but makes no tracker to apply the switch: it is turned off here, and the manifest's flags
+            // cover a fresh install (Properties/AssemblyInfo.cs).
+            if (IsDebug)
+                FirebaseAnalyticsTracker.Instance.IsEnabled = false;
+        }
 
         // the app, then the UI
         base.OnCreate();

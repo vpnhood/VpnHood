@@ -36,7 +36,7 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
         // until consent is applied — deliberately, so a crash during that first startup is still reported.
     }
 
-    // Both SDKs follow the user's consent (VpnHoodApp applies UserSettings.AllowAnonymousTracker here), and
+    // Both SDKs follow the user's consent (the app and its VPN service apply the usage-data switch here), and
     // it is applied to the SDKs themselves rather than only to our Track calls below: Firebase collects
     // first_open/session_start/screen_view and crash reports on its own, which no amount of
     // not-calling-LogEvent would suppress. Firebase persists both values for subsequent launches.
@@ -54,8 +54,14 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
             }
 
             try {
-                FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(
-                    value ? Java.Lang.Boolean.True : Java.Lang.Boolean.False);
+                var crashlytics = FirebaseCrashlytics.Instance;
+                crashlytics.SetCrashlyticsCollectionEnabled(value ? Java.Lang.Boolean.True : Java.Lang.Boolean.False);
+
+                // Turned off, Crashlytics stops only from the next start and keeps its reports on the
+                // device: they are deleted here and at each start while off (the factory sets this each
+                // time), so none is sent later.
+                if (!value)
+                    crashlytics.DeleteUnsentReports();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not change the Firebase Crashlytics collection state.");

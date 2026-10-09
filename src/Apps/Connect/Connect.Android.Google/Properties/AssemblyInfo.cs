@@ -6,6 +6,14 @@
 [assembly: UsesFeature("android.software.leanback", Required = false)]
 [assembly: UsesFeature("android.hardware.touchscreen", Required = false)]
 
+#if DEBUG
+// A Debug build runs Firebase as Release does but sends nothing. These hold from a fresh install. Where
+// a Release build ran before, Crashlytics' saved choice outweighs its flag until the head turns the
+// tracker off (App.OnCreate), which applies from the next start.
+[assembly: MetaData("firebase_analytics_collection_deactivated", Value = "true")]
+[assembly: MetaData("firebase_crashlytics_collection_enabled", Value = "false")]
+#endif
+
 // [assembly: UsesPermission(Name = "android.permission.ACCESS_WIFI_STATE")] // InMobi
 // [assembly: UsesPermission(Name = "android.permission.CHANGE_WIFI_STATE")] // InMobi
 // [assembly: UsesPermission(Name = "com.google.android.gms.permission.AD_ID")] // InMobi

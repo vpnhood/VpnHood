@@ -72,7 +72,7 @@ You can use the app without an account. Signing in is only ever needed to buy or
 
 In every case we store that email address with your account so your subscription follows you across your devices, and you can delete it at any time — see [Delete Your Account](#delete-your-account).
 
-When the app talks to our account website, the website logs each request with its time and your IP address, and keeps that log for **90 days** to protect sign-in against abuse and to look into faults.
+When the app talks to our account website, the website logs each request with its time and your IP address, and keeps that log for **31 days** to protect sign-in against abuse and to look into faults. The website also keeps your account's history — your sign-ins and the changes made to the account, each with its time and IP address — for as long as the account exists; deleting the account erases it.
 
 ## Log Data (our VPN servers)
 
@@ -171,7 +171,7 @@ Where data-protection law requires a legal basis, we rely on:
 
 ## How Long We Keep Data
 
-Connection logs are kept for 31 days, diagnostic server logs for 14 days and the account website's request log for 90 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account". Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
+Connection logs and the account website's request log are kept for 31 days, and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account". Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
 
 ## International Transfers
 

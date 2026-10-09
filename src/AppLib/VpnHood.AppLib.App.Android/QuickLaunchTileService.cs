@@ -20,7 +20,8 @@ namespace VpnHood.AppLib.App.Android;
 // to the service over the message channel when the file says it is running (a dormant binding
 // that cannot start the service), so querying while the service is stopped simply reads as not
 // connected. A tap either disconnects, starts the VPN service with its last configuration (the
-// always-on bootstrap), or — when no configuration exists — opens the main app.
+// always-on bootstrap), or — when no configuration exists — opens the main app. A start whose server
+// asks for an ad opens the main app too, to show it.
 //
 // Deliberately PASSIVE (no MetaDataActiveTile): a passive tile gets a listening window on every
 // Quick Settings open, so it re-queries and self-heals there — even after the VPN process was
@@ -167,7 +168,6 @@ public class QuickLaunchTileService : TileService
 
     private async Task TryClick()
     {
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         try {
             if (!_vpnServiceManager.IsConfigured) {
                 // no configuration yet; only the main app can create one
@@ -186,13 +186,37 @@ public class QuickLaunchTileService : TileService
             // Starting a foreground service from a tile tap is within the FGS exemptions
             _overrideClientState = ClientState.Initializing;
             RefreshTile();
-            await _vpnServiceManager.StartFromLastConfig(timeoutCts.Token).Vhc();
+            await StartFromLastConfig().Vhc();
         }
         catch (Exception ex) {
             AndroidUtils.ShowToast(ex.Message);
         }
         finally {
             _overrideClientState = null;
+        }
+    }
+
+    // A server that asks for an ad needs the app to show it: once the session waits for one, the tile
+    // opens the app, which shows the ad, and stops waiting for the connection itself. No deadline of its
+    // own: the wait ends when the session connects, fails or waits for an ad, and finding a server alone
+    // may take longer than any patience a tap could have (the app allows a connect minutes).
+    private async Task StartFromLastConfig()
+    {
+        using var adWaitCts = new CancellationTokenSource();
+        EventHandler stateChanged = (_, _) => {
+            if (_vpnServiceManager.ConnectionInfo.ClientState is ClientState.WaitingForAd)
+                adWaitCts.TryCancel();
+        };
+
+        _vpnServiceManager.StateChanged += stateChanged;
+        try {
+            await _vpnServiceManager.StartFromLastConfig(adWaitCts.Token).Vhc();
+        }
+        catch (System.OperationCanceledException) when (adWaitCts.IsCancellationRequested) {
+            _mainHandler.Post(LaunchMainApp);
+        }
+        finally {
+            _vpnServiceManager.StateChanged -= stateChanged;
         }
     }
 

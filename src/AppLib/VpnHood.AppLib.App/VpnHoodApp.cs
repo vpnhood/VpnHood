@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using TaskExtensions = VpnHood.Net.Toolkit.Extensions.TaskExtensions;
 using VpnHood.AppLib.Abstractions.Ads;
+using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.Api;
@@ -488,6 +489,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VhUtils.TryInvokeAsync("PreloadAd",
                 () => AdManager.AdService.LoadInterstitialAd(uiContext, useFallback: false, CancellationToken.None));
         }
+
+        // a session that waits for an ad nobody could show yet - the tile's, always-on's, or one from before
+        // this process restarted, the person opening the app to watch it - gets it now that a window can
+        if (uiContext != null && ConnectionState is AppConnectionState.WaitingForAd)
+            _ = TryShowAd();
 
         // try update the app
         if (uiContext != null)
@@ -1272,6 +1278,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await AdManager.ShowAd(
                 connectionInfo.SessionInfo.SessionId, connectionInfo.SessionInfo.AdRequirement,
                 useFallback: useFallback, _showAdCts.Token);
+        }
+        catch (ShowAdNoUiException) when (!_isConnecting) {
+            // No connect of this process is waiting for the ad: the session is the quick-settings tile's,
+            // always-on's, or this app's from before its process restarted, and the person opens the app to
+            // watch it. It keeps waiting, and the window's arrival shows the ad. A connect running here
+            // fails instead, as it always did
+            VhLogger.Instance.LogInformation("The ad waits for a window to show it in.");
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not show ad.");

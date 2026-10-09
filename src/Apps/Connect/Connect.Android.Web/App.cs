@@ -9,6 +9,7 @@ using VpnHood.AppUi.Hosting.Avalonia.Android;
 using VpnHood.AppLib.App.Android.Constants;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.App.Connect.Android.Web.AppsFlyerUtils;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Android.Web;
@@ -26,13 +27,10 @@ namespace VpnHood.App.Connect.Android.Web;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : AndroidAvaloniaApplication<ClassicAvaloniaApp>(javaReference, transfer)
 {
-    // read once, for AppsFlyer in every process and for the app in its own
-    private readonly Lazy<ConnectAppConfigs> _appConfigs = new(() => ConnectAppConfigs.Load(typeof(App).Assembly));
-
     // Called by the platform only in the app's own process: never in the VPN service's or the tile's.
     protected override AppInitParams CreateInitParams()
     {
-        var appConfigs = _appConfigs.Value;
+        var appConfigs = ConnectAppConfigs.Load(typeof(App).Assembly);
         return new AppInitParams {
             AppId = PackageName ?? throw new InvalidOperationException("The app has no package name."),
             AppName = AppConstants.AppName,
@@ -50,6 +48,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         // own shop.
         options.Premium = ConnectAppOptions.CreatePremium(allowImportAccessCode: true, isPurchaseUrlSupported: true);
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
+        options.TrackerFactories = [..options.TrackerFactories, new AppsFlyerTrackerFactory { DevKey = appConfigs.AppsFlyerDevKey }];
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "android-web"),
             PromptDelay = TimeSpan.FromDays(1)
@@ -82,16 +81,5 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             VhLogger.Instance.LogError(ex, "Could not create AccountService.");
             return null;
         }
-    }
-
-    public override void OnCreate()
-    {
-        // initialize the app flyer
-        var appConfigs = _appConfigs.Value;
-        if (!string.IsNullOrEmpty(appConfigs.AppsFlyerDevKey))
-            AppFlyerUtils.InitAppsFlyer(this, appConfigs.AppsFlyerDevKey, useRegionPolicy: !AppConstants.IsDebugMode);
-
-        // the app, then the UI
-        base.OnCreate();
     }
 }

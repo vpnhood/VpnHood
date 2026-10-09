@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -38,6 +39,14 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     // replaced per start and never disposed: it has no timer, and a token in flight may still read it.
     private volatile bool _keepStarted;
     private CancellationTokenSource _keepStartedCts = new();
+
+    // This run's reader, which a stop may wait for (WaitForReader). The sender is waited for by the
+    // transport's own sending flag (WaitForSender), so nothing is added per batch; only the adapter whose
+    // sender is stopping it on its own errors is marked, on that thread.
+    private volatile Task _readerTask = Task.CompletedTask;
+    private volatile int _readerThreadId;
+    [ThreadStatic] private static TunVpnAdapter? _senderErrorStopAdapter;
+
     protected IPAddress? ServerIp => _startOptions?.ServerIp;
 
     // ReSharper disable once FieldCanBeMadeReadOnly.Local
@@ -290,8 +299,13 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             VhLogger.Instance.LogInformation("Opening TUN adapter...");
             await AdapterOpen(cancellationToken).Vhc();
 
-            // start reading packets
-            _ = Task.Run(StartReadingPackets, CancellationToken.None);
+            // start reading packets; the task is published before it runs, so a stop from here waits
+            // for this run's reader, not the last one's. On the default scheduler, as Task.Run: never
+            // on a caller's own scheduler, which the blocking reader would hold
+            var readerTask = new Task(RunReader, TaskCreationOptions.DenyChildAttach);
+            _readerThreadId = 0;
+            _readerTask = readerTask;
+            readerTask.Start(TaskScheduler.Default);
 
             VhLogger.Instance.LogInformation("TUN adapter started.");
         }
@@ -556,9 +570,23 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 throw;
 
             // too many errors in a row: the adapter is broken, so stop it, and recover or tell the owner
-            if (Stop(false))
+            if (StopBySender())
                 OnUnrequestedStop(ex);
             throw;
+        }
+    }
+
+    // the stop runs inside the sender's batch, so it must not wait for that batch; the previous mark is
+    // restored, as this stop may run inside another adapter's
+    private bool StopBySender()
+    {
+        var previous = _senderErrorStopAdapter;
+        _senderErrorStopAdapter = this;
+        try {
+            return Stop(false);
+        }
+        finally {
+            _senderErrorStopAdapter = previous;
         }
     }
 
@@ -574,6 +602,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 break;
             }
 
+            // a stop: the packet goes with the run, and no wait here holds the stop
+            if (!IsReady)
+                return;
+
             // break if delay exceeds the max delay
             if (delay > _maxPacketSendDelayMs)
                 break;
@@ -588,6 +620,57 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         if (!sent)
             VhLogger.Instance.LogWarning("Failed to send packet via TUN adapter. AdapterName: {AdapterName}",
                 AdapterName);
+    }
+
+    // The reader's thread is known, so a stop made on it does not wait for itself. Never faults: a stop
+    // waits for the task.
+    private void RunReader()
+    {
+        _readerThreadId = Environment.CurrentManagedThreadId;
+        try {
+            StartReadingPackets();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "The TUN adapter's reader ended by an error.");
+        }
+    }
+
+    /// <summary>
+    /// Waits for this run's reader to end, for an adapter about to free what the reader uses. Returns
+    /// false when it did not end in time. A stop made on the reader's own thread, by its read errors or
+    /// by a subscriber, does not wait for itself.
+    /// </summary>
+    protected bool WaitForReader(TimeSpan timeout)
+    {
+        return Environment.CurrentManagedThreadId == _readerThreadId || _readerTask.Wait(timeout);
+    }
+
+    /// <summary>
+    /// Waits for the batch being sent to end, for an adapter that has cleared the handle its WritePacket
+    /// uses: that batch may still hold the handle, a later one finds it cleared. The sender writes its
+    /// flag with no fence, so a process-wide barrier before the wait makes a flag set before the clearing
+    /// seen here, and one after it makes all the batch did before clearing its flag seen too (ARM64 may
+    /// show the clearing first). Returns false when it did not end in time. A stop made by this adapter's
+    /// sender, on its own errors, does not wait for itself.
+    /// </summary>
+    protected bool WaitForSender(TimeSpan timeout)
+    {
+        if (_senderErrorStopAdapter == this)
+            return true;
+
+        Interlocked.MemoryBarrierProcessWide();
+        var stopwatch = Stopwatch.StartNew();
+        var spinWait = new SpinWait();
+        while (IsSendingBatch) {
+            if (stopwatch.Elapsed > timeout)
+                return false;
+
+            // never a sleep, a whole timer tick: under traffic, a check may meet one batch after another
+            spinWait.SpinOnce(sleep1Threshold: -1);
+        }
+
+        Interlocked.MemoryBarrierProcessWide();
+        return true;
     }
 
     protected virtual void StartReadingPackets()

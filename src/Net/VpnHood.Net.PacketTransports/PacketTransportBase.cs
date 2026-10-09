@@ -29,6 +29,9 @@ public abstract class PacketTransportBase : IPacketTransport
     public int QueueLength => _sendChannel.Reader.Count;
     public bool IsSending => _isSending || QueueLength > 0;
 
+    // the batch in flight, for a stop that waits for it; read fresh each time
+    protected bool IsSendingBatch => Volatile.Read(ref _isSending);
+
     protected PacketTransportBase(PacketTransportOptions options, bool singleMode, bool passthrough)
     {
         if (passthrough && !singleMode)

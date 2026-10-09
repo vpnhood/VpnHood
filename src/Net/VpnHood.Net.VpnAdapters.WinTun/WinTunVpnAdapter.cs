@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -441,6 +442,9 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         Thread.Sleep(1);
     }
 
+    // A real call, never inlined: the batch's sending flag, set before it, then stays ahead of this read of
+    // the session, which a stop's wait for the sender counts on (WaitForSender)
+    [MethodImpl(MethodImplOptions.NoInlining)]
     protected override bool WritePacket(IpPacket ipPacket)
     {
         var session = _tunSession;

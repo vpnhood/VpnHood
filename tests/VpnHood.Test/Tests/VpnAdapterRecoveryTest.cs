@@ -220,12 +220,15 @@ public class VpnAdapterRecoveryTest : TestBase
         await adapter.Start(CreateAdapterOptions(), TestCt);
 
         // the write errors stop the adapter on the sender's thread: at once, not after the wait's 5 s.
-        // One packet at a time: a batch ends at its first error, so each counts one
+        // One packet per batch, as a batch ends at its first error, and fast: the reader's polling
+        // resets the error count every 20 ms, so the spin never sleeps (a sleep lasts a whole timer tick)
         adapter.FailWrite = true;
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; i < 30 && adapter.IsStarted; i++) {
             adapter.SendPacketQueued(BuildPacket());
-            await Task.Delay(10, TestCt);
+            var spinWait = new SpinWait();
+            while (adapter.QueueLength > 0 && stopwatch.Elapsed < TimeSpan.FromSeconds(3)) // a stalled sender fails, not hangs
+                spinWait.SpinOnce(sleep1Threshold: -1);
         }
         await AssertEqualsWait(false, () => adapter.IsStarted, timeout: 3000);
         Assert.IsTrue(stopwatch.Elapsed < TimeSpan.FromSeconds(3));

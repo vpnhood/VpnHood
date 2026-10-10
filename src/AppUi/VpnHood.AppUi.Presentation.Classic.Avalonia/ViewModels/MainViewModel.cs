@@ -240,8 +240,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         // HomeConnectionInfo
         IsConnected = VhApp.IsConnected(state);
-        IsPremiumSession = (VhApp.IsPremiumSupported && VhApp.IsPremiumUser) ||
-                           (state.SessionInfo?.IsPremiumSession == true && IsConnected);
+        // the circle's gold: only where the app sells premium - a Client's own key is premium by
+        // its token, and Client sells nothing - and set before the phase, so a premium connect
+        // arrives in gold
+        IsPremiumSession = VhApp.IsPremiumSupported && IsConnected &&
+                           (VhApp.IsPremiumUser || state.SessionInfo?.IsPremiumSession == true);
         Phase = connectionState switch {
             AppConnectionState.None => "none",
             AppConnectionState.Connected => "connected",

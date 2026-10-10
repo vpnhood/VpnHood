@@ -34,6 +34,10 @@ public partial class ConnectionCircle : UserControl
     public static readonly StyledProperty<bool> IsProgressVisibleProperty =
         AvaloniaProperty.Register<ConnectionCircle, bool>(nameof(IsProgressVisible));
 
+    // a premium session: the shine, the flash and the glow in gold rather than green
+    public static readonly StyledProperty<bool> IsPremiumProperty =
+        AvaloniaProperty.Register<ConnectionCircle, bool>(nameof(IsPremium));
+
     // The dots' turn (#rotateCircle). The web UI's turn never ends: it is a 3s linear rotate whose
     // play state goes from running to paused, so a connect freezes the ring at the angle it had
     // reached and the dots slide to the centre from there. A style animation has no pause - when
@@ -92,6 +96,11 @@ public partial class ConnectionCircle : UserControl
     public bool IsProgressVisible {
         get => GetValue(IsProgressVisibleProperty);
         set => SetValue(IsProgressVisibleProperty, value);
+    }
+
+    public bool IsPremium {
+        get => GetValue(IsPremiumProperty);
+        set => SetValue(IsPremiumProperty, value);
     }
 
     // The attachment is the circle's mount. The turn runs only while it is on screen: the frame
@@ -193,6 +202,9 @@ public partial class ConnectionCircle : UserControl
         }
         else if (change.Property == IsProgressVisibleProperty) {
             ProgressPanel.IsVisible = IsProgressVisible;
+        }
+        else if (change.Property == IsPremiumProperty) {
+            RootGrid.Classes.Set("premium", IsPremium);
         }
     }
 }

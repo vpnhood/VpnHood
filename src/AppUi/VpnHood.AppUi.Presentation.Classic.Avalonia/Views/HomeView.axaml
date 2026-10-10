@@ -36,20 +36,13 @@
   </UserControl.Styles>
 
   <Panel Background="{StaticResource HomeBgBrush}">
-    <!-- #homeContainer: the web UI's body-bg over the home's gradient; the premium art on the sides
-         once the session is premium -->
+    <!-- #homeContainer: the web UI's body-bg over the home's gradient. Its premium art on the
+         sides is not drawn: a phone's corners on a solid fill, it broke a wide page; a premium
+         session shows in the circle's gold instead. -->
     <Panel>
       <Panel.Background>
         <ImageBrush ui:AppImage.Source="images/body-bg.png" Stretch="UniformToFill" AlignmentY="Top" />
       </Panel.Background>
-    </Panel>
-    <!-- on their own sides in every language: the web UI places them by background-position,
-         which no direction moves -->
-    <Panel FlowDirection="LeftToRight">
-      <Image ui:AppImage.Source="images/premium-bg-left.webp" HorizontalAlignment="Left" VerticalAlignment="Top"
-             Stretch="Uniform" MaxWidth="260" IsVisible="{Binding IsPremiumSession}" />
-      <Image ui:AppImage.Source="images/premium-bg-right.webp" HorizontalAlignment="Right" VerticalAlignment="Top"
-             Stretch="Uniform" MaxWidth="260" IsVisible="{Binding IsPremiumSession}" />
     </Panel>
 
     <Grid Classes="page" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto,Auto">
@@ -150,6 +143,7 @@
 
         <!-- HomeConnectionInfo: the circle -->
         <controls:ConnectionCircle Margin="0,12"
+                                   IsPremium="{Binding IsPremiumSession}"
                                    Phase="{Binding Phase}"
                                    StateText="{Binding StateText}"
                                    Glyph="{Binding StateGlyph}"

@@ -43,4 +43,8 @@
   <!-- .card-on-grad-bg: card-on-grad-bg at 30% -->
   <SolidColorBrush x:Key="CardOnGradBgAlphaBrush" Color="#4D0E1C5F" />
 
+  <!-- a premium session's connection circle, gold where ConnectionCircleShineBrush is green; this
+       UI's own, not the web UI's -->
+  <SolidColorBrush x:Key="ConnectionCirclePremiumShineBrush" Color="#FFC83D" />
+
 </ResourceDictionary>

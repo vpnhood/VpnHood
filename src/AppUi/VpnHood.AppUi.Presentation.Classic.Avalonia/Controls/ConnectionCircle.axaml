@@ -7,7 +7,9 @@
        faint, ring, dots and words alike, as the web UI fades it; two dots on a 3s turn while
        connecting; on connect the dots slide to the centre, a green ring grows past the circle and
        glows (resize-and-shine), a green flash fills it and fades (resize-and-hide), and the ring
-       turns white. The phase drives the classes on RootGrid (code-behind); the styles below do the
+       turns white. A premium session's shine, glow and flash are gold instead (.premium), the
+       mark that replaced the web UI's side art. The phase drives the classes on RootGrid
+       (code-behind); the styles below do the
        rest, with the CSS's durations and delays. ClipToBounds is off because a UserControl clips
        by default, and the turning dots and the glow both reach past the 150px box. -->
   <UserControl.Styles>
@@ -124,7 +126,15 @@
       <Setter Property="Opacity" Value="1" />
       <Setter Property="BoxShadow" Value="0 0 30 11 #15F5BA" />
     </Style>
-    <Style Selector="Grid.connected.animate Border#Shine">
+    <!-- a premium session's shine: gold, its glow the gold of ConnectionCirclePremiumShineBrush,
+         since a BoxShadow takes a colour and no brush -->
+    <Style Selector="Grid.premium Border#Shine">
+      <Setter Property="BorderBrush" Value="{StaticResource ConnectionCirclePremiumShineBrush}" />
+    </Style>
+    <Style Selector="Grid.connected.premium Border#Shine">
+      <Setter Property="BoxShadow" Value="0 0 30 11 #FFC83D" />
+    </Style>
+    <Style Selector="Grid.connected.animate:not(.premium) Border#Shine">
       <Style.Animations>
         <Animation Duration="0:0:0.8" Delay="0:0:0.4" FillMode="Backward" Easing="CubicEaseInOut">
           <KeyFrame Cue="0%">
@@ -142,13 +152,35 @@
         </Animation>
       </Style.Animations>
     </Style>
+    <Style Selector="Grid.connected.animate.premium Border#Shine">
+      <Style.Animations>
+        <Animation Duration="0:0:0.8" Delay="0:0:0.4" FillMode="Backward" Easing="CubicEaseInOut">
+          <KeyFrame Cue="0%">
+            <Setter Property="Width" Value="15" />
+            <Setter Property="Height" Value="15" />
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="BoxShadow" Value="0 0 0 0 #00FFC83D" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Width" Value="157" />
+            <Setter Property="Height" Value="157" />
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="BoxShadow" Value="0 0 30 11 #FFC83D" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
 
-    <!-- the flash: green, fills the circle from the centre and fades out -->
+    <!-- the flash: green, gold for a premium session, fills the circle from the centre and fades
+         out -->
     <Style Selector="Ellipse#Flash">
       <Setter Property="Width" Value="15" />
       <Setter Property="Height" Value="15" />
       <Setter Property="Fill" Value="{StaticResource ConnectionCircleShineBrush}" />
       <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="Grid.premium Ellipse#Flash">
+      <Setter Property="Fill" Value="{StaticResource ConnectionCirclePremiumShineBrush}" />
     </Style>
     <Style Selector="Grid.connected.animate Ellipse#Flash">
       <Style.Animations>

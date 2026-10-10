@@ -6,6 +6,7 @@ you are trying to do.
 | I want to… | Go to |
 | --- | --- |
 | **Publish my own branded VPN app** to the stores | [publish-your-app/](publish-your-app/README.md) ← start here |
+| Audit a web interface for accessibility | [accessibility-audit-checklist.md](accessibility-audit-checklist.md) |
 | Know which component talks to which, and in which direction | [topology.md](topology.md) |
 | Find where something lives in `src/`, or what a platform app is made of | [source-layout.md](source-layout.md) |
 | Ship a set of files with the app — images, fonts, words, a database | [assets.md](assets.md) |
@@ -51,6 +52,7 @@ Store policy and legal checkpoints a publisher must clear:
 
 | Area | Document |
 | --- | --- |
+| Web accessibility | [accessibility-audit-checklist.md](accessibility-audit-checklist.md) — practical WCAG 2.2 AA audit steps and tools |
 | Source layout | [source-layout.md](source-layout.md) — the five layers under `src/`, what a head is made of, how the browser page is built and placed |
 | Assets and zips | [assets.md](assets.md) — why data ships as a placed zip and never as an embedded resource, the provider chain that reads one, and why the paired-phone page is WebAssembly |
 | Component topology | [topology.md](topology.md) — who connects to whom, in which direction, and how many of each |

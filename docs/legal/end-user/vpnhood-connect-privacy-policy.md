@@ -8,7 +8,7 @@ This policy describes what the app collects, what it never collects, and what ou
 
 ## What VpnHood! CONNECT Collects
 
-Except on iOS, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics, through Firebase on the Google Play build. It is linked to the Client ID described below, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. The iOS build does not load Google Analytics or Firebase.
+Except on iOS, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics, through Firebase on the Google Play build. It is linked to the Client ID described below and, on the Google Play build, to your device's advertising ID, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. The iOS build does not load Google Analytics or Firebase.
 
 Some data depends on **where you installed the app from**, because those builds contain different components:
 
@@ -39,6 +39,8 @@ On builds that support analytics, it is controlled by **Settings → Privacy →
 On builds with analytics, when analytics is on, the following is collected:
 
 - Client ID (the identifier described above)
+- Your device's advertising ID, on the Google Play build, so Google can tell which of our ad campaigns an install came from; you can reset or delete it in your device's ads settings
+- Where the app was installed from, on the Google Play build: the store listing or link that led to the install
 - VpnHood version
 - Country, from your device's region setting or your connection — never a precise location
 - Language
@@ -154,7 +156,7 @@ record with us.
 
 These companies process data on our behalf or in their own right, and only for the purposes described above:
 
-- **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, non-iOS builds), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
+- **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, non-iOS builds, and the advertising ID, Google Play build), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
 - **Apple Inc.** — Sign in with Apple and App Store billing (optional accounts and purchases, App Store build)
 - **Hosting and payment providers** — infrastructure needed to run the VPN and account services, and payment processing for website purchases
 

@@ -82,7 +82,9 @@ and **Grow → Store presence**:
 2. **Privacy policy URL** — a working page on your own domain.
 3. **App content declarations**, each a short questionnaire:
    - **Data safety** — what you collect and share. Answer from your own app's behaviour, not from
-     someone else's form.
+     someone else's form. A build with Firebase Analytics also sends the device's advertising ID
+     unless its manifest turns that off (`google_analytics_adid_collection_enabled` set to false):
+     while it is on, declare Device or other IDs as collected for analytics.
    - **Content rating** — honest answers for a VPN put it in a mature category.
    - **Target audience** — a VPN is not for children; saying otherwise triggers extra rules.
    - **Ads** — declare whether your app shows ads.

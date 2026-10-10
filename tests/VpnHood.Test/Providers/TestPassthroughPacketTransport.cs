@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.PacketTransports;
@@ -8,9 +9,16 @@ namespace VpnHood.Test.Providers;
 public class TestPassthroughPacketTransport : PassthroughPacketTransport
 {
     private readonly List<int> _sentPorts = [];
+    private int _sendsStarted;
 
     // set, a packet from this UDP source port is refused before it is handed on
     public volatile int FailPort;
+
+    // set, a send past its disposed check waits here before it sends
+    public ManualResetEventSlim? SendGate { get; set; }
+
+    // the sends past their disposed check
+    public int SendsStarted => Volatile.Read(ref _sendsStarted);
 
     public IReadOnlyList<int> SentPorts {
         get {
@@ -27,5 +35,17 @@ public class TestPassthroughPacketTransport : PassthroughPacketTransport
 
         lock (_sentPorts)
             _sentPorts.Add(sourcePort);
+    }
+
+    // a send logs this right after its disposed check
+    protected override void LogPacket(IpPacket ipPacket, LogLevel logLevel, Exception? exception,
+        string message, params object?[] args)
+    {
+        if (message == "Sending a packet to queue.") {
+            Interlocked.Increment(ref _sendsStarted);
+            SendGate?.Wait();
+        }
+
+        base.LogPacket(ipPacket, logLevel, exception, message, args);
     }
 }

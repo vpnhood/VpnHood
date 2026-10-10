@@ -374,6 +374,27 @@ public class PacketTransportTest : TestBase
     }
 
     [TestMethod]
+    public async Task Passthrough_send_racing_a_dispose_disposes_its_packet()
+    {
+        using var sendGate = new ManualResetEventSlim();
+        var transport = new TestPassthroughPacketTransport { SendGate = sendGate };
+
+        // a send past its disposed check, held while the transport is disposed
+        var memory = BuildPacketMemory(1);
+        var ipPacket = PacketBuilder.Attach(memory);
+        var sendTask = Task.Run(() => transport.SendPacketQueued(ipPacket), TestCt);
+        await AssertEqualsWait(1, () => transport.SendsStarted);
+        transport.Dispose();
+        sendGate.Set();
+
+        // the packet never reached the subclass, so the transport disposes it, though it hands its packets on
+        Assert.IsFalse(await sendTask);
+        Assert.IsTrue(memory.IsDisposed);
+        Assert.AreEqual(1, transport.PacketStat.DroppedPackets);
+        GC.KeepAlive(ipPacket);
+    }
+
+    [TestMethod]
     public void Passthrough_transport_that_hands_packets_on_disposes_what_it_does_not_hand_on()
     {
         var transport = new TestPassthroughPacketTransport { FailPort = 1 };

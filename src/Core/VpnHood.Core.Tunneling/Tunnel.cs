@@ -1,6 +1,5 @@
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.PacketTransports;
 using VpnHood.Core.Tunneling.Channels;
@@ -8,18 +7,11 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling;
 
-// Unthrottled, the tunnel passes each packet straight on to its channel. With a send limit, the session's
-// packets wait in the tunnel's own queue, one for all its channels, and leave it at the limit: the
-// session's bottleneck, sharing the limit with its proxy streams. The queue holds about a quarter second of
-// the limit, at least a new connection's first burst, and drops its oldest packet when full, so the newer
-// ones behind it show the loss
+// A session's tunnel: it passes each packet straight on to one of its channels. A session with a send limit
+// uses a ThrottledTunnel, which paces the packets first
 public class Tunnel : PacketTransportBase
 {
-    private const int MinThrottledQueueCapacity = 32;
     private readonly ChannelManager _channelManager;
-    private readonly bool _isThrottled;
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly CancellationToken _cancellationToken;
 
     public TrafficMeter TrafficMeter { get; }
     public int PacketChannelCount => _channelManager.PacketChannelCount;
@@ -35,28 +27,29 @@ public class Tunnel : PacketTransportBase
     public int Mtu { get; set; }
 
     public Tunnel(TunnelOptions options)
-        : base(CreatePacketTransportOptions(options), singleMode: true, passthrough: options.MaxSpeed.Sent <= 0)
+        : this(options, throttlesPackets: false)
     {
-        _isThrottled = options.MaxSpeed.Sent > 0;
-        _cancellationToken = _cancellationTokenSource.Token;
+    }
+
+    // A tunnel with a send limit must pace its packets, or its proxy streams would keep the limit and its packets
+    // would not; one that paces them needs a limit to pace them to
+    protected Tunnel(TunnelOptions options, bool throttlesPackets)
+        : base(new PacketTransportOptions {
+            AutoDisposePackets = false, // a packet handed on is no longer the tunnel's
+            Blocking = false
+        }, singleMode: true, passthrough: true)
+    {
+        if ((options.MaxSpeed.Sent > 0) != throttlesPackets)
+            throw new ArgumentException(throttlesPackets
+                ? "A tunnel that throttles its packets needs a send limit."
+                : "A tunnel with a send limit must throttle its packets.", nameof(options));
+
         Mtu = options.Mtu;
         TrafficMeter = new TrafficMeter {
             MaxSpeed = options.MaxSpeed,
             MaxSpeedBurst = options.MaxSpeedBurst
         };
         _channelManager = new ChannelManager(options.MaxPacketChannelCount, Channel_OnPacketReceived);
-    }
-
-    private static PacketTransportOptions CreatePacketTransportOptions(TunnelOptions options)
-    {
-        return new PacketTransportOptions {
-            AutoDisposePackets = false, // a packet handed to a channel is the channel's
-            Blocking = false,
-            QueueCapacity = options.MaxSpeed.Sent > 0
-                ? (int)Math.Clamp(options.MaxSpeed.Sent / 4 / TransportDefaults.MaxPacketSize,
-                    MinThrottledQueueCapacity, PacketTransportOptions.DefaultQueueCapacity)
-                : null
-        };
     }
 
     public void AddChannel(IChannel channel, bool disposeIfFailed = false)
@@ -75,38 +68,17 @@ public class Tunnel : PacketTransportBase
         OnPacketReceived(ipPacket);
     }
 
-    // One packet at a time: the caller's, passed through, or the queue's when throttled. It is not thread-safe
+    // one packet at a time, under the base's lock
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
-        var ipPacket = ipPackets[0];
-        if (!_isThrottled) {
-            SendPacketToChannel(ipPacket);
-            return default;
-        }
-
-        // sent, then paid for: the wait holds the next packets in the queue, where a full queue drops the
-        // oldest. The length is read first, as the channel may send and dispose the packet at once
-        var packetLength = ipPacket.PacketLength;
-        if (!SendPacketToChannel(ipPacket))
-            return default;
-
-        var throttleTask = TrafficMeter.ThrottleSendAsync(packetLength, _cancellationToken);
-        return throttleTask.IsCompletedSuccessfully ? default : WaitForThrottle(throttleTask);
+        SendPacketToChannel(ipPackets[0]);
+        return default;
     }
 
-    private async ValueTask WaitForThrottle(ValueTask throttleTask)
-    {
-        try {
-            await throttleTask.Vhc();
-        }
-        catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested) {
-            // disposed: the packets left in the queue are disposed with it
-        }
-    }
-
-    // a packet that cannot go is disposed here, as no one else holds it; one a channel refused is disposed
-    // already, and a second Dispose does nothing
-    private bool SendPacketToChannel(IpPacket ipPacket)
+    // A packet that cannot go is disposed here, as no one else holds it; one a channel refused is disposed
+    // already, and a second Dispose does nothing. A too-big packet's ICMP reply goes to the receive handlers on
+    // the caller's thread, so a handler that waits holds the caller: for a throttled tunnel, every turn
+    protected bool SendPacketToChannel(IpPacket ipPacket)
     {
         try {
             var channel = FindChannelForPacket(ipPacket);
@@ -169,9 +141,6 @@ public class Tunnel : PacketTransportBase
 
     protected override void DisposeManaged()
     {
-        // ends a throttle wait first
-        _cancellationTokenSource.TryCancel();
-        _cancellationTokenSource.Dispose();
         _channelManager.Dispose();
         TrafficMeter.Dispose();
 

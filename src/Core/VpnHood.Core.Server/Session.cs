@@ -135,7 +135,7 @@ public class Session : IDisposable
         // the server shapes what it sends, the client's download; what it receives it only enforces, a little
         // looser than the client shapes it, so an honest client is never held
         var maxSpeedMbps = sessionResponseEx.AccessInfo?.MaxSpeedMbps ?? new Traffic();
-        Tunnel = new Tunnel(new TunnelOptions {
+        var tunnelOptions = new TunnelOptions {
             MaxPacketChannelCount = options.MaxPacketChannelCountValue,
             Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu),
             MaxSpeed = new Traffic(
@@ -144,7 +144,8 @@ public class Session : IDisposable
             MaxSpeedBurst = new Traffic(
                 sent: TransportDefaults.MaxSpeedBurst,
                 received: (long)(TransportDefaults.MaxSpeedBurst * ReceiveSpeedGrace))
-        });
+        };
+        Tunnel = tunnelOptions.MaxSpeed.Sent > 0 ? new ThrottledTunnel(tunnelOptions) : new Tunnel(tunnelOptions);
 
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 

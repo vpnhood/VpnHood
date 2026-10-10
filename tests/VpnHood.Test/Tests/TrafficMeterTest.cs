@@ -7,6 +7,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.Dom;
 
@@ -113,7 +114,7 @@ public class TrafficMeterTest : TestBase
         });
 
         const long maxSpeed = 125_000;
-        using var tunnel = new Tunnel(new TunnelOptions {
+        using var tunnel = new ThrottledTunnel(new TunnelOptions {
             MaxPacketChannelCount = 1,
             Mtu = TransportDefaults.MtuClient,
             MaxSpeed = new Traffic(sent: maxSpeed, received: 0),
@@ -130,16 +131,23 @@ public class TrafficMeterTest : TestBase
             TrafficMeter = tunnel.TrafficMeter
         }), disposeIfFailed: true);
 
+        const int quietPort = 1001;
         long receivedBytes = 0;
+        var quietPacketsReceived = 0;
         serverChannel.PacketReceived += (_, ipPacket) => {
             Interlocked.Add(ref receivedBytes, ipPacket.PacketLength);
+            if (ipPacket.ExtractUdp().SourcePort == quietPort)
+                Interlocked.Increment(ref quietPacketsReceived);
+
             ipPacket.Dispose();
         };
         serverChannel.Start();
 
-        // an upload at several times the limit: no send waits, the limit holds the speed, and the
-        // tunnel's queue drops the excess
+        // an upload at several times the limit beside a quiet flow, a small packet every 20 ms: no send waits,
+        // the limit holds the speed, the tunnel's queue drops the excess, and the quiet flow is not caught in it
         var longestSend = TimeSpan.Zero;
+        var quietPacketsSent = 0;
+        var nextQuietTime = TimeSpan.Zero;
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; stopwatch.Elapsed < TimeSpan.FromSeconds(2); i++) {
             var ipPacket = PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("10.0.0.3"),
@@ -149,6 +157,13 @@ public class TrafficMeterTest : TestBase
             if (sendStopwatch.Elapsed > longestSend)
                 longestSend = sendStopwatch.Elapsed;
 
+            if (stopwatch.Elapsed >= nextQuietTime) {
+                tunnel.SendPacketQueued(PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"),
+                    IPAddress.Parse("10.0.0.3"), quietPort, 2000, new byte[100]));
+                quietPacketsSent++;
+                nextQuietTime += TimeSpan.FromMilliseconds(20);
+            }
+
             if (i % 10 == 0)
                 await Task.Delay(1, TestCt);
         }
@@ -156,7 +171,9 @@ public class TrafficMeterTest : TestBase
         var speed = Interlocked.Read(ref receivedBytes) / stopwatch.Elapsed.TotalSeconds;
         Assert.IsLessThan(TimeSpan.FromMilliseconds(100), longestSend, $"Longest send: {longestSend}");
         Assert.IsTrue(speed is > maxSpeed * 0.5 and < maxSpeed * 1.5, $"Speed: {speed:F0} B/s");
-        Assert.IsGreaterThan(0, tunnel.PacketStat.DroppedPackets, "The tunnel's queue should drop the excess.");
+        Assert.IsGreaterThan(0, tunnel.QueueDroppedPackets, "The tunnel's queue should drop the excess.");
+        await AssertEqualsWait(true, () => Volatile.Read(ref quietPacketsReceived) >= quietPacketsSent * 0.9,
+            "The quiet flow should not lose its packets to the flood.");
     }
 
     // We use QUIC to make sure packet channel is used

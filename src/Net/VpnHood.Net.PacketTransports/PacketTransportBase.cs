@@ -25,8 +25,8 @@ public abstract class PacketTransportBase : IPacketTransport
     // The transport takes every packet it is given. One it drops or refuses went to no one, so it is disposed in
     // any mode. One a send failed on, or left in the queue at the end, is disposed whenever the transport queues,
     // as no one else holds it; in passthrough mode only with AutoDisposePackets, as the subclass may have handed
-    // it on. A delivered one only with AutoDisposePackets, as a transport that hands its packets on (a throttled
-    // tunnel) must not dispose them
+    // it on. A delivered one only with AutoDisposePackets, as a transport that hands its packets on (a tunnel)
+    // must not dispose them
     private readonly bool _disposeUnsentPackets;
     protected bool IsDisposed => _disposed;
 
@@ -307,12 +307,16 @@ public abstract class PacketTransportBase : IPacketTransport
 
     private async ValueTask<bool> SendPacketsInternalAsync(IReadOnlyList<IpPacket> ipPackets)
     {
+        // a transport disposed since the send's own check refuses the packets: the subclass never saw them, so
+        // they are disposed in any mode
+        if (IsDisposed) {
+            DropFailedPackets(ipPackets, new ObjectDisposedException(VhLogger.FormatType(this)),
+                disposePackets: true);
+            return false;
+        }
+
         // send packets
         try {
-            // if the transport is disposed, do not send packets
-            if (IsDisposed)
-                throw new ObjectDisposedException(VhLogger.FormatType(this));
-
             // Set sending state and last sent time
             _isSending = true;
             _stat.LastSentTime = FastDateTime.UtcNow;
@@ -323,7 +327,7 @@ public abstract class PacketTransportBase : IPacketTransport
                 await task.Vhc();
         }
         catch (Exception ex) {
-            DropFailedPackets(ipPackets, ex);
+            DropFailedPackets(ipPackets, ex, _disposeUnsentPackets);
             return false;
         }
         finally {
@@ -342,9 +346,8 @@ public abstract class PacketTransportBase : IPacketTransport
         return true;
     }
 
-    // a batch the send failed on: every packet is counted and, by the rule above, disposed, even when the logger
-    // fails
-    private void DropFailedPackets(IReadOnlyList<IpPacket> ipPackets, Exception exception)
+    // a batch that was not sent: every packet is counted and, when told, disposed, even when the logger fails
+    private void DropFailedPackets(IReadOnlyList<IpPacket> ipPackets, Exception exception, bool disposePackets)
     {
         try {
             // ReSharper disable once ForCanBeConvertedToForeach
@@ -355,7 +358,7 @@ public abstract class PacketTransportBase : IPacketTransport
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < ipPackets.Count; i++) {
                 _stat.AddDroppedPacket();
-                if (_disposeUnsentPackets)
+                if (disposePackets)
                     ipPackets[i].Dispose();
             }
         }

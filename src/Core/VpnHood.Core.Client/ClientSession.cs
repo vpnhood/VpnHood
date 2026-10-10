@@ -92,11 +92,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         // Tunnel; the client limits only what it sends: the server shapes the download already, and a
         // second limit here would only drop what the server let through
-        _tunnel = new Tunnel(new TunnelOptions {
+        var tunnelOptions = new TunnelOptions {
             MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
             Mtu = config.Mtu,
             MaxSpeed = new Traffic(sent: (config.MaxSpeedMbps?.Sent ?? 0) * 1_000_000 / 8, received: 0)
-        });
+        };
+        _tunnel = tunnelOptions.MaxSpeed.Sent > 0 ? new ThrottledTunnel(tunnelOptions) : new Tunnel(tunnelOptions);
 
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 

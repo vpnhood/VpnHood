@@ -13,19 +13,23 @@ using VpnHood.Net.Toolkit.Graphics;
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
 // The title bar Avalonia draws in place of an X11 window manager's (AvaloniaDesktopHost), in the
-// app's colour where the app names one. Its buttons are the window's, so the UI's own button styles
-// reach them too - the Classic UI's template paints Fluent's close button red at rest - and so they
-// get their template back here, in the window's styles, which outrank the application's. Under the
-// pointer a button takes a faint wash of its icon's colour, which shows on any bar, rather than
-// Fluent's greys and Windows' red. A window that cannot be maximized has no maximize or full-screen
-// button rather than greyed ones.
+// app's colour. Its buttons are the window's, so the UI's own button styles reach them too - the
+// Classic UI's template paints Fluent's close button red at rest - and so they get their template
+// back here, in the window's styles, which outrank the application's. Under the pointer a button
+// takes a faint wash of its icon's colour, which shows on any bar, rather than Fluent's greys and
+// Windows' red. A window that cannot be maximized has no maximize or full-screen button rather than
+// greyed ones.
 internal static class AvaloniaDrawnTitleBar
 {
     public static void Apply(Window window, VhColor? color)
     {
-        if (color is { } barColor)
-            window.Resources["TitleBarBackgroundBrush"] =
-                new SolidColorBrush(Color.FromArgb(barColor.A, barColor.R, barColor.G, barColor.B));
+        // the window's own background where the app names no colour, as the message window, if it is
+        // one colour
+        var barBrush = color is { } barColor
+            ? new SolidColorBrush(Color.FromArgb(barColor.A, barColor.R, barColor.G, barColor.B))
+            : window.Background as ISolidColorBrush;
+        if (barBrush != null)
+            window.Resources["TitleBarBackgroundBrush"] = barBrush;
 
         var buttonStyle = new Style(x => x.OfType<WindowDrawnDecorations>().Template().OfType<Button>());
         buttonStyle.Setters.Add(new Setter(TemplatedControl.TemplateProperty, CreateButtonTemplate()));

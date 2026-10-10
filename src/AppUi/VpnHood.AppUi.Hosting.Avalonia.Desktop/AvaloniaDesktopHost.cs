@@ -175,13 +175,19 @@ public static class AvaloniaDesktopHost
 
     // An X11 window manager frames a window in its own colours, which the window cannot change, so
     // Avalonia draws the title bar instead and it takes the app's (AvaloniaDrawnTitleBar). Avalonia 12
-    // marks the option experimental.
+    // marks the option experimental. WSLg shows such a window as its shadow alone, the content
+    // see-through, so there WSLg keeps framing it.
     private static AppBuilder BuildAvaloniaApp<TUi>()
         where TUi : Application, new()
     {
 #pragma warning disable AVALONIA_X11_FORCE_CSD
         return AppBuilder.Configure<TUi>().UsePlatformDetect()
-            .With(new X11PlatformOptions { ForceDrawnDecorations = true });
+            .With(new X11PlatformOptions { ForceDrawnDecorations = !IsWslg() });
 #pragma warning restore AVALONIA_X11_FORCE_CSD
+    }
+
+    private static bool IsWslg()
+    {
+        return OperatingSystem.IsLinux() && Directory.Exists("/mnt/wslg");
     }
 }

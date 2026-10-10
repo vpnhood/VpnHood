@@ -172,7 +172,13 @@ public class Redactor(bool isAnonymousMode)
             ipAddress = ipAddress.MapToIPv4();
 
         var addressBytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
-        var isV4 = ipAddress.IsV4();
+
+        // NAT64's well-known prefix carries the IPv4 address it reaches in its last 32 bits: the same
+        // host, so the same token, as that address
+        if (addressBytes.StartsWith(Nat64WellKnownPrefix))
+            addressBytes = addressBytes[12..];
+
+        var isV4 = addressBytes.Length == 4;
 
         // loopback, unspecified, link-local, multicast, broadcast and the private ranges of the user's own
         // LAN. None of them can point at a subscriber or at a site, and an operator needs to read them as
@@ -209,12 +215,17 @@ public class Redactor(bool isAnonymousMode)
         return (isV4 ? "v4-" : "v6-") + Convert.ToHexStringLower(hash[..4]);
     }
 
+    // 64:ff9b::/96 and 64:ff9b:1::/48 (RFC 6052, RFC 8215)
+    private static ReadOnlySpan<byte> Nat64WellKnownPrefix => [0x00, 0x64, 0xff, 0x9b, 0, 0, 0, 0, 0, 0, 0, 0];
+    private static ReadOnlySpan<byte> Nat64LocalUsePrefix => [0x00, 0x64, 0xff, 0x9b, 0x00, 0x01];
+
     private static bool IsGloballyRoutable(ReadOnlySpan<byte> addressBytes, bool isV4)
     {
         // 2000::/3 is the only globally routable IPv6 range; everything else is loopback, unspecified,
-        // link-local, unique-local or multicast
+        // link-local, unique-local or multicast, but for NAT64's local-use prefix, which carries the IPv4
+        // address it reaches at a place the network's prefix length decides
         if (!isV4)
-            return (addressBytes[0] & 0xE0) == 0x20;
+            return (addressBytes[0] & 0xE0) == 0x20 || addressBytes.StartsWith(Nat64LocalUsePrefix);
 
         return addressBytes[0] switch {
             0 or 127 => false, // unspecified, loopback

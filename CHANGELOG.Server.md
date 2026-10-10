@@ -1,6 +1,7 @@
 # Latest
 
 * Fix: VpnHoodServer's tracking log writes no destination address when destination tracking is off; when it is on, it writes a token in place of each address, even with the log anonymizer off. Its ICMP lines follow the ICMP switch; they used to follow the UDP one.
+* Fix: VpnHoodServer's logs redact NAT64 addresses, which carry the IPv4 address they reach: those in 64:ff9b::/96 as that address, those in 64:ff9b:1::/48 whole. They used to be written as they were.
 * Update: VpnHoodServer's console no longer prints the session lines, which carry the client IP; they stay in server.log and sessions.log.
 * Update: VpnHoodServer's server.log starts a new file every day as well as at 10 MB, and the shipped NLog.config keeps every archive 28 days, so no line is older than 30 days when it goes.
 * Fix: When its NLog.config cannot be used, VpnHoodServer's fallback log leaves out the tracking and session lines, which carry client IPs; that log never rolls, so each start begins it anew.

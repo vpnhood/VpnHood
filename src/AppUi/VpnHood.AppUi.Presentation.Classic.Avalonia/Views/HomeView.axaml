@@ -55,10 +55,7 @@
     <Grid Classes="page" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto,Auto">
 
       <!-- HomePageHeader: the drawer's door, the app name in the middle, the build at the end.
-           A row of its own height, held at the top: the badges below share this grid row (they are
-           one column under the header in the web UI, not over it), and a header left to stretch is
-           centred in whatever height they give the row - which drops the name and the chips down
-           the screen by half the badges. -->
+           A row of its own height, held at the top. -->
       <Grid Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,2*,*" Height="48" VerticalAlignment="Top">
         <Button x:Name="MenuButton" Classes="icon" HorizontalAlignment="Left" VerticalAlignment="Center"
                 IsVisible="{Binding IsNotTv}" Click="OnMenuClick"
@@ -75,8 +72,10 @@
       </Grid>
 
       <!-- HomeBadge and GoPremiumButton: the badges of the features in use, and the premium
-           chip, the countdown or the pitch, under the header -->
-      <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,52,0,0" VerticalAlignment="Top">
+           chip, the countdown or the pitch, under the header. They span into the hero's row, over
+           the room above the speeds, so they size neither row: they come and go with a connection,
+           and the header, the circle and the rows stay where they are. -->
+      <Grid Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,52,0,0" VerticalAlignment="Top">
         <StackPanel HorizontalAlignment="Center">
           <!-- CountDown: the time left in a trial or a rewarded session, and the way to extend it -->
           <Border x:Name="CountdownChip" Classes="chip countdown comfortable" IsVisible="{Binding ShowCountdown}">

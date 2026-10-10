@@ -57,8 +57,7 @@ public static class AvaloniaDesktopHost
         var window = lifetime.MainWindow ??
                      throw new InvalidOperationException("The UI has made no main window.");
         AvaloniaWindowFit.Apply(window, resources.WindowSize, VhApp.IsTvUi);
-        if (OperatingSystem.IsWindows() && resources.Colors.WindowBackgroundColor is { } titleBarColor)
-            SetTitleBarColor(window, titleBarColor);
+        SetTitleBar(window, resources.Colors.WindowBackgroundColor);
         if (exitOnClose) {
             window.Closed += (_, _) => lifetime.Shutdown();
         }
@@ -102,6 +101,7 @@ public static class AvaloniaDesktopHost
 
         var window = new AvaloniaMessageWindow(messageParams.AppName, text, strings?.Close ?? "Close",
             strings?.IsRightToLeft ?? false);
+        SetTitleBar(window, color: null);
         window.Closed += (_, _) => lifetime.Shutdown();
         lifetime.MainWindow = window;
         _lifetime = lifetime;
@@ -151,10 +151,19 @@ public static class AvaloniaDesktopHost
         Dispatcher.UIThread.Post(() => lifetime.Shutdown());
     }
 
+    // Windows draws its own title bar; X11's is the one Avalonia draws (BuildAvaloniaApp).
+    private static void SetTitleBar(Window window, VhColor? color)
+    {
+        if (!OperatingSystem.IsWindows())
+            AvaloniaDrawnTitleBar.Apply(window, color);
+        else if (color is { } captionColor)
+            SetWindowsCaptionColor(window, captionColor);
+    }
+
     // Windows 11 draws the title bar in the given colour rather than the person's accent; Windows 10
     // keeps its own.
     [SupportedOSPlatform("windows")]
-    private static void SetTitleBarColor(Window window, VhColor color)
+    private static void SetWindowsCaptionColor(Window window, VhColor color)
     {
         if (window.TryGetPlatformHandle() is not { } handle)
             return;
@@ -164,9 +173,15 @@ public static class AvaloniaDesktopHost
         DwmSetWindowAttribute(handle.Handle, captionColor, attrValue, attrValue.Length * 4);
     }
 
+    // An X11 window manager frames a window in its own colours, which the window cannot change, so
+    // Avalonia draws the title bar instead and it takes the app's (AvaloniaDrawnTitleBar). Avalonia 12
+    // marks the option experimental.
     private static AppBuilder BuildAvaloniaApp<TUi>()
         where TUi : Application, new()
     {
-        return AppBuilder.Configure<TUi>().UsePlatformDetect();
+#pragma warning disable AVALONIA_X11_FORCE_CSD
+        return AppBuilder.Configure<TUi>().UsePlatformDetect()
+            .With(new X11PlatformOptions { ForceDrawnDecorations = true });
+#pragma warning restore AVALONIA_X11_FORCE_CSD
     }
 }

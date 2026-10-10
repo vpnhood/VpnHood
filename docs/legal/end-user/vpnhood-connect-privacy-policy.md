@@ -72,7 +72,7 @@ You can use the app without an account. Signing in is only ever needed to buy or
 
 In every case we store that email address with your account so your subscription follows you across your devices, and you can delete it at any time — see [Delete Your Account](#delete-your-account).
 
-When the app talks to our account website, the website logs each request with its time and your IP address, and keeps that log for **31 days** to protect sign-in against abuse and to look into faults. The website also keeps your account's history — your sign-ins and the changes made to the account, each with its time and IP address — for as long as the account exists; deleting the account erases it.
+When the app talks to our account website, the website logs each request with its time and your IP address, and keeps that log for **30 days** to protect sign-in against abuse and to look into faults. The website also keeps your account's history — your sign-ins and the changes made to the account, each with its time and IP address — for as long as the account exists; deleting the account erases it.
 
 ## Log Data (our VPN servers)
 
@@ -82,15 +82,15 @@ When you connect, our servers record what any VPN server must see to run the ser
 - The technical information listed above
 - The rating you last gave in the app, if any, without its text, so the app stops asking for one
 - The amount of traffic (bytes sent and received), used for accounting and quotas
-- Your IP address and connection activity — the time, your client endpoint (IP address & port), and the port each connection goes to — kept in server log files for **31 days** from the moment each entry is written, then deleted. These log files are never backed up. If our hosting provider forwards a "Notice of Claimed Infringement," we use them to trace the connection back to whoever made it, so we can notify or suspend them. Free use has no account behind it to suspend, so there the address itself is the only thing that lets us stop the abuse — which is why we keep it.
+- Your IP address and connection activity — the time, your client endpoint (IP address & port), and the port each connection goes to — kept in server log files for **30 days** from the moment each entry is written, then deleted. These log files are never backed up. If our hosting provider forwards a "Notice of Claimed Infringement," we use them to trace the connection back to whoever made it, so we can notify or suspend them. Free use has no account behind it to suspend, so there the address itself is the only thing that lets us stop the abuse — which is why we keep it.
 
-**One exception to the 31 days.** If we receive a legal preservation request, or a claim we have to defend, the records it covers stop expiring until the matter is resolved. That is the only thing that keeps an entry past its 31 days, and it applies whether or not the account behind it still exists — destroying records after being formally put on notice is not something we are permitted to do.
+**One exception to the 30 days.** If we receive a legal preservation request, or a claim we have to defend, the records it covers stop expiring until the matter is resolved. That is the only thing that keeps an entry past its 30 days, and it applies whether or not the account behind it still exists — destroying records after being formally put on notice is not something we are permitted to do.
 
 **Important!** We do not record your browsing. Our servers never inspect your traffic for the domains or URLs you visit, and we do not record the addresses your connections go to: the connection records above keep a connection's port and, in place of its address, a token that cannot be turned back into it, like those in the diagnostic logs below. Our code is open source, so you can verify this for yourself.
 
-**Diagnostic logs.** Apart from the connection records above, our servers keep technical logs used to find faults — failed connections, protocol errors, and the like. These are kept for **14 days** from the moment each entry is written, then deleted, and they are never backed up.
+**Diagnostic logs.** Apart from the connection records above, our servers keep technical logs used to find faults — failed connections, protocol errors, and the like. These are kept for **30 days** from the moment each entry is written, then deleted, and they are never backed up. They also note each session you start, with your IP address, as the connection records do.
 
-Network addresses inside them are not written down as addresses. Each one is replaced by a short token produced with a random key that is created when the server process starts, exists only in memory, and is never saved anywhere. The same address gives the same token while that process runs, which is what lets an engineer follow one connection through a file; when the process stops, the key ceases to exist, so nothing afterwards can turn a token back into an address — not us, not anyone we hand a file to. Tokens from two different runs cannot be matched to each other either. Addresses that identify nobody are left readable, because they help us diagnose faults and reveal nothing: loopback and private-range addresses, which belong to a machine's own network and point at no one on the internet.
+Other network addresses inside them are not written down as addresses. Each one is replaced by a short token produced with a random key that is created when the server process starts, exists only in memory, and is never saved anywhere. The same address gives the same token while that process runs, which is what lets an engineer follow one connection through a file; when the process stops, the key ceases to exist, so nothing afterwards can turn a token back into an address — not us, not anyone we hand a file to. Tokens from two different runs cannot be matched to each other either. Addresses that identify nobody are left readable, because they help us diagnose faults and reveal nothing: loopback and private-range addresses, which belong to a machine's own network and point at no one on the internet.
 
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 
@@ -135,7 +135,7 @@ What deletion does **not** do:
   as long as that law requires, and are used for nothing else: not for support, not for marketing,
   only to satisfy that legal obligation.
 - **It does not erase everything the same instant.** Connection records already written to our
-  server log files run out their own 31 days, and residual copies may remain in our backups and
+  server log files run out their own 30 days, and residual copies may remain in our backups and
   system logs for a limited period. Records held under a legal preservation request are kept until
   the matter is resolved.
 
@@ -171,7 +171,7 @@ Where data-protection law requires a legal basis, we rely on:
 
 ## How Long We Keep Data
 
-Connection logs and the account website's request log are kept for 31 days, and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account". Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
+Connection logs, diagnostic server logs and the account website's request log are kept for 30 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account". Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. Feedback, a message, or a log you send us is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
 
 ## International Transfers
 

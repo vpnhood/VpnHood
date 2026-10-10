@@ -31,13 +31,11 @@ public class ThrottledTunnel : Tunnel
     }
 
     // Hands the packet to the queue, whose turn routes it; so it completes at once and never routes the packet
-    // itself, as the base requires. A queue that refuses it while the tunnel lives has lost its loop: the tunnel
-    // goes down, so its senders fail loud rather than lose every packet quietly
+    // itself, as the base requires. The queue refuses, and drops, a packet only once the tunnel is being disposed:
+    // a tunnel stays open until its session closes it
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
-        if (!_throttleQueue.SendPacketQueued(ipPackets[0]) && !IsDisposing)
-            Dispose();
-
+        _throttleQueue.SendPacketQueued(ipPackets[0]);
         return default;
     }
 

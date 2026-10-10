@@ -54,9 +54,7 @@ public abstract class FairPacketQueue : IDisposable
         ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
         _slots = new IpPacket?[capacity];
         _nextSlots = new int[capacity];
-        for (var slot = 0; slot < capacity; slot++)
-            _nextSlots[slot] = slot + 1 < capacity ? slot + 1 : NoSlot;
-
+        ClearSlots();
         Task.Run(SendPacketsAsync);
     }
 
@@ -209,8 +207,8 @@ public abstract class FairPacketQueue : IDisposable
 
     private async Task SendPacketsAsync()
     {
-        try {
-            while (true) {
+        while (true) {
+            try {
                 var ipPacket = TakePacket();
                 if (ipPacket != null)
                     try {
@@ -225,12 +223,14 @@ public abstract class FairPacketQueue : IDisposable
                 else
                     return; // disposed
             }
-        }
-        catch (Exception ex) {
-            // a loop that cannot go on leaves the queue disposed, so its owner sees its packets refused
-            VhLogger.Instance.LogError(ex, "Error in the send loop of a fair packet queue. Type: {Type}",
-                VhLogger.FormatType(this));
-            Dispose();
+            catch (Exception ex) {
+                // Only a bug gets here. The queue never gives up, as its owner stays open until it is disposed: it
+                // drops what it holds and starts afresh
+                VhLogger.Instance.LogError(ex, "A fair packet queue failed and starts afresh. Type: {Type}",
+                    VhLogger.FormatType(this));
+                foreach (var ipPacket in Restart())
+                    DropPacket(ipPacket, null, "Dropping a packet. Send queue starts afresh.");
+            }
         }
     }
 
@@ -273,13 +273,43 @@ public abstract class FairPacketQueue : IDisposable
     private List<IpPacket> Close()
     {
         lock (_lock) {
-            var ipPackets = new List<IpPacket>(_count);
             _disposed = true;
-            while (_count > 0)
-                ipPackets.Add(Unlink(BitOperations.TrailingZeroCount(_busyLanes)));
-
-            return ipPackets;
+            return TakeAllPackets();
         }
+    }
+
+    // after a fault: takes the packets the queue holds, and it starts afresh
+    private List<IpPacket> Restart()
+    {
+        lock (_lock)
+            return TakeAllPackets();
+    }
+
+    // under the lock: the packets held, read from the slots rather than the links a bug may have broken, and the
+    // queue emptied
+    private List<IpPacket> TakeAllPackets()
+    {
+        var ipPackets = new List<IpPacket>(_count);
+        foreach (var ipPacket in _slots)
+            if (ipPacket != null)
+                ipPackets.Add(ipPacket);
+
+        ClearSlots();
+        return ipPackets;
+    }
+
+    // every slot free and every lane empty
+    private void ClearSlots()
+    {
+        Array.Clear(_slots);
+        for (var slot = 0; slot < _slots.Length; slot++)
+            _nextSlots[slot] = slot + 1 < _slots.Length ? slot + 1 : NoSlot;
+
+        Array.Clear(_laneCounts);
+        _freeSlot = 0;
+        _count = 0;
+        _busyLanes = 0;
+        _newLanes = 0;
     }
 
     // Enqueue's result; a struct, as it is made for every packet

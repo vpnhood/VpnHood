@@ -14,6 +14,7 @@ public abstract class PacketTransportBase : IPacketTransport
     private readonly int _queueCapacity;
     private readonly bool _autoDisposePackets;
     private readonly bool _blocking;
+    private readonly TimeSpan? _blockingTimeout;
     private readonly bool _singleMode;
     private readonly bool _passthrough;
     private bool _disposed;
@@ -36,7 +37,9 @@ public abstract class PacketTransportBase : IPacketTransport
     // last packets wait on it. A throw counts the whole batch dropped and, by the rule above, disposes it, so a
     // send must not throw after handing a packet on; a passthrough send without AutoDisposePackets disposes
     // itself what it does not hand on. In passthrough mode it must complete at once and never send on its own
-    // transport, whose one-packet buffer the outer send still uses
+    // transport, whose one-packet buffer the outer send still uses. Both rules are left unchecked by design:
+    // telling which packets a failing send had handed on would take an API of its own, and catching a send
+    // on its own transport would cost every packet
     protected abstract ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets);
     protected virtual string Name => VhLogger.FormatType(this);
 
@@ -60,6 +63,7 @@ public abstract class PacketTransportBase : IPacketTransport
         _autoDisposePackets = options.AutoDisposePackets;
         _disposeUnsentPackets = options.AutoDisposePackets || !passthrough;
         _blocking = options.Blocking;
+        _blockingTimeout = options.BlockingTimeout;
         _singleMode = singleMode;
         _passthrough = passthrough;
 
@@ -118,20 +122,41 @@ public abstract class PacketTransportBase : IPacketTransport
 
         LogPacket(ipPacket, "Sending a packet to queue.");
 
-        // waits for room in blocking mode; a queue that drops its oldest takes the packet at once
-        var writeTask = _sendChannel.Writer.WriteAsync(ipPacket);
-        return writeTask.IsCompletedSuccessfully ? default : WaitForQueueAsync(writeTask, ipPacket);
+        // a queue with room takes the packet at once, as does one that drops its oldest; a full one in blocking
+        // mode is waited on
+        if (_sendChannel.Writer.TryWrite(ipPacket))
+            return default;
+
+        if (_blocking)
+            return WaitForQueueAsync(ipPacket);
+
+        // a queue that drops its oldest refuses only once it is closed
+        DropRefusedPacket(ipPacket);
+        return ValueTask.FromException(new ChannelClosedException());
     }
 
-    private async ValueTask WaitForQueueAsync(ValueTask writeTask, IpPacket ipPacket)
+    // waits for room up to the blocking timeout; a packet that waited longer is dropped, and the call completes
+    private async ValueTask WaitForQueueAsync(IpPacket ipPacket)
     {
+        using var timeoutCancellationTokenSource = CreateBlockingTimeout();
         try {
-            await writeTask.Vhc();
+            await _sendChannel.Writer
+                .WriteAsync(ipPacket, timeoutCancellationTokenSource?.Token ?? CancellationToken.None)
+                .Vhc();
+        }
+        catch (OperationCanceledException) {
+            DropTimedOutPacket(ipPacket);
         }
         catch {
             DropRefusedPacket(ipPacket);
             throw;
         }
+    }
+
+    // the timeout of one blocking wait, when the options set one
+    private CancellationTokenSource? CreateBlockingTimeout()
+    {
+        return _blockingTimeout is { } blockingTimeout ? new CancellationTokenSource(blockingTimeout) : null;
     }
 
     private readonly object _singlePacketLock = new();
@@ -170,15 +195,23 @@ public abstract class PacketTransportBase : IPacketTransport
         return false;
     }
 
+    // waits for room up to the blocking timeout. A packet the queue refused (closed while waiting) or that
+    // waited longer is dropped; any other error leaves the packet alone, as its write may still be pending
     private bool SendPacketQueuedBlocking(IpPacket ipPacket)
     {
+        using var timeoutCancellationTokenSource = CreateBlockingTimeout();
         try {
-            _sendChannel.Writer.WriteAsync(ipPacket).VhBlock();
+            _sendChannel.Writer
+                .WriteAsync(ipPacket, timeoutCancellationTokenSource?.Token ?? CancellationToken.None)
+                .VhBlock();
             return true;
         }
         catch (ChannelClosedException) {
-            // closed while waiting. Any other error leaves the packet alone: its write may still be pending
             DropRefusedPacket(ipPacket);
+            return false;
+        }
+        catch (OperationCanceledException) {
+            DropTimedOutPacket(ipPacket);
             return false;
         }
     }
@@ -191,12 +224,24 @@ public abstract class PacketTransportBase : IPacketTransport
         throw new ObjectDisposedException(GetType().FullName);
     }
 
-    // a packet the closed queue refused, in any mode: it went to no one, so it is disposed, even when the logger
-    // fails; the caller is told so
+    // a packet the closed queue refused, in any mode
     private void DropRefusedPacket(IpPacket ipPacket)
     {
+        DropUnqueuedPacket(ipPacket, "Dropping a packet. Send queue is closed.");
+    }
+
+    // a packet that waited for room longer than the blocking timeout: a drop, as a full queue's is
+    private void DropTimedOutPacket(IpPacket ipPacket)
+    {
+        DropUnqueuedPacket(ipPacket, "Dropping a packet. Send queue stayed full.");
+    }
+
+    // a packet the queue did not take went to no one, so it is disposed, even when the logger fails; the caller
+    // is told so
+    private void DropUnqueuedPacket(IpPacket ipPacket, string message)
+    {
         try {
-            LogPacket(ipPacket, LogLevel.Debug, null, "Dropping a packet. Send queue is closed.");
+            LogPacket(ipPacket, LogLevel.Debug, null, message);
         }
         finally {
             _stat.AddDroppedPacket();

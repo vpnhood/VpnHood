@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Threading.Channels;
 using VpnHood.Net.Packets;
@@ -140,6 +141,53 @@ public class PacketTransportTest : TestBase
         await sendTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
         await AssertEqualsWait(3, () => transport.SentPorts.Count);
         CollectionAssert.AreEqual(new[] { 1, 2, 3 }, transport.SentPorts.ToArray());
+    }
+
+    [TestMethod]
+    public async Task Blocking_send_drops_its_packet_after_its_timeout()
+    {
+        using var transport = new TestHeldPacketTransport(queueCapacity: 1, blocking: true,
+            blockingTimeout: TimeSpan.FromMilliseconds(200));
+        await FillHeldQueue(transport);
+
+        // the queue does not move: the send gives up once its timeout is out, and drops its packet
+        var memory = BuildPacketMemory(3);
+        var ipPacket = PacketBuilder.Attach(memory);
+        var stopwatch = Stopwatch.StartNew();
+        Assert.IsFalse(await Task.Run(() => transport.SendPacketQueued(ipPacket), TestCt)
+            .WaitAsync(TimeSpan.FromSeconds(5), TestCt));
+        Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(150), stopwatch.Elapsed);
+        Assert.IsTrue(memory.IsDisposed);
+        Assert.AreEqual(1, transport.PacketStat.DroppedPackets);
+
+        // moving again, the queue sends what it kept
+        transport.Release();
+        await AssertEqualsWait(2, () => transport.SentPorts.Count);
+        CollectionAssert.AreEqual(new[] { 1, 2 }, transport.SentPorts.ToArray());
+        GC.KeepAlive(ipPacket);
+    }
+
+    [TestMethod]
+    public async Task Async_blocking_send_drops_its_packet_after_its_timeout()
+    {
+        using var transport = new TestHeldPacketTransport(queueCapacity: 1, blocking: true,
+            blockingTimeout: TimeSpan.FromMilliseconds(200));
+        await FillHeldQueue(transport);
+
+        // the queue does not move: the send gives up once its timeout is out, drops its packet and completes
+        var memory = BuildPacketMemory(3);
+        var ipPacket = PacketBuilder.Attach(memory);
+        var stopwatch = Stopwatch.StartNew();
+        await transport.SendPacketQueuedAsync(ipPacket).AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(150), stopwatch.Elapsed);
+        Assert.IsTrue(memory.IsDisposed);
+        Assert.AreEqual(1, transport.PacketStat.DroppedPackets);
+
+        // moving again, the queue sends what it kept
+        transport.Release();
+        await AssertEqualsWait(2, () => transport.SentPorts.Count);
+        CollectionAssert.AreEqual(new[] { 1, 2 }, transport.SentPorts.ToArray());
+        GC.KeepAlive(ipPacket);
     }
 
     [TestMethod]

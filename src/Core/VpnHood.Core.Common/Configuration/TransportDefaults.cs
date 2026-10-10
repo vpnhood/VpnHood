@@ -46,6 +46,8 @@ public static class TransportDefaults
     public static TimeSpan ByeTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
     // What a speed-limited session may send at full speed after a pause, each way, as cable ISPs allow a
-    // burst: short use such as a page load runs at full speed, and heavy use is held to the limit
+    // burst: short use such as a page load runs at full speed, and heavy use is held to the limit. By design,
+    // in the user's favor: the burst has no peak rate, so a heavy transfer may stall a second or two once as
+    // it meets the limit, and each new session starts with a full burst, so a reconnect gets another
     public static long MaxSpeedBurst { get; set; } = VhUtils.FromMB(10);
 }

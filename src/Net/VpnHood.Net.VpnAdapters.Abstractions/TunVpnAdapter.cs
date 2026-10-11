@@ -830,11 +830,22 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             var currentAddresses = GetPrimaryAdapterAddresses();
             if (currentAddresses.SetEquals(_lastPrimaryAdapterAddresses))
                 return;
+            var isSameNetworks = IsSameNetworks(currentAddresses, _lastPrimaryAdapterAddresses);
             _lastPrimaryAdapterAddresses = currentAddresses;
 
             // do not restart adapter if there is no primary network adapter up
             if (currentAddresses.Count == 0)
                 return;
+
+            // new addresses on the same networks: the OS rotated a temporary IPv6 address. The adapter needs its
+            // primary IPs again, not a restart, whose teardown would let the host's traffic pass outside the
+            // tunnel meanwhile. A socket protected by its bind cannot look past its own address, so the look is
+            // unprotected there: the dead networks it aims at stay out of the tunnel's routes
+            if (isSameNetworks) {
+                VhLogger.Instance.LogInformation("Network addresses changed within the same networks.");
+                DiscoverPrimaryAdapterIps(protect: !IsSocketProtectedByBind);
+                return;
+            }
 
             VhLogger.Instance.LogInformation("Network address changed.");
             if (!RestartAfterNetworkAddressChanged) {
@@ -852,6 +863,20 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not check the primary adapter addresses.");
         }
+    }
+
+    // The same networks: each IPv4 address, and each IPv6 one by its /64, as the OS rotates its temporary IPv6
+    // addresses within their prefix (RFC 8981), daily on Windows
+    internal static bool IsSameNetworks(IEnumerable<IPAddress> addresses, IEnumerable<IPAddress> otherAddresses)
+    {
+        return GetNetworks(addresses).SetEquals(GetNetworks(otherAddresses));
+    }
+
+    private static HashSet<IpNetwork> GetNetworks(IEnumerable<IPAddress> addresses)
+    {
+        return addresses
+            .Select(address => new IpNetwork(address, address.IsV6() ? 64 : 32))
+            .ToHashSet();
     }
 
     private static bool IsPrimaryAdapter(NetworkInterface networkInterface)

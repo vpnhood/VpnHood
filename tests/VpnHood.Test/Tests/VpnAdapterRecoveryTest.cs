@@ -292,4 +292,26 @@ public class VpnAdapterRecoveryTest : TestBase
         Assert.IsInstanceOfType<IOException>(ex.InnerException);
         StringAssert.Contains(ex.Message, "adapter");
     }
+
+    [TestMethod]
+    public void A_rotated_temporary_IPv6_address_is_no_network_change()
+    {
+        IPAddress[] addresses = [
+            IPAddress.Parse("192.168.1.10"), IPAddress.Parse("2001:db8:1:2:aaaa::1"), IPAddress.Parse("fe80::1%5")
+        ];
+
+        // the OS adds a temporary address within the prefix, and later drops the old one
+        Assert.IsTrue(TunVpnAdapter.IsSameNetworks(addresses, [.. addresses, IPAddress.Parse("2001:db8:1:2:bbbb::2")]));
+        Assert.IsTrue(TunVpnAdapter.IsSameNetworks(addresses, [
+            IPAddress.Parse("192.168.1.10"), IPAddress.Parse("2001:db8:1:2:bbbb::2"), IPAddress.Parse("fe80::1%5")
+        ]));
+
+        // a new IPv4 address, or a new IPv6 prefix, is a new network
+        Assert.IsFalse(TunVpnAdapter.IsSameNetworks(addresses, [
+            IPAddress.Parse("192.168.1.11"), IPAddress.Parse("2001:db8:1:2:aaaa::1"), IPAddress.Parse("fe80::1%5")
+        ]));
+        Assert.IsFalse(TunVpnAdapter.IsSameNetworks(addresses, [
+            IPAddress.Parse("192.168.1.10"), IPAddress.Parse("2001:db8:1:3:aaaa::1"), IPAddress.Parse("fe80::1%5")
+        ]));
+    }
 }

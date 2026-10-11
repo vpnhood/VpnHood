@@ -46,4 +46,29 @@
 			<FileWrites Include="$(_VhConsoleAppHostPath)" />
 		</ItemGroup>
 	</Target>
+
+	<!-- The install root's two launchers, for an installer: the window's and the console's, named as the
+	     version's own, but over current\<app>.dll - the version folder that the root's "current" junction
+	     names (WindowsDesktopPaths.CurrentFolderName) - so shortcuts, the service and the PATH name the root and an update only re-points the
+	     junction. The apphost takes a path under its own folder; the runtime is then found beside the
+	     dll, in current. Made only when an installer's publish names a folder for them
+	     (VhRootLaunchersDir), since nothing else has a root. -->
+	<Target Name="_VhCreateRootLaunchers" AfterTargets="_CreateAppHost"
+	        DependsOnTargets="_GetAppHostCreationConfiguration"
+	        Condition="'$(VhRootLaunchersDir)' != '' And '$(OutputType)' == 'WinExe' And '$(UseAppHost)' != 'false'">
+		<ItemGroup>
+			<_VhRootLauncher Include="$(VhRootLaunchersDir)\$(AssemblyName)$(_NativeExecutableExtension)" Gui="true" />
+			<_VhRootLauncher Include="$(VhRootLaunchersDir)\$(VhAppCommandName)$(_NativeExecutableExtension)" Gui="false"
+			                 Condition="'$(VhAppCommandName)' != ''" />
+		</ItemGroup>
+		<MakeDir Directories="$(VhRootLaunchersDir)" />
+		<CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
+		               AppHostDestinationPath="%(_VhRootLauncher.FullPath)"
+		               AppBinaryName="current\$(AssemblyName)$(TargetExt)"
+		               IntermediateAssembly="@(IntermediateAssembly->'%(FullPath)')"
+		               WindowsGraphicalUserInterface="%(_VhRootLauncher.Gui)"
+		               Retries="$(CopyRetryCount)"
+		               RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
+		               DisableCetCompat="$(_DisableCetCompat)" />
+	</Target>
 </Project>

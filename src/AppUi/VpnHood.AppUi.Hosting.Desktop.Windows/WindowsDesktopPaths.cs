@@ -49,7 +49,28 @@ public class WindowsDesktopPaths(string appId) : IAppDesktopPaths
     // and the storage folder it went to instead of its own.
     public string RegistryKeyPath => @"SOFTWARE\" + appId;
 
-    // What the service runs and an elevated copy of a command is started as: the apphost beside the
-    // entry assembly, even when this process is dotnet.
-    public string ExecutablePath => Path.Combine(AppContext.BaseDirectory, InstanceName + ".exe");
+    // The install's own folder above the version's, when an installer made one: it holds the root's
+    // launchers, which run the version that its "current" junction names (CurrentFolderName). Each
+    // version has a folder of its own beside it, so an update only re-points the junction. Null for a
+    // copy run where it lies - a zip, a debugger's build.
+    public string? InstallRootPath {
+        get {
+            var root = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory));
+            return root != null &&
+                   File.Exists(Path.Combine(root, InstanceName + ".exe")) &&
+                   Directory.Exists(Path.Combine(root, CurrentFolderName))
+                ? root
+                : null;
+        }
+    }
+
+    // The junction in the install root that names the version in use; the build's root launchers
+    // (VpnHood.AppUi.Hosting.Desktop.Windows.targets) and the installer name it too.
+    public const string CurrentFolderName = "current";
+
+    // What the service runs and an elevated copy of a command is started as: the install root's
+    // launcher, which an update never moves, else the apphost beside the entry assembly, even when
+    // this process is dotnet.
+    public string ExecutablePath =>
+        Path.Combine(InstallRootPath ?? AppContext.BaseDirectory, InstanceName + ".exe");
 }

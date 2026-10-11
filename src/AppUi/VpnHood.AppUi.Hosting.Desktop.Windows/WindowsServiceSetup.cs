@@ -7,8 +7,9 @@ using VpnHood.Net.Toolkit.Extensions;
 namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 
 // "service install" and "service uninstall": the service registered at this executable - automatic,
-// LocalSystem, restarted on failure, startable by anyone signed in - and removed again. The installer
-// runs them; a window that finds no service runs install itself (WindowsInstanceController.Start).
+// LocalSystem, restarted on failure, startable by anyone signed in - and removed again; in an
+// installer's layout, at the install root's launcher, with the root on the machine PATH so the command
+// is typed by its name (WindowsDesktopPaths.InstallRootPath). The installer runs them; a window that finds no service runs install itself (WindowsInstanceController.Start).
 // Without elevation each runs itself again as an administrator, behind one UAC prompt.
 //
 // Only a copy that nobody else can change is registered, since the service runs it as SYSTEM
@@ -43,6 +44,9 @@ public class WindowsServiceSetup(WindowsDesktopPaths paths, string appName) : IA
             EventLog.CreateEventSource(paths.InstanceName, "Application");
 
         Console.WriteLine($"{paths.InstanceName} is registered, and starts with Windows.");
+        if (paths.InstallRootPath is { } installRoot && WindowsMachinePath.Add(installRoot))
+            Console.WriteLine($"{installRoot} is on the PATH: a terminal opened from now on runs {paths.CommandName} by its name.");
+
         return 0;
     }
 
@@ -66,7 +70,9 @@ public class WindowsServiceSetup(WindowsDesktopPaths paths, string appName) : IA
     // Why this copy may not be the service, as a person reads it; null when it may.
     private string? FindUnsafeFolder()
     {
-        return WindowsInstallFolder.FindProblem(AppContext.BaseDirectory) is { } problem
+        // the folder of what the service runs: the install root, whose "current" names this version
+        var folder = Path.GetDirectoryName(paths.ExecutablePath) ?? AppContext.BaseDirectory;
+        return WindowsInstallFolder.FindProblem(folder) is { } problem
             ? $"{paths.InstanceName} runs as SYSTEM, so it is not registered from a folder others can change: {problem}. " +
               "Copy it under Program Files, or into a folder only administrators can change."
             : null;
@@ -76,6 +82,10 @@ public class WindowsServiceSetup(WindowsDesktopPaths paths, string appName) : IA
     {
         if (!WindowsElevation.IsElevated)
             return await WindowsElevation.Run(paths.ExecutablePath, ["service", "uninstall"], cancellationToken).Vhc();
+
+        // all of what install added, whatever is left of it
+        if (paths.InstallRootPath is { } installRoot && WindowsMachinePath.Remove(installRoot))
+            Console.WriteLine($"{installRoot} is off the PATH.");
 
         if (!IsRegistered) {
             Console.WriteLine($"{paths.InstanceName} is not registered.");

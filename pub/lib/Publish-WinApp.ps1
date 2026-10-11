@@ -2,8 +2,10 @@ param(
 	[Parameter(Mandatory=$true)] [String]$projectDir,
 	# The .user/<appFolder>/ config folder name; also the bin module dir name and default artifact title.
 	[Parameter(Mandatory=$true)] [String]$appFolder,
-	[Parameter(Mandatory=$true)] [String]$aipFileR,
 	[Parameter(Mandatory=$true)] [String]$distribution,
+	# The upgrade code of the MSI the app's earlier releases shipped, which the setup removes first; a
+	# product that never shipped one passes none.
+	[Parameter(Mandatory=$false)] [String]$legacyMsiUpgradeCode = "",
 	# User-facing install/download page baked into the publish JSON. Read from .user; an explicit value
 	# here still wins, and absent both it defaults to the repo's releases page.
 	[Parameter(Mandatory=$false)] [String]$installationPageUrl = "",
@@ -11,7 +13,7 @@ param(
 	[switch]$connect,
 	# Which phase to run. "all" (default) does the full local flow in one process.
 	# CI splits it into two separately-labeled steps: "publish" compiles the binary,
-	# "package" wraps it in the MSI. Both stages share the same computed paths and the
+	# "package" wraps it in the NSIS setup. Both stages share the same computed paths and the
 	# on-disk $publishDir, so they can run as two processes on the same machine.
 	[Parameter(Mandatory=$false)] [ValidateSet("all", "publish", "package")] [String]$stage = "all"
 )
@@ -56,15 +58,15 @@ $assemblyName = Get-ProjectProperty $projectFile "AssemblyName";
 $commandName = Get-ProjectProperty $projectFile "VhAppCommandName";
 $targetFramework = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.TargetFramework;
 $publishDir = "$projectDir/bin/Publish-$distribution";
-$aipFile = "$solutionDir/$aipFileR";
-$aipFolder = Split-Path -parent $aipFile;
+# the install root's two launchers, over current\<app>.dll, which only the setup installs
+# (VhRootLaunchersDir in VpnHood.AppUi.Hosting.Desktop.Windows.targets)
+$launchersDir = "$projectDir/bin/Publish-$distribution-root";
 
 # module paths (dir keyed by the stable app folder; file names use the artifact title)
 $moduleDir = "$packagesRootDir/$appFolder/windows-$distribution";
 $moduleDirLatest = "$packagesRootDirLatest/$appFolder/windows-$distribution";
 $module_infoFile = "$moduleDir/$packageFileTitle-win-x64.json";
-$module_packageFile = [System.IO.Path]::ChangeExtension($module_infoFile, ".msi");
-$module_updaterConfigFile = [System.IO.Path]::ChangeExtension($module_infoFile, ".txt");
+$module_packageFile = [System.IO.Path]::ChangeExtension($module_infoFile, ".exe");
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
@@ -84,12 +86,14 @@ if ($doPublish) {
 	#update project version
 	UpdateProjectVersion $projectFile;
 
-	# publish
+	# publish, with the install root's launchers beside it
 	# NOTE: appSettings will not load from private files if p:SolutionDir=$solutionDir is not set
+	try { Remove-Item -Path $launchersDir -Force -Recurse } catch {}
 	dotnet publish $projectDir `
 		/p:SolutionDir=$solutionDir `
 		/p:Configuration=Release `
 		/p:Version=$versionParam `
+		"/p:VhRootLaunchersDir=$launchersDir" `
 		--output $publishDir `
 		--framework $targetFramework `
 		--self-contained `
@@ -105,64 +109,79 @@ if ($doPublish) {
 	# attestation signature: re-signing a driver with our cert makes Windows refuse to load it. Do not
 	# widen this list to "*" or add .sys/.cat. Already-signed files are dropped inside Invoke-VhSign,
 	# so the vendor-signed .NET runtime and WinDivert.dll pass straight through untouched.
-	Invoke-VhSign (Get-ChildItem $publishDir -File -Recurse -Include "*.exe", "*.dll" |
+	Invoke-VhSign (Get-ChildItem $publishDir, $launchersDir -File -Recurse -Include "*.exe", "*.dll" |
 		Select-Object -ExpandProperty FullName);
 
-	# The apphosts are the files Windows shows in the UAC/SmartScreen prompt, so neither may slip through
+	# The apphosts are the files Windows shows in the UAC/SmartScreen prompt, so none may slip through
 	# unsigned when signing is configured (a renamed AssemblyName would silently miss the glob above):
-	# the window's exe and the console launcher beside it.
+	# the window's exe and the console launcher beside it, in the version's folder and in the root.
 	$appHostNames = @("$assemblyName.exe") + @(if ($commandName) { "$commandName.exe" });
-	foreach ($appHostName in $appHostNames) {
-		if ($signEnabled -and -not (Get-AuthenticodeSignature "$publishDir/$appHostName").SignerCertificate) {
-			Throw "Signing is configured but '$appHostName' is still unsigned after the signing step.";
+	foreach ($appHostFile in @($appHostNames | ForEach-Object { "$publishDir/$_"; "$launchersDir/$_" })) {
+		if (-not (Test-Path $appHostFile)) { Throw "The build did not make '$appHostFile'."; }
+		if ($signEnabled -and -not (Get-AuthenticodeSignature $appHostFile).SignerCertificate) {
+			Throw "Signing is configured but '$appHostFile' is still unsigned after the signing step.";
 		}
 	}
 }
 
 # =====================================================================================
-# Stage: package — wrap the published binary into the MSI with Advanced Installer
+# Stage: package — wrap the published binary into the NSIS setup (install-client.nsi)
 # =====================================================================================
 if ($doPackage) {
 	Write-Host;
-	Write-Host "*** [package] Building MSI for $packageFileTitle ..." -BackgroundColor Blue -ForegroundColor White;
+	Write-Host "*** [package] Building the setup for $packageFileTitle ..." -BackgroundColor Blue -ForegroundColor White;
 
-	# Locate AdvancedInstaller.com. In CI the Caphyon action exposes the install via the
-	# AdvancedInstallerRoot env var (no registry key); locally it's found via the registry.
-	$advinstallerFile = $null;
-	if ($env:AdvancedInstallerRoot) {
-		$advinstallerFile = Get-ChildItem -Path $env:AdvancedInstallerRoot -Recurse -Filter "AdvancedInstaller.com" -ErrorAction SilentlyContinue |
-			Select-Object -First 1 -ExpandProperty FullName;
+	# makensis: on the PATH, else where the NSIS installer puts it (winget NSIS.NSIS, choco nsis)
+	$makensisFile = (Get-Command "makensis.exe" -ErrorAction SilentlyContinue).Source;
+	if (-not $makensisFile) {
+		$makensisFile = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe") |
+			Where-Object { Test-Path $_ } | Select-Object -First 1;
 	}
-	if (-not $advinstallerFile) {
-		$advinstallerRoot = (Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Caphyon\Advanced Installer" -Name "InstallRoot").InstallRoot;
-		$advinstallerFile = Join-Path $advinstallerRoot "bin\x86\AdvancedInstaller.com";
-	}
-	if (-not $advinstallerFile -or -not (Test-Path $advinstallerFile)) {
-		throw "Could not locate AdvancedInstaller.com (AdvancedInstallerRoot='$env:AdvancedInstallerRoot').";
-	}
+	if (-not $makensisFile) { Throw "Could not locate makensis.exe: install NSIS (winget install NSIS.NSIS)."; }
 
 	# prepare module folders
 	PrepareModuleFolder $moduleDir $moduleDirLatest;
 
+	# the app's names and files, as its identity and its publish give them
+	$company = Get-ProjectProperty $projectFile "Company";
+	$copyright = Get-ProjectProperty $projectFile "Copyright";
+	$iconFile = Join-Path $projectDir (Get-ProjectProperty $projectFile "ApplicationIcon");
+	$version4 = (@($versionParam.Split('-')[0].Split('.')) + @("0", "0", "0"))[0..3] -join ".";
+	$setupFile = "$moduleDir/$packageFileTitle-win-x64.exe";
+	$nsisDefines = @(
+		"/DPRODUCT_NAME=$productName",
+		"/DINSTANCE_NAME=$assemblyName",
+		"/DCOMMAND_NAME=$commandName",
+		"/DVERSION=$versionParam",
+		"/DVERSION4=$version4",
+		"/DCOMPANY=$company",
+		"/DCOPYRIGHT=$copyright",
+		"/DICON=$((Resolve-Path $iconFile).Path)",
+		"/DSOURCE_DIR=$((Resolve-Path $publishDir).Path)",
+		"/DLAUNCHERS_DIR=$((Resolve-Path $launchersDir).Path)",
+		"/DOUTPUT_FILE=$([IO.Path]::GetFullPath($setupFile))"
+	) + @(if ($legacyMsiUpgradeCode) { "/DLEGACY_MSI_UPGRADE_CODE=$legacyMsiUpgradeCode" });
+	# the uninstaller sits inside the setup, so makensis has it signed as it packs it
+	if ($signEnabled) { $nsisDefines += "/DSIGN_SCRIPT=$PSScriptRoot\Sign-File.ps1"; }
+
 	# Build Setup
-	$buildPacakgeFile = "$aipFolder/release/$packageFileTitle-win-x64.msi";
-	& $advinstallerFile /build "$aipFile";
-	if ($LASTEXITCODE -ne 0) { Throw "AdvancedInstaller build failed (exit $LASTEXITCODE)."; }
+	& $makensisFile /V2 /WX @nsisDefines "$PSScriptRoot/vh-installer/win/install-client.nsi";
+	if ($LASTEXITCODE -ne 0) { Throw "makensis failed (exit $LASTEXITCODE)."; }
 
 	# sign the built installer
-	Invoke-VhSign @("$buildPacakgeFile");
+	Invoke-VhSign @("$setupFile");
 
 	# Verify the installer actually carries a signature and surface it explicitly. Signing is optional
 	# (see $signEnabled) so an unsigned build is NOT fatal — but it must never pass silently: warn on the
 	# command line (local builds) and as a GitHub annotation (CI). When signing is configured yet the
 	# file is still unsigned, the signing step misbehaved, so the warning is worded differently.
-	$sig = Get-AuthenticodeSignature $buildPacakgeFile;
+	$sig = Get-AuthenticodeSignature $setupFile;
 	if ($sig.SignerCertificate) {
 		# A certificate is embedded -> the file IS signed. Status may be non-'Valid' on the build agent
 		# (e.g. a short-lived Trusted Signing cert whose chain isn't validated locally); that is not an
 		# "unsigned" condition, so just report it.
 		$note = if ($sig.Status -eq 'Valid') { "Valid" } else { "signed (Authenticode status: $($sig.Status))" };
-		Write-Host "MSI signature: $note ($($sig.SignerCertificate.Subject))." -ForegroundColor Green;
+		Write-Host "Setup signature: $note ($($sig.SignerCertificate.Subject))." -ForegroundColor Green;
 	}
 	elseif (-not $signEnabled) {
 		Write-VhBuildWarning ("The Windows installer '$module_packageFileName' is UNSIGNED: Azure Trusted Signing is not " +
@@ -175,10 +194,6 @@ if ($doPackage) {
 			"Windows installer failed to sign";
 	}
 
-	#####
-	# copy to module
-	Copy-Item -path "$buildPacakgeFile" -Destination "$moduleDir/" -Force;
-
 	# publish info
 	$json = @{
 		Version = $versionParam;
@@ -190,25 +205,6 @@ if ($doPackage) {
 		NotificationDelay = "$versionNotificationDelay";
 	};
 	$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
-
-	# Create Updater Config File
-	$str=";aiu;
-
-[Update]
-Name = $productName $versionParam
-ProductVersion = $versionParam
-URL = $repoUrl/releases/download/$versionTag/$module_packageFileName
-Size = $((Get-Item $module_packageFile).length)
-SHA256 = $((Get-FileHash $module_packageFile -Algorithm SHA256).Hash)
-MD5 = $((Get-FileHash $module_packageFile -Algorithm MD5).Hash)
-ServerFileName = $module_packageFileName
-Flags = NoRedetect
-RegistryKey = HKUD\Software\$assemblyName\$packageFileTitle\Version
-Version = $versionParam
-UpdatedApplications = $productName(1.0-$versionParam)
-Description = <a href=""https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md"">Release note</a>
-";
-	$str | Out-File -FilePath $module_updaterConfigFile;
 
 	if ($isLatest)
 	{

@@ -16,7 +16,7 @@ Available for Windows, Linux, Android and iOS.
 <img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" alt="Download for Google Play" width="200"/></a>
 <a href="https://apps.apple.com/app/id6788176050">
 <img src="https://github.com/vpnhood/VpnHood/wiki/images/download-app-store.png" alt="Download on the App Store" width="200"/></a>
-<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.msi">
+<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.exe">
 <img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" alt="Download for Windows" width="200"/></a>
 <a href="https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client-for-Linux">
 <img src="https://github.com/vpnhood/VpnHood/wiki/images/get-it-on-linux.png" width="200" alt="Download for Linux"/></a>

@@ -49,15 +49,14 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `GITHUB_TOKEN` | all release/publish workflows | Automatic | Provided by GitHub; no action needed. |
 | `PUBLISHER_APP_PRIVATE_KEY` (+ `PUBLISHER_APP_CLIENT_ID` **Variable**) | `publish_app.yml` (release job) | Required only for a **cross-repo release** | Private key + Client ID (the `Iv23…` id on the App's settings page, not the numeric App ID) of a GitHub App installed on the release repo with `Contents: Read and write`. Needed only when `VH_PUBLISH_REPO` points somewhere other than the repo running the workflow — `github.token` is scoped to the caller and cannot write a release elsewhere. Set on the **publishing** repo (e.g. `Vpnhood.App.Client`), not on the release repo. Absent while a cross-repo release is requested → the run fails loudly rather than 404-ing inside `gh`. |
 | `GOOGLE_PLAY_API_KEY` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`), `_publish_listing_play.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → the AAB is published to Play, the Play-signed APK is attached to the release, and the store LISTING can be pushed. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
-| `ADVANCED_INSTALLER_LICENSE` | `publish_client.yml` (in `Vpnhood.App.Client`) | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
-| `AZURE_SIGNING_CREDENTIAL` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (Windows signing) | The single Azure service-principal JSON you download from Azure (contains `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`; other fields ignored). Paste the whole file. Absent **together with** `AZURE_SIGNING_TARGET` → MSI builds unsigned with a warning; present without it → the build **fails** (see the pair rule below). |
+| `AZURE_SIGNING_CREDENTIAL` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (Windows signing) | The single Azure service-principal JSON you download from Azure (contains `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`; other fields ignored). Paste the whole file. Absent **together with** `AZURE_SIGNING_TARGET` → the setup builds unsigned with a warning; present without it → the build **fails** (see the pair rule below). |
 | `AZURE_SIGNING_TARGET` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (Windows signing) | Single JSON in Azure Trusted Signing's `metadata.json` schema: `Endpoint`, `CodeSigningAccountName`, `CertificateProfileName`. Not secret and not part of the Azure credential file; required alongside it for signing to run. Store it as an org/repository **Variable**. These two are an all-or-nothing **pair**: both set → signed, neither set → unsigned + warning, exactly one set → the build **fails**, because a half-configured signer ships an unsigned installer from a green run. |
 | `ANDROID_KEYSTORE_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (Android signing) | Base64 of the keystore that signs the Google AAB, plus its store password. Same secret NAME on either app's repo — the workflow routes it per app. The key alias is auto-detected; set `_ALIAS` only for a multi-entry keystore. |
 | `ANDROID_KEYSTORE_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (Android signing) | Base64 of the keystore that signs the Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
 | `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. ONE cert signs every app of the team — set it as an **organization** secret visible to both app repos (or repeat it per repo). Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
 | `IOS_PROVISION_APP_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app. Per-app **repository** secret — the profile is minted for that repo's own bundle id (Client `com.vpnhood.client.ios`, Connect `com.vpnhood.connect.ios`). |
 | `IOS_PROVISION_EXT_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for that app's Network Extension (`…ios.networkextension`). The extension needs its own profile. |
-| `ACCESS_KEY_AD` / `ACCESS_KEY_PREMIUM` | `_build_app_android.yml`, `_build_app_ios.yml`, `_build_app_windows.yml`, `_build_app_linux.yml` | **Required (Connect only)** | The `vh://…` default server access key embedded in each Connect distribution, written to `.user/VpnHoodConnect/access_key_ad.txt` / `access_key_premium.txt` before the build. Keys are per-entitlement, not per-store: `ACCESS_KEY_AD` = the ad-supported Android Google (Play) build only; `ACCESS_KEY_PREMIUM` = every ad-free distribution (iOS **+ Android web APK + Windows MSI + Linux**). Absent on a strict publish → the build **FAILS** (`Assert-DefaultAccessKey`): Connect without a default server opens on an empty server list. Ignored by Client builds, and skipped entirely for a fork with no `PUBLISH` variable. |
+| `ACCESS_KEY_AD` / `ACCESS_KEY_PREMIUM` | `_build_app_android.yml`, `_build_app_ios.yml`, `_build_app_windows.yml`, `_build_app_linux.yml` | **Required (Connect only)** | The `vh://…` default server access key embedded in each Connect distribution, written to `.user/VpnHoodConnect/access_key_ad.txt` / `access_key_premium.txt` before the build. Keys are per-entitlement, not per-store: `ACCESS_KEY_AD` = the ad-supported Android Google (Play) build only; `ACCESS_KEY_PREMIUM` = every ad-free distribution (iOS **+ Android web APK + Windows setup + Linux**). Absent on a strict publish → the build **FAILS** (`Assert-DefaultAccessKey`): Connect without a default server opens on an empty server list. Ignored by Client builds, and skipped entirely for a fork with no `PUBLISH` variable. |
 | `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents** (raw PEM text, NOT base64), its Key ID, and the Issuer ID. Team-wide like the cert — suits an **organization** secret. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
 
 ## Building your own app (fork-friendly)
@@ -107,7 +106,7 @@ secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_GOOGLE_BASE64`)
 .user/VpnHoodClient/google/android_keystore_google_password.txt  store password — secret
 .user/VpnHoodConnect/access_key_ad.txt                      Connect default access key, ad-supported build (Android Google only)
 .user/VpnHoodConnect/access_key_ad.Debug.txt                Debug-config override (optional)
-.user/VpnHoodConnect/access_key_premium.txt                 same, for EVERY ad-free distribution (iOS, Android web APK, Windows MSI, Linux)
+.user/VpnHoodConnect/access_key_premium.txt                 same, for EVERY ad-free distribution (iOS, Android web APK, Windows setup, Linux)
 .user/VpnHoodConnect/access_key_premium.Debug.txt           Debug-config override (optional)
 .user/VpnHoodClient/web/… , .user/VpnHoodConnect/web/…       (per-store signing keys only)
 .user/<app>/ios/ios_provision_app.mobileprovision           App Store profile, app        — secret IOS_PROVISION_APP_BASE64
@@ -215,19 +214,19 @@ verification commands, Apple failure lore) lives in
 `VpnHood.AppUi.Spa/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store/README.md` — read it before changing any of these workflows.
 
 ### Windows client — `publish_app.yml` (via `publish_client.yml` (in `Vpnhood.App.Client`))
-The MSI is built with **Advanced Installer** on a `windows-latest` runner.
+The setup is built with **NSIS** (`pub/lib/vh-installer/win/install-client.nsi`) on a `windows-latest`
+runner, whose image carries `makensis` (else Chocolatey installs it); it needs no license or secret.
 
-- **`ADVANCED_INSTALLER_LICENSE`** — your Advanced Installer license ID. The Caphyon
-  action installs and registers Advanced Installer with it.
-- **`ACCESS_KEY_PREMIUM`** (Connect only) — the default server key baked into the MSI. Windows has no
+- **`ACCESS_KEY_PREMIUM`** (Connect only) — the default server key baked into the setup. Windows has no
   ads, so it embeds the 'premium' key shared by every ad-free distribution. The build fails without it
   on a strict publish, so an installer can never ship with an empty server list.
 
 **Code signing (optional, `publish_client.yml` (in `Vpnhood.App.Client`)):** signing is **off unless the Azure
 credential and the Trusted Signing target are both present**, in which case the build signs
 every published binary that does not already carry a vendor signature (the apphost `.exe` plus our
-own `VpnHood*.dll` assemblies; the .NET runtime, WinDivert and Advanced Installer's `updater.exe`
-keep their Microsoft/vendor signatures) and then the MSI, via Azure Trusted Signing — now surfaced as
+own `VpnHood*.dll` assemblies, and the install root's two launchers; the .NET runtime and WinDivert
+keep their Microsoft/vendor signatures) and then the setup and the uninstaller inside it (NSIS's
+`!uninstfinalize` runs `pub/lib/Sign-File.ps1` on it while it packs it), via Azure Trusted Signing — now surfaced as
 **Artifact Signing** (`sign code artifact-signing`; the old `trusted-signing` verb still works but the
 CLI marks it obsolete). Any file that already carries a signature is never re-signed, and a signing
 failure is fatal. The same pair (via `SignFiles.ps1`) is honoured by `publish_nugets.yml`, which
@@ -235,11 +234,11 @@ signs each package's own assembly between build and pack. The `.nupkg` wrapper i
 to nuget.org's own repository signature, applied at ingestion. Do NOT add author signing: it requires
 registering a long-lived certificate on the nuget.org account, after which *every* future push must
 be signed with it — impossible with Trusted Signing's ~3-day rotating certificates, so the whole
-suite would stop publishing at the next rotation (NuGetGallery#10027). They are an all-or-nothing **pair**: with **neither** set the MSI is built **unsigned** with a
+suite would stop publishing at the next rotation (NuGetGallery#10027). They are an all-or-nothing **pair**: with **neither** set the setup is built **unsigned** with a
 warning (the fork-friendly path), but with **exactly one** set the build **fails** — a half-configured
 signer otherwise ships an unsigned installer from a green run, which is how every release before
 8.1.843 went out unsigned unnoticed (the org had the credential; the target was never set anywhere).
-The `.aip` files themselves carry no signer. To enable it under **your own organization's identity**:
+The NSIS script itself carries no signer. To enable it under **your own organization's identity**:
 
 - `AZURE_SIGNING_CREDENTIAL` — the single JSON credential you download from Azure for a service
   principal with the *Trusted Signing Certificate Profile Signer* role, scoped to your signing
@@ -334,7 +333,7 @@ prerelease/stable model lives here in the monorepo via `bump.yml`. Trigger it wi
 
 Because the workflow runs **inside** the server repo, it creates the release with the automatic
 `github.token` — **no cross-repo PAT needed** (same trick as Connect). One ubuntu job builds both the
-Linux packages and the Windows-x64 zip (the server has no MSI/Advanced-Installer step, so Windows
+Linux packages and the Windows-x64 zip (the server has no Windows-only packaging step, so Windows
 cross-builds on Linux). Secrets/variables live on **that** repo, not here:
 
 | Secret / Variable | Required? | What it is |

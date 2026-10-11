@@ -75,6 +75,69 @@ public class WindowsInstallFolderTest
         }
     }
 
+    // An installer's root: the service runs the root's launcher, which runs the version "current"
+    // names, a folder of the root's own (WindowsDesktopPaths.InstallRootPath).
+    [TestMethod]
+    public void Install_roots_current_naming_a_version_in_it_is_taken()
+    {
+        RequireElevation();
+        var root = CreateProgramFilesFolder();
+        try {
+            var version = Path.Combine(root, "8.2.900");
+            Directory.CreateDirectory(version);
+            File.WriteAllText(Path.Combine(version, "app.dll"), "");
+            CreateJunction(Path.Combine(root, WindowsDesktopPaths.CurrentFolderName), version);
+
+            Assert.IsNull(WindowsInstallFolder.FindProblem(root), "the junction and what it names are the root's");
+        }
+        finally {
+            DeleteInstallRoot(root);
+        }
+    }
+
+    [TestMethod]
+    public void Install_roots_current_naming_a_folder_elsewhere_is_refused()
+    {
+        RequireElevation();
+        var root = CreateProgramFilesFolder();
+        var elsewhere = CreateProgramFilesFolder();
+        try {
+            var current = Path.Combine(root, WindowsDesktopPaths.CurrentFolderName);
+            CreateJunction(current, elsewhere);
+
+            var problem = WindowsInstallFolder.FindProblem(root);
+            Assert.IsNotNull(problem, "what the service would load is not the root's");
+            StringAssert.Contains(problem, current);
+        }
+        finally {
+            DeleteInstallRoot(root);
+            Directory.Delete(elsewhere, recursive: true);
+        }
+    }
+
+    // The junction's own access list, not its target's: whoever may rewrite the link chooses the
+    // version the service runs.
+    [TestMethod]
+    public void Install_roots_current_that_others_may_re_point_is_refused()
+    {
+        RequireElevation();
+        var root = CreateProgramFilesFolder();
+        try {
+            var version = Path.Combine(root, "8.2.900");
+            Directory.CreateDirectory(version);
+            var current = Path.Combine(root, WindowsDesktopPaths.CurrentFolderName);
+            CreateJunction(current, version);
+            Run("icacls.exe", current, "/grant", "*S-1-5-32-545:(M)", "/L"); // Users, on the link itself
+
+            var problem = WindowsInstallFolder.FindProblem(root);
+            Assert.IsNotNull(problem, "Users may now re-point the junction");
+            StringAssert.Contains(problem, current);
+        }
+        finally {
+            DeleteInstallRoot(root);
+        }
+    }
+
     // The service is registered under the path it was started from: a link to a folder only
     // administrators can change is still whoever made the link's to point elsewhere.
     [TestMethod]
@@ -156,14 +219,36 @@ public class WindowsInstallFolderTest
 
     private static void SetCaseSensitive(string folder)
     {
-        using var process = Process.Start(new ProcessStartInfo("fsutil.exe", ["file", "setCaseSensitiveInfo", folder, "enable"]) {
+        Run("fsutil.exe", "file", "setCaseSensitiveInfo", folder, "enable");
+    }
+
+    // The junction first, by itself: .NET's recursive delete cannot remove one ("The parameter is
+    // incorrect"), as the uninstaller removes it first too.
+    private static void DeleteInstallRoot(string root)
+    {
+        var current = Path.Combine(root, WindowsDesktopPaths.CurrentFolderName);
+        if (Directory.Exists(current))
+            Directory.Delete(current);
+
+        Directory.Delete(root, recursive: true);
+    }
+
+    // a junction, as the installer makes "current" - Directory.CreateSymbolicLink makes a symbolic link
+    private static void CreateJunction(string link, string target)
+    {
+        Run("cmd.exe", "/c", "mklink", "/J", link, target);
+    }
+
+    private static void Run(string fileName, params string[] arguments)
+    {
+        using var process = Process.Start(new ProcessStartInfo(fileName, arguments) {
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true
-        }) ?? throw new InvalidOperationException("fsutil did not start.");
+        }) ?? throw new InvalidOperationException($"{fileName} did not start.");
         var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
         process.WaitForExit();
-        Assert.AreEqual(0, process.ExitCode, $"fsutil could not make {folder} case-sensitive: {output}");
+        Assert.AreEqual(0, process.ExitCode, $"{fileName} {string.Join(' ', arguments)} failed: {output}");
     }
 
     private static void RequireElevation()

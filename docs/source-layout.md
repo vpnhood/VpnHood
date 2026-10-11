@@ -122,8 +122,7 @@ src/Apps/
 │   ├── Client.Ios.Apple/           the App Store distribution
 │   ├── Client.Ios.Extension/       the Network Extension it bundles
 │   ├── Client.Linux.Web/
-│   ├── Client.Windows.Web/
-│   └── Client.Windows.Web.Setup/       the Advanced Installer project (.aip), not a csproj
+│   └── Client.Windows.Web/
 ├── Connect/                        the same set, with Connect's own product project
 ├── Server/                         VpnHood.App.Server.Net.csproj + its Docker and Linux packaging
 └── Tools/
@@ -139,10 +138,11 @@ folder, and a head's folder is `<Product>.<Platform>.<Channel>` without the `Vpn
 `Google` is Play, `Apple` is the App Store, `Web` is our own site. Every head names its channel, so
 a second one on the same platform is a sibling rather than a rename.
 
-Two folders are not heads and do not follow that rule. `*.Ios.Extension` is the Network Extension
+One folder is not a head and does not follow that rule. `*.Ios.Extension` is the Network Extension
 the iOS app bundles, which belongs to the platform rather than to a channel, so every iOS channel
-of a product would reuse the same one. `*.Windows.Web.Setup` holds the installer definition the
-Windows publish script builds.
+of a product would reuse the same one. The Windows setup is not a folder of the product's: one NSIS
+script for every app, `pub/lib/vh-installer/win/install-client.nsi`, takes the app's names from its
+identity.
 
 `Tools/` is what we run ourselves. Nothing in it ships, and nothing in it is built by CI.
 

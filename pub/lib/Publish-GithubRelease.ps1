@@ -78,10 +78,9 @@ if ($LASTEXITCODE -eq 0) {
 # publish new release
 Write-Host "create new release: $versionTag";
 
-# Assets to attach. A platform can be intentionally skipped in CI (e.g. the Windows MSI when no
-# Advanced Installer license, Android when build_android is off, or Docker when the registry secrets
-# are absent), so warn about each missing asset rather than failing the whole release on a
-# non-existent file path.
+# Assets to attach. A platform can be intentionally skipped in CI (e.g. Android when build_android is
+# off, or Docker when the registry secrets are absent), so warn about each missing asset rather than
+# failing the whole release on a non-existent file path.
 if ($assetSet -eq "server") {
 	# Server set: Linux (x64/arm64/any + msquic) tar.gz/sh/json, Windows-x64 zip/ps1/json, and the two
 	# docker-compose helper files. The docker files keep their literal "VpnHoodServer.docker.*" names
@@ -128,9 +127,8 @@ else {
 		# the MsQuic installer each Linux install downloads from its own release
 		"$packageDir/linux-any/$packageFileTitle-linux-msquic.sh",
 
-		"$packageDir/windows-web/$packageFileTitle-win-x64.msi",
-		"$packageDir/windows-web/$packageFileTitle-win-x64.json",
-		"$packageDir/windows-web/$packageFileTitle-win-x64.txt"
+		"$packageDir/windows-web/$packageFileTitle-win-x64.exe",
+		"$packageDir/windows-web/$packageFileTitle-win-x64.json"
 	);
 
 	# The arm64 update-info file under its retired name, written alongside the current one by

@@ -4,9 +4,11 @@ param(
 )
 
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot)));
+# legacyMsiUpgradeCode: the Advanced Installer MSI that releases before the NSIS setup shipped,
+# which the setup removes first
 & "$SolutionDir/pub/lib/Publish-WinApp.ps1" `
 	-projectDir $PSScriptRoot  `
 	-appFolder "VpnHoodClient" `
-	-aipFileR "src/Apps/Client/Client.Windows.Web.Setup/VpnHood.App.Client.Windows.Web.Setup.aip" `
+	-legacyMsiUpgradeCode "{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}" `
 	-distribution "web" `
 	-stage $stage

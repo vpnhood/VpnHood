@@ -13,7 +13,9 @@ namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 // anything in it, or delete, rename or rewrite a folder on the way to it; adding a folder beside
 // one stays allowed, as C:\ lets everyone do. The service is registered under the path it was
 // started from, so that path must be the folder's own: reached through a link, a mapped drive or
-// another name, it is refused, since whoever made the link may point it elsewhere. All of it is
+// another name, it is refused, since whoever made the link may point it elsewhere. The one link a
+// folder may hold is an install root's "current" junction (WindowsDesktopPaths.InstallRootPath),
+// naming a version folder in the root itself, which only those three may re-point. All of it is
 // read from the access lists alone, which needs no elevation.
 internal static class WindowsInstallFolder
 {
@@ -34,6 +36,11 @@ internal static class WindowsInstallFolder
 
     private const uint FileReadAttributes = 0x80;
     private const uint FileFlagBackupSemantics = 0x02000000;
+    private const uint FileFlagOpenReparsePoint = 0x00200000;
+    private const uint ReadControl = 0x00020000;
+    private const int SeFileObject = 1;
+    private const int OwnerSecurityInformation = 0x1;
+    private const int DaclSecurityInformation = 0x4;
 
     private static readonly SecurityIdentifier TrustedInstaller =
         new("S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464");
@@ -71,8 +78,12 @@ internal static class WindowsInstallFolder
         // the folder, and everything in it
         foreach (var path in EnumerateTree(folder)) {
             var isDirectory = File.GetAttributes(path).HasFlag(FileAttributes.Directory);
-            if (path != folder && IsLink(path, isDirectory))
-                return $"{path} is a link";
+            if (path != folder && IsLink(path, isDirectory)) {
+                if (FindCurrentLinkProblem(folder, path, isDirectory) is { } linkProblem)
+                    return linkProblem;
+
+                continue;
+            }
 
             FileSystemSecurity security = isDirectory
                 ? new DirectoryInfo(path).GetAccessControl()
@@ -110,6 +121,49 @@ internal static class WindowsInstallFolder
         }
 
         return null;
+    }
+
+    // An install root's "current": a junction naming a folder in the root, which this walk checks as
+    // any other, and which only SYSTEM, Administrators and TrustedInstaller may re-point - read from
+    // the link itself, whose own access list is not its target's. Any other link is a problem.
+    private static string? FindCurrentLinkProblem(string root, string path, bool isDirectory)
+    {
+        if (!isDirectory ||
+            !Path.GetFileName(path).Equals(WindowsDesktopPaths.CurrentFolderName, StringComparison.OrdinalIgnoreCase))
+            return $"{path} is a link";
+
+        var target = GetRealPath(path);
+        if (!string.Equals(Path.GetDirectoryName(target), root, StringComparison.OrdinalIgnoreCase))
+            return $"{path} names {target}, which is not in {root}";
+
+        return FindChanger(GetLinkSecurity(path), ChangeRights) is { } changer
+            ? $"{changer} may re-point {path}"
+            : null;
+    }
+
+    // The access list of the link itself, not of what it names, which every other read here follows to.
+    private static DirectorySecurity GetLinkSecurity(string path)
+    {
+        using var handle = CreateFile(path, ReadControl, FileShare.ReadWrite | FileShare.Delete, IntPtr.Zero,
+            FileMode.Open, FileFlagBackupSemantics | FileFlagOpenReparsePoint, IntPtr.Zero);
+        if (handle.IsInvalid)
+            throw new IOException($"Could not open {path}: {new Win32Exception().Message}");
+
+        var error = GetSecurityInfo(handle, SeFileObject, OwnerSecurityInformation | DaclSecurityInformation,
+            out _, out _, out _, out _, out var descriptor);
+        if (error != 0)
+            throw new IOException($"Could not read the access list of {path}: {new Win32Exception((int)error).Message}");
+
+        try {
+            var bytes = new byte[GetSecurityDescriptorLength(descriptor)];
+            Marshal.Copy(descriptor, bytes, 0, bytes.Length);
+            var security = new DirectorySecurity();
+            security.SetSecurityDescriptorBinaryForm(bytes, AccessControlSections.Owner | AccessControlSections.Access);
+            return security;
+        }
+        finally {
+            LocalFree(descriptor);
+        }
     }
 
     // A symbolic link or a junction. Any other reparse point - a compressed file's, a cloud
@@ -191,6 +245,16 @@ internal static class WindowsInstallFolder
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateFile(string fileName, uint desiredAccess, FileShare shareMode,
         IntPtr securityAttributes, FileMode creationDisposition, uint flagsAndAttributes, IntPtr templateFile);
+
+    [DllImport("advapi32.dll")]
+    private static extern uint GetSecurityInfo(SafeFileHandle handle, int objectType, int securityInfo,
+        out IntPtr owner, out IntPtr group, out IntPtr dacl, out IntPtr sacl, out IntPtr securityDescriptor);
+
+    [DllImport("advapi32.dll")]
+    private static extern uint GetSecurityDescriptorLength(IntPtr securityDescriptor);
+
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr LocalFree(IntPtr memory);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern uint GetFinalPathNameByHandle(SafeFileHandle file, StringBuilder path, uint pathLength,

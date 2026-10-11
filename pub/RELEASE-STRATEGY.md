@@ -281,7 +281,7 @@ and `-changelogFileName CHANGELOG.Server.md`), so one release creator serves eve
   monorepo (§2): a prerelease server release *builds from* `develop`; a stable one first fast-forwards
   `main` via `bump.yml`. The server workflow just builds from whatever monorepo ref it is handed.
 - **No store, no fastlane.** The only "store" is Docker Hub. One `ubuntu-latest` job builds both the
-  Linux packages and the Windows-x64 zip (the server has no MSI/Advanced-Installer step, so Windows
+  Linux packages and the Windows-x64 zip (the server has no Windows-only packaging step, so Windows
   cross-builds on Linux); a second job pushes the multi-arch image (skip-with-warning if the
   `DOCKERHUB_*` secrets are absent).
 - **Trigger.** `pub/Server/PublishByGithub.ps1` bumps this monorepo (publish/nuget OFF), waits, then

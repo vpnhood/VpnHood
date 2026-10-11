@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-10-10.*
+*Effective: 2026-10-11.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to the official **VpnHood! CONNECT** app and to the VPN servers we operate. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -8,7 +8,7 @@ This policy describes what the app collects, what it never collects, and what ou
 
 ## What VpnHood! CONNECT Collects
 
-Except on iOS, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics, through Firebase on the Google Play build. It is linked to the Client ID described below and, on the Google Play build, to your device's advertising ID, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. The iOS build does not load Google Analytics or Firebase.
+Except on iOS, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics, through Firebase on the Google Play build. It is linked to the Client ID described below and, on the Google Play build, to your device's advertising ID, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. While analytics is on, our VPN servers also report the usage of your connections to Google Analytics, linked to the same Client ID. The iOS build does not load Google Analytics or Firebase, and its connections are not reported.
 
 Some data depends on **where you installed the app from**, because those builds contain different components:
 
@@ -32,7 +32,7 @@ The Client ID labels analytics on builds that support analytics and is sent to o
 
 ### You can turn analytics off
 
-On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches. Turning it off also keeps the ratings you give in the app out of the analytics; your last rating, without any text you added, still reaches our servers with your next connection, so the app stops asking for one (see [Log Data](#log-data-our-vpn-servers)). The iOS build has no analytics collection to turn on.
+On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches; what our VPN servers report stops from your next connection. Turning it off also keeps the ratings you give in the app out of the analytics; your last rating, without any text you added, still reaches our servers with your next connection, so the app stops asking for one (see [Log Data](#log-data-our-vpn-servers)). The iOS build has no analytics collection to turn on.
 
 ### Technical information
 
@@ -49,7 +49,7 @@ On builds with analytics, when analytics is on, the following is collected:
 - Device architecture and browser engine
 - Session start time and duration, and the app screens you visit
 - Connection results — the server location you chose, whether the connection succeeded, and the server address used
-- Usage totals: the amount of VPN traffic and the number of connections, never what they carried
+- Usage totals: the amount of VPN traffic and the number of connections, never what they carried; our VPN servers report them too, with the server used and the access key's identifier and name
 - Ad results, on the Google Play build: which ad network served an ad, and whether it was shown, clicked, closed, or failed
 - A rating you give in the app, with any text you add
 - Error messages shown by the app (their English technical text)

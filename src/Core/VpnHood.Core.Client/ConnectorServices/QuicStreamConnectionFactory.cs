@@ -94,12 +94,7 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
 
     private void RecycleAll()
     {
-        List<QuicStreamConnectionItem> items;
-        lock (_items) {
-            items = [.. _items];
-            _items.Clear();
-        }
-
+        var items = TakeItems();
         if (items.Count > 0) {
             VhLogger.Instance.LogWarning(GeneralEventId.Request,
                 "QUIC pool panic recycle: process footprint is near the platform kill limit. " +
@@ -110,6 +105,23 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
         }
 
         PanicRecycled?.Invoke(this, EventArgs.Empty);
+    }
+
+    // The host moved to other networks: every pooled connection is from the old ones, so all go with their
+    // streams, and the next stream opens a new connection
+    public void DropConnections()
+    {
+        foreach (var item in TakeItems())
+            _ = item.TryDisposeAsync();
+    }
+
+    private List<QuicStreamConnectionItem> TakeItems()
+    {
+        lock (_items) {
+            List<QuicStreamConnectionItem> items = [.. _items];
+            _items.Clear();
+            return items;
+        }
     }
 
     public Task<IStreamConnection> CreateConnection(string connectionId, CancellationToken cancellationToken)

@@ -339,6 +339,14 @@ internal class ConnectorService : IDisposable
         }
     }
 
+    // The host moved to other networks: every connection is from the old ones, so none goes back to the
+    // pool, the idle ones close, and QUIC's pooled connections go
+    public void DropConnections()
+    {
+        PreventReuseChannel();
+        _quicConnectionFactory?.DropConnections();
+    }
+
     public bool AllowChannelReuse {
         get;
         set {

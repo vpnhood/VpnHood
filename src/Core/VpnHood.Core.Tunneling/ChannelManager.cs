@@ -253,7 +253,12 @@ internal class ChannelManager : IDisposable
 
     public void RemoveChannels<T>(bool dispose = true) where T : IChannel
     {
-        foreach (var channel in _packetChannels.Where(x => x is T).ToArray())
+        // both lists: a proxy channel is never in the packet channels
+        IChannel[] channels;
+        lock (_channelListLock)
+            channels = _packetChannels.Concat<IChannel>(_proxyChannels).Where(x => x is T).ToArray();
+
+        foreach (var channel in channels)
             RemoveChannel(channel, dispose);
     }
 

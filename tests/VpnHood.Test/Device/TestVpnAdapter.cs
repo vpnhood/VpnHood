@@ -11,4 +11,7 @@ public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions)
     })
 {
     public TestVpnAdapterOptions VpnAdapterOptions { get; } = vpnAdapterOptions;
+
+    // as the adapter says once the host moved to other networks
+    public void SimulatePrimaryNetworkChange() => OnPrimaryNetworkChanged();
 }

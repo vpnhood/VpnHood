@@ -47,6 +47,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     private DateTime? _autoWaitTime;
     private ClientUdpChannelTransmitter? _udpTransmitter;
+    private volatile bool _isUdpTransmitterStale;
     private bool _disposed;
     private ChannelProtocol _channelProtocol;
     private ChannelProtocol _oldChannelProtocol;
@@ -88,6 +89,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // init VPN adapter
         _vpnAdapter = options.VpnAdapter;
         _vpnAdapter.PrimaryAdapterIpChanged += VpnAdapter_PrimaryAdapterIpChanged;
+        _vpnAdapter.PrimaryNetworkChanged += VpnAdapter_PrimaryNetworkChanged;
         _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
         _vpnAdapter.Failed += VpnAdapter_Failed;
 
@@ -380,6 +382,28 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         UpdateConfig();
     }
 
+    // The host moved to other networks: the tunnel's connections from the old ones are dead, yet an OS may keep
+    // them open until the channel idle timeout (Linux does), so they go now and new ones open from the new
+    // network; the apps' proxied TCP connections go with theirs
+    private void VpnAdapter_PrimaryNetworkChanged(object? sender, EventArgs e)
+    {
+        if (IsClosing)
+            return;
+
+        try {
+            VhLogger.Instance.LogInformation("The network changed. Replacing the tunnel's connections...");
+            _isUdpTransmitterStale = true; // before the channels go, so the next UDP channel sees it
+            _requestSender.ConnectorService.DropConnections();
+            _tunnel.RemoveChannels<IPacketChannel>();
+            DropCurrentConnections();
+            _packetChannelBackoff.Reset();
+            Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not replace the tunnel's connections after a network change.");
+        }
+    }
+
     // The adapter stopped on its own and stays down. Without it, the device's traffic bypasses the
     // tunnel, so the session ends with the error rather than staying connected in name.
     private void VpnAdapter_Failed(object? sender, Exception ex)
@@ -510,6 +534,14 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     {
         if (Config.SessionKey.IsEmpty) throw new Exception("Server UdpKey has not been set.");
         if (Config.HostUdpEndPoint == null) throw new Exception("Server does not serve any UDP endpoint.");
+
+        // a socket from the old networks is dead; it goes here, under the packet channel lock, as no channel
+        // may be made on it meanwhile
+        if (_isUdpTransmitterStale) {
+            _isUdpTransmitterStale = false;
+            _udpTransmitter?.Dispose();
+            _udpTransmitter = null;
+        }
 
         // create channelTransmitter if not created
         _udpTransmitter ??= new ClientUdpChannelTransmitter(
@@ -722,6 +754,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;
         _vpnAdapter.PrimaryAdapterIpChanged -= VpnAdapter_PrimaryAdapterIpChanged;
+        _vpnAdapter.PrimaryNetworkChanged -= VpnAdapter_PrimaryNetworkChanged;
         _vpnAdapter.Failed -= VpnAdapter_Failed;
         _tunnel.PacketReceived -= Tunnel_PacketReceived;
         _clientTcpHost.PacketReceived -= ClientTcpHostPacketReceived;

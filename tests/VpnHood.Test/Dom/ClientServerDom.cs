@@ -8,6 +8,7 @@ using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Test.AccessManagers;
+using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
 
 namespace VpnHood.Test.Dom;
@@ -16,6 +17,7 @@ internal class ClientServerDom : IAsyncDisposable
 {
     public VpnHoodServer Server { get; }
     public VpnHoodClient Client { get; }
+    public TestVpnAdapter ClientVpnAdapter { get; }
     public TestAccessManager AccessManager { get; }
     public FileAccessManagerOptions AccessManagerOptions { get; }
     public Token Token { get; }
@@ -28,6 +30,7 @@ internal class ClientServerDom : IAsyncDisposable
     private ClientServerDom(
         Token token,
         VpnHoodClient client,
+        TestVpnAdapter clientVpnAdapter,
         VpnHoodServer server,
         TestAccessManager accessManager,
         FileAccessManagerOptions fileAccessManagerOptions)
@@ -35,6 +38,7 @@ internal class ClientServerDom : IAsyncDisposable
         Token = token;
         Server = server;
         Client = client;
+        ClientVpnAdapter = clientVpnAdapter;
         AccessManager = accessManager;
         AccessManagerOptions = fileAccessManagerOptions;
 
@@ -95,7 +99,8 @@ internal class ClientServerDom : IAsyncDisposable
 
             client = await testHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter,
                 proxyOptions: proxyOptions);
-            var clientServerDom = new ClientServerDom(token, client, server, accessManager, fileAccessManagerOptions);
+            var clientServerDom = new ClientServerDom(token, client, clientVpnAdapter, server, accessManager,
+                fileAccessManagerOptions);
             return clientServerDom;
         }
         catch {

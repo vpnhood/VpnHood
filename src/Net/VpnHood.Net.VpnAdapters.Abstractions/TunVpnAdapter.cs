@@ -113,6 +113,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public virtual bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool IsStarted { get; private set; }
     public event EventHandler? PrimaryAdapterIpChanged;
+    public event EventHandler? PrimaryNetworkChanged;
 
     // ReSharper disable once InconsistentlySynchronizedField
     private bool IsReady => IsStarted && !_isStopping && !IsDisposed && !IsDisposing;
@@ -851,10 +852,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 return;
             }
 
-            // an adapter that needs no restart takes the new network's primary IPs, looking as above
+            // an adapter that needs no restart takes the new network's primary IPs, looking as above, then
+            // tells its owner, whose connections from the old networks are dead
             VhLogger.Instance.LogInformation("Network address changed.");
             if (!RestartAfterNetworkAddressChanged) {
                 DiscoverPrimaryAdapterIps(protect: !IsSocketProtectedByBind);
+                OnPrimaryNetworkChanged();
                 return;
             }
 
@@ -868,6 +871,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not check the primary adapter addresses.");
         }
+    }
+
+    // protected, so a test adapter raises it: a test never moves the host's network
+    protected void OnPrimaryNetworkChanged()
+    {
+        PrimaryNetworkChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // The same networks: each IPv4 address, and each IPv6 one by its /64, as the OS rotates its temporary IPv6

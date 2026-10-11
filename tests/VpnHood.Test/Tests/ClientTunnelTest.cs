@@ -107,6 +107,36 @@ public class ClientTunnelTest : TestBase
     }
 
 
+    [TestMethod]
+    [DataRow(ChannelProtocol.Tcp)]
+    [DataRow(ChannelProtocol.Udp)]
+    [DataRow(ChannelProtocol.Quic)]
+    public async Task A_network_change_replaces_the_tunnels_connections(ChannelProtocol channelProtocol)
+    {
+        if (channelProtocol == ChannelProtocol.Quic && (!QuicListener.IsSupported || !QuicConnection.IsSupported))
+            Assert.Inconclusive("QUIC is not supported on this platform.");
+
+        var clientOption = TestHelper.CreateClientOptions(channelProtocol: channelProtocol);
+        await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
+        await AssertValidUdp(clientServerDom);
+        await AssertValidTcp(clientServerDom);
+        var createdChannelCount = clientServerDom.Client.RequiredSession.Status.SessionPacketChannelCount;
+
+        clientServerDom.ClientVpnAdapter.SimulatePrimaryNetworkChange();
+
+        // a packet sent before the new channel is up is lost, as on a real network change
+        await VhTestUtil.AssertEqualsWait(true,
+            () => clientServerDom.Client.RequiredSession.Status.ActivePacketChannelCount > 0,
+            cancellationToken: TestCt);
+
+        // both kinds of traffic again, on connections made after the change: TCP by the proxy channels
+        await AssertValidUdp(clientServerDom);
+        await AssertValidTcp(clientServerDom);
+        if (channelProtocol == ChannelProtocol.Tcp)
+            Assert.IsGreaterThan(createdChannelCount, clientServerDom.Client.RequiredSession.Status.SessionPacketChannelCount);
+        Assert.AreEqual(ClientState.Connected, clientServerDom.Client.State);
+    }
+
     private async Task AssertInvalidTcpRequest(ClientServerDom clientServer)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Invalid Https request.");

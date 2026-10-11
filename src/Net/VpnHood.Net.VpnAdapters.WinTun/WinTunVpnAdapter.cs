@@ -230,13 +230,29 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                 $"interface ipv6 set interface \"{AdapterName}\" metric={metric}", cancellationToken);
     }
 
-    protected override async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        var command = ipNetwork.IsV4
-            ? $"interface ipv4 set address \"{AdapterName}\" static {ipNetwork}"
-            : $"interface ipv6 set address \"{AdapterName}\" {ipNetwork}";
+        // Migration (2026-10): drop a few months after it ships. A netsh build saved its address for the
+        // adapter's GUID, and after its crash Windows brings that back with the adapter, where it would be the
+        // traffic's source; netsh's static address replaced it, so the family's addresses go first
+        foreach (var ipAddress in GetAdapterAddresses(ipNetwork.AddressFamily))
+            Win32IpHelper.DeleteAddress(_adapterIndex, ipAddress);
 
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        // no duplicate address detection: a tunnel shares its link with no one, and the detection would keep
+        // the address unusable for seconds after the interface comes up, while the routes already lead to it
+        Win32IpHelper.DisableDuplicateAddressDetection(_adapterIndex, ipNetwork.AddressFamily);
+        Win32IpHelper.AddAddress(_adapterIndex, ipNetwork);
+        return Task.CompletedTask;
+    }
+
+    private IPAddress[] GetAdapterAddresses(AddressFamily addressFamily)
+    {
+        return NetworkInterface.GetAllNetworkInterfaces()
+            .First(x => x.Name == AdapterName)
+            .GetIPProperties().UnicastAddresses
+            .Select(x => x.Address)
+            .Where(x => x.AddressFamily == addressFamily && !x.IsIPv6LinkLocal)
+            .ToArray();
     }
 
     // ReSharper disable once UnusedMember.Local

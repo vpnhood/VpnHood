@@ -98,8 +98,87 @@ public static class Win32IpHelper
         public uint sin6_scope_id;
     }
 
+    // BOOLEAN members are bytes, so a row read from Windows goes back exactly as read
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MIB_IPINTERFACE_ROW
+    {
+        public ushort Family;
+        public ulong InterfaceLuid;
+        public uint InterfaceIndex;
+        public uint MaxReassemblySize;
+        public ulong InterfaceIdentifier;
+        public uint MinRouterAdvertisementInterval;
+        public uint MaxRouterAdvertisementInterval;
+        public byte AdvertisingEnabled;
+        public byte ForwardingEnabled;
+        public byte WeakHostSend;
+        public byte WeakHostReceive;
+        public byte UseAutomaticMetric;
+        public byte UseNeighborUnreachabilityDetection;
+        public byte ManagedAddressConfigurationSupported;
+        public byte OtherStatefulConfigurationSupported;
+        public byte AdvertiseDefaultRoute;
+        public int RouterDiscoveryBehavior;
+        public uint DadTransmits;
+        public uint BaseReachableTime;
+        public uint RetransmitTime;
+        public uint PathMtuDiscoveryTimeout;
+        public int LinkLocalAddressBehavior;
+        public uint LinkLocalAddressTimeout;
+
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] // ScopeLevelCount
+        public uint[] ZoneIndices;
+
+        public uint SitePrefixLength;
+        public uint Metric;
+        public uint NlMtu;
+        public byte Connected;
+        public byte SupportsWakeUpPatterns;
+        public byte SupportsNeighborDiscovery;
+        public byte SupportsRouterDiscovery;
+        public uint ReachableTime;
+        public byte TransmitOffload; // NL_INTERFACE_OFFLOAD_ROD: eight one-bit flags
+        public byte ReceiveOffload;
+        public byte DisableDefaultRoutes;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MIB_UNICASTIPADDRESS_ROW
+    {
+        public SOCKADDR_INET Address;
+        public ulong InterfaceLuid;
+        public uint InterfaceIndex;
+        public int PrefixOrigin;
+        public int SuffixOrigin;
+        public uint ValidLifetime;
+        public uint PreferredLifetime;
+        public byte OnLinkPrefixLength;
+        public byte SkipAsSource;
+        public int DadState;
+        public uint ScopeId;
+        public long CreationTimeStamp;
+    }
+
     [DllImport("Iphlpapi.dll", SetLastError = true)]
     public static extern int CreateIpForwardEntry2(ref MIB_IPFORWARD_ROW2 pRoute);
+
+    [DllImport("Iphlpapi.dll")]
+    public static extern void InitializeIpInterfaceEntry(out MIB_IPINTERFACE_ROW row);
+
+    [DllImport("Iphlpapi.dll")]
+    public static extern int GetIpInterfaceEntry(ref MIB_IPINTERFACE_ROW row);
+
+    [DllImport("Iphlpapi.dll")]
+    public static extern int SetIpInterfaceEntry(ref MIB_IPINTERFACE_ROW row);
+
+    [DllImport("Iphlpapi.dll")]
+    public static extern void InitializeUnicastIpAddressEntry(out MIB_UNICASTIPADDRESS_ROW row);
+
+    [DllImport("Iphlpapi.dll")]
+    public static extern int CreateUnicastIpAddressEntry(ref MIB_UNICASTIPADDRESS_ROW row);
+
+    [DllImport("Iphlpapi.dll")]
+    public static extern int DeleteUnicastIpAddressEntry(ref MIB_UNICASTIPADDRESS_ROW row);
 
 
     private static IN6_ADDR ToIN6_ADDR(IPAddress ip)
@@ -112,6 +191,23 @@ public static class Win32IpHelper
             lower = BitConverter.ToUInt64(bytes, 0),
             upper = BitConverter.ToUInt64(bytes, 8)
         };
+    }
+
+    private static SOCKADDR_INET ToSOCKADDR_INET(IPAddress ipAddress)
+    {
+        return ipAddress.AddressFamily == AddressFamily.InterNetwork
+            ? new SOCKADDR_INET {
+                Ipv4 = new SOCKADDR_IN {
+                    sin_family = (ushort)AddressFamily.InterNetwork,
+                    sin_addr = BitConverter.ToUInt32(ipAddress.GetAddressBytes(), 0)
+                }
+            }
+            : new SOCKADDR_INET {
+                Ipv6 = new SOCKADDR_IN6 {
+                    sin6_family = (ushort)AddressFamily.InterNetworkV6,
+                    sin6_addr = ToIN6_ADDR(ipAddress)
+                }
+            };
     }
 
     public static void AddRoute(uint interfaceIndex, IpNetwork ipNetwork, CancellationToken cancellationToken)
@@ -198,5 +294,59 @@ public static class Win32IpHelper
             if (result != noError && result != errorObjectAlreadyExists)
                 throw new Win32Exception(result, $"Failed to add IPv6 route for {ipNetwork}");
         }
+    }
+
+    public static void DisableDuplicateAddressDetection(uint interfaceIndex, AddressFamily addressFamily)
+    {
+        const int noError = 0;
+
+        InitializeIpInterfaceEntry(out var row);
+        row.Family = (ushort)addressFamily;
+        row.InterfaceIndex = interfaceIndex;
+        var result = GetIpInterfaceEntry(ref row);
+        if (result != noError)
+            throw new Win32Exception(result, $"Failed to get the {addressFamily} interface {interfaceIndex}.");
+
+        // the row goes back whole, but an IPv4 one read with a site prefix length of 64 must carry 0 (documented)
+        row.DadTransmits = 0;
+        if (addressFamily == AddressFamily.InterNetwork)
+            row.SitePrefixLength = 0;
+
+        result = SetIpInterfaceEntry(ref row);
+        if (result != noError)
+            throw new Win32Exception(result,
+                $"Failed to disable duplicate address detection on the {addressFamily} interface {interfaceIndex}.");
+    }
+
+    // a static address as netsh adds one, but it lasts only as long as the adapter
+    public static void AddAddress(uint interfaceIndex, IpNetwork ipNetwork)
+    {
+        const int noError = 0;
+        const int errorObjectAlreadyExists = 5010;
+        const int ipPrefixOriginManual = 1;
+        const int ipSuffixOriginManual = 1;
+
+        InitializeUnicastIpAddressEntry(out var row);
+        row.InterfaceIndex = interfaceIndex;
+        row.Address = ToSOCKADDR_INET(ipNetwork.Prefix);
+        row.OnLinkPrefixLength = (byte)ipNetwork.PrefixLength;
+        row.PrefixOrigin = ipPrefixOriginManual;
+        row.SuffixOrigin = ipSuffixOriginManual;
+        var result = CreateUnicastIpAddressEntry(ref row);
+        if (result != noError && result != errorObjectAlreadyExists)
+            throw new Win32Exception(result, $"Failed to add the address {ipNetwork}.");
+    }
+
+    public static void DeleteAddress(uint interfaceIndex, IPAddress ipAddress)
+    {
+        const int noError = 0;
+        const int errorNotFound = 1168;
+
+        InitializeUnicastIpAddressEntry(out var row);
+        row.InterfaceIndex = interfaceIndex;
+        row.Address = ToSOCKADDR_INET(ipAddress);
+        var result = DeleteUnicastIpAddressEntry(ref row);
+        if (result != noError && result != errorNotFound)
+            throw new Win32Exception(result, $"Failed to delete the address {ipAddress}.");
     }
 }

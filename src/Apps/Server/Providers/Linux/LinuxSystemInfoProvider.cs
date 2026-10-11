@@ -86,17 +86,15 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
 
     public string GetOperatingSystemInfo()
     {
-        string? prettyName = null;
-        if (File.Exists("/etc/os-release")) {
-            var items = File
+        // os-release may hold comments without '=' (Tumbleweed's do) and blank lines
+        var prettyName = File.Exists("/etc/os-release")
+            ? File
                 .ReadAllLines("/etc/os-release")
-                .Select(line => line.Split('='))
-                .Where(split => split.Length >= 1 && !string.IsNullOrEmpty(split[0]))
-                .ToDictionary(split => split[0], split => split[1]);
-
-            if (items.TryGetValue("PRETTY_NAME", out prettyName))
-                prettyName = prettyName.Replace("\"", "").Trim();
-        }
+                .Select(line => line.Split('=', 2))
+                .Where(split => split.Length == 2 && split[0] == "PRETTY_NAME")
+                .Select(split => split[1].Replace("\"", "").Trim())
+                .FirstOrDefault()
+            : null;
 
         if (string.IsNullOrEmpty(prettyName)) prettyName = "Linux";
         prettyName += $", {RuntimeInformation.OSArchitecture}";

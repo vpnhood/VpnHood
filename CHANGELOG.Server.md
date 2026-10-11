@@ -42,6 +42,7 @@
 * Update: VpnHoodServer holds a speed-limited session to its limit in one place for all its traffic: after a pause about 10 MB goes at full speed, then packets wait in a short queue, about a quarter second of the limit, where they used to wait seconds; a session idle for a long time no longer gets unlimited speed for its saved allowance. A client's upload is checked at 1.2 times its limit, with a 12 MB burst.
 * Fix: The Docker server no longer logs errors at start about a network interface it could not find: it says once that it runs as a proxy, since a container has no TUN device.
 * Fix: On Linux the installer installs ICU where it is missing, as on Debian 13's cloud image: VpnHoodServer did not start without it.
+* Fix: VpnHoodServer starts on openSUSE Tumbleweed; it stopped at start on a comment line in /etc/os-release.
 
 # v8.1.849
 

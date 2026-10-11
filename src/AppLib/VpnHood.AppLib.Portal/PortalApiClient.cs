@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -265,6 +266,8 @@ public class PortalApiClient : ApiClientBase
     }
 
     /// <summary>
+    /// Every call names the app's language (Accept-Language), so what the portal writes to the
+    /// person — the website account it creates, and so its mail — can be in it.
     /// The session credential travels twice on purpose: as the standard bearer, and as X-Portal-Token
     /// for the proxies that strip Authorization. A 401 is the portal saying "this token is not a
     /// session" — never a transport failure, which throws instead of answering, and never a
@@ -275,6 +278,11 @@ public class PortalApiClient : ApiClientBase
         HttpRequestMessage request, HttpCompletionOption responseHeadersRead,
         CancellationToken cancellationToken)
     {
+        // the app sets its UI culture for every thread; the invariant one names no language
+        var language = CultureInfo.CurrentUICulture.Name;
+        if (language != "")
+            request.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue(language));
+
         var authenticationProvider = _authenticationProvider;
         if (authenticationProvider == null)
             return await base.HttpClientSendAsync(client, request, responseHeadersRead, cancellationToken).Vhc();

@@ -1,4 +1,5 @@
-﻿using System.Security.Authentication;
+﻿using System.Globalization;
+using System.Security.Authentication;
 using System.Text.Json;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
@@ -116,6 +117,25 @@ public class PortalTest
         Assert.AreEqual(pageUrl, url?.AbsoluteUri);
         var request = _portal.Requests.Single(x => x.Route == "GET /auth/password-reset");
         Assert.IsNull(request.Authorization, "the page is public: no session is sent");
+    }
+
+    [TestMethod]
+    public async Task Requests_carry_the_app_language()
+    {
+        // the portal gives it to the website account it creates, which its mail follows
+        _portal.Enqueue("GET /auth/password-reset", new { url = "https://account.example.com/password/reset" });
+        using var authenticationProvider = CreateAuthenticationProvider();
+        var uiCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("fa");
+        try {
+            await authenticationProvider.GetPasswordResetUrl(CancellationToken.None);
+        }
+        finally {
+            CultureInfo.CurrentUICulture = uiCulture;
+        }
+
+        var request = _portal.Requests.Single(x => x.Route == "GET /auth/password-reset");
+        Assert.AreEqual("fa", request.AcceptLanguage);
     }
 
     [TestMethod]

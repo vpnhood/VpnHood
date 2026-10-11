@@ -46,6 +46,7 @@ public sealed class TestPortalServer : IDisposable
         public JsonElement Body { get; init; }
         public string? Authorization { get; init; }
         public string? PortalToken { get; init; }
+        public string? AcceptLanguage { get; init; }
     }
 
     public sealed class ErrorScript
@@ -138,7 +139,8 @@ public sealed class TestPortalServer : IDisposable
                 Query = context.Request.Url?.Query,
                 Body = string.IsNullOrEmpty(bodyText) ? default : JsonSerializer.Deserialize<JsonElement>(bodyText),
                 Authorization = context.Request.Headers["Authorization"],
-                PortalToken = context.Request.Headers["X-Portal-Token"]
+                PortalToken = context.Request.Headers["X-Portal-Token"],
+                AcceptLanguage = context.Request.Headers["Accept-Language"]
             });
         }
 

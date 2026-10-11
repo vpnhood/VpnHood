@@ -52,6 +52,7 @@
 * Fix: Crash when Google Play reported a purchase result without a purchase #android #connect #store
 * Fix: Sign in with Apple could occasionally never finish #ios #connect
 * Fix: "Forgot password" on the sign-in form opens the account website's password reset page, as a code to scan on a TV; it opened the site's home page, and its text was cut off at the form's edge #connect
+* Improve: Buying on the website opens the checkout in the app's language #connect
 * Improve: The Quick Settings tile no longer starts Firebase in its own process, so it appears faster on low-end devices #android #connect
 * Fix: Timeouts no longer drift with the device's time zone or a daylight-saving change
 * Fix: On Linux without systemd-resolved, the VPN's DNS server stayed in resolv.conf after disconnecting #linux

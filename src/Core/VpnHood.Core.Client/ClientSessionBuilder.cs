@@ -126,7 +126,8 @@ internal class ClientSessionBuilder(
                 AllowRedirect = allowRedirect,
                 IsIpV6Supported = vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
                 UserReview = config.UserReview,
-                Mtu = TransportDefaults.MtuClient
+                Mtu = TransportDefaults.MtuClient,
+                AllowAnonymousTracker = config.AllowAnonymousTracker
             };
 
             using var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();

@@ -1,5 +1,6 @@
 # Latest
 
+* Update: VpnHoodServer passes each new session's analytics choice, which the client now sends in its hello, to the access manager (`SessionRequestEx.AllowAnonymousTracker`), so an access manager can report only the sessions that allow it. A client before this sends none, which reads as no.
 * Fix: VpnHoodServer's tracking log writes no destination address when destination tracking is off; when it is on, it writes a token in place of each address, even with the log anonymizer off. Its ICMP lines follow the ICMP switch; they used to follow the UDP one.
 * Fix: VpnHoodServer's logs redact NAT64 addresses, which carry the IPv4 address they reach: those in 64:ff9b::/96 as that address, those in 64:ff9b:1::/48 whole. They used to be written as they were.
 * Update: VpnHoodServer's console no longer prints the session lines, which carry the client IP; they stay in server.log and sessions.log.

@@ -20,6 +20,7 @@ public class SessionRequestEx
     public int ProtocolVersion { get; set; }
     public string? AccessCode { get; set; }
     public UserReview? UserReview { get; set; }
+    public bool AllowAnonymousTracker { get; set; } // the client's analytics choice: report this session only when true
 
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint HostEndPoint { get; set; }

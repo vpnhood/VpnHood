@@ -150,9 +150,34 @@ public class AllowAnonymousTrackerTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task The_access_manager_is_told_the_switch_at_each_connect()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+
+        await using var app = TestAppHelper.CreateClientApp(CreateAppOptions());
+        AcceptTerms(app);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+        Assert.IsTrue(accessManager.AllowAnonymousTracker, "on: the hello says so");
+
+        // a session keeps what its hello said: the access manager hears a change at the next connect
+        app.UserSettings.AllowAnonymousTracker = false;
+        app.SettingsService.Save();
+        await app.Disconnect();
+        await app.WaitForState(AppConnectionState.None);
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+        Assert.IsFalse(accessManager.AllowAnonymousTracker, "off at the next connect");
+    }
+
+    [TestMethod]
     public async Task A_build_without_a_tracker_tells_the_vpn_service_off()
     {
-        await using var server = await TestHelper.CreateServer();
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
         var device = new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter());
@@ -166,11 +191,12 @@ public class AllowAnonymousTrackerTest : TestAppBase
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
-        // so the access manager's own hit stays off too
+        // so the access manager's own hit stays off too, and it is told off
         var clientOptions = new VpnServiceOptionsFile(device.VpnServiceConfigFolder).Read().ClientOptions;
         Assert.IsFalse(clientOptions.AllowAnonymousTracker);
         Assert.IsFalse(clientOptions.AllowEndPointTracker);
         Assert.IsEmpty(clientOptions.TrackerFactoryInfos);
+        Assert.IsFalse(accessManager.AllowAnonymousTracker);
     }
 
     [TestMethod]

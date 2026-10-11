@@ -30,6 +30,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public Dictionary<string, string> AccessCodes { get; set; } = new();
     public int UserReviewRecommended { get; set; }
     public UserReview? UserReview { get; set; }
+    public bool? AllowAnonymousTracker { get; private set; } // as the last session's hello said
 
     [Obsolete("Use RedirectServerTokens")]
     public IPEndPoint? RedirectHostEndPoint { get; set; }
@@ -95,6 +96,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
 
         // update test provider
         UserReview = sessionRequestEx.UserReview;
+        AllowAnonymousTracker = sessionRequestEx.AllowAnonymousTracker;
 
         if (!sessionRequestEx.AllowRedirect)
             return ret;

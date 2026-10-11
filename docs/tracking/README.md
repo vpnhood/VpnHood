@@ -133,7 +133,13 @@ so it sends none.
 
 The id belongs to whoever runs the access manager, not to whoever made the app. `FileAccessManager`
 never returns one; an HTTP access manager may. Anything an access manager reports by itself is
-outside this repo.
+outside this repo, but the switch reaches it: the hello carries it
+([`HelloRequest`](../../src/Core/VpnHood.Core.Tunneling/Messaging/HelloRequest.cs)) and the server
+passes it on with the new session
+([`SessionRequestEx`](../../src/Core/VpnHood.Core.Server.Access/Messaging/SessionRequestEx.cs)), both
+as `AllowAnonymousTracker`, so an access manager reports only a session whose hello said yes. A
+client before it sends none, which reads as no. It is the switch at connect: a change reaches the
+access manager with the next session.
 
 ## The server's tracker
 
@@ -178,6 +184,7 @@ every tracker stays switched off until they are accepted.
 | The VPN service's `vh_usage` | its tracker, made with the switch, and set in a running session by the reconfigure the app sends on every change |
 | A VPN service started without the app, from its saved options (always-on, the quick-settings tile, the system restarting it) | the switch in those options ([`VpnServiceOptionsFile`](../../src/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnServiceOptionsFile.cs)), saved at each connect and at each settings change, connected or not |
 | A successful `vh_connect_attempt`, and the access manager's `session_start` | `VpnHoodClientConfig.AllowAnonymousTracker` |
+| What the access manager reports by itself | the same, in the hello, from the next connect |
 | `vh_endpoint_status`, and a failed `vh_connect_attempt` | endpoint tracking, which runs only with the switch on |
 | A web UI's own analytics | the web UI itself |
 

@@ -17,4 +17,5 @@ public class HelloRequest()
     public string? AccessCode { get; set; }
     public UserReview? UserReview { get; init; }
     public int Mtu { get; init; } = TransportDefaults.MtuClient;
+    public bool AllowAnonymousTracker { get; init; } // the user's choice at connect; a client before it sends none, read as no
 }

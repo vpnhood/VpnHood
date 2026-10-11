@@ -32,8 +32,16 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private const int MaxAdapterAliasLength = 255;
     private const int KeptAliasLength = 64;
 
+    // A closed tun's number is freed only once the reader and the batch being sent have left (as WinTun's
+    // session): the reader once the device's removal wakes its poll, the batch, which may sleep in the send
+    // backoff, within twice MaxPacketSendDelay. A thread held off the CPU with the stop gets a moment more.
+    private static readonly TimeSpan StopWaitTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan StopRewaitTimeout = TimeSpan.FromMilliseconds(100);
+    private readonly TimeSpan _senderStopWaitTimeout;
+
     private readonly string? _adapterAlias;
     private int _tunAdapterFd = InvalidFd;
+    private int _retiredTunAdapterFd = InvalidFd;
     private int? _metric;
     private string? _primaryAdapterName;
     private bool _isAdapterAdded;
@@ -61,6 +69,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
                 nameof(adapterSettings));
 
         _adapterAlias = adapterSettings.AppId == null ? null : GetAdapterAlias(adapterSettings.AppId);
+        _senderStopWaitTimeout = StopWaitTimeout + adapterSettings.MaxPacketSendDelay * 2;
     }
 
     // A name the kernel takes: at most 15 characters, and none it refuses - whitespace, '/' or ':'.
@@ -256,6 +265,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             _isAdapterAdded = false;
         }
 
+        // the device is gone, which wakes a reader in its poll
+        FreeRetiredTunAdapterFd();
+
         // Remove previous NAT iptables record
         if (UseNat) {
             VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...",
@@ -287,12 +299,55 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         return Task.CompletedTask;
     }
 
+    // The reader and the sender read the tun's number from the field, so one may still hold it after the
+    // clearing; were the number closed, the next file the process opens could take it and get their read or
+    // write. /dev/null takes the tun's place under it in one step (dup2), which lets the tun go and gives a
+    // late read an end and a late write a sink; AdapterRemove frees the number once both have left.
     protected override void AdapterClose()
     {
-        // Close the TUN adapter if it is open
         var fd = Interlocked.Exchange(ref _tunAdapterFd, InvalidFd);
-        if (fd != InvalidFd)
-            LinuxAPI.close(fd);
+        if (fd == InvalidFd)
+            return;
+
+        // failing that, the number stays the tun's until then: a late read or write meets the tun, never another file
+        if (!TryReplaceByNull(fd))
+            VhLogger.Instance.LogWarning(
+                "Could not put /dev/null under the TUN adapter's descriptor; it stays the tun's until its users leave.");
+
+        _retiredTunAdapterFd = fd;
+    }
+
+    private static bool TryReplaceByNull(int fd)
+    {
+        var nullFd = LinuxAPI.open("/dev/null", OsConstants.ORdwr);
+        if (nullFd < 0)
+            return false;
+
+        var result = LinuxAPI.dup2(nullFd, fd);
+        LinuxAPI.close(nullFd);
+        return result >= 0;
+    }
+
+    // One that does not leave in time keeps the number until the process exits. A finalizer finds neither, as
+    // either keeps the adapter alive, so its waits return at once.
+    private void FreeRetiredTunAdapterFd()
+    {
+        var fd = Interlocked.Exchange(ref _retiredTunAdapterFd, InvalidFd);
+        if (fd == InvalidFd)
+            return;
+
+        var readerLeft = WaitForReader(StopWaitTimeout);
+        var senderLeft = WaitForSender(_senderStopWaitTimeout);
+        readerLeft = readerLeft || WaitForReader(StopRewaitTimeout);
+        senderLeft = senderLeft || WaitForSender(StopRewaitTimeout);
+        if (!readerLeft || !senderLeft) {
+            VhLogger.Instance.LogError(
+                "The TUN {Thread} did not leave in time, so the adapter's descriptor stays taken until the process exits.",
+                senderLeft ? "reader" : readerLeft ? "sender" : "reader and sender");
+            return;
+        }
+
+        LinuxAPI.close(fd);
     }
 
     protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)

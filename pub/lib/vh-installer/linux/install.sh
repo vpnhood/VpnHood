@@ -19,33 +19,67 @@ launcher="$(launcherNameParam)";
 destinationPath="/opt/$assemblyName";
 packageFile="";
 
-# Read arguments
-for i; 
+function show_help() {
+	echo "Usage: $assemblyName-linux.sh [options]";
+	echo "  -q                    no questions: what is not given keeps the install's choices,";
+	echo "                        and a new install starts at boot and updates itself";
+	echo "  -noautostart          do not start the server at boot";
+	echo "  -noautoupdate         do not update the server by itself";
+	echo "  -httpBaseUrl <url>    the access server; with -httpAuthorization <value>";
+	echo "  -managementSecret <secret>";
+	echo "  -help                 this";
+}
+
+# Read arguments. Every option an earlier release took still works, as the updaters of installed
+# servers run this script with theirs.
+autostart="";
+autoupdate="";
+for i;
 do
 arg=$i;
+# Compatibility (2026-10): the default now; the updaters before this release and the access server's
+# install commands pass it. Drop once the access server no longer writes it, a few months after this ships.
 if [ "$arg" = "-autostart" ]; then
 	autostart="y";
-	lastArg=""; 
+	lastArg="";
 	continue;
+
+elif [ "$arg" = "-noautostart" ]; then
+	autostart="n";
+	lastArg=""; continue;
+
+elif [ "$arg" = "-autoupdate" ]; then
+	autoupdate="y";
+	lastArg=""; continue;
+
+elif [ "$arg" = "-noautoupdate" ]; then
+	autoupdate="n";
+	lastArg=""; continue;
 
 elif [ "$arg" = "-q" ]; then
 	quiet="y";
 	lastArg=""; continue;
+
+elif [ "$arg" = "-help" ] || [ "$arg" = "--help" ]; then
+	show_help;
+	exit 0;
 
 # Run in a container, by its supervisor: there is no systemd there, so no units either.
 elif [ "$arg" = "-container" ]; then
 	container="y";
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-httpBaseUrl" ]; then
+# Compatibility (2026-10): -restBaseUrl, -restAuthorization and -secret, the 2023 names of these three;
+# drop a few months after this ships.
+elif [ "$lastArg" = "-httpBaseUrl" ] || [ "$lastArg" = "-restBaseUrl" ]; then
 	httpBaseUrl=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-httpAuthorization" ]; then
+elif [ "$lastArg" = "-httpAuthorization" ] || [ "$lastArg" = "-restAuthorization" ]; then
 	httpAuthorization=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-managementSecret" ]; then
+elif [ "$lastArg" = "-managementSecret" ] || [ "$lastArg" = "-secret" ]; then
 	managementSecret=$arg;
 	lastArg=""; continue;
 
@@ -72,14 +106,14 @@ elif [ "$lastArg" = "-versionTag" ]; then
 
 
 elif [ "$lastArg" != "" ]; then
-	echo "Unknown argument! argument: $lastArg";
+	echo "Unknown argument! argument: $lastArg (-help lists the options)";
 	exit 1;
 fi;
 lastArg=$arg;
 done;
 # a last option still waiting for its value, or an unknown last one
 if [ "$lastArg" != "" ]; then
-	echo "Unknown argument or missing value! argument: $lastArg";
+	echo "Unknown argument or missing value! argument: $lastArg (-help lists the options)";
 	exit 1;
 fi
 
@@ -107,15 +141,32 @@ if grep -qF "/${assemblyName}Updater.service" /proc/self/cgroup 2>/dev/null; the
 	insideUpdaterUnit="y";
 fi
 
-# User interaction
-if [ "$quiet" != "y" ]; then
-	if [ "$autostart" == "" ]; then
-		read -p "Auto Start (Y/n)?" autostart;
-		if [ -z "$autostart" ]; then
-			autostart="y";
-		fi;
-	fi;
-fi;
+# A choice no option made keeps the install's own, so an update - run with -q alone - changes none; a
+# new install starts at boot and updates itself. Asked unless -q, with that as the answer Enter gives.
+function unit_choice() {
+	if [ ! -f "$destinationPath/publish.json" ] || systemctl is-enabled --quiet "$1" 2>/dev/null; then
+		echo "y";
+	else
+		echo "n";
+	fi
+}
+function ask() {
+	local answer hint="Y/n";
+	if [ "$2" = "n" ]; then hint="y/N"; fi
+	read -r -p "$1 ($hint)? " answer;
+	answer="${answer,,}";
+	if [ "${answer:-$2}" = "y" ] || [ "${answer:0:1}" = "y" ]; then echo "y"; else echo "n"; fi
+}
+if [ "$container" != "y" ]; then
+	defaultAutostart=$(unit_choice "$assemblyName.service");
+	defaultAutoupdate=$(unit_choice "${assemblyName}Updater.service");
+	if [ "$quiet" != "y" ]; then
+		[ -z "$autostart" ] && autostart=$(ask "Start the server at boot" "$defaultAutostart");
+		[ -z "$autoupdate" ] && autoupdate=$(ask "Keep the server up to date by itself" "$defaultAutoupdate");
+	fi
+	autostart=${autostart:-$defaultAutostart};
+	autoupdate=${autoupdate:-$defaultAutoupdate};
+fi
 
 # In a container nothing else patches the libraries the server runs on but never installs itself -
 # the image brought them - so each release upgrades them there: OpenSSL, the root certificates, ICU,
@@ -265,12 +316,18 @@ if [ "$httpBaseUrl" != "" ]; then
 	fi
 fi
 
-# init service. The paths are quoted: the install's folder may hold a space.
-if [ "${autostart,,}" = "y" ] && [ "$container" != "y" ]; then
-	# network-online: at boot the server would otherwise start before there is a route, find no primary
-	# adapter, and run without its tun (proxy only) until restarted
-	echo "creating autostart service... Name: $assemblyName";
-	service="
+# The units. The paths are quoted: the install's folder may hold a space. Starting at boot and updating
+# are two choices: a unit neither ever asked for is not written, and one that is there stays, disabled,
+# when its choice is no.
+if [ "$container" != "y" ]; then
+	serviceUnit="/etc/systemd/system/$assemblyName.service";
+	updaterUnit="/etc/systemd/system/${assemblyName}Updater.service";
+
+	if [ "$autostart" = "y" ] || [ -f "$serviceUnit" ]; then
+		# network-online: at boot the server would otherwise start before there is a route, find no
+		# primary adapter, and run without its tun (proxy only) until restarted
+		echo "Writing the $assemblyName service...";
+		service="
 [Unit]
 Description=$productName
 Wants=network-online.target
@@ -289,13 +346,14 @@ StandardError=journal
 [Install]
 WantedBy=default.target
 ";
+		echo "$service" > "$serviceUnit";
+	fi
 
-	echo "$service" > "/etc/systemd/system/$assemblyName.service";
-
-	# network-online: at boot the first check would otherwise run before there is a route, fail, and
-	# wait 12 hours for the next
-	echo "creating VpnHood Updater service... Name: ${assemblyName}Updater";
-	service="
+	if [ "$autoupdate" = "y" ] || [ -f "$updaterUnit" ]; then
+		# network-online: at boot the first check would otherwise run before there is a route, fail, and
+		# wait 12 hours for the next
+		echo "Writing the $assemblyName updater service...";
+		service="
 [Unit]
 Description=$productName Updater
 Wants=network-online.target
@@ -311,20 +369,37 @@ RestartSec=720min
 [Install]
 WantedBy=default.target
 ";
-	echo "$service" > "/etc/systemd/system/${assemblyName}Updater.service";
+		echo "$service" > "$updaterUnit";
+	fi
 
-	# Executing services
-	echo "Executing $assemblyName services...";
 	systemctl daemon-reload;
-	
-	systemctl enable $assemblyName.service;
-	systemctl restart $assemblyName.service;
-	
-	systemctl enable ${assemblyName}Updater.service;
-	# Not from inside it (above): the unit's next run takes the unit file and the vhupdate written
-	# here anyway.
-	if [ "$insideUpdaterUnit" != "y" ]; then
-		systemctl restart ${assemblyName}Updater.service;
+
+	# A server that runs now runs the new version, whether or not it starts at boot
+	if [ -f "$serviceUnit" ]; then
+		if [ "$autostart" = "y" ]; then
+			systemctl enable "$assemblyName.service";
+		else
+			systemctl disable "$assemblyName.service" 2>/dev/null;
+		fi
+		if [ "$autostart" = "y" ] || systemctl is-active --quiet "$assemblyName.service"; then
+			systemctl restart "$assemblyName.service";
+		fi
+	fi
+
+	# Never stopped from inside it: this script would stop with it and nothing would start it again.
+	# Its next run takes the unit file and the vhupdate written here anyway.
+	if [ -f "$updaterUnit" ]; then
+		if [ "$autoupdate" = "y" ]; then
+			systemctl enable "${assemblyName}Updater.service";
+			if [ "$insideUpdaterUnit" != "y" ]; then
+				systemctl restart "${assemblyName}Updater.service";
+			fi
+		else
+			systemctl disable "${assemblyName}Updater.service" 2>/dev/null;
+			if [ "$insideUpdaterUnit" != "y" ]; then
+				systemctl stop "${assemblyName}Updater.service";
+			fi
+		fi
 	fi
 fi
 

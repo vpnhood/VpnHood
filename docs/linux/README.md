@@ -33,6 +33,8 @@ The installer must run as root and will say so rather than half-install. It:
   keeping the three newest, any installed in the last 30 days and any still running
 - puts `vhclient` on your `PATH` (`/usr/local/bin/vhclient`)
 - writes and starts `VpnHoodClient.service`, enabled at boot unless you answer no
+- writes `VpnHoodClientUpdater.service`, which keeps the app up to date unless you answer no; a
+  question of its own, apart from the one about the boot
 - on a machine with a graphical target, adds **VpnHood! CLIENT** to the application menu and
   installs the libraries the window needs (`libx11-6`, `libice6`, `libsm6`, `libfontconfig1`,
   `xdg-utils`); without `apt`, it names any of them it cannot find, for you to install
@@ -43,10 +45,14 @@ Flags worth knowing:
 
 | Flag | Effect |
 | --- | --- |
-| `-q` | No questions. |
-| `-autostart` | Start at boot (the default answer). |
+| `-q` | No questions. An update keeps the install's choices; a new install starts at boot and updates itself. |
+| `-noautostart` | Do not start the service at boot. |
+| `-noautoupdate` | Do not update the app by itself. |
 | `-nodesktop` | Service and commands only: no menu entry, no GUI libraries. Use this on a server. |
 | `-desktop` | Force the menu entry on, where the graphical target was not detected. |
+| `-help` | List the options. |
+
+An option from an earlier release, such as `-autostart`, is still taken.
 
 For VpnHood! CONNECT the names are `vhconnect` and `VpnHoodConnect.service`. It ships with its
 server built in and cannot be given another access key, so it has **no `profile` command and no
@@ -178,7 +184,7 @@ without privilege.
 Install with `-nodesktop`, then drive it from the shell or from a unit of your own:
 
 ```bash
-sudo su -c "bash <(wget -qO- https://.../VpnHoodClient-linux.sh) -q -autostart -nodesktop"
+sudo su -c "bash <(wget -qO- https://.../VpnHoodClient-linux.sh) -q -nodesktop"
 sudo vhclient profile add /root/access-key.txt
 vhclient connect --location US/Virginia
 vhclient status

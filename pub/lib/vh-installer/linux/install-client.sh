@@ -36,21 +36,51 @@ launcher="$(launcherNameParam)";
 destinationPath="/opt/$assemblyName";
 packageFile="";
 autostart="";
+autoupdate="";
 quiet="";
 withDesktop="";
 
-# Read arguments
+function show_help() {
+	echo "Usage: $assemblyName-linux.sh [options]";
+	echo "  -q                    no questions: what is not given keeps the install's choices,";
+	echo "                        and a new install starts at boot and updates itself";
+	echo "  -noautostart          do not start the VPN service at boot";
+	echo "  -noautoupdate         do not update the app by itself";
+	echo "  -desktop, -nodesktop  the menu entry and the window's libraries, or not (found by default)";
+	echo "  -help                 this";
+}
+
+# Read arguments. Every option an earlier release took still works: the updaters of installed apps
+# run this script with theirs.
 for i;
 do
 arg=$i;
+# Compatibility (2026-10): the default now; the updaters before this release pass it. Drop a few months
+# after this ships.
 if [ "$arg" = "-autostart" ]; then
 	autostart="y";
 	lastArg="";
 	continue;
 
+elif [ "$arg" = "-noautostart" ]; then
+	autostart="n";
+	lastArg=""; continue;
+
+elif [ "$arg" = "-autoupdate" ]; then
+	autoupdate="y";
+	lastArg=""; continue;
+
+elif [ "$arg" = "-noautoupdate" ]; then
+	autoupdate="n";
+	lastArg=""; continue;
+
 elif [ "$arg" = "-q" ]; then
 	quiet="y";
 	lastArg=""; continue;
+
+elif [ "$arg" = "-help" ] || [ "$arg" = "--help" ]; then
+	show_help;
+	exit 0;
 
 # Force the window's side of the install on or off rather than let it be guessed. -nodesktop is
 # for a server or a container: no desktop entry, no GUI libraries pulled in, the service and the
@@ -85,14 +115,14 @@ elif [ "$lastArg" = "-versionTag" ]; then
 	continue;
 
 elif [ "$lastArg" != "" ]; then
-	echo "Unknown argument! argument: $lastArg";
+	echo "Unknown argument! argument: $lastArg (-help lists the options)";
 	exit 1;
 fi;
 lastArg=$arg;
 done;
 # a last option still waiting for its value, or an unknown last one
 if [ "$lastArg" != "" ]; then
-	echo "Unknown argument or missing value! argument: $lastArg";
+	echo "Unknown argument or missing value! argument: $lastArg (-help lists the options)";
 	exit 1;
 fi
 
@@ -133,18 +163,30 @@ if [ "$withDesktop" == "" ]; then
 	fi
 fi
 
-# User interaction
+# A choice no option made keeps the install's own, so an update - run with -q alone - changes none; a
+# new install starts at boot and updates itself. Asked unless -q, with that as the answer Enter gives.
+function unit_choice() {
+	if [ ! -f "$destinationPath/publish.json" ] || systemctl is-enabled --quiet "$1" 2>/dev/null; then
+		echo "y";
+	else
+		echo "n";
+	fi
+}
+function ask() {
+	local answer hint="Y/n";
+	if [ "$2" = "n" ]; then hint="y/N"; fi
+	read -r -p "$1 ($hint)? " answer;
+	answer="${answer,,}";
+	if [ "${answer:-$2}" = "y" ] || [ "${answer:0:1}" = "y" ]; then echo "y"; else echo "n"; fi
+}
+defaultAutostart=$(unit_choice "$assemblyName.service");
+defaultAutoupdate=$(unit_choice "${assemblyName}Updater.service");
 if [ "$quiet" != "y" ]; then
-	if [ "$autostart" == "" ]; then
-		read -p "Start the VpnHood service at boot (Y/n)? " autostart;
-		if [ -z "$autostart" ]; then
-			autostart="y";
-		fi;
-	fi;
-fi;
-if [ "$autostart" == "" ]; then
-	autostart="y";
+	[ -z "$autostart" ] && autostart=$(ask "Start the VpnHood service at boot" "$defaultAutostart");
+	[ -z "$autoupdate" ] && autoupdate=$(ask "Keep VpnHood up to date by itself" "$defaultAutoupdate");
 fi
+autostart=${autostart:-$defaultAutostart};
+autoupdate=${autoupdate:-$defaultAutoupdate};
 
 # ------------------------------------------------------------------
 # Dependencies
@@ -376,17 +418,25 @@ echo "$updaterService" > "/etc/systemd/system/${assemblyName}Updater.service";
 
 systemctl daemon-reload;
 
-if [ "${autostart,,}" = "y" ]; then
+if [ "$autostart" = "y" ]; then
 	systemctl enable "$assemblyName.service";
+else
+	systemctl disable "$assemblyName.service" >/dev/null 2>&1;
+fi
+
+# Its own choice, apart from the boot's. Never stopped from inside it (above): this script would stop
+# with it and nothing would start it again; its next run takes the unit file and the vhupdate written
+# here anyway.
+if [ "$autoupdate" = "y" ]; then
 	systemctl enable "${assemblyName}Updater.service";
-	# Not from inside it (above): the unit's next run takes the unit file and the vhupdate written
-	# here anyway.
 	if [ "$insideUpdaterUnit" != "y" ]; then
 		systemctl restart "${assemblyName}Updater.service";
 	fi
 else
-	systemctl disable "$assemblyName.service" >/dev/null 2>&1;
 	systemctl disable "${assemblyName}Updater.service" >/dev/null 2>&1;
+	if [ "$insideUpdaterUnit" != "y" ]; then
+		systemctl stop "${assemblyName}Updater.service";
+	fi
 fi
 
 # Started either way: a person who said no to "at boot" still expects the app they just installed

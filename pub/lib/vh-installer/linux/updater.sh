@@ -91,8 +91,9 @@ if ! wget -qO "$installScriptFile" "$onlineInstallScriptUrl"; then
     echo "Could not download the install script! Url: $onlineInstallScriptUrl";
     exit 1;
 fi
-modeArg="-autostart";
+# -q alone: the install keeps its own choices, starting at boot and updating among them
 if [ "$container" = "y" ]; then
-    modeArg="-container";
+    bash "$installScriptFile" -q -destination "$curDir" -container;
+else
+    bash "$installScriptFile" -q -destination "$curDir";
 fi
-bash "$installScriptFile" -q -destination "$curDir" "$modeArg";

@@ -42,9 +42,10 @@ try
         exit;
     }
 
-    # Install the new version
+    # Install the new version; -q alone, so the install keeps its own choices, starting at boot and
+    # updating among them
     Write-Output "Installing the latest version...";
-    & ([scriptblock]::Create((Invoke-RestMethod -Uri $onlineInstallScriptUrl))) -q -autostart;
+    & ([scriptblock]::Create((Invoke-RestMethod -Uri $onlineInstallScriptUrl))) -q;
 }
 finally
 {

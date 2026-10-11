@@ -14,7 +14,9 @@
 * Fix: A rewarded ad's reward is no longer undone by a usage report that crossed it on the server, which could end the session early.
 * Fix: VpnHoodServer no longer fails a connection when two clients connect at the same moment, nor a client that comes back while its idle session is being removed.
 * Fix: VpnHoodServer removes the saved records of sessions whose clients never came back; they used to pile up in its internal/sessions folder.
-* Update: On Linux, the installer notes when firewalld or ufw is active, since clients reach the server only through the ports the firewall allows; opening them stays the administrator's.
+* Update: The installer asks about updating apart from starting at boot, and both are on by default: `-noautostart` and `-noautoupdate` turn them off, `-autostart` is no longer needed, and an update keeps the choices made at install. Every earlier option still works, `-restBaseUrl`, `-restAuthorization` and `-secret` again among them; `-help` lists them.
+* Fix: On Windows, an install or update unpacks the new version before it stops the server, and starts the server again if anything fails after the stop, so a failed download or update no longer leaves the server down. The updater's own scheduled task is never stopped or replaced by an install.
+* Update: The installer notes an active firewall - firewalld or ufw on Linux, Windows Firewall on Windows - since clients reach the server only through the ports it allows; opening them stays the administrator's.
 * Feature: VpnHoodServer has an uninstaller: `sudo /opt/VpnHoodServer/vhuninstall` on Linux; on Windows it is listed in Installed apps, or run `vhuninstall.ps1` in its folder. Its settings and certificates stay for a later install unless you add `-purge`. An install gets it with its next update.
 * Fix: A self-hosted VpnHoodServer no longer logs an error at start for each session that closed in the last day; it skips them, as they are not to be recovered.
 * Fix: Session timeouts and cleanup no longer drift with the server's time zone or a daylight-saving change.

@@ -334,4 +334,17 @@ echo "$destinationPath/$launcher";
 if [ "$container" != "y" ]; then
 	echo "To uninstall it: sudo \"$destinationPath/vhuninstall\"";
 fi
+
+# The firewall is the administrator's to open: this says only that there is one, as the ports are
+# the server's settings, which can change after this.
+firewall="";
+if systemctl is-active --quiet firewalld 2>/dev/null; then
+	firewall="firewalld";
+elif command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "^Status: active"; then
+	firewall="ufw";
+fi
+if [ "$container" != "y" ] && [ -n "$firewall" ]; then
+	echo "NOTE: $firewall is active on this machine. Clients reach the server only through ports it";
+	echo "      allows: allow the ports the server listens on (TCP 443 by default).";
+fi
 } # the group opened at the top

@@ -14,6 +14,7 @@
 * Fix: A rewarded ad's reward is no longer undone by a usage report that crossed it on the server, which could end the session early.
 * Fix: VpnHoodServer no longer fails a connection when two clients connect at the same moment, nor a client that comes back while its idle session is being removed.
 * Fix: VpnHoodServer removes the saved records of sessions whose clients never came back; they used to pile up in its internal/sessions folder.
+* Update: On Linux, the installer notes when firewalld or ufw is active, since clients reach the server only through the ports the firewall allows; opening them stays the administrator's.
 * Feature: VpnHoodServer has an uninstaller: `sudo /opt/VpnHoodServer/vhuninstall` on Linux; on Windows it is listed in Installed apps, or run `vhuninstall.ps1` in its folder. Its settings and certificates stay for a later install unless you add `-purge`. An install gets it with its next update.
 * Fix: A self-hosted VpnHoodServer no longer logs an error at start for each session that closed in the last day; it skips them, as they are not to be recovered.
 * Fix: Session timeouts and cleanup no longer drift with the server's time zone or a daylight-saving change.

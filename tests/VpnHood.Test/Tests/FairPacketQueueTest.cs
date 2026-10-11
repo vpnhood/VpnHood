@@ -179,6 +179,34 @@ public class FairPacketQueueTest : TestBase
     }
 
     [TestMethod]
+    public async Task Faulted_queue_drops_what_it_holds_and_starts_afresh()
+    {
+        // a fault outside a turn, which only a bug can cause: here a failed turn whose packet then fails to dispose
+        using var queue = new TestHeldFairPacketQueue(capacity: 4) { FailSendPort = 1000 };
+        var faultyMemory = BuildPacketMemory(1000);
+        faultyMemory.FailsFirstDispose = true;
+        var faultyPacket = PacketBuilder.Attach(faultyMemory);
+        Assert.IsTrue(queue.SendPacketQueued(faultyPacket));
+        await AssertEqualsWait(1, () => queue.TurnsStarted);
+        var heldMemory = BuildPacketMemory(2000);
+        var heldPacket = PacketBuilder.Attach(heldMemory);
+        Assert.IsTrue(queue.SendPacketQueued(heldPacket));
+
+        // the packet held goes too, and the queue goes on
+        queue.Release();
+        await AssertEqualsWait(2L, () => queue.DroppedPackets);
+        Assert.IsTrue(heldMemory.IsDisposed);
+        Assert.AreEqual(0, queue.QueueLength);
+        Assert.IsTrue(queue.SendPacketQueued(BuildPacket(3000)));
+        await AssertEqualsWait(1, () => queue.SentPorts.Count);
+        Assert.AreEqual(3000, queue.SentPorts[0]);
+
+        // its memory throws only once, so no finalizer meets the fault
+        faultyPacket.Dispose();
+        GC.KeepAlive(heldPacket);
+    }
+
+    [TestMethod]
     public async Task Disposed_queue_drops_what_it_holds_and_refuses_later_sends()
     {
         var queue = new TestHeldFairPacketQueue(capacity: 4);

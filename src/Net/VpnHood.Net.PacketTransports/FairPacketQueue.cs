@@ -226,8 +226,7 @@ public abstract class FairPacketQueue : IDisposable
             catch (Exception ex) {
                 // Only a bug gets here. The queue never gives up, as its owner stays open until it is disposed: it
                 // drops what it holds and starts afresh
-                VhLogger.Instance.LogError(ex, "A fair packet queue failed and starts afresh. Type: {Type}",
-                    VhLogger.FormatType(this));
+                LogFault(ex);
                 foreach (var ipPacket in Restart())
                     DropPacket(ipPacket, null, "Dropping a packet. Send queue starts afresh.");
             }
@@ -246,6 +245,17 @@ public abstract class FairPacketQueue : IDisposable
         }
 
         ipPacket.Dispose();
+    }
+
+    private void LogFault(Exception exception)
+    {
+        try {
+            VhLogger.Instance.LogError(exception, "A fair packet queue failed and starts afresh. Type: {Type}",
+                VhLogger.FormatType(this));
+        }
+        catch {
+            // as in DropPacket, a failing logger must not end the loop
+        }
     }
 
     private void LogPacket(IpPacket ipPacket, Exception? exception, string message)
@@ -270,7 +280,7 @@ public abstract class FairPacketQueue : IDisposable
     }
 
     // marks the queue disposed and takes the packets it holds; a second call takes none
-    private List<IpPacket> Close()
+    private IReadOnlyList<IpPacket> Close()
     {
         lock (_lock) {
             _disposed = true;
@@ -279,21 +289,17 @@ public abstract class FairPacketQueue : IDisposable
     }
 
     // after a fault: takes the packets the queue holds, and it starts afresh
-    private List<IpPacket> Restart()
+    private IReadOnlyList<IpPacket> Restart()
     {
         lock (_lock)
             return TakeAllPackets();
     }
 
-    // under the lock: the packets held, read from the slots rather than the links a bug may have broken, and the
-    // queue emptied
-    private List<IpPacket> TakeAllPackets()
+    // under the lock: the packets held, read from the slots rather than the count and links a bug may have
+    // broken, and the queue emptied
+    private IReadOnlyList<IpPacket> TakeAllPackets()
     {
-        var ipPackets = new List<IpPacket>(_count);
-        foreach (var ipPacket in _slots)
-            if (ipPacket != null)
-                ipPackets.Add(ipPacket);
-
+        var ipPackets = _slots.OfType<IpPacket>().ToArray();
         ClearSlots();
         return ipPackets;
     }

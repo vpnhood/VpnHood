@@ -9,8 +9,12 @@ public class TestMemoryOwner(byte[] buffer) : IMemoryOwner<byte>
     public bool IsDisposed => Volatile.Read(ref _disposeCount) > 0;
     public Memory<byte> Memory => buffer;
 
+    // set, its first disposal throws, as no memory should: a fault where none is expected
+    public bool FailsFirstDispose { get; set; }
+
     public void Dispose()
     {
-        Interlocked.Increment(ref _disposeCount);
+        if (Interlocked.Increment(ref _disposeCount) == 1 && FailsFirstDispose)
+            throw new InvalidOperationException("Test: the disposal failed.");
     }
 }

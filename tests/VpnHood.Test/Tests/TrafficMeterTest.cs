@@ -10,6 +10,7 @@ using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.Dom;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -174,6 +175,117 @@ public class TrafficMeterTest : TestBase
         Assert.IsGreaterThan(0, tunnel.QueueDroppedPackets, "The tunnel's queue should drop the excess.");
         await AssertEqualsWait(true, () => Volatile.Read(ref quietPacketsReceived) >= quietPacketsSent * 0.9,
             "The quiet flow should not lose its packets to the flood.");
+    }
+
+    [TestMethod]
+    public async Task Packets_together_get_a_streams_share_beside_busy_streams()
+    {
+        // a tunnel throttled to 1 Mbps with no burst: a turn at the limit is 2.5 KB, and a stream reads 6.25 KB
+        const long maxSpeed = 125_000;
+        using var tunnel = new ThrottledTunnel(new TunnelOptions {
+            MaxPacketChannelCount = 1,
+            Mtu = TransportDefaults.MtuClient,
+            MaxSpeed = new Traffic(sent: maxSpeed, received: 0),
+            MaxSpeedBurst = new Traffic(sent: 0, received: 0)
+        });
+        var packetChannel = new TestPacketChannel();
+        tunnel.AddChannel(packetChannel, disposeIfFailed: true);
+
+        // four proxy streams on the tunnel's meter, each always with bytes to send
+        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        var cancellationToken = cancellationTokenSource.Token;
+        var disposables = new List<IDisposable>();
+        long streamBytes = 0;
+        try {
+            for (var i = 0; i < 4; i++) {
+                var (hostWriter, hostEnd) = await ConnectLoopbackAsync();
+                var (tunnelEnd, tunnelReader) = await ConnectLoopbackAsync();
+                var proxyChannel = new ProxyChannel($"stream{i}",
+                    new TcpStreamConnection(hostEnd, connectionName: "host", isServer: true),
+                    new TcpStreamConnection(tunnelEnd, connectionName: "tunnel", isServer: true),
+                    ServerTransportDefaults.StreamProxyBufferSize, tunnel.TrafficMeter);
+                disposables.AddRange([proxyChannel, hostWriter, hostEnd, tunnelEnd, tunnelReader]);
+                proxyChannel.Start();
+                _ = FloodAsync(hostWriter.GetStream(), cancellationToken);
+                _ = DrainAsync(tunnelReader.GetStream(), bytes => Interlocked.Add(ref streamBytes, bytes),
+                    cancellationToken);
+            }
+
+            // a packet flood beside them, faster than the limit; measured after the first half second
+            var stopwatch = Stopwatch.StartNew();
+            await FloodPacketsAsync(tunnel, stopwatch, TimeSpan.FromSeconds(0.5));
+            var packetBytesAtStart = packetChannel.SentBytes;
+            var streamBytesAtStart = Interlocked.Read(ref streamBytes);
+            var measureStopwatch = Stopwatch.StartNew();
+            await FloodPacketsAsync(tunnel, stopwatch, TimeSpan.FromSeconds(3));
+            var packetBytes = packetChannel.SentBytes - packetBytesAtStart;
+            var allBytes = packetBytes + Interlocked.Read(ref streamBytes) - streamBytesAtStart;
+
+            // the packets together get one stream's share, about a fifth, and the limit holds. A queue that waits
+            // after each packet gets 14% here, and 5% beside streams that pay a whole read at once
+            var share = (double)packetBytes / allBytes;
+            var speed = allBytes / measureStopwatch.Elapsed.TotalSeconds;
+            Assert.IsTrue(share is > 0.17 and < 0.35, $"Packets' share: {share:P0}");
+            Assert.IsTrue(speed is > maxSpeed * 0.6 and < maxSpeed * 1.4, $"Speed: {speed:F0} B/s");
+        }
+        finally {
+            await cancellationTokenSource.CancelAsync();
+            foreach (var disposable in disposables)
+                disposable.Dispose();
+        }
+    }
+
+    // sends UDP packets through the tunnel, faster than any limit here, until the stopwatch reaches the time
+    private async Task FloodPacketsAsync(Tunnel tunnel, Stopwatch stopwatch, TimeSpan until)
+    {
+        for (var i = 0; stopwatch.Elapsed < until; i++) {
+            tunnel.SendPacketQueued(PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("10.0.0.3"),
+                1000, 2000, new byte[1200]));
+            if (i % 10 == 0)
+                await Task.Delay(1, TestCt);
+        }
+    }
+
+    // the two ends of a loopback TCP connection
+    private async Task<(TcpClient Client, TcpClient Server)> ConnectLoopbackAsync()
+    {
+        var tcpListener = new TcpListener(IPAddress.Loopback, 0);
+        tcpListener.Start();
+        try {
+            var listenerTask = tcpListener.AcceptTcpClientAsync(TestCt).AsTask();
+            var tcpClient = new TcpClient();
+            await tcpClient.ConnectAsync((IPEndPoint)tcpListener.LocalEndpoint, TestCt);
+            return (tcpClient, await listenerTask);
+        }
+        finally {
+            tcpListener.Stop();
+        }
+    }
+
+    // writes into the stream until cancelled
+    private static async Task FloodAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[16 * 1024];
+        try {
+            while (true)
+                await stream.WriteAsync(buffer, cancellationToken);
+        }
+        catch when (cancellationToken.IsCancellationRequested) {
+            // the test is over
+        }
+    }
+
+    // reads the stream until cancelled, reporting each read's byte count
+    private static async Task DrainAsync(Stream stream, Action<int> onRead, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[16 * 1024];
+        try {
+            while (await stream.ReadAsync(buffer, cancellationToken) is var bytesRead and > 0)
+                onRead(bytesRead);
+        }
+        catch when (cancellationToken.IsCancellationRequested) {
+            // the test is over
+        }
     }
 
     // We use QUIC to make sure packet channel is used

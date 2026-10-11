@@ -33,20 +33,21 @@ public class ThrottledTunnelTest : TestBase
     [TestMethod]
     public async Task Dispose_ends_the_wait_on_the_limit_and_drops_the_queued_packets()
     {
-        // at 1000 B/s with no burst, the first packet makes the queue wait more than a second
+        // at 1000 B/s with no burst, a turn is the smallest, 2 KB: the queue's second packet ends it, and the queue
+        // waits more than two seconds
         using var tunnel = new ThrottledTunnel(CreateTunnelOptions(maxSpeed: 1000));
         var channel = new TestPacketChannel();
         tunnel.AddChannel(channel, disposeIfFailed: true);
         for (var i = 0; i < 5; i++)
             tunnel.SendPacketQueued(PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("10.0.0.3"),
                 1000, 2000, new byte[1200]));
-        await AssertEqualsWait(1, () => channel.SentPackets);
+        await AssertEqualsWait(2, () => channel.SentPackets);
 
         // the disposal does not wait for the limit, and the packets still queued are dropped
         var stopwatch = Stopwatch.StartNew();
         tunnel.Dispose();
         Assert.IsLessThan(TimeSpan.FromMilliseconds(500), stopwatch.Elapsed);
-        Assert.AreEqual(4, tunnel.QueueDroppedPackets);
-        Assert.AreEqual(1, channel.SentPackets);
+        Assert.AreEqual(3, tunnel.QueueDroppedPackets);
+        Assert.AreEqual(2, channel.SentPackets);
     }
 }

@@ -17,6 +17,12 @@ internal sealed class TrafficMeterItem : IDisposable
     // A longer wait is cut here; the debt behind it carries to the next charge
     private const long MaxWaitNanoseconds = 24 * 60 * 60 * 1000 * NanosecondsPerMillisecond;
 
+    // A taker's turn, the bytes it charges between two looks at the debt, is 20 ms of the limit (the wait
+    // threshold), at least a stream's smallest read and at most a server stream's buffer. Takers with equal turns
+    // share the limit equally, and a round of them stays short for a packet waiting its turn
+    private const long MinTurnLength = 2 * 1024;
+    private const long MaxTurnLength = 8 * 1024;
+
     private long _total;
     private long _lastTotal;
     private DateTime _lastSpeedUpdateTime = FastDateTime.UtcNow;
@@ -38,6 +44,10 @@ internal sealed class TrafficMeterItem : IDisposable
     public long Burst { get; set; }
 
     public long Traffic => Interlocked.Read(ref _total);
+
+    /// <remarks>Unit: bytes.</remarks>
+    public long TurnLength => Math.Clamp(MaxSpeed * MinWaitNanoseconds / (1000 * NanosecondsPerMillisecond),
+        MinTurnLength, MaxTurnLength);
 
     /// <remarks>Unit: bytes per second.</remarks>
     public long Speed {
@@ -65,6 +75,13 @@ internal sealed class TrafficMeterItem : IDisposable
             ? default
             : new ValueTask(Task.Delay(TimeSpan.FromTicks(Math.Min(debt, MaxWaitNanoseconds) / 100),
                 cancellationToken));
+    }
+
+    // charges the bytes without waiting, for a taker that waits once per turn
+    public void Charge(long bytes)
+    {
+        if (MaxSpeed > 0)
+            TryCharge(bytes, long.MaxValue, out _);
     }
 
     // the police, for a path that cannot wait: charges the bytes, or refuses them uncharged

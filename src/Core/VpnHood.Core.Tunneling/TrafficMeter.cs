@@ -6,8 +6,9 @@ namespace VpnHood.Core.Tunneling;
 /// <summary>
 /// Tracks tunnel traffic as two independent directions, and holds the session's speed limit: one bucket per
 /// direction, which every path of the session charges, so the limit covers all of its traffic. A sender
-/// waits on it (the tunnel's queue for packets, each proxy stream for its reads); a receiver only enforces
-/// it, slowing a stream or dropping a datagram the peer sent past the limit.
+/// waits on it once per turn (the tunnel's queue for its packets, each proxy stream for its reads), so its
+/// senders share it equally; a receiver only enforces it, slowing a stream or dropping a datagram the peer
+/// sent past the limit.
 /// For session-facing limits, server download maps to send and server upload maps to receive.
 /// </summary>
 public class TrafficMeter : IDisposable
@@ -65,6 +66,16 @@ public class TrafficMeter : IDisposable
     public Traffic Speed => new(_sent.Speed, _received.Speed);
 
     /// <summary>
+    /// A sender's turn at the send limit (bytes): what it charges between two waits.
+    /// </summary>
+    public long SendTurnLength => _sent.TurnLength;
+
+    /// <summary>
+    /// A receiver's turn at the receive limit (bytes): what it charges between two waits.
+    /// </summary>
+    public long ReceiveTurnLength => _received.TurnLength;
+
+    /// <summary>
     /// Reports sent bytes to the traffic meter. This method is thread-safe.
     /// </summary>
     public void OnSent(long bytes)
@@ -90,6 +101,14 @@ public class TrafficMeter : IDisposable
     public ValueTask ThrottleSendAsync(long bytes, CancellationToken cancellationToken)
     {
         return _sent.ThrottleAsync(bytes, cancellationToken);
+    }
+
+    /// <summary>
+    /// Charges bytes to the send limit without waiting, for a sender that waits once per turn.
+    /// </summary>
+    public void ChargeSend(long bytes)
+    {
+        _sent.Charge(bytes);
     }
 
     /// <summary>

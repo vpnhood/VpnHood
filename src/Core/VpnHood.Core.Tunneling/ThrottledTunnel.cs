@@ -8,15 +8,20 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.Core.Tunneling;
 
 // A tunnel with a send limit. The session's packets wait in its queue, one for all its channels, and leave it at
-// the limit: the session's bottleneck, sharing the limit with its proxy streams. The queue holds about a quarter
-// second of the limit, at least a new connection's first burst, in lanes by flow that take turns, so a flow that
-// floods fills only its own lane
+// the limit: the session's bottleneck, sharing the limit with its proxy streams. The queue takes its turns at the
+// limit as one more stream, so beside busy streams all its packets together get a stream's share. It holds about
+// a quarter second of the limit, at least a new connection's first burst, in lanes by flow that take turns, so a
+// flow that floods fills only its own lane
 public class ThrottledTunnel : Tunnel
 {
     private const int MinQueueCapacity = 32;
     private readonly ThrottleQueue _throttleQueue;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly CancellationToken _cancellationToken;
+    private readonly long _turnLength;
+
+    // the bytes sent in this turn, an overshoot carried from the last; only the queue's turns touch it
+    private long _turnBytes;
 
     // the packets the queue dropped: a full queue's oldest, and those it held at the end
     public long QueueDroppedPackets => _throttleQueue.DroppedPackets;
@@ -25,6 +30,7 @@ public class ThrottledTunnel : Tunnel
         : base(options, throttlesPackets: true)
     {
         _cancellationToken = _cancellationTokenSource.Token;
+        _turnLength = TrafficMeter.SendTurnLength;
         _throttleQueue = new ThrottleQueue(this, (int)Math.Clamp(
             options.MaxSpeed.Sent / 4 / TransportDefaults.MaxPacketSize,
             MinQueueCapacity, PacketTransportOptions.DefaultQueueCapacity));
@@ -39,9 +45,10 @@ public class ThrottledTunnel : Tunnel
         return default;
     }
 
-    // A packet's turn: routed, then paid for, the wait holding the next turn. The length is read first, as the
-    // channel may send and dispose the packet at once. Once handed on, the packet is the channel's, so nothing
-    // after may throw back to the queue, which would drop it
+    // A packet's turn in the queue: routed, then paid for. Each packet is charged at once, but the queue waits on
+    // the limit only with the last packet of its turn at the limit, the wait holding the queue's next turn. The
+    // length is read first, as the channel may send and dispose the packet at once. Once handed on, the packet
+    // is the channel's, so nothing after may throw back to the queue, which would drop it
     private ValueTask SendThrottledPacketAsync(IpPacket ipPacket)
     {
         var packetLength = ipPacket.PacketLength;
@@ -49,6 +56,13 @@ public class ThrottledTunnel : Tunnel
             return default;
 
         try {
+            _turnBytes += packetLength;
+            if (_turnBytes < _turnLength) {
+                TrafficMeter.ChargeSend(packetLength);
+                return default;
+            }
+
+            _turnBytes -= _turnLength;
             var throttleTask = TrafficMeter.ThrottleSendAsync(packetLength, _cancellationToken);
             return throttleTask.IsCompletedSuccessfully ? default : WaitForThrottle(throttleTask);
         }

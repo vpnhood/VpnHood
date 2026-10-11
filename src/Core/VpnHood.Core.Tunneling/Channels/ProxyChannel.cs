@@ -216,8 +216,8 @@ public class ProxyChannel : IProxyChannel
         if (MemoryMarshal.TryGetArray<byte>(readBufferOwner.Memory, out var segment) && segment.Array != null)
             VhTypeTracker.Track(segment.Array);
 
-        // throttled, a read takes at most a twentieth of a second of the limit, so the session's streams and
-        // its packets take turns at the limit finely
+        // throttled, a read takes at most a twentieth of a second of the limit, so a stream holds few bytes while
+        // it pays for them in turns; a smaller read would slow a stream whose writes wait out the round trip
         var maxSpeed = _trafficMeter == null ? 0
             : isSendingToTunnel ? _trafficMeter.MaxSpeed.Sent : _trafficMeter.MaxSpeed.Received;
         var readLength = maxSpeed > 0
@@ -236,16 +236,9 @@ public class ProxyChannel : IProxyChannel
 
             // the limit is paid before the bytes go on, so a stream never runs ahead of it; a wait the channel's
             // close ends drops the bytes, as they have nowhere to go
-            if (_trafficMeter != null) {
-                try {
-                    await (isSendingToTunnel
-                        ? _trafficMeter.ThrottleSendAsync(bytesRead, _throttleCancellationToken)
-                        : _trafficMeter.ThrottleReceiveAsync(bytesRead, _throttleCancellationToken)).Vhc();
-                }
-                catch (OperationCanceledException) when (_throttleCancellationToken.IsCancellationRequested) {
-                    break;
-                }
-            }
+            if (maxSpeed > 0 && _trafficMeter != null &&
+                !await PayLimitAsync(_trafficMeter, isSendingToTunnel, bytesRead).Vhc())
+                break;
 
             // write to destination
             if (destinationPreserved != null)
@@ -273,6 +266,26 @@ public class ProxyChannel : IProxyChannel
                 else
                     _trafficMeter.OnReceived(bytesRead);
             }
+        }
+    }
+
+    // Pays for the bytes a turn at a time, so the session's other streams and its packet queue take their turns
+    // between; false once the channel's close ends a wait
+    private async ValueTask<bool> PayLimitAsync(TrafficMeter trafficMeter, bool isSendingToTunnel, int byteCount)
+    {
+        var turnLength = isSendingToTunnel ? trafficMeter.SendTurnLength : trafficMeter.ReceiveTurnLength;
+        try {
+            for (long paid = 0; paid < byteCount; paid += turnLength) {
+                var bytes = Math.Min(turnLength, byteCount - paid);
+                await (isSendingToTunnel
+                    ? trafficMeter.ThrottleSendAsync(bytes, _throttleCancellationToken)
+                    : trafficMeter.ThrottleReceiveAsync(bytes, _throttleCancellationToken)).Vhc();
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException) when (_throttleCancellationToken.IsCancellationRequested) {
+            return false;
         }
     }
 

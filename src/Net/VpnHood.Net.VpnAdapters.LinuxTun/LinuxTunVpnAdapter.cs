@@ -47,7 +47,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     public override bool IsNatSupported(IpVersion ipVersion) => true;
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
-    protected override bool RestartAfterNetworkAddressChanged => true;
+    // A client takes a new network without a restart, whose teardown would let the host's traffic pass
+    // outside the tunnel for its seconds; a server restarts, as its NAT names the card it started on
+    protected override bool RestartAfterNetworkAddressChanged => UseNat;
     protected override bool CheckAdapterInterfaceAfterNetworkChanged => true;
 
     public LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)

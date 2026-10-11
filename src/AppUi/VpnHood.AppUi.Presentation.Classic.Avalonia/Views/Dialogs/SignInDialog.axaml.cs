@@ -2,12 +2,14 @@
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppLib.Api.Accounts;
 using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Logging;
 using Avalonia;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
@@ -17,6 +19,8 @@ public partial class SignInDialog : DialogBase
     private readonly MainView _host;
     private readonly string? _primaryProviderId = VhApp.PrimaryProviderId;
     private bool _isWorking;
+    private bool _isPasswordResetAsked;
+    private Uri? _passwordResetUrl;
 
     public SignInDialog(MainView host)
     {
@@ -52,8 +56,6 @@ public partial class SignInDialog : DialogBase
         CodeBox.PlaceholderText = s.TwoFactorCode;
         // a TV types with a remote: its phone can type the same form instead
         PhoneLink.IsVisible = VhApp.IsTvUi;
-        // the one place the account website appears - where a browser can open it
-        ForgotButton.IsVisible = MainView.IsExternalLinkUsable && VhApp.Features.AccountWebsiteUrl != null;
 
         // with no identity provider to choose, the dialog opens on the form itself
         if (_primaryProviderId == null)
@@ -117,7 +119,27 @@ public partial class SignInDialog : DialogBase
         BackupStep.IsVisible = step == BackupStep;
         PasswordError.IsVisible = false;
         CodeError.IsVisible = false;
+        if (step == PasswordStep)
+            _ = ShowForgotWhenAvailable();
         FocusDefault();
+    }
+
+    // The one place the account website appears: asked once, when the password form first shows,
+    // and offered only when it names its page and a browser - or a TV's phone - can open it.
+    private async Task ShowForgotWhenAvailable()
+    {
+        if (_isPasswordResetAsked || !MainView.IsExternalLinkUsable)
+            return;
+
+        _isPasswordResetAsked = true;
+        try {
+            _passwordResetUrl = await VhApp.Api.Account.GetPasswordResetUrl(CancellationToken.None);
+            ForgotButton.IsVisible = _passwordResetUrl != null;
+        }
+        catch (Exception ex) {
+            // the form works without it: the link stays hidden
+            VhLogger.Instance.LogWarning(ex, "Could not get the password-reset page.");
+        }
     }
 
     private async void OnPrimaryClick(object? sender, RoutedEventArgs e)
@@ -211,7 +233,7 @@ public partial class SignInDialog : DialogBase
     private async void OnForgotClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.AccountWebsiteUrl is { } url)
+            if (_passwordResetUrl is { } url)
                 await _host.OpenLink(url, Strings.Current.ForgotPassword);
         }
         catch (Exception ex) {

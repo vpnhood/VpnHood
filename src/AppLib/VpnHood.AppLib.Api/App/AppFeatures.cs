@@ -33,9 +33,6 @@ public class AppFeatures
     // and the UI derives labels by convention (SIGN_IN_WITH_<UPPERCASE-ID>).
     public required IReadOnlyList<string> AuthProviderIds { get; init; }
 
-    // The human account website behind the auth provider — the password form's escape hatch
-    // ("forgot password?" opens it in the device browser). Null when no provider declares one.
-    public required Uri? AccountWebsiteUrl { get; init; }
     // See AppOptions.IsLicenseAgreementRequired. Never derive this from which product is running.
     public required bool IsLicenseAgreementRequired { get; init; }
 

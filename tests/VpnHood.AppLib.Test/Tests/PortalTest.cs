@@ -104,6 +104,21 @@ public class PortalTest
     }
 
     [TestMethod]
+    public async Task Forgot_password_opens_the_page_the_portal_names()
+    {
+        // the portal's own address, whatever its scheme: the app never builds it
+        const string pageUrl = "https://account.example.com/billing/index.php?rp=/password/reset";
+        _portal.Enqueue("GET /auth/password-reset", new { url = pageUrl });
+        using var authenticationProvider = CreateAuthenticationProvider();
+
+        var url = await authenticationProvider.GetPasswordResetUrl(CancellationToken.None);
+
+        Assert.AreEqual(pageUrl, url?.AbsoluteUri);
+        var request = _portal.Requests.Single(x => x.Route == "GET /auth/password-reset");
+        Assert.IsNull(request.Authorization, "the page is public: no session is sent");
+    }
+
+    [TestMethod]
     public async Task Requests_carry_the_session_as_bearer_and_portal_token()
     {
         _portal.Enqueue(SignInRoute, SignInData(accessToken: "tok-abc"));

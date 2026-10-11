@@ -6,12 +6,16 @@ namespace VpnHood.AppLib.Test.Providers;
 internal class TestAuthenticationProvider : IAuthenticationProvider
 {
     public IReadOnlyList<string> ProviderIds => [AuthProviders.Google];
-    public Uri? AccountWebsiteUrl => null;
     public string? UserId { get; private set; }
 
     public Task<string?> GetAccessToken(CancellationToken cancellationToken)
     {
         return Task.FromResult(UserId == null ? null : "test-access-token");
+    }
+
+    public Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken)
+    {
+        return Task.FromResult<Uri?>(null);
     }
 
     public void InvalidateAccessToken(string accessToken)

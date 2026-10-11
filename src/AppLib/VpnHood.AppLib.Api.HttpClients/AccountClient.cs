@@ -32,4 +32,9 @@ internal sealed class AccountClient(HttpClient httpClient) : AppApiClientBase(ht
     {
         return HttpGetAsync<Account?>(BaseUrl, null, cancellationToken);
     }
+
+    public Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken)
+    {
+        return HttpGetAsync<Uri?>(BaseUrl + "password-reset-url", null, cancellationToken);
+    }
 }

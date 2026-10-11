@@ -9,6 +9,7 @@ internal sealed class FakeAccountApi : IAccountApi
 {
     public Task<Account?> Get(CancellationToken cancellationToken) => Task.FromResult<Account?>(null);
     public Task Refresh(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken) => throw UnmockedCalls.Record("Account.GetPasswordResetUrl");
 
     public Task<SignInResult> SignIn(SignInOptions signInOptions, CancellationToken cancellationToken) => throw UnmockedCalls.Record("Account.SignIn");
     public Task SignOut(CancellationToken cancellationToken) => throw UnmockedCalls.Record("Account.SignOut");

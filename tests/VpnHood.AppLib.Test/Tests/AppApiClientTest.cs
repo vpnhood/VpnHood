@@ -91,6 +91,7 @@ public class AppApiClientTest : TestAppBase
 
         // nothing to say is an empty reply, not a failure
         Assert.IsNull(await api.Account.Get(CancellationToken.None));
+        Assert.IsNull(await api.Account.GetPasswordResetUrl(CancellationToken.None));
         Assert.IsNull(await api.ProxyEndPoints.GetDevice(CancellationToken.None));
 
         // the two replies that are not JSON: the log as text, the promotion image as bytes - while

@@ -94,6 +94,15 @@ public class PortalApiClient : ApiClientBase
     }
 
     /// <summary>
+    /// GET /auth/password-reset — the portal website's page for a forgotten password, as that website
+    /// builds it. Public: no session.
+    /// </summary>
+    public Task<PortalPasswordReset> GetPasswordReset(CancellationToken cancellationToken)
+    {
+        return HttpGetAsync<PortalPasswordReset>("auth/password-reset", null, cancellationToken);
+    }
+
+    /// <summary>
     /// POST /auth/sessions, the restore-credential form — a WebAuthn assertion from the restore key
     /// this device carried over from its predecessor (zero-tap sign-in restoration). Sign-in only;
     /// every failure is one neutral 401 `invalid_restore_credential`.

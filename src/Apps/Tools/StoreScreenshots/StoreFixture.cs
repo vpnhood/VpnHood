@@ -90,7 +90,6 @@ internal sealed class StoreFixture
         // a premium tier that gates nothing: the fixture's own premiumFeatures: [] in the old shape
         Fill(features, "premium", new JsonObject(), filled, "features");
         Fill(features, "authProviderIds", new JsonArray(), filled, "features");
-        Fill(features, "accountWebsiteUrl", null, filled, "features");
         Fill(features, "isLicenseAgreementRequired", false, filled, "features");
         Fill(features, "isRemoteAccessSupported", false, filled, "features");
         // both products ship the IP-location data, so their store pages show the country split

@@ -45,12 +45,6 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
 
     public string? UserId => Session?.UserId;
 
-    /// <summary>
-    /// The account website is the portal's own host — the API lives under it (…/modules/addons/…),
-    /// so the site root is where a person sets or recovers the client-area password.
-    /// </summary>
-    public Uri? AccountWebsiteUrl { get; }
-
     public PortalAuthenticationProvider(
         string storageFolderPath,
         Uri portalBaseUrl,
@@ -70,9 +64,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
             throw new ArgumentException("Multiple external providers declare the same sign-in method id.",
                 nameof(authenticationExternalProviders));
 
-        AccountWebsiteUrl = new Uri(portalBaseUrl.GetLeftPart(UriPartial.Authority));
-
-        // Its own client, for its own two calls (sign in, revoke) — never handed out.
+        // Its own client, for its own calls (sign in, revoke, the password-reset page) — never handed out.
         var handler = new HttpClientHandler();
         if (ignoreSslVerification) handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         _httpClient = new HttpClient(handler) { BaseAddress = portalBaseUrl };
@@ -180,6 +172,14 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     {
         var session = await TryGetSession(AppUiContext.Context, cancellationToken).Vhc();
         return session?.AccessToken;
+    }
+
+    // The portal names its own page: only its website knows its address and URL scheme.
+    public async Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken)
+    {
+        var apiClient = new PortalApiClient(_httpClient);
+        var passwordReset = await apiClient.GetPasswordReset(cancellationToken).Vhc();
+        return passwordReset.Url;
     }
 
     public async Task<SignInResult> SignIn(IUiContext uiContext, SignInOptions signInOptions,

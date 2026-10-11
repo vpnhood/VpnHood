@@ -14,6 +14,11 @@ public class AuthenticationService(
     public IReadOnlyList<string> ProviderIds => accountProvider.ProviderIds;
     public string? UserId => accountProvider.UserId;
 
+    public Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken)
+    {
+        return accountProvider.GetPasswordResetUrl(cancellationToken);
+    }
+
     /// <summary>
     /// Zero-tap sign-in restoration probe: when nobody is signed in, asking the provider for an
     /// access token is its cue to try re-establishing a session silently (a restored device may

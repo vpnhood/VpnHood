@@ -8,12 +8,16 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 internal sealed class DevAuthenticationProvider(string storeAuthProviderId) : IAuthenticationProvider
 {
     public IReadOnlyList<string> ProviderIds { get; } = [storeAuthProviderId, AuthProviders.Password];
-    public Uri? AccountWebsiteUrl { get; } = new("https://account.example.com/");
     public string? UserId { get; private set; }
 
     public Task<string?> GetAccessToken(CancellationToken cancellationToken)
     {
         return Task.FromResult(UserId == null ? null : "dev-access-token");
+    }
+
+    public Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken)
+    {
+        return Task.FromResult<Uri?>(new Uri("https://account.example.com/password/reset"));
     }
 
     public void InvalidateAccessToken(string accessToken)

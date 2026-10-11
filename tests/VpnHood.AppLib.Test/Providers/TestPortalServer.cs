@@ -33,6 +33,7 @@ public sealed class TestPortalServer : IDisposable
         "GET /system/status",
         "GET /openapi.json",
         "POST /auth/sessions",
+        "GET /auth/password-reset",
         "GET /billing/products"
     ];
 

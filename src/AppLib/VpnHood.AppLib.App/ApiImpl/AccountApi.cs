@@ -27,6 +27,13 @@ internal sealed class AccountApi(VpnHoodApp app) : IAccountApi
         return AccountService.Refresh(cancellationToken: cancellationToken);
     }
 
+    public Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken)
+    {
+        return app.Services.AccountService is null
+            ? Task.FromResult<Uri?>(null)
+            : app.Services.AccountService.AuthenticationService.GetPasswordResetUrl(cancellationToken);
+    }
+
     public async Task<SignInResult> SignIn(SignInOptions signInOptions, CancellationToken cancellationToken)
     {
         if (!AccountService.AuthenticationService.ProviderIds.Contains(signInOptions.ProviderId))

@@ -50,10 +50,10 @@
                 Click="OnSubmitPasswordClick" Content="{Binding SignIn, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="PasswordError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />
         <Button x:Name="PhoneLink" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnPhoneClick" IsVisible="False">
-          <TextBlock Classes="body-small highlight" Text="{Binding SignInTypeOnYourPhone, Source={x:Static res:Strings.Current}}" />
+          <TextBlock Classes="body-small highlight" TextWrapping="Wrap" Text="{Binding SignInTypeOnYourPhone, Source={x:Static res:Strings.Current}}" />
         </Button>
         <Button x:Name="ForgotButton" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnForgotClick" IsVisible="False">
-          <TextBlock Classes="body-small highlight" Text="{Binding ForgotPassword, Source={x:Static res:Strings.Current}}" />
+          <TextBlock Classes="body-small highlight" TextWrapping="Wrap" Text="{Binding ForgotPassword, Source={x:Static res:Strings.Current}}" />
         </Button>
         <Button Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
       </StackPanel>

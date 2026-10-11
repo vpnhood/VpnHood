@@ -16,11 +16,11 @@ public interface IAuthenticationProvider : IDisposable
     IReadOnlyList<string> ProviderIds { get; }
 
     /// <summary>
-    /// The human account website behind this provider (where a person manages the account and
-    /// recovers a password), or null when there is none. The UI renders it as the escape hatch of
-    /// the password sign-in form — never as an API endpoint.
+    /// The page of the human account website behind this provider where a person recovers a
+    /// password, or null when there is none. Asked when the password sign-in form opens, which
+    /// offers it as its escape hatch only when a page comes back — never as an API endpoint.
     /// </summary>
-    Uri? AccountWebsiteUrl { get; }
+    Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken);
 
     /// <summary>
     /// The signed-in account's id, or null. Ambient and cheap: it is read straight from the

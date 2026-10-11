@@ -15,6 +15,11 @@ internal class AccountController(IAccountApi api) : ControllerBase
             await ctx.SendJson(res);
         });
 
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "password-reset-url", async ctx => {
+            var res = await api.GetPasswordResetUrl(ctx.Token);
+            await ctx.SendJson(res);
+        });
+
         mapper.AddStatic(HttpMethod.POST, baseUrl + "refresh", async ctx => {
             await api.Refresh(ctx.Token);
             await ctx.SendNoContent();

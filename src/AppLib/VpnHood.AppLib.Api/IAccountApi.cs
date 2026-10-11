@@ -19,4 +19,11 @@ public interface IAccountApi
 
     Task Refresh(CancellationToken cancellationToken);
     Task<Account?> Get(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The account website's page for a forgotten password, or null when there is none — no
+    /// account provider, or one without such a page. Asked when the password form opens: the form
+    /// offers "forgot password" only when a page comes back.
+    /// </summary>
+    Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken);
 }

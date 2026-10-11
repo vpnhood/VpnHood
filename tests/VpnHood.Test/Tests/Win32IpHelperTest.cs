@@ -7,6 +7,7 @@ namespace VpnHood.Test.Tests;
 
 // The IP Helper rows go to Windows as they are, so each field must sit where the Windows SDK's netioapi.h
 // puts it: offsetof on x64 and x86 gives these, and arm64 lays them out as x64, as they hold no pointers.
+// The DNS settings hold pointers: their offsets are x64's (arm64's too) or x86's, by the pointer size.
 [TestClass]
 public class Win32IpHelperTest
 {
@@ -30,11 +31,27 @@ public class Win32IpHelperTest
         ("DadState", 64), ("ScopeId", 68), ("CreationTimeStamp", 72)
     ];
 
+    private static readonly (string Field, int Offset)[] DnsInterfaceSettingsOffsets64 = [
+        ("Version", 0), ("Flags", 8), ("Domain", 16), ("NameServer", 24), ("SearchList", 32),
+        ("RegistrationEnabled", 40), ("RegisterAdapterName", 44), ("EnableLLMNR", 48), ("QueryAdapterName", 52),
+        ("ProfileNameServer", 56)
+    ];
+
+    private static readonly (string Field, int Offset)[] DnsInterfaceSettingsOffsets32 = [
+        ("Version", 0), ("Flags", 8), ("Domain", 16), ("NameServer", 20), ("SearchList", 24),
+        ("RegistrationEnabled", 28), ("RegisterAdapterName", 32), ("EnableLLMNR", 36), ("QueryAdapterName", 40),
+        ("ProfileNameServer", 44)
+    ];
+
     [TestMethod]
     public void Rows_keep_the_windows_sdk_layout()
     {
         AssertLayout<Win32IpHelper.MIB_IPINTERFACE_ROW>(168, InterfaceRowOffsets);
         AssertLayout<Win32IpHelper.MIB_UNICASTIPADDRESS_ROW>(80, UnicastAddressRowOffsets);
+        if (IntPtr.Size == 8)
+            AssertLayout<Win32IpHelper.DNS_INTERFACE_SETTINGS>(64, DnsInterfaceSettingsOffsets64);
+        else
+            AssertLayout<Win32IpHelper.DNS_INTERFACE_SETTINGS>(48, DnsInterfaceSettingsOffsets32);
     }
 
     [TestMethod]

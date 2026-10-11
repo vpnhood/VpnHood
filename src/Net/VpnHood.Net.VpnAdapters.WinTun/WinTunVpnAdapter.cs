@@ -348,41 +348,24 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     }
     */
 
+    // A failure fails the start: without the tunnel's DNS, Windows asks the other adapters' servers, often a
+    // router outside the tunnel, and the user would never know
     protected override async Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,
         CancellationToken cancellationToken)
     {
-        var ipv4 = dnsServers
-            .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)
-            .ToArray();
+        foreach (var addressFamily in new[] { AddressFamily.InterNetwork, AddressFamily.InterNetworkV6 }) {
+            var servers = dnsServers.Where(ip => ip.AddressFamily == addressFamily).ToArray();
+            if (servers.Length == 0)
+                continue;
 
-        var ipv6 = dnsServers
-            .Where(ip => ip.AddressFamily == AddressFamily.InterNetworkV6)
-            .ToArray();
-
-        VhLogger.Instance.LogDebug("Setting DNS via PowerShell...");
-
-        if (ipv4.Length > 0) {
-            var v4List = string.Join(",", ipv4.Select(ip => $"'{ip}'"));
-            var cmd = $"Set-DnsClientServerAddress -InterfaceAlias '{AdapterName}' -ServerAddresses @({v4List})";
-
-            await VhUtils.TryInvokeAsync(
-                VhLogger.MinLogLevel == LogLevel.Trace ? "Set IPv4 DNS" : "",
-                () => OsUtils.ExecuteCommandAsync(
-                    "powershell.exe",
-                    $"-NoProfile -ExecutionPolicy Bypass -Command \"{cmd}\"",
-                    cancellationToken));
-        }
-
-        if (ipv6.Length > 0) {
-            var v6List = string.Join(",", ipv6.Select(ip => $"'{ip}'"));
-            var cmd = $"Set-DnsClientServerAddress -InterfaceAlias '{AdapterName}' -ServerAddresses @({v6List})";
-
-            await VhUtils.TryInvokeAsync(
-                VhLogger.MinLogLevel == LogLevel.Trace ? "Set IPv6 DNS" : "",
-                () => OsUtils.ExecuteCommandAsync(
-                    "powershell.exe",
-                    $"-NoProfile -ExecutionPolicy Bypass -Command \"{cmd}\"",
-                    cancellationToken));
+            // the API where Windows has it; PowerShell is a process per IP version, ~0.75 s each
+            if (Win32IpHelper.IsInterfaceDnsSettingsSupported)
+                Win32IpHelper.SetDnsServers(_adapterIndex, addressFamily, servers);
+            else
+                await ExecutePowerShellCommandAsync(
+                    $"Set-DnsClientServerAddress -InterfaceAlias '{AdapterName}' " +
+                    $"-ServerAddresses @({string.Join(",", servers.Select(ip => $"'{ip}'"))})",
+                    cancellationToken).Vhc();
         }
     }
 

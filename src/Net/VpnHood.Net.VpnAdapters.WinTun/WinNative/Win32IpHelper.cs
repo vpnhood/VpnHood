@@ -159,6 +159,21 @@ public static class Win32IpHelper
         public long CreationTimeStamp;
     }
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct DNS_INTERFACE_SETTINGS
+    {
+        public uint Version;
+        public ulong Flags;
+        public string? Domain;
+        public string? NameServer;
+        public string? SearchList;
+        public uint RegistrationEnabled;
+        public uint RegisterAdapterName;
+        public uint EnableLLMNR;
+        public uint QueryAdapterName;
+        public string? ProfileNameServer;
+    }
+
     [DllImport("Iphlpapi.dll", SetLastError = true)]
     public static extern int CreateIpForwardEntry2(ref MIB_IPFORWARD_ROW2 pRoute);
 
@@ -179,6 +194,16 @@ public static class Win32IpHelper
 
     [DllImport("Iphlpapi.dll")]
     public static extern int DeleteUnicastIpAddressEntry(ref MIB_UNICASTIPADDRESS_ROW row);
+
+    [DllImport("Iphlpapi.dll")]
+    public static extern int ConvertInterfaceIndexToLuid(uint interfaceIndex, out ulong interfaceLuid);
+
+    [DllImport("Iphlpapi.dll")]
+    public static extern int ConvertInterfaceLuidToGuid(ref ulong interfaceLuid, out Guid interfaceGuid);
+
+    // Windows 10 2004 (build 19041) and later: IsInterfaceDnsSettingsSupported
+    [DllImport("Iphlpapi.dll")]
+    public static extern int SetInterfaceDnsSettings(Guid interfaceGuid, ref DNS_INTERFACE_SETTINGS settings);
 
 
     private static IN6_ADDR ToIN6_ADDR(IPAddress ip)
@@ -365,6 +390,45 @@ public static class Win32IpHelper
         var result = CreateUnicastIpAddressEntry(ref row);
         if (result != noError && result != errorObjectAlreadyExists)
             throw new Win32Exception(result, $"Failed to add the address {ipNetwork}.");
+    }
+
+    public static bool IsInterfaceDnsSettingsSupported => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041);
+
+    // as Set-DnsClientServerAddress: the servers replace the interface's own of their IP version, and stay in
+    // its settings
+    public static void SetDnsServers(uint interfaceIndex, AddressFamily addressFamily, IEnumerable<IPAddress> dnsServers)
+    {
+        const int noError = 0;
+        const uint dnsInterfaceSettingsVersion1 = 1;
+        const ulong dnsSettingIpv6 = 0x0001;
+        const ulong dnsSettingNameServer = 0x0002;
+
+        var settings = new DNS_INTERFACE_SETTINGS {
+            Version = dnsInterfaceSettingsVersion1,
+            Flags = addressFamily == AddressFamily.InterNetworkV6
+                ? dnsSettingNameServer | dnsSettingIpv6
+                : dnsSettingNameServer,
+            NameServer = string.Join(",", dnsServers)
+        };
+        var result = SetInterfaceDnsSettings(GetInterfaceGuid(interfaceIndex), ref settings);
+        if (result != noError)
+            throw new Win32Exception(result,
+                $"Failed to set the {addressFamily} DNS servers {settings.NameServer} on the interface {interfaceIndex}.");
+    }
+
+    private static Guid GetInterfaceGuid(uint interfaceIndex)
+    {
+        const int noError = 0;
+
+        var result = ConvertInterfaceIndexToLuid(interfaceIndex, out var interfaceLuid);
+        if (result != noError)
+            throw new Win32Exception(result, $"Failed to get the LUID of the interface {interfaceIndex}.");
+
+        result = ConvertInterfaceLuidToGuid(ref interfaceLuid, out var interfaceGuid);
+        if (result != noError)
+            throw new Win32Exception(result, $"Failed to get the GUID of the interface {interfaceIndex}.");
+
+        return interfaceGuid;
     }
 
     public static void DeleteAddress(uint interfaceIndex, IPAddress ipAddress)

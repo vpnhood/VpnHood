@@ -39,6 +39,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     public override bool IsNatSupported(IpVersion ipVersion) => false;
     protected override string? AppPackageId => null;
     protected override bool RestartAfterNetworkAddressChanged => false;
+    protected override bool CheckAdapterInterfaceAfterNetworkChanged => false;
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         // load WinDivert before anything may call it

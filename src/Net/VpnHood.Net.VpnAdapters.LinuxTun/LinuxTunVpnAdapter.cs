@@ -48,6 +48,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
     protected override bool RestartAfterNetworkAddressChanged => true;
+    protected override bool CheckAdapterInterfaceAfterNetworkChanged => true;
 
     public LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         : base(adapterSettings)

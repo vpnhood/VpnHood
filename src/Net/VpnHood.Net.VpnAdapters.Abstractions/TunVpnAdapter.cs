@@ -76,6 +76,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected abstract void WaitForTunRead();
     protected abstract bool RestartAfterNetworkAddressChanged { get; }
 
+    // an interface of the adapter's own, which a user can disable or set down: no I/O error tells of it,
+    // only the OS's network events (CheckAdapterInterface)
+    protected abstract bool CheckAdapterInterfaceAfterNetworkChanged { get; }
+
     // the wait before AutoRestart tries a failed restart again
     protected virtual TimeSpan AutoRestartDelay => TimeSpan.FromSeconds(10);
 
@@ -787,7 +791,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     // the OS events: a fresh interface may not report up yet at a start's end. Never throws.
     private async Task CheckAdapterInterface()
     {
-        if (!RestartAfterNetworkAddressChanged || !IsStarted || !_keepStarted || _isStarting ||
+        if (!CheckAdapterInterfaceAfterNetworkChanged || !IsStarted || !_keepStarted || _isStarting ||
             IsDisposing || IsDisposed)
             return;
 
@@ -847,9 +851,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 return;
             }
 
+            // an adapter that needs no restart takes the new network's primary IPs, looking as above
             VhLogger.Instance.LogInformation("Network address changed.");
             if (!RestartAfterNetworkAddressChanged) {
-                DiscoverPrimaryAdapterIps(true);
+                DiscoverPrimaryAdapterIps(protect: !IsSocketProtectedByBind);
                 return;
             }
 

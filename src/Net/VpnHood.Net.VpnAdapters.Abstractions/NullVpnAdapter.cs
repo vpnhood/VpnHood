@@ -21,6 +21,7 @@ public class NullVpnAdapter : TunVpnAdapter
     }
 
     protected override bool RestartAfterNetworkAddressChanged => false;
+    protected override bool CheckAdapterInterfaceAfterNetworkChanged => false;
     public override bool IsAppFilterSupported => true;
     public override bool IsNatSupported(IpVersion ipVersion) => true;
     protected override bool IsSocketProtectedByBind => false;

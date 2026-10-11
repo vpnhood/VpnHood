@@ -185,10 +185,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                 return;
 
             // then what may still hold the session leaves before it is freed: the reader, woken from
-            // its wait, and the batch being sent. A finalizer has neither. One that does not leave in
-            // time may still be inside a WinTun call, so the session is left allocated, never freed
-            // under it; the adapter's removal closes its device handle and ends its rings' use.
-            if (!IsDisposed && !WaitForSessionThreads(readEvent))
+            // its wait, and the batch being sent; a finalizer finds neither, as either keeps the adapter
+            // alive. One that does not leave in time may still be inside a WinTun call, so the session is
+            // left allocated, never freed under it; the adapter's removal closes its device handle and
+            // ends its rings' use.
+            if (!WaitForSessionThreads(readEvent))
                 return;
 
             WinTunApi.WintunEndSession(session);

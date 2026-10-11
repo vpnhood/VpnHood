@@ -21,10 +21,12 @@ install_msquic() {
 
     # A derivative takes the feed of the distribution it is built on, at that one's release: Linux
     # Mint, Pop!_OS and the like Ubuntu's, by their UBUNTU_CODENAME; Debian's, by debian_version;
-    # Rocky, AlmaLinux and Oracle Linux RHEL's, by PLATFORM_ID (platform:el9). An unknown release
-    # takes the newest feed. Arch's are found by their ID_LIKE below.
+    # Rocky, AlmaLinux and Oracle Linux RHEL's, by PLATFORM_ID (platform:el9); openSUSE Leap its own,
+    # by its release. An unknown release, Tumbleweed's among them, takes the newest feed. Arch's are
+    # found by their ID_LIKE below. The RPM feeds go by major release alone.
     case "$distro" in
-        ubuntu | debian | rhel | centos | fedora) ;;
+        ubuntu | debian | fedora) ;;
+        rhel | centos | sles) distro_version="${VERSION_ID%%.*}" ;;
         *)
             case " $ID_LIKE " in
                 *" ubuntu "*)
@@ -50,20 +52,29 @@ install_msquic() {
                         platform:f[0-9]*) distro="fedora" distro_version="${PLATFORM_ID#platform:f}" ;;
                     esac
                     ;;
+                *" suse "* | *" opensuse "*)
+                    distro="opensuse"
+                    if [ "$ID" = "opensuse-leap" ]; then
+                        distro_version="${VERSION_ID%%.*}"
+                    else
+                        distro_version=""
+                    fi
+                    ;;
             esac
             ;;
     esac
 
-    # the package puts it where the loader looks
+    # the package puts it where the loader looks. By glob: a minimal image has no find.
     _find_msquic() {
         local msquic_lib
-        msquic_lib=$(find /usr/lib64 /usr/lib -name "libmsquic.so.2" 2>/dev/null | head -1)
-        if [ -n "$msquic_lib" ]; then
-            echo "MsQuic installed: $msquic_lib"
-        else
-            echo "WARNING: libmsquic.so.2 not found after installation."
-            return 1
-        fi
+        for msquic_lib in /usr/lib64/libmsquic.so.2 /usr/lib/libmsquic.so.2 /usr/lib/*/libmsquic.so.2; do
+            if [ -e "$msquic_lib" ]; then
+                echo "MsQuic installed: $msquic_lib"
+                return 0
+            fi
+        done
+        echo "WARNING: libmsquic.so.2 not found after installation."
+        return 1
     }
 
     # -----------------------------------------------
@@ -124,6 +135,11 @@ install_msquic() {
                 [ "$fallback" = "$requested_version" ] && continue
                 candidates="$candidates $fallback"
             done
+        elif [ "$distro" = "opensuse" ] || [ "$distro" = "sles" ]; then
+            for fallback in "16" "15"; do
+                [ "$fallback" = "$requested_version" ] && continue
+                candidates="$candidates $fallback"
+            done
         else
             # RHEL / CentOS - major version only
             local major_ver
@@ -135,12 +151,12 @@ install_msquic() {
             done
         fi
 
+        local feed_distro="rhel"
+        case "$distro" in
+            fedora | opensuse | sles) feed_distro="$distro" ;;
+        esac
         for ver in $candidates; do
-            if [ "$distro" = "fedora" ]; then
-                local url="https://packages.microsoft.com/config/fedora/${ver}/packages-microsoft-prod.rpm"
-            else
-                local url="https://packages.microsoft.com/config/rhel/${ver}/packages-microsoft-prod.rpm"
-            fi
+            local url="https://packages.microsoft.com/config/${feed_distro}/${ver}/packages-microsoft-prod.rpm"
             echo "  Checking feed for ${distro} ${ver}..." >&2
             if wget -q --spider "${wget_args[@]}" "$url" 2>/dev/null; then
                 echo "  Feed found for ${distro} ${ver}." >&2
@@ -294,7 +310,8 @@ install_msquic() {
         fi
         _find_msquic
 
-    elif [ "$distro" = "rhel" ] || [ "$distro" = "centos" ] || [ "$distro" = "fedora" ]; then
+    elif [ "$distro" = "rhel" ] || [ "$distro" = "centos" ] || [ "$distro" = "fedora" ] ||
+        [ "$distro" = "opensuse" ] || [ "$distro" = "sles" ]; then
 
         local resolved
         if ! resolved=$(_resolve_rpm_feed_url "$distro" "$distro_version"); then
@@ -314,22 +331,35 @@ install_msquic() {
         if ! rpm -q packages-microsoft-prod >/dev/null 2>&1; then
             feed_added="y"
         fi
+        # an unknown release, Tumbleweed's, takes the newest feed, whose package asks for that release
+        local rpm_args=()
+        if [ -z "$distro_version" ]; then
+            rpm_args=(--nodeps)
+        fi
         local tmp_rpm
         tmp_rpm=$(mktemp /tmp/packages-microsoft-prod.XXXXXX.rpm) || return 1
         if wget -nv "${wget_args[@]}" -O "$tmp_rpm" "$feed_url"; then
-            rpm -Uvh "$tmp_rpm" 2>/dev/null || true
+            rpm -Uvh "${rpm_args[@]}" "$tmp_rpm" 2>/dev/null || true
         else
             echo "WARNING: Failed to download feed package from ${feed_url}."
         fi
         rm -f "$tmp_rpm"
 
-        local package_manager
-        package_manager=$(command -v dnf >/dev/null 2>&1 && echo dnf || echo yum)
+        # zypper fails at once on a lock another one holds (PackageKit's, at a first boot): it waits,
+        # as apt does above
+        local install_command
+        if command -v zypper >/dev/null 2>&1; then
+            install_command=(env ZYPP_LOCK_TIMEOUT=60 zypper --non-interactive --gpg-auto-import-keys install libmsquic)
+        elif command -v dnf >/dev/null 2>&1; then
+            install_command=(dnf install -y libmsquic)
+        else
+            install_command=(yum install -y libmsquic)
+        fi
         local installed=""
-        if "$package_manager" install -y libmsquic; then
+        if "${install_command[@]}"; then
             installed="y"
         else
-            echo "WARNING: libmsquic installation failed via $package_manager."
+            echo "WARNING: libmsquic installation failed: ${install_command[*]}"
         fi
 
         if [ "$feed_added" = "y" ] && rpm -q packages-microsoft-prod >/dev/null 2>&1 &&

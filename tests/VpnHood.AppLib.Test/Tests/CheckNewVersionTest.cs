@@ -212,13 +212,11 @@ public class CheckNewVersionTest : TestAppBase
 
         // a store build's check after a connect made with its window closed: the feed's answer must
         // not stamp the check, or the store's own prompt would wait a whole interval
-        AppUiContext.Context = null;
-        await updaterService.CheckForUpdate(force: false, TestCt);
+        await updaterService.CheckForUpdate(uiContext: null, force: false, TestCt);
         Assert.IsNull(updaterService.Status.CheckedTime);
 
         // the window's arrival checks at once, and the store's updater is asked
-        AppUiContext.Context = new TestHelper.TestAppUiContext();
-        await updaterService.CheckForUpdate(force: false, TestCt);
+        await updaterService.CheckForUpdate(new TestHelper.TestAppUiContext(), force: false, TestCt);
         Assert.AreEqual(1, updaterProvider.IsUpdateAvailableCalls);
         Assert.IsNotNull(updaterService.Status.CheckedTime);
     }

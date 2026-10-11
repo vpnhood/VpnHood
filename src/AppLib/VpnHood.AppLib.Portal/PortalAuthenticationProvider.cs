@@ -173,6 +173,8 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     /// </summary>
     public async Task<string?> GetAccessToken(CancellationToken cancellationToken)
     {
+        // The one window read below the API: every portal request asks for the token, and none of
+        // their callers holds a window to pass. Only a renewal or a zero-tap restore uses it.
         var session = await TryGetSession(AppUiContext.Context, cancellationToken).Vhc();
         return session?.AccessToken;
     }

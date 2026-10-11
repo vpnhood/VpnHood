@@ -7,6 +7,7 @@ using Android.Service.QuickSettings;
 using Java.Util.Functions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.VpnServices.Manager;
@@ -210,7 +211,8 @@ public class QuickLaunchTileService : TileService
 
         _vpnServiceManager.StateChanged += stateChanged;
         try {
-            await _vpnServiceManager.StartFromLastConfig(adWaitCts.Token).Vhc();
+            // the tap has no window of its own; the app's, when one is open, can still ask for the VPN permission
+            await _vpnServiceManager.StartFromLastConfig(AppUiContext.Context, adWaitCts.Token).Vhc();
         }
         catch (System.OperationCanceledException) when (adWaitCts.IsCancellationRequested) {
             _mainHandler.Post(LaunchMainApp);

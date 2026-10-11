@@ -3,6 +3,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.App;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test;
@@ -37,7 +38,8 @@ public static class VpnHoodAppExtensions
             bool diagnose = false,
             CancellationToken cancellationToken = default)
         {
-            return app.Connect(new ConnectOptions {
+            // the window as the API passes it: the one the test has set, if any
+            return app.Connect(AppUiContext.Context, new ConnectOptions {
                 VpnProfileId = vpnProfileId,
                 PlanId = planId,
                 Diagnose = diagnose

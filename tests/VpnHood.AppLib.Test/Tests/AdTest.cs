@@ -102,7 +102,7 @@ public class AdTest : TestAppBase
         // connect
         var token = accessManager.CreateToken();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(() => app.Connect(new ConnectOptions {
+        await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(() => app.Connect(uiContext: null, new ConnectOptions {
             VpnProfileId = vpnProfile.VpnProfileId,
             PlanId = ConnectPlanId.PremiumByRewardedAd
         }));
@@ -207,12 +207,12 @@ public class AdTest : TestAppBase
 
         // show ad
         if (acceptAd) {
-            await app.AdManager.ExtendByRewardedAd(TestCt);
+            await app.Api.App.ExtendByRewardedAd(TestCt);
             Assert.IsNull(app.State.SessionStatus?.SessionExpirationTime);
         }
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
-                app.AdManager.ExtendByRewardedAd(TestCt));
+                app.Api.App.ExtendByRewardedAd(TestCt));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
             await Task.Delay(500);
             await app.WaitForState(AppConnectionState.Connected);

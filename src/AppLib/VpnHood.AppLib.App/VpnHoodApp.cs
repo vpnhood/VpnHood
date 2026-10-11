@@ -499,7 +499,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // try update the app
         if (uiContext != null)
-            _ = Services.UpdaterService?.TryCheckForUpdate(false, CancellationToken.None);
+            _ = Services.UpdaterService?.TryCheckForUpdate(uiContext, false, CancellationToken.None);
     }
 
     private void ActiveUiContext_OnResumed(object? sender, EventArgs e)
@@ -538,57 +538,60 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public AppState State {
-        get {
-            var vpnProfileInfo = CurrentVpnProfileInfo;
-            var connectionState = ConnectionState;
-            var lastConnectionInfo = ConnectionInfo;
-            var connectionInfo = connectionState.IsIdle() ? null : lastConnectionInfo;
+    // The state for a caller with no window to measure, whose system bars are then the default.
+    public AppState State => GetState(uiContext: null);
 
-            var uiContext = AppUiContext.Context;
-            var appState = new AppState {
-                ConfigTime = Settings.ConfigTime,
-                SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
-                SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
-                ServerLocationInfo = StateHelper.GetServerLocationInfo(connectionInfo?.SessionInfo, vpnProfileInfo),
-                ProxyConnectorStatus = lastConnectionInfo.ProxyConnectorStatus?.ToAppDto(),
-                ConnectionState = connectionState,
-                CanConnect = connectionState.CanConnect(),
-                CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
-                CanDisconnect = connectionState.CanDisconnect(),
-                UserReviewRecommended = _userReviewRecommended,
-                IsWaitingForInternalAd = AdManager.AdService.IsWaitingForInternalAd,
-                IsQuickLaunchRecommended = _quickLaunchRecommended && !Settings.UserSettings.IsQuickLaunchPrompted,
-                IsIdle = IsIdle,
-                PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
-                LogExists = _logService.Exists,
-                IsDiagnosing = _appPersistState.HasDiagnoseRequested && !IsIdle,
-                HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
-                IsReconnectRequired = _appPersistState.IsReconnectRequired,
-                ClientCountryInfo = AppCountryInfo.TryGet(AppRegionInfo.CurrentRegion.Name),
-                ConnectRequestTime = _appPersistState.ConnectRequestTime,
-                CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
-                SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
-                PurchaseState = Services.AccountService?.BillingService?.PurchaseState.ToAppDto(),
-                UpdaterStatus = Services.UpdaterService?.Status,
-                LastError = LastError?.ToAppDto(),
-                VpnProfile = vpnProfileInfo?.ToBaseInfo(),
-                ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol.ToAppDto() ??
-                                  UserSettings.ChannelProtocol,
-                IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
-                SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()?.ToAppDto()),
-                StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
-                IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
-                PromotionExists = PromotionExists(),
-                TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo, this),
-                SplitTunnelingState = StateHelper.GetSplitTunnelingState(UserSettings, connectionInfo?.SessionInfo, this),
-                SystemBarsInfo = uiContext != null
-                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext).ToAppDto()
-                    : VpnHood.AppLib.Api.Device.SystemBarsInfo.Default
-            };
+    /// <param name="uiContext">The caller's window, whose system bars the state reports; null when it has
+    /// none.</param>
+    public AppState GetState(IUiContext? uiContext)
+    {
+        var vpnProfileInfo = CurrentVpnProfileInfo;
+        var connectionState = ConnectionState;
+        var lastConnectionInfo = ConnectionInfo;
+        var connectionInfo = connectionState.IsIdle() ? null : lastConnectionInfo;
 
-            return appState;
-        }
+        var appState = new AppState {
+            ConfigTime = Settings.ConfigTime,
+            SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
+            SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
+            ServerLocationInfo = StateHelper.GetServerLocationInfo(connectionInfo?.SessionInfo, vpnProfileInfo),
+            ProxyConnectorStatus = lastConnectionInfo.ProxyConnectorStatus?.ToAppDto(),
+            ConnectionState = connectionState,
+            CanConnect = connectionState.CanConnect(),
+            CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
+            CanDisconnect = connectionState.CanDisconnect(),
+            UserReviewRecommended = _userReviewRecommended,
+            IsWaitingForInternalAd = AdManager.AdService.IsWaitingForInternalAd,
+            IsQuickLaunchRecommended = _quickLaunchRecommended && !Settings.UserSettings.IsQuickLaunchPrompted,
+            IsIdle = IsIdle,
+            PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
+            LogExists = _logService.Exists,
+            IsDiagnosing = _appPersistState.HasDiagnoseRequested && !IsIdle,
+            HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
+            IsReconnectRequired = _appPersistState.IsReconnectRequired,
+            ClientCountryInfo = AppCountryInfo.TryGet(AppRegionInfo.CurrentRegion.Name),
+            ConnectRequestTime = _appPersistState.ConnectRequestTime,
+            CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
+            SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
+            PurchaseState = Services.AccountService?.BillingService?.PurchaseState.ToAppDto(),
+            UpdaterStatus = Services.UpdaterService?.Status,
+            LastError = LastError?.ToAppDto(),
+            VpnProfile = vpnProfileInfo?.ToBaseInfo(),
+            ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol.ToAppDto() ??
+                              UserSettings.ChannelProtocol,
+            IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
+            SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()?.ToAppDto()),
+            StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
+            IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
+            PromotionExists = PromotionExists(),
+            TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo, this),
+            SplitTunnelingState = StateHelper.GetSplitTunnelingState(UserSettings, connectionInfo?.SessionInfo, this),
+            SystemBarsInfo = uiContext != null
+                ? Services.DeviceUiProvider.GetBarsInfo(uiContext).ToAppDto()
+                : VpnHood.AppLib.Api.Device.SystemBarsInfo.Default
+        };
+
+        return appState;
     }
 
     private bool PromotionExists()
@@ -726,11 +729,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return logOptions;
     }
 
-    public async Task<bool> TryConnect(ConnectOptions? connectOptions = null,
+    public async Task<bool> TryConnect(IUiContext? uiContext, ConnectOptions? connectOptions = null,
         CancellationToken cancellationToken = default)
     {
         try {
-            await Connect(connectOptions, cancellationToken);
+            await Connect(uiContext, connectOptions, cancellationToken);
             return true;
         }
         catch {
@@ -738,7 +741,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public async Task Connect(ConnectOptions? connectOptions = null, CancellationToken cancellationToken = default)
+    /// <param name="uiContext">The caller's window, which asks the person for the VPN permission and
+    /// for notifications; null when it has none, and then a missing permission fails and nothing is asked.</param>
+    public async Task Connect(IUiContext? uiContext, ConnectOptions? connectOptions = null,
+        CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew(); // a failed connect's report tells how long it ran
         try {
@@ -761,7 +767,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _userReviewRecommended = 0; // UI may call ClearLastError, so it my close immediately
             ClearLastError();
             _appPersistState.IsReconnectRequired = false; // this connect applies every pending change
-            await ConnectInternal1(connectOptions, linkedCts.Token);
+            await ConnectInternal1(uiContext, connectOptions, linkedCts.Token);
         }
         catch (Exception ex) {
             _errorReporter.ReportConnectError(ex, stopwatch.Elapsed);
@@ -775,7 +781,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task ConnectInternal1(ConnectOptions connectOptions, CancellationToken cancellationToken)
+    private async Task ConnectInternal1(IUiContext? uiContext, ConnectOptions connectOptions,
+        CancellationToken cancellationToken)
     {
         // set use default vpnProfile and serverLocation
         var vpnProfileId = connectOptions.VpnProfileId ??
@@ -828,11 +835,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // request features for the first time
             VhLogger.Instance.LogDebug("Requesting Features ...");
-            await RequestFeatures(linkedCts.Token).Vhc();
+            await RequestFeatures(uiContext, linkedCts.Token).Vhc();
 
             // connect
             VhLogger.Instance.LogInformation("Client is Connecting ...");
-            await ConnectInternal2(vpnProfile.Token,
+            await ConnectInternal2(uiContext, vpnProfile.Token,
                     serverLocation: serverLocation,
                     planId: connectOptions.PlanId,
                     accessCode: vpnProfile.AccessCode,
@@ -862,7 +869,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task ConnectInternal2(Token token, string? serverLocation,
+    private async Task ConnectInternal2(IUiContext? uiContext, Token token, string? serverLocation,
         Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
         CancellationToken cancellationToken)
     {
@@ -962,12 +969,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     .ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy.ToEngine(), cancellationToken).Vhc();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).Vhc();
                 await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
-                await _vpnServiceManager.Start(serviceOptions, cancellationToken).Vhc();
+                await _vpnServiceManager.Start(uiContext, serviceOptions, cancellationToken).Vhc();
                 await Diagnoser.CheckVpnNetwork(cancellationToken).Vhc();
             }
             // start client
             else {
-                await _vpnServiceManager.Start(serviceOptions, cancellationToken).Vhc();
+                await _vpnServiceManager.Start(uiContext, serviceOptions, cancellationToken).Vhc();
             }
 
             var connectionInfo = ConnectionInfo;
@@ -1001,7 +1008,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 // next press takes the next turn.
                 var repairedProfile = VpnProfileService.FindById(profileInfo.VpnProfileId) ??
                                       throw new NotExistsException("The repaired profile has disappeared.");
-                await ConnectInternal2(token,
+                await ConnectInternal2(uiContext, token,
                         serverLocation: serverLocation,
                         planId: planId,
                         accessCode: repairedProfile.AccessCode,
@@ -1021,7 +1028,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 _errorReporter.ReportError(ex,
                     "Could not establish the connection. Reconnecting using the new token...");
                 token = VpnProfileService.GetToken(token.TokenId);
-                await ConnectInternal2(token,
+                await ConnectInternal2(uiContext, token,
                         serverLocation: serverLocation,
                         planId: planId,
                         accessCode: accessCode,
@@ -1155,9 +1162,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             .Contains(command, StringComparer.OrdinalIgnoreCase) == true;
     }
 
-    private async Task RequestFeatures(CancellationToken cancellationToken)
+    private async Task RequestFeatures(IUiContext? uiContext, CancellationToken cancellationToken)
     {
-        var uiContext = AppUiContext.Context;
         if (uiContext == null || !await uiContext.IsActive())
             return;
 
@@ -1237,7 +1243,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // check the version after the first connection
         if (ConnectionState is AppConnectionState.Connected)
-            _ = Services.UpdaterService?.TryCheckForUpdate(false, CancellationToken.None);
+            _ = Services.UpdaterService?.TryCheckForUpdate(AppUiContext.Context, false, CancellationToken.None);
 
         // Revival proves itself (keyring plan §6 step 4): a PREMIUM session on a profile whose
         // code stood refused clears the mark — the issuer extended it, and it is premium again
@@ -1277,7 +1283,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _connectTimeoutCts.CancelAfter(TimeSpan.FromMinutes(15));
             var connectionInfo = ConnectionInfo;
             var useFallback = connectionInfo.SessionStatus?.IsAdapterStarted is true;
-            await AdManager.ShowAd(
+            await AdManager.ShowAd(AppUiContext.Context,
                 connectionInfo.SessionInfo.SessionId, connectionInfo.SessionInfo.AdRequirement,
                 useFallback: useFallback, _showAdCts.Token);
         }

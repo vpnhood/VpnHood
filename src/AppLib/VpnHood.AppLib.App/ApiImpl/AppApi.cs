@@ -13,6 +13,7 @@ using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.AppLib.App.WebHosting;
 using VpnHood.AppLib.Api;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.App.ApiImpl;
 
@@ -44,7 +45,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
             IntentFeatures = app.Services.DeviceUiProvider.ToIntentFeatures(app.Services.UserReviewProvider),
             UserSettings = app.UserSettings,
             VpnProfileInfos = app.VpnProfileService.List().Select(x => x.ToInfo(app.Features)).ToArray(),
-            State = app.State,
+            State = app.GetState(AppUiContext.Context),
             AvailableCultureInfos = app.Services.CultureProvider.AvailableCultures
                 .Select(x => new UiCultureInfo(x))
                 .ToArray()
@@ -88,13 +89,13 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
 
     public Task<AppState> GetState(CancellationToken cancellationToken)
     {
-        return Task.FromResult(app.State);
+        return Task.FromResult(app.GetState(AppUiContext.Context));
     }
 
     public Task Connect(Guid? vpnProfileId,
         string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken)
     {
-        return app.Connect(
+        return app.Connect(AppUiContext.Context,
             new ConnectOptions {
                 VpnProfileId = vpnProfileId,
                 ServerLocation = serverLocation,
@@ -105,7 +106,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
     public Task Diagnose(Guid? vpnProfileId, string? serverLocation,
         ConnectPlanId planId, CancellationToken cancellationToken)
     {
-        return app.Connect(
+        return app.Connect(AppUiContext.Context,
             new ConnectOptions {
                 VpnProfileId = vpnProfileId,
                 ServerLocation = serverLocation,
@@ -124,7 +125,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
         if (app.Services.UpdaterService is null)
             throw new NotSupportedException("App Updater is not supported.");
 
-        return app.Services.UpdaterService.CheckForUpdate(true, cancellationToken);
+        return app.Services.UpdaterService.CheckForUpdate(AppUiContext.Context, true, cancellationToken);
     }
 
     public Task VersionCheckPostpone(CancellationToken cancellationToken)
@@ -150,7 +151,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
 
     public Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
-        return app.AdManager.ExtendByRewardedAd(cancellationToken);
+        return app.AdManager.ExtendByRewardedAd(AppUiContext.Context, cancellationToken);
     }
 
     public Task SetUserSettings(UserSettings userSettings, CancellationToken cancellationToken)

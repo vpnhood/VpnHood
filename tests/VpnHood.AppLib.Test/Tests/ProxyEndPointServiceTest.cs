@@ -7,6 +7,7 @@ using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
@@ -45,7 +46,7 @@ public class ProxyEndPointServiceTest : TestAppBase
             Port = httpProxyServer.ListenerEndPoint.Port
         });
 
-        await dom.App.Connect();
+        await dom.App.Connect(AppUiContext.Context);
         await dom.App.WaitForState(AppConnectionState.Connected);
 
         var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
@@ -77,7 +78,7 @@ public class ProxyEndPointServiceTest : TestAppBase
             Port = httpProxyServer.ListenerEndPoint.Port
         });
 
-        await dom.App.Connect();
+        await dom.App.Connect(AppUiContext.Context);
         await dom.App.WaitForState(AppConnectionState.Connected);
         await TestHelper.Test_Https();
 
@@ -101,7 +102,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         lastSucceededCount = endPointInfos[0].Status.SucceededCount;
 
         // reconnect and make sure status is restored
-        await dom.App.Connect();
+        await dom.App.Connect(AppUiContext.Context);
         await dom.App.WaitForState(AppConnectionState.Connected);
         await dom.App.ForceUpdateState(TestCt);
         endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
@@ -323,7 +324,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint);
 
         // connect
-        await dom.App.Connect();
+        await dom.App.Connect(AppUiContext.Context);
         await TestHelper.Test_Https();
 
         // get info
@@ -360,7 +361,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         })).EndPoint;
 
         // connect
-        await dom.App.Connect();
+        await dom.App.Connect(AppUiContext.Context);
         await dom.App.WaitForState(AppConnectionState.Connected);
 
         // delete the extra endpoint while the core session is live, then force a core status flush;
@@ -391,7 +392,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint);
 
         // connect
-        await Assert.ThrowsAsync<UnreachableProxyServerException>(() => dom.App.Connect());
+        await Assert.ThrowsAsync<UnreachableProxyServerException>(() => dom.App.Connect(AppUiContext.Context));
 
         // get info
         await dom.App.ForceUpdateState(TestCt);
@@ -601,7 +602,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         };
 
         // connect
-        await dom.App.Connect();
+        await dom.App.Connect(AppUiContext.Context);
 
         // the core downloads and merges the list in the background; wait until it lands in the db
         await VhTestUtil.AssertEqualsWait(2, async () =>

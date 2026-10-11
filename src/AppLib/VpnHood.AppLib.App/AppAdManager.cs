@@ -31,7 +31,12 @@ public class AppAdManager(
     public bool IsPreloadAdEnabled => isPreloadAdEnabled;
     public bool IsAdSupported => adService.CanShowInterstitial || adService.CanShowRewarded;
 
+    /// <param name="uiContext">
+    /// The window, or null where none is open: a build without ads refuses the server either way, and
+    /// one with ads throws <see cref="ShowAdNoUiException" />.
+    /// </param>
     public async Task ShowAd(
+        IUiContext? uiContext,
         string sessionId,
         AdRequirement adRequirement,
         bool useFallback,
@@ -57,7 +62,6 @@ public class AppAdManager(
         }
 
         // let's throw an exception if context is not set
-        var uiContext = AppUiContext.Context;
         if (uiContext == null)
             throw new ShowAdNoUiException();
 
@@ -125,7 +129,7 @@ public class AppAdManager(
         }
     }
 
-    public async Task ExtendByRewardedAd(CancellationToken cancellationToken)
+    public async Task ExtendByRewardedAd(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // save variable to prevent null reference exception
         var connectionInfo = vpnServiceManager.ConnectionInfo;
@@ -140,7 +144,7 @@ public class AppAdManager(
             throw new InvalidOperationException("Could not extend this session by a rewarded ad at this time.");
 
         // set wait for ad state
-        await ShowAd(connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, useFallback: false,
+        await ShowAd(uiContext, connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, useFallback: false,
             cancellationToken: cancellationToken).Vhc();
     }
 

@@ -78,10 +78,10 @@ public class AppUpdaterService : IDisposable
             : VersionStatus.Latest;
     }
 
-    public async Task TryCheckForUpdate(bool force, CancellationToken cancellationToken)
+    public async Task TryCheckForUpdate(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
     {
         try {
-            await CheckForUpdate(force, cancellationToken).Vhc();
+            await CheckForUpdate(uiContext, force, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error occurred while checking for updates.");
@@ -89,7 +89,11 @@ public class AppUpdaterService : IDisposable
         }
     }
 
-    public async Task CheckForUpdate(bool force, CancellationToken cancellationToken)
+    /// <param name="uiContext">
+    /// The window, or null where none is open, as in the desktop service: the feed needs none, and a
+    /// store's updater that needs one leaves the check for a call that has it.
+    /// </param>
+    public async Task CheckForUpdate(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
     {
         // check if the version check is already in progress
         using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
@@ -117,7 +121,7 @@ public class AppUpdaterService : IDisposable
 
         try {
             // check by provider
-            if (await TryUpdateByProvider(force, cancellationToken).Vhc() ||
+            if (await TryUpdateByProvider(uiContext, force, cancellationToken).Vhc() ||
                 await TryUpdateByPublishInfoUrl(cancellationToken).Vhc()) {
                 Data.CheckedTime = FastDateTime.UtcNow;
             }
@@ -132,14 +136,14 @@ public class AppUpdaterService : IDisposable
         }
     }
 
-    private async Task<bool> TryUpdateByProvider(bool force, CancellationToken cancellationToken)
+    private async Task<bool> TryUpdateByProvider(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
     {
         try {
             var updater = _updateOptions.UpdaterProvider;
             if (updater == null)
                 return false; // no updater provider. Job done
 
-            if (!await updater.IsUpdateAvailable(AppUiContext.Context, cancellationToken)) {
+            if (!await updater.IsUpdateAvailable(uiContext, cancellationToken)) {
                 Data.UpdaterAvailableSince = null;
                 return false; // no update available or could not handle the update
             }
@@ -153,7 +157,7 @@ public class AppUpdaterService : IDisposable
                 return true; // handled
 
             // update available, try to update
-            if (!await updater.Update(AppUiContext.Context, cancellationToken).Vhc())
+            if (!await updater.Update(uiContext, cancellationToken).Vhc())
                 return false; // handled
 
             // update was handled so reset the UpdaterAvailableSince, till next check

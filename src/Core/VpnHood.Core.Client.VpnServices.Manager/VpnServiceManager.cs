@@ -106,7 +106,9 @@ public class VpnServiceManager : IDisposable
 
     public bool IsStarted => _isInitializing || ConnectionInfo.IsStarted();
 
-    public async Task Start(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
+    /// <param name="uiContext">The caller's window, which asks the person for the VPN permission when
+    /// the OS needs that (Android); null when it has none, and then a missing permission fails.</param>
+    public async Task Start(IUiContext? uiContext, VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         var clientOptions = serviceOptions.ClientOptions;
 
@@ -129,7 +131,7 @@ public class VpnServiceManager : IDisposable
             // prepare vpn service
             VhLogger.Instance.LogInformation("Requesting VpnService...");
             if (!clientOptions.UseNullCapture)
-                await _device.RequestVpnService(AppUiContext.Context, _requestVpnServiceTimeout,
+                await _device.RequestVpnService(uiContext, _requestVpnServiceTimeout,
                     cancellationToken).Vhc();
 
             // start vpn service
@@ -164,14 +166,15 @@ public class VpnServiceManager : IDisposable
     /// Start the VPN service from its last persisted configuration without touching it — the same
     /// bootstrap always-on uses. Check IsConfigured before calling.
     /// </summary>
-    public Task StartFromLastConfig(CancellationToken cancellationToken)
+    /// <param name="uiContext">The caller's window, as Start takes it.</param>
+    public Task StartFromLastConfig(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         // load the last configuration and start the service
         var serviceOptions = _serviceOptionsFile.TryRead();
         return serviceOptions != null 
-            ? Start(serviceOptions, cancellationToken) 
+            ? Start(uiContext, serviceOptions, cancellationToken)
             : throw new InvalidOperationException("There is no previous VPN configuration to start from.");
     }
 

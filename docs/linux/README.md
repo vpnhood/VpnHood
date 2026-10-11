@@ -39,7 +39,9 @@ The installer must run as root and will say so rather than half-install. It:
   installs the libraries the window needs (`libx11-6`, `libice6`, `libsm6`, `libfontconfig1`,
   `xdg-utils`); without `apt`, it names any of them it cannot find, for you to install
 - installs MsQuic, for the QUIC channel, from Microsoft's package feed, which it removes again
-  unless it was there before; without MsQuic the client uses TCP
+  unless it was there before; a distribution built on another, such as Linux Mint, takes that
+  one's feed. Arch has no package for it: there it puts Microsoft's build in the
+  version's folder and installs `numactl`, which MsQuic needs. Without MsQuic the client uses TCP
 
 Flags worth knowing:
 
@@ -71,8 +73,8 @@ rm -rf ~/.cache/com.vpnhood.client.linux ~/.cache/VpnHoodClient   # the window's
 ```
 
 It stops the service and any open window, and removes the units, `vhclient`, the menu entry and its
-icon, and the program. MsQuic, a system package, stays. The menu's **Uninstall** needs `pkexec`; the
-installer leaves it out where there is none.
+icon, and the program. MsQuic, a system package, stays; on Arch it was in the program's folder.
+The menu's **Uninstall** needs `pkexec`; the installer leaves it out where there is none.
 
 ---
 

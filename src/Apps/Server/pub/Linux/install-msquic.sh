@@ -1,7 +1,11 @@
 # -----------------------------------------------
 # Install MsQuic Library
+# The app's version folder is the first argument: Arch's MsQuic goes there.
 # -----------------------------------------------
 install_msquic() {
+    local app_dir="$1"
+    # an optional library holds up no install for long; apt and dnf have timeouts of their own
+    local wget_args=(--timeout=30 --tries=3)
     echo "Installing MsQuic library..."
     export DEBIAN_FRONTEND=noninteractive
     export NEEDRESTART_MODE=a
@@ -15,15 +19,46 @@ install_msquic() {
         return 1
     fi
 
-    _link_and_register_msquic() {
+    # A derivative takes the feed of the distribution it is built on, at that one's release: Linux
+    # Mint, Pop!_OS and the like Ubuntu's, by their UBUNTU_CODENAME; Debian's, by debian_version;
+    # Rocky, AlmaLinux and Oracle Linux RHEL's, by PLATFORM_ID (platform:el9). An unknown release
+    # takes the newest feed. Arch's are found by their ID_LIKE below.
+    case "$distro" in
+        ubuntu | debian | rhel | centos | fedora) ;;
+        *)
+            case " $ID_LIKE " in
+                *" ubuntu "*)
+                    distro="ubuntu"
+                    case "$UBUNTU_CODENAME" in
+                        focal) distro_version="20.04" ;;
+                        jammy) distro_version="22.04" ;;
+                        noble) distro_version="24.04" ;;
+                        oracular) distro_version="24.10" ;;
+                        plucky) distro_version="25.04" ;;
+                        questing) distro_version="25.10" ;;
+                        resolute) distro_version="26.04" ;;
+                        *) distro_version="" ;;
+                    esac
+                    ;;
+                *" debian "*)
+                    distro="debian"
+                    distro_version=$(cut -d. -f1 /etc/debian_version 2>/dev/null | grep -E '^[0-9]+$')
+                    ;;
+                *" rhel "* | *" centos "* | *" fedora "*)
+                    case "$PLATFORM_ID" in
+                        platform:el[0-9]*) distro="rhel" distro_version="${PLATFORM_ID#platform:el}" ;;
+                        platform:f[0-9]*) distro="fedora" distro_version="${PLATFORM_ID#platform:f}" ;;
+                    esac
+                    ;;
+            esac
+            ;;
+    esac
+
+    # the package puts it where the loader looks
+    _find_msquic() {
         local msquic_lib
         msquic_lib=$(find /usr/lib64 /usr/lib -name "libmsquic.so.2" 2>/dev/null | head -1)
         if [ -n "$msquic_lib" ]; then
-            mkdir -p /usr/local/lib/msquic
-            ln -sf "$msquic_lib" /usr/local/lib/msquic/libmsquic.so.2
-            if command -v ldconfig >/dev/null 2>&1; then
-                ldconfig
-            fi
             echo "MsQuic installed: $msquic_lib"
         else
             echo "WARNING: libmsquic.so.2 not found after installation."
@@ -47,13 +82,13 @@ install_msquic() {
 
         if [ "$distro" = "ubuntu" ]; then
             # Append known LTS releases as fallbacks, oldest-last
-            for fallback in "24.04" "22.04" "20.04"; do
+            for fallback in "26.04" "24.04" "22.04" "20.04"; do
                 # Skip if it's already the requested version
                 [ "$fallback" = "$requested_version" ] && continue
                 candidates="$candidates $fallback"
             done
         elif [ "$distro" = "debian" ]; then
-            for fallback in "12" "11" "10"; do
+            for fallback in "13" "12" "11" "10"; do
                 [ "$fallback" = "$requested_version" ] && continue
                 candidates="$candidates $fallback"
             done
@@ -63,7 +98,7 @@ install_msquic() {
             local url="https://packages.microsoft.com/config/${distro}/${ver}/packages-microsoft-prod.deb"
             echo "  Checking feed for ${distro} ${ver}..." >&2
             # Use --spider to probe without downloading
-            if wget -q --spider "$url" 2>/dev/null; then
+            if wget -q --spider "${wget_args[@]}" "$url" 2>/dev/null; then
                 echo "  Feed found for ${distro} ${ver}." >&2
                 # Print the resolved version so the caller knows which one worked
                 echo "$url|$ver"
@@ -107,7 +142,7 @@ install_msquic() {
                 local url="https://packages.microsoft.com/config/rhel/${ver}/packages-microsoft-prod.rpm"
             fi
             echo "  Checking feed for ${distro} ${ver}..." >&2
-            if wget -q --spider "$url" 2>/dev/null; then
+            if wget -q --spider "${wget_args[@]}" "$url" 2>/dev/null; then
                 echo "  Feed found for ${distro} ${ver}." >&2
                 echo "$url|$ver"
                 return 0
@@ -116,6 +151,77 @@ install_msquic() {
 
         echo "WARNING: No compatible Microsoft package feed found for ${distro} (tried: ${candidates})." >&2
         return 1
+    }
+
+    # -----------------------------------------------
+    # Arch has no libmsquic package: Microsoft's own build comes out of its RHEL 9 feed - it needs
+    # glibc 2.34, OpenSSL 3's libcrypto, libnuma and no CPU newer than x86-64's baseline - into the
+    # app's version folder, where .NET looks first. Nothing is left outside the app: each version gets
+    # its own, newest copy, and the uninstaller takes it along.
+    # -----------------------------------------------
+    _install_msquic_on_arch() {
+        local app_dir="$1"
+        if [ ! -d "$app_dir" ]; then
+            echo "WARNING: No app folder to put MsQuic in. Skipping MsQuic installation."
+            return 1
+        fi
+
+        local rpm_arch
+        case "$(uname -m)" in
+            x86_64) rpm_arch="x86_64" ;;
+            aarch64) rpm_arch="aarch64" ;;
+            *)
+                echo "WARNING: Microsoft builds no MsQuic for $(uname -m). Skipping MsQuic installation."
+                return 1
+                ;;
+        esac
+
+        # libmsquic needs libnuma. Without -y: refreshing the package lists for one package is a
+        # partial upgrade, which Arch does not support.
+        if ! pacman -Q numactl >/dev/null 2>&1 && ! pacman -S --noconfirm numactl; then
+            echo "WARNING: MsQuic needs numactl, which could not be installed. Update the system (pacman -Syu), then install again."
+            return 1
+        fi
+
+        local feed_url="https://packages.microsoft.com/rhel/9/prod/Packages/l"
+        local rpm_file
+        rpm_file=$(wget -qO- "${wget_args[@]}" "$feed_url/" |
+            grep -oE "libmsquic-2\.[0-9.]+-[A-Za-z0-9._]+\.${rpm_arch}\.rpm" | sort -uV | tail -1)
+        if [ -z "$rpm_file" ]; then
+            echo "WARNING: Could not find libmsquic in ${feed_url}."
+            return 1
+        fi
+
+        # libmsquic-2.6.2-1.x86_64.rpm holds usr/lib64/libmsquic.so.2.6.2
+        local lib_version tmp_dir lib_file
+        lib_version=$(echo "$rpm_file" | sed -E 's/^libmsquic-([0-9.]+)-.*/\1/')
+        tmp_dir=$(mktemp -d) || return 1
+        lib_file="$tmp_dir/usr/lib64/libmsquic.so.$lib_version"
+        if ! wget -nv "${wget_args[@]}" -O "$tmp_dir/$rpm_file" "$feed_url/$rpm_file" ||
+            ! bsdtar -xf "$tmp_dir/$rpm_file" -C "$tmp_dir" || [ ! -f "$lib_file" ]; then
+            rm -rf "$tmp_dir"
+            echo "WARNING: Could not extract libmsquic from ${feed_url}/${rpm_file}."
+            return 1
+        fi
+
+        # .NET could not load it then, and would use TCP without a word
+        if ldd "$lib_file" | grep -q "not found"; then
+            echo "WARNING: MsQuic needs libraries this system lacks:"
+            ldd "$lib_file" | grep "not found"
+            rm -rf "$tmp_dir"
+            return 1
+        fi
+
+        # by rename: an app already running from this folder keeps the file it loaded
+        if ! install -m 755 "$lib_file" "$app_dir/.libmsquic.so.2.new" ||
+            ! mv -f "$app_dir/.libmsquic.so.2.new" "$app_dir/libmsquic.so.2"; then
+            rm -f "$app_dir/.libmsquic.so.2.new"
+            rm -rf "$tmp_dir"
+            echo "WARNING: Could not put MsQuic in ${app_dir}."
+            return 1
+        fi
+        rm -rf "$tmp_dir"
+        echo "MsQuic installed: $app_dir/libmsquic.so.2 ($rpm_file)"
     }
 
     # -----------------------------------------------
@@ -133,7 +239,7 @@ install_msquic() {
         feed_url=$(echo "$resolved" | cut -d'|' -f1)
         resolved_version=$(echo "$resolved" | cut -d'|' -f2)
 
-        if [ "$resolved_version" != "$distro_version" ]; then
+        if [ -n "$distro_version" ] && [ "$resolved_version" != "$distro_version" ]; then
             echo "NOTE: No feed for ${distro} ${distro_version}. Falling back to ${distro} ${resolved_version} feed (MsQuic is ABI-compatible)."
         fi
 
@@ -152,7 +258,7 @@ install_msquic() {
         echo 'DPkg::Lock::Timeout "60";' > "$apt_lock_conf"
         trap 'rm -f "$apt_lock_conf"' RETURN
 
-        if ! wget -nv -O "$tmp_deb" "$feed_url"; then
+        if ! wget -nv "${wget_args[@]}" -O "$tmp_deb" "$feed_url"; then
             rm -f "$tmp_deb"
             echo "WARNING: Failed to download feed package from ${feed_url}."
             return 1
@@ -186,7 +292,7 @@ install_msquic() {
         if [ "$installed" != "y" ]; then
             return 1
         fi
-        _link_and_register_msquic
+        _find_msquic
 
     elif [ "$distro" = "rhel" ] || [ "$distro" = "centos" ] || [ "$distro" = "fedora" ]; then
 
@@ -199,7 +305,7 @@ install_msquic() {
         feed_url=$(echo "$resolved" | cut -d'|' -f1)
         resolved_version=$(echo "$resolved" | cut -d'|' -f2)
 
-        if [ "$resolved_version" != "$distro_version" ]; then
+        if [ -n "$distro_version" ] && [ "$resolved_version" != "$distro_version" ]; then
             echo "NOTE: No feed for ${distro} ${distro_version}. Falling back to ${distro} ${resolved_version} feed (MsQuic is ABI-compatible)."
         fi
 
@@ -208,7 +314,14 @@ install_msquic() {
         if ! rpm -q packages-microsoft-prod >/dev/null 2>&1; then
             feed_added="y"
         fi
-        rpm -Uvh "$feed_url" 2>/dev/null || true
+        local tmp_rpm
+        tmp_rpm=$(mktemp /tmp/packages-microsoft-prod.XXXXXX.rpm) || return 1
+        if wget -nv "${wget_args[@]}" -O "$tmp_rpm" "$feed_url"; then
+            rpm -Uvh "$tmp_rpm" 2>/dev/null || true
+        else
+            echo "WARNING: Failed to download feed package from ${feed_url}."
+        fi
+        rm -f "$tmp_rpm"
 
         local package_manager
         package_manager=$(command -v dnf >/dev/null 2>&1 && echo dnf || echo yum)
@@ -227,7 +340,11 @@ install_msquic() {
         if [ "$installed" != "y" ]; then
             return 1
         fi
-        _link_and_register_msquic
+        _find_msquic
+
+    # EndeavourOS, Manjaro and the like name Arch in ID_LIKE
+    elif [ "$distro" = "arch" ] || [[ " $ID_LIKE " == *" arch "* ]]; then
+        _install_msquic_on_arch "$app_dir"
 
     else
         echo "WARNING: Unsupported distribution '${distro}' for MsQuic installation. Skipping."
@@ -235,4 +352,4 @@ install_msquic() {
     fi
 }
 
-install_msquic
+install_msquic "$@"

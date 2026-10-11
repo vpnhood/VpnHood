@@ -284,12 +284,13 @@ fi
 rm -f "/$assemblyName-linux.tar.gz";
 
 # MsQuic, for the QUIC channel, once the package is in: a run that fails before changes nothing else.
-# Optional everywhere: without it the client uses TCP.
+# Optional everywhere: without it the client uses TCP. Where the distribution has no package for it,
+# it goes in the version folder.
 msquic_url="$releaseUrl/$assemblyName-linux-msquic.sh"
 if ! msquic_script=$(wget -qO- "$msquic_url"); then
 	echo "WARNING: Could not download MsQuic installer from: $msquic_url"
 	echo "WARNING: wget failed. Skipping MsQuic installation."
-elif ! bash <(printf '%s' "$msquic_script"); then
+elif ! bash <(printf '%s' "$msquic_script") "$binDir"; then
 	echo "WARNING: MsQuic installation failed. The client will use TCP."
 fi
 

@@ -230,12 +230,13 @@ fi
 # the package the updater of earlier releases left in its working folder, /
 rm -f "/$assemblyName-linux.tar.gz";
 
-# install ms-quic, once the package is in: a run that fails before changes nothing else
+# install ms-quic, once the package is in: a run that fails before changes nothing else. Where the
+# distribution has no package for it, it goes in the version folder.
 msquic_url="$releaseUrl/$assemblyName-linux-msquic.sh"
 if ! msquic_script=$(wget -qO- "$msquic_url"); then
 	echo "WARNING: Could not download MsQuic installer from: $msquic_url"
 	echo "WARNING: wget failed. Skipping MsQuic installation."
-elif ! bash <(printf '%s' "$msquic_script"); then
+elif ! bash <(printf '%s' "$msquic_script") "$binDir"; then
 	echo "WARNING: MsQuic installation failed. Skipping."
 fi
 

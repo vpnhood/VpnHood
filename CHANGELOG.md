@@ -75,6 +75,7 @@
 * Fix: A big upload over a slow connection no longer holds up the device's other traffic, such as browsing
 * Feature: On Linux the app has an uninstaller: Uninstall on its menu entry's right-click menu, or `sudo /opt/VpnHoodClient/vhuninstall` (`/opt/VpnHoodConnect/vhuninstall` for CONNECT). Settings and profiles stay for a later install unless you add `-purge` #linux
 * Update: On Linux the installer asks about updating apart from starting at boot, both on by default (`-noautostart`, `-noautoupdate`); a no to starting at boot no longer turns updates off #linux
+* Feature: On Linux the installer sets up MsQuic, for QUIC, on more distributions: Arch-based ones such as EndeavourOS and Manjaro, and those built on Ubuntu, Debian or RHEL, such as Linux Mint, Pop!_OS, Rocky Linux and AlmaLinux. They used to get none, and the app used TCP #linux
 
 # v8.1.849
 

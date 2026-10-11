@@ -313,41 +313,6 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return Task.CompletedTask;
     }
 
-
-    //protected override async Task RemoveAllDnsServers(CancellationToken cancellationToken)
-    //{
-    //    var commandV4 = $"interface ipv4 set dns \"{AdapterName}\" dhcp";
-    //    var commandV6 = $"interface ipv6 set dns \"{AdapterName}\" dhcp";
-
-    //    await OsUtils.ExecuteCommandAsync("netsh", commandV4, cancellationToken);
-    //    await OsUtils.ExecuteCommandAsync("netsh", commandV6, cancellationToken);
-    //}
-
-    /*
-    protected override async Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
-    {
-        // remove previous DNS servers.
-        // Do not log in debug mode because it is common error as the adapter is usually new
-        VhLogger.Instance.LogDebug("Removing previous DNS from the adapter...");
-        await VhUtils.TryInvokeAsync(VhLogger.MinLogLevel == LogLevel.Trace ? "Remove previous IPv4 DNS" : "",
-            () => OsUtils.ExecuteCommandAsync("netsh", $"netsh interface ipv4 delete dns \"{AdapterName}\" all",
-                cancellationToken));
-
-        await VhUtils.TryInvokeAsync(VhLogger.MinLogLevel == LogLevel.Trace ? "Remove previous IPv6 DNS" : "",
-            () => OsUtils.ExecuteCommandAsync("netsh", $"netsh interface ipv6 delete dns \"{AdapterName}\" all",
-                cancellationToken));
-
-        VhLogger.Instance.LogDebug("Adding new DNS to the adapter...");
-        foreach (var ipAddress in dnsServers) {
-            var command = ipAddress.IsV4()
-                ? $"interface ipv4 add dns \"{AdapterName}\" {ipAddress}"
-                : $"interface ipv6 add dns \"{AdapterName}\" {ipAddress}";
-
-            await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
-        }
-    }
-    */
-
     // A failure fails the start: without the tunnel's DNS, Windows asks the other adapters' servers, often a
     // router outside the tunnel, and the user would never know
     protected override async Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,

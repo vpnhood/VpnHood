@@ -8,6 +8,8 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 		<AssemblyName>VpnHoodServer</AssemblyName>
+		<!-- the Windows exe's, which Installed apps shows -->
+		<ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>

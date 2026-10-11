@@ -1888,7 +1888,7 @@ public sealed partial class Strings
     /// <summary>Terms of Use</summary>
     public string TermsOfUse => Get("TERMS_OF_USE");
 
-    /// <summary>By tapping Accept and continue, you agree to:</summary>
+    /// <summary>By selecting Accept and continue, you agree to:</summary>
     public string AcceptLicenseNotice => Get("ACCEPT_LICENSE_NOTICE");
 
     /// <summary>Scan this code with your phone's camera, or type the address below into a browser.</summary>

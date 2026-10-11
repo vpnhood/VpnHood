@@ -22,7 +22,6 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
 {
     private static readonly TimeSpan StatusTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
-    private const int EventLogEntryCount = 10;
 
     public string NotRunningHint =>
         $"The {paths.InstanceName} service is not running. Start it with: {paths.CommandName} service start";
@@ -133,14 +132,15 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
     // A start that fails before the app opens its log - over the storage or the lock - writes only to
     // the Application log, which a signed-in administrator may read unelevated: its latest entries under
     // the service's name. An elevated terminal may open the storage too, so it gets the app's own log.
-    // Nothing is followed: what comes next comes from a service that answers.
+    // Each part prints its last lines, as journalctl -n does on Linux. Nothing is followed: what comes
+    // next comes from a service that answers.
     public async Task<int> ShowOfflineLog(bool follow, int lines, CancellationToken cancellationToken)
     {
-        var entries = ReadEventLog(paths.InstanceName, EventLogEntryCount);
+        var entries = ReadEventLog(paths.InstanceName, lines);
         foreach (var entry in entries)
             Console.WriteLine($"{entry.TimeCreated:yyyy-MM-dd HH:mm:ss} {entry.Level}: {entry.Message}");
 
-        if (entries.Count == 0)
+        if (entries.Count == 0 && lines > 0)
             Console.WriteLine($"The Application log holds nothing from {paths.InstanceName}.");
 
         if (!WindowsElevation.IsElevated)
@@ -156,9 +156,9 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
         using var reader = new StreamReader(stream);
         var tail = new Queue<string>();
         while (await reader.ReadLineAsync(cancellationToken).Vhc() is { } line) {
-            if (tail.Count == lines)
-                tail.Dequeue();
             tail.Enqueue(line);
+            if (tail.Count > lines)
+                tail.Dequeue();
         }
 
         Console.WriteLine($"--- {logFilePath}");

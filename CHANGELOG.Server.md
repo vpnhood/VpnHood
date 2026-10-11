@@ -41,6 +41,7 @@
 * Fix: On Linux, an installed VpnHoodServer waits for the network at boot (network-online.target, where the system's wait-online service is enabled). It could start before the default route existed, find no network adapter, and then run without its tun (TCP by the TCP proxy only) until restarted by hand.
 * Update: VpnHoodServer holds a speed-limited session to its limit in one place for all its traffic: after a pause about 10 MB goes at full speed, then packets wait in a short queue, about a quarter second of the limit, where they used to wait seconds; a session idle for a long time no longer gets unlimited speed for its saved allowance. A client's upload is checked at 1.2 times its limit, with a 12 MB burst.
 * Fix: The Docker server no longer logs errors at start about a network interface it could not find: it says once that it runs as a proxy, since a container has no TUN device.
+* Fix: On Linux the installer installs ICU where it is missing, as on Debian 13's cloud image: VpnHoodServer did not start without it.
 
 # v8.1.849
 

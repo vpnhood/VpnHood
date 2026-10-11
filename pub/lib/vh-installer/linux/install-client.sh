@@ -191,10 +191,10 @@ autoupdate=${autoupdate:-$defaultAutoupdate};
 # ------------------------------------------------------------------
 # Dependencies
 # ------------------------------------------------------------------
-# The build is self-contained - it carries .NET and Skia - so the only things missing on a bare
-# machine are the C libraries Avalonia opens by name at runtime, and they are needed only where
-# there is a window to draw. A failure here is a warning, not an exit: a machine with them
-# already, or one that is not Debian at all, must still finish installing.
+# The build is self-contained - it carries .NET and Skia - so what a bare machine lacks is ICU,
+# which .NET needs (once the package is in, below), and the C libraries Avalonia opens by name at
+# runtime, needed only where there is a window to draw. A failure here is a warning, not an exit:
+# a machine with them already, or one that is not Debian at all, must still finish installing.
 if [ "$withDesktop" == "y" ] && command -v dpkg >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
 	missing="";
 	for lib in libx11-6 libice6 libsm6 libfontconfig1 xdg-utils; do
@@ -282,6 +282,41 @@ else
 fi
 # the package the updater of earlier releases left in its working folder, /
 rm -f "/$assemblyName-linux.tar.gz";
+
+# ICU, once the package is in, as MsQuic below: .NET reads its culture data from it and stops at start
+# without it, the service and the commands as well as the window. Most systems have it; a minimal one,
+# Debian 13's cloud image among them, does not. Found by glob, as MsQuic is. Debian and Ubuntu carry
+# ICU's version in the package's name (libicu76). Arch needs no branch: its pacman cannot run without
+# ICU, so it is there wherever pacman is.
+function icu_found() {
+	local icuLib;
+	for icuLib in /usr/lib64/libicuuc.so.* /usr/lib/libicuuc.so.* /usr/lib/*/libicuuc.so.*; do
+		[ -e "$icuLib" ] && return 0;
+	done
+	return 1;
+}
+function install_icu() {
+	local package;
+	if command -v apt-get >/dev/null 2>&1; then
+		DEBIAN_FRONTEND=noninteractive apt-get update -qq;
+		package=$(apt-cache pkgnames libicu | grep -xE 'libicu[0-9]+(t64)?' | sort -V | tail -n 1);
+		# waiting for the lock, which unattended-upgrades holds for minutes after a first boot
+		[ -n "$package" ] && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+			-o DPkg::Lock::Timeout=300 "$package";
+	elif command -v dnf >/dev/null 2>&1; then
+		dnf install -y -q libicu;
+	elif command -v zypper >/dev/null 2>&1; then
+		ZYPP_LOCK_TIMEOUT=300 zypper --non-interactive --quiet install libicu;
+	fi
+}
+if ! icu_found; then
+	echo "Installing ICU (libicu), which $productName needs...";
+	install_icu;
+	if ! icu_found; then
+		echo "WARNING: Could not install ICU (libicu), without which $productName does not start.";
+		echo "WARNING: Install it with your package manager.";
+	fi
+fi
 
 # MsQuic, for the QUIC channel, once the package is in: a run that fails before changes nothing else.
 # Optional everywhere: without it the client uses TCP. Where the distribution has no package for it,

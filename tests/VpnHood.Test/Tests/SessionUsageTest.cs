@@ -348,8 +348,8 @@ public class SessionUsageTest : TestBase
 
     private static void AddTraffic(Session session, long sent, long received)
     {
-        session.Tunnel.TrafficMeter.OnSent(sent);
-        session.Tunnel.TrafficMeter.OnReceived(received);
+        session.TrafficMeter.OnSent(sent);
+        session.TrafficMeter.OnReceived(received);
     }
 
     // the session's code as the access manager has it
@@ -389,7 +389,7 @@ public class SessionUsageTest : TestBase
         Assert.IsNotNull(accessTokenData);
 
         // the session counts the client's way: what the server received, the client has sent
-        var traffic = session.Tunnel.TrafficMeter.Traffic - (unbilled ?? new Traffic());
+        var traffic = session.TrafficMeter.Traffic - (unbilled ?? new Traffic());
         Assert.AreEqual(traffic.Received, accessTokenData.Usage.Sent);
         Assert.AreEqual(traffic.Sent, accessTokenData.Usage.Received);
     }

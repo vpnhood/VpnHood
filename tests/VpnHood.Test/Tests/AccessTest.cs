@@ -265,7 +265,7 @@ public class AccessTest : TestBase
             // verify server-side TrafficMeter was configured with correct bps values converted from Mbps
             // MaxSpeedMbps(sent=5, received=50): server maps received->sent and sent->received with ReceiveSpeedGrace(1.2)
             var serverSession = server.GetSession(client2);
-            var serverMaxSpeed = serverSession.Tunnel.TrafficMeter.MaxSpeed;
+            var serverMaxSpeed = serverSession.TrafficMeter.MaxSpeed;
             Assert.AreEqual(50 * 1_000_000 / 8, serverMaxSpeed.Sent,
                 "Server send limit should be 50 Mbps converted to bps (client download = server send).");
             Assert.AreEqual((long)(5 * 1_000_000 / 8d * 1.2), serverMaxSpeed.Received,

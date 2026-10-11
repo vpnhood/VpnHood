@@ -10,6 +10,10 @@ namespace VpnHood.Net.PacketTransports;
 
 public abstract class PacketTransportBase : IPacketTransport
 {
+    // a passthrough transport sends on the sender's thread and queues nothing: it shares this closed queue and
+    // runs no send loop, saving each its own
+    private static readonly Channel<IpPacket> PassthroughSendChannel = CreatePassthroughSendChannel();
+
     private readonly Channel<IpPacket> _sendChannel;
     private readonly int _queueCapacity;
     private readonly bool _autoDisposePackets;
@@ -45,7 +49,8 @@ public abstract class PacketTransportBase : IPacketTransport
 
     public event EventHandler<IpPacket>? PacketReceived;
     public ReadOnlyPacketTransportStat PacketStat { get; }
-    public int QueueLength => _sendChannel.Reader.Count;
+    // a subclass that queues its packets elsewhere counts them here
+    public virtual int QueueLength => _sendChannel.Reader.Count;
 
     // the flag is read again after the queue: the loop marks a batch before it empties the queue, so a batch
     // taken between the first two reads still shows
@@ -68,14 +73,24 @@ public abstract class PacketTransportBase : IPacketTransport
         _passthrough = passthrough;
 
         // a full queue that does not block drops its oldest packet, so the newer ones behind it show the loss
-        _sendChannel = Channel.CreateBounded(new BoundedChannelOptions(_queueCapacity) {
-            SingleReader = true,
-            SingleWriter = false,
-            FullMode = options.Blocking ? BoundedChannelFullMode.Wait : BoundedChannelFullMode.DropOldest
-        }, options.Blocking ? null : (Action<IpPacket>)DropQueuedPacket);
+        _sendChannel = passthrough
+            ? PassthroughSendChannel
+            : Channel.CreateBounded(new BoundedChannelOptions(_queueCapacity) {
+                SingleReader = true,
+                SingleWriter = false,
+                FullMode = options.Blocking ? BoundedChannelFullMode.Wait : BoundedChannelFullMode.DropOldest
+            }, options.Blocking ? null : (Action<IpPacket>)DropQueuedPacket);
 
         PacketStat = new ReadOnlyPacketTransportStat(_stat);
-        Task.Run(StartSendingPacketsAsync);
+        if (!passthrough)
+            Task.Run(StartSendingPacketsAsync);
+    }
+
+    private static Channel<IpPacket> CreatePassthroughSendChannel()
+    {
+        var sendChannel = Channel.CreateBounded<IpPacket>(1);
+        sendChannel.Writer.TryComplete();
+        return sendChannel;
     }
 
     // The handler takes a received packet. One the transport cannot deliver (refused once disposed, with no

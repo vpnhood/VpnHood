@@ -32,6 +32,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly IVpnAdapter _vpnAdapter;
     private readonly NetFilter _netFilter;
     private readonly Tunnel _tunnel;
+    private readonly TrafficMeter _trafficMeter;
     private readonly ClientUsageTracker? _clientUsageTracker;
     private readonly ProxyManager _proxyManager;
     private readonly ClientPacketHandler _packetHandler;
@@ -90,14 +91,21 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
         _vpnAdapter.Failed += VpnAdapter_Failed;
 
-        // Tunnel; the client limits only what it sends: the server shapes the download already, and a
-        // second limit here would only drop what the server let through
+        // the session's limit and traffic count. The client limits only what it sends: the server shapes the
+        // download already, and a second limit here would only drop what the server let through
+        _trafficMeter = new TrafficMeter {
+            MaxSpeed = new Traffic(sent: (config.MaxSpeedMbps?.Sent ?? 0) * 1_000_000 / 8, received: 0),
+            MaxSpeedBurst = new Traffic(sent: TransportDefaults.MaxSpeedBurst, received: TransportDefaults.MaxSpeedBurst)
+        };
+
+        // Tunnel; a send limit paces its packets
         var tunnelOptions = new TunnelOptions {
             MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
-            Mtu = config.Mtu,
-            MaxSpeed = new Traffic(sent: (config.MaxSpeedMbps?.Sent ?? 0) * 1_000_000 / 8, received: 0)
+            Mtu = config.Mtu
         };
-        _tunnel = tunnelOptions.MaxSpeed.Sent > 0 ? new ThrottledTunnel(tunnelOptions) : new Tunnel(tunnelOptions);
+        _tunnel = _trafficMeter.MaxSpeed.Sent > 0
+            ? new ThrottledTunnel(tunnelOptions, _trafficMeter)
+            : new Tunnel(tunnelOptions);
 
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
@@ -125,6 +133,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             domainFilterService: options.DomainFilteringService,
             socketFactory: _socketFactory,
             tunnel: _tunnel,
+            trafficMeter: _trafficMeter,
             tcpConnectTimeout: Config.Transport.TcpConnectTimeout,
             proxyManager: _proxyManager,
             netFilter: _netFilter,
@@ -150,6 +159,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _status = new ClientSessionStatus(
             session: this,
             tunnel: _tunnel,
+            trafficMeter: _trafficMeter,
             domainFilteringService: options.DomainFilteringService,
             requestSender: _requestSender,
             proxyManager: _proxyManager,
@@ -485,7 +495,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 Blocking = false,
                 AutoDisposePackets = true,
                 Lifespan = lifespan,
-                TrafficMeter = _tunnel.TrafficMeter
+                TrafficMeter = _trafficMeter
             });
             _tunnel.AddChannel(channel, true);
             CreatedPacketChannelCount++;
@@ -516,7 +526,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             Blocking = false,
             ChannelId = Guid.NewGuid().ToString(),
             Lifespan = null,
-            TrafficMeter = _tunnel.TrafficMeter
+            TrafficMeter = _trafficMeter
         });
 
         // add to tunnel
@@ -727,6 +737,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         VhLogger.Instance.LogDebug("Disposing Tunnel...");
         _tunnel.Dispose();
+        _trafficMeter.Dispose();
 
         VhLogger.Instance.LogDebug("Disposing UdpTransmitter...");
         _udpTransmitter?.Dispose();

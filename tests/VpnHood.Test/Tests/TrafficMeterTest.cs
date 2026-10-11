@@ -115,12 +115,14 @@ public class TrafficMeterTest : TestBase
         });
 
         const long maxSpeed = 125_000;
-        using var tunnel = new ThrottledTunnel(new TunnelOptions {
-            MaxPacketChannelCount = 1,
-            Mtu = TransportDefaults.MtuClient,
+        using var trafficMeter = new TrafficMeter {
             MaxSpeed = new Traffic(sent: maxSpeed, received: 0),
             MaxSpeedBurst = new Traffic(sent: 16 * 1024, received: 0)
-        });
+        };
+        using var tunnel = new ThrottledTunnel(new TunnelOptions {
+            MaxPacketChannelCount = 1,
+            Mtu = TransportDefaults.MtuClient
+        }, trafficMeter);
         await using var clientConnection = new TcpStreamConnection(tcpClient, connectionName: "tunnel", isServer: false);
         tunnel.AddChannel(new StreamPacketChannel(new StreamPacketChannelOptions {
             RequestTime = DateTime.UtcNow,
@@ -129,7 +131,7 @@ public class TrafficMeterTest : TestBase
             AutoDisposePackets = true,
             Lifespan = null,
             ChannelId = Guid.NewGuid().ToString(),
-            TrafficMeter = tunnel.TrafficMeter
+            TrafficMeter = trafficMeter
         }), disposeIfFailed: true);
 
         const int quietPort = 1001;
@@ -180,14 +182,16 @@ public class TrafficMeterTest : TestBase
     [TestMethod]
     public async Task Packets_together_get_a_streams_share_beside_busy_streams()
     {
-        // a tunnel throttled to 1 Mbps with no burst: a turn at the limit is 2.5 KB, and a stream reads 6.25 KB
+        // a tunnel throttled to 1 Mbps with no burst: a turn at the limit is 2.5 KB, and a stream reads 8 KB
         const long maxSpeed = 125_000;
-        using var tunnel = new ThrottledTunnel(new TunnelOptions {
-            MaxPacketChannelCount = 1,
-            Mtu = TransportDefaults.MtuClient,
+        using var trafficMeter = new TrafficMeter {
             MaxSpeed = new Traffic(sent: maxSpeed, received: 0),
             MaxSpeedBurst = new Traffic(sent: 0, received: 0)
-        });
+        };
+        using var tunnel = new ThrottledTunnel(new TunnelOptions {
+            MaxPacketChannelCount = 1,
+            Mtu = TransportDefaults.MtuClient
+        }, trafficMeter);
         var packetChannel = new TestPacketChannel();
         tunnel.AddChannel(packetChannel, disposeIfFailed: true);
 
@@ -203,7 +207,7 @@ public class TrafficMeterTest : TestBase
                 var proxyChannel = new ProxyChannel($"stream{i}",
                     new TcpStreamConnection(hostEnd, connectionName: "host", isServer: true),
                     new TcpStreamConnection(tunnelEnd, connectionName: "tunnel", isServer: true),
-                    ServerTransportDefaults.StreamProxyBufferSize, tunnel.TrafficMeter);
+                    ServerTransportDefaults.StreamProxyBufferSize, trafficMeter);
                 disposables.AddRange([proxyChannel, hostWriter, hostEnd, tunnelEnd, tunnelReader]);
                 proxyChannel.Start();
                 _ = FloodAsync(hostWriter.GetStream(), cancellationToken);
@@ -222,7 +226,7 @@ public class TrafficMeterTest : TestBase
             var allBytes = packetBytes + Interlocked.Read(ref streamBytes) - streamBytesAtStart;
 
             // the packets together get one stream's share, about a fifth, and the limit holds. A queue that waits
-            // after each packet gets 14% here, and 5% beside streams that pay a whole read at once
+            // after each packet gets 13% here, and 4% beside streams that pay a whole read at once
             var share = (double)packetBytes / allBytes;
             var speed = allBytes / measureStopwatch.Elapsed.TotalSeconds;
             Assert.IsTrue(share is > 0.17 and < 0.35, $"Packets' share: {share:P0}");

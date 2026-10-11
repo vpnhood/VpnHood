@@ -216,13 +216,11 @@ public class ProxyChannel : IProxyChannel
         if (MemoryMarshal.TryGetArray<byte>(readBufferOwner.Memory, out var segment) && segment.Array != null)
             VhTypeTracker.Track(segment.Array);
 
-        // throttled, a read takes at most a twentieth of a second of the limit, so a stream holds few bytes while
-        // it pays for them in turns; a smaller read would slow a stream whose writes wait out the round trip
+        // a throttled stream reads as much as any, as one whose writes wait out the round trip is only as fast as
+        // its reads; it pays for them in turns, so the session's other takers keep theirs (PayLimitAsync)
         var maxSpeed = _trafficMeter == null ? 0
             : isSendingToTunnel ? _trafficMeter.MaxSpeed.Sent : _trafficMeter.MaxSpeed.Received;
-        var readLength = maxSpeed > 0
-            ? (int)Math.Min(Math.Max(maxSpeed / 20, BufferSizeMin), bufferSize - preserveCount)
-            : bufferSize - preserveCount;
+        var readLength = bufferSize - preserveCount;
 
         while (!sourceCt.IsCancellationRequested && !destinationCt.IsCancellationRequested) {
             // read from source

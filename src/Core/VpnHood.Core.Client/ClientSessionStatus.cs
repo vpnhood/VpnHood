@@ -10,6 +10,7 @@ namespace VpnHood.Core.Client;
 internal class ClientSessionStatus(
     ClientSession session,
     Tunnel tunnel,
+    TrafficMeter trafficMeter,
     RequestSender requestSender,
     DomainFilteringService domainFilteringService,
     ProxyManager proxyManager,
@@ -22,16 +23,16 @@ internal class ClientSessionStatus(
     internal void Update(AccessUsage? value) => _accessUsage = value ?? _accessUsage;
 
     public ConnectorStat ConnectorStatus => requestSender.ConnectorService.Stat;
-    public Traffic Speed => tunnel.TrafficMeter.Speed;
-    public Traffic SessionTraffic => tunnel.TrafficMeter.Traffic;
+    public Traffic Speed => trafficMeter.Speed;
+    public Traffic SessionTraffic => trafficMeter.Traffic;
     public Traffic SessionSplitTraffic => proxyManager.Traffic;
 
     public Traffic CycleTraffic {
-        get => field + tunnel.TrafficMeter.Traffic;
+        get => field + trafficMeter.Traffic;
     } = accessUsage.CycleTraffic;
 
     public Traffic TotalTraffic {
-        get => field + tunnel.TrafficMeter.Traffic;
+        get => field + trafficMeter.Traffic;
     } = accessUsage.TotalTraffic;
 
     public int SessionPacketChannelCount => session.CreatedPacketChannelCount;

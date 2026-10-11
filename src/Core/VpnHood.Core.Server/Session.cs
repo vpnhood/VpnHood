@@ -64,6 +64,9 @@ public class Session : IDisposable
     private readonly Lock _stateLock = new();
 
     public Tunnel Tunnel { get; }
+
+    // the session's limit and traffic count, which its tunnel, channels and streams share
+    public TrafficMeter TrafficMeter { get; }
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
     public SessionResponse Response { get; private set; }
@@ -78,7 +81,7 @@ public class Session : IDisposable
 
 
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
-    public DateTime LastActivityTime => Tunnel.TrafficMeter.LastActivityTime;
+    public DateTime LastActivityTime => TrafficMeter.LastActivityTime;
     public VirtualIpBundle VirtualIps { get; }
     public bool AllowTcpPacket { get; }
     public bool AllowTcpProxy { get; }
@@ -135,9 +138,7 @@ public class Session : IDisposable
         // the server shapes what it sends, the client's download; what it receives it only enforces, a little
         // looser than the client shapes it, so an honest client is never held
         var maxSpeedMbps = sessionResponseEx.AccessInfo?.MaxSpeedMbps ?? new Traffic();
-        var tunnelOptions = new TunnelOptions {
-            MaxPacketChannelCount = options.MaxPacketChannelCountValue,
-            Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu),
+        TrafficMeter = new TrafficMeter {
             MaxSpeed = new Traffic(
                 sent: maxSpeedMbps.Received * 1_000_000 / 8,
                 received: (long)(maxSpeedMbps.Sent * 1_000_000d / 8 * ReceiveSpeedGrace)),
@@ -145,7 +146,15 @@ public class Session : IDisposable
                 sent: TransportDefaults.MaxSpeedBurst,
                 received: (long)(TransportDefaults.MaxSpeedBurst * ReceiveSpeedGrace))
         };
-        Tunnel = tunnelOptions.MaxSpeed.Sent > 0 ? new ThrottledTunnel(tunnelOptions) : new Tunnel(tunnelOptions);
+
+        // Tunnel; a send limit paces its packets
+        var tunnelOptions = new TunnelOptions {
+            MaxPacketChannelCount = options.MaxPacketChannelCountValue,
+            Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu)
+        };
+        Tunnel = TrafficMeter.MaxSpeed.Sent > 0
+            ? new ThrottledTunnel(tunnelOptions, TrafficMeter)
+            : new Tunnel(tunnelOptions);
 
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 
@@ -159,7 +168,7 @@ public class Session : IDisposable
         get {
             // Intentionally Reversed: sending to tunnel means receiving form client,
             // Intentionally Reversed: receiving from tunnel means sending for client
-            var traffic = Tunnel.TrafficMeter.Traffic - _prevTraffic;
+            var traffic = TrafficMeter.Traffic - _prevTraffic;
             return new Traffic {
                 Sent = traffic.Received,
                 Received = traffic.Sent
@@ -175,7 +184,7 @@ public class Session : IDisposable
             AutoDisposePackets = true,
             Lifespan = null,
             ChannelId = Guid.NewGuid().ToString(),
-            TrafficMeter = Tunnel.TrafficMeter
+            TrafficMeter = TrafficMeter
         });
 
         UseUdpChannel = true;
@@ -186,7 +195,7 @@ public class Session : IDisposable
     {
         lock (_stateLock) {
             // one read of the meter for both: bytes counted between two reads would never be reported
-            var meterTraffic = Tunnel.TrafficMeter.Traffic;
+            var meterTraffic = TrafficMeter.Traffic;
             var traffic = meterTraffic - _prevTraffic;
             _prevTraffic = meterTraffic;
 
@@ -382,7 +391,7 @@ public class Session : IDisposable
             StreamConnection = streamConnection,
             ChannelId = request.ChannelId ?? request.RequestId,
             Lifespan = null,
-            TrafficMeter = Tunnel.TrafficMeter
+            TrafficMeter = TrafficMeter
         });
 
         // delete all inactive PacketChannels if ActiveChannelIds exists. InActive channel request time must be less than current request time
@@ -528,7 +537,7 @@ public class Session : IDisposable
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
             var proxyChannel = new ProxyChannel(streamConnection.ToString()!, tcpConnectionHost, streamConnection,
-                _streamProxyBufferSize, Tunnel.TrafficMeter);
+                _streamProxyBufferSize, TrafficMeter);
 
             // swap the reserved slot with the channel atomically, so a concurrent request can
             // neither count this request twice nor slip in through a gap and overshoot the limit
@@ -594,6 +603,7 @@ public class Session : IDisposable
         _proxyManager.Dispose();
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
         Tunnel.Dispose();
+        TrafficMeter.Dispose();
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();

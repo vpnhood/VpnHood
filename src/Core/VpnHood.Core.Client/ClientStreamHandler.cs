@@ -25,6 +25,7 @@ internal class ClientStreamHandler(
     ISocketFactory socketFactory,
     DomainFilteringService domainFilterService,
     Tunnel tunnel,
+    TrafficMeter trafficMeter,
     ProxyManager proxyManager,
     TimeSpan tcpConnectTimeout,
     NetFilter netFilter,
@@ -156,7 +157,7 @@ internal class ClientStreamHandler(
 
         // they leave with the request, outside the proxy channel, so the speed limit is paid for them here
         if (initContents.Length > 0)
-            await tunnel.TrafficMeter.ThrottleSendAsync(initContents.Length, cancellationToken).Vhc();
+            await trafficMeter.ThrottleSendAsync(initContents.Length, cancellationToken).Vhc();
 
         // read the response
         var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
@@ -166,10 +167,10 @@ internal class ClientStreamHandler(
 
             // account for prefetched init contents that bypassed the proxy channel
             if (initContents.Length > 0)
-                tunnel.TrafficMeter.OnSent(initContents.Length);
+                trafficMeter.OnSent(initContents.Length);
 
             // add stream proxy
-            var channel = new ProxyChannel(proxyConnection.ToString()!, streamConnection, proxyConnection, streamProxyBufferSize, tunnel.TrafficMeter);
+            var channel = new ProxyChannel(proxyConnection.ToString()!, streamConnection, proxyConnection, streamProxyBufferSize, trafficMeter);
             tunnel.AddChannel(channel, disposeIfFailed: true);
         }
         catch {

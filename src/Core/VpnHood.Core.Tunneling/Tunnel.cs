@@ -8,12 +8,11 @@ using VpnHood.Core.Common.Configuration;
 namespace VpnHood.Core.Tunneling;
 
 // A session's tunnel: it passes each packet straight on to one of its channels. A session with a send limit
-// uses a ThrottledTunnel, which paces the packets first
+// uses a ThrottledTunnel, which paces the packets first; the limit and the traffic count are the session's
 public class Tunnel : PacketTransportBase
 {
     private readonly ChannelManager _channelManager;
 
-    public TrafficMeter TrafficMeter { get; }
     public int PacketChannelCount => _channelManager.PacketChannelCount;
     public int StreamProxyChannelCount => _channelManager.ProxyChannelCount;
     public void RemoveChannels<T>() where T : IChannel => _channelManager.RemoveChannels<T>();
@@ -27,28 +26,12 @@ public class Tunnel : PacketTransportBase
     public int Mtu { get; set; }
 
     public Tunnel(TunnelOptions options)
-        : this(options, throttlesPackets: false)
-    {
-    }
-
-    // A tunnel with a send limit must pace its packets, or its proxy streams would keep the limit and its packets
-    // would not; one that paces them needs a limit to pace them to
-    protected Tunnel(TunnelOptions options, bool throttlesPackets)
         : base(new PacketTransportOptions {
             AutoDisposePackets = false, // a packet handed on is no longer the tunnel's
             Blocking = false
         }, singleMode: true, passthrough: true)
     {
-        if ((options.MaxSpeed.Sent > 0) != throttlesPackets)
-            throw new ArgumentException(throttlesPackets
-                ? "A tunnel that throttles its packets needs a send limit."
-                : "A tunnel with a send limit must throttle its packets.", nameof(options));
-
         Mtu = options.Mtu;
-        TrafficMeter = new TrafficMeter {
-            MaxSpeed = options.MaxSpeed,
-            MaxSpeedBurst = options.MaxSpeedBurst
-        };
         _channelManager = new ChannelManager(options.MaxPacketChannelCount, Channel_OnPacketReceived);
     }
 
@@ -142,8 +125,6 @@ public class Tunnel : PacketTransportBase
     protected override void DisposeManaged()
     {
         _channelManager.Dispose();
-        TrafficMeter.Dispose();
-
         base.DisposeManaged();
     }
 }

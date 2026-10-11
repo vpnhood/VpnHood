@@ -15,6 +15,7 @@ namespace VpnHood.Core.Tunneling;
 public class ThrottledTunnel : Tunnel
 {
     private const int MinQueueCapacity = 32;
+    private readonly TrafficMeter _trafficMeter;
     private readonly ThrottleQueue _throttleQueue;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly CancellationToken _cancellationToken;
@@ -26,13 +27,22 @@ public class ThrottledTunnel : Tunnel
     // the packets the queue dropped: a full queue's oldest, and those it held at the end
     public long QueueDroppedPackets => _throttleQueue.DroppedPackets;
 
-    public ThrottledTunnel(TunnelOptions options)
-        : base(options, throttlesPackets: true)
+    // the packets waiting for their turn; the base queues none, as it passes each on
+    public override int QueueLength => _throttleQueue.QueueLength;
+
+    // the session's meter, which it owns: the limit the packets are paced to, shared with its proxy streams
+    public ThrottledTunnel(TunnelOptions options, TrafficMeter trafficMeter)
+        : base(options)
     {
+        if (trafficMeter.MaxSpeed.Sent <= 0)
+            throw new ArgumentException("A tunnel that throttles its packets needs a send limit.",
+                nameof(trafficMeter));
+
+        _trafficMeter = trafficMeter;
         _cancellationToken = _cancellationTokenSource.Token;
-        _turnLength = TrafficMeter.TurnLength.Sent;
+        _turnLength = trafficMeter.TurnLength.Sent;
         _throttleQueue = new ThrottleQueue(this, (int)Math.Clamp(
-            options.MaxSpeed.Sent / 4 / TransportDefaults.MaxPacketSize,
+            trafficMeter.MaxSpeed.Sent / 4 / TransportDefaults.MaxPacketSize,
             MinQueueCapacity, PacketTransportOptions.DefaultQueueCapacity));
     }
 
@@ -58,12 +68,12 @@ public class ThrottledTunnel : Tunnel
         try {
             _turnBytes += packetLength;
             if (_turnBytes < _turnLength) {
-                TrafficMeter.ChargeSend(packetLength);
+                _trafficMeter.ChargeSend(packetLength);
                 return default;
             }
 
             _turnBytes -= _turnLength;
-            var throttleTask = TrafficMeter.ThrottleSendAsync(packetLength, _cancellationToken);
+            var throttleTask = _trafficMeter.ThrottleSendAsync(packetLength, _cancellationToken);
             return throttleTask.IsCompletedSuccessfully ? default : WaitForThrottle(throttleTask);
         }
         catch (Exception ex) {

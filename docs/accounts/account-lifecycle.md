@@ -695,7 +695,8 @@ reset, sent to the address on file.** That address always reaches the person, in
 Apple's Hide My Email — a relay address is pseudonymous, not anonymous (below): it forwards to
 their real inbox, so the reset lands exactly where any other mail for that account does. Nothing
 new to build and nothing to explain in the app; support answers "use the password reset on the
-website" and it is true for every account we have.
+website" and it is true for every account that bought something. One that only ever signed in, in
+the app, has no website login at all: for deleting it, that person asks by email (§9).
 
 #### Which code the account gets, and whose choice it is
 
@@ -1237,6 +1238,7 @@ partner's.
 |---|---|---|
 | In the app, on the account page | Anyone signed in — the fastest route | **Apple requires it.** An app that lets people create an account must let them delete it *from inside the app*. Sending them to a website instead is refused. The only exemption is for tightly regulated fields — banking, healthcare, identity-verified services — which we are not. |
 | The website deletion page → client area | Someone who no longer has the app, or never used it | **Google requires it.** Play's data-safety declaration asks for a deletion URL a person can reach without installing anything. |
+| The website deletion page → an email | Someone who only ever signed in in the app, so has no website login | The same requirement, for every account: they write from the address the account signs in with, and we delete it with the same deletion (the iap addon's Accounts tab). |
 
 So it is **both, and neither is optional** — they are two different stores' requirements, not two ways
 of doing the same thing.
@@ -1248,7 +1250,9 @@ it lives, because a reviewer who cannot find it treats it as missing.
 
 The web route requires signing in; there is no unauthenticated deletion form, ever. Someone who
 bought through a store and never set a password uses password recovery on the address they signed
-in with.
+in with. Someone who never bought has no website login, so the page offers the email instead: the
+request has to come from an address the account signs in with, and that address is what finds the
+account.
 
 ### An account that started on the website
 

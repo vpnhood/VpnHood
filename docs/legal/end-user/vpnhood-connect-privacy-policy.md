@@ -96,6 +96,8 @@ When you connect, our servers record what any VPN server must see to run the ser
 
 Other network addresses inside them are not written down as addresses. Each one is replaced by a short token produced with a random key that is created when the server process starts, exists only in memory, and is never saved anywhere. The same address gives the same token while that process runs, which is what lets an engineer follow one connection through a file; when the process stops, the key ceases to exist, so nothing afterwards can turn a token back into an address — not us, not anyone we hand a file to. Tokens from two different runs cannot be matched to each other either. Addresses that identify nobody are left readable, because they help us diagnose faults and reveal nothing: loopback and private-range addresses, which belong to a machine's own network and point at no one on the internet.
 
+**DNS.** While you are connected, the names your device looks up are answered through our servers by Google Public DNS, unless you choose another DNS server in the app: Google sees those names with our server's address, not yours.
+
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 
 Connection activity stays only in server log files; it never enters our database. Our database stores the technical information associated with your Client ID, and your email address if you signed in.
@@ -106,10 +108,14 @@ If you have signed in, you can permanently delete your account at any time:
 
 - **In the app**: Account page → **Delete my account**.
 - **Without the app**: follow the steps on our [account deletion page](https://www.vpnhood.com/user-account-deletion-request).
+- **By email**: if you can do neither — you only ever signed in in the app, so our website has no
+  password for you — write to **[legal@vpnhood.com](mailto:legal@vpnhood.com)** from the address you
+  sign in with, and we delete the account for you.
 
 Deletion applies everywhere at once: you are signed out on all devices, your sign-in identity and
 email address are erased, and there is no way to restore the account — signing in again later
-creates a new, empty one. Premium granted by the account ends with it on every device. A premium
+creates a new, empty one. Premium granted by the account ends with it on every device; a device
+that is offline or not in use at the time notices the next time it reaches our account website. A premium
 code you bought is still yours — it keeps working until the period you paid for ends, and anyone
 you shared it with is unaffected — but a code the account had applied for you leaves your devices
 together with the account: enter it again, or import it into a new account, to keep using it. A
@@ -135,7 +141,7 @@ What deletion does **not** do:
   change that — cancel the subscription in the store if you do not want it back.
 - It does not erase invoices, and does not strip the name off them. We are legally required to
   keep financial records, and a financial record has to say who bought — so invoices keep the name
-  they were issued with, frozen exactly as issued. They are kept because tax law requires it, for
+  they were issued with. They are kept because tax law requires it, for
   as long as that law requires, and are used for nothing else: not for support, not for marketing,
   only to satisfy that legal obligation. The notices our payment processors send us about a
   payment are kept with its invoice, for the same reason and as long.
@@ -159,7 +165,7 @@ record with us.
 
 These companies process data on our behalf or in their own right, and only for the purposes described above:
 
-- **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, non-iOS builds, and the advertising ID, Google Play build), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
+- **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, non-iOS builds, and the advertising ID, Google Play build), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build), and Google Public DNS (the names your device looks up while connected, through our servers)
 - **Apple Inc.** — Sign in with Apple and App Store billing (optional accounts and purchases, App Store build)
 - **Hosting and payment providers** — infrastructure needed to run the VPN and account services, and payment processing for website purchases
 

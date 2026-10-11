@@ -249,6 +249,13 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         // recover all sessions
         var responseExs = await _accessManager.Session_GetAll(cancellationToken).Vhc();
         foreach (var responseEx in responseExs) {
+            // a closed session's record is gone for good, though the access manager may still list it for a while
+            if (_sessionLocalService.Find(responseEx.SessionId) == null) {
+                VhLogger.Instance.LogDebug("Skipping a closed session. SessionId: {SessionId}",
+                    VhLogger.FormatSessionId(responseEx.SessionId));
+                continue;
+            }
+
             try {
                 var session = BuildSessionFromResponseEx(responseEx, true);
                 if (!Sessions.TryAdd(session.SessionId, session)) {

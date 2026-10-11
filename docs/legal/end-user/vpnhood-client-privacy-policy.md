@@ -1,9 +1,12 @@
 # VpnHood! CLIENT - Privacy Policy
 
-*Effective: 2026-10-08.*
+*Effective: 2026-10-11.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy.
 This policy applies only to the official **VpnHood! CLIENT** app.
+
+On iOS, the app sends nothing about you to us or to any third party; to connect, it talks only to the
+VPN server you choose and the addresses its access key names.
 
 ## Data We Collect
 

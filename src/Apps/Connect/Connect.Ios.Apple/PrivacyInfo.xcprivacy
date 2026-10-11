@@ -85,7 +85,8 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- Sessions and their traffic, which the servers keep against the Client ID for quotas. -->
+		<!-- Sessions and their traffic, which the servers keep against the Client ID for quotas, and the
+		     last in-app rating, which the handshake carries and the device record keeps. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherUsageData</string>

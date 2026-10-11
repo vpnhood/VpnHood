@@ -332,7 +332,21 @@ one unit. Build the basket, then send it.
 3. **Write the review note.** A working test account and whatever a reviewer needs to reach every
    feature, including anything behind a purchase. Reviewers must be able to *use* the app, not just
    open it. The panel also wants your own contact details, so Apple can reach a human during review.
-4. **Submit**, and wait.
+4. **Check the privacy declarations against the build you picked**, every time: each version is
+   reviewed against them, and a VPN app is held to more than the panel
+   ([guideline 5.4](https://developer.apple.com/app-store/review/guidelines/#5.4)).
+   - The build's privacy manifest and the **App Privacy** answers say the same, and the panel is
+     published ([App Store privacy](../legal/developer/APP_STORE_PRIVACY.md)).
+   - Nothing in the iOS build sends user data to a third party: no analytics, ad or attribution
+     SDK, and no tracker.
+   - Before first use, the app says what it sends off the device and to whom: the first-run
+     summary, which the iOS heads keep on (`IsLicenseAgreementRequired`).
+   - The privacy policy the app links promises that no user data is sold, used or disclosed to
+     third parties.
+
+   If any of that changed since your last approved version, change the manifest and the panel
+   together: the manifest reaches Apple only in a new build.
+5. **Submit**, and wait.
 
 If you are rejected, read the message literally: first rejections are usually about the paperwork
 above, not about your app. Fixing metadata and resubmitting does not need a new build.

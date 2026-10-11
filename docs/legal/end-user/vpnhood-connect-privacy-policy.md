@@ -6,6 +6,8 @@
 
 This policy describes what the app collects, what it never collects, and what our servers record. We do not use or share your information except as described here.
 
+We never sell your data on any platform. In the App Store build, none of it reaches a third party at all, except where a legal obligation described below requires it.
+
 ## What VpnHood! CONNECT Collects
 
 Except on iOS, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics, through Firebase on the Google Play build. It is linked to the Client ID described below and, on the Google Play build, to your device's advertising ID, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. While analytics is on, our VPN servers also report the usage of your connections to Google Analytics, linked to the same Client ID. The iOS build does not load Google Analytics or Firebase, and its connections are not reported.
@@ -58,7 +60,7 @@ On builds with analytics, when analytics is on, the following is collected:
 
 The Google Play build sends automatic crash reports through Google Firebase Crashlytics. A crash report contains the technical details of the failure and device information; it never includes your browsing activity or the content of your traffic.
 
-Crash reports follow the same switch as analytics, though turning it off takes effect for them the next time the app starts. Your choice is remembered from one launch to the next. The single exception is the very first start of a fresh install: the crash handler has to be in place before your settings can be read, so a crash during that first startup — exactly the kind we most need to fix — is still reported.
+Crash reports follow the same switch as analytics, though turning it off takes effect for them the next time the app starts. Your choice is remembered from one launch to the next. The single exception is a crash during the very first start of a fresh install, which is still reported.
 
 ### Advertisements (Google Play build)
 
@@ -94,9 +96,7 @@ When you connect, our servers record what any VPN server must see to run the ser
 
 **Diagnostic logs.** Apart from the connection records above, our servers keep technical logs used to find faults — failed connections, protocol errors, and the like. These are kept for **30 days** from the moment each entry is written, then deleted, and they are never backed up. They also note each session you start, with your IP address, as the connection records do.
 
-Other network addresses inside them are not written down as addresses. Each one is replaced by a short token produced with a random key that is created when the server process starts, exists only in memory, and is never saved anywhere. The same address gives the same token while that process runs, which is what lets an engineer follow one connection through a file; when the process stops, the key ceases to exist, so nothing afterwards can turn a token back into an address — not us, not anyone we hand a file to. Tokens from two different runs cannot be matched to each other either. Addresses that identify nobody are left readable, because they help us diagnose faults and reveal nothing: loopback and private-range addresses, which belong to a machine's own network and point at no one on the internet.
-
-**DNS.** While you are connected, the names your device looks up are answered through our servers by Google Public DNS, unless you choose another DNS server in the app: Google sees those names with our server's address, not yours.
+Other network addresses in them are replaced by tokens that nobody, including us, can turn back into addresses. Local network addresses stay readable, as they identify nobody.
 
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 
@@ -165,7 +165,7 @@ record with us.
 
 These companies process data on our behalf or in their own right, and only for the purposes described above:
 
-- **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, non-iOS builds, and the advertising ID, Google Play build), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build), and Google Public DNS (the names your device looks up while connected, through our servers)
+- **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, non-iOS builds, and the advertising ID, Google Play build), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
 - **Apple Inc.** — Sign in with Apple and App Store billing (optional accounts and purchases, App Store build)
 - **Hosting and payment providers** — infrastructure needed to run the VPN and account services, and payment processing for website purchases
 
@@ -204,7 +204,7 @@ Our services are not directed to anyone under the age of 18. We do not knowingly
 
 Sending feedback opens our feedback form, on Google Forms, in your browser. The app keeps a diagnostic log file on your device and sends it nowhere: you can read it in the app and share it yourself, for example with our support, to help solve a technical issue.
 
-The log file contains basic technical information and never the content of your traffic. Network addresses in it — yours, and those of the servers your device connected to — are replaced by tokens the same way as on our servers, using a key created inside the app that is never saved and never sent with the file, so a copy you share cannot be turned back into addresses by us or by anybody else. Local network addresses stay readable, as they identify nobody. If you switch on verbose diagnostics yourself while reproducing a problem, the file can additionally contain host names in a shortened form.
+The log file contains basic technical information and never the content of your traffic. Network addresses in it — yours, and those of the servers your device connected to — are replaced by tokens that nobody, including us, can turn back into addresses. Local network addresses stay readable, as they identify nobody. If you switch on verbose diagnostics yourself while reproducing a problem, the file can additionally contain host names in a shortened form.
 
 ## Changes to This Privacy Policy
 

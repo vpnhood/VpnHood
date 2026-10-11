@@ -56,8 +56,11 @@ App Store Connect → your app → **App Privacy**.
 
 ### Official iOS build
 
-VpnHood! CLIENT has no accounts and no server of its own. It sends no analytics on iOS. The Client ID still reaches the independent VPN server selected by the user. For the
-official App Store record, the answer is:
+VpnHood! CLIENT has no accounts and no server of its own, and sends no analytics on iOS. What it
+does send at each connection — the Client ID, the app version and OS, and the last rating — reaches
+only the VPN server of the key the user added, which someone else runs: VpnHood sells no key or code
+that Client takes. Apple counts data as collected only when you, or code you put in the app, can
+read it afterwards, so for the official App Store record the answer is:
 
 > **"No, we do not collect data from this app."**
 
@@ -72,18 +75,22 @@ any more; re-check it against the shared GA4 tracker before relying on it:
 
 1. **"Do you or your third-party partners collect data from this app?"** → **Yes**.
 
-2. **Data types — select exactly these three** (matching the manifest):
+2. **Data types — select exactly these five** (matching the manifest):
    - **Identifiers → User ID** — the random clientId is deliberately sent as GA4's `user_id`.
      It behaves like an install id, but Apple's taxonomy keys on what the field *is*, and it is
      literally the user-level id field.
    - **Usage Data → Product Interaction** — GA4's automatic events plus custom UI events.
    - **Diagnostics → Other Diagnostic Data** — error-dialog messages and app version sent for
      triage.
+   - **Location → Coarse Location** — GA4 looks up the country and city from the request's IP and
+     keeps them (see below).
+   - **User Content → Other User Content** — the text a user adds to an in-app rating, which GA4's
+     `vh_user_review` event carries with the stars (see below).
 
    Do **not** select Crash Data or Performance Data — the app ships no crash reporter and no
    performance SDK; nothing collects them. Do **not** select **Device ID** — see below.
 
-3. **For each of the three types:**
+3. **For each of the five types:**
    - **Purpose:** **Analytics** only (what the manifest declares).
    - **Linked to the user's identity?** → **No.** The id is a random GUID hash: no account, no
      email, no name, no payment data exists in the app to link it to.
@@ -96,7 +103,7 @@ any more; re-check it against the shared GA4 tracker before relying on it:
 | Question | Answer |
 | --- | --- |
 | Collect data? | Yes |
-| Data types | User ID, Product Interaction, Other Diagnostic Data — nothing else |
+| Data types | User ID, Product Interaction, Other Diagnostic Data, Coarse Location, Other User Content — nothing else |
 | Purpose | Analytics |
 | Linked to identity? | No |
 | Used for tracking? | No |
@@ -110,16 +117,23 @@ re-litigate from scratch.
 - **Device ID: no.** Apple's "Device ID" means the advertising identifier or another
   *device-level* id. The clientId is derived from nothing on the device — it is random, dies with
   the install, and differs per app.
-- **Coarse Location: not declared.** GA4 derives country/city from the request IP server-side; the
-  app itself reads no location API and sends no location field. Declaring it would also mismatch
-  the shipped manifest.
-- **Ratings: not declared.** Apple's questionnaire lets you omit data that is user-initiated,
-  occasional, and obvious to the user at the point of sending — the rating dialog is exactly that.
-  The app uploads no log or report; a person shares the log themselves.
-- **The VPN-session clientId: covered by "User ID", purpose Analytics is VpnHood's declared
-  stance.** If your fork's servers retain per-client records beyond the session (quotas, device
-  limits), consider adding the **App Functionality** purpose to User ID — in the panel *and* the
-  manifest, which means a new build.
+- **Coarse Location: declared wherever a server keeps one.** The app reads no location API and
+  sends no location field, but a country or city looked up from the connection's IP counts as
+  Coarse Location once a server you run, or an analytics service you send to, keeps it. The
+  official Client declares none: its IP reaches only the server the user chose. A fork that
+  re-enables GA4 declares it (above), and so does Connect, for the country its servers keep.
+- **Ratings: declared wherever a server keeps them.** The official Client's rating rides in each
+  connection's handshake to the user's own server, never to us, so it is not declared. That is the
+  reason, not Apple's exemption for optional disclosures: that fits a form the user fills in and
+  sends each time, and the handshake re-sends the rating at every connection. A fork whose servers
+  keep it declares it, as Connect does among its Other Usage Data; one that re-enables GA4 sends it
+  in `vh_user_review` (above). The app uploads no log or report; a person shares the log
+  themselves.
+- **The VPN-session clientId: not collected by the official Client**, because it reaches only the
+  server the user chose. A fork whose key points at its own servers collects it: declare **User
+  ID** for App Functionality (session records, quotas, device limits), linked to the user's
+  identity once an account can be joined to it, as Connect does — in the panel *and* the manifest,
+  which means a new build.
 
 ## VpnHood! CONNECT on iOS
 
@@ -184,9 +198,9 @@ alone cannot fix it (that takes a new build).
 
 The random Client ID travels in the VPN session handshake, where the servers keep quota/session
 records against it and the portal can join it to the account. It is not sent to GA4 on iOS. Those
-records also hold the sessions and their traffic (Other Usage Data), the app and OS versions from the
-handshake's user agent (Other Diagnostic Data), and the country the servers look up from the
-connection's IP address (Coarse Location); Analytics is our servers counting them.
+records also hold the sessions, their traffic and the last in-app rating (Other Usage Data), the app
+and OS versions from the handshake's user agent (Other Diagnostic Data), and the country the servers
+look up from the connection's IP address (Coarse Location); Analytics is our servers counting them.
 
 Types deliberately **not** selected:
 

@@ -100,7 +100,7 @@ Other network addresses inside them are not written down as addresses. Each one 
 
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 
-Connection activity stays only in server log files; it never enters our database. Our database stores the technical information associated with your Client ID, and your email address if you signed in.
+Connection activity stays only in server log files; it never enters our database. Our database stores the technical information associated with your Client ID, and your email address if you signed in. We also count these records together to see how the service is used, on every platform, iOS included; that stays with us and is shared with no one.
 
 ## Delete Your Account
 
@@ -177,7 +177,7 @@ Where data-protection law requires a legal basis, we rely on:
 
 - **performance of a contract** to provide VPN sessions, accounts, subscriptions, support, and purchases you request;
 - **consent**, where the law requires it, for analytics and crash reports; you may withdraw it at any time by turning analytics off. Where the law permits opt-out analytics instead, we rely on the legitimate interests below;
-- **legitimate interests** in securing the Service, enforcing quotas, preventing fraud and abuse, diagnosing faults, and improving reliability; and
+- **legitimate interests** in securing the Service, enforcing quotas, preventing fraud and abuse, diagnosing faults, improving reliability, and counting from our servers' own records how the Service is used; and
 - **legal obligations and legal claims** for tax and accounting records, lawful requests, preservation duties, and establishing, exercising, or defending claims.
 
 ## How Long We Keep Data

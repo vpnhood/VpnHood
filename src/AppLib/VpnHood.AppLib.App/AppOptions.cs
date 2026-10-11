@@ -158,9 +158,10 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // agreement to install it. The screen is that channel's substitute for a store, not an extra
     // requirement on top of one - it is the links above that App Review 3.1.2 and Play's User Data
     // policy actually ask for.
-    // On by default and opted OUT of by the four store heads, deliberately that way round: a head
+    // On by default and opted OUT of by the Google Play heads, deliberately that way round: a head
     // added later that forgets the line shows one screen too many, which is noise, rather than
-    // skipping a disclosure, which is a gap.
+    // skipping a disclosure, which is a gap. The App Store heads keep it: App Review 5.4 wants a VPN
+    // app to say what it collects on a screen before first use, which the store's own does not.
     // The user's answer is UserSettings.IsLicenseAccepted, asked once.
     public bool IsLicenseAgreementRequired { get; set; } = true;
 

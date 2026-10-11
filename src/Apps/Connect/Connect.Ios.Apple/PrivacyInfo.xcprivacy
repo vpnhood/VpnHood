@@ -3,7 +3,7 @@
 <!-- Apple's privacy manifest for the HOST APP. Required since May 2024: App Store Connect scans the
      upload for "required reason" API use and rejects with ITMS-91053 when a use is not declared here.
      The Network Extension is a separate bundle and needs its OWN manifest — see
-     Connect.Ios.Extension/PrivacyInfo.xcprivacy. Neither bundle sends analytics.
+     Connect.Ios.Extension/PrivacyInfo.xcprivacy. Neither bundle sends analytics; our servers count their own records.
 
      Reason codes come from Apple's published lists; they are NOT free text and an unrecognised code
      fails validation. On the first App Store upload, check the Xcode/altool privacy report against
@@ -33,8 +33,9 @@
 	     hard-blocked by the system when the user denies tracking. -->
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
-	<!-- The account-bound types are used only for App Functionality. The iOS build sends no analytics:
-	     AppDelegate forces a NullTracker and disables endpoint tracking. -->
+	<!-- The app sends no analytics: AppDelegate makes no tracker and disables endpoint tracking (App
+	     Review 5.4 bars a VPN app from sending data to a third party). The Analytics purpose below is our
+	     servers counting the records they keep anyway, which reaches no third party. -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
 		<!-- The random per-install clientId travels in the VPN session handshake (ClientInfo), and
@@ -52,6 +53,7 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
 		<!-- Sign in with Apple, email scope ONLY (no name — deliberate policy, see
@@ -81,6 +83,49 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Sessions and their traffic, which the servers keep against the Client ID for quotas. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherUsageData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<!-- The app and OS versions in the handshake's user agent, kept with the device record. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherDiagnosticData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<!-- The country the servers look up from the connection's IP address, kept with the device and
+		     session records. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCoarseLocation</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
 	</array>

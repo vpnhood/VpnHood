@@ -46,8 +46,8 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         var appConfigs = ClientAppConfigs.Load();
         var options = ClientAppOptions.Create(context, appConfigs);
 
-        // Apple applies an additional privacy rule to VPN apps: the iOS build does not send
-        // analytics to third parties.
+        // Apple does not allow a VPN app to send data to a third party (App Review 5.4): no analytics,
+        // and with no tracker the hello tells the access manager not to report its sessions either.
         options.TrackerFactories = [];
         options.AllowEndPointTracker = false;
         // Not appConfigs' TermsOfUse: a purchase here is governed by Apple's standard EULA while
@@ -55,8 +55,6 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         options.Links = options.Links with {
             TermsOfUse = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")
         };
-        // The store already took this acceptance at install - see AppOptions.
-        options.IsLicenseAgreementRequired = false;
         // Native in-app rating dialog (parity with Client.Android.Google's Google Play provider).
         // Like Android Client, AllowRecommendUserReviewByServer stays at its default (false).
         options.UserReviewProvider = new AppStoreInAppUserReviewProvider();

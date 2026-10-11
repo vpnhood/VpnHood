@@ -141,8 +141,12 @@ What iOS Connect sends that Client does not:
   are sent to the account backend, which stores them against the account to grant and restore the
   entitlement.
 
-Like Client, Connect disables the GA4 tracker and endpoint tracking in its iOS app boundary. The shared configuration used by other
-platforms still contains those settings, but the iOS build does not use them.
+Like Client, Connect disables the GA4 tracker and endpoint tracking in its iOS app boundary: Guideline
+5.4 bars a VPN app from sending data to a third party, and an analytics service is one. The shared
+configuration used by other platforms still contains those settings, but the iOS build does not use
+them, and with no tracker its handshake tells the access server not to report its sessions. What
+Connect learns about iOS use comes from the records its own servers keep anyway, counted together:
+that is the **Analytics** purpose below, and it reaches no third party.
 
 **Name is NOT collected — deliberate policy (2026-08-09), on BOTH platforms.** On iOS the sign-in
 requests only the **email** scope, so Apple never hands the app a name at all. On Android, Google's
@@ -156,7 +160,7 @@ new build.
 ### Filling the App Privacy panel
 
 "Do you or your third-party partners collect data from this app?" → **Yes**. Then select exactly the
-three types below and nothing else.
+six types below and nothing else.
 
 > **Saving is not publishing.** The panel has its own **Publish** button (top right), separate from
 > saving each type. Until you press it the answers do not count and the app version silently refuses
@@ -171,12 +175,18 @@ alone cannot fix it (that takes a new build).
 
 | Panel category | Data type | "How is this data used?" | Linked to identity? | Used for tracking? |
 | --- | --- | --- | --- | --- |
-| Identifiers | **User ID** | App Functionality | **Yes** | No |
+| Identifiers | **User ID** | App Functionality, Analytics | **Yes** | No |
 | Contact Info | **Email Address** | App Functionality | **Yes** | No |
 | Purchases | **Purchase History** | App Functionality | **Yes** | No |
+| Usage Data | **Other Usage Data** | App Functionality, Analytics | **Yes** | No |
+| Diagnostics | **Other Diagnostic Data** | App Functionality, Analytics | **Yes** | No |
+| Location | **Coarse Location** | App Functionality, Analytics | **Yes** | No |
 
 The random Client ID travels in the VPN session handshake, where the servers keep quota/session
-records against it and the portal can join it to the account. It is not sent to GA4 on iOS.
+records against it and the portal can join it to the account. It is not sent to GA4 on iOS. Those
+records also hold the sessions and their traffic (Other Usage Data), the app and OS versions from the
+handshake's user agent (Other Diagnostic Data), and the country the servers look up from the
+connection's IP address (Coarse Location); Analytics is our servers counting them.
 
 Types deliberately **not** selected:
 
@@ -185,7 +195,7 @@ Types deliberately **not** selected:
 | **Name** | Policy (2026-08-09): iOS requests the email scope only, and the name inside Google's sign-in token is never stored. Applies to both platforms |
 | **Device ID** | Same reasoning as Client — random per-install id; no IDFA, no ATT |
 | **Crash Data** | **No on iOS** — Crashlytics ships only in the Android/Google build. Apple's own Xcode Organizer crash reports are Apple collecting, not you, and never need declaring. Do not pre-declare this "for the future": when iOS gains crash reporting, ship both halves in one release — add the type to the manifest, build, *then* update the panel |
-| **Product Interaction, Other Usage Data, Other Diagnostic Data** | The iOS build disables the GA4 tracker and endpoint tracking |
+| **Product Interaction** | The iOS build disables the GA4 tracker and endpoint tracking, so nothing reports what is done inside the app |
 
 **Account deletion becomes mandatory.** Sign in with Apple means the app supports account creation,
 which triggers **Guideline 5.1.1(v)**: deletion must be initiated *inside* the app — sign-out is
@@ -215,10 +225,11 @@ prevent, so do not reintroduce it in a fork. The shipped behaviour is described 
 
 **Manifest status.** `Connect.Ios.Apple/PrivacyInfo.xcprivacy` and
 `Connect.Ios.Extension/PrivacyInfo.xcprivacy` now exist (the extension stays collection-free). The
-host app's manifest declares **three** collected types: User ID, Email Address, and Purchase History,
-all for App Functionality and all with `Linked = true`. Manifest and panel must ship together: Apple
-generates a privacy report from the binary and flags discrepancies, and the panel alone cannot fix
-a mismatch.
+host app's manifest declares **six** collected types: User ID, Email Address, Purchase History,
+Other Usage Data, Other Diagnostic Data and Coarse Location, all with `Linked = true`; all but Email
+Address and Purchase History are for Analytics as well as App Functionality. Manifest and panel
+must ship together: Apple generates a privacy report from the binary and flags discrepancies, and
+the panel alone cannot fix a mismatch.
 
 ## If your fork adds sign-in (Connect-like)
 
@@ -254,6 +265,9 @@ compliance has its own document: [APP_STORE_EXPORT_COMPLIANCE.md](APP_STORE_EXPO
   it. What it forbids is user data reaching a **third party** — so a fork whose built-in key points
   at servers it neither runs nor contracts for cannot truthfully make the in-app data declaration
   the guideline demands. The app must use NEVPNManager / Network Extension (this codebase does).
+  The guideline's in-app declaration of what is collected and why, on a screen before first use,
+  is the first-run summary (`PrivacyConsentAssetName`): the iOS heads keep `IsLicenseAgreementRequired`
+  on for it, since the store listing is not an app screen.
 - **[Guideline 4.2.6](https://developer.apple.com/app-store/review/guidelines/#4.2.6) — who
   submits.** An app produced by a template or builder service must be submitted from the developer
   account of the business it belongs to, not from the service's. If someone builds your fork for

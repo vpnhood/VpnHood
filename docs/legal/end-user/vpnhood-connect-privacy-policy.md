@@ -100,7 +100,7 @@ Other network addresses in them are replaced by tokens that nobody, including us
 
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 
-Connection activity stays only in server log files; it never enters our database. Our database stores the technical information associated with your Client ID, and your email address if you signed in. We also count these records together to see how the service is used, on every platform, iOS included; that stays with us and is shared with no one.
+Connection activity stays only in server log files; it never enters our database. Our database keeps the rest of what is listed at the start of this section, linked to your Client ID. We also count these records together to see how the service is used, on every platform, iOS included; that stays with us and is shared with no one.
 
 ## Delete Your Account
 

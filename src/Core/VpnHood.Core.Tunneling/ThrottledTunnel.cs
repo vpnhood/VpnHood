@@ -30,7 +30,7 @@ public class ThrottledTunnel : Tunnel
         : base(options, throttlesPackets: true)
     {
         _cancellationToken = _cancellationTokenSource.Token;
-        _turnLength = TrafficMeter.SendTurnLength;
+        _turnLength = TrafficMeter.TurnLength.Sent;
         _throttleQueue = new ThrottleQueue(this, (int)Math.Clamp(
             options.MaxSpeed.Sent / 4 / TransportDefaults.MaxPacketSize,
             MinQueueCapacity, PacketTransportOptions.DefaultQueueCapacity));

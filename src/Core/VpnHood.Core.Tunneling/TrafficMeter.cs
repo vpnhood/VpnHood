@@ -66,14 +66,9 @@ public class TrafficMeter : IDisposable
     public Traffic Speed => new(_sent.Speed, _received.Speed);
 
     /// <summary>
-    /// A sender's turn at the send limit (bytes): what it charges between two waits.
+    /// A turn at each limit (bytes): what a sender or a receiver charges between two waits.
     /// </summary>
-    public long SendTurnLength => _sent.TurnLength;
-
-    /// <summary>
-    /// A receiver's turn at the receive limit (bytes): what it charges between two waits.
-    /// </summary>
-    public long ReceiveTurnLength => _received.TurnLength;
+    public Traffic TurnLength => new(_sent.TurnLength, _received.TurnLength);
 
     /// <summary>
     /// Reports sent bytes to the traffic meter. This method is thread-safe.

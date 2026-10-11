@@ -273,7 +273,7 @@ public class ProxyChannel : IProxyChannel
     // between; false once the channel's close ends a wait
     private async ValueTask<bool> PayLimitAsync(TrafficMeter trafficMeter, bool isSendingToTunnel, int byteCount)
     {
-        var turnLength = isSendingToTunnel ? trafficMeter.SendTurnLength : trafficMeter.ReceiveTurnLength;
+        var turnLength = isSendingToTunnel ? trafficMeter.TurnLength.Sent : trafficMeter.TurnLength.Received;
         try {
             for (long paid = 0; paid < byteCount; paid += turnLength) {
                 var bytes = Math.Min(turnLength, byteCount - paid);

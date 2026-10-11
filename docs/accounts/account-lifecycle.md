@@ -63,7 +63,7 @@ Section 8 answers these, in order:
 | Do we ever refuse a purchase? | Never after the money moved. Prevention happens before the store's payment sheet; whatever arrives paid is provisioned | §8 |
 | Is a code safe to hand out? | Yes — it carries its own device limit, whoever holds it | §2 |
 | What does deletion erase? | The person, on every device. Premium granted by the account dies with it | §5 |
-| What does deletion keep? | Their store subscription, the codes they bought on the website, and invoices frozen with the buyer's name | §6 |
+| What does deletion keep? | Their store subscription, the codes they bought on the website, and invoices with the buyer's name as issued | §6 |
 | What blocks deletion? | **Nothing.** Billing is cancelled at the end of its paid period instead | §8 |
 | Coming back? | A new, empty account — the store is asked at sign-in and gives the subscription back by itself; a code they kept still works | §7 |
 | Blocked where they are, so they cannot sign in? | Connect first on the free or trial path, then sign in through the tunnel. No portal clock removes the applied code; only an access-server refusal starts the ending flow | §8 |
@@ -229,11 +229,14 @@ Before anything is erased, we tell them what it means (§10). Then, in this orde
    the account itself.
 4. **Cut the account free from its premium code.** The code is kept on our side, but it now belongs
    to nobody.
-5. **Freeze the invoices, then erase the customer.** Each invoice is archived exactly as it was
-   issued — buyer's name and address included, not the email, which no invoice shows — and the
-   customer record and client-area login are then overwritten. WHMCS's own traces of the person go
-   with them: its mail log, its activity log, and the addresses of the last sign-ins and of the
-   orders. A login that cannot be overwritten stops the deletion, so a re-run tries it again. The
+5. **Keep the invoices as issued, then erase the customer.** Each invoice keeps its buyer, name and
+   address, in WHMCS's own client data snapshot (*Store Client Data Snapshot*, which the module keeps
+   on); one made before that setting was on gets its snapshot now. The snapshot loses what no
+   invoice shows — email, phone, notes, card details — and the customer record and client-area login
+   are then overwritten. WHMCS's own traces of the person go
+   with them: its mail log, its activity log, the addresses of the last sign-ins and of the orders,
+   their support tickets, and the links to their sign-in providers. A login that cannot be
+   overwritten stops the deletion, so a re-run tries it again. The
    person disappears from the live system; the financial documents keep the identity the law
    requires them to carry. See below for why this replaced anonymising them.
 6. **Write the journal entry** — numeric ids and the gateway's agreement reference, no personal data
@@ -278,8 +281,9 @@ and consumer, which is not a bet worth carrying.
 things have to be true together, and the third is the one usually forgotten:
 
 1. **A legal basis** — the tax retention obligation. Already the case.
-2. **Restriction.** The frozen invoice is out of ordinary reach: not searchable, not used for
-   support, never used for marketing. It exists to satisfy an auditor, nothing else.
+2. **Restriction.** The name lives on the invoice alone: the customer record is anonymized, so
+   nothing else shows it, and the invoice is not used for support, never for marketing. It exists to
+   satisfy an auditor, nothing else.
 3. **Disclosure.** We say plainly that invoices keep the buyer's name. Retention that is disclosed is
    accepted, by regulators and by the stores alike; retention that is quiet is what turns into a
    complaint.
@@ -382,9 +386,10 @@ connect.
 - **It does not refund anything.** Refunds are the store's decision for store purchases, and ours
   only for website purchases.
 - **It does not erase invoices, and does not strip the name off them.** We are legally required to
-  keep financial records, and a financial record has to say who bought. They are frozen as issued and
-  locked out of ordinary use — see §5. This is disclosed, with the retention period, before anyone
-  confirms a deletion.
+  keep financial records, and a financial record has to say who bought. They keep the buyer as issued,
+  and nothing else shows the name — see §5. This is disclosed, with the retention period, before anyone
+  confirms a deletion. The payment processors' notices of a payment (WHMCS's gateway log) are kept
+  with its invoice, for the same reason.
 - **It does not take back the codes they paid for.** Those codes run to the end of the period they
   were bought for, and the copy a website buyer got in their inbox at purchase stays theirs. (They
   do leave the person's own signed-in devices with the account — re-entering a kept code is what
@@ -1401,7 +1406,7 @@ These came up and are now settled — kept here only so they are not re-opened.
 | Why not refuse and let the store refund? | Only one store refunds an unacknowledged purchase by itself; the other keeps the buyer's money and gives us no way to return it. Prevention costs nobody anything — §8 |
 | Which purchase serves a device? | Its home store's subscription while it is serving — grace counts, hold does not — otherwise whatever the account's ranking serves — §8 |
 | How does someone switch stores? | Cancel at the store that billed, let the paid time run out, subscribe at the new one. Nothing moves a subscription between stores — §8 |
-| Should invoices be anonymised? | No. They keep the buyer's name, frozen as issued and locked out of ordinary use — §5 |
+| Should invoices be anonymised? | No. They keep the buyer's name as issued, and nothing else shows it — §5 |
 | How many years do we keep an invoice? | We do not publish a figure. The policy names the legal obligation as the criterion, which is what the law asks for and what our market does — §5 |
 | What if they sign in with a different address than they bought with? | Sign in as the website account instead; failing that, import the code — then rename the account when the address is free, link the records when it is not — §8 |
 | Does entering a code use it up, or tie it to one account? | Neither. It creates a pointer, consumes nothing, and the same code may be imported into any number of accounts — §2, §8 |

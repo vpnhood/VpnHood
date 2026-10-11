@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-10-09.*
+*Effective: 2026-10-10.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to the official **VpnHood! CONNECT** app and to the VPN servers we operate. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -76,6 +76,8 @@ In every case we store that email address with your account so your subscription
 
 When the app talks to our account website, the website logs each request with its time and your IP address, and keeps that log for **30 days** to protect sign-in against abuse and to look into faults. The website also keeps your account's history — your sign-ins and the changes made to the account, each with its time and IP address — for as long as the account exists; deleting the account erases it.
 
+When you write to our support, we keep your messages, with your email address and the IP address you wrote from, to answer you and to look back on earlier requests. Deleting your account deletes them, including those you sent from its email address without signing in.
+
 ## Log Data (our VPN servers)
 
 When you connect, our servers record what any VPN server must see to run the service:
@@ -135,7 +137,8 @@ What deletion does **not** do:
   keep financial records, and a financial record has to say who bought — so invoices keep the name
   they were issued with, frozen exactly as issued. They are kept because tax law requires it, for
   as long as that law requires, and are used for nothing else: not for support, not for marketing,
-  only to satisfy that legal obligation.
+  only to satisfy that legal obligation. The notices our payment processors send us about a
+  payment are kept with its invoice, for the same reason and as long.
 - **It does not erase everything the same instant.** Connection records already written to our
   server log files run out their own 30 days, and residual copies may remain in our backups and
   system logs for a limited period. Records held under a legal preservation request are kept until

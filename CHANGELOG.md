@@ -73,6 +73,7 @@
 * Fix: A paired browser's tab and the command line's help name the app, not VpnHood
 * Update: On a plan with a speed limit, the first megabytes after a pause go at full speed, so pages load quickly, and only steady heavy use is held to the limit
 * Fix: A big upload over a slow connection no longer holds up the device's other traffic, such as browsing
+* Feature: On Linux the app has an uninstaller: Uninstall on its menu entry's right-click menu, or `sudo /opt/VpnHoodClient/vhuninstall` (`/opt/VpnHoodConnect/vhuninstall` for CONNECT). Settings and profiles stay for a later install unless you add `-purge` #linux
 
 # v8.1.849
 

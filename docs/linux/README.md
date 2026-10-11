@@ -55,14 +55,18 @@ identical.
 
 ### Uninstall
 
+Right-click **VpnHood! CLIENT** in the application menu and choose **Uninstall**; it asks for an
+administrator's password. Or from a terminal:
+
 ```bash
-sudo systemctl disable --now VpnHoodClient.service VpnHoodClientUpdater.service
-sudo rm -f /etc/systemd/system/VpnHoodClient*.service /usr/local/bin/vhclient \
-           /usr/share/applications/VpnHoodClient.desktop
-sudo systemctl daemon-reload
-sudo rm -rf /opt/VpnHoodClient            # this deletes your settings and profiles too
+sudo /opt/VpnHoodClient/vhuninstall           # keeps your settings and profiles for a later install
+sudo /opt/VpnHoodClient/vhuninstall -purge    # deletes them too
 rm -rf ~/.cache/com.vpnhood.client.linux ~/.cache/VpnHoodClient   # the window's; the second, an older release's
 ```
+
+It stops the service and any open window, and removes the units, `vhclient`, the menu entry and its
+icon, and the program. MsQuic, a system package, stays. The menu's **Uninstall** needs `pkexec`; the
+installer leaves it out where there is none.
 
 ---
 

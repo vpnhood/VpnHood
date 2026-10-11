@@ -204,6 +204,7 @@ function replace_file() {
 }
 chmod +x "$binDir/$assemblyName";
 replace_file "$infoDir/vhupdate" "$destinationPath/vhupdate" 755;
+replace_file "$infoDir/vhuninstall" "$destinationPath/vhuninstall" 755;
 replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
 replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
 
@@ -330,4 +331,7 @@ fi
 # show final message
 echo "$productName has been installed. Run the following command:";
 echo "$destinationPath/$launcher";
+if [ "$container" != "y" ]; then
+	echo "To uninstall it: sudo \"$destinationPath/vhuninstall\"";
+fi
 } # the group opened at the top

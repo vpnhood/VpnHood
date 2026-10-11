@@ -22,6 +22,7 @@ $runtime = "$os-$cpu";
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 $assemblyName = Get-ProjectProperty $projectFile "AssemblyName";
 $productName = Get-ProjectProperty $projectFile "Product";
+$companyName = Get-ProjectProperty $projectFile "Company";
 if (-not $assemblyName) { throw "The project has no AssemblyName: '$projectFile'." };
 
 Write-Host;
@@ -51,6 +52,7 @@ $template_installScriptFile = "$templateDir/$installTemplate.$shellExt";
 if (-not (Test-Path $template_installScriptFile)) { throw "Install template not found: $template_installScriptFile"; }
 $template_launcherFile = "$templateDir/vhlauncher.$shellExt";
 $template_updaterFile = "$templateDir/updater.$shellExt";
+$template_uninstallerFile = "$templateDir/uninstall.$shellExt";
 
 $publishDir = "$projectDir/bin/release/publish-$runtime";
 $publishFileExt = if ($os -ieq "linux") { "" } else { ".ps1" };
@@ -58,6 +60,7 @@ $publish_infoDir = "$publishDir/$versionTag/publish_info";
 $publish_updaterFileName = "vhupdate$publishFileExt";
 $publish_launcherFileName = "$launcherName$publishFileExt";
 $publish_updaterFile = "$publish_infoDir/$publish_updaterFileName";
+$publish_uninstallerFile = "$publish_infoDir/vhuninstall$publishFileExt";
 $publish_launcherFile = "$publish_infoDir/$publish_launcherFileName";
 $publish_infoFile = "$publish_infoDir/publish.json";
 
@@ -102,6 +105,7 @@ $installScript = $installScript.Replace('$(versionTagParam)', "$versionTag");
 $installScript = $installScript.Replace('$(productNameParam)', "$productName");
 $installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName");
 $installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName");
+$installScript = $installScript.Replace('$(companyNameParam)', "$companyName");
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
 
@@ -116,6 +120,15 @@ Write-Output "Creating updater script...";
 $installScript = Get-Content -Path "$template_updaterFile" -Raw;
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$publish_updaterFile" -Encoding ASCII -Force -NoNewline;
+
+# uninstaller script
+Write-Output "Creating uninstaller script...";
+$installScript = Get-Content -Path "$template_uninstallerFile" -Raw;
+$installScript = $installScript.Replace('$(productNameParam)', "$productName");
+$installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName");
+$installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName");
+$installScript = $installScript -replace "`r`n", $lineEnding;
+$installScript  | Out-File -FilePath "$publish_uninstallerFile" -Encoding ASCII -Force -NoNewline;
 
 # publish info
 $json = @{

@@ -261,6 +261,7 @@ function replace_file() {
 	fi
 }
 replace_file "$infoDir/vhupdate" "$destinationPath/vhupdate" 755;
+replace_file "$infoDir/vhuninstall" "$destinationPath/vhuninstall" 755;
 replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
 replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
 chmod +x "$binDir/$assemblyName";
@@ -417,6 +418,19 @@ if [ "$withDesktop" == "y" ]; then
 		echo "WARNING: Could not place the application icon; the menu entry will use a generic one.";
 	fi
 
+	# Uninstall on the entry's own right-click menu, where the desktops put it for the apps their
+	# software centre installed; Linux has no list of installed apps for a script's install to join,
+	# and an uninstall icon of its own in the app grid is clutter. pkexec asks for an administrator's
+	# password; without it the uninstall stays a command.
+	actionLines="";
+	if command -v pkexec >/dev/null 2>&1; then
+		actionLines="Actions=Uninstall;
+
+[Desktop Action Uninstall]
+Name=Uninstall
+Exec=pkexec \"$destinationPath/vhuninstall\"";
+	fi
+
 	desktopEntry="[Desktop Entry]
 Type=Application
 Name=$productName
@@ -427,6 +441,7 @@ Terminal=false
 Categories=Network;Security;
 Keywords=VPN;Privacy;Proxy;
 StartupNotify=true
+$actionLines
 ";
 	echo "$desktopEntry" > "/usr/share/applications/$assemblyName.desktop";
 	# readable by the desktop even where an earlier run left the file at its caller's umask, as the icon
@@ -448,4 +463,5 @@ echo "    $launcher profile add <access-key>";
 echo "    $launcher connect";
 echo "    $launcher status";
 echo "    $launcher --help";
+echo "  To uninstall it: sudo \"$destinationPath/vhuninstall\"";
 } # the group opened at the top

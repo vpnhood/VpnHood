@@ -124,8 +124,29 @@ Remove-Item -Path "${env:SystemRoot}/System32/$assemblyName-win.zip" -Force -Err
 Write-Output "Updating shared files...";
 $infoDir = "$binDir/publish_info";
 Copy-Item -path "$infoDir/vhupdate.ps1" -Destination "$destinationPath/" -Force;
+Copy-Item -path "$infoDir/vhuninstall.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/$launcher.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/publish.json" -Destination "$destinationPath/" -Force;
+
+# Windows' installed apps lists it, its Uninstall running vhuninstall.ps1; the version and the icon
+# follow each install
+$uninstallKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$assemblyName";
+New-Item -Path $uninstallKey -Force | Out-Null;
+$uninstallValues = @{
+	DisplayName     = $productName;
+	DisplayVersion  = $versionTag -replace '^v';
+	Publisher       = "$(companyNameParam)";
+	DisplayIcon     = "$installFullPath\bin\$versionTag\$assemblyName.exe";
+	InstallLocation = $installFullPath;
+	UninstallString = "powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$installFullPath\vhuninstall.ps1`"";
+};
+foreach ($name in $uninstallValues.Keys) {
+	Set-ItemProperty -Path $uninstallKey -Name $name -Value $uninstallValues[$name];
+}
+$estimatedSize = [int]((Get-ChildItem -Path $installFullPath -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1KB);
+Set-ItemProperty -Path $uninstallKey -Name "EstimatedSize" -Value $estimatedSize -Type DWord;
+Set-ItemProperty -Path $uninstallKey -Name "NoModify" -Value 1 -Type DWord;
+Set-ItemProperty -Path $uninstallKey -Name "NoRepair" -Value 1 -Type DWord;
 
 # Old versions go only here, at an update: one stays while it is among the three newest, was
 # installed in the last 30 days or a process still runs from it. Version folders at the top, from the
@@ -191,3 +212,6 @@ elseif ($isTaskEnabled) {
 	Enable-ScheduledTask -TaskName $jobName | Out-Null;
 	Start-Process "schtasks" "/run /tn $jobName";
 }
+
+Write-Output "$productName has been installed.";
+Write-Output "To uninstall it: Installed apps, or $installFullPath\vhuninstall.ps1";

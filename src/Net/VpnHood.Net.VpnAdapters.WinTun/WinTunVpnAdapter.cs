@@ -219,15 +219,15 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return Task.CompletedTask;
     }
 
-    protected override async Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
+    protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         if (ipV4)
-            await OsUtils.ExecuteCommandAsync("netsh",
-                $"interface ipv4 set interface \"{AdapterName}\" metric={metric}", cancellationToken);
+            Win32IpHelper.SetMetric(_adapterIndex, AddressFamily.InterNetwork, metric);
 
         if (ipV6)
-            await OsUtils.ExecuteCommandAsync("netsh",
-                $"interface ipv6 set interface \"{AdapterName}\" metric={metric}", cancellationToken);
+            Win32IpHelper.SetMetric(_adapterIndex, AddressFamily.InterNetworkV6, metric);
+
+        return Task.CompletedTask;
     }
 
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
@@ -299,15 +299,15 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         throw new InvalidOperationException($"Adapter '{adapterName}' does not support IPv4 or IPv6.");
     }
 
-    protected override async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
+    protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         if (ipV4)
-            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv4 set subinterface \"{AdapterName}\" mtu={mtu}",
-                cancellationToken);
+            Win32IpHelper.SetMtu(_adapterIndex, AddressFamily.InterNetwork, mtu);
 
         if (ipV6)
-            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv6 set subinterface \"{AdapterName}\" mtu={mtu}",
-                cancellationToken);
+            Win32IpHelper.SetMtu(_adapterIndex, AddressFamily.InterNetworkV6, mtu);
+
+        return Task.CompletedTask;
     }
 
 

@@ -298,6 +298,31 @@ public static class Win32IpHelper
 
     public static void DisableDuplicateAddressDetection(uint interfaceIndex, AddressFamily addressFamily)
     {
+        var row = GetIpInterface(interfaceIndex, addressFamily);
+        row.DadTransmits = 0;
+        SetIpInterface(row, "disable duplicate address detection");
+    }
+
+    // as netsh's "set interface metric=": the metric stops being automatic
+    public static void SetMetric(uint interfaceIndex, AddressFamily addressFamily, int metric)
+    {
+        var row = GetIpInterface(interfaceIndex, addressFamily);
+        row.UseAutomaticMetric = 0;
+        row.Metric = (uint)metric;
+        SetIpInterface(row, $"set the metric {metric}");
+    }
+
+    public static void SetMtu(uint interfaceIndex, AddressFamily addressFamily, int mtu)
+    {
+        var row = GetIpInterface(interfaceIndex, addressFamily);
+        row.NlMtu = (uint)mtu;
+        SetIpInterface(row, $"set the MTU {mtu}");
+    }
+
+    // the row goes back whole, as read, but an IPv4 one read with a site prefix length of 64 must carry 0
+    // (documented)
+    private static MIB_IPINTERFACE_ROW GetIpInterface(uint interfaceIndex, AddressFamily addressFamily)
+    {
         const int noError = 0;
 
         InitializeIpInterfaceEntry(out var row);
@@ -307,15 +332,20 @@ public static class Win32IpHelper
         if (result != noError)
             throw new Win32Exception(result, $"Failed to get the {addressFamily} interface {interfaceIndex}.");
 
-        // the row goes back whole, but an IPv4 one read with a site prefix length of 64 must carry 0 (documented)
-        row.DadTransmits = 0;
         if (addressFamily == AddressFamily.InterNetwork)
             row.SitePrefixLength = 0;
 
-        result = SetIpInterfaceEntry(ref row);
+        return row;
+    }
+
+    private static void SetIpInterface(MIB_IPINTERFACE_ROW row, string change)
+    {
+        const int noError = 0;
+
+        var result = SetIpInterfaceEntry(ref row);
         if (result != noError)
             throw new Win32Exception(result,
-                $"Failed to disable duplicate address detection on the {addressFamily} interface {interfaceIndex}.");
+                $"Failed to {change} on the {(AddressFamily)row.Family} interface {row.InterfaceIndex}.");
     }
 
     // a static address as netsh adds one, but it lasts only as long as the adapter

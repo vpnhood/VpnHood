@@ -60,7 +60,7 @@
 * Fix: On Linux, signing in and buying from the app's window work, and the checkout opens in your own browser #linux #connect
 * Fix: On Linux, opening the app again brings its open window forward instead of starting another, and closing the window ends it rather than leaving it running hidden #linux
 * Fix: On a screen without room for the window, such as a 1366x768 laptop's, it opens in landscape, in the middle of the screen, and fits the screen again when its resolution changes: the bottom of a page, the first run's Accept button included, no longer falls under the taskbar #windows #linux
-* Fix: The Servers page's warning that no server is added yet shows its whole text; it was cut off at the card's edge
+* Fix: The Servers page's warning that no server is added yet shows its whole text, and names the "Add server" button without asking to click it; it was cut off at the card's edge
 * Fix: The first run's terms page says "By selecting Accept and continue" rather than "By tapping", which fit only a touch screen
 * Fix: On Linux, the app's icon in the dock and the app grid is sharp; it was blurred #linux
 * Update: On Linux, an update removes the app's old versions: the three newest stay, and any installed in the last 30 days or still running, such as a window left open #linux

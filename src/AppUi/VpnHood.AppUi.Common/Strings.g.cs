@@ -394,7 +394,7 @@ public sealed partial class Strings
     /// <summary>Reload</summary>
     public string ReloadApp => Get("RELOAD_APP");
 
-    /// <summary>You haven’t added any servers yet. Please add a server by clicking on the "Add Server" button.</summary>
+    /// <summary>You haven’t added any servers yet. Please add a server with the "Add server" button.</summary>
     public string NoServerAvailable => Get("NO_SERVER_AVAILABLE");
 
     /// <summary>&lt;h3 class="mb-3"&gt;Don’t have a Server Key?&lt;/h3&gt;&lt;p class="mb-2"&gt;You can acquire a server key through the following meth...</summary>

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.Updaters;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -99,12 +100,7 @@ public class AppUpdaterService : IDisposable
             Data.PostponeVersion = null; // reset postpone version if forced
         }
 
-        // check ui context
         VhLogger.Instance.LogDebug("VersionCheck requested. Force: {Force}", force);
-        if (AppUiContext.Context == null) {
-            VhLogger.Instance.LogDebug("VersionCheck is not available. AppUiContext is null.");
-            return;
-        }
 
         // check if any update info URL or updater provider is available
         if (_updateOptions.UpdateInfoUrl is null && _updateOptions.UpdaterProvider is null) {
@@ -126,6 +122,11 @@ public class AppUpdaterService : IDisposable
                 Data.CheckedTime = FastDateTime.UtcNow;
             }
         }
+        catch (UiContextNotAvailableException) {
+            // A store's updater shows its own screen: the check waits for a window, unstamped, or the
+            // feed's answer would put the store's prompt off for a whole interval
+            VhLogger.Instance.LogDebug("The updater provider needs a window, and none is open.");
+        }
         finally {
             Save();
         }
@@ -138,7 +139,7 @@ public class AppUpdaterService : IDisposable
             if (updater == null)
                 return false; // no updater provider. Job done
 
-            if (!await updater.IsUpdateAvailable(AppUiContext.RequiredContext, cancellationToken)) {
+            if (!await updater.IsUpdateAvailable(AppUiContext.Context, cancellationToken)) {
                 Data.UpdaterAvailableSince = null;
                 return false; // no update available or could not handle the update
             }
@@ -152,13 +153,16 @@ public class AppUpdaterService : IDisposable
                 return true; // handled
 
             // update available, try to update
-            if (!await updater.Update(AppUiContext.RequiredContext, cancellationToken).Vhc())
+            if (!await updater.Update(AppUiContext.Context, cancellationToken).Vhc())
                 return false; // handled
 
             // update was handled so reset the UpdaterAvailableSince, till next check
             Data.UpdaterAvailableSince = null;
             Postpone(); // this version is postponed because user either updated or skipped the update
             return true;
+        }
+        catch (UiContextNotAvailableException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not check version by UpdaterProvider.");

@@ -39,18 +39,20 @@ internal sealed class AccountApi(VpnHoodApp app) : IAccountApi
         if (!AccountService.AuthenticationService.ProviderIds.Contains(signInOptions.ProviderId))
             throw new NotSupportedException($"Sign-in provider is not supported. ProviderId: {signInOptions.ProviderId}");
 
+        // the window this process has, if any: the desktop service never has one, and a provider
+        // that needs one says so
         var result = await AccountService.AuthenticationService
-            .SignIn(AppUiContext.RequiredContext, signInOptions.ToProvider(), cancellationToken).Vhc();
+            .SignIn(AppUiContext.Context, signInOptions.ToProvider(), cancellationToken).Vhc();
         return result.ToAppDto();
     }
 
     public Task SignOut(CancellationToken cancellationToken)
     {
-        return AccountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, cancellationToken);
+        return AccountService.AuthenticationService.SignOut(AppUiContext.Context, cancellationToken);
     }
 
     public Task Delete(CancellationToken cancellationToken)
     {
-        return AccountService.DeleteAccount(AppUiContext.RequiredContext, cancellationToken);
+        return AccountService.DeleteAccount(AppUiContext.Context, cancellationToken);
     }
 }

@@ -33,7 +33,7 @@ public class AuthenticationService(
         return accessToken != null;
     }
 
-    public async Task<SignInResult> SignIn(IUiContext uiContext, SignInOptions signInOptions,
+    public async Task<SignInResult> SignIn(IUiContext? uiContext, SignInOptions signInOptions,
         CancellationToken cancellationToken)
     {
         var result = await accountProvider.SignIn(uiContext, signInOptions, cancellationToken).Vhc();
@@ -58,7 +58,7 @@ public class AuthenticationService(
         return result;
     }
 
-    private async Task TrySilentRestore(IUiContext uiContext)
+    private async Task TrySilentRestore(IUiContext? uiContext)
     {
         try {
             var billingService = accountService.BillingService;
@@ -73,7 +73,7 @@ public class AuthenticationService(
         }
     }
 
-    public async Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         await accountProvider.SignOut(uiContext, cancellationToken).Vhc();
 

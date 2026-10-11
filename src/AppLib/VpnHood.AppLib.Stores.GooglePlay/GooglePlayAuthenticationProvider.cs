@@ -4,6 +4,7 @@ using AndroidX.Credentials.Exceptions;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
@@ -12,10 +13,10 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAu
 {
     public string ProviderId => AuthProviders.Google;
 
-    public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin, 
+    public async Task<string> SignIn(IUiContext? uiContext, bool isSilentLogin,
         CancellationToken cancellationToken)
     {
-        var appUiContext = (AndroidUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
         var nonce = Guid.NewGuid().ToString();
@@ -64,9 +65,9 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAu
         }
     }
 
-    public async Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
-        var appUiContext = (AndroidUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
         await credentialManager.ClearCredentialStateAsync(appUiContext.Activity, cancellationToken).ConfigureAwait(false);
     }

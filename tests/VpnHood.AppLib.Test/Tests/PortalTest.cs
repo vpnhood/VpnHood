@@ -6,6 +6,7 @@ using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Test;
 
@@ -280,6 +281,51 @@ public class PortalTest
             "a DELETE must not carry a body — some servers and proxies reject one");
         using var reloadedProvider = CreateAuthenticationProvider();
         Assert.IsNull(reloadedProvider.UserId, "the session file must be gone");
+    }
+
+    [TestMethod]
+    public async Task The_password_form_signs_in_and_out_with_no_window()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue(SignOutRoute, TestPortalServer.NoContent);
+
+        // the desktop service: no window, and no provider that would need one
+        using var authenticationProvider = new PortalAuthenticationProvider(_storageFolder, _portal.BaseUrl,
+            PackageName, authenticationExternalProviders: []);
+
+        var result = await authenticationProvider.SignIn(null,
+            new SignInOptions {
+                ProviderId = AuthProviders.Password,
+                UserName = "buyer@example.com",
+                Password = "the-password"
+            }, CancellationToken.None);
+
+        Assert.AreEqual(SignInState.SignedIn, result.State);
+        Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId);
+
+        await authenticationProvider.SignOut(null, CancellationToken.None);
+        Assert.IsNull(authenticationProvider.UserId);
+        Assert.ContainsSingle(_portal.Requests.Where(x => x.Route == SignOutRoute));
+    }
+
+    [TestMethod]
+    public async Task SignOut_completes_when_the_identity_provider_has_no_window_to_clear_in()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue(SignOutRoute, TestPortalServer.NoContent);
+
+        // Google clears its credential only in a window: a TV driven by its paired phone may have none
+        var externalProvider = new TestAuthenticationExternalProvider("google-id-token") {
+            SignOutException = new UiContextNotAvailableException()
+        };
+        using var authenticationProvider = CreateAuthenticationProvider(externalProvider);
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            CancellationToken.None);
+
+        await authenticationProvider.SignOut(null, CancellationToken.None);
+
+        Assert.IsNull(authenticationProvider.UserId);
+        Assert.AreEqual(1, externalProvider.SignOutCalls);
     }
 
     [TestMethod]

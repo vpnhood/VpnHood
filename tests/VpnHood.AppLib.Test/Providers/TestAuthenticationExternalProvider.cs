@@ -11,16 +11,21 @@ internal class TestAuthenticationExternalProvider(string idToken,
     public int SignInCalls { get; private set; }
     public int SignOutCalls { get; private set; }
 
-    public Task<string> SignIn(IUiContext uiContext, bool isSilentLogin, CancellationToken cancellationToken)
+    /// <summary>Set to make the sign-out fail, as Google's does with no window to clear it in.</summary>
+    public Exception? SignOutException { get; init; }
+
+    public Task<string> SignIn(IUiContext? uiContext, bool isSilentLogin, CancellationToken cancellationToken)
     {
         SignInCalls++;
         return Task.FromResult(idToken);
     }
 
-    public Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         SignOutCalls++;
-        return Task.CompletedTask;
+        return SignOutException != null
+            ? Task.FromException(SignOutException)
+            : Task.CompletedTask;
     }
 
     public void Dispose()

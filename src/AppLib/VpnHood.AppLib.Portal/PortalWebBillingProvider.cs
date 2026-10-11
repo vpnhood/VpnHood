@@ -40,7 +40,7 @@ public class PortalWebBillingProvider : IBillingProvider
 
     public PurchaseState PurchaseState => PurchaseState.None;
 
-    public Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         throw new NotSupportedException("A web subscription is managed on the website, not on this device.");
     }
@@ -68,13 +68,13 @@ public class PortalWebBillingProvider : IBillingProvider
 
     // The UI opens the plan's checkout page instead; the purchase reaches the account server-side,
     // and the next account refresh delivers it.
-    public Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+    public Task<PurchaseProof> Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
         throw new NotSupportedException("A web plan is bought on its checkout page (SubscriptionPlan.CheckoutUrl).");
     }
 
-    public Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // a web purchase lives in the account, not on the device — signing in restores it by itself
         return Task.FromResult<PurchaseProof?>(null);

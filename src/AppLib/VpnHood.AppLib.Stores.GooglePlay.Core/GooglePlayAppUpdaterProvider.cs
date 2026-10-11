@@ -4,6 +4,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;
@@ -12,14 +13,16 @@ namespace VpnHood.AppLib.Stores.GooglePlay;
 
 public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 {
-    public Task<bool> IsUpdateAvailable(IUiContext uiContext, CancellationToken cancellationToken)
+    // Play's update flow shows over the window: without one the check waits, outside the try below,
+    // which would answer "no update" and restart the prompt's delay
+    public Task<bool> IsUpdateAvailable(IUiContext? uiContext, CancellationToken cancellationToken)
     {
-        return UpdateInternal(uiContext, false, cancellationToken);
+        return UpdateInternal(uiContext ?? throw new UiContextNotAvailableException(), false, cancellationToken);
     }
 
-    public Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task<bool> Update(IUiContext? uiContext, CancellationToken cancellationToken)
     {
-        return UpdateInternal(uiContext, true, cancellationToken);
+        return UpdateInternal(uiContext ?? throw new UiContextNotAvailableException(), true, cancellationToken);
     }
 
     public static async Task<bool> UpdateInternal(IUiContext uiContext, bool execute, CancellationToken cancellationToken)

@@ -53,7 +53,7 @@ public class BillingService(
         }
     }
 
-    public async Task Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+    public async Task Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
         CancellationToken cancellationToken)
     {
         using var storeLock = await _storeLock.LockAsync(cancellationToken).Vhc();
@@ -105,7 +105,7 @@ public class BillingService(
     /// Hands the user to the store's own manage-subscriptions surface. The store does it natively;
     /// no URL reaches the UI, so no UI can open the wrong store or need a browser to exist.
     /// </summary>
-    public Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // The UI decides whether to OFFER this; here is where it is decided whether to DO it. A
         // caller that asks anyway — a stale page, a fork's own UI, a subscription billed by another
@@ -116,7 +116,7 @@ public class BillingService(
         return _billingProvider.OpenSubscriptionManagement(uiContext, cancellationToken);
     }
 
-    public async Task<bool> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task<bool> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         using var storeLock = await _storeLock.LockAsync(cancellationToken).Vhc();
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Portal.Dto;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -138,10 +139,6 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
             return Session;
 
         try {
-            // silent re-sign-in with a fresh provider id token
-            if (uiContext == null)
-                throw new InvalidOperationException("UI context is not available.");
-
             // renew only via the provider that established the session; a different IdP could land in
             // a different account
             var externalProvider = FindExternalProvider(Session.ProviderId);
@@ -152,9 +149,15 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
                 return Session; // no way to renew; use it until the portal rejects it
             }
 
+            // silent re-sign-in with a fresh provider id token; a provider that needs a window fails
+            // without one
             var idToken = await externalProvider.SignIn(uiContext, true, cancellationToken).Vhc();
             if (!string.IsNullOrWhiteSpace(idToken))
                 return await SignInToPortal(externalProvider, idToken, cancellationToken).Vhc();
+        }
+        catch (UiContextNotAvailableException) {
+            // asked at every token use in the session's last day: expected until a window opens
+            VhLogger.Instance.LogDebug("The portal session's renewal waits for a window.");
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not renew the portal session silently.");
@@ -182,7 +185,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         return passwordReset.Url;
     }
 
-    public async Task<SignInResult> SignIn(IUiContext uiContext, SignInOptions signInOptions,
+    public async Task<SignInResult> SignIn(IUiContext? uiContext, SignInOptions signInOptions,
         CancellationToken cancellationToken)
     {
         if (signInOptions.ProviderId == AuthProviders.Password)
@@ -204,7 +207,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     /// TwoFactorCode and completes the challenge held here. The portal never creates an account for
     /// this method, and its 401 is one answer for unknown email and wrong password alike.
     /// </summary>
-    private async Task<SignInResult> SignInWithPassword(IUiContext uiContext, SignInOptions signInOptions,
+    private async Task<SignInResult> SignInWithPassword(IUiContext? uiContext, SignInOptions signInOptions,
         CancellationToken cancellationToken)
     {
         var apiClient = new PortalApiClient(_httpClient);
@@ -259,7 +262,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         return exception;
     }
 
-    public async Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // best-effort server-side revoke; local sign-out must succeed regardless
         var session = Session;
@@ -290,11 +293,20 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
 
         // Sign out the provider that established the session. With no session there is nothing to
         // target, so every provider is cleared instead — a local sign-out must leave no cached
-        // credential behind, whatever state this device was in.
+        // credential behind, whatever state this device was in. Best-effort like the steps above:
+        // the session is gone already, and a provider with no window to clear it in must not turn
+        // that into a failed sign-out.
         var externalProviders = _authenticationExternalProviders
             .Where(x => session == null || x.ProviderId == session.ProviderId);
-        foreach (var externalProvider in externalProviders)
-            await externalProvider.SignOut(uiContext, cancellationToken).Vhc();
+        foreach (var externalProvider in externalProviders) {
+            try {
+                await externalProvider.SignOut(uiContext, cancellationToken).Vhc();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "Could not sign out of the identity provider. ProviderId: {ProviderId}",
+                    externalProvider.ProviderId);
+            }
+        }
     }
 
     private async Task<PortalSession> SignInToPortal(IAuthenticationExternalProvider externalProvider,
@@ -355,7 +367,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     /// its assertion comes back verbatim, and the answer is the same session every other form
     /// returns. Null when this device holds no restore credential.
     /// </summary>
-    private async Task<PortalSession?> SignInWithRestoreCredential(IUiContext uiContext,
+    private async Task<PortalSession?> SignInWithRestoreCredential(IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
         if (_restoreCredentialProvider == null)
@@ -383,7 +395,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     /// what makes the NEXT device's zero-tap sign-in possible. Best-effort by design: a person who
     /// just signed in must never be signed out again because a background enrolment failed.
     /// </summary>
-    private Task TryRegisterRestoreCredential(IUiContext uiContext, CancellationToken cancellationToken)
+    private Task TryRegisterRestoreCredential(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // Single-flight: the zero-tap path and the opportunistic path can both ask for enrolment in
         // the same startup, and each platform Create mints a NEW key - two racing enrolments leave a
@@ -403,7 +415,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         }
     }
 
-    private async Task RegisterRestoreCredentialCore(IUiContext uiContext, CancellationToken cancellationToken)
+    private async Task RegisterRestoreCredentialCore(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var session = Session;
         if (_restoreCredentialProvider == null || session == null)

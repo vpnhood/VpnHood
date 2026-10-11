@@ -10,6 +10,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Utils;
+using ApiSignInOptions = VpnHood.AppLib.Api.Accounts.SignInOptions;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -268,6 +269,30 @@ public class BillingServiceTest : TestAppBase
         Assert.HasCount(1, accountProvider.TestOrderProcessor.CompletedOrders);
         Assert.AreEqual("restored_purchase_data", accountProvider.TestOrderProcessor.CompletedOrders[0].Value);
         Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);
+    }
+
+    [TestMethod]
+    [DoNotParallelize] // clears the process-global AppUiContext; parallel tests restore it
+    public async Task The_api_signs_in_restores_and_signs_out_with_no_window()
+    {
+        // subscribed, so the silent restore after the sign-in stays out of the count
+        var accountProvider = new TestAccountProvider {
+            Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true),
+            TestBillingProvider = { RestoreResult = new PurchaseProof { Value = "restored_purchase_data" } }
+        };
+        await using var app = CreateAppWithAccount(accountProvider);
+
+        // the desktop service: its window is another process, so this one has none
+        AppUiContext.Context = null;
+
+        await app.Api.Account.SignIn(new ApiSignInOptions { ProviderId = AuthProviders.Google }, TestCt);
+        Assert.IsNotNull(await app.Api.Account.Get(TestCt));
+
+        Assert.IsTrue(await app.Api.Billing.RestorePurchase(TestCt));
+        Assert.HasCount(1, accountProvider.TestOrderProcessor.CompletedOrders);
+
+        await app.Api.Account.SignOut(TestCt);
+        Assert.IsNull(await app.Api.Account.Get(TestCt));
     }
 
     [TestMethod]

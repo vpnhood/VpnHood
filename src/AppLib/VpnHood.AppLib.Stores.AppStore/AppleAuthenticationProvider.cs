@@ -6,6 +6,7 @@ using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Ios.Extensions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.AppLib.Stores.AppStore;
 
@@ -18,8 +19,12 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
 {
     public string ProviderId => AuthProviders.Apple;
 
-    public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin, CancellationToken cancellationToken)
+    public async Task<string> SignIn(IUiContext? uiContext, bool isSilentLogin, CancellationToken cancellationToken)
     {
+        // the sheet shows over the window
+        if (uiContext is null)
+            throw new UiContextNotAvailableException();
+
         // Apple has no silent token mint; an interactive-capable session is required.
         // (The system sheet completes without input when the Apple ID session is warm,
         // so "silent" renewals still work in practice — they just must not START from
@@ -52,7 +57,7 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
         return identityToken;
     }
 
-    public Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // Apple has no sign-out API; the portal session revoke (DELETE /auth/sessions/current) is the
         // real sign-out. Nothing to do on the device.

@@ -10,12 +10,12 @@ namespace VpnHood.AppLib.App.Windows;
 public class AdvancedInstallerUpdaterProvider : IAppUpdaterProvider
 {
     // return false if the app update system does not work
-    public Task<bool> IsUpdateAvailable(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task<bool> IsUpdateAvailable(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         return UpdateInternal(false, cancellationToken);
     }
 
-    public Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task<bool> Update(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         return UpdateInternal(true, cancellationToken);
     }

@@ -25,13 +25,13 @@ internal sealed class DevAuthenticationProvider(string storeAuthProviderId) : IA
         UserId = null;
     }
 
-    public Task<SignInResult> SignIn(IUiContext uiContext, SignInOptions signInOptions, CancellationToken cancellationToken)
+    public Task<SignInResult> SignIn(IUiContext? uiContext, SignInOptions signInOptions, CancellationToken cancellationToken)
     {
         UserId = "dev-user";
         return Task.FromResult(new SignInResult { State = SignInState.SignedIn });
     }
 
-    public Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         UserId = null;
         return Task.CompletedTask;

@@ -8,6 +8,9 @@ namespace VpnHood.AppLib.Abstractions.Accounts;
 /// through device-to-device transfer and cloud restore. The portal is the relying party and OWNS
 /// every options document — implementations pass the JSON through to the platform credential API
 /// verbatim and hand its response back verbatim, composing nothing themselves.
+/// <para>
+/// Each call takes the window, null where none is open; a platform API that needs one fails then.
+/// </para>
 /// </summary>
 public interface IRestoreCredentialProvider : IDisposable
 {
@@ -16,15 +19,15 @@ public interface IRestoreCredentialProvider : IDisposable
     /// creation options. Returns the platform's registration response JSON, to be posted back to
     /// the portal verbatim.
     /// </summary>
-    Task<string> Create(IUiContext uiContext, string requestJson, CancellationToken cancellationToken);
+    Task<string> Create(IUiContext? uiContext, string requestJson, CancellationToken cancellationToken);
 
     /// <summary>
     /// Sign the portal's WebAuthn request options with the restored credential — the zero-tap
     /// moment on a new device. Returns the assertion response JSON verbatim, or null when this
     /// device holds no restore credential (a fresh install that was never restored).
     /// </summary>
-    Task<string?> TryGet(IUiContext uiContext, string requestJson, CancellationToken cancellationToken);
+    Task<string?> TryGet(IUiContext? uiContext, string requestJson, CancellationToken cancellationToken);
 
     /// <summary>Clear this device's restore credential (sign-out). Idempotent.</summary>
-    Task Clear(IUiContext uiContext, CancellationToken cancellationToken);
+    Task Clear(IUiContext? uiContext, CancellationToken cancellationToken);
 }

@@ -3,6 +3,9 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Updaters;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.AppLib.Test.Providers;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Test;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -171,5 +174,52 @@ public class CheckNewVersionTest : TestAppBase
         await app.Connect(vpnProfile.VpnProfileId);
         await app.WaitForState(AppConnectionState.Connected);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.UpdaterStatus?.VersionStatus);
+    }
+
+    [TestMethod]
+    public async Task A_check_with_no_window_finds_a_new_version()
+    {
+        SetNewRelease(CurrentAppVersion, DateTime.UtcNow, TimeSpan.Zero);
+
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.UpdaterOptions = new AppUpdaterOptions {
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1
+        };
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.State.UpdaterStatus?.VersionStatus);
+
+        // the desktop service: its window is another process, so this one has none. Released a minute
+        // ago: the status reads a coarse clock, which may not have reached "now" yet
+        AppUiContext.Context = null;
+        SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
+            DateTime.UtcNow.AddMinutes(-1), TimeSpan.Zero);
+        await app.Api.App.VersionCheck(TestCt);
+
+        Assert.AreEqual(VersionStatus.Old, app.State.UpdaterStatus?.VersionStatus);
+    }
+
+    [TestMethod]
+    public async Task A_store_updater_with_no_window_leaves_the_check_for_one_with_a_window()
+    {
+        SetNewRelease(CurrentAppVersion, DateTime.UtcNow, TimeSpan.Zero);
+        var updaterProvider = new TestAppUpdaterProvider();
+        Directory.CreateDirectory(TestHelper.WorkingPath);
+        using var updaterService = new AppUpdaterService(TestHelper.WorkingPath, CurrentAppVersion,
+            new AppUpdaterOptions {
+                UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1,
+                UpdaterProvider = updaterProvider
+            });
+
+        // a store build's check after a connect made with its window closed: the feed's answer must
+        // not stamp the check, or the store's own prompt would wait a whole interval
+        AppUiContext.Context = null;
+        await updaterService.CheckForUpdate(force: false, TestCt);
+        Assert.IsNull(updaterService.Status.CheckedTime);
+
+        // the window's arrival checks at once, and the store's updater is asked
+        AppUiContext.Context = new TestHelper.TestAppUiContext();
+        await updaterService.CheckForUpdate(force: false, TestCt);
+        Assert.AreEqual(1, updaterProvider.IsUpdateAvailableCalls);
+        Assert.IsNotNull(updaterService.Status.CheckedTime);
     }
 }

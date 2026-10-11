@@ -19,18 +19,20 @@ internal sealed class BillingApi(VpnHoodApp app) : IBillingApi
         return plans.Select(x => x.ToAppDto()).ToArray();
     }
 
+    // the window this process has, if any: the desktop service never has one, and a store that
+    // needs one says so
     public Task Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
-        return BillingService.Purchase(AppUiContext.RequiredContext, purchaseParams.ToProvider(), cancellationToken);
+        return BillingService.Purchase(AppUiContext.Context, purchaseParams.ToProvider(), cancellationToken);
     }
 
     public Task<bool> RestorePurchase(CancellationToken cancellationToken)
     {
-        return BillingService.RestorePurchase(AppUiContext.RequiredContext, cancellationToken);
+        return BillingService.RestorePurchase(AppUiContext.Context, cancellationToken);
     }
 
     public Task OpenSubscriptionManagement(CancellationToken cancellationToken)
     {
-        return BillingService.OpenSubscriptionManagement(AppUiContext.RequiredContext, cancellationToken);
+        return BillingService.OpenSubscriptionManagement(AppUiContext.Context, cancellationToken);
     }
 }

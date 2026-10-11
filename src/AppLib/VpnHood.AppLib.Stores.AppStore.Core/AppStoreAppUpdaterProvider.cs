@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -22,7 +23,7 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
     // the lookup result of the last successful check; Update reuses it for the store page URL
     private AppStoreAppInfo? _storeApp;
 
-    public async Task<bool> IsUpdateAvailable(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task<bool> IsUpdateAvailable(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         try {
             VhLogger.Instance.LogDebug("Checking for App Store update availability...");
@@ -62,8 +63,12 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
         }
     }
 
-    public async Task<bool> Update(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task<bool> Update(IUiContext? uiContext, CancellationToken cancellationToken)
     {
+        // the store page opens over the window; outside the try, so the check waits for one
+        if (uiContext is null)
+            throw new UiContextNotAvailableException();
+
         try {
             // reuse the last lookup; fetch again if Update is called without a prior successful check
             var storeApp = _storeApp ?? await FetchStoreAppInfo(cancellationToken).Vhc();

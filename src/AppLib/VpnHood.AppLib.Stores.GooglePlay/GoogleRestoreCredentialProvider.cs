@@ -3,6 +3,7 @@ using AndroidX.Credentials.Exceptions;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 
@@ -14,9 +15,9 @@ namespace VpnHood.AppLib.Stores.GooglePlay;
 /// </summary>
 public class GoogleRestoreCredentialProvider : IRestoreCredentialProvider
 {
-    public async Task<string> Create(IUiContext uiContext, string requestJson, CancellationToken cancellationToken)
+    public async Task<string> Create(IUiContext? uiContext, string requestJson, CancellationToken cancellationToken)
     {
-        var appUiContext = (AndroidUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
         using var request = new CreateRestoreCredentialRequest(requestJson);
         using var response = await credentialManager
@@ -29,9 +30,9 @@ public class GoogleRestoreCredentialProvider : IRestoreCredentialProvider
         return restoreResponse.ResponseJson;
     }
 
-    public async Task<string?> TryGet(IUiContext uiContext, string requestJson, CancellationToken cancellationToken)
+    public async Task<string?> TryGet(IUiContext? uiContext, string requestJson, CancellationToken cancellationToken)
     {
-        var appUiContext = (AndroidUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
         using var restoreOption = new GetRestoreCredentialOption(requestJson);
         using var credentialRequest = new GetCredentialRequest.Builder().AddCredentialOption(restoreOption).Build();
@@ -53,9 +54,9 @@ public class GoogleRestoreCredentialProvider : IRestoreCredentialProvider
         }
     }
 
-    public async Task Clear(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task Clear(IUiContext? uiContext, CancellationToken cancellationToken)
     {
-        var appUiContext = (AndroidUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
         using var request = new ClearCredentialStateRequest(ClearCredentialStateRequest.TypeClearRestoreCredential);
         await credentialManager.ClearCredentialStateAsync(appUiContext.Activity, request, cancellationToken)

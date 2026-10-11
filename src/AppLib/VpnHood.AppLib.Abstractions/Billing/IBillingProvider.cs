@@ -3,6 +3,10 @@ using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Abstractions.Billing;
 
+/// <summary>
+/// The calls that take the window get null where none is open, as in the desktop service: a store
+/// whose sheet needs one fails then, and the web store, whose checkout the UI opens, needs none.
+/// </summary>
 public interface IBillingProvider : IDisposable
 {
     /// <summary>
@@ -26,7 +30,7 @@ public interface IBillingProvider : IDisposable
     /// billed, and only while <see cref="IsSubscriptionManagementSupported" />: the app refuses the
     /// call otherwise, so an implementation need not re-check its own answer.
     /// </summary>
-    Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken);
+    Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken);
 
     /// <summary>
     /// Prices the given products. The store is not asked WHICH products exist — it cannot answer that
@@ -43,14 +47,14 @@ public interface IBillingProvider : IDisposable
     /// choice, <paramref name="attribution" /> is the app's answer to whose account is paying.
     /// </para>
     /// </summary>
-    Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+    Task<PurchaseProof> Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken);
 
     /// <summary>
     /// The proof for a subscription this store account already owns, or null when it owns none.
     /// Silent: it reads what the device already knows and never prompts.
     /// </summary>
-    Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken);
+    Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken);
 
     PurchaseState PurchaseState { get; }
 }

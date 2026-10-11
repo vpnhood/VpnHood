@@ -23,14 +23,14 @@ internal class TestAuthenticationProvider : IAuthenticationProvider
         UserId = null;
     }
 
-    public Task<SignInResult> SignIn(IUiContext uiContext, SignInOptions signInOptions,
+    public Task<SignInResult> SignIn(IUiContext? uiContext, SignInOptions signInOptions,
         CancellationToken cancellationToken)
     {
         UserId = Guid.Empty.ToString();
         return Task.FromResult(new SignInResult { State = SignInState.SignedIn });
     }
 
-    public Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         UserId = null;
         return Task.CompletedTask;

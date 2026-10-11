@@ -2,6 +2,7 @@
 using VpnHood.AppLib.Stores.AppStore.Exceptions;
 using VpnHood.AppLib.Stores.AppStore.Native;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.Stores.AppStore;
@@ -25,8 +26,12 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
     // no store address anywhere in the codebase.
     public bool IsSubscriptionManagementSupported => true;
 
-    public Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
     {
+        // Apple's sheet shows over the window
+        if (uiContext is null)
+            throw new UiContextNotAvailableException();
+
         return _bridge.ShowManageSubscriptions(cancellationToken);
     }
 
@@ -48,9 +53,13 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
             .ToArray();
     }
 
-    public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+    public async Task<PurchaseProof> Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
+        // the payment sheet shows over the window
+        if (uiContext is null)
+            throw new UiContextNotAvailableException();
+
         // Apple binds the purchase to the account via appAccountToken, and accepts only a UUID —
         // the shaping happens here, where that constraint lives. A backend whose account ids are
         // not UUIDs fails with that as the reason, rather than looking like nobody is signed in.
@@ -79,7 +88,7 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
     }
 
     /// <summary>Apple review requirement: surface previously purchased items without a new charge.</summary>
-    public async Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var entitlement = await CallBridge(() => _bridge.CurrentEntitlement(cancellationToken), cancellationToken).Vhc();
         var jws = entitlement?.Jws;

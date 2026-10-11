@@ -149,7 +149,7 @@ public class AccountService
     /// backend deliberately does not cancel it, and signing in again brings it back by itself.
     /// </para>
     /// </summary>
-    public async Task DeleteAccount(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task DeleteAccount(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         await _accountProvider.DeleteAccount(cancellationToken).Vhc();
 

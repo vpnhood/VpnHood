@@ -7,6 +7,7 @@ using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Stores.GooglePlay.Exceptions;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -32,14 +33,14 @@ public class GooglePlayBillingProvider : IBillingProvider
     // TV — a television with one installed reaches the same web page a phone would.
     public bool IsSubscriptionManagementSupported => AndroidBrowserUtils.IsExternalBrowserAvailable();
 
-    public async Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
     {
+        var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
         var url = await BuildSubscriptionManagementUrl(cancellationToken).Vhc();
 
         // An implicit view, the way every other outbound link in the app travels: Play holds
         // verified app links for this host and claims it. Naming the package instead would buy
         // determinism at the price of a visibility declaration, and it is not worth that.
-        var appUiContext = (AndroidUiContext)uiContext;
         appUiContext.Activity.StartActivity(new Intent(Intent.ActionView, Android.Net.Uri.Parse(url)));
     }
 
@@ -221,10 +222,10 @@ public class GooglePlayBillingProvider : IBillingProvider
         return [.. productDetailsResult.ProductDetails];
     }
 
-    public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+    public async Task<PurchaseProof> Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
-        var appUiContext = (AndroidUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
         var subscriptionToken = JsonUtils.Deserialize<SubscriptionPlanToken>(purchaseParams.PlanToken);
 
@@ -283,7 +284,7 @@ public class GooglePlayBillingProvider : IBillingProvider
         }
     }
 
-    public async Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // The SILENT ownership query (lifecycle §7): reads what the device already knows and never
         // prompts, so it is safe on every sign-in as well as behind the visible Restore control.

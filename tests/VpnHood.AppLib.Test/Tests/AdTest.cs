@@ -111,6 +111,26 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // clears the process-global AppUiContext; parallel tests restore it
+    public async Task An_app_without_ads_refuses_an_ad_server_with_no_window_too()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // a build with no ad network, as the desktop service runs it: with no window
+        await using var app = TestAppHelper.CreateClientApp();
+        AppUiContext.Context = null;
+
+        // the reason is the app's, not a window that is not open
+        var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        var exception = await Assert.ThrowsExactlyAsync<AdException>(() =>
+            app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt));
+        StringAssert.Contains(exception.Message, "does not support servers that require ads");
+        await app.WaitForState(AppConnectionState.None);
+    }
+
+    [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
     public async Task RewardedAd_expiration_must_be_increased_by_plan_id(bool acceptAd)

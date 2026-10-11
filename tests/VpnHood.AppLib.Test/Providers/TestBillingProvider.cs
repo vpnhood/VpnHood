@@ -15,7 +15,7 @@ internal class TestBillingProvider : IBillingProvider
     public bool IsSubscriptionManagementSupported { get; set; } = true;
     public bool WasSubscriptionManagementOpened { get; private set; }
 
-    public Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         WasSubscriptionManagementOpened = true;
         return Task.CompletedTask;
@@ -47,7 +47,7 @@ internal class TestBillingProvider : IBillingProvider
     /// <summary>Runs while the store's sheet would be open — the window a real one leaves the app in.</summary>
     public Func<Task>? WhileStoreIsAnswering { get; set; }
 
-    public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+    public async Task<PurchaseProof> Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
         LastPurchaseParams = purchaseParams;
@@ -61,7 +61,7 @@ internal class TestBillingProvider : IBillingProvider
         return new PurchaseProof { Value = "test_purchase_data" };
     }
 
-    public Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         return Task.FromResult(RestoreResult);
     }

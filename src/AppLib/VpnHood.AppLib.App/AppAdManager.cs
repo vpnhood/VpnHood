@@ -47,19 +47,24 @@ public class AppAdManager(
         VhLogger.Instance.LogDebug("Showing ad. Session: {SessionId}, AdRequirement: {AdRequirement}", sessionId,
             adRequirement);
 
+        // A build that shows no ads says so before it asks for a window: the desktop service never has
+        // one, and "the window was not open" would send the person after the wrong cause
+        if (!IsAdSupported) {
+            var notSupportedException = new AdException("This app does not support servers that require ads.");
+            await SetWaitForAd(cancellationToken).Vhc();
+            await vpnServiceManager.SetAdFailed(notSupportedException, cancellationToken).Vhc();
+            throw notSupportedException;
+        }
+
         // let's throw an exception if context is not set
         var uiContext = AppUiContext.Context;
         if (uiContext == null)
             throw new ShowAdNoUiException();
 
-        // set wait for ad if not already in that state
-        if (vpnServiceManager.ConnectionInfo.ClientState is not ClientState.WaitingForAd)
-            await vpnServiceManager.SetWaitForAd(cancellationToken).Vhc();
+        await SetWaitForAd(cancellationToken).Vhc();
 
         try {
             IsShowing = true;
-            if (!IsAdSupported)
-                throw new AdException("This app does not support servers that require ads.");
 
             // flexible ad
             var adResult = adRequirement switch {
@@ -86,10 +91,6 @@ public class AppAdManager(
             await vpnServiceManager.SetAdOk(adResult,
                 isRewarded: adRequirement == AdRequirement.Rewarded,
                 cancellationToken).Vhc();
-        }
-        catch (Exception ex) when (!IsAdSupported) {
-            await vpnServiceManager.SetAdFailed(ex, cancellationToken).Vhc();
-            throw;
         }
         catch (ShowAdNoUiException) {
             // if ad is not shown because of no UI context just throw exception and let core
@@ -141,6 +142,13 @@ public class AppAdManager(
         // set wait for ad state
         await ShowAd(connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, useFallback: false,
             cancellationToken: cancellationToken).Vhc();
+    }
+
+    // the core takes an ad's failure only while it waits for one; sent outside that, it is lost
+    private async Task SetWaitForAd(CancellationToken cancellationToken)
+    {
+        if (vpnServiceManager.ConnectionInfo.ClientState is not ClientState.WaitingForAd)
+            await vpnServiceManager.SetWaitForAd(cancellationToken).Vhc();
     }
 
     private async Task VerifyAdBlocker(Exception ex, CancellationToken cancellationToken)

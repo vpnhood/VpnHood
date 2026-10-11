@@ -13,7 +13,7 @@ internal sealed class DevBillingProvider(string storeId, bool isSubscriptionMana
     public bool IsSubscriptionManagementSupported => isSubscriptionManagementSupported;
     public PurchaseState PurchaseState => PurchaseState.None;
 
-    public Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
@@ -34,14 +34,14 @@ internal sealed class DevBillingProvider(string storeId, bool isSubscriptionMana
         return Task.FromResult(plans);
     }
 
-    public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+    public async Task<PurchaseProof> Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
         await Task.Delay(TimeSpan.FromSeconds(1.5), cancellationToken);
         return new PurchaseProof { Value = purchaseParams.PlanToken };
     }
 
-    public Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         return Task.FromResult<PurchaseProof?>(null);
     }

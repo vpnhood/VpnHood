@@ -22,17 +22,13 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         }
     }
 
-    private Task<bool> IpAddressExists(IPAddress ipAddress)
-    {
-        if (ipAddress.Equals(IPAddress.Any) ||
-            ipAddress.Equals(IPAddress.IPv6Any))
-            return Task.FromResult(true);
-
-        return netConfigurationProvider.IpAddressExists(ipAddress);
-    }
-
     public async Task AddIpAddress(IPAddress ipAddress, string? interfaceName)
     {
+        // a listener on any address needs none added, so no interface is looked up for it: a
+        // container has no tool to find one
+        if (ipAddress.Equals(IPAddress.Any) || ipAddress.Equals(IPAddress.IPv6Any))
+            return;
+
         try {
             // find default interface name
             if (interfaceName == "*" || string.IsNullOrEmpty(interfaceName))
@@ -48,7 +44,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
             }
 
             // add new ip address if it does not exist in the system
-            if (await IpAddressExists(ipAddress).Vhc())
+            if (await netConfigurationProvider.IpAddressExists(ipAddress).Vhc())
                 return;
 
             VhLogger.Instance.LogInformation("Adding IP address to system. IP: {IP}, InterfaceName: {interfaceName}",
@@ -93,7 +89,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
             return await netConfigurationProvider.GetTcpCongestionControl();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could no read TCP congestion control.");
+            VhLogger.Instance.LogWarning(ex, "Could not read TCP congestion control.");
             return null;
         }
     }
@@ -108,7 +104,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
             await netConfigurationProvider.SetTcpCongestionControl(value);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could no set TCP congestion control.");
+            VhLogger.Instance.LogWarning(ex, "Could not set TCP congestion control.");
         }
     }
 

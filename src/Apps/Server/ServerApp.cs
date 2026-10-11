@@ -35,6 +35,7 @@ public class ServerApp : IDisposable
     private const string FolderNameInternal = "internal";
     private const string EnvNameAppSettings = "VH_APPSETTINGS";
     private const string EnvNameLauncherName = "VH_LAUNCHER_NAME";
+    private const string LinuxTunDevicePath = "/dev/net/tun";
     private readonly ITracker _tracker;
     private readonly Lazy<IAccessManager> _accessManager;
     private readonly CommandListener _commandListener;
@@ -424,9 +425,9 @@ public class ServerApp : IDisposable
         }
     }
 
-    // Proxy only where there is no adapter to have: neither Linux nor Windows, or a failure, such as a
-    // host without IPv6, whose probe the constructor runs, or a Windows without WinNAT. A stop is passed
-    // on, not taken for a failure.
+    // Proxy only where there is no adapter to have: neither Linux nor Windows, a Linux without a TUN
+    // device, or a failure, such as a host without IPv6, whose probe the constructor runs, or a Windows
+    // without WinNAT. A stop is passed on, not taken for a failure.
     private static async Task<IVpnAdapter?> CreateTunProvider(IpNetwork virtualIpNetworkV4,
         IpNetwork virtualIpNetworkV6, CancellationToken cancellationToken)
     {
@@ -465,7 +466,15 @@ public class ServerApp : IDisposable
     // down for good, the server offering no TCP packets meanwhile; so the adapter retries by itself.
     private static IVpnAdapter? CreateVpnAdapter()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+            // A container has no TUN device unless it is given one, so the Docker server is a proxy:
+            // said once, as what it is, rather than as the adapter's failure to find an interface.
+            if (!File.Exists(LinuxTunDevicePath)) {
+                VhLogger.Instance.LogWarning("There is no TUN device ({TunDevicePath}), so the server runs as a proxy only.",
+                    LinuxTunDevicePath);
+                return null;
+            }
+
             return new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
                 AdapterName = AppName,
                 AppId = AppId,
@@ -473,6 +482,7 @@ public class ServerApp : IDisposable
                 AutoDisposePackets = true,
                 AutoRestart = true
             });
+        }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return new WinTunVpnAdapter(new WinVpnAdapterSettings {

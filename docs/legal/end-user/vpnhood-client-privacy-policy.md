@@ -5,8 +5,9 @@
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy.
 This policy applies only to the official **VpnHood! CLIENT** app.
 
-On iOS, the app sends nothing about you to us or to any third party; to connect, it talks only to the
-VPN server you choose and the addresses its access key names.
+We never sell your data on any platform. On iOS, the app sends nothing about you to us or to any
+third party, except what it needs to connect: that goes only to the VPN server you choose and the
+addresses its access key names, as described under [VPN Servers Are Separate](#vpn-servers-are-separate).
 
 ## Data We Collect
 

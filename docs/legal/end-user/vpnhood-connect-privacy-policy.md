@@ -85,7 +85,7 @@ When you write to our support, we keep your messages, with your email address an
 When you connect, our servers record what any VPN server must see to run the service:
 
 - Your Client ID and the access your app uses to connect
-- The technical information listed above
+- Your app version, operating system and browser engine, the server location you chose, and the country we look up from your IP address
 - The rating you last gave in the app, if any, without its text, so the app stops asking for one
 - The amount of traffic (bytes sent and received), used for accounting and quotas
 - Your IP address and connection activity — the time, your client endpoint (IP address & port), and the port each connection goes to — kept in server log files for **30 days** from the moment each entry is written, then deleted. These log files are never backed up. If our hosting provider forwards a "Notice of Claimed Infringement," we use them to trace the connection back to whoever made it, so we can notify or suspend them. Free use has no account behind it to suspend, so there the address itself is the only thing that lets us stop the abuse — which is why we keep it.

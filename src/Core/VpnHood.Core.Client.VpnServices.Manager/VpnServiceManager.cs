@@ -22,6 +22,9 @@ public class VpnServiceManager : IDisposable
     private readonly TimeSpan _requestVpnServiceTimeout = TimeSpan.FromSeconds(120).WhenNoDebugger();
     private readonly TimeSpan _startVpnServiceTimeout = TimeSpan.FromSeconds(20).WhenNoDebugger();
     private readonly TimeSpan _startVpnServicePollInterval = TimeSpan.FromMilliseconds(200);
+
+    // the service's Connected shows this late at most; a second hid a faster start
+    private readonly TimeSpan _waitForConnectionPollInterval = TimeSpan.FromMilliseconds(200);
     private bool _disposed;
 
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
@@ -237,7 +240,7 @@ public class VpnServiceManager : IDisposable
 
             // wait for a while before checking the state again
             try {
-                await Task.Delay(_connectionInfoTimeSpan, cancellationToken).Vhc();
+                await Task.Delay(_waitForConnectionPollInterval, cancellationToken).Vhc();
             }
             catch (Exception) when (cancellationToken.IsCancellationRequested) {
                 // continue to check the state again as ThrowIfCancellationRequested will throw after checking the state

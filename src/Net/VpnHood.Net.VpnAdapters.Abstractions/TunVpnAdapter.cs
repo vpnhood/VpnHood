@@ -171,6 +171,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         if (options.UseNat && !IsNatSupported(IpVersion.IPv4))
             throw new NotSupportedException("NAT is not supported by this adapter.");
 
+        var wasStarted = false; // this start marked the adapter started
         try {
             VhLogger.Instance.LogInformation("Starting the VPN adapter. AdapterName: {AdapterName}", AdapterName);
 
@@ -183,6 +184,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 if (!_keepStarted)
                     throw new OperationCanceledException("The VPN adapter has been stopped while starting.");
                 IsStarted = true;
+                wasStarted = true;
             }
             _ioErrorCount = 0; // a new run, not the errors that ended the last one
 
@@ -331,7 +333,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             var isStopped = _isStopping || !IsStarted || cancellationToken.IsCancellationRequested;
             VhLogger.Instance.Log(ex is OperationCanceledException || isStopped ? LogLevel.Trace : LogLevel.Error,
                 ex, "Failed to start TUN adapter.");
-            Stop(false);
+
+            // a stop that overtook this start removed only what it found; what the start added since goes
+            // here, as no later start may come to clear it (a dispose)
+            if (!Stop(false) && wasStarted)
+                RemoveAfterOvertakingStop();
 
             if (isStopped && ex is not OperationCanceledException)
                 throw new OperationCanceledException("The VPN adapter has been stopped while starting.", ex);
@@ -441,6 +447,27 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             }
 
             return true;
+        }
+    }
+
+    // Under the stop lock, and not once a new run has started: what is there is then that run's
+    private void RemoveAfterOvertakingStop()
+    {
+        lock (_stopLock) {
+            if (IsStarted)
+                return;
+
+            VhLogger.Instance.LogInformation(
+                "Removing what the start added after a stop overtook it. AdapterName: {AdapterName}", AdapterName);
+            try {
+                AdapterClose();
+                AdapterRemove();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex,
+                    "Could not remove what the start added after a stop overtook it. AdapterName: {AdapterName}",
+                    AdapterName);
+            }
         }
     }
 

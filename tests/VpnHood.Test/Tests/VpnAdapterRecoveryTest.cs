@@ -233,6 +233,27 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Start_overtaken_before_its_add_removes_what_it_added(bool dispose)
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) {
+            StopBeforeAdd = !dispose,
+            DisposeBeforeAdd = dispose
+        };
+
+        // the owner's stop or dispose lands before the start adds the adapter, so it finds nothing; the start
+        // adds and opens it anyway, then reports the stop, and what it added goes with it: after a dispose no
+        // later start would clear it
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() =>
+            adapter.Start(CreateAdapterOptions(), TestCt));
+        Assert.AreEqual(1, adapter.OpenCount);
+        Assert.IsFalse(adapter.IsOpen);
+        Assert.IsFalse(adapter.IsAdded);
+        Assert.AreEqual(0, adapter.ReadingCount);
+    }
+
+    [TestMethod]
     public async Task Stop_waits_for_the_sender()
     {
         using var adapter = new TestFaultyVpnAdapter(autoRestart: false);

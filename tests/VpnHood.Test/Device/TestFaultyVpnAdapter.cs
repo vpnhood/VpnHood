@@ -21,6 +21,10 @@ public class TestFaultyVpnAdapter(bool autoRestart)
     public volatile bool HoldReader; // the reader's next wait holds until ReleaseReader
     public volatile bool HoldSender; // the next write holds until ReleaseSender
     public volatile bool StopAfterOpen; // the owner's stop overtakes the start, between its open and its reader
+    public volatile bool StopBeforeAdd; // the owner's stop overtakes the start before it adds the adapter
+    public volatile bool DisposeBeforeAdd; // the owner's dispose does
+    public volatile bool IsAdded;
+    public volatile bool IsOpen;
     public volatile bool IsReaderHeld;
     public volatile bool IsSenderHeld;
     public volatile bool IsReading;
@@ -34,18 +38,31 @@ public class TestFaultyVpnAdapter(bool autoRestart)
 
     protected override TimeSpan AutoRestartDelay => TimeSpan.FromMilliseconds(200);
 
-    protected override Task AdapterAdd(CancellationToken cancellationToken)
+    protected override async Task AdapterAdd(CancellationToken cancellationToken)
     {
         Interlocked.Increment(ref StartCount);
-        return FailStart
-            ? throw new IOException("Test: the adapter could not be added.")
-            : base.AdapterAdd(cancellationToken);
+        if (StopBeforeAdd)
+            Stop();
+        if (DisposeBeforeAdd)
+            Dispose();
+        if (FailStart)
+            throw new IOException("Test: the adapter could not be added.");
+
+        await base.AdapterAdd(cancellationToken);
+        IsAdded = true;
+    }
+
+    protected override void AdapterRemove()
+    {
+        base.AdapterRemove();
+        IsAdded = false;
     }
 
     protected override async Task AdapterOpen(CancellationToken cancellationToken)
     {
         Interlocked.Increment(ref OpenCount);
         await base.AdapterOpen(cancellationToken);
+        IsOpen = true;
         if (StopAfterOpen)
             Stop();
     }
@@ -112,6 +129,7 @@ public class TestFaultyVpnAdapter(bool autoRestart)
         WasReadingAtClose = IsReading;
         SenderEndedAtClose = WaitForSender(TimeSpan.FromSeconds(5));
         base.AdapterClose();
+        IsOpen = false;
     }
 
     protected override void DisposeManaged()

@@ -30,6 +30,11 @@ public class LinuxDesktopPaths(string appId) : IAppDesktopPaths
             ? launcher
             : InstanceName;
 
+    // The desktop entry runs the launcher too, but always with "ui"; only the binary run on its own - a
+    // debugger's run - is not the command.
+    public bool IsStartedAsCommand =>
+        Environment.GetEnvironmentVariable(LauncherNameVariable) is { Length: > 0 };
+
     // /opt/VpnHoodClient/bin/<version>/VpnHoodClient -> /opt/VpnHoodClient/storage, which is what every
     // release of this package has used and where an advanced user's settings.json already is.
     public string StoragePath {

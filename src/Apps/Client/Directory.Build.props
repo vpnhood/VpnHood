@@ -11,6 +11,7 @@
     <VhAppIdBase>com.vpnhood.client</VhAppIdBase>
     <VhAppName>VpnHood! CLIENT</VhAppName>
     <VhAppPackageTitle>VpnHoodClient</VhAppPackageTitle>
+    <VhAppCommandName>vhclient</VhAppCommandName>
   </PropertyGroup>
 
   <!-- After the values, as NuGet imports a package's props after Directory.Build.props: the same file

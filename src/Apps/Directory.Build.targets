@@ -10,4 +10,10 @@
        no identity, as the tools and the server do, is left as it is. -->
   <Import Project="$(MSBuildThisFileDirectory)..\AppLib\VpnHood.AppLib.App\buildTransitive\VpnHood.AppLib.App.targets" />
 
+  <!-- Windows' console launcher beside the window's executable, for the same reason: the Windows
+       hosting package's targets, which its project reference does not carry. They act only on a
+       WinExe that names a command. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\AppUi\VpnHood.AppUi.Hosting.Desktop.Windows\buildTransitive\VpnHood.AppUi.Hosting.Desktop.Windows.targets"
+          Condition="$(TargetFramework.Contains('-windows'))" />
+
 </Project>

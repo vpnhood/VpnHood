@@ -4,7 +4,9 @@ param(
     # per-app .user override or resolved from the current repo (see below).
     [Parameter(Mandatory = $false)] [string]$repoBaseUrl,
     [Parameter(Mandatory = $true)] [string]$publishDirName,
-    [Parameter(Mandatory = $true)] [string]$launcherName,
+    # Optional: an app's head takes it from its identity (VhAppCommandName, see
+    # Publish-InstallerImpl.ps1); the server, which states none, passes it.
+    [Parameter(Mandatory = $false)] [string]$launcherName,
     [Parameter(Mandatory = $true)] [string]$os,
     # Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client.
     [switch]$connect,

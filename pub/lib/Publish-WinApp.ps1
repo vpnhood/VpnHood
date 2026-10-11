@@ -52,6 +52,8 @@ $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullNa
 # Both from the app's identity, so as MSBuild evaluates them (Get-ProjectProperty).
 $productName = Get-ProjectProperty $projectFile "Product";
 $assemblyName = Get-ProjectProperty $projectFile "AssemblyName";
+# the console launcher's name; the build writes it beside the window's exe (VhAppCommandName)
+$commandName = Get-ProjectProperty $projectFile "VhAppCommandName";
 $targetFramework = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.TargetFramework;
 $publishDir = "$projectDir/bin/Publish-$distribution";
 $aipFile = "$solutionDir/$aipFileR";
@@ -106,10 +108,14 @@ if ($doPublish) {
 	Invoke-VhSign (Get-ChildItem $publishDir -File -Recurse -Include "*.exe", "*.dll" |
 		Select-Object -ExpandProperty FullName);
 
-	# The apphost is the file Windows shows in the UAC/SmartScreen prompt, so it must never slip through
-	# unsigned when signing is configured (a renamed AssemblyName would silently miss the glob above).
-	if ($signEnabled -and -not (Get-AuthenticodeSignature "$publishDir/$assemblyName.exe").SignerCertificate) {
-		Throw "Signing is configured but '$assemblyName.exe' is still unsigned after the signing step.";
+	# The apphosts are the files Windows shows in the UAC/SmartScreen prompt, so neither may slip through
+	# unsigned when signing is configured (a renamed AssemblyName would silently miss the glob above):
+	# the window's exe and the console launcher beside it.
+	$appHostNames = @("$assemblyName.exe") + @(if ($commandName) { "$commandName.exe" });
+	foreach ($appHostName in $appHostNames) {
+		if ($signEnabled -and -not (Get-AuthenticodeSignature "$publishDir/$appHostName").SignerCertificate) {
+			Throw "Signing is configured but '$appHostName' is still unsigned after the signing step.";
+		}
 	}
 }
 

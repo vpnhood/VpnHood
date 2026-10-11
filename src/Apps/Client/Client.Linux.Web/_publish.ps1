@@ -3,5 +3,4 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-projectDir $PSScriptRoot `
 	-publishDirName "VpnHoodClient" `
 	-os "linux" `
-	-launcherName "vhclient" `
 	-installTemplate "install-client";

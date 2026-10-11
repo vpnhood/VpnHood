@@ -48,6 +48,13 @@
 		<VhAdMobApplicationId Condition="'$(VhAdMobApplicationId)' == ''">ca-app-pub-3940256099942544~3347511713</VhAdMobApplicationId>
 	</PropertyGroup>
 
+	<!-- The command's name (VhAppCommandName), in the app's own assembly, where the desktop host reads
+	     it for the names its help and hints print: an attribute rather than a constant, so a head
+	     passes the host nothing. -->
+	<ItemGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppIsApp)' == 'true' And '$(VhAppCommandName)' != ''">
+		<AssemblyMetadata Include="VhAppCommandName" Value="$(VhAppCommandName)" />
+	</ItemGroup>
+
 	<!-- The name this build shows (VhAppDisplayName), a head's and the product library's alike. Debug
 	     says so in the name. -->
 	<PropertyGroup Condition="'$(VhAppIdBase)' != ''">

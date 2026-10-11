@@ -14,6 +14,10 @@ public interface IAppDesktopPaths
     // binary's name, which on Linux is not on the PATH at all.
     string CommandName { get; }
 
+    // Whether this process was started by that word rather than by the window's own executable, which
+    // a desktop entry runs: run alone, the one prints its help and the other opens the window.
+    bool IsStartedAsCommand { get; }
+
     // The daemon's: settings.json, the profiles, the log, which only it and administrators may open -
     // not the person at the window, whose commands ask the daemon instead.
     string StoragePath { get; }

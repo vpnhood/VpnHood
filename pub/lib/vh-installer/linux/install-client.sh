@@ -522,7 +522,7 @@ fi
 echo "";
 echo "$productName has been installed.";
 if [ "$withDesktop" == "y" ]; then
-	echo "  Open the window from the application menu, or run: $launcher";
+	echo "  Open the window from the application menu, or run: $launcher ui";
 fi
 echo "  From a terminal:";
 echo "    $launcher profile add <access-key>";

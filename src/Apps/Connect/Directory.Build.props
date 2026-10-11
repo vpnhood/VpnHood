@@ -11,6 +11,7 @@
     <VhAppIdBase>com.vpnhood.connect</VhAppIdBase>
     <VhAppName>VpnHood! CONNECT</VhAppName>
     <VhAppPackageTitle>VpnHoodConnect</VhAppPackageTitle>
+    <VhAppCommandName>vhconnect</VhAppCommandName>
     <!-- the AdMob application id the Google Play head's manifest names (AppConstants.AdMobApplicationId) -->
     <VhAdMobApplicationId>ca-app-pub-8662231806304184~1740102860</VhAdMobApplicationId>
   </PropertyGroup>

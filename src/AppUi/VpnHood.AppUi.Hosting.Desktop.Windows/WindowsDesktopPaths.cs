@@ -20,8 +20,19 @@ public class WindowsDesktopPaths(string appId) : IAppDesktopPaths
         Assembly.GetEntryAssembly()?.GetName().Name ??
         throw new InvalidOperationException("The entry assembly has no name, so this install has none.");
 
-    // Nothing of this install is on the PATH yet, so a hint names the executable itself.
-    public string CommandName => InstanceName;
+    // The console launcher beside the window's executable, which a terminal waits for: the name the
+    // app's identity writes into its assembly (VhAppCommandName). An app built without that identity
+    // has only the window's executable, so a hint names that.
+    public string CommandName => string.IsNullOrEmpty(_commandName) ? InstanceName : _commandName;
+
+    private readonly string? _commandName = Assembly.GetEntryAssembly()?
+        .GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(x => x.Key == "VhAppCommandName")?.Value;
+
+    public bool IsStartedAsCommand =>
+        !string.IsNullOrEmpty(_commandName) &&
+        string.Equals(Path.GetFileNameWithoutExtension(Environment.ProcessPath), _commandName,
+            StringComparison.OrdinalIgnoreCase);
 
     // The folder in use: the one an earlier start recorded when it had to pass over its own, else
     // its own.

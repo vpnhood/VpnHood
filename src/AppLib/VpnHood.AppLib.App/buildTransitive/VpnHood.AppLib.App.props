@@ -20,12 +20,17 @@
 	     its own; an installed app keeps these names for good, so an app that has shipped states its
 	     package title rather than let a new name move its service and folders.
 
+	     VhAppCommandName is what a person types at a terminal: Windows' console launcher beside the
+	     window's executable, and Linux's launcher script. The package title and "Cli" unless the app
+	     states its own, so a fork's name clashes with nobody's.
+
 	     Product is the name the executable's details show and the Windows service is listed under.
 	     Set here because the SDK sets it to the assembly's name before a targets file could, and so it
 	     does Company: whether the app stated one is noted here, while it still shows. Copyright follows
 	     from Company unless the app states its own. -->
 	<PropertyGroup Condition="'$(VhAppName)' != ''">
 		<VhAppPackageTitle Condition="'$(VhAppPackageTitle)' == ''">$([System.Text.RegularExpressions.Regex]::Replace('$(VhAppName)', '[^A-Za-z0-9]', ''))</VhAppPackageTitle>
+		<VhAppCommandName Condition="'$(VhAppCommandName)' == ''">$(VhAppPackageTitle)Cli</VhAppCommandName>
 		<Product Condition="'$(Product)' == ''">$(VhAppName)</Product>
 		<_VhAppHasCompany Condition="'$(Company)' != ''">true</_VhAppHasCompany>
 		<Copyright Condition="'$(Copyright)' == '' And '$(Company)' != ''">&#169; $(Company). All rights reserved.</Copyright>

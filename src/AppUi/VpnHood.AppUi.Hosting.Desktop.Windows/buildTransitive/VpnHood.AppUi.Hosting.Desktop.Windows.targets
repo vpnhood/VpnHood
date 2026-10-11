@@ -1,0 +1,49 @@
+<Project>
+	<!-- Windows' console launcher: the command's name (VhAppCommandName, the app's identity), vhclient.exe,
+	     beside the window's executable and over the same dll. The window's executable is a GUI program,
+	     so a shell neither waits for it nor gets its output or exit code; this one is the same apphost
+	     marked console. It is the SDK's own step run a second time (CreateAppHost, as _CreateAppHost
+	     runs it), copied to the output and the publish folder as the SDK copies the first
+	     (_ComputeNETCoreBuildOutputFiles), so a head adds nothing. The apphost finds its dll by the
+	     name written into it, and the runtime finds runtimeconfig.json and deps.json by the dll's
+	     name: the two launchers share all three. -->
+	<PropertyGroup>
+		<_VhConsoleAppHostEnabled Condition="'$(OutputType)' == 'WinExe' And '$(VhAppCommandName)' != '' And '$(UseAppHost)' != 'false'">true</_VhConsoleAppHostEnabled>
+	</PropertyGroup>
+
+	<Target Name="_VhGetConsoleAppHostPath" DependsOnTargets="_GetAppHostPaths"
+	        Condition="'$(_VhConsoleAppHostEnabled)' == 'true'">
+		<PropertyGroup Condition="'$(AppHostIntermediatePath)' != ''">
+			<_VhConsoleAppHostPath>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)$(VhAppCommandName)$(_NativeExecutableExtension)'))</_VhConsoleAppHostPath>
+		</PropertyGroup>
+	</Target>
+
+	<Target Name="_VhAddConsoleAppHostToOutput" BeforeTargets="AssignTargetPaths" DependsOnTargets="_VhGetConsoleAppHostPath"
+	        Condition="'$(_VhConsoleAppHostEnabled)' == 'true'">
+		<ItemGroup Condition="'$(_VhConsoleAppHostPath)' != ''">
+			<None Include="$(_VhConsoleAppHostPath)">
+				<Link>$(VhAppCommandName)$(_NativeExecutableExtension)</Link>
+				<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+				<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+			</None>
+		</ItemGroup>
+	</Target>
+
+	<Target Name="_VhCreateConsoleAppHost" AfterTargets="_CreateAppHost"
+	        DependsOnTargets="_VhGetConsoleAppHostPath;_GetAppHostCreationConfiguration"
+	        Inputs="@(IntermediateAssembly);$(AppHostSourcePath)" Outputs="$(_VhConsoleAppHostPath)"
+	        Condition="'$(_VhConsoleAppHostEnabled)' == 'true'">
+		<CreateAppHost Condition="'$(_VhConsoleAppHostPath)' != '' And Exists('@(IntermediateAssembly)') And Exists('$(AppHostSourcePath)')"
+		               AppHostSourcePath="$(AppHostSourcePath)"
+		               AppHostDestinationPath="$(_VhConsoleAppHostPath)"
+		               AppBinaryName="$(AssemblyName)$(TargetExt)"
+		               IntermediateAssembly="@(IntermediateAssembly->'%(FullPath)')"
+		               WindowsGraphicalUserInterface="false"
+		               Retries="$(CopyRetryCount)"
+		               RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"
+		               DisableCetCompat="$(_DisableCetCompat)" />
+		<ItemGroup>
+			<FileWrites Include="$(_VhConsoleAppHostPath)" />
+		</ItemGroup>
+	</Target>
+</Project>

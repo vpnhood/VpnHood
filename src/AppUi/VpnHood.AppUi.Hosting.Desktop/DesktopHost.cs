@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Help;
 using VpnHood.AppUi.Hosting.Desktop.Commands;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -9,8 +10,8 @@ namespace VpnHood.AppUi.Hosting.Desktop;
 // product facts only it can give (DesktopInitParams), a platform package is the machine facts only it
 // can give (IDesktopPlatform), and this joins them.
 //
-// Typing the name alone opens the window, because that is what a person who typed it wanted and
-// what a desktop entry means.
+// Run alone, the window's executable opens the window, which is what a desktop entry means by it,
+// and the command a person types prints its help, as a terminal's command does.
 public static class DesktopHost
 {
     // The whole run, on the calling thread, which is the host's main thread: the UI gets it (on
@@ -38,12 +39,16 @@ public static class DesktopHost
         MainThreadQueue mainThread)
     {
         if (args.Length == 0)
-            args = ["ui"];
+            args = platform.Paths.IsStartedAsCommand ? ["--help"] : ["ui"];
 
         // Added in the order they are meant to be read, since this is also the order help prints
         // them in: what a person does to the connection, then to their profiles, then to the
         // install itself.
-        var rootCommand = new RootCommand($"{platform.Paths.InstanceName} - {initParams.AppName} at the command line");
+        // A command of its own rather than RootCommand, whose name - the one help's Usage line prints - is
+        // the dll's: "VpnHoodClient", where a person typed "vhclient". RootCommand's two options come along.
+        var rootCommand = new Command(platform.Paths.CommandName, $"{initParams.AppName} at the command line") {
+            Options = { new HelpOption(), new VersionOption() }
+        };
         rootCommand.Subcommands.Add(ConnectCommand.Create(platform, initParams.IsAddAccessKeySupported));
         rootCommand.Subcommands.Add(DisconnectCommand.Create(platform));
         rootCommand.Subcommands.Add(StatusCommand.Create(platform));

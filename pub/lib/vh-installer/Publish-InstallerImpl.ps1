@@ -4,7 +4,8 @@ param(
     [Parameter(Mandatory = $true)] [string]$publishDirName,
     [Parameter(Mandatory = $true)] [string]$os,
     [Parameter(Mandatory = $true)] [string]$cpu,
-    [Parameter(Mandatory = $true)] [string]$launcherName,
+    # Unset, the app's identity names it (VhAppCommandName), as it names the Windows console launcher.
+    [Parameter(Mandatory = $false)] [string]$launcherName,
     # Which install template to fill. The server takes "install"; a desktop client takes
     # "install-client", which writes a headless service, a PATH entry and a desktop entry instead
     # of a server's single daemon. Named rather than switched so a fork can add its own.
@@ -24,6 +25,8 @@ $assemblyName = Get-ProjectProperty $projectFile "AssemblyName";
 $productName = Get-ProjectProperty $projectFile "Product";
 $companyName = Get-ProjectProperty $projectFile "Company";
 if (-not $assemblyName) { throw "The project has no AssemblyName: '$projectFile'." };
+if (-not $launcherName) { $launcherName = Get-ProjectProperty $projectFile "VhAppCommandName"; }
+if (-not $launcherName) { throw "The project names no command (VhAppCommandName), and none was passed: '$projectFile'." };
 
 Write-Host;
 Write-Host "*** Creating $assemblyName-$runtime Module ..." -BackgroundColor Blue -ForegroundColor White;

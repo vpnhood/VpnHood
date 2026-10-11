@@ -7,6 +7,7 @@ internal sealed class TestDesktopPaths : IAppDesktopPaths
 {
     public string InstanceName => "VpnHoodTest";
     public string CommandName => "vhtest";
+    public bool IsStartedAsCommand => false;
     public string StoragePath => Path.Combine(TestHelper.AssemblyWorkingPath, InstanceName, "storage");
     public string UiDataPath => Path.Combine(TestHelper.AssemblyWorkingPath, InstanceName, "ui");
 }

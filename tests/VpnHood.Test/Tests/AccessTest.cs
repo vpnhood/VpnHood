@@ -232,16 +232,23 @@ public class AccessTest : TestBase
     {
         // Create Server
         var expired = DateTime.UtcNow.AddDays(1);
-        await using var server = await TestHelper.CreateServer();
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server, maxClientCount: 2,
             expirationTime: expired,
             maxTrafficByteCount: 2_000_000,
             maxSpeedMbps: new Traffic(5, 50));
 
         // create default token with 2 client count
-        await using (var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
-            await client1.WaitForState(ClientState.Connected);
-        }
+        var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
+        await client1.WaitForState(ClientState.Connected);
+        var serverSession1 = server.GetSession(client1);
+        await client1.DisposeAsync();
+
+        // client2 must see client1's last use, which client1's close moves on: the server reports the close after
+        // the session stopped, and the access manager saves the use before it marks the session closed
+        await VhTestUtil.AssertEqualsWait(SessionErrorCode.SessionClosed,
+            () => accessManager.SessionService.Sessions[serverSession1.SessionId].ErrorCode, cancellationToken: TestCt);
 
         await Task.Delay(1000, TestCt);
         // remove milliseconds from time for comparison

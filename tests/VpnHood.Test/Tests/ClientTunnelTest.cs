@@ -162,7 +162,7 @@ public class ClientTunnelTest : TestBase
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Https");
         await TestHelper.Test_Https();
 
-        clientServer.AssertTransfer(minTunnelReceivedData: 2000);
+        await clientServer.AssertTransfer(minTunnelReceivedData: 2000);
     }
 
     private async Task AssertValidUdp(ClientServerDom clientServer)
@@ -172,7 +172,7 @@ public class ClientTunnelTest : TestBase
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Udp");
         await TestHelper.Test_UdpEcho();
 
-        clientServer.AssertTransfer();
+        await clientServer.AssertTransfer();
     }
 
     private async Task AssertValidPingV4(ClientServerDom clientServer)
@@ -182,7 +182,7 @@ public class ClientTunnelTest : TestBase
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv4");
         await TestHelper.Test_Ping(ipAddress: MockEps.PingV4Address1);
 
-        clientServer.AssertTransfer();
+        await clientServer.AssertTransfer();
     }
 
     private async Task AssertValidPingV6(ClientServerDom clientServer)
@@ -195,7 +195,7 @@ public class ClientTunnelTest : TestBase
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv6");
         await TestHelper.Test_Ping(ipAddress: MockEps.PingV6Address1);
 
-        clientServer.AssertTransfer();
+        await clientServer.AssertTransfer();
     }
 
     private async Task AssertValidTcpData(ClientServerDom clientServer)
@@ -205,16 +205,16 @@ public class ClientTunnelTest : TestBase
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: TcpUpload");
         await TestHelper.Test_TcpUpload();
 
-        clientServer.AssertClientSent();
-        clientServer.AssertServerReceived();
+        await clientServer.AssertClientSent();
+        await clientServer.AssertServerReceived();
 
         clientServer.Collect();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: TcpDownload");
         await TestHelper.Test_TcpDownload();
 
-        clientServer.AssertClientReceived();
-        clientServer.AssertServerSent();
+        await clientServer.AssertClientReceived();
+        await clientServer.AssertServerSent();
     }
 
     private async Task AssertTunnel(ClientServerDom clientServerDom)

@@ -123,50 +123,63 @@ internal class ClientServerDom : IAsyncDisposable
         OldServerReceivedByteCount = ServerSession.TrafficMeter.Traffic.Received;
     }
 
-    public void AssertClientSent(int minData = 100)
+    public async Task AssertClientSent(int minData = 100)
     {
+        await WaitForCount(() => Client.RequiredSession.Status.SessionTraffic.Sent, OldClientSentByteCount + minData);
         Assert.AreNotEqual(OldClientSentByteCount, Client.RequiredSession.Status.SessionTraffic.Sent,
             delta: minData,
             "Not enough data has been sent through the client.");
     }
 
-    public void AssertClientReceived(int minData = 500)
+    public async Task AssertClientReceived(int minData = 500)
     {
+        await WaitForCount(() => Client.RequiredSession.Status.SessionTraffic.Received,
+            OldClientReceivedByteCount + minData);
         Assert.AreNotEqual(OldClientReceivedByteCount, Client.RequiredSession.Status.SessionTraffic.Received,
             delta: minData,
             "Not enough data has been received through the client.");
     }
 
-    public void AssertServerSent(int minData = 500)
+    public async Task AssertServerSent(int minData = 500)
     {
+        await WaitForCount(() => ServerSession.TrafficMeter.Traffic.Sent, OldServerSentByteCount + minData);
         Assert.AreNotEqual(OldServerSentByteCount, ServerSession.TrafficMeter.Traffic.Sent,
             delta: minData,
             "Not enough data has been sent through the server.");
     }
 
-    public void AssertServerReceived(int minData = 100)
+    public async Task AssertServerReceived(int minData = 100)
     {
+        await WaitForCount(() => ServerSession.TrafficMeter.Traffic.Received, OldServerReceivedByteCount + minData);
         Assert.AreNotEqual(OldServerReceivedByteCount, ServerSession.TrafficMeter.Traffic.Received,
             delta: minData,
             "Not enough data has been received through the server.");
     }
 
-    public void AssertClientTransfer(int minTunnelSendData = 100, int minTunnelReceivedData = 500)
+    public async Task AssertClientTransfer(int minTunnelSendData = 100, int minTunnelReceivedData = 500)
     {
-        AssertClientSent(minTunnelSendData);
-        AssertClientReceived(minTunnelReceivedData);
+        await AssertClientSent(minTunnelSendData);
+        await AssertClientReceived(minTunnelReceivedData);
     }
 
-    public void AssertServerTransfer(int minTunnelSendData = 500, int minTunnelReceivedData = 100)
+    public async Task AssertServerTransfer(int minTunnelSendData = 500, int minTunnelReceivedData = 100)
     {
-        AssertServerSent(minTunnelSendData);
-        AssertServerReceived(minTunnelReceivedData);
+        await AssertServerSent(minTunnelSendData);
+        await AssertServerReceived(minTunnelReceivedData);
     }
 
-    public void AssertTransfer(int minTunnelSendData = 100, int minTunnelReceivedData = 500)
+    public async Task AssertTransfer(int minTunnelSendData = 100, int minTunnelReceivedData = 500)
     {
-        AssertClientTransfer(minTunnelSendData: minTunnelSendData, minTunnelReceivedData: minTunnelReceivedData);
-        AssertServerTransfer(minTunnelSendData: minTunnelReceivedData, minTunnelReceivedData: minTunnelSendData);
+        await AssertClientTransfer(minTunnelSendData: minTunnelSendData, minTunnelReceivedData: minTunnelReceivedData);
+        await AssertServerTransfer(minTunnelSendData: minTunnelReceivedData, minTunnelReceivedData: minTunnelSendData);
+    }
+
+    // A proxied stream counts its bytes once its write returns, which can be after the other end has them and
+    // the test's request is done: a count gets a moment to arrive before it is asserted
+    private static async Task WaitForCount(Func<long> count, long exceeded)
+    {
+        for (var i = 0; i < 50 && count() <= exceeded; i++)
+            await Task.Delay(100);
     }
 
     public async ValueTask DisposeAsync()

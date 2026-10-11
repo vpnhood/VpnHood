@@ -153,7 +153,7 @@ fi
 # machine are the C libraries Avalonia opens by name at runtime, and they are needed only where
 # there is a window to draw. A failure here is a warning, not an exit: a machine with them
 # already, or one that is not Debian at all, must still finish installing.
-if [ "$withDesktop" == "y" ]; then
+if [ "$withDesktop" == "y" ] && command -v dpkg >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
 	missing="";
 	for lib in libx11-6 libice6 libsm6 libfontconfig1 xdg-utils; do
 		if ! dpkg -s "$lib" >/dev/null 2>&1; then
@@ -163,19 +163,34 @@ if [ "$withDesktop" == "y" ]; then
 
 	if [ -n "$missing" ]; then
 		echo "Installing the libraries the window needs:$missing";
-		if command -v apt-get >/dev/null 2>&1; then
-			DEBIAN_FRONTEND=noninteractive apt-get update -qq;
-			# --no-install-recommends, and it matters: xdg-utils RECOMMENDS a terminal emulator and
-			# an X utility set, so without this a VPN client quietly installs tilix, x11-utils,
-			# cpp and libllvm on somebody's machine. Only what the window actually opens by name.
-			# shellcheck disable=SC2086
-			if ! DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $missing; then
-				echo "WARNING: Could not install:$missing";
-				echo "WARNING: The commands and the service will work; the window may not open.";
-			fi
-		else
-			echo "WARNING: apt-get was not found. Install these yourself before opening the window:$missing";
+		DEBIAN_FRONTEND=noninteractive apt-get update -qq;
+		# --no-install-recommends, and it matters: xdg-utils RECOMMENDS a terminal emulator and
+		# an X utility set, so without this a VPN client quietly installs tilix, x11-utils,
+		# cpp and libllvm on somebody's machine. Only what the window actually opens by name.
+		# shellcheck disable=SC2086
+		if ! DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $missing; then
+			echo "WARNING: Could not install:$missing";
+			echo "WARNING: The commands and the service will work; the window may not open.";
 		fi
+	fi
+
+# Not Debian: no package names to go by, so the files themselves - the libraries as the loader finds
+# them, and xdg-open - and a warning names only what is missing.
+elif [ "$withDesktop" == "y" ]; then
+	missing="";
+	loaderLibs=$(ldconfig -p 2>/dev/null | awk '{ print $1 }');
+	for lib in libX11.so.6 libICE.so.6 libSM.so.6 libfontconfig.so.1; do
+		if ! grep -qxF "$lib" <<< "$loaderLibs"; then
+			missing="$missing $lib";
+		fi
+	done
+	if ! command -v xdg-open >/dev/null 2>&1; then
+		missing="$missing xdg-open";
+	fi
+
+	if [ -n "$missing" ]; then
+		echo "WARNING: The window needs these, which were not found:$missing";
+		echo "WARNING: Install them with your package manager; the commands and the service work without them.";
 	fi
 fi
 

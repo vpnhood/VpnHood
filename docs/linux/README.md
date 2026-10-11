@@ -35,7 +35,7 @@ The installer must run as root and will say so rather than half-install. It:
 - writes and starts `VpnHoodClient.service`, enabled at boot unless you answer no
 - on a machine with a graphical target, adds **VpnHood! CLIENT** to the application menu and
   installs the libraries the window needs (`libx11-6`, `libice6`, `libsm6`, `libfontconfig1`,
-  `xdg-utils`)
+  `xdg-utils`); without `apt`, it names any of them it cannot find, for you to install
 - installs MsQuic, for the QUIC channel, from Microsoft's package feed, which it removes again
   unless it was there before; without MsQuic the client uses TCP
 

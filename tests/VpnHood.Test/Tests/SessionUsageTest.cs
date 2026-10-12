@@ -337,6 +337,36 @@ public class SessionUsageTest : TestBase
         Assert.AreEqual(SessionErrorCode.Ok, GetAccessManagerErrorCode(accessManager, session));
     }
 
+    [TestMethod]
+    public async Task Active_session_is_reported_once_per_sync_interval()
+    {
+        using var accessManager = CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
+        var session = server.GetSession(client);
+
+        // a short sync interval, and a cache its bytes never fill; a report now
+        var syncInterval = TimeSpan.FromSeconds(2);
+        server.SessionManager.SessionOptions.SyncInterval = syncInterval;
+        server.SessionManager.SessionOptions.SyncCacheSize = 1_000_000;
+        AddTraffic(session, sent: 1, received: 1);
+        await server.SessionManager.Sync(true, TestCt);
+
+        // never idle, its bytes wait for the interval, then go, then wait again: the access manager hears of it
+        AddTraffic(session, sent: 1000, received: 2000);
+        Assert.IsNull(await SendStatus(server, session));
+        await Task.Delay(syncInterval, TestCt);
+        AddTraffic(session, sent: 3000, received: 4000);
+        var usage = await SendStatus(server, session);
+        Assert.IsNotNull(usage);
+        Assert.IsGreaterThanOrEqualTo(6000, usage.Sent);
+        Assert.IsGreaterThanOrEqualTo(4000, usage.Received);
+
+        AddTraffic(session, sent: 1000, received: 2000);
+        Assert.IsNull(await SendStatus(server, session));
+    }
+
     // only the test sends usage: the server's own status and sync wait an hour
     private TestHttpAccessManager CreateAccessManager()
     {

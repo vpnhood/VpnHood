@@ -1,6 +1,6 @@
 # Latest
 
-* Fix: A connection to a self-hosted VpnHoodServer no longer ends two days after it began while still in use: its session now times out 48 hours after its last use.
+* Fix: A connection to VpnHoodServer no longer ends two days after it began while still in use. The server now reports an active session's traffic to its access manager every sync interval (20 minutes by default), not only once the session goes quiet, and a self-hosted server's session times out 48 hours after its last use.
 * Fix: A restart or an update of a self-hosted VpnHoodServer no longer ends a connected device's session as suppressed by another session, which could happen when that device had connected before in the last two days.
 * Update: VpnHoodServer passes each new session's analytics choice, which the client now sends in its hello, to the access manager (`SessionRequestEx.AllowAnonymousTracker`), so an access manager can report only the sessions that allow it. A client before this sends none, which reads as no.
 * Fix: VpnHoodServer's tracking log writes no destination address when destination tracking is off; when it is on, it writes a token in place of each address, even with the log anonymizer off. Its ICMP lines follow the ICMP switch; they used to follow the UDP one.

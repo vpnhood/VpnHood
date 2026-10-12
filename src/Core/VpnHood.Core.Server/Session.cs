@@ -82,6 +82,7 @@ public class Session : IDisposable
 
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => TrafficMeter.LastActivityTime;
+    public DateTime LastReportTime { get; private set; } = FastDateTime.UtcNow; // its bytes last taken for a report
     public VirtualIpBundle VirtualIps { get; }
     public bool AllowTcpPacket { get; }
     public bool AllowTcpProxy { get; }
@@ -198,6 +199,7 @@ public class Session : IDisposable
             var meterTraffic = TrafficMeter.Traffic;
             var traffic = meterTraffic - _prevTraffic;
             _prevTraffic = meterTraffic;
+            LastReportTime = FastDateTime.UtcNow;
 
             // Intentionally Reversed, as in UnreportedTraffic
             return new Traffic {

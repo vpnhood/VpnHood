@@ -514,12 +514,12 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
 
     private void CollectSessionUsages(bool force)
     {
-        // a session's bytes are due once it has been inactive for the sync interval, which tells the access
-        // manager it was still active; a full cache is due at once, and all bytes are when forced
-        var minActivityTime = FastDateTime.UtcNow - SessionOptions.SyncIntervalValue;
+        // a session's bytes are due a sync interval after its last report, active or not: the access manager times
+        // out a live session it hears nothing of. A full cache is due at once, and all bytes are when forced
+        var minReportTime = FastDateTime.UtcNow - SessionOptions.SyncIntervalValue;
         foreach (var session in Sessions.Values) {
             var total = session.UnreportedTraffic.Total;
-            if ((total > 0 && (force || session.LastActivityTime < minActivityTime)) ||
+            if ((total > 0 && (force || session.LastReportTime < minReportTime)) ||
                 total >= SessionOptions.SyncCacheSizeValue)
                 _usageReporter.Add(session.SessionId, session.TakeUnreportedTraffic());
         }

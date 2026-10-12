@@ -84,6 +84,9 @@ In App Store Connect → **Apps → +**:
   primary language, and an SKU (any internal code, e.g. your bundle id).
 - Under **Pricing and Availability → Availability**, **deselect the territories a VPN must not be
   sold in** before you ever submit: [which ones and why](../legal/developer/APP_STORE_TERRITORIES.md).
+  Keep the **United States** selected: the app looks for its own updates in the US App Store only,
+  so an app not sold there never offers its users an update, and nothing says why. iOS's own
+  automatic updates are not affected.
 
 The app must exist here before the pipeline's first upload — uploading is the only part of this
 section that is automated.

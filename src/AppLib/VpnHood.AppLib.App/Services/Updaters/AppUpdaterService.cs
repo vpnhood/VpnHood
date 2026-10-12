@@ -249,7 +249,7 @@ public class AppUpdaterService : IDisposable
 
             // shown: the user updated or put it off, and the store's next offer waits PromptDelay again
             Data.UpdaterAvailableSince = null;
-            Postpone();
+            MarkPostponed();
             return StoreAnswer.Offered;
         }
         catch (UiContextNotAvailableException) {
@@ -290,12 +290,19 @@ public class AppUpdaterService : IDisposable
         }
     }
 
-    public void Postpone()
+    // Later on the feed's notice: under the check's lock, as both write version.json
+    public async Task Postpone(CancellationToken cancellationToken)
     {
-        // version status is unknown when the app container can do it
+        using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
+        MarkPostponed();
+        Save();
+    }
+
+    // the caller holds the check's lock
+    private void MarkPostponed()
+    {
         Data.PostponeTime = FastDateTime.UtcNow;
         Data.PostponeVersion = _appVersion;
-        Save();
     }
 
     private void Save()

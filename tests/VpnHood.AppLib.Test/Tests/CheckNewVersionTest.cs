@@ -500,6 +500,38 @@ public class CheckNewVersionTest : TestAppBase
         Assert.AreEqual(0, updaterProvider.UpdateCalls, "an offer to this version, which waits its delay");
     }
 
+    // Later and a running check both write version.json: Later waits for the check, and a restart
+    // finds both.
+    [TestMethod]
+    public async Task Later_during_a_check_waits_for_it()
+    {
+        SetNewRelease(new Version(CurrentAppVersion.Major + 1, 0, 0), DateTime.UtcNow, TimeSpan.Zero);
+        var folder = CreateUpdaterFolder();
+        var storeAnswer = new TaskCompletionSource();
+        var updaterOptions = new AppUpdaterOptions {
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1,
+            UpdaterProvider = new TestAppUpdaterProvider { AnswerWait = storeAnswer.Task }
+        };
+
+        using (var updaterService = new AppUpdaterService(folder, CurrentAppVersion, updaterOptions,
+                   isConnected: () => true)) {
+            var checkTask = updaterService.CheckForUpdate(new TestHelper.TestAppUiContext(), force: false, TestCt);
+            var postponeTask = updaterService.Postpone(TestCt);
+            await Task.Delay(500, TestCt);
+            Assert.IsFalse(postponeTask.IsCompleted, "Later waits for the check");
+
+            storeAnswer.SetResult();
+            await checkTask;
+            await postponeTask;
+        }
+
+        using var restartedService = new AppUpdaterService(folder, CurrentAppVersion, updaterOptions,
+            isConnected: () => true);
+        Assert.IsNotNull(restartedService.Status.CheckedTime, "the check's stamp");
+        Assert.AreEqual(VersionStatus.Old, restartedService.Status.VersionStatus);
+        Assert.IsFalse(restartedService.Status.Prompt, "Later's postpone");
+    }
+
     // each test's own version.json
     private string CreateUpdaterFolder()
     {

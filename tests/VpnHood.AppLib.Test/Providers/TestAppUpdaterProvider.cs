@@ -20,13 +20,19 @@ internal class TestAppUpdaterProvider : IAppUpdaterProvider
     public bool IsUpdateInProgress { get; set; }
     public int ResumeUpdateCalls { get; private set; }
 
-    public Task<bool> IsUpdateAvailable(IUiContext? uiContext, CancellationToken cancellationToken)
+    // A store slow to answer: the answer waits for this task.
+    public Task? AnswerWait { get; set; }
+
+    public async Task<bool> IsUpdateAvailable(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         if (uiContext is null)
             throw new UiContextNotAvailableException();
 
         IsUpdateAvailableCalls++;
-        return Task.FromResult(IsAvailable);
+        if (AnswerWait != null)
+            await AnswerWait.WaitAsync(cancellationToken);
+
+        return IsAvailable;
     }
 
     // the store's screen

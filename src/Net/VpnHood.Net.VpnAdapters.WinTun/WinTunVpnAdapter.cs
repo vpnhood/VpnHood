@@ -45,6 +45,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private static readonly TimeSpan StopRewaitTimeout = TimeSpan.FromMilliseconds(100);
     private readonly TimeSpan _senderStopWaitTimeout = StopWaitTimeout + adapterSettings.MaxPacketSendDelay * 2;
 
+    // ERROR_ALREADY_EXISTS: plain when a create gave up on a removed process's device, as an HRESULT while
+    // a live handle holds the adapter
+    private const int ErrorAlreadyExists = 183;
+    private const int ErrorAlreadyExistsHResult = unchecked((int)0x800700B7);
+
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
     protected override bool IsSocketProtectedByBind => true;
@@ -96,27 +101,28 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // Load the WinTun DLL
         LoadWinTunDll();
 
-        // start wintun logger
-        // create the adapter
+        // create the adapter. One of this name whose process ended a moment ago (a crash, a debugger's stop)
+        // is still being removed: a create racing that removal gives up after WinTun's 15 s wait with the
+        // plain code, by when that device is gone, so it is created once more
         _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", BuildGuidFromName(AdapterName));
-
-        // close the adapter if it was already exists error 183 (ERROR_ALREADY_EXISTS)
-        var lastErrorCode = Marshal.GetLastWin32Error();
-        if (_tunAdapter == IntPtr.Zero && lastErrorCode == 183) {
-            var prevAdapter = WinTunApi.WintunOpenAdapter(AdapterName);
-            if (prevAdapter != IntPtr.Zero)
-                WinTunApi.WintunCloseAdapter(prevAdapter);
-
-            // try to create the adapter again, then refresh the error so a failure here is not
-            // reported with the stale ERROR_ALREADY_EXISTS from the first attempt.
+        var errorCode = _tunAdapter == IntPtr.Zero ? Marshal.GetLastWin32Error() : 0;
+        if (errorCode == ErrorAlreadyExists) {
+            VhLogger.Instance.LogWarning(
+                "The WinTun adapter {AdapterName} of an ended process was still being removed. Creating it again...",
+                AdapterName);
             _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", BuildGuidFromName(AdapterName));
-            lastErrorCode = Marshal.GetLastWin32Error();
+            errorCode = _tunAdapter == IntPtr.Zero ? Marshal.GetLastWin32Error() : 0;
         }
 
+        // a live one is not ours to remove: WinTun removes an adapter only by the handle that created it
         if (_tunAdapter == IntPtr.Zero)
-            throw new PInvokeException(
-                $"Failed to create WinTun adapter. Make sure the app is running with admin privilege. ErrorCode: {lastErrorCode}",
-                lastErrorCode);
+            throw errorCode is ErrorAlreadyExists or ErrorAlreadyExistsHResult
+                ? new PInvokeException(
+                    $"The WinTun adapter {AdapterName} already exists: another process holds it. ErrorCode: {errorCode}",
+                    errorCode)
+                : new PInvokeException(
+                    $"Failed to create WinTun adapter. Make sure the app is running with admin privilege. ErrorCode: {errorCode}",
+                    errorCode);
 
         _adapterIndex = GetAdapterIndex(AdapterName);
         return Task.CompletedTask;

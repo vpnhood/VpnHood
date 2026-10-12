@@ -157,7 +157,29 @@ register again only for a new package name or a new signing key, never per relea
 
 ---
 
-## 9. Afterwards
+## 9. See the in-app update before a release
+
+Optional. The app asks Google Play whether there is an update and shows Play's own update screen.
+To watch it happen before a real release, use Play's **internal app sharing**, Google's own way to
+test it. Nothing reaches a track or a user.
+
+1. In Play Console → your app → **Test and release → Internal app sharing**, under *Manage
+   testers*, choose who may download. "Restrict access to email lists" with no list selected lets
+   nobody in, and the phone then says only *Item not found*.
+2. Upload two builds of the app at
+   [play.google.com/console/internal-app-sharing](https://play.google.com/console/internal-app-sharing),
+   the second with a higher version code. Any signing key will do, a debug build too: Google signs
+   both with a key of its own for sharing.
+3. On the test phone, the Google account must have installed your app from Play once; Play offers
+   in-app updates only to an account that owns the app. In the Play Store, Settings → About → tap
+   *Play Store version* seven times, then General → Developer options → turn on **Internal app
+   sharing**.
+4. Install the first build from its link. Open the second build's link but **do not** tap Update
+   there. Open your app: Play now offers the second build, and the app shows Play's update screen.
+
+---
+
+## 10. Afterwards
 
 Later releases are automatic: the pipeline builds, uploads and updates the listing. You return to
 the console only when Google asks you to re-confirm a declaration, or when you change something

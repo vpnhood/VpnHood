@@ -98,7 +98,12 @@ public class VpnHoodServer : IAsyncDisposable
         ServerHost = new ServerHost(SessionManager, options.DownloadsPath, options.QuicServer);
 
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
-        _configureAndSendStatusJob = new Job(ConfigureAndSendStatus, options.ConfigureInterval, nameof(VpnHoodServer));
+        // first after its interval, not at once: Start runs it itself, and a first run queued meanwhile sent a status
+        // of its own right after the start, which a caller's status call then skipped as already under way
+        _configureAndSendStatusJob = new Job(ConfigureAndSendStatus, new JobOptions {
+            Interval = options.ConfigureInterval,
+            Name = nameof(VpnHoodServer)
+        });
     }
 
     public async ValueTask ConfigureAndSendStatus(CancellationToken cancellationToken)

@@ -866,7 +866,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             var isSameNetworks = IsSameNetworks(currentAddresses, _lastPrimaryAdapterAddresses);
             _lastPrimaryAdapterAddresses = currentAddresses;
 
-            // do not restart adapter if there is no primary network adapter up
+            // no primary network adapter up: nothing to look for. The empty set is recorded, so any address
+            // that comes back, the old one included, is a network change
             if (currentAddresses.Count == 0)
                 return;
 
@@ -987,11 +988,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             if (!_keepStarted || IsDisposing || IsDisposed)
                 return;
 
-            // rediscover the primary adapter IPs, in case they are changed during the stop-start process.
-            // adapter is off so should not protect
-            DiscoverPrimaryAdapterIps(protect: false);
-
-            // start the adapter with the same options
+            // start the adapter with the same options; the start reads the primary IPs itself, with the adapter off
             await StartCore(startOptions, cancellationToken).Vhc();
         }
         // this restart's own failure, not the owner's stop ending it: the adapter answers it

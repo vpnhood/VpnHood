@@ -254,6 +254,26 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_packet_sent_while_starting_does_not_wait_out_the_send_backoff()
+    {
+        // a backoff of ~10 s, which a slow machine cannot pass for
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false, maxPacketSendDelay: TimeSpan.FromSeconds(5)) {
+            HoldBeforeAdd = true
+        };
+
+        // the start holds before its add, as a restart's does while it sets the device up: the adapter is
+        // started, its device not open yet, so the write fails; the packet goes at once, as in a stop
+        var startTask = adapter.Start(CreateAdapterOptions(), TestCt);
+        await AssertEqualsWait(true, () => adapter.IsStartHeld);
+        adapter.SendPacketQueued(BuildPacket());
+        await AssertEqualsWait(1L, () => adapter.PacketStat.SentPackets, timeout: 2000);
+
+        adapter.ReleaseStart();
+        await startTask;
+        Assert.IsTrue(adapter.IsStarted);
+    }
+
+    [TestMethod]
     public async Task Stop_waits_for_the_sender()
     {
         using var adapter = new TestFaultyVpnAdapter(autoRestart: false);

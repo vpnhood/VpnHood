@@ -5,16 +5,20 @@ namespace VpnHood.Test.Device;
 
 // A null adapter whose start, reads and writes fail on demand, and whose reader and sender can be held
 // at a barrier, for the adapter's own recovery and its stop
-public class TestFaultyVpnAdapter(bool autoRestart)
+public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay = null)
     : NullVpnAdapter(new VpnAdapterSettings {
         AdapterName = "VpnHoodFaultyAdapter",
         Blocking = false,
         AutoDisposePackets = true,
-        AutoRestart = autoRestart
+        AutoRestart = autoRestart,
+        MaxPacketSendDelay = maxPacketSendDelay ?? TimeSpan.FromMilliseconds(500)
     })
 {
     private readonly ManualResetEventSlim _readerRelease = new(false);
     private readonly ManualResetEventSlim _senderRelease = new(false);
+    private readonly TaskCompletionSource _startRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public volatile bool HoldBeforeAdd; // the start holds before it adds the adapter until ReleaseStart
+    public volatile bool IsStartHeld;
     public volatile bool FailStart;
     public volatile bool FailRead;
     public volatile bool FailWrite;
@@ -47,6 +51,12 @@ public class TestFaultyVpnAdapter(bool autoRestart)
             Dispose();
         if (FailStart)
             throw new IOException("Test: the adapter could not be added.");
+
+        if (HoldBeforeAdd) {
+            IsStartHeld = true;
+            await _startRelease.Task.WaitAsync(cancellationToken);
+            IsStartHeld = false;
+        }
 
         await base.AdapterAdd(cancellationToken);
         IsAdded = true;
@@ -107,7 +117,14 @@ public class TestFaultyVpnAdapter(bool autoRestart)
             IsSenderHeld = false;
         }
 
-        return base.WritePacket(ipPacket);
+        // as a real adapter's: no device to take the packet until the start opens it
+        return IsOpen && base.WritePacket(ipPacket);
+    }
+
+    public void ReleaseStart()
+    {
+        HoldBeforeAdd = false;
+        _startRelease.TrySetResult();
     }
 
     public void ReleaseReader()
@@ -136,6 +153,7 @@ public class TestFaultyVpnAdapter(bool autoRestart)
     {
         _readerRelease.Set();
         _senderRelease.Set();
+        _startRelease.TrySetResult();
         base.DisposeManaged();
     }
 }

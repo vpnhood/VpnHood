@@ -661,8 +661,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 break;
             }
 
-            // a stop: the packet goes with the run, and no wait here holds the stop
-            if (!IsReady)
+            // a stop: the packet goes with the run, and no wait here holds the stop. A start, a restart's too,
+            // opens its device last: a packet before finds none, and would wait out the backoff for nothing
+            if (!IsReady || _isStarting)
                 return;
 
             // break if delay exceeds the max delay

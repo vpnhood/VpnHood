@@ -389,6 +389,9 @@ public class ClientServerTest : TestBase
         var connectTask = client.Connect(TestCt);
         await client.WaitForState(ClientState.WaitingForAd);
 
+        // the start's packet channel is in first: its request, still under way, would find out instead
+        await VhTestUtil.AssertEqualsWait(1, () => client.RequiredSession.Status.ActivePacketChannelCount);
+
         // the server closes the session meanwhile, and the client's next request finds out
         await server.SessionManager.CloseSession(client.SessionId, TestCt);
         await Assert.ThrowsExactlyAsync<SessionException>(() => client.UpdateSessionStatus(TestCt));

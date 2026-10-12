@@ -98,11 +98,12 @@ public class VpnHoodServer : IAsyncDisposable
         ServerHost = new ServerHost(SessionManager, options.DownloadsPath, options.QuicServer);
 
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
-        // first after its interval, not at once: Start runs it itself, and a first run queued meanwhile sent a status
-        // of its own right after the start, which a caller's status call then skipped as already under way
+        // started by Start, its first periodic run an interval after Start's own: a run queued before that sent a
+        // status of its own right after the start, which a caller's status call then skipped as already under way
         _configureAndSendStatusJob = new Job(ConfigureAndSendStatus, new JobOptions {
             Interval = options.ConfigureInterval,
-            Name = nameof(VpnHoodServer)
+            Name = nameof(VpnHoodServer),
+            AutoStart = false
         });
     }
 
@@ -174,6 +175,7 @@ public class VpnHoodServer : IAsyncDisposable
 
         // ReSharper disable once DisposeOnUsingVariable
         scope?.Dispose();
+        _configureAndSendStatusJob.Start(); // before its own run, so a run that throws still leaves it running
         await _configureAndSendStatusJob.RunNow(cancellationToken);
     }
 

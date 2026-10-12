@@ -1,11 +1,13 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.Exceptions;
+using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Manager;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -23,13 +25,42 @@ public class AppAdManager(
     TimeSpan showAdPostDelay,
     bool isPreloadAdEnabled,
     bool rejectAdBlocker,
-    string[]? allowedPrivateDnsProviders)
+    string[]? allowedPrivateDnsProviders,
+    IAdConsentProvider? consentProvider)
 {
     public bool IsShowing { get; private set; }
     public AppAdService AdService => adService;
     public bool IsWaitingForPostDelay { get; private set; }
-    public bool IsPreloadAdEnabled => isPreloadAdEnabled;
     public bool IsAdSupported => adService.CanShowInterstitial || adService.CanShowRewarded;
+    public bool IsAdPrivacyOptionsRequired => consentProvider?.IsPrivacyOptionsRequired == true;
+
+    // The next connect's interstitial, where the head preloads. A preload never brings the ad network's
+    // consent form, which would open over the page the app starts on - at a first start, the first-run
+    // page: where a form is due, the first ad the person waits for asks.
+    public async Task PreloadAd(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        if (!isPreloadAdEnabled)
+            return;
+
+        if (consentProvider != null && !await consentProvider.CanRequestAds(uiContext, cancellationToken).Vhc()) {
+            VhLogger.Instance.LogInformation("No ad is preloaded before the person answers the ad consent form.");
+            return;
+        }
+
+        await adService.LoadInterstitialAd(uiContext, useFallback: false, cancellationToken).Vhc();
+    }
+
+    // the ad network's consent form again, for the person to change their answer
+    public Task ShowAdPrivacyOptions(IUiContext? uiContext, CancellationToken cancellationToken)
+    {
+        if (consentProvider == null)
+            throw new InvalidOperationException("This app has no ad consent to change.");
+
+        if (uiContext == null)
+            throw new UiContextNotAvailableException();
+
+        return consentProvider.ShowPrivacyOptions(uiContext, cancellationToken);
+    }
 
     /// <param name="uiContext">
     /// The window, or null where none is open: a build without ads refuses the server either way, and

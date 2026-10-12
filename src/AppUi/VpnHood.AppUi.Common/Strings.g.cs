@@ -1960,6 +1960,12 @@ public sealed partial class Strings
     /// <summary>We never log your browsing activity, the sites you visit, or the content of your traffic. When this is on, the app se...</summary>
     public string AnonymousTrackerNotice => Get("ANONYMOUS_TRACKER_NOTICE");
 
+    /// <summary>Ad privacy choices</summary>
+    public string AdPrivacyOptions => Get("AD_PRIVACY_OPTIONS");
+
+    /// <summary>Change what you agreed to for ads, such as whether they may be personalised.</summary>
+    public string AdPrivacyOptionsDesc => Get("AD_PRIVACY_OPTIONS_DESC");
+
     /// <summary>Enforced by the server</summary>
     public string EnforcedByServer => Get("ENFORCED_BY_SERVER");
 

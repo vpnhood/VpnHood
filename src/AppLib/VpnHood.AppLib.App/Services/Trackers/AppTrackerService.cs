@@ -10,10 +10,20 @@ using VpnHood.Net.Toolkit.Trackers;
 namespace VpnHood.AppLib.App.Services.Trackers;
 
 // The app's trackers and when they report: one from each of the head's factories, none in a Debug
-// build, switched by the first-run terms where the head asks for them and by the usage-data switch.
-// The VPN service makes its own from the same factories, with what this says it may.
+// build, switched by the first-run terms where the head asks for them and by the usage-data switch,
+// which counts only once answered where the law wants a yes first. The VPN service makes its own
+// from the same factories, with what this says it may.
 public class AppTrackerService
 {
+    // Where the law wants a yes before usage data - the EEA, the UK and Switzerland - as the app's region
+    // tells (AppRegionInfo: the country a server last reported, else the device's): the first-run page
+    // asks there, with the box unticked, on every build that reports.
+    private static readonly string[] PromptCountryCodes = [
+        "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV",
+        "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE", // the EU
+        "IS", "LI", "NO", "GB", "CH" // the rest of the EEA, the UK and Switzerland
+    ];
+
     private readonly AppSettingsService _settingsService;
     private readonly bool _isLicenseAgreementRequired;
     private readonly string _clientId;
@@ -53,11 +63,21 @@ public class AppTrackerService
     // build), which keeps the access manager's own hit off there too.
     public bool IsVpnServiceTrackerAllowed => IsSupported && IsAllowed;
 
-    // the first-run terms where the head asks for them, then the usage-data switch
+    // the first-run page must ask before this build reports anything
+    public bool IsPromptRequired => IsSupported && IsPromptPending;
+
+    private bool IsPromptPending =>
+        !_settingsService.UserSettings.IsAnonymousTrackerPrompted &&
+        PromptCountryCodes.Contains(AppRegionInfo.CurrentRegion.TwoLetterISORegionName, StringComparer.OrdinalIgnoreCase);
+
+    // the first-run terms where the head asks for them, the answer where the law wants one, then the
+    // usage-data switch
     private bool IsAllowed {
         get {
             var userSettings = _settingsService.UserSettings;
-            return userSettings.AllowAnonymousTracker && (!_isLicenseAgreementRequired || userSettings.IsLicenseAccepted);
+            return userSettings.AllowAnonymousTracker &&
+                   (!_isLicenseAgreementRequired || userSettings.IsLicenseAccepted) &&
+                   !IsPromptPending;
         }
     }
 

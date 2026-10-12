@@ -317,6 +317,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             isPreloadAdEnabled: options.AdOptions.PreloadAd,
             rejectAdBlocker: options.AdOptions.RejectAdBlocker,
             allowedPrivateDnsProviders: options.AdOptions.AllowedPrivateDnsProviders,
+            consentProvider: options.AdOptions.ConsentProvider,
             uiProvider: deviceUiProvider);
 
         // temporary, enable internal ad provider if exists and setting is enabled
@@ -488,10 +489,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
     {
         var uiContext = AppUiContext.Context;
-        if (IsIdle && AdManager.IsPreloadAdEnabled && uiContext != null) {
-            _ = VhUtils.TryInvokeAsync("PreloadAd",
-                () => AdManager.AdService.LoadInterstitialAd(uiContext, useFallback: false, CancellationToken.None));
-        }
+        if (IsIdle && uiContext != null)
+            _ = VhUtils.TryInvokeAsync("PreloadAd", () => AdManager.PreloadAd(uiContext, CancellationToken.None));
 
         // a session that waits for an ad nobody could show yet - the tile's, always-on's, or one from before
         // this process restarted, the person opening the app to watch it - gets it now that a window can
@@ -568,7 +567,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             CanDisconnect = connectionState.CanDisconnect(),
             UserReviewRecommended = _userReviewRecommended,
             IsWaitingForInternalAd = AdManager.AdService.IsWaitingForInternalAd,
+            IsAdPrivacyOptionsRequired = AdManager.IsAdPrivacyOptionsRequired,
             IsQuickLaunchRecommended = _quickLaunchRecommended && !Settings.UserSettings.IsQuickLaunchPrompted,
+            IsAnonymousTrackerPromptRequired = Services.TrackerService.IsPromptRequired,
             IsIdle = IsIdle,
             PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
             LogExists = _logService.Exists,

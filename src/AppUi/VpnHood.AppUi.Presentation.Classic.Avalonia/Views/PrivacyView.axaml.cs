@@ -22,6 +22,10 @@ public partial class PrivacyView : UserControl, IPage
         TrackerItem.Description = s.AllowAnonymousTrackerDesc;
         TrackerItem.IsOn = VhApp.UserSettings.AllowAnonymousTracker;
         TrackerItem.IsVisible = isTrackerSupported;
+        // only where the ad network asked for a consent, which Google requires a way back to
+        AdPrivacyItem.Title = s.AdPrivacyOptions;
+        AdPrivacyItem.Subtitle = s.AdPrivacyOptionsDesc;
+        AdPrivacyItem.IsVisible = VhApp.State.IsAdPrivacyOptionsRequired;
         NoticeText.IsVisible = isTrackerSupported;
         PolicyButton.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
         PolicyCard.IsVisible = NoticeText.IsVisible || PolicyButton.IsVisible;
@@ -30,6 +34,7 @@ public partial class PrivacyView : UserControl, IPage
     public void FocusDefault()
     {
         if (TrackerItem.IsVisible) TrackerItem.FindFirstButton()?.LandFocus();
+        else if (AdPrivacyItem.IsVisible) AdPrivacyItem.FindFirstButton()?.LandFocus();
         else if (PolicyButton.IsVisible) PolicyButton.LandFocus();
         else Header.FocusBack();
     }
@@ -40,6 +45,17 @@ public partial class PrivacyView : UserControl, IPage
             var settings = VhApp.UserSettings;
             settings.AllowAnonymousTracker = TrackerItem.IsOn;
             await VhApp.SaveUserSettings(settings, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    // the ad network's own form, over the app; AdMob reads the new answer itself
+    private async void OnAdPrivacyClick(object? sender, EventArgs e)
+    {
+        try {
+            await VhApp.Api.App.ShowAdPrivacyOptions(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

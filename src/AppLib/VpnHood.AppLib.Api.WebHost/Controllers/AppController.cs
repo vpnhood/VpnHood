@@ -120,6 +120,11 @@ internal class AppController(IAppApi api) : ControllerBase
             await ctx.SendNoContent();
         });
 
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "ad-privacy-options", async ctx => {
+            await api.ShowAdPrivacyOptions(ctx.Token);
+            await ctx.SendNoContent();
+        });
+
         mapper.AddStatic(HttpMethod.PUT, baseUrl + "user-settings", async ctx => {
             var body = ctx.ReadJson<UserSettings>();
             await api.SetUserSettings(body, ctx.Token);

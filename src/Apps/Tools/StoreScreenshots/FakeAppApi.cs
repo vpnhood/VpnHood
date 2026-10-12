@@ -57,6 +57,7 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
     public Task<byte[]> PromotionImage(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.PromotionImage");
     public Task<VersionCheckResult> VersionCheck(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.VersionCheck");
     public Task ExtendByRewardedAd(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.ExtendByRewardedAd");
+    public Task ShowAdPrivacyOptions(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.ShowAdPrivacyOptions");
     public Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetUserReview");
     public Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.InternalAdDismiss");
     public Task InternalAdError(string errorMessage, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.InternalAdError");

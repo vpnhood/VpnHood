@@ -34,7 +34,7 @@ The Client ID labels analytics on builds that support analytics and is sent to o
 
 ### You can turn analytics off
 
-On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches; what our VPN servers report stops from your next connection. Turning it off also keeps the ratings you give in the app out of the analytics; your last rating, without any text you added, still reaches our servers with your next connection, so the app stops asking for one (see [Log Data](#log-data-our-vpn-servers)). The iOS build has no analytics collection to turn on.
+On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default, except in the European Economic Area, the United Kingdom and Switzerland, as your device's region setting or your connection tells: there it stays off until you agree, and the app asks you once, with a box you tick yourself. Turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches; what our VPN servers report stops from your next connection. Turning it off also keeps the ratings you give in the app out of the analytics; your last rating, without any text you added, still reaches our servers with your next connection, so the app stops asking for one (see [Log Data](#log-data-our-vpn-servers)). The iOS build has no analytics collection to turn on.
 
 ### Technical information
 
@@ -60,11 +60,13 @@ On builds with analytics, when analytics is on, the following is collected:
 
 The Google Play build sends automatic crash reports through Google Firebase Crashlytics. A crash report contains the technical details of the failure and device information; it never includes your browsing activity or the content of your traffic.
 
-Crash reports follow the same switch as analytics, though turning it off takes effect for them the next time the app starts. Your choice is remembered from one launch to the next. The single exception is a crash during the very first start of a fresh install, which is still reported.
+Crash reports follow the same switch as analytics, though turning it off takes effect for them the next time the app starts. Your choice is remembered from one launch to the next.
 
 ### Advertisements (Google Play build)
 
 The Google Play build shows advertisements, including rewarded ads you may choose to watch to extend a session. Ads are delivered by **Google AdMob**, which collects its own data under Google's policies to select and measure ads. AdMob's own data collection is not controlled by the analytics switch; the ad results our analytics record (above) are. Ads are not shown in every country. You can limit ad personalisation in your Google account settings and in your device's ads settings.
+
+In the European Economic Area, the United Kingdom and Switzerland, the app first asks you, in Google's own form, whether AdMob may use your data for ads, such as to personalise them. If you say no, you still see ads, but they are not personalised. You can change your answer at any time in **Settings → Privacy → Ad privacy choices**.
 
 ### Optional sign-in and purchases
 
@@ -176,7 +178,7 @@ They are obliged not to use the data for any purpose other than the one we assig
 Where data-protection law requires a legal basis, we rely on:
 
 - **performance of a contract** to provide VPN sessions, accounts, subscriptions, support, and purchases you request;
-- **consent**, where the law requires it, for analytics and crash reports; you may withdraw it at any time by turning analytics off. Where the law permits opt-out analytics instead, we rely on the legitimate interests below;
+- **consent**, where the law requires it, for analytics and crash reports, and for AdMob's use of your data for ads; you may withdraw it at any time by turning analytics off, or under Ad privacy choices. Where the law permits opt-out analytics instead, we rely on the legitimate interests below;
 - **legitimate interests** in securing the Service, enforcing quotas, preventing fraud and abuse, diagnosing faults, improving reliability, and counting from our servers' own records how the Service is used; and
 - **legal obligations and legal claims** for tax and accounting records, lawful requests, preservation duties, and establishing, exercising, or defending claims.
 

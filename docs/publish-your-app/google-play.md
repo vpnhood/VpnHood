@@ -87,7 +87,11 @@ and **Grow → Store presence**:
      while it is on, declare Device or other IDs as collected for analytics.
    - **Content rating** — honest answers for a VPN put it in a mature category.
    - **Target audience** — a VPN is not for children; saying otherwise triggers extra rules.
-   - **Ads** — declare whether your app shows ads.
+   - **Ads** — declare whether your app shows ads. A build with AdMob asks people in the EEA, the
+     UK and Switzerland for their consent before its first ad, with Google's own form, and its
+     Privacy page offers the way back to the answer. The form is yours to create and publish: in
+     AdMob → **Privacy & messaging → European regulations**, for your app. Until one is published,
+     nothing is asked and AdMob serves only limited, unpersonalised ads there.
    - **Permissions** — a VPN app uses Android's VPN service, and Google asks you to justify it.
      Answer plainly: the app is a VPN and routes the user's traffic on request.
 4. **Countries and regions** — choose where the app is available. Several countries restrict or ban

@@ -22,6 +22,9 @@ public class UserSettings
     // the engine's own default for this, stated rather than borrowed: the contract does not
     // reach into ClientOptions to find out what it should say
     public bool AllowAnonymousTracker { get; set; } = true;
+    // the person answered the usage-data question, which is asked where the law wants a yes first
+    // (AppTrackerService); until then the switch's default counts for nothing there
+    public bool IsAnonymousTrackerPrompted { get; set; }
     public string? DebugData1 { get; set; }
     public string? DebugData2 { get; set; }
     public bool LogAnonymous { get; set; } = true;

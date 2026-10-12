@@ -18,7 +18,8 @@ Whoever keeps a policy, VpnHood or a fork, keeps two places true together, the w
   what the app actually collects; the two must never disagree.
 - **The app's own words follow the policy.** The app describes its data in its own words too, and a
   fork shows VpnHood's until it replaces them: the Privacy page's notice and the settings'
-  descriptions (`ANONYMOUS_TRACKER_NOTICE`, `ALLOW_ANONYMOUS_TRACKER_DESC`, `PRIVACY_DESC`), the
+  descriptions (`ANONYMOUS_TRACKER_NOTICE`, `ALLOW_ANONYMOUS_TRACKER_DESC`, `PRIVACY_DESC`,
+  `AD_PRIVACY_OPTIONS_DESC`), the
   account-deletion words (`DELETE_MY_ACCOUNT_DESC`, `CONFIRM_DELETE_ACCOUNT_DESC`, the
   `DELETE_ACCOUNT_*` notes) and the first-run summary the app names by `PrivacyConsentAssetName`
   (`privacy-consent-client.md`, `privacy-consent-connect.md`). A zip of the fork's own ahead of the

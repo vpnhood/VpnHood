@@ -32,16 +32,15 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
 
         // Nothing is forced on here. Firebase auto-inits from a ContentProvider before Application.OnCreate
         // and starts from its own persisted state, which is what IsEnabled last wrote: a user who opted out
-        // stays opted out from the very first instruction of the next launch, and a fresh installation collects
-        // until consent is applied — deliberately, so a crash during that first startup is still reported.
+        // stays opted out from the very first instruction of the next launch, and a fresh installation starts
+        // off, from the manifest (Properties/AssemblyInfo.cs), until the switch is applied.
     }
 
     // Both SDKs follow the user's consent (the app and its VPN service apply the usage-data switch here), and
     // it is applied to the SDKs themselves rather than only to our Track calls below: Firebase collects
     // first_open/session_start/screen_view and crash reports on its own, which no amount of
-    // not-calling-LogEvent would suppress. Firebase persists both values for subsequent launches.
-    // The only window neither switch can cover is the first startup of a fresh install, before the setting
-    // has been read — the privacy policy says so.
+    // not-calling-LogEvent would suppress. Firebase persists both values for subsequent launches; the
+    // manifest keeps a fresh install off until the setting has been read.
     public bool IsEnabled {
         get;
         set {

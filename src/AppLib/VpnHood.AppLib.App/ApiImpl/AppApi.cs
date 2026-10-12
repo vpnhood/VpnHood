@@ -154,6 +154,11 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
         return app.AdManager.ExtendByRewardedAd(AppUiContext.Context, cancellationToken);
     }
 
+    public Task ShowAdPrivacyOptions(CancellationToken cancellationToken)
+    {
+        return app.AdManager.ShowAdPrivacyOptions(AppUiContext.Context, cancellationToken);
+    }
+
     public Task SetUserSettings(UserSettings userSettings, CancellationToken cancellationToken)
     {
         app.SettingsService.Settings.UserSettings = userSettings;

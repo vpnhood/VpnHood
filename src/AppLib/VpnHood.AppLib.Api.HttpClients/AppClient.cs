@@ -135,6 +135,11 @@ internal sealed class AppClient(HttpClient httpClient) : AppApiClientBase(httpCl
         return HttpPostAsync(BaseUrl + "extend-by-rewarded-ad", null, null, cancellationToken);
     }
 
+    public Task ShowAdPrivacyOptions(CancellationToken cancellationToken)
+    {
+        return HttpPostAsync(BaseUrl + "ad-privacy-options", null, null, cancellationToken);
+    }
+
     public Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken)
     {
         return HttpPostAsync(BaseUrl + "user-review", null, userReview, cancellationToken);

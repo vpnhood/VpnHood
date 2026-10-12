@@ -1,3 +1,4 @@
+using System.Globalization;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.Test.Providers;
@@ -118,6 +119,42 @@ public class AllowAnonymousTrackerTest : TestAppBase
         app.SettingsService.Save();
         await Task.Delay(TimeSpan.FromMilliseconds(500), TestCt);
         Assert.IsTrue(appTrackers.All(x => CountFirstLaunches(x) == 1), "the first launch, once");
+    }
+
+    [TestMethod]
+    public async Task Where_the_law_wants_a_yes_first_every_tracker_waits_for_the_answer()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // a device in Germany whose terms were accepted before: the switch's default on counts for nothing
+        AppRegionInfo.CurrentRegion = new RegionInfo("DE");
+        RecordingTrackerFactory.Made.Clear();
+        await using var app = TestAppHelper.CreateClientApp(CreateAppOptions());
+        AcceptTerms(app);
+        Assert.IsTrue(app.State.IsAnonymousTrackerPromptRequired, "the first-run page asks");
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+
+        var trackers = MadeTrackers();
+        Assert.HasCount(4, trackers);
+        Assert.IsTrue(trackers.All(x => !x.IsEnabled), "nothing before the answer");
+
+        // the box ticked, as the first-run page saves it: every tracker on, and the page asks no more
+        app.UserSettings.AllowAnonymousTracker = true;
+        app.UserSettings.IsAnonymousTrackerPrompted = true;
+        app.SettingsService.Save();
+        await AssertEqualsWait(true, () => trackers.All(x => x.IsEnabled), "the answer reaches each tracker");
+        Assert.IsFalse(app.State.IsAnonymousTrackerPromptRequired);
+    }
+
+    [TestMethod]
+    public async Task Elsewhere_the_first_run_page_does_not_ask()
+    {
+        AppRegionInfo.CurrentRegion = new RegionInfo("US");
+        await using var app = TestAppHelper.CreateClientApp(CreateAppOptions());
+        Assert.IsFalse(app.State.IsAnonymousTrackerPromptRequired);
     }
 
     [TestMethod]

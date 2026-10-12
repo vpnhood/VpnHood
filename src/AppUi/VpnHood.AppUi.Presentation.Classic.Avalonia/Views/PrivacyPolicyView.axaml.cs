@@ -11,7 +11,9 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 // our servers and their logging, CLIENT's the bring-your-own-key reality, and a fork names its own.
 // Whether it is shown is the head's word too (IsLicenseAgreementRequired) and the person's
 // (IsLicenseAccepted); until they accept, Back goes nowhere - the page holds the app, as the web
-// UI's overlay does.
+// UI's overlay does. Where the law wants a yes before usage data, the app's word as well
+// (IsAnonymousTrackerPromptRequired): the page then asks it too, with the box unticked, since only
+// the person's own tick counts there.
 public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
 {
     private readonly MainView _host;
@@ -23,6 +25,10 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
         _ = LoadDocument(VhApp.Features.PrivacyConsentAssetName);
         TermsButton.IsVisible = VhApp.Features.Links.TermsOfUse != null;
         PrivacyButton.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
+        TrackerItem.Title = Strings.Current.AllowAnonymousTracker;
+        TrackerItem.Description = Strings.Current.AllowAnonymousTrackerDesc;
+        TrackerItem.IsOn = false;
+        TrackerItem.IsVisible = VhApp.State.IsAnonymousTrackerPromptRequired;
     }
 
     // The document as the store hands it over - in the app's language, with the product's own
@@ -56,6 +62,11 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
         try {
             var settings = VhApp.UserSettings;
             settings.IsLicenseAccepted = true;
+            if (TrackerItem.IsVisible) {
+                settings.AllowAnonymousTracker = TrackerItem.IsOn;
+                settings.IsAnonymousTrackerPrompted = true;
+            }
+
             await VhApp.SaveUserSettings(settings, CancellationToken.None);
             _host.GoHome();
         }

@@ -94,7 +94,7 @@ GA4 factory without an id makes a `NullTracker`. Nothing is sent then, and the U
 
 | Event | When | Carries |
 | --- | --- | --- |
-| `session_start` | the tracker is made, with the switch on: every app start, but not the first run of a head that shows the first-run terms, where it is made switched off | — |
+| `session_start` | the tracker is made, with the switch on: every app start, but not the first run of a head that shows the first-run terms, nor before the person's answer where the law wants a yes first ([The switch](#the-switch)), where it is made switched off | — |
 | `vh_first_launch` | once per install | the client id, the country of the device's region |
 | `vh_exception` | an error the app reports | where it happened, the message, the exception type, error or warning |
 | `vh_user_review` | the user rates the app | the rating and the text |
@@ -177,6 +177,15 @@ as its browser build, or a web UI such as the SPA sample.
 VPN session too. On a head that shows the first-run terms (`AppOptions.IsLicenseAgreementRequired`),
 every tracker stays switched off until they are accepted.
 
+Where the law wants a yes before usage data, the default counts for nothing: where the app's
+region (`AppRegionInfo`: the country a server last reported, else the device's) is in the EEA, the
+UK or Switzerland, every tracker stays switched off until the person
+answers the first-run page's usage-data box, which starts unticked (`AppState.IsAnonymousTrackerPromptRequired`
+until then, `UserSettings.IsAnonymousTrackerPrompted` after). The page asks on every head that
+reports, one that skips the terms included, and once more of a person who accepted them before. A
+UI of one's own shows its first-run page while that state is set and saves the box as
+`AllowAnonymousTracker` with `IsAnonymousTrackerPrompted`.
+
 | Report | Stopped by |
 | --- | --- |
 | Each tracker's `session_start` | `TrackerCreateParams.IsEnabled`: the app and the VPN service make every tracker with the switch, and one made switched off sends nothing |
@@ -193,7 +202,7 @@ every tracker stays switched off until they are accepted.
 | Head | The app's tracker |
 | --- | --- |
 | Client, Google Play, website Android, Windows, Linux; Connect, website Android, Windows, Linux | the id in its private `appsettings.json`, embedded at build (CI writes it from the publishing repo's `APPSETTINGS` variable); endpoint tracking as that file sets it |
-| Connect, Google Play | Firebase's Android SDK ([`FirebaseAnalyticsTracker`](../../src/Apps/Connect/Connect.Android.Google/FirebaseUtils/FirebaseAnalyticsTracker.cs)), in the app's process and in the VPN service's own, each set to the switch; Crashlytics follows the same switch and, turned off, deletes the reports it has not sent |
+| Connect, Google Play | Firebase's Android SDK ([`FirebaseAnalyticsTracker`](../../src/Apps/Connect/Connect.Android.Google/FirebaseUtils/FirebaseAnalyticsTracker.cs)), in the app's process and in the VPN service's own, each set to the switch; Crashlytics follows the same switch and, turned off, deletes the reports it has not sent. Both are off in the manifest, so a fresh install sends nothing before the switch is read |
 | Client and Connect, iOS | none: no tracker factory and no endpoint tracking ([`AppDelegate`](../../src/Apps/Client/Client.Ios.Apple/AppDelegate.cs)), until Apple's rules for a VPN app are checked |
 | Any head, Debug build | none |
 

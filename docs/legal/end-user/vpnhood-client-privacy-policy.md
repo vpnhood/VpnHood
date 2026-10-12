@@ -33,8 +33,10 @@ app's data, so updating or reinstalling the app keeps it. A Windows installation
 from an earlier version keeps the Client ID it had, which was derived from your Windows user account.
 
 Analytics is controlled by **Settings → Privacy → "Share anonymous usage data"**. Turning it off
-stops analytics and is remembered for later launches. The iOS build does not load Google Analytics
-or Firebase and does not send analytics or reports to Google.
+stops analytics and is remembered for later launches. In the European Economic Area, the United
+Kingdom and Switzerland, as your device's region setting or your connection tells, analytics stays
+off until you agree: the app asks you once, with a box you tick yourself. The iOS build does not
+load Google Analytics or Firebase and does not send analytics or reports to Google.
 
 ## Feedback and the App's Log
 

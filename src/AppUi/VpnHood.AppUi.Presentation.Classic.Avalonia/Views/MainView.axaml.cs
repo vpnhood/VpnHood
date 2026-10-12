@@ -68,9 +68,11 @@ public partial class MainView : UserControl
         DrawerContent.RenderTransform = _drawerOffset;
 
         // the consent a first run asks for, over everything until it is given (App.vue's
-        // isShowPrivacyPolicyDialog)
+        // isShowPrivacyPolicyDialog), and the usage-data question where the law wants a yes first,
+        // on a build that skips the terms too and for a person who accepted them before
         var features = VhApp.Features;
-        if (features.IsLicenseAgreementRequired && !VhApp.UserSettings.IsLicenseAccepted)
+        if ((features.IsLicenseAgreementRequired && !VhApp.UserSettings.IsLicenseAccepted) ||
+            VhApp.State.IsAnonymousTrackerPromptRequired)
             Navigate(new PrivacyPolicyView(this));
         // the account, once, for a build that has one (App.vue's onMounted); the pages that change
         // it read it again themselves

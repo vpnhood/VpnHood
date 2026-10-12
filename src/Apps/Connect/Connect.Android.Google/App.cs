@@ -86,7 +86,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         options.AdOptions = new AppAdOptions {
             PreloadAd = true,
             RejectAdBlocker = true,
-            AllowedPrivateDnsProviders = AllowedPrivateDnsProviders
+            AllowedPrivateDnsProviders = AllowedPrivateDnsProviders,
+            ConsentProvider = new AdMobConsentProvider()
         };
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "android"),

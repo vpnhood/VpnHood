@@ -4,12 +4,13 @@
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.PrivacyView">
   <!-- The web UI's settings/privacy: the consent to anonymous data, where the build collects any,
-       and the privacy policy's link. -->
+       the ad network's consent, where it asked for one, and the privacy policy's link. -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Privacy, Source={x:Static res:Strings.Current}}" />
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel MaxWidth="720" Spacing="4">
         <controls:SettingsToggleItem x:Name="TrackerItem" Toggled="OnTrackerToggled" />
+        <controls:SettingsItem x:Name="AdPrivacyItem" Clicked="OnAdPrivacyClick" />
         <Border x:Name="PolicyCard" Classes="config-card" Padding="16,12">
           <StackPanel Spacing="12">
             <TextBlock x:Name="NoticeText" Classes="card-subtitle" Text="{Binding AnonymousTrackerNotice, Source={x:Static res:Strings.Current}}" />

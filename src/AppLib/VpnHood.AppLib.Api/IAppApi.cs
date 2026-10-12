@@ -35,6 +35,7 @@ public interface IAppApi
     Task<VersionCheckResult> VersionCheck(CancellationToken cancellationToken);
     Task VersionCheckPostpone(CancellationToken cancellationToken);
     Task ExtendByRewardedAd(CancellationToken cancellationToken);
+    Task ShowAdPrivacyOptions(CancellationToken cancellationToken);
     Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken);
     Task<IReadOnlyList<CountryInfo>> GetCountries(CancellationToken cancellationToken);
     Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken);

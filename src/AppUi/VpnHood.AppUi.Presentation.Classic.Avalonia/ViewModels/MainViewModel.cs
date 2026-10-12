@@ -44,6 +44,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isUpdatePostponed;
     private bool _isReviewShown;
     private bool _isQuickLaunchPrompted;
+    private bool _isAnonymousTrackerPromptShown;
     private bool _isInternalAdShown;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -407,7 +408,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The prompts the web UI's reloadState raises off the state: the last error as a dialog, the
     // internal ad and the quick launch page, the update notice, the 'suppressed to' notice and the
-    // review. Each once per occasion, so a poll never nags.
+    // review; and the usage-data question. Each once per occasion, so a poll never nags.
     private void RefreshPrompts(AppState state)
     {
         var host = Host;
@@ -446,6 +447,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (state.UserReviewRecommended != 0 && !_isReviewShown) {
             _isReviewShown = true;
             _ = host.ShowDialog(new UserReviewDialog(host, state.UserReviewRecommended));
+        }
+
+        // the usage-data question falling due while the app runs, once a server tells a country where
+        // the law wants a yes first; at start the main view has shown the page already
+        if (state.IsAnonymousTrackerPromptRequired && !_isAnonymousTrackerPromptShown) {
+            _isAnonymousTrackerPromptShown = true;
+            if (host.CurrentPage is not PrivacyPolicyView)
+                host.Navigate(new PrivacyPolicyView(host));
         }
     }
 

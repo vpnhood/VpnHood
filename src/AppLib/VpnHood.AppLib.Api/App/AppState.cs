@@ -32,6 +32,7 @@ public class AppState
     public required bool CanDiagnose { get; init; }
     public required int UserReviewRecommended { get; init; }
     public required bool IsQuickLaunchRecommended { get; init; }
+    public required bool IsAnonymousTrackerPromptRequired { get; init; } // the first-run page asks for usage data first
     public required CountryInfo? ClientCountryInfo { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
@@ -40,6 +41,7 @@ public class AppState
     public required bool? IsNotificationEnabled { get; init; }
     public required PrivateDns? SystemPrivateDns { get; init; }
     public required bool? IsWaitingForInternalAd { get; set; }
+    public required bool IsAdPrivacyOptionsRequired { get; init; } // the ad consent can be changed in the privacy settings
     public required int? StateProgress { get; init; }
     public required bool IsDiagnosing { get; set; }
     public required ChannelProtocol ChannelProtocol { get; init; }

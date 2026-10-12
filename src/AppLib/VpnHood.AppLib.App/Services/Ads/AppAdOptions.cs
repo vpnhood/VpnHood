@@ -1,4 +1,5 @@
-﻿using VpnHood.Net.Toolkit.Utils;
+﻿using VpnHood.AppLib.Abstractions.Ads;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services.Ads;
 
@@ -11,4 +12,8 @@ public class AppAdOptions
     public bool PreloadAd { get; set; }
     public bool RejectAdBlocker { get; set; }
     public string[]? AllowedPrivateDnsProviders { get; set; }
+
+    // the ad network's consent, so a preload does not bring its form, and the privacy settings' way back
+    // to it; none where no network asks
+    public IAdConsentProvider? ConsentProvider { get; set; }
 }

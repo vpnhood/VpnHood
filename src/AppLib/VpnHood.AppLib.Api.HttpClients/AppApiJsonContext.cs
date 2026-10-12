@@ -9,6 +9,7 @@ using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.Api.Device;
+using VpnHood.AppLib.Api.Updaters;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Generics;
 
@@ -28,6 +29,7 @@ namespace VpnHood.AppLib.Api.HttpClients;
 [JsonSerializable(typeof(AppUserReview))]
 [JsonSerializable(typeof(CountryInfo[]))]
 [JsonSerializable(typeof(RemoteAccessState))]
+[JsonSerializable(typeof(VersionCheckResult))]
 [JsonSerializable(typeof(VpnProfileInfo))]
 [JsonSerializable(typeof(VpnProfileUpdateParams))]
 [JsonSerializable(typeof(AppPurchaseOptions))]

@@ -319,6 +319,12 @@ public sealed partial class Strings
     /// <summary>There is a new version available to install.</summary>
     public string VersionIsOld => Get("VERSION_IS_OLD");
 
+    /// <summary>You have the latest version.</summary>
+    public string VersionIsLatest => Get("VERSION_IS_LATEST");
+
+    /// <summary>Could not check for updates. Please try again later.</summary>
+    public string VersionCheckFailed => Get("VERSION_CHECK_FAILED");
+
     /// <summary>Install</summary>
     public string Install => Get("install");
 

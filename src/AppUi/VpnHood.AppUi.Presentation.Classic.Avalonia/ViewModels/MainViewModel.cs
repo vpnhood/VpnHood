@@ -14,6 +14,7 @@ using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
+using VpnHood.AppLib.Api.Updaters;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -457,6 +458,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         _isUpdatePostponed = true;
         VhApp.Api.App.VersionCheckPostpone(CancellationToken.None).Forget("Could not postpone the update notice.");
+    }
+
+    // The drawer's "Check for update": the person asked, so the check always answers, and an update's
+    // notice shows even after Later. An update the store has shows in the store's own screen.
+    public async Task CheckForUpdate()
+    {
+        _isUpdatePostponed = false;
+        var result = await VhApp.Api.App.VersionCheck(CancellationToken.None);
+        if (result == VersionCheckResult.Latest)
+            Host?.ShowSnackbar(Strings.Current.VersionIsLatest);
+        else if (result == VersionCheckResult.Failed)
+            Host?.ShowSnackbar(Strings.Current.VersionCheckFailed, SnackbarKind.Warning);
     }
 
     public void ReviewShown()

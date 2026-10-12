@@ -5,6 +5,7 @@ using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
+using VpnHood.AppLib.Api.Updaters;
 
 namespace VpnHood.App.StoreScreenshots;
 
@@ -54,7 +55,7 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
     public Task Disconnect(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Disconnect");
     public Task<string> Log(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Log");
     public Task<byte[]> PromotionImage(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.PromotionImage");
-    public Task VersionCheck(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.VersionCheck");
+    public Task<VersionCheckResult> VersionCheck(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.VersionCheck");
     public Task ExtendByRewardedAd(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.ExtendByRewardedAd");
     public Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetUserReview");
     public Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.InternalAdDismiss");

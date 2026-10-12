@@ -7,6 +7,7 @@ using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.Api.Device;
+using VpnHood.AppLib.Api.Updaters;
 
 namespace VpnHood.AppLib.Api.HttpClients;
 
@@ -119,9 +120,9 @@ internal sealed class AppClient(HttpClient httpClient) : AppApiClientBase(httpCl
         return HttpGetAsync<IReadOnlyList<DeviceAppInfo>>(BaseUrl + "installed-apps", null, cancellationToken);
     }
 
-    public Task VersionCheck(CancellationToken cancellationToken)
+    public Task<VersionCheckResult> VersionCheck(CancellationToken cancellationToken)
     {
-        return HttpPostAsync(BaseUrl + "version-check", null, null, cancellationToken);
+        return HttpPostAsync<VersionCheckResult>(BaseUrl + "version-check", null, null, cancellationToken);
     }
 
     public Task VersionCheckPostpone(CancellationToken cancellationToken)

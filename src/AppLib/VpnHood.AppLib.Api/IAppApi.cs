@@ -6,6 +6,7 @@ using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.Api.Device;
+using VpnHood.AppLib.Api.Updaters;
 
 // ReSharper disable UnusedMemberInSuper.Global
 
@@ -31,7 +32,7 @@ public interface IAppApi
     Task<string> Log(CancellationToken cancellationToken);
     Task<byte[]> PromotionImage(CancellationToken cancellationToken);
     Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken);
-    Task VersionCheck(CancellationToken cancellationToken);
+    Task<VersionCheckResult> VersionCheck(CancellationToken cancellationToken);
     Task VersionCheckPostpone(CancellationToken cancellationToken);
     Task ExtendByRewardedAd(CancellationToken cancellationToken);
     Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken);

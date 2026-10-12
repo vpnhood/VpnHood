@@ -7,6 +7,7 @@ using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
+using VpnHood.AppLib.Api.Updaters;
 using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.Net.Toolkit.Exceptions;
@@ -120,7 +121,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
         return app.Disconnect();
     }
 
-    public Task VersionCheck(CancellationToken cancellationToken)
+    public Task<VersionCheckResult> VersionCheck(CancellationToken cancellationToken)
     {
         if (app.Services.UpdaterService is null)
             throw new NotSupportedException("App Updater is not supported.");

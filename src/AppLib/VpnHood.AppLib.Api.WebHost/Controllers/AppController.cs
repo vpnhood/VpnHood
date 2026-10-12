@@ -96,8 +96,8 @@ internal class AppController(IAppApi api) : ControllerBase
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "version-check", async ctx => {
-            await api.VersionCheck(ctx.Token);
-            await ctx.SendNoContent();
+            var res = await api.VersionCheck(ctx.Token);
+            await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "version-check-postpone", async ctx => {

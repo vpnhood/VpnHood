@@ -1,6 +1,9 @@
-﻿using System.Text.Json;
+﻿using System.Net.Http.Headers;
+using System.Text.Json;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppLib.Api.Updaters;
+using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.Test.Providers;
@@ -399,6 +402,74 @@ public class CheckNewVersionTest : TestAppBase
         await updaterService.CheckForUpdate(window, force: false, TestCt);
         Assert.AreEqual(1, updaterProvider.ResumeUpdateCalls);
         Assert.AreEqual(1, updaterProvider.UpdateCalls, "no new prompt");
+    }
+
+    // A check the person asked for always answers: none while the feed cannot be read, then nothing
+    // newer, then the update.
+    [TestMethod]
+    public async Task A_check_asked_for_always_answers()
+    {
+        TestHelper.WebServer.FileContent1 = Guid.NewGuid().ToString(); // no feed to read
+        using var updaterService = new AppUpdaterService(CreateUpdaterFolder(), CurrentAppVersion,
+            new AppUpdaterOptions {
+                UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1
+            }, isConnected: () => false);
+        var uiContext = new TestHelper.TestAppUiContext();
+
+        Assert.AreEqual(VersionCheckResult.Failed, await updaterService.CheckForUpdate(uiContext, force: true, TestCt));
+
+        SetNewRelease(CurrentAppVersion, DateTime.UtcNow, TimeSpan.Zero);
+        Assert.AreEqual(VersionCheckResult.Latest, await updaterService.CheckForUpdate(uiContext, force: true, TestCt));
+
+        SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
+            DateTime.UtcNow.AddMinutes(-1), TimeSpan.Zero);
+        Assert.AreEqual(VersionCheckResult.UpdateAvailable, await updaterService.CheckForUpdate(uiContext, force: true, TestCt));
+    }
+
+    // A window over a desktop service asks through the web host, and the answer comes back the same.
+    [TestMethod]
+    public async Task A_check_asked_for_answers_over_http()
+    {
+        SetNewRelease(CurrentAppVersion, DateTime.UtcNow, TimeSpan.Zero);
+        var appOptions = TestAppHelper.CreateAppOptions(isDebugMode: false);
+        appOptions.WebHostFactory = new VpnHoodAppWebHostFactory();
+        appOptions.WebRootZipAsset = TestAppHelper.CreateWebRootZip("web-root-test");
+        appOptions.UpdaterOptions = new AppUpdaterOptions {
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1
+        };
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        var localHost = app.LocalWebHost ?? throw new InvalidOperationException("The app has no local web host.");
+        var localUrl = await localHost.EnsureStarted(TestCt);
+        using var http = new HttpClient { BaseAddress = new Uri(localUrl.GetLeftPart(UriPartial.Authority) + "/") };
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+            LocalApiToken.Read(localUrl) ?? throw new InvalidOperationException("The local address carries no token."));
+        var api = VpnHoodApiHttpFactory.Create(http);
+
+        Assert.AreEqual(VersionCheckResult.Latest, await api.App.VersionCheck(TestCt));
+    }
+
+    // While the store offers the update, a check that cannot reach the store has no answer: not "the
+    // latest", and no feed's notice either.
+    [TestMethod]
+    public async Task A_check_asked_for_with_the_store_out_of_reach_has_no_answer()
+    {
+        SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
+            DateTime.UtcNow.AddMinutes(-1), TimeSpan.Zero);
+        var updaterProvider = new TestAppUpdaterProvider { IsAvailable = true };
+        using var updaterService = new AppUpdaterService(CreateUpdaterFolder(), CurrentAppVersion,
+            new AppUpdaterOptions {
+                UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1,
+                UpdaterProvider = updaterProvider
+            }, isConnected: () => false);
+        var uiContext = new TestHelper.TestAppUiContext();
+
+        // offered, the store's own update waiting its delay
+        Assert.AreEqual(VersionCheckResult.UpdateAvailable, await updaterService.CheckForUpdate(uiContext, force: false, TestCt));
+
+        // out of reach before a connect, when the person asks
+        updaterProvider.IsAvailable = false;
+        Assert.AreEqual(VersionCheckResult.Failed, await updaterService.CheckForUpdate(uiContext, force: true, TestCt));
+        Assert.IsFalse(updaterService.Status.Prompt);
     }
 
     // An install ends the offer the version before it had: the new version is not old for it, and an

@@ -134,7 +134,7 @@ public partial class DrawerView : UserControl
             UpdateIcon.Classes.Add("spinner");
             UpdateItem.IsEnabled = false;
             try {
-                await VhApp.Api.App.VersionCheck(CancellationToken.None);
+                await _host.ViewModel.CheckForUpdate();
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);

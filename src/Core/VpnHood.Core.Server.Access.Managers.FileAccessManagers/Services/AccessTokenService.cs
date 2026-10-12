@@ -185,7 +185,8 @@ public class AccessTokenService
         accessTokenData.Usage.Version = 2;
         accessTokenData.Usage.LastUsedTime = DateTime.UtcNow;
 
-        // save to file; not cancelled: a write cut off after the truncation would leave the usage empty
+        // save to file; not cancelled: a write cut off after the truncation would leave the usage empty. A crash in
+        // the write still can, and the token's traffic then reads as zero (left so: a crash must land in the write)
         await File
             .WriteAllTextAsync(
                 GetAccessTokenUsageFileName(tokenId),

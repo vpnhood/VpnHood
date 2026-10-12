@@ -67,7 +67,8 @@ public class SessionService : IDisposable
 
     // the file follows the session (its creation, its end, its use), so a restart loads it as it was: loaded as live,
     // an ended session suppressed its client's live one at the server's recovery. One write at a time, as two calls
-    // may change a session at once; a session the cleanup has removed is not written back
+    // may change a session at once; a session the cleanup has removed is not written back. The write truncates
+    // first: a crash in it leaves a file the load deletes, and that client connects anew (left so: rare and cheap)
     private void Save(Session session)
     {
         lock (_fileLock) {

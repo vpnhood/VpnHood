@@ -25,7 +25,10 @@
 		<RunAOTCompilation>True</RunAOTCompilation>
 		<!-- Play DEX-optimization requirement (Feb 2027): R8 shrinks the Java side.
 		     Shrink-only: the SDK's generated rules already pass -dontobfuscate,
-		     so names survive and JNI/reflection lookups stay valid. -->
+		     so names survive and JNI/reflection lookups stay valid.
+		     Its command line takes about 30,800 of Windows' 32,767 characters (2026-10-09): a dozen more
+		     Android libraries or a longer checkout path fail it with error 206. The fix then is in the
+		     build (fewer, merged ProGuard files, or shorter paths), not in CI. -->
 		<AndroidLinkTool>r8</AndroidLinkTool>
 	</PropertyGroup>
 

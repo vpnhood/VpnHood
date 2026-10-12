@@ -655,9 +655,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    [DoNotParallelize] // asserts exact connection-reuse counts; under CPU contention a parked
-    // shared connection can die from a canceled graceful close and the client legitimately
-    // falls back to a new connection, breaking the exact counts
+    [DoNotParallelize] // asserts exact connection-reuse counts
     public async Task Reusing_ChunkStream()
     {
         // Create Server

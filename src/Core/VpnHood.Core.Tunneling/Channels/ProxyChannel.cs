@@ -25,6 +25,7 @@ public class ProxyChannel : IProxyChannel
     private Traffic _traffic = new();
     private readonly Lock _trafficLock = new();
     private bool _isTunnelReadTaskFinished;
+    private volatile bool _isClosing;
     private readonly Job _checkAliveJob;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
@@ -57,7 +58,13 @@ public class ProxyChannel : IProxyChannel
                 $"Proxy send buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Send}");
 
         ChannelId = channelId;
-        _checkAliveJob = new Job(CheckAlive, TransportDefaults.TcpCheckInterval, nameof(ProxyChannel));
+
+        // first after its interval, not at once: a channel just started has nothing to check, and the pumps end one
+        // whose socket fails themselves; a check racing them cancels the graceful close the connection's reuse needs
+        _checkAliveJob = new Job(CheckAlive, new JobOptions {
+            Interval = TransportDefaults.TcpCheckInterval,
+            Name = nameof(ProxyChannel)
+        });
     }
 
     public Traffic Traffic {
@@ -107,6 +114,7 @@ public class ProxyChannel : IProxyChannel
 
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).Vhc();
             _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
+            _isClosing = true; // before the host stream goes: the alive check must not take this for an error
 
             // the other pump's wait on the speed limit ends at once: its bytes have nowhere to go
             _throttleCancellationTokenSource.TryCancel();
@@ -291,7 +299,9 @@ public class ProxyChannel : IProxyChannel
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-        if (!_started)
+        // a closing channel waits for its peer's end of the tunnel stream, within the graceful timeout, so its
+        // connection can be reused; a dispose here would cancel that read, and the peer would reuse a closed one
+        if (!_started || _isClosing)
             return default;
 
         // check tcp states

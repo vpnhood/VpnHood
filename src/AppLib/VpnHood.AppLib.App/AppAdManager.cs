@@ -101,6 +101,11 @@ public class AppAdManager(
         try {
             IsShowing = true;
 
+            // the ad network's consent form first, where one is due: the person reads it for as long as
+            // they need, as the ad's timed load starts only after it
+            if (consentProvider != null)
+                await consentProvider.GatherConsent(uiContext, cancellationToken).Vhc();
+
             // flexible ad
             var adResult = adRequirement switch {
                 AdRequirement.Flexible when adService.CanShowInterstitial =>

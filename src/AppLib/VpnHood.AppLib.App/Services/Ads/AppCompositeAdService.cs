@@ -14,8 +14,13 @@ namespace VpnHood.AppLib.App.Services.Ads;
 
 internal class AppCompositeAdService
 {
+    // Without a limit of the app's, the network's own ends a stuck load: AdMob gives each of its network
+    // calls 60 seconds, which paces the loading bar.
+    private static readonly TimeSpan NetworkLoadAdTimeout = TimeSpan.FromSeconds(60);
+
     private AppAdProviderItem? _loadedAdProviderItem;
     private readonly AppAdProviderItem[] _adProviderItems;
+    private readonly TimeSpan _loadAdTimeout;
     private readonly ITracker? _tracker;
     private ProgressMonitor? _progressMonitor;
     public bool IsPreload { get; private set; }
@@ -24,9 +29,11 @@ internal class AppCompositeAdService
 
     public ProgressStatus? LoadAdProgress => _progressMonitor?.Progress;
 
-    public AppCompositeAdService(AppAdProviderItem[] adProviderItems, ITracker? tracker)
+    // loadAdTimeout: each provider's, or Timeout.InfiniteTimeSpan for none of the app's
+    public AppCompositeAdService(AppAdProviderItem[] adProviderItems, TimeSpan loadAdTimeout, ITracker? tracker)
     {
         _adProviderItems = adProviderItems;
+        _loadAdTimeout = loadAdTimeout;
         _tracker = tracker;
 
         // throw exception if an add has both include and exclude country codes
@@ -60,8 +67,7 @@ internal class AppCompositeAdService
     private readonly AsyncLock _loadAdLock = new();
 
     public async Task LoadAd(IUiContext uiContext,
-        bool isPreload, string? countryCode, bool forceReload,
-        TimeSpan loadAdTimeout, bool useFallback,
+        bool isPreload, string? countryCode, bool forceReload, bool useFallback,
         CancellationToken cancellationToken)
     {
         if (_adProviderItems.Length == 0)
@@ -84,7 +90,7 @@ internal class AppCompositeAdService
 
         _progressMonitor = new ProgressMonitor(
             totalTaskCount: filteredAdProviderItems.Count(x => !x.IsFallback),
-            taskTimeout: loadAdTimeout);
+            taskTimeout: _loadAdTimeout == Timeout.InfiniteTimeSpan ? NetworkLoadAdTimeout : _loadAdTimeout);
 
         try {
             foreach (var adProviderItem in filteredAdProviderItems) {
@@ -93,7 +99,7 @@ internal class AppCompositeAdService
                 // find first successful ad network
                 try {
                     VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
-                    using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
+                    using var timeoutCts = new CancellationTokenSource(_loadAdTimeout);
                     using var linkedCts =
                         CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                     if (adProviderItem.IsFallback) _progressMonitor = null; // do not track fallback ads

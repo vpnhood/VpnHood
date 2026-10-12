@@ -7,11 +7,17 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Ads.AdMob.Android;
 
-// AdMob's consent for the app (AppAdOptions.ConsentProvider): whether a preload may go ahead without
-// the form, and the privacy settings' way back to the answer; AdMob's ads ask for it by themselves
-// (AdMobConsent).
+// AdMob's consent for the app (AppAdOptions.ConsentProvider): its form before an ad's timed load,
+// whether a preload may go ahead without the form, and the privacy settings' way back to the answer;
+// AdMob's ads also ask for it by themselves (AdMobConsent).
 public class AdMobConsentProvider : IAdConsentProvider
 {
+    public Task GatherConsent(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        var activity = ((AndroidUiContext)uiContext).Activity;
+        return AdMobConsent.TryGather(activity, cancellationToken);
+    }
+
     public async Task<bool> CanRequestAds(IUiContext uiContext, CancellationToken cancellationToken)
     {
         var activity = ((AndroidUiContext)uiContext).Activity;

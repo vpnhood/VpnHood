@@ -38,6 +38,7 @@
 * Fix: A VPN started without opening the app - always-on, the quick-settings tile, or the system restarting it - follows your latest settings, "Share anonymous usage data" among them #android
 * Fix: Where Google Play works only through the VPN, its update now comes once you connect, and an update you started and left comes back when you return to the app #android #store
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
+* Fix: On a slow connection, an ad you chose to watch - Watch Ad, Free Server by Ad, or more minutes for your session - is no longer cut off while it is still loading #android #connect
 * Update: The Android app from our website no longer contains AppsFlyer, so it no longer reports which link it was installed from #android #connect
 * Fix: A head built without the browser page starts and serves its API; only a request for the page fails, naming the missing file. A service that cannot start says why in its log, and on Windows in the Application event log under the service's name.
 * Fix: ApiClientBase sends a request body only when there is data. A POST, PUT or PATCH without data used to send the JSON null, and data given with any other method was dropped.

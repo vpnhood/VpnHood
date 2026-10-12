@@ -1,8 +1,6 @@
 ﻿using Google.Android.Gms.Ads;
 using Google.Android.Gms.Ads.Initialization;
-using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
-using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
@@ -14,10 +12,13 @@ public static class AdMobUtil
     public static bool IsInitialized { get; private set; }
     public static TimeSpan DefaultAdTimeSpan { get; } = TimeSpan.FromMinutes(20);
 
-    // Every ad comes through here, so none is asked for before the person's consent where one is due.
+    // Every ad comes through here, so none is asked for before the person's consent where one is due;
+    // the app has usually gathered it before the ad's timed load, which finds it done.
     public static async Task Initialize(Activity activity, CancellationToken cancellationToken)
     {
-        await GatherConsent(activity, cancellationToken).Vhc();
+        await AdMobConsent.TryGather(activity, cancellationToken).Vhc();
+        if (!AdMobConsent.CanRequestAds)
+            throw new LoadAdException("AdMob may not ask for an ad before the person answers its consent form.");
 
         using var lockAsync = await InitLock.LockAsync(cancellationToken).Vhc();
         if (IsInitialized)
@@ -27,23 +28,6 @@ public static class AdMobUtil
         MobileAds.Initialize(activity, initializeListener);
         await initializeListener.Task;
         IsInitialized = true;
-    }
-
-    private static async Task GatherConsent(Activity activity, CancellationToken cancellationToken)
-    {
-        try {
-            await AdMobConsent.Gather(activity, cancellationToken).Vhc();
-        }
-        catch (OperationCanceledException) {
-            throw;
-        }
-        catch (Exception ex) {
-            // Google's rule: an answer from an earlier run still counts when this one cannot get one
-            VhLogger.Instance.LogWarning(ex, "Could not gather the ad consent.");
-        }
-
-        if (!AdMobConsent.CanRequestAds)
-            throw new LoadAdException("AdMob may not ask for an ad before the person answers its consent form.");
     }
 
     private class MyOnInitializationCompleteListener : Java.Lang.Object, IOnInitializationCompleteListener

@@ -32,7 +32,8 @@ public class TestAdProvider(TestAccessManager accessManager, AdType adType = AdT
         if (FailLoad)
             throw new LoadAdException("Load Ad failed by test.");
 
-        await LoadAdCallback.Invoke();
+        // as a real network's, the load ends when the app stops waiting for it
+        await LoadAdCallback.Invoke().WaitAsync(cancellationToken);
 
         AdLoadedTime = DateTime.Now;
         if (LoadAdCompletionSource != null)

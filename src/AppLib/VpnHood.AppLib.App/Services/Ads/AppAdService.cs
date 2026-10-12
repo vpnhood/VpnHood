@@ -20,11 +20,12 @@ public class AppAdService(
 
     private readonly AppCompositeAdService _compositeInterstitialAdService = new(
         adProviderItems.Where(x => x.AdProvider.AdType == AdType.InterstitialAd).ToArray(),
-        tracker);
+        loadAdTimeout, tracker);
 
+    // the person asked to watch it, so the app never cuts its load (AppAdOptions.LoadAdTimeout)
     private readonly AppCompositeAdService _compositeRewardedAdService = new(
         adProviderItems.Where(x => x.AdProvider.AdType == AdType.RewardedAd).ToArray(),
-        tracker);
+        Timeout.InfiniteTimeSpan, tracker);
 
     private InternalInAdProvider? ActiveInternalAdProvider => (InternalInAdProvider?)adProviderItems
         .FirstOrDefault(x => x.AdProvider is InternalInAdProvider { IsWaitingForAd: true })?
@@ -90,7 +91,7 @@ public class AppAdService(
     {
         _currentCompositeAdService = appCompositeAdService;
         await appCompositeAdService.LoadAd(uiContext, isPreload: isPreload,
-            countryCode: countryCode, loadAdTimeout: loadAdTimeout, useFallback: useFallback,
+            countryCode: countryCode, useFallback: useFallback,
             forceReload: false,
             cancellationToken: cancellationToken).Vhc();
 

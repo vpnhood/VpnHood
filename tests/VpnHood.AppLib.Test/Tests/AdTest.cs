@@ -423,6 +423,62 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task Consent_form_does_not_count_toward_the_ad_load_limit()
+    {
+        // the person reads the form for longer than the app waits for an ad to load
+        var consentProvider = new TestAdConsentProvider { ReadingTime = TimeSpan.FromSeconds(3) };
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.LoadAdTimeout = TimeSpan.FromSeconds(1);
+        appOptions.AdOptions.ConsentProvider = consentProvider;
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper,
+            adProviderAdType: AdType.InterstitialAd, appOptions: appOptions);
+
+        var adProvider = appDom.TestAdProvider;
+        var isLoadedAfterConsent = false;
+        adProvider.LoadAdCallback = () => {
+            isLoadedAfterConsent = consentProvider.IsGathered;
+            return Task.CompletedTask;
+        };
+
+        // the ad loads once, after the answer
+        var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var vpnProfile = appDom.App.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await appDom.App.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        Assert.IsTrue(isLoadedAfterConsent);
+        Assert.AreEqual(1, adProvider.LoadAdCount);
+    }
+
+    [TestMethod]
+    public async Task Rewarded_ad_load_has_no_app_time_limit()
+    {
+        // the person asked to watch it, so a load slower than the app's limit still shows
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.LoadAdTimeout = TimeSpan.FromSeconds(1);
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper, appOptions: appOptions);
+        appDom.TestAdProvider.LoadAdCallback = () => Task.Delay(TimeSpan.FromSeconds(3));
+
+        await appDom.Connect(ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt);
+        Assert.AreEqual(1, appDom.TestAdProvider.LoadAdCount);
+        Assert.IsNull(appDom.App.State.SessionStatus?.SessionExpirationTime, "The reward must be granted.");
+    }
+
+    [TestMethod]
+    public async Task Flexible_ad_load_keeps_the_app_time_limit()
+    {
+        // a Free Server's ad: past the limit, the person connects without it
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.LoadAdTimeout = TimeSpan.FromSeconds(1);
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper,
+            adProviderAdType: AdType.InterstitialAd, appOptions: appOptions);
+        appDom.TestAdProvider.LoadAdCallback = () => Task.Delay(TimeSpan.FromSeconds(10));
+
+        var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var vpnProfile = appDom.App.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await appDom.App.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        Assert.AreEqual(2, appDom.TestAdProvider.LoadAdCount, "Once before the tunnel is up and once after.");
+    }
+
+    [TestMethod]
     public async Task Internal_Ad_provider_with_fallback()
     {
         // create server

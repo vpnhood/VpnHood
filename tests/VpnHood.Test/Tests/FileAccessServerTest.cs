@@ -161,6 +161,30 @@ public class FileAccessManagerTest : TestBase
         Assert.AreEqual(30, response.AccessUsage?.CycleTraffic.Received);
     }
 
+    [TestMethod]
+    public async Task A_restart_keeps_the_end_of_a_clients_old_sessions()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        using var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        var sessionRequestEx = CreateSessionRequestEx(accessManager1.CreateToken());
+
+        // one client: its first session closed, its second suppressed by its third, the live one
+        var closedSession = await accessManager1.Session_Create(sessionRequestEx, TestCt);
+        await accessManager1.Session_Close(closedSession.SessionId, new Traffic(), TestCt);
+        var suppressedSession = await accessManager1.Session_Create(sessionRequestEx, TestCt);
+        var liveSession = await accessManager1.Session_Create(sessionRequestEx, TestCt);
+
+        // a restarted server's recovery asks for every session. Loaded as live, an ended session suppressed the
+        // client's live one, which the server then closed
+        using var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        var responses = await accessManager2.Session_GetAll(TestCt);
+        Assert.AreEqual(SessionErrorCode.Ok, responses.Single(x => x.SessionId == liveSession.SessionId).ErrorCode);
+        Assert.AreEqual(SessionErrorCode.SessionClosed,
+            responses.Single(x => x.SessionId == closedSession.SessionId).ErrorCode);
+        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy,
+            responses.Single(x => x.SessionId == suppressedSession.SessionId).ErrorCode);
+    }
+
     public SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)
     {
         clientId ??= Guid.NewGuid().ToString();

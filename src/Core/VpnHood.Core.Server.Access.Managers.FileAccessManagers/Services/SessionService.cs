@@ -23,6 +23,7 @@ public class SessionService : IDisposable
     private long _lastSessionId;
     private readonly string _sessionsFolderPath;
     private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new();
+    private readonly Lock _fileLock = new();
     private readonly Job _cleanupSessionsJob;
     public ConcurrentDictionary<ulong, Session> Sessions { get; }
 
@@ -62,6 +63,14 @@ public class SessionService : IDisposable
     private string GetSessionFilePath(ulong sessionId)
     {
         return Path.Combine(_sessionsFolderPath, $"{sessionId}.{SessionFileExtension}");
+    }
+
+    // at a session's creation and again at its end: loaded as live after a restart, an ended session suppressed its
+    // client's live one at the server's recovery. One write at a time, as two calls may end a session at once
+    private void Save(Session session)
+    {
+        lock (_fileLock)
+            File.WriteAllText(GetSessionFilePath(session.SessionId), JsonSerializer.Serialize(session));
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
@@ -140,7 +149,7 @@ public class SessionService : IDisposable
 
         // add the new session to collection
         Sessions.TryAdd(session.SessionId, session);
-        File.WriteAllText(GetSessionFilePath(session.SessionId), JsonSerializer.Serialize(session));
+        Save(session);
 
         responseEx.SessionId = session.SessionId;
         return responseEx;
@@ -187,6 +196,7 @@ public class SessionService : IDisposable
         if (session.EndTime == null && ret.ErrorCode != SessionErrorCode.Ok) {
             session.ErrorCode = ret.ErrorCode;
             session.EndTime = DateTime.UtcNow;
+            Save(session);
         }
 
         return ret;
@@ -267,6 +277,7 @@ public class SessionService : IDisposable
                     selfSession.SuppressedBy = SessionSuppressType.YourSelf;
                     selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     selfSession.Kill();
+                    Save(selfSession);
                     lock (_updatedSessionIds) {
                         _updatedSessionIds.TryAdd(selfSession.SessionId, true);
                     }
@@ -286,6 +297,7 @@ public class SessionService : IDisposable
                     otherSession.SuppressedBy = SessionSuppressType.Other;
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     otherSession.EndTime = FastDateTime.UtcNow;
+                    Save(otherSession);
                     session.SuppressedTo = SessionSuppressType.Other;
                     lock (_updatedSessionIds) {
                         _updatedSessionIds.TryAdd(otherSession.SessionId, true);
@@ -322,13 +334,14 @@ public class SessionService : IDisposable
 
     public void CloseSession(ulong sessionId, SessionErrorCode errorCode)
     {
-        if (!Sessions.TryGetValue(sessionId, out var session))
-            return;
+        if (!Sessions.TryGetValue(sessionId, out var session) || !session.IsAlive)
+            return; // an ended session keeps its end
 
         if (session.ErrorCode == SessionErrorCode.Ok)
             session.ErrorCode = errorCode;
 
         session.Kill();
+        Save(session);
     }
 
     public void Dispose()

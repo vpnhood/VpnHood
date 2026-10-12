@@ -32,14 +32,18 @@ public class TestAppHelper : TestHelper
     // isDebugMode: false stands for a release build where the test needs the difference: the web
     // server's remote access, or trackers, which a Debug build never makes. The log options below are
     // explicit, so the flag changes nothing else.
-    // storagePath: another app's, for a test that reopens what it saved.
-    public AppOptions CreateAppOptions(bool isDebugMode = true, string? storagePath = null)
+    // storagePath: another app's, for a test that reopens what it saved. noBackupStoragePath: the
+    // device-only one, as a phone has; the storage itself where null, as on a desktop.
+    public AppOptions CreateAppOptions(bool isDebugMode = true, string? storagePath = null,
+        string? noBackupStoragePath = null)
     {
         // a storage of its own per app, since tests run many apps side by side
+        var storageFolderPath = storagePath ?? Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7());
         var context = new AppOptionsContext {
             AppId = "com.vpnhood.client.test",
             AppName = "VpnHood! Test",
-            StoragePath = storagePath ?? Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
+            StoragePath = storageFolderPath,
+            NoBackupStoragePath = noBackupStoragePath ?? storageFolderPath,
             PackagedAssetProvider = AssetProvider
         };
 

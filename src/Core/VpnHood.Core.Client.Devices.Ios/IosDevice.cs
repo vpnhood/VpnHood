@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using VpnHood.Core.Client.Devices.Ios.Extensions;
+using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
@@ -14,6 +15,7 @@ public class IosDevice : IDevice
     private readonly NETunnelProviderManager _vpnManager = new();
 
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
+    private const string VpnServiceDataFolderKey = "VpnServiceDataFolder";
 
     // NEVPNProtocol.ServerAddress is a REQUIRED field (SaveToPreferences fails / the Settings entry is
     // invalid if it is nil), but it is purely cosmetic for a packet tunnel — it is only the text shown
@@ -51,11 +53,16 @@ public class IosDevice : IDevice
         // so it works in both processes; each reads its OWN process's footprint.
         IosMemory.Install();
 
-        VpnServiceConfigFolder = Path.Combine(sharedContainerPath, "vpn-service");
+        // the service's own files in a folder of their own, kept out of backups; the proxies stay in the
+        // folder they all shared before, which travels
+        VpnServiceConfigFolder = Path.Combine(sharedContainerPath, "vpn-service-config");
+        VpnServiceDataFolder = Path.Combine(sharedContainerPath, "vpn-service");
+        IosNoBackupFolder.Create(VpnServiceConfigFolder);
         VhLogger.Instance.LogInformation("IosDevice created. VpnServiceConfigFolder={Folder}", VpnServiceConfigFolder);
     }
 
     public string VpnServiceConfigFolder { get; }
+    public string VpnServiceDataFolder { get; }
 
     public bool IsBindProcessToVpnSupported => false;
     public bool IsTcpProxySupported => true;
@@ -141,11 +148,11 @@ public class IosDevice : IDevice
         // ---- Build new protocol ----
         var providerProtocol = new NETunnelProviderProtocol();
         providerProtocol.ProviderBundleIdentifier = _providerBundleId;
-        // Forward the resolved shared-container path verbatim; the Extension resolves its config folder
-        // from this key alone (no App Group id needed — the container path is identical in both processes).
+        // Forward the resolved shared-container paths verbatim; the Extension resolves its folders from
+        // these keys alone (no App Group id needed — the container path is identical in both processes).
         providerProtocol.ProviderConfiguration = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
-            [(NSString)VpnServiceConfigFolder],
-            [(NSString)VpnServiceConfigFolderKey]);
+            [(NSString)VpnServiceConfigFolder, (NSString)VpnServiceDataFolder],
+            [(NSString)VpnServiceConfigFolderKey, (NSString)VpnServiceDataFolderKey]);
 
         providerProtocol.ServerAddress = ServerAddress;
         providerProtocol.EnforceRoutes = true;

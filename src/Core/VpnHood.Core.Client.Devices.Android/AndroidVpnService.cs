@@ -35,7 +35,13 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     public const string ActionConnect = "connect";
     public const string ActionDisconnect = "disconnect";
 
+    // the service's own files: Android never puts the no-backup folder in a backup or a transfer
     public static string VpnServiceConfigFolder =>
+        Path.Combine(Application.Context.NoBackupFilesDir?.AbsolutePath ??
+                     throw new InvalidOperationException("Android named no no-backup folder for the app."), "vpn-service");
+
+    // the person's proxies, beside the app's files, which travel with a backup
+    public static string VpnServiceDataFolder =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
 
     public AndroidVpnService()
@@ -93,6 +99,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                 // go to the app's file
                 _vpnServiceHost ??= new VpnServiceHost(
                     configFolder: VpnServiceConfigFolder,
+                    dataFolder: VpnServiceDataFolder,
                     vpnServiceHandler: this,
                     socketFactory: new AndroidSocketFactory(),
                     messageListener: _messageListener,

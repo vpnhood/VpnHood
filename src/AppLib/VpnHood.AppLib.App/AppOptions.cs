@@ -29,6 +29,7 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // registration; production keeps the single-instance guarantee and VpnHoodApp.Instance.
     internal bool IsSingleton { get; set; } = true;
     public string StorageFolderPath => context.StoragePath;
+    public string NoBackupStorageFolderPath => context.NoBackupStoragePath;
 
     // Transport tuning handed to the client untouched. Its timeouts default themselves; the buffer
     // and count knobs stay null so each core component applies its own default at first use.

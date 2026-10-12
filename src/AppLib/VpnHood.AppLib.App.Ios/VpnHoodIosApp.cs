@@ -1,6 +1,7 @@
 using Foundation;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Devices.Ios;
+using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -24,11 +25,23 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
         VhLogger.AddProvider(new ConsoleLoggerProvider());
         VhLogger.AddProvider(new TraceLoggerProvider());
 
+        // the device-only folder beside the storage, carrying iOS's do-not-back-up flag, takes what must
+        // not travel before the head's factory, whose providers read the sign-in session at once
+        var storagePath = initParams.ResolveStoragePath();
+        var noBackupStoragePath = initParams.ResolveNoBackupStoragePath(Path.Combine(
+            Path.GetDirectoryName(storagePath) ??
+            throw new InvalidOperationException("The app's storage has no parent folder."), "no-backup"));
+        IosNoBackupFolder.Create(noBackupStoragePath);
+#pragma warning disable CS0618 // Type or member is obsolete
+        AppStorageMigration.MoveToNoBackup(storagePath, noBackupStoragePath);
+#pragma warning restore CS0618 // Type or member is obsolete
+
         // the bundle is a folder, and the asset packages placed their files in it
         var context = new AppOptionsContext {
             AppId = initParams.AppId,
             AppName = initParams.AppName,
-            StoragePath = initParams.ResolveStoragePath(),
+            StoragePath = storagePath,
+            NoBackupStoragePath = noBackupStoragePath,
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };
 

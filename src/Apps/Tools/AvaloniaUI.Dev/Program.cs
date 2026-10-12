@@ -55,6 +55,7 @@ internal static class Program
             AppId = "com.vpnhood.avalonia.dev",
             AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
             StoragePath = storageFolderPath,
+            NoBackupStoragePath = storageFolderPath,
             PackagedAssetProvider = platformAssets
         };
 

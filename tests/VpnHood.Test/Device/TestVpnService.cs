@@ -28,6 +28,7 @@ public class TestVpnService
         _netFilter = netFilter;
         _vpnServiceHost = new VpnServiceHost(
             configFolder,
+            dataFolder: configFolder,
             this,
             socketFactory: new TestSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),

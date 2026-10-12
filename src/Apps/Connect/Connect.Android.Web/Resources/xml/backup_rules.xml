@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- What Auto Backup leaves out on Android 11 and older: the sign-in session and the logs
-     (data_extraction_rules.xml for newer ones). A restored device signs in again, and
-     the logs stay on the device that wrote them. -->
-<full-backup-content>
-	<exclude domain="file" path=".local/share/VpnHoodConnect/account" />
-	<exclude domain="file" path=".local/share/VpnHoodConnect/app.log" />
-	<exclude domain="file" path=".local/share/vpn-service" />
-</full-backup-content>

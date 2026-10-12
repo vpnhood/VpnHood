@@ -28,6 +28,7 @@ public class TestDevice(
         Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: false)
     };
     public string VpnServiceConfigFolder { get; } = Path.Combine(testHelper.WorkingPath, "VpnService");
+    public string VpnServiceDataFolder => VpnServiceConfigFolder;
     public bool IsTv => false;
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;

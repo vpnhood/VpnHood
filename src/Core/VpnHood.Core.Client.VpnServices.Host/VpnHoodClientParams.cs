@@ -15,4 +15,7 @@ public class VpnHoodClientParams
     public required IVpnAdapter VpnAdapter { get; init; }
     public required ISocketFactory SocketFactory { get; init; }
     public required string ConfigFolder { get; init; }
+
+    // the proxies' folder, which travels with a backup (VpnServiceFolders)
+    public required string DataFolder { get; init; }
 }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What Auto Backup leaves out on Android 11 and older (data_extraction_rules.xml for newer ones): the
+     SDKs' own files - their unsent reports, their state and ids for this install, the ad web view's
+     data. The app's own device-only files are in the no-backup folder, which no backup takes
+     (AppOptionsContext.NoBackupStoragePath, IDevice.VpnServiceConfigFolder), so none is named here. -->
+<full-backup-content>
+	<exclude domain="file" path=".crashlytics.v3" />
+	<exclude domain="file" path="datastore" />
+	<exclude domain="file" path="profileInstalled" />
+	<exclude domain="database" path="com.google.android.datatransport.events" />
+	<exclude domain="database" path="com.google.android.datatransport.events-journal" />
+	<exclude domain="sharedpref" path="admob.xml" />
+	<exclude domain="sharedpref" path="com.google.android.gms.measurement.prefs.xml" />
+	<exclude domain="sharedpref" path="com.google.firebase.crashlytics.xml" />
+	<exclude domain="sharedpref" path="paid_storage_sp.xml" />
+	<exclude domain="sharedpref" path="WebViewChromiumPrefs.xml" />
+	<exclude domain="sharedpref" path="AwOriginVisitLoggerPrefs.xml" />
+	<exclude domain="root" path="app_webview" />
+</full-backup-content>

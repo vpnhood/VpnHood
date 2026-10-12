@@ -26,7 +26,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppInitParams {
             AppId = PackageName ?? throw new InvalidOperationException("The app has no package name."),
             AppName = AppConstants.AppName,
-            StorageFolderName = "VpnHood", // what every shipped build has used; the backup rules name it
+            StorageFolderName = "VpnHood", // what every shipped build has used
             AppOptionsFactory = CreateAppOptions
         };
     }

@@ -33,7 +33,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppInitParams {
             AppId = PackageName ?? throw new InvalidOperationException("The app has no package name."),
             AppName = AppConstants.AppName,
-            StorageFolderName = "VpnHoodConnect", // what every shipped build has used; the backup rules name it
+            StorageFolderName = "VpnHoodConnect", // what every shipped build has used
             AppOptionsFactory = context => CreateAppOptions(context, appConfigs)
         };
     }
@@ -66,7 +66,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             // No Google sign-in on this head, deliberately: an Android OAuth client is bound to a
             // package name AND signing certificate, and this sideloaded build shares neither with
             // the Play build. The portal's own password sign-in serves.
-            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.StoragePath,
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.NoBackupStoragePath,
                 appConfigs.PortalBaseUri, context.AppId, []);
 
             // the web-distribution store: plans priced by the portal, checkout in the browser

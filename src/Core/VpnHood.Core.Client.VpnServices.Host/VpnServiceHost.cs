@@ -20,6 +20,7 @@ public class VpnServiceHost : IDisposable
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
+    private readonly string _dataFolder;
     private readonly LogService? _logService;
     private CancellationTokenSource _connectCts = new();
     private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(3);
@@ -46,12 +47,20 @@ public class VpnServiceHost : IDisposable
     internal VpnServiceContext Context { get; }
     public static ConnectionInfo DefaultConnectionInfo => ConnectionInfo.Default;
 
+    // configFolder and dataFolder: IDevice's VpnServiceConfigFolder and VpnServiceDataFolder
     public VpnServiceHost(string configFolder,
+        string dataFolder,
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,
         IMessageListener messageListener,
         bool withLogger = true)
     {
+        // the service may start before the app has made its folder: always-on, after an update
+        Directory.CreateDirectory(configFolder);
+#pragma warning disable CS0618 // Type or member is obsolete
+        VpnServiceFolders.MigrateServiceFiles(dataFolder, configFolder);
+#pragma warning restore CS0618 // Type or member is obsolete
+        _dataFolder = dataFolder;
         Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
@@ -197,7 +206,8 @@ public class VpnServiceHost : IDisposable
                 ServiceOptions = serviceOptions,
                 VpnAdapter = vpnAdapter,
                 SocketFactory = _socketFactory,
-                ConfigFolder = Context.ConfigFolder
+                ConfigFolder = Context.ConfigFolder,
+                DataFolder = _dataFolder
             };
 
             // the filter pipes are self-updating: their split filter stages re-read the folder

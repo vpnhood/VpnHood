@@ -38,6 +38,7 @@ public class AndroidDevice : IDevice
         Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: IsPhone())
     };
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
+    public string VpnServiceDataFolder => AndroidVpnService.VpnServiceDataFolder;
     public bool IsTv => AndroidUtils.IsTv();
 
     // a phone as Chrome tells one, by its "Mobile": no TV, and narrower than a tablet's 600 dp

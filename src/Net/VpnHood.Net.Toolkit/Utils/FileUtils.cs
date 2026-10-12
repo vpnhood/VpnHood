@@ -2,6 +2,28 @@ namespace VpnHood.Net.Toolkit.Utils;
 
 public static class FileUtils
 {
+    // A file or folder moved to its new place - a rename on one volume - unless the new place already has
+    // one, which is then the one in use, so the old goes. False where the old is gone: another process
+    // may have moved it first.
+    public static bool MoveOrDiscard(string sourcePath, string targetPath)
+    {
+        try {
+            var isFolder = Directory.Exists(sourcePath);
+            if (!isFolder && !File.Exists(sourcePath))
+                return false;
+
+            var isTargetPresent = File.Exists(targetPath) || Directory.Exists(targetPath);
+            if (isFolder && isTargetPresent) Directory.Delete(sourcePath, recursive: true);
+            else if (isFolder) Directory.Move(sourcePath, targetPath);
+            else if (isTargetPresent) File.Delete(sourcePath);
+            else File.Move(sourcePath, targetPath);
+            return true;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) {
+            return false; // another process moved it in the meantime
+        }
+    }
+
     public static async Task WriteAllTextRetryAsync(string filePath, string content, TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {

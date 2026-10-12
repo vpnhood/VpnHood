@@ -54,7 +54,8 @@ namespace VpnHood.AppLib.App;
 public class VpnHoodApp : Singleton<VpnHoodApp>,
     IPremiumFeatureChecker, IDisposable, IAsyncDisposable
 {
-    // In the storage folder; public for a reader that holds no app ("service log" on Windows).
+    // In the device-only storage folder, a desktop's storage folder; public for a reader that holds no
+    // app ("service log" on Windows).
     public const string FileNameLog = "app.log";
 
     // The two parts of the log the API sends (CopyLogToStream), each under a header of its own, at
@@ -63,6 +64,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public const string LogVpnServiceHeader = "VPN Service Log";
     private const string FileNamePersistState = "state.json";
     internal const string FolderNameProfiles = "profiles";
+    internal const string FolderNameAccount = "account";
+    internal const string FolderNameTemp = "Temp";
+    private const string FileNameInstallId = "install_id";
     private readonly LogService _logService;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
@@ -84,11 +88,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AppErrorReporter _errorReporter;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     internal IIpRangeLocationProvider? IpRangeLocationProvider => _ipRangeLocationProvider;
-    public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
+    public string TempFolderPath => Path.Combine(NoBackupStorageFolderPath, FolderNameTemp);
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
     public bool IsIdle => ConnectionState.IsIdle();
     public string StorageFolderPath { get; }
+    public string NoBackupStorageFolderPath { get; }
     public AppSettings Settings => SettingsService.Settings;
     public UserSettings UserSettings => SettingsService.UserSettings;
     public AppFeatures Features { get; }
@@ -126,22 +131,25 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public IAppWebHost? LocalWebHost => _webHostManager.Local;
     public IAppWebHost? RemoteWebHost => _webHostManager.Remote;
 
-    private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options)
+    private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options,
+        string installId)
         : base(register: options.IsSingleton)
     {
         var appVersion = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version();
         Resources = new AppResources();
         StorageFolderPath = options.StorageFolderPath ??
                             throw new ArgumentNullException(nameof(options.StorageFolderPath));
+        NoBackupStorageFolderPath = options.NoBackupStorageFolderPath;
         SettingsService = settingsService;
         SettingsService.BeforeSave += SettingsBeforeSave;
 
         // The head names the zips; where they are unpacked is the app's own business - one fixed
-        // folder each under its storage, so no two of them can be handed the same one. The UI's are
-        // one provider over all the head named, in the order it named them.
-        UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAssets, StorageFolderPath, "ui");
+        // folder each under its device-only storage, so no two of them can be handed the same one and no
+        // backup carries them. The UI's are one provider over all the head named, in the order it named
+        // them.
+        UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAssets, NoBackupStorageFolderPath, "ui");
         _webHostManager = new AppWebHostManager(this, options.WebHostFactory,
-            AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, StorageFolderPath, "web-root"),
+            AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, NoBackupStorageFolderPath, "web-root"),
             options.WebUiPort);
 
         // The look the OS chrome draws with, out of the UI's store, read while the rest of the app
@@ -196,7 +204,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             protocols.Add(ChannelProtocol.Quic);
 
         // Created before the features because only the trackers know whether this build collects anything.
-        var clientId = AppUtils.CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId);
+        var clientId = AppUtils.CreateClientId(options.AppId, options.DeviceId ?? installId);
         _userAgent = AppUtils.BuildUserAgent(device.UserAgentInfo, options.PackageTitle, appVersion, includeModel: false);
         var trackerService = new AppTrackerService(settingsService, new AppTrackerServiceParams {
             TrackerFactories = options.TrackerFactories,
@@ -286,7 +294,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     settingsService: settingsService,
                     accountProvider: options.AccountProvider,
                     vpnProfileService: VpnProfileService,
-                    storageFolderPath: Path.Combine(StorageFolderPath, "account")),
+                    storageFolderPath: Path.Combine(NoBackupStorageFolderPath, FolderNameAccount)),
             UpdaterService = options.UpdaterOptions is null
                 ? null
                 : new AppUpdaterService(
@@ -295,7 +303,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     updateOptions: options.UpdaterOptions,
                     isConnected: () => ConnectionState is AppConnectionState.Connected),
             ProxyEndPointService = new AppProxyEndPointService(
-                dbPath: Path.Combine(_device.VpnServiceConfigFolder, "proxies", "proxies.db"),
+                dbPath: VpnServiceFolders.GetProxyStoreFilePath(_device.VpnServiceDataFolder),
                 ipLocationProvider: _ipRangeLocationProvider,
                 vpnServiceManager: _vpnServiceManager,
                 deviceUiProvider: deviceUiProvider,
@@ -696,16 +704,59 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public static VpnHoodApp Init(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
+        Directory.CreateDirectory(options.NoBackupStorageFolderPath);
 
         var settingsService =
             new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl);
-        var logService = new LogService(Path.Combine(options.StorageFolderPath, FileNameLog));
+        var installId = LoadInstallId(options.NoBackupStorageFolderPath, settingsService);
+        var logService = new LogService(Path.Combine(options.NoBackupStorageFolderPath, FileNameLog));
         logService.Start(
             GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
             deleteOldReport: false);
 
         // registers as the singleton instance unless options opt out (tests run many concurrent apps)
-        return new VpnHoodApp(device, settingsService, logService, options);
+        return new VpnHoodApp(device, settingsService, logService, options, installId);
+    }
+
+    // The install's own random id, which the client id comes from where the device has none of its own
+    // (iOS, Windows, an Android without its id): in the device-only folder, so a device restored from a
+    // backup makes its own rather than sharing the old one's.
+    private static string LoadInstallId(string noBackupStorageFolderPath, AppSettingsService settingsService)
+    {
+        var filePath = Path.Combine(noBackupStorageFolderPath, FileNameInstallId);
+#pragma warning disable CS0618 // Type or member is obsolete
+        MigrateInstallId(filePath, settingsService);
+#pragma warning restore CS0618 // Type or member is obsolete
+        var savedId = TryReadInstallId(filePath);
+        if (savedId != null)
+            return savedId;
+
+        var installId = Guid.NewGuid().ToString();
+        File.WriteAllText(filePath, installId);
+        return installId;
+    }
+
+    private static string? TryReadInstallId(string filePath)
+    {
+        return File.Exists(filePath) && Guid.TryParse(File.ReadAllText(filePath).Trim(), out var installId)
+            ? installId.ToString()
+            : null;
+    }
+
+    // The id was ClientId in settings.json, which a backup carries; an update keeps it. The file is
+    // written before the settings let it go, so an end between the two loses nothing.
+    [Obsolete("Migration (2026-10): drop a few months after it ships, with its call in LoadInstallId, " +
+              "AppSettings.ClientId and the An_update_moves_the_install_id_out_of_the_settings test.")]
+    private static void MigrateInstallId(string filePath, AppSettingsService settingsService)
+    {
+        var settings = settingsService.Settings;
+        if (settings.ClientId is null)
+            return;
+
+        if (TryReadInstallId(filePath) is null)
+            File.WriteAllText(filePath, settings.ClientId);
+        settings.ClientId = null;
+        settingsService.Save();
     }
 
     public void ClearLastError()

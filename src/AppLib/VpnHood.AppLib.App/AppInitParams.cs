@@ -15,11 +15,12 @@ public class AppInitParams
     // its service and its message with it in the processes that never build the options.
     public required string AppName { get; init; }
 
-    // The folder, under the platform's own place for app data, that holds the settings, the
-    // profiles and the log. Required where the platform names such a folder (Android, iOS, a
-    // Windows desktop app); null where a host lays storage out itself (the Linux daemon). Never
-    // changed for a head that has shipped: a new name is an empty folder, and every setting and
-    // profile left behind in the old one.
+    // The folder, under the platform's own place for app data, that holds the settings and the
+    // profiles; one of the same name under its device-only place holds the sign-in session, the log
+    // and the caches (ResolveNoBackupStoragePath). Required where the platform names such a folder
+    // (Android, iOS, a Windows desktop app); null where a host lays storage out itself (the Linux
+    // daemon). Never changed for a head that has shipped: a new name is an empty folder, and every
+    // setting and profile left behind in the old one.
     public string? StorageFolderName { get; init; }
 
     // Called once, in the process that runs the app, after the platform has resolved the context.
@@ -29,9 +30,6 @@ public class AppInitParams
     // Windows, the app's files folder on Android, Documents on iOS.
     public string ResolveStoragePath()
     {
-        var folderName = StorageFolderName ?? throw new InvalidOperationException(
-            $"This platform keeps the app's files in a folder the head names; {nameof(StorageFolderName)} is required.");
-
         // GetFolderPath answers an empty string for a folder that does not exist, which Path.Combine
         // would turn into a path relative to wherever the process happens to run
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -39,6 +37,16 @@ public class AppInitParams
             throw new InvalidOperationException(
                 $"This platform has no {nameof(Environment.SpecialFolder.LocalApplicationData)} folder to keep the app's files in.");
 
-        return Path.Combine(localAppData, folderName);
+        return Path.Combine(localAppData, RequiredStorageFolderName);
     }
+
+    // Its device-only counterpart (AppOptionsContext.NoBackupStoragePath): the same name, under the
+    // folder the platform keeps out of backups.
+    public string ResolveNoBackupStoragePath(string noBackupFolderPath)
+    {
+        return Path.Combine(noBackupFolderPath, RequiredStorageFolderName);
+    }
+
+    private string RequiredStorageFolderName => StorageFolderName ?? throw new InvalidOperationException(
+        $"This platform keeps the app's files in a folder the head names; {nameof(StorageFolderName)} is required.");
 }

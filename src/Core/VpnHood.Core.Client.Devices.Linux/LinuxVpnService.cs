@@ -16,6 +16,7 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
     {
         _vpnServiceHost = new VpnServiceHost(
             configFolder: configFolder, 
+            dataFolder: configFolder,
             vpnServiceHandler: this,
             socketFactory: new MsQuicSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),

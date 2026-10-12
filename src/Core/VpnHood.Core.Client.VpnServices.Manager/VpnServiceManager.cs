@@ -47,6 +47,9 @@ public class VpnServiceManager : IDisposable
     public VpnServiceManager(IDevice device, TimeSpan? eventWatcherInterval)
     {
         Directory.CreateDirectory(device.VpnServiceConfigFolder);
+#pragma warning disable CS0618 // Type or member is obsolete
+        VpnServiceFolders.MigrateServiceFiles(device.VpnServiceDataFolder, device.VpnServiceConfigFolder);
+#pragma warning restore CS0618 // Type or member is obsolete
         _serviceOptionsFile = new VpnServiceOptionsFile(device.VpnServiceConfigFolder);
         _vpnStatusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         _device = device;

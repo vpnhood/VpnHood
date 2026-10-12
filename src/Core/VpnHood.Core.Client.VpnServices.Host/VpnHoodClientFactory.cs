@@ -74,7 +74,7 @@ public class VpnHoodClientFactory
                 new SimpleProxyConnector(proxyOptions.ProxyEndPoint),
             ProxyMode.Managed => await ManagedProxyConnector.Create(
                 proxyOptions: proxyOptions,
-                store: new ProxyEndPointStore(Path.Combine(clientParams.ConfigFolder, "proxies", "proxies.db")),
+                store: new ProxyEndPointStore(VpnServiceFolders.GetProxyStoreFilePath(clientParams.DataFolder)),
                 serverCheckTimeout: serviceOptions.ClientOptions.Transport.ServerQueryTimeout,
                 cancellationToken: cancellationToken).Vhc(),
             _ => null

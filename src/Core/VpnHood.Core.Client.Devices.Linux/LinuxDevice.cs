@@ -16,6 +16,7 @@ public class LinuxDevice(string storageFolder) : IDevice
         Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: false)
     };
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
+    public string VpnServiceDataFolder => VpnServiceConfigFolder; // nothing backs up a desktop app's data
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsTcpProxySupported => true;

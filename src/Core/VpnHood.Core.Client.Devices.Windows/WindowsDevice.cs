@@ -18,6 +18,7 @@ public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
         Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: false)
     };
     public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
+    public string VpnServiceDataFolder => VpnServiceConfigFolder; // nothing backs up a desktop app's data
     public bool IsExcludeAppsSupported => isDebugMode;
     public bool IsIncludeAppsSupported => isDebugMode;
     public bool IsTcpProxySupported => true;

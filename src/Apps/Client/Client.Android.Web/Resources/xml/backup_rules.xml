@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- What Auto Backup leaves out on Android 11 and older: the logs
-     (data_extraction_rules.xml for newer ones). The logs stay on the device that wrote
-     them. -->
-<full-backup-content>
-	<exclude domain="file" path=".local/share/VpnHood/app.log" />
-	<exclude domain="file" path=".local/share/vpn-service" />
-</full-backup-content>

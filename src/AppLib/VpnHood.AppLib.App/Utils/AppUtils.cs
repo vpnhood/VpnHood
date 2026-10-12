@@ -8,6 +8,8 @@ namespace VpnHood.AppLib.App.Utils;
 
 public static class AppUtils
 {
+    internal const string FolderNameAssets = "assets";
+
     // A zip a head named, as assets: extracted once into a folder the APP chooses, named for what
     // it holds rather than for the zip it came from, so no head can put two of them in one.
     internal static IAssetProvider? CreateZipAssetProvider(IAsset? zipAsset, string storageFolderPath,
@@ -15,7 +17,7 @@ public static class AppUtils
     {
         return zipAsset is null
             ? null
-            : new ZipAssetProvider(zipAsset, Path.Combine(storageFolderPath, "assets", folderName));
+            : new ZipAssetProvider(zipAsset, Path.Combine(storageFolderPath, FolderNameAssets, folderName));
     }
 
     // The same for zips a head named more than one of, as ONE provider joined here rather than at
@@ -30,7 +32,7 @@ public static class AppUtils
             ? null
             : new CompositeAssetProvider(zipAssets
                 .Select((asset, index) => (IAssetProvider)new ZipAssetProvider(asset,
-                    Path.Combine(storageFolderPath, "assets", index == 0 ? folderName : $"{folderName}-{index}")))
+                    Path.Combine(storageFolderPath, FolderNameAssets, index == 0 ? folderName : $"{folderName}-{index}")))
                 .ToArray());
     }
 

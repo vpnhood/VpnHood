@@ -41,6 +41,7 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
             AppId = initParams.AppId,
             AppName = initParams.AppName,
             StoragePath = storagePath,
+            NoBackupStoragePath = storagePath, // nothing backs up a desktop app's data
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };
 

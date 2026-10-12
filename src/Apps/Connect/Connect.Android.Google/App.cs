@@ -63,7 +63,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppInitParams {
             AppId = PackageName ?? throw new InvalidOperationException("The app has no package name."),
             AppName = AppConstants.AppName,
-            StorageFolderName = "VpnHoodConnect", // what every shipped build has used; the backup rules name it
+            StorageFolderName = "VpnHoodConnect", // what every shipped build has used
             AppOptionsFactory = CreateAppOptions
         };
     }
@@ -191,7 +191,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             var googlePlayBillingProvider = TryCreateBillingClient();
 
             // a Debug build may reach a development portal's certificate
-            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.StoragePath,
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.NoBackupStoragePath,
                 appConfigs.PortalBaseUri, context.AppId, [authenticationExternalProvider],
                 restoreCredentialProvider: new GoogleRestoreCredentialProvider(),
                 ignoreSslVerification: AppConstants.IsDebugMode);

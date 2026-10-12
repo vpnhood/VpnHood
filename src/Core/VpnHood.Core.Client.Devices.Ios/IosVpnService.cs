@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using ObjCRuntime;
+using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
@@ -39,6 +40,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 
 
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
+    private const string VpnServiceDataFolderKey = "VpnServiceDataFolder";
 
     /// Called by IosVpnAdapter.AdapterOpen after SetTunnelNetworkSettings succeeds (error == null)
     /// or fails (error != null). Safe to call multiple times — only the first call wins.
@@ -68,6 +70,17 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // Last resort — IPC will not work between App and Extension with this path.
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
+    }
+
+    // The proxies' folder, which travels with a backup (IosDevice.VpnServiceDataFolder), passed by the
+    // App as the config folder is. A configuration an older App saved names one folder for both.
+    private string ResolveDataFolder(string configFolder)
+    {
+        var proto = ProtocolConfiguration as NETunnelProviderProtocol;
+        return proto?.ProviderConfiguration?[(NSString)VpnServiceDataFolderKey] is NSString folderStr &&
+               !string.IsNullOrEmpty(folderStr)
+            ? folderStr.ToString()
+            : configFolder;
     }
 
     // Called by the .NET iOS runtime when ObjC creates the extension instance.
@@ -100,9 +113,15 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         _startTunnelCompletionHandler = startTunnelCompletionHandler;
         _completionFired = false;
 
-        // Resolve the config folder — ProviderConfiguration set by App takes priority.
+        // Resolve the folders — ProviderConfiguration set by App takes priority. The config folder stays
+        // out of backups where it is a folder of its own, not the proxies' one.
         var configFolder = ResolveConfigFolder();
-        try { Directory.CreateDirectory(configFolder); } catch { /* ignore */ }
+        var dataFolder = ResolveDataFolder(configFolder);
+        try {
+            if (dataFolder == configFolder) Directory.CreateDirectory(configFolder);
+            else IosNoBackupFolder.Create(configFolder);
+        }
+        catch { /* ignore */ }
 
         // Kick off heavy VpnHood init off the main thread.
         _ = Task.Run(() => {
@@ -114,7 +133,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                 var sf = new IosSocketFactory(memoryScale: () => _vpnServiceHost?.IsTcpProxy == true ? 1 : 2);
                 // withLogger: true - the extension is a process of its own, so the host keeps its own log
                 // file, with the settings the app's LogServiceOptions carry
-                _vpnServiceHost = new VpnServiceHost(configFolder, this, sf,
+                _vpnServiceHost = new VpnServiceHost(configFolder, dataFolder, this, sf,
                     withLogger: true, messageListener: _messageListener);
                 _ = _vpnServiceHost.TryConnect(true);
             }

@@ -1,4 +1,5 @@
-﻿using VpnHood.AppLib.Api.Settings;
+﻿using System.Text.Json.Serialization;
+using VpnHood.AppLib.Api.Settings;
 using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.AppLib.App.Settings;
@@ -6,7 +7,11 @@ namespace VpnHood.AppLib.App.Settings;
 public class AppSettings
 {
     public int Version { get; set; } = 2;
-    public string ClientId { get; set; } = Guid.NewGuid().ToString();
+    // The install's id, which moved to the device-only folder so a backup no longer carries it; an older
+    // file still does, and VpnHoodApp.MigrateInstallId takes it from there.
+    [Obsolete("Migration (2026-10): drop a few months after it ships, with VpnHoodApp.MigrateInstallId.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ClientId { get; set; }
     public bool IsNotificationRequested { get; set; }
     public UserReview? UserReview { get; set; }
     public bool IsStartupTrackerSent { get; set; }

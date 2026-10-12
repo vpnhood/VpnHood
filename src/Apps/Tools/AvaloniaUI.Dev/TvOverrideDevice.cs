@@ -11,6 +11,7 @@ internal sealed class TvOverrideDevice(IDevice inner, bool isTv) : IDevice
 {
     public bool IsTv => isTv;
     public string VpnServiceConfigFolder => inner.VpnServiceConfigFolder;
+    public string VpnServiceDataFolder => inner.VpnServiceDataFolder;
     public bool IsExcludeAppsSupported => inner.IsExcludeAppsSupported;
     public bool IsIncludeAppsSupported => inner.IsIncludeAppsSupported;
     public bool IsBindProcessToVpnSupported => inner.IsBindProcessToVpnSupported;

@@ -37,6 +37,7 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
             AppId = initParams.AppId,
             AppName = initParams.AppName,
             StoragePath = storagePath,
+            NoBackupStoragePath = storagePath, // nothing backs up a desktop app's data
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };
 
@@ -44,8 +45,8 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
         appOptions.DeviceUiProvider ??= new WindowsDeviceUiProvider();
         appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
 
-        // No DeviceId: the service's account is every machine's same S-1-5-18, so the app's own
-        // Settings.ClientId serves.
+        // No DeviceId: the service's account is every machine's same S-1-5-18, so the install's own id
+        // serves (VpnHoodApp.LoadInstallId).
 
         // the service control manager stops the daemon, and the tunnel must end with it
         appOptions.DisconnectOnDispose = true;

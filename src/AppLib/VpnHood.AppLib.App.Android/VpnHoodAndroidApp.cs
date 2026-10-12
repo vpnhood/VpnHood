@@ -31,14 +31,26 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
             return new VpnHoodAndroidApp();
 
         var initParams = initParamsFactory();
+        var storagePath = initParams.ResolveStoragePath();
+        var noBackupStoragePath = initParams.ResolveNoBackupStoragePath(
+            Application.Context.NoBackupFilesDir?.AbsolutePath ??
+            throw new InvalidOperationException("Android named no no-backup folder for the app."));
+
+        // before the head's factory, whose providers read the sign-in session at once
+#pragma warning disable CS0618 // Type or member is obsolete
+        AppStorageMigration.MoveToNoBackup(storagePath, noBackupStoragePath);
+#pragma warning restore CS0618 // Type or member is obsolete
         var context = new AppOptionsContext {
             AppId = initParams.AppId,
             AppName = initParams.AppName,
-            StoragePath = initParams.ResolveStoragePath(),
+            StoragePath = storagePath,
+            NoBackupStoragePath = noBackupStoragePath,
             PackagedAssetProvider = new AndroidAssetProvider(Application.Context)
         };
 
         var options = initParams.AppOptionsFactory(context);
+        if (options.IsDebugMode)
+            VerifyStoragePath(storagePath);
         options.DeviceUiProvider ??= new AndroidDeviceUiProvider();
         options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
         options.DeviceId ??= AndroidUtils.GetDeviceId(Application.Context); //this will be hashed using AppId
@@ -46,6 +58,18 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
         var vpnHoodDevice = AndroidDevice.Create();
         VpnHoodApp.Init(vpnHoodDevice, options);
         return new VpnHoodAndroidApp();
+    }
+
+    // A Debug build's check that .NET still maps the app's local data to its files folder: a runtime
+    // that moved it would start every updated install empty, as Xamarin's files/.local/share once
+    // misled the backup rules.
+    private static void VerifyStoragePath(string storagePath)
+    {
+        var filesPath = Application.Context.FilesDir?.AbsolutePath ??
+                        throw new InvalidOperationException("Android named no files folder for the app.");
+        if (Path.GetDirectoryName(storagePath) != filesPath)
+            throw new InvalidOperationException(
+                $"The app's storage is not in its files folder. StoragePath: {storagePath}, FilesDir: {filesPath}");
     }
 
     private static void OnUnhandledExceptionRaiser(object? sender, RaiseThrowableEventArgs args)

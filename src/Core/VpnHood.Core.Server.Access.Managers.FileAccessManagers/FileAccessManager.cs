@@ -316,6 +316,9 @@ public class FileAccessManager : IAccessManager
             // read accessItem
             var accessTokenData = await AccessTokenService.Get(tokenId, cancellationToken).Vhc();
 
+            // the server recovers a session for its client's request: a use
+            SessionService.UpdateLastUsedTime(sessionId);
+
             // read usage
             return SessionService.GetSessionResponse(sessionId, accessTokenData, hostEndPoint);
         }
@@ -442,7 +445,12 @@ public class FileAccessManager : IAccessManager
                 ErrorMessage = "Token does not exist."
             };
 
-        await AccessTokenService.AddUsage(tokenId, sessionUsage.ToTraffic(), cancellationToken);
+        var traffic = sessionUsage.ToTraffic();
+        await AccessTokenService.AddUsage(tokenId, traffic, cancellationToken);
+
+        // a session's traffic is its use
+        if (traffic.Total > 0)
+            SessionService.UpdateLastUsedTime(sessionId);
 
         if (sessionUsage.ErrorCode != SessionErrorCode.Ok)
             SessionService.CloseSession(sessionId, sessionUsage.ErrorCode);

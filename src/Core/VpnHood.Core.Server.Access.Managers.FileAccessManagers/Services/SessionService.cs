@@ -65,8 +65,9 @@ public class SessionService : IDisposable
         return Path.Combine(_sessionsFolderPath, $"{sessionId}.{SessionFileExtension}");
     }
 
-    // at a session's creation and again at its end: loaded as live after a restart, an ended session suppressed its
-    // client's live one at the server's recovery. One write at a time, as two calls may end a session at once
+    // the file follows the session (its creation, its end, its use), so a restart loads it as it was: loaded as live,
+    // an ended session suppressed its client's live one at the server's recovery. One write at a time, as two calls
+    // may change a session at once
     private void Save(Session session)
     {
         lock (_fileLock)
@@ -91,6 +92,16 @@ public class SessionService : IDisposable
         return default;
     }
 
+    // a live session times out 48 hours after its last use, saved so a restart keeps it
+    public void UpdateLastUsedTime(ulong sessionId)
+    {
+        if (!Sessions.TryGetValue(sessionId, out var session))
+            return;
+
+        session.UpdateLastUsedTime();
+        Save(session);
+    }
+
     public string? FindTokenIdFromSessionId(ulong sessionId)
     {
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
@@ -107,7 +118,6 @@ public class SessionService : IDisposable
             TokenId = accessTokenData.AccessToken.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.UtcNow,
-            LastUsedTime = FastDateTime.UtcNow,
             SessionKey = VhUtils.GenerateKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,

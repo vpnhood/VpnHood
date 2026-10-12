@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.Json.Nodes;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
@@ -183,6 +184,49 @@ public class FileAccessManagerTest : TestBase
             responses.Single(x => x.SessionId == closedSession.SessionId).ErrorCode);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy,
             responses.Single(x => x.SessionId == suppressedSession.SessionId).ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task A_used_session_times_out_from_its_last_use_not_its_creation()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        using var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        var token = accessManager1.CreateToken(maxClientCount: 2);
+        var usedSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
+        var unusedSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
+
+        // both made 47 hours ago, as their files hold them; a restart loads them
+        var oldTime = DateTime.UtcNow.AddHours(-47);
+        SetSessionTimes(accessManager1.SessionsFolderPath, usedSession.SessionId, oldTime);
+        SetSessionTimes(accessManager1.SessionsFolderPath, unusedSession.SessionId, oldTime);
+        using var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
+
+        // the server's report of a session's traffic is its use; the start's recovery is none
+        await accessManager2.Session_GetAll(TestCt);
+        await accessManager2.Session_AddUsage(usedSession.SessionId, new Traffic { Sent = 10, Received = 10 }, null,
+            TestCt);
+        Assert.IsGreaterThan(DateTime.UtcNow.AddMinutes(-1), GetLastUsedTime(accessManager2, usedSession.SessionId));
+        Assert.IsLessThan(oldTime.AddMinutes(1), GetLastUsedTime(accessManager2, unusedSession.SessionId));
+
+        // a restart keeps the use
+        using var accessManager3 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        Assert.IsGreaterThan(DateTime.UtcNow.AddMinutes(-1), GetLastUsedTime(accessManager3, usedSession.SessionId));
+    }
+
+    // a session's times as its file would hold them had it been made then
+    private static void SetSessionTimes(string sessionsFolderPath, ulong sessionId, DateTime time)
+    {
+        var filePath = Path.Combine(sessionsFolderPath, $"{sessionId}.session");
+        var session = JsonNode.Parse(File.ReadAllText(filePath)) ??
+                      throw new InvalidOperationException("The session file is empty.");
+        session["CreatedTime"] = time;
+        session["LastUsedTime"] = time;
+        File.WriteAllText(filePath, session.ToJsonString());
+    }
+
+    private static DateTime GetLastUsedTime(FileAccessManager accessManager, ulong sessionId)
+    {
+        return accessManager.SessionService.Sessions[sessionId].LastUsedTime;
     }
 
     public SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)

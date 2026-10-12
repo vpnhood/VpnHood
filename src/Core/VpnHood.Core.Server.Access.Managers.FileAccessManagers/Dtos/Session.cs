@@ -13,7 +13,8 @@ public class Session
     public required ClientInfo ClientInfo { get; init; }
     public required byte[] SessionKey { get; init; }
     public DateTime CreatedTime { get; init; } = FastDateTime.UtcNow;
-    public DateTime LastUsedTime { get; init; } = FastDateTime.UtcNow;
+    [JsonInclude] // the file sets it; the session's own use moves it
+    public DateTime LastUsedTime { get; private set; } = FastDateTime.UtcNow;
     public DateTime? EndTime { get; set; }
     public DateTime? ExpirationTime { get; set; }
     public bool IsAlive => EndTime == null;
@@ -34,5 +35,10 @@ public class Session
     {
         if (IsAlive)
             EndTime = FastDateTime.UtcNow;
+    }
+
+    public void UpdateLastUsedTime()
+    {
+        LastUsedTime = FastDateTime.UtcNow;
     }
 }

@@ -20,6 +20,10 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     private static readonly Lock WinDivertDllLock = new();
     private static readonly Lock WinDivertOpenLock = new();
     private static IntPtr _winDivertDll; // the one WinDivert.dll of the process, once loaded
+
+    // AdapterOpen is atomic against AdapterClose and AdapterRemove: a stop during the open would find no handle
+    // yet and drop the device, and the handle the open then made would hold the host's matching traffic unread
+    private readonly Lock _deviceLock = new();
     private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
     private readonly List<IpNetwork> _includeIpNetworks = [];
@@ -56,9 +60,11 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override void AdapterRemove()
     {
-        AdapterClose();
-        _device?.Dispose();
-        _device = null;
+        lock (_deviceLock) {
+            AdapterClose();
+            _device?.Dispose();
+            _device = null;
+        }
     }
 
     private static string Ip(IpRange ipRange)
@@ -68,9 +74,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
-        if (_device == null)
-            throw new InvalidOperationException("Device is not initialized.");
-
         var ipRanges = _includeIpNetworks.ToIpRanges();
         if (_excludeLocalNetwork)
             ipRanges = ipRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
@@ -96,13 +99,18 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
         try {
-            _device.Filter = filter;
+            lock (_deviceLock) {
+                if (_device == null)
+                    throw new InvalidOperationException("Could not open WinDivert. The device has been removed.");
 
-            // One open at a time in the process: with the driver not loaded, the first open installs and starts
-            // it, and a second that found none meanwhile fails to start it again (error 1058). Two processes
-            // opening in that moment still can; left so: the user's reconnect opens the running driver
-            lock (WinDivertOpenLock)
-                _device.Open(new DeviceConfiguration());
+                _device.Filter = filter;
+
+                // One open at a time in the process: with the driver not loaded, the first open installs and
+                // starts it, and a second that found none meanwhile fails to start it again (error 1058). Two
+                // processes opening at that moment still can; left so: a reconnect opens the running driver
+                lock (WinDivertOpenLock)
+                    _device.Open(new DeviceConfiguration());
+            }
         }
         catch (Exception ex) {
             if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -117,7 +125,8 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override void AdapterClose()
     {
-        _device?.Close();
+        lock (_deviceLock)
+            _device?.Close();
     }
 
 

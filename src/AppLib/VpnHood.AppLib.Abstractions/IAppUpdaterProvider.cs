@@ -11,4 +11,8 @@ public interface IAppUpdaterProvider
     Task<bool> IsUpdateAvailable(IUiContext? uiContext, CancellationToken cancellationToken);
 
     Task<bool> Update(IUiContext? uiContext, CancellationToken cancellationToken);
+
+    // Brings back the screen of an update the person started and left before it finished; false when
+    // there is none. Asked with a window in front, apart from the checks' interval.
+    Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken);
 }

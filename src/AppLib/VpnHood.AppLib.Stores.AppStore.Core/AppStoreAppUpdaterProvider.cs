@@ -94,6 +94,12 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
         }
     }
 
+    // the update runs in the App Store app, so the app has none of its own to bring back
+    public Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(false);
+    }
+
     private static Version Normalize(Version version) =>
         new(version.Major, version.Minor, Math.Max(version.Build, 0));
 

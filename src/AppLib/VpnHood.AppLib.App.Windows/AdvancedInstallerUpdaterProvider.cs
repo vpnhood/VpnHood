@@ -20,6 +20,11 @@ public class AdvancedInstallerUpdaterProvider : IAppUpdaterProvider
         return UpdateInternal(true, cancellationToken);
     }
 
+    public Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(false);
+    }
+
     private static async Task<bool> UpdateInternal(bool executeUpdate, CancellationToken cancellationToken)
     {
         // launch updater if exists

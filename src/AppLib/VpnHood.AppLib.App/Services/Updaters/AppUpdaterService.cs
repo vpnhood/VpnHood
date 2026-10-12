@@ -14,17 +14,23 @@ public class AppUpdaterService : IDisposable
     private readonly AsyncLock _versionCheckLock = new();
     private readonly Version _appVersion;
     private readonly AppUpdaterOptions _updateOptions;
+    private readonly Func<bool> _isConnected;
     private string VersionCheckFilePath => Path.Combine(field, "version.json");
     private readonly Lazy<AppUpdaterData> _lazyData;
     private AppUpdaterData Data => _lazyData.Value;
     private bool _disposed;
 
+    /// <param name="isConnected">
+    /// Whether the VPN is connected: a filtered network may reach the store only through the tunnel,
+    /// so the store's "none" counts only then.
+    /// </param>
     public AppUpdaterService(string storageFolderPath, Version appVersion,
-        AppUpdaterOptions updateOptions)
+        AppUpdaterOptions updateOptions, Func<bool> isConnected)
     {
         VersionCheckFilePath = storageFolderPath;
         _appVersion = appVersion;
         _updateOptions = updateOptions;
+        _isConnected = isConnected;
         // defer reading version.json until update status is first queried
         _lazyData = new Lazy<AppUpdaterData>(() => {
             var data = JsonUtils.TryDeserializeFile<AppUpdaterData>(VersionCheckFilePath) ?? new AppUpdaterData();
@@ -45,12 +51,19 @@ public class AppUpdaterService : IDisposable
                 VersionStatus = versionStatus,
                 CheckedTime = Data.CheckedTime,
                 PublishInfo = Data.PublishInfo,
-                Prompt = Data.UpdaterAvailableSince == null &&
+                // the feed's notice is the way only where the store is not
+                Prompt = !IsUpdaterOffering &&
                          versionStatus is VersionStatus.Old or VersionStatus.Deprecated &&
                          !IsInPostponeTime
             };
         }
     }
+
+    // The store said lately that it has an update for the installed version: its own screen is the way.
+    // An offer to the version before an install, or from before the version was kept with it, is none.
+    private bool IsUpdaterOffering =>
+        _appVersion.Equals(Data.UpdaterAvailableVersion) &&
+        FastDateTime.UtcNow - Data.UpdaterLastAvailableTime < _updateOptions.UpdaterOfferPeriod;
 
     private bool IsInPostponeTime =>
         Data.PostponeTime != null &&
@@ -59,7 +72,7 @@ public class AppUpdaterService : IDisposable
 
     private VersionStatus CalcVersionStatus()
     {
-        if (Data.UpdaterAvailableSince != null)
+        if (IsUpdaterOffering)
             return VersionStatus.Old;
 
         if (Data.PublishInfo == null)
@@ -98,6 +111,11 @@ public class AppUpdaterService : IDisposable
         // check if the version check is already in progress
         using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
 
+        // an update the person started and left before it finished comes back with a window in front,
+        // whatever the interval or a postpone: their own choice, not a prompt
+        if (await TryResumeUpdate(uiContext, cancellationToken).Vhc())
+            return;
+
         // reset postpone time and version if forced
         if (force) {
             Data.PostponeTime = null; // reset postpone time if forced
@@ -120,49 +138,79 @@ public class AppUpdaterService : IDisposable
         }
 
         try {
-            // check by provider
-            if (await TryUpdateByProvider(uiContext, force, cancellationToken).Vhc() ||
-                await TryUpdateByPublishInfoUrl(cancellationToken).Vhc()) {
+            // the store's updater first, then the feed. The store's "none" before a connect leaves the
+            // check unstamped, whatever the feed said, so the try after the connect - through the
+            // tunnel - asks the store again
+            var providerResult = await TryUpdateByProvider(uiContext, force, cancellationToken).Vhc();
+            var isPublishInfoRead = providerResult != true && await TryUpdateByPublishInfoUrl(cancellationToken).Vhc();
+            if (providerResult == true ||
+                (providerResult == false && (isPublishInfoRead || _updateOptions.UpdateInfoUrl == null)))
                 Data.CheckedTime = FastDateTime.UtcNow;
-            }
         }
         catch (UiContextNotAvailableException) {
-            // A store's updater shows its own screen: the check waits for a window, unstamped, or the
-            // feed's answer would put the store's prompt off for a whole interval
-            VhLogger.Instance.LogDebug("The updater provider needs a window, and none is open.");
+            // A store's updater shows its own screen: the check waits for a window in front, unstamped,
+            // or the feed's answer would put the store's prompt off for a whole interval
+            VhLogger.Instance.LogDebug("The updater provider needs a window in front, and none is.");
         }
         finally {
             Save();
         }
     }
 
-    private async Task<bool> TryUpdateByProvider(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
+    private async Task<bool> TryResumeUpdate(IUiContext? uiContext, CancellationToken cancellationToken)
+    {
+        try {
+            var updater = _updateOptions.UpdaterProvider;
+            return updater != null && uiContext != null && await uiContext.IsActive().Vhc() &&
+                   await updater.ResumeUpdate(uiContext, cancellationToken).Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not resume the update the user started.");
+            return false;
+        }
+    }
+
+    // True: the store's updater has the update in hand - shown, waiting its turn, or put off. False: it
+    // has none to offer, and the feed decides. Null: it said "none" before a connect, which may only
+    // mean it could not reach its servers - Play answers "none" with no connection to Google, and a
+    // filtered network reaches the store only through the tunnel - so the try after the connect asks
+    // it again.
+    private async Task<bool?> TryUpdateByProvider(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
     {
         try {
             var updater = _updateOptions.UpdaterProvider;
             if (updater == null)
                 return false; // no updater provider. Job done
 
-            if (!await updater.IsUpdateAvailable(uiContext, cancellationToken)) {
-                Data.UpdaterAvailableSince = null;
-                return false; // no update available or could not handle the update
-            }
+            if (!await updater.IsUpdateAvailable(uiContext, cancellationToken))
+                return _isConnected() ? false : null;
 
-            // update available time if not set
-            Data.UpdaterAvailableSince ??= FastDateTime.UtcNow;
+            // an offer belongs to the version it was made to: an install starts a new one
+            var now = FastDateTime.UtcNow;
+            if (!_appVersion.Equals(Data.UpdaterAvailableVersion)) {
+                Data.UpdaterAvailableVersion = _appVersion;
+                Data.UpdaterAvailableSince = null;
+            }
+            Data.UpdaterAvailableSince ??= now;
+            Data.UpdaterLastAvailableTime = now;
 
             // wait while the user's postpone is active or the auto-updater has not had its chance yet
-            if (!force && (IsInPostponeTime ||
-                           FastDateTime.UtcNow - Data.UpdaterAvailableSince < _updateOptions.PromptDelay))
+            if (!force && (IsInPostponeTime || now - Data.UpdaterAvailableSince < _updateOptions.PromptDelay))
                 return true; // handled
 
-            // update available, try to update
-            if (!await updater.Update(uiContext, cancellationToken).Vhc())
-                return false; // handled
+            // the store's screen shows over the window, and Android opens none for an app in the
+            // background: a window there leaves the check for its return to the front
+            if (uiContext == null || !await uiContext.IsActive().Vhc())
+                throw new UiContextNotAvailableException();
 
-            // update was handled so reset the UpdaterAvailableSince, till next check
+            // the store's screen; one that failed is shown again at the next check, since the store's
+            // update stays the way while the store offers it
+            if (!await updater.Update(uiContext, cancellationToken).Vhc())
+                return true;
+
+            // shown: the user updated or put it off, and the store's next offer waits PromptDelay again
             Data.UpdaterAvailableSince = null;
-            Postpone(); // this version is postponed because user either updated or skipped the update
+            Postpone();
             return true;
         }
         catch (UiContextNotAvailableException) {
@@ -170,7 +218,7 @@ public class AppUpdaterService : IDisposable
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not check version by UpdaterProvider.");
-            return false; // could not check version by UpdaterProvider. 
+            return _isConnected() ? false : null;
         }
     }
 

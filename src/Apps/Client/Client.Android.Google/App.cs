@@ -42,7 +42,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "android"),
             UpdaterProvider = new GooglePlayAppUpdaterProvider(),
-            PromptDelay = TimeSpan.FromDays(3)
+            // Play says "update available" only once it has reached Google, so its screen comes at
+            // once: where Play is reachable only through the tunnel, its own update may never run
+            PromptDelay = TimeSpan.Zero
         };
         return options;
     }

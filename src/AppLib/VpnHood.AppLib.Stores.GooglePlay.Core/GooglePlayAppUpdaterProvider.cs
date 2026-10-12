@@ -17,15 +17,26 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
     // which would answer "no update" and restart the prompt's delay
     public Task<bool> IsUpdateAvailable(IUiContext? uiContext, CancellationToken cancellationToken)
     {
-        return UpdateInternal(uiContext ?? throw new UiContextNotAvailableException(), false, cancellationToken);
+        return UpdateInternal(uiContext ?? throw new UiContextNotAvailableException(),
+            UpdateAvailability.UpdateAvailable, execute: false, cancellationToken);
     }
 
     public Task<bool> Update(IUiContext? uiContext, CancellationToken cancellationToken)
     {
-        return UpdateInternal(uiContext ?? throw new UiContextNotAvailableException(), true, cancellationToken);
+        return UpdateInternal(uiContext ?? throw new UiContextNotAvailableException(),
+            UpdateAvailability.UpdateAvailable, execute: true, cancellationToken);
     }
 
-    public static async Task<bool> UpdateInternal(IUiContext uiContext, bool execute, CancellationToken cancellationToken)
+    // Google's guide for immediate updates: one the person started and left before it finished reports
+    // DeveloperTriggeredUpdateInProgress, and the app brings its screen back
+    public Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return UpdateInternal(uiContext,
+            UpdateAvailability.DeveloperTriggeredUpdateInProgress, execute: true, cancellationToken);
+    }
+
+    private static async Task<bool> UpdateInternal(IUiContext uiContext, int availability, bool execute,
+        CancellationToken cancellationToken)
     {
         try {
             var appUiContext = (AndroidUiContext)uiContext;
@@ -36,7 +47,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             // So we return false if there is UpdateNotAvailable to let the alternative way works
             VhLogger.Instance.LogDebug("Checking for Google Play update availability...");
             var updateAvailability = appUpdateInfo.UpdateAvailability();
-            if (updateAvailability != UpdateAvailability.UpdateAvailable) {
+            if (updateAvailability != availability) {
                 VhLogger.Instance.LogDebug(
                     "Google Play update is not available. UpdateAvailability: {UpdateAvailability}",
                     updateAvailability);

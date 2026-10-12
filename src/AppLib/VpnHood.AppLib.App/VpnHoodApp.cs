@@ -292,7 +292,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 : new AppUpdaterService(
                     storageFolderPath: options.StorageFolderPath,
                     appVersion: Features.Version,
-                    updateOptions: options.UpdaterOptions),
+                    updateOptions: options.UpdaterOptions,
+                    isConnected: () => ConnectionState is AppConnectionState.Connected),
             ProxyEndPointService = new AppProxyEndPointService(
                 dbPath: Path.Combine(_device.VpnServiceConfigFolder, "proxies", "proxies.db"),
                 ipLocationProvider: _ipRangeLocationProvider,
@@ -512,6 +513,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // window was there all along, so its return to the front is what shows it
         if (ConnectionState is AppConnectionState.WaitingForAd)
             _ = TryShowAd();
+
+        // the window's return checks for an update too: a window kept for days with the VPN on all
+        // along would get no check otherwise, and a store's screen left for a window in front shows now
+        if (AppUiContext.Context is { } uiContext)
+            _ = Services.UpdaterService?.TryCheckForUpdate(uiContext, false, CancellationToken.None);
     }
 
     public VpnProfileInfo? CurrentVpnProfileInfo =>

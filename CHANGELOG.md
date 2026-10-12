@@ -32,6 +32,7 @@
 * Fix: With "Share anonymous usage data" off, the app no longer reports each start, nor the VPN each connection and its usage, and turning it off while connected stops the VPN's reports at once #android
 * Fix: Where the app asks you to accept its terms at first run, it sends no usage data before you accept them #android #windows #linux
 * Fix: A VPN started without opening the app - always-on, the quick-settings tile, or the system restarting it - follows your latest settings, "Share anonymous usage data" among them #android
+* Fix: Where Google Play works only through the VPN, its update now comes once you connect, and an update you started and left comes back when you return to the app #android #store
 * Update: The Android app from our website no longer contains AppsFlyer, so it no longer reports which link it was installed from #android #connect
 * Fix: A head built without the browser page starts and serves its API; only a request for the page fails, naming the missing file. A service that cannot start says why in its log, and on Windows in the Application event log under the service's name.
 * Fix: ApiClientBase sends a request body only when there is data. A POST, PUT or PATCH without data used to send the JSON null, and data given with any other method was dropped.

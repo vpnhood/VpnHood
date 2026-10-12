@@ -9,4 +9,9 @@ public class AppUpdaterOptions
     public TimeSpan CheckInterval { get; init; } = TimeSpan.FromHours(24);
     public TimeSpan PromptDelay { get; init; } = TimeSpan.FromDays(3); // wait for autoupdate 
     public TimeSpan PostponePeriod { get; init; } = TimeSpan.FromDays(7);
+
+    // How long the store's "update available" keeps the feed's notice away. A store out of reach
+    // answers "none" (Play does with no connection to Google), so only this long without its offer
+    // makes the feed's notice the way.
+    public TimeSpan UpdaterOfferPeriod { get; init; } = TimeSpan.FromDays(7);
 }

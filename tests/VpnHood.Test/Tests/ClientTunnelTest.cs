@@ -200,7 +200,7 @@ public class ClientTunnelTest : TestBase
         clientServer.Collect();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Udp");
-        await TestHelper.Test_UdpEcho();
+        await TunnelState.Assert(() => TestHelper.Test_UdpEcho(), clientServer.Client, clientServer.Server);
 
         await clientServer.AssertTransfer();
     }
@@ -210,7 +210,8 @@ public class ClientTunnelTest : TestBase
         clientServer.Collect();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv4");
-        await TestHelper.Test_Ping(ipAddress: MockEps.PingV4Address1);
+        await TunnelState.Assert(() => TestHelper.Test_Ping(ipAddress: MockEps.PingV4Address1),
+            clientServer.Client, clientServer.Server);
 
         await clientServer.AssertTransfer();
     }
@@ -223,7 +224,8 @@ public class ClientTunnelTest : TestBase
         clientServer.Collect();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv6");
-        await TestHelper.Test_Ping(ipAddress: MockEps.PingV6Address1);
+        await TunnelState.Assert(() => TestHelper.Test_Ping(ipAddress: MockEps.PingV6Address1),
+            clientServer.Client, clientServer.Server);
 
         await clientServer.AssertTransfer();
     }

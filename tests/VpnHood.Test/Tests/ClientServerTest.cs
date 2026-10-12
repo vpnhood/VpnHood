@@ -417,17 +417,20 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using (await TestHelper.CreateClient(token, vpnAdapter: TestHelper.CreateTestVpnAdapter())) {
+        var vpnAdapter1 = TestHelper.CreateTestVpnAdapter();
+        await using (var client1 = await TestHelper.CreateClient(token, vpnAdapter: vpnAdapter1)) {
             // test Icmp & Udp
-            await TestHelper.Test_Ping(ping);
-            await TestHelper.Test_UdpEcho(udpClient);
+            await TunnelState.Assert(() => TestHelper.Test_Ping(ping), client1, server);
+            await TunnelState.Assert(() => TestHelper.Test_UdpEcho(udpClient), client1, server);
         }
 
-        // create client
-        await using (await TestHelper.CreateClient(token, vpnAdapter: TestHelper.CreateTestVpnAdapter())) {
+        // create client; a ping that timed out here once found the first client's adapter still reading
+        await using (var client2 = await TestHelper.CreateClient(token, vpnAdapter: TestHelper.CreateTestVpnAdapter())) {
             // test Icmp & Udp
-            await TestHelper.Test_Ping(ping);
-            await TestHelper.Test_UdpEcho(udpClient);
+            await TunnelState.Assert(() => TestHelper.Test_Ping(ping), client2, server,
+                () => $"First adapter started: {vpnAdapter1.IsStarted}.");
+            await TunnelState.Assert(() => TestHelper.Test_UdpEcho(udpClient), client2, server,
+                () => $"First adapter started: {vpnAdapter1.IsStarted}.");
         }
     }
 

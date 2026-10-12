@@ -23,7 +23,7 @@ public static class TestHelperTransferExtensions
             ping ??= pingTmp;
             var pingReply = await ping.SendPingAsync(ipAddress, timeout.Value, new byte[1024]);
             if (pingReply.Status != IPStatus.Success)
-                throw new PingException($"Ping failed. Status: {pingReply.Status}");
+                throw new PingException($"Ping failed. Status: {pingReply.Status}, Address: {ipAddress}, Timeout: {timeout}");
         }
 
         public async Task Test_Dns(IPEndPoint? nsEndPoint = null, TimeSpan? timeout = null,

@@ -84,9 +84,9 @@ function Invoke-VhSign([string[]]$files, [switch]$recurseContainers) {
 	if (-not $signEnabled -or -not $files) { return; }
 
 	# NEVER re-sign. Anything that already carries a signature — Microsoft's runtime, WinDivert.dll,
-	# Caphyon's updater.exe, or our own output from an earlier run of this script — is dropped HERE rather
-	# than at the call site, so no caller can forget: overwriting a vendor's identity with ours buys
-	# nothing and burns signing quota. Callers may therefore hand over a whole publish folder.
+	# or our own output from an earlier run of this script — is dropped HERE rather than at the call
+	# site, so no caller can forget: overwriting a vendor's identity with ours buys nothing and burns
+	# signing quota. Callers may therefore hand over a whole publish folder.
 	$pending = @($files | Where-Object { -not (Get-AuthenticodeSignature $_).SignerCertificate });
 	if ($pending.Count -lt $files.Count) {
 		Write-Host "Signing: $($files.Count - $pending.Count) file(s) already signed, left untouched." -ForegroundColor DarkGray;

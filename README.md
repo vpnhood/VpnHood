@@ -88,7 +88,6 @@ Windows|Linux
 
 ## Special Thanks
 
-* [Advanced Installer](https://www.advancedinstaller.com): Installer tools for Windows.
 * [ReSharper](https://www.jetbrains.com/resharper/): Write, improve, and maintain C# code.
 
 ---

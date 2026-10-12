@@ -159,8 +159,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             throw;
         }
 
-        // an address change during the start was left to it: see it now
+        // an address change or a disable during the start was left to it: see them now
         CheckPrimaryAdapterAddresses();
+        await CheckAdapterInterface().Vhc();
     }
 
     // The start itself, for the owner's Start and for a restart
@@ -814,10 +815,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         _ = CheckAdapterInterface();
     }
 
-    // The OS says its network moved: is our own interface still there and up? A disabled adapter gives
-    // no I/O error, its reads just stop, so these events are the one signal of it. Under the restart
-    // lock, so no restart runs between the look and the stop; one under way looks for itself. Only from
-    // the OS events: a fresh interface may not report up yet at a start's end. Never throws.
+    // The OS says its network moved: is our own interface still enabled? A disabled adapter gives no I/O
+    // error, its reads just stop, and its routes and DNS servers go with it, so the host's traffic leaves
+    // outside the tunnel while the session shows connected: these events are the one signal of it. Under
+    // the restart lock, so no restart runs between the look and the stop. An event during a start is
+    // dropped here, and the start looks once at its end. Never throws.
     private async Task CheckAdapterInterface()
     {
         if (!CheckAdapterInterfaceAfterNetworkChanged || !IsStarted || !_keepStarted || _isStarting ||
@@ -829,26 +831,27 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             if (!lockScope.Succeeded || !IsStarted || !_keepStarted || _isStarting || IsDisposing || IsDisposed)
                 return;
 
-            if (IsAdapterInterfaceUp())
+            if (IsAdapterInterfaceEnabled())
                 return;
 
-            VhLogger.Instance.LogWarning("The VPN adapter's interface is gone or down.");
+            VhLogger.Instance.LogWarning("The VPN adapter's interface is gone or disabled.");
             if (Stop(false))
-                OnUnrequestedStop(new InvalidOperationException("The VPN adapter's interface is gone or down."));
+                OnUnrequestedStop(new InvalidOperationException("The VPN adapter's interface is gone or disabled."));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not check the VPN adapter's interface.");
         }
     }
 
-    // Our interface, by our name or our address, present and not down. A tun may report Unknown while up.
-    private bool IsAdapterInterfaceUp()
+    // Our interface, by our name or our address, still on the IP stack, which a disabled adapter leaves
+    // (Windows). Never its operational status: a fresh interface may report Down for a while after its
+    // start, and a look then would stop a good start
+    protected virtual bool IsAdapterInterfaceEnabled()
     {
         var adapterAddresses = new[] { AdapterIpNetworkV4?.Prefix, AdapterIpNetworkV6?.Prefix }.OfType<IPAddress>().ToArray();
         return NetworkInterface.GetAllNetworkInterfaces()
-            .Where(ni => ni.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase) ||
-                         ni.GetIPProperties().UnicastAddresses.Any(a => adapterAddresses.Contains(a.Address)))
-            .Any(ni => ni.OperationalStatus is not (OperationalStatus.Down or OperationalStatus.LowerLayerDown or OperationalStatus.NotPresent));
+            .Any(ni => ni.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase) ||
+                       ni.GetIPProperties().UnicastAddresses.Any(a => adapterAddresses.Contains(a.Address)));
     }
 
     // Restarts, or rediscovers the primary IPs, where the host's addresses moved since the last look.
@@ -964,8 +967,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, keepStartedToken);
         await RestartUnderLock(startOptions, keepStartedToken, cancellationTokenSource.Token).Vhc();
 
-        // an address change during the restart was left to it: see it now, outside the lock
+        // an address change or a disable during the restart was left to it: see them now, outside the lock
         CheckPrimaryAdapterAddresses();
+        await CheckAdapterInterface().Vhc();
     }
 
     private async Task RestartUnderLock(VpnAdapterOptions startOptions, CancellationToken keepStartedToken,

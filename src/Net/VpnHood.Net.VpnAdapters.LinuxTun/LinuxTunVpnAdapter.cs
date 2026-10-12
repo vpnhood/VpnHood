@@ -26,6 +26,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     // IFNAMSIZ less its terminator; the kernel and ip(8) refuse longer ones
     private const int MaxAdapterNameLength = 15;
+    private const int IffUp = 0x1; // the interface flag ip(8) sets and clears with "link set up/down"
     private const int KeptNameLength = 10;
 
     // IFALIASZ less its terminator
@@ -70,6 +71,19 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
         _adapterAlias = adapterSettings.AppId == null ? null : GetAdapterAlias(adapterSettings.AppId);
         _senderStopWaitTimeout = StopWaitTimeout + adapterSettings.MaxPacketSendDelay * 2;
+    }
+
+    // A set-down link stays listed but loses IFF_UP, and the kernel drops its routes; a fresh tun has the
+    // flag while its carrier may still read down (the kernel publishes it up to a second late)
+    protected override bool IsAdapterInterfaceEnabled()
+    {
+        try {
+            var flags = Convert.ToInt32(File.ReadAllText($"/sys/class/net/{AdapterName}/flags").Trim(), 16);
+            return (flags & IffUp) != 0;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) {
+            return false; // the device is gone
+        }
     }
 
     // A name the kernel takes: at most 15 characters, and none it refuses - whitespace, '/' or ':'.

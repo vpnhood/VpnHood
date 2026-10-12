@@ -300,7 +300,10 @@ public class ProxyChannel : IProxyChannel
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         // a closing channel waits for its peer's end of the tunnel stream, within the graceful timeout, so its
-        // connection can be reused; a dispose here would cancel that read, and the peer would reuse a closed one
+        // connection can be reused; a dispose here would cancel that read, and the peer would reuse a closed one.
+        // A check reading the flag just before the pump sets it still can: one reuse error logged and a new
+        // connection, nothing hangs (each close step is bounded by TcpGracefulTimeout). Left so: a few
+        // instructions' window once per check interval
         if (!_started || _isClosing)
             return default;
 

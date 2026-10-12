@@ -48,6 +48,9 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private DateTime? _autoWaitTime;
     private ClientUdpChannelTransmitter? _udpTransmitter;
     private volatile bool _isUdpTransmitterStale;
+    // the current network's: a change cancels it, so a packet channel still being added on the old network gives
+    // up the channel lock at once rather than at its connect timeout
+    private CancellationTokenSource _networkCts = new();
     private bool _disposed;
     private ChannelProtocol _channelProtocol;
     private ChannelProtocol _oldChannelProtocol;
@@ -197,7 +200,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _clientTcpHost.Start();
 
         // we can start managing datagram channels but lets wait for it after ad
-        var manageChannelsTask = ManagePacketChannels(cancellationToken);
+        var manageChannelsTask = ManagePacketChannels(waitForLock: false, cancellationToken);
 
         // wait for ad before adapter
         var retryAd = false; 
@@ -351,7 +354,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             _requestSender.ConnectorService.QuicEndPoint = Config.HostQuicEndPoint;
             _tunnel.RemoveChannels<IPacketChannel>();
             _packetChannelBackoff.Reset(); // new protocol is a fresh start: clear the old protocol's retry-flood backoff
-            Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
+            Task.Run(() => ManagePacketChannels(waitForLock: false, _cancellationTokenSource.Token));
         }
 
         if (useTcpProxyIpV4 != _useTcpProxy)
@@ -393,11 +396,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         try {
             VhLogger.Instance.LogInformation("The network changed. Replacing the tunnel's connections...");
             _isUdpTransmitterStale = true; // before the channels go, so the next UDP channel sees it
+            Interlocked.Exchange(ref _networkCts, new CancellationTokenSource()).TryCancel();
             _requestSender.ConnectorService.DropConnections();
             _tunnel.RemoveChannels<IPacketChannel>();
             DropCurrentConnections();
             _packetChannelBackoff.Reset();
-            Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
+            Task.Run(() => ManagePacketChannels(waitForLock: true, _cancellationTokenSource.Token));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not replace the tunnel's connections after a network change.");
@@ -431,7 +435,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         // Manage datagram channels if needed
         if (ShouldManagePacketChannels && !_packetChannelLock.IsLocked)
-            _ = ManagePacketChannels(_cancellationTokenSource.Token);
+            _ = ManagePacketChannels(waitForLock: false, _cancellationTokenSource.Token);
 
         // simple process if domain filtering is not enabled to improve performance
         _packetHandler.ProcessOutgoingPacket(ipPacket);
@@ -457,13 +461,16 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
-    private async ValueTask ManagePacketChannels(CancellationToken cancellationToken)
+    // Without waitForLock, a lock taken means another thread is managing the channels already. A network change
+    // waits for it: an add on the old network gives it up at once, cut off
+    private async ValueTask ManagePacketChannels(bool waitForLock, CancellationToken cancellationToken)
     {
-        // if the lock is not acquired, it means that another thread is already managing packet channels
-        using var lockResult = await _packetChannelLock.LockAsync(TimeSpan.Zero, cancellationToken);
+        using var lockResult = await _packetChannelLock.LockAsync(
+            waitForLock ? Timeout.InfiniteTimeSpan : TimeSpan.Zero, cancellationToken);
         if (!lockResult.Succeeded)
             return;
 
+        var networkCts = _networkCts;
         try {
             // check is adding channels allowed (includes the retry-flood backoff; see ShouldManagePacketChannels)
             if (!ShouldManagePacketChannels)
@@ -472,10 +479,17 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             // make sure only one UdpChannel exists for PacketChannels if UseUdpChannel is on
             if (_channelProtocol == ChannelProtocol.Udp)
                 AddUdpChannel();
-            else
-                await AddTcpPacketChannel(cancellationToken).Vhc();
+            else {
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, networkCts.Token);
+                await AddTcpPacketChannel(linkedCts.Token).Vhc();
+            }
 
             _packetChannelBackoff.Reset();
+        }
+        catch (Exception) when (networkCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+            // no failure to back off from: the network change adds a channel itself
+            VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
+                "A packet channel being added on the old network was cut off by the network change.");
         }
         catch (Exception ex) {
             _packetChannelBackoff.OnFail();
@@ -745,6 +759,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         State = ClientState.Disconnecting;
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
+        _networkCts.TryCancel();
+        _networkCts.Dispose();
 
         // stop adapter and events before sending bye request
         // Do not dispose VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly

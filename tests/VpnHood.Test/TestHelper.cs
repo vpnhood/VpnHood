@@ -369,11 +369,12 @@ public class TestHelper : IDisposable
         ClientOptions clientOptions,
         IVpnAdapter? vpnAdapter = null,
         bool autoConnect = true,
-        ProxyOptions? proxyOptions = null)
+        ProxyOptions? proxyOptions = null,
+        ISocketFactory? socketFactory = null)
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
-            socketFactory: new TestSocketFactory(),
+            socketFactory: socketFactory ?? new TestSocketFactory(),
             netFilter: ClientNetFilter,
             proxyConnector: await CreateProxyConnector(clientOptions, proxyOptions),
             new TestTracker { IsEnabled = clientOptions.AllowAnonymousTracker },

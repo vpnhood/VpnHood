@@ -6,6 +6,7 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.Dom;
+using VpnHood.Test.Providers;
 // ReSharper disable ShortLivedHttpClient
 
 namespace VpnHood.Test.Tests;
@@ -134,6 +135,35 @@ public class ClientTunnelTest : TestBase
         await AssertValidTcp(clientServerDom);
         if (channelProtocol == ChannelProtocol.Tcp)
             Assert.IsGreaterThan(createdChannelCount, clientServerDom.Client.RequiredSession.Status.SessionPacketChannelCount);
+        Assert.AreEqual(ClientState.Connected, clientServerDom.Client.State);
+    }
+
+    [TestMethod]
+    public async Task A_network_change_cuts_off_a_channel_still_connecting_on_the_old_network()
+    {
+        if (!QuicListener.IsSupported || !QuicConnection.IsSupported)
+            Assert.Inconclusive("QUIC is not supported on this platform.");
+
+        // a connect timeout the test would never wait out
+        var socketFactory = new QuicConnectHoldingSocketFactory();
+        var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Quic);
+        clientOption.Transport.TcpConnectTimeout = TimeSpan.FromSeconds(60);
+        await using var clientServerDom =
+            await ClientServerDom.Create(TestHelper, clientOption, clientSocketFactory: socketFactory);
+        await AssertValidUdp(clientServerDom);
+
+        // the first change's channel cannot connect: the host has gone on to another network
+        socketFactory.HoldConnects = true;
+        clientServerDom.ClientVpnAdapter.SimulatePrimaryNetworkChange();
+        await VhTestUtil.AssertEqualsWait(true, () => socketFactory.HeldConnectCount > 0, cancellationToken: TestCt);
+
+        // that network's change cuts the connect off, and its own channel comes up at once
+        socketFactory.HoldConnects = false;
+        clientServerDom.ClientVpnAdapter.SimulatePrimaryNetworkChange();
+        await VhTestUtil.AssertEqualsWait(true,
+            () => clientServerDom.Client.RequiredSession.Status.ActivePacketChannelCount > 0,
+            cancellationToken: TestCt);
+        await AssertValidUdp(clientServerDom);
         Assert.AreEqual(ClientState.Connected, clientServerDom.Client.State);
     }
 

@@ -170,9 +170,11 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         if (_device == null)
             throw new InvalidOperationException("Device is not initialized.");
 
+        // a blocking read gives a packet or fails: any other status is an error for the reader to count, as
+        // a null would loop at once, uncounted (ERROR_NO_DATA after a shutdown of the handle would spin it)
         var status = _device.GetNextPacket(out var packetCapture);
         if (status != GetPacketStatus.PacketRead)
-            return null;
+            throw new InvalidOperationException($"Could not read from WinDivert. Status: {status}");
 
         _lastCaptureHeader = (WinDivertHeader)packetCapture.Header;
         var rawPacket = packetCapture.GetPacket();

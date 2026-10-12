@@ -320,6 +320,8 @@ public class IosVpnAdapter(
         }
     }
 
+    // Unlike the base sender, no error count stops the adapter: a failed write drops its batch (a stall,
+    // never a leak), iOS ends a dead tunnel itself (stopTunnel), and Apple names no failure to stop on
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         // Capture the flow; AdapterClose may null it out concurrently.
@@ -395,11 +397,10 @@ public class IosVpnAdapter(
 
         // Log transitions only; a dead flow would otherwise log every batch.
         if (ok == _writePacketsFailing) {
-            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
             if (ok)
-                VhLogger.Instance.LogDebug("iOS: NEPacketTunnelFlow.WritePackets recovered.");
+                VhLogger.Instance.LogInformation("iOS: NEPacketTunnelFlow.WritePackets recovered.");
             else
-                VhLogger.Instance.LogDebug("iOS: NEPacketTunnelFlow.WritePackets returned false; packets are being dropped.");
+                VhLogger.Instance.LogWarning("iOS: NEPacketTunnelFlow.WritePackets returned false; packets are being dropped.");
         }
         _writePacketsFailing = !ok;
 

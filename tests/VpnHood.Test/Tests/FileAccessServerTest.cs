@@ -213,6 +213,34 @@ public class FileAccessManagerTest : TestBase
         Assert.IsGreaterThan(DateTime.UtcNow.AddMinutes(-1), GetLastUsedTime(accessManager3, usedSession.SessionId));
     }
 
+    [TestMethod]
+    public async Task Cleanup_removes_a_timed_out_session_with_its_file()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        using var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        var token = accessManager1.CreateToken(maxClientCount: 3);
+        var oldSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
+        var recentSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
+        var endedSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
+        await accessManager1.Session_Close(endedSession.SessionId, new Traffic(), TestCt);
+
+        // as their files hold them: live ones unused for 49 and 47 hours, an ended one for 21; a restart loads them
+        var sessionsFolderPath = accessManager1.SessionsFolderPath;
+        SetSessionTimes(sessionsFolderPath, oldSession.SessionId, DateTime.UtcNow.AddHours(-49));
+        SetSessionTimes(sessionsFolderPath, recentSession.SessionId, DateTime.UtcNow.AddHours(-47));
+        SetSessionTimes(sessionsFolderPath, endedSession.SessionId, DateTime.UtcNow.AddHours(-21));
+        using var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
+
+        // the cleanup takes those past their timeout, files too, and keeps the other
+        var sessions = accessManager2.SessionService.Sessions;
+        await AssertEqualsWait(false, () => sessions.ContainsKey(oldSession.SessionId));
+        await AssertEqualsWait(false, () => sessions.ContainsKey(endedSession.SessionId));
+        Assert.IsTrue(sessions.ContainsKey(recentSession.SessionId));
+        Assert.IsFalse(File.Exists(Path.Combine(sessionsFolderPath, $"{oldSession.SessionId}.session")));
+        Assert.IsFalse(File.Exists(Path.Combine(sessionsFolderPath, $"{endedSession.SessionId}.session")));
+        Assert.IsTrue(File.Exists(Path.Combine(sessionsFolderPath, $"{recentSession.SessionId}.session")));
+    }
+
     // a session's times as its file would hold them had it been made then
     private static void SetSessionTimes(string sessionsFolderPath, ulong sessionId, DateTime time)
     {

@@ -67,39 +67,48 @@ public class SessionService : IDisposable
 
     // the file follows the session (its creation, its end, its use), so a restart loads it as it was: loaded as live,
     // an ended session suppressed its client's live one at the server's recovery. One write at a time, as two calls
-    // may change a session at once
+    // may change a session at once; a session the cleanup has removed is not written back
     private void Save(Session session)
     {
-        lock (_fileLock)
-            File.WriteAllText(GetSessionFilePath(session.SessionId), JsonSerializer.Serialize(session));
+        lock (_fileLock) {
+            if (Sessions.ContainsKey(session.SessionId))
+                File.WriteAllText(GetSessionFilePath(session.SessionId), JsonSerializer.Serialize(session));
+        }
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
-        // timeout live session
-        var minSessionTime = DateTime.UtcNow - _sessionPermanentlyTimeout;
-        var minCloseWaitTime = DateTime.UtcNow - _sessionTemporaryTimeout;
-        var timeoutSessions = Sessions
-            .Where(x =>
-                x.Value.EndTime == null && x.Value.LastUsedTime < minSessionTime ||
-                x.Value.EndTime != null && x.Value.LastUsedTime < minCloseWaitTime);
+        foreach (var session in Sessions.Values.Where(IsTimedOut)) {
+            // checked again under the file lock: a use may have just moved its time
+            lock (_fileLock) {
+                if (!IsTimedOut(session))
+                    continue;
 
-        foreach (var item in timeoutSessions) {
-            Sessions.TryRemove(item.Key, out _);
-            VhUtils.TryDeleteFile(GetSessionFilePath(item.Key));
+                Sessions.TryRemove(session.SessionId, out _);
+                VhUtils.TryDeleteFile(GetSessionFilePath(session.SessionId));
+            }
         }
 
         return default;
     }
 
-    // a live session times out 48 hours after its last use, saved so a restart keeps it
+    // a live session times out 48 hours after its last use, an ended one 20 hours after
+    private bool IsTimedOut(Session session)
+    {
+        var timeout = session.IsAlive ? _sessionPermanentlyTimeout : _sessionTemporaryTimeout;
+        return session.LastUsedTime < DateTime.UtcNow - timeout;
+    }
+
+    // saved so a restart keeps it; under the file lock, so the cleanup either sees the use or has removed the session
     public void UpdateLastUsedTime(ulong sessionId)
     {
-        if (!Sessions.TryGetValue(sessionId, out var session))
-            return;
+        lock (_fileLock) {
+            if (!Sessions.TryGetValue(sessionId, out var session))
+                return;
 
-        session.UpdateLastUsedTime();
-        Save(session);
+            session.UpdateLastUsedTime();
+            Save(session);
+        }
     }
 
     public string? FindTokenIdFromSessionId(ulong sessionId)

@@ -18,6 +18,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     TunVpnAdapter(adapterSettings)
 {
     private static readonly Lock WinDivertDllLock = new();
+    private static readonly Lock WinDivertOpenLock = new();
     private static IntPtr _winDivertDll; // the one WinDivert.dll of the process, once loaded
     private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
@@ -96,7 +97,12 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
         try {
             _device.Filter = filter;
-            _device.Open(new DeviceConfiguration());
+
+            // One open at a time in the process: with the driver not loaded, the first open installs and starts
+            // it, and a second that found none meanwhile fails to start it again (error 1058). Two processes
+            // opening in that moment still can; left so: the user's reconnect opens the running driver
+            lock (WinDivertOpenLock)
+                _device.Open(new DeviceConfiguration());
         }
         catch (Exception ex) {
             if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)

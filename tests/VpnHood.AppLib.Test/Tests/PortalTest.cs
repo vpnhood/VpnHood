@@ -352,6 +352,30 @@ public class PortalTest
     }
 
     [TestMethod]
+    public async Task A_session_past_its_old_expiry_is_used_without_a_silent_sign_in()
+    {
+        // a session from before the portal's sessions lost their time limit: a silent sign-in would
+        // make a new account for a person who deleted theirs on another device
+        var accountFolder = Path.Combine(_storageFolder, "account");
+        Directory.CreateDirectory(accountFolder);
+        await File.WriteAllTextAsync(Path.Combine(accountFolder, "portalSession.json"), JsonSerializer.Serialize(new {
+            AccessToken = "old-session-token",
+            UserId = ExternalUid.ToString(),
+            ExpiresAt = DateTime.UtcNow.AddDays(-1),
+            ProviderId = AuthProviders.Google
+        }));
+        _portal.Enqueue(SignInRoute, SignInData(accessToken: "new-account-token"));
+        var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
+        using var authenticationProvider = CreateAuthenticationProvider(externalProvider);
+
+        var accessToken = await authenticationProvider.GetAccessToken(CancellationToken.None);
+
+        Assert.AreEqual("old-session-token", accessToken);
+        Assert.AreEqual(0, externalProvider.SignInCalls);
+        Assert.IsFalse(_portal.Requests.Any(x => x.Route == SignInRoute));
+    }
+
+    [TestMethod]
     public async Task SetAccessCode_uses_one_put_for_a_code_and_null_removal()
     {
         _portal.Enqueue(SignInRoute, SignInData());

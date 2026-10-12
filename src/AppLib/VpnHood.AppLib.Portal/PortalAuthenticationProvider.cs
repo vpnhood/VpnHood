@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Portal.Dto;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -134,47 +133,22 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
             _ = TryRegisterRestoreCredential(uiContext, CancellationToken.None);
         }
 
-        // opaque tokens are long-lived; renew a day before expiry
-        if (Session.ExpiresAt == null || Session.ExpiresAt - TimeSpan.FromDays(1) > DateTime.UtcNow)
-            return Session;
-
-        try {
-            // renew only via the provider that established the session; a different IdP could land in
-            // a different account
-            var externalProvider = FindExternalProvider(Session.ProviderId);
-            if (externalProvider == null) {
-                // a restore-credential session renews the way it was born - silently, via the key
-                if (Session.ProviderId == RestoreCredentialMethodId)
-                    return await SignInWithRestoreCredential(uiContext, cancellationToken).Vhc() ?? Session;
-                return Session; // no way to renew; use it until the portal rejects it
-            }
-
-            // silent re-sign-in with a fresh provider id token; a provider that needs a window fails
-            // without one
-            var idToken = await externalProvider.SignIn(uiContext, true, cancellationToken).Vhc();
-            if (!string.IsNullOrWhiteSpace(idToken))
-                return await SignInToPortal(externalProvider, idToken, cancellationToken).Vhc();
-        }
-        catch (UiContextNotAvailableException) {
-            // asked at every token use in the session's last day: expected until a window opens
-            VhLogger.Instance.LogDebug("The portal session's renewal waits for a window.");
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not renew the portal session silently.");
-        }
-
+        // Never renewed: a session has no time limit at the portal and lasts until the portal refuses
+        // it (InvalidateAccessToken). A silent sign-in here would make a new account for a person who
+        // deleted theirs on another device.
         return Session;
     }
 
     /// <summary>
-    /// The session token, silently renewed first when it is close to expiring. Null when nobody is
-    /// signed in — an anonymous call asks for none, which is also why sign-in itself must not go
-    /// through here: its 401 means "wrong credentials", not "dead session".
+    /// The session token. Null when nobody is signed in — an anonymous call asks for none, which is
+    /// also why sign-in itself must not go through here: its 401 means "wrong credentials", not
+    /// "dead session".
     /// </summary>
     public async Task<string?> GetAccessToken(CancellationToken cancellationToken)
     {
         // The one window read below the API: every portal request asks for the token, and none of
-        // their callers holds a window to pass. Only a renewal or a zero-tap restore uses it.
+        // their callers holds a window to pass. Only a zero-tap restore or a restore-credential
+        // enrolment uses it.
         var session = await TryGetSession(AppUiContext.Context, cancellationToken).Vhc();
         return session?.AccessToken;
     }
@@ -333,7 +307,6 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         return new PortalSession {
             AccessToken = response.AccessToken
                 ?? throw new InvalidOperationException("The portal sign-in answer carries no session token."),
-            ExpiresAt = response.ExpiresAt,
             UserId = response.UserId
                 ?? throw new InvalidOperationException("The portal sign-in answer carries no user id."),
             ProviderId = providerId
@@ -437,7 +410,6 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
                     Session = new PortalSession {
                         AccessToken = session.AccessToken,
                         UserId = session.UserId,
-                        ExpiresAt = session.ExpiresAt,
                         ProviderId = session.ProviderId,
                         RestoreCredentialId = registered.CredentialId
                     };

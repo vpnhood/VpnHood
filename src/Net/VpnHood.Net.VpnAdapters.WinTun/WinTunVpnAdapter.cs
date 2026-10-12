@@ -114,7 +114,9 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             errorCode = _tunAdapter == IntPtr.Zero ? Marshal.GetLastWin32Error() : 0;
         }
 
-        // a live one is not ours to remove: WinTun removes an adapter only by the handle that created it
+        // A live one is not ours to remove: WinTun removes an adapter only by the handle that created it.
+        // Error 2 failed every create once, in the boot that first installed WinTun's driver (Windows 10,
+        // CR_INVALID_DEVNODE in setupapi.dev.log; older builds too); a reboot cleared it, not seen since
         if (_tunAdapter == IntPtr.Zero)
             throw errorCode is ErrorAlreadyExists or ErrorAlreadyExistsHResult
                 ? new PInvokeException(

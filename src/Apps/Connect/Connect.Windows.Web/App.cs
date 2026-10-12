@@ -35,7 +35,9 @@ internal static class App
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
         // the folder every release before the service used; the service's first start copies it in
-        LegacyStorage.TryImport(context.StoragePath, "VpnHoodConnect");
+#pragma warning disable CS0618 // Type or member is obsolete
+        LegacyStorageMigration.TryImport(context.StoragePath, "VpnHoodConnect");
+#pragma warning restore CS0618 // Type or member is obsolete
         var appConfigs = ConnectAppConfigs.Load(typeof(App).Assembly);
         var options = ConnectAppOptions.Create(context, appConfigs);
         // Nothing forbids a typed code on this channel (App Review 3.1.1 binds the App Store head

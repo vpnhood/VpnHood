@@ -31,8 +31,10 @@ internal static class App
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
         // the folder every release before the service used; the service's first start copies it in
+#pragma warning disable CS0618 // Type or member is obsolete
         // ReSharper disable once HeuristicUnreachableCode
-        LegacyStorage.TryImport(context.StoragePath, AppConstants.IsDebugMode ? "VpnHoodClient.debug" : "VpnHood");
+        LegacyStorageMigration.TryImport(context.StoragePath, AppConstants.IsDebugMode ? "VpnHoodClient.debug" : "VpnHood");
+#pragma warning restore CS0618 // Type or member is obsolete
         var appConfigs = ClientAppConfigs.Load();
         var options = ClientAppOptions.Create(context, appConfigs);
         options.UpdaterOptions = new AppUpdaterOptions {

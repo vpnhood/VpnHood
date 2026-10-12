@@ -6,7 +6,8 @@ namespace VpnHood.AppLib.Test.Tests;
 // The import of the releases before the Windows service, with the machine's profile list and group
 // check stood in for.
 [TestClass]
-public class LegacyStorageTest : TestAppBase
+[Obsolete("Migration (2026-09): remove with LegacyStorageMigration.")]
+public class LegacyStorageMigrationTest : TestAppBase
 {
     private const string LegacyFolderName = "VpnHoodTest";
     private const string AdminSid = "S-1-5-21-1-2-3-1001";
@@ -34,7 +35,7 @@ public class LegacyStorageTest : TestAppBase
         var unreadable = CreateProfile(root, "unreadable", now);
         var storagePath = Path.Combine(root, "storage");
 
-        LegacyStorage.Import(storagePath, LegacyFolderName,
+        LegacyStorageMigration.Import(storagePath, LegacyFolderName,
             [(UserSid, user), (UnreadableSid, unreadable), (AdminSid, admin)], IsAdministrator);
 
         var settings = JsonNode.Parse(File.ReadAllText(Path.Combine(storagePath, "settings.json")));
@@ -65,7 +66,7 @@ public class LegacyStorageTest : TestAppBase
         var unreadable = CreateProfile(root, "unreadable", DateTime.UtcNow);
         var storagePath = Path.Combine(root, "storage");
 
-        LegacyStorage.Import(storagePath, LegacyFolderName, [(UserSid, user), (UnreadableSid, unreadable)],
+        LegacyStorageMigration.Import(storagePath, LegacyFolderName, [(UserSid, user), (UnreadableSid, unreadable)],
             IsAdministrator);
 
         Assert.IsFalse(Directory.Exists(storagePath));

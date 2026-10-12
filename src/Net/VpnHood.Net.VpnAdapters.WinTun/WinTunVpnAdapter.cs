@@ -244,11 +244,9 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        // Migration (2026-10): drop a few months after it ships. A netsh build saved its address for the
-        // adapter's GUID, and after its crash Windows brings that back with the adapter, where it would be the
-        // traffic's source; netsh's static address replaced it, so the family's addresses go first
-        foreach (var ipAddress in GetAdapterAddresses(ipNetwork.AddressFamily))
-            Win32IpHelper.DeleteAddress(_adapterIndex, ipAddress);
+#pragma warning disable CS0618 // Type or member is obsolete
+        MigrateSavedAddresses(ipNetwork.AddressFamily);
+#pragma warning restore CS0618 // Type or member is obsolete
 
         // no duplicate address detection: a tunnel shares its link with no one, and the detection would keep
         // the address unusable for seconds after the interface comes up, while the routes already lead to it
@@ -257,6 +255,18 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return Task.CompletedTask;
     }
 
+    // A netsh build saved its address for the adapter's GUID, and after its crash Windows brings that back
+    // with the adapter, where it would be the traffic's source; netsh's static address replaced it, so the
+    // family's addresses go first.
+    [Obsolete("Migration (2026-10): drop a few months after it ships, with its call in AddAddress and " +
+              "GetAdapterAddresses.")]
+    private void MigrateSavedAddresses(AddressFamily addressFamily)
+    {
+        foreach (var ipAddress in GetAdapterAddresses(addressFamily))
+            Win32IpHelper.DeleteAddress(_adapterIndex, ipAddress);
+    }
+
+    [Obsolete("Migration (2026-10): drop with MigrateSavedAddresses, its only caller.")]
     private IPAddress[] GetAdapterAddresses(AddressFamily addressFamily)
     {
         return NetworkInterface.GetAllNetworkInterfaces()

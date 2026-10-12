@@ -145,10 +145,18 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         if (tun.IsHeld)
             return false;
 
-        // Migration (2026-09), the untagged case - versions before tags: drop a few months after it ships.
+#pragma warning disable CS0618 // Type or member is obsolete
         return tun.Alias.Length == 0
-            ? tun.Name == adapterName
+            ? IsUntaggedLeftoverToMigrate(tun, adapterName)
             : tun.Alias == adapterAlias;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    // A version before tags left its tun untagged, known only by this adapter's name.
+    [Obsolete("Migration (2026-09): drop a few months after it ships, with its call in IsOwnLeftover.")]
+    private static bool IsUntaggedLeftoverToMigrate(LinuxTunInfo tun, string adapterName)
+    {
+        return tun.Name == adapterName;
     }
 
     // At the daemon's start, after its single-instance lock, rather than at the next connect: a crash

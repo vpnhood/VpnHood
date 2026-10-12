@@ -8,14 +8,15 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.App.Windows;
 
-// Migration (2026-09): drop a few months after it ships.
 // The releases before the service kept the app's files in the person's own folder. The service's first
 // start copies the newest such folder's files in, with its person's SID as the client id those releases
 // went by. Only the known files, none reached through a link: the service is LocalSystem and the
 // folder is the person's to shape. settings.json goes last, so a start cut short copies again.
 // Only an administrator's folder: those releases ran elevated, so no other is one they used, and a
 // standard user's could be planted - settings that turn on /remote-access, or a server of their own.
-public static class LegacyStorage
+[Obsolete("Migration (2026-09): drop a few months after it ships, with its calls in Connect.Windows.Web " +
+          "and Client.Windows.Web and LegacyStorageMigrationTest.")]
+public static class LegacyStorageMigration
 {
     private const string SettingsFileName = "settings.json";
 

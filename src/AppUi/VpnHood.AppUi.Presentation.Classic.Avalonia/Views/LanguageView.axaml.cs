@@ -1,4 +1,6 @@
-﻿using Avalonia.Controls;
+﻿using System.ComponentModel;
+using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
@@ -12,15 +14,16 @@ public partial class LanguageView : UserControl, IPage
 
     private readonly MainView _host;
     private readonly List<(string Code, OptionRow Row)> _rows = [];
+    private readonly OptionRow _systemRow;
+    private readonly string _systemCultureName;
+    private readonly bool _isSystemSupported;
 
     public LanguageView(MainView host)
     {
         _host = host;
         InitializeComponent();
 
-        var s = Strings.Current;
-        var state = VhApp.State;
-        var systemCulture = state.SystemUiCultureInfo;
+        var systemCulture = VhApp.State.SystemUiCultureInfo;
         var cultures = VhApp.AvailableCultureInfos
             .OrderBy(x => x.NativeName, StringComparer.CurrentCulture)
             .ToArray();
@@ -28,13 +31,42 @@ public partial class LanguageView : UserControl, IPage
         // the device's language, with the note that it is not one the app has when it is not - a
         // regional culture counts as had when its language is (en-US by en), as the app's own
         // best-culture choice counts it
-        var isSystemSupported = IsSupported(systemCulture.Code, cultures.Select(x => x.Code));
-        AddRow(SystemDefault, $"{s.SystemDefaultLanguage} ({systemCulture.NativeName})",
-            isSystemSupported ? null : s.SystemDefaultLanguageNotSupportedDesc);
+        _systemCultureName = systemCulture.NativeName;
+        _isSystemSupported = IsSupported(systemCulture.Code, cultures.Select(x => x.Code));
+        _systemRow = AddRow(SystemDefault);
         foreach (var culture in cultures)
-            AddRow(culture.Code, culture.NativeName, null);
+            AddRow(culture.Code).Title = culture.NativeName;
 
         ShowChoice();
+    }
+
+    // The system row is in the app's language, unlike the others, so it is written on arrival and again
+    // when the words change: MainViewModel then raises every property, on the UI thread. The title
+    // follows by its binding.
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _host.ViewModel.PropertyChanged += OnViewModelChanged;
+        ShowSystemRow();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        _host.ViewModel.PropertyChanged -= OnViewModelChanged;
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is "")
+            ShowSystemRow();
+    }
+
+    private void ShowSystemRow()
+    {
+        var s = Strings.Current;
+        _systemRow.Title = $"{s.SystemDefaultLanguage} ({_systemCultureName})";
+        _systemRow.Description = _isSystemSupported ? null : s.SystemDefaultLanguageNotSupportedDesc;
     }
 
     private static bool IsSupported(string systemCode, IEnumerable<string> availableCodes)
@@ -47,13 +79,14 @@ public partial class LanguageView : UserControl, IPage
         return false;
     }
 
-    private void AddRow(string code, string title, string? description)
+    private OptionRow AddRow(string code)
     {
         // the note under the system row reads left to right in every language, as language.vue pins it
-        var row = new OptionRow { Title = title, Description = description, DescriptionFlowDirection = FlowDirection.LeftToRight };
+        var row = new OptionRow { DescriptionFlowDirection = FlowDirection.LeftToRight };
         row.Clicked += (_, _) => Choose(code);
         _rows.Add((code, row));
         Rows.Children.Add(row);
+        return row;
     }
 
     private static string CurrentCode => VhApp.UserSettings.CultureCode ?? SystemDefault;
@@ -73,7 +106,6 @@ public partial class LanguageView : UserControl, IPage
             await VhApp.SaveUserSettings(settings, CancellationToken.None);
             ShowChoice();
             _host.ViewModel.Refresh();
-            Header.Title = Strings.Current.Language;
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);

@@ -72,15 +72,34 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
     }
 
-    // The proxies' folder, which travels with a backup (IosDevice.VpnServiceDataFolder), passed by the
-    // App as the config folder is. A configuration an older App saved names one folder for both.
-    private string ResolveDataFolder(string configFolder)
+    // The config folder and the proxies' folder, which travels with a backup (IosDevice.VpnServiceDataFolder),
+    // passed by the App as the config folder is.
+    private (string ConfigFolder, string DataFolder) ResolveFolders()
     {
+        var configFolder = ResolveConfigFolder();
         var proto = ProtocolConfiguration as NETunnelProviderProtocol;
-        return proto?.ProviderConfiguration?[(NSString)VpnServiceDataFolderKey] is NSString folderStr &&
-               !string.IsNullOrEmpty(folderStr)
-            ? folderStr.ToString()
-            : configFolder;
+        if (proto?.ProviderConfiguration?[(NSString)VpnServiceDataFolderKey] is NSString dataFolder &&
+            !string.IsNullOrEmpty(dataFolder))
+            return (configFolder, dataFolder.ToString());
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        return MigrateFolders(configFolder);
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    // iOS keeps the configuration an older App saved until the App connects again, and a VPN switched on
+    // from iOS Settings starts with it. It names one folder, the one that is now the proxies'; the
+    // service's own files go to the config folder beside it, where IosDevice puts it.
+    [Obsolete("Migration (2026-10): drop a few months after it ships, with its call in ResolveFolders.")]
+    private static (string ConfigFolder, string DataFolder) MigrateFolders(string sharedFolder)
+    {
+        var containerPath = Path.GetDirectoryName(sharedFolder) ??
+                            throw new InvalidOperationException("The VPN service's folder has no parent folder.");
+        var configFolder = Path.Combine(containerPath, IosDevice.VpnServiceConfigFolderName);
+        VhLogger.Instance.LogInformation(
+            "The VPN configuration is an older app's, with one folder; the service's files go beside it. ConfigFolder: {ConfigFolder}",
+            configFolder);
+        return (configFolder, sharedFolder);
     }
 
     // Called by the .NET iOS runtime when ObjC creates the extension instance.
@@ -114,12 +133,10 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         _completionFired = false;
 
         // Resolve the folders — ProviderConfiguration set by App takes priority. The config folder stays
-        // out of backups where it is a folder of its own, not the proxies' one.
-        var configFolder = ResolveConfigFolder();
-        var dataFolder = ResolveDataFolder(configFolder);
+        // out of backups.
+        var (configFolder, dataFolder) = ResolveFolders();
         try {
-            if (dataFolder == configFolder) Directory.CreateDirectory(configFolder);
-            else IosNoBackupFolder.Create(configFolder);
+            IosNoBackupFolder.Create(configFolder);
         }
         catch { /* ignore */ }
 

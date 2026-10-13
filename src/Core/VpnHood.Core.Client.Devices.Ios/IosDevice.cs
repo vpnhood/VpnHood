@@ -16,6 +16,8 @@ public class IosDevice : IDevice
 
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
     private const string VpnServiceDataFolderKey = "VpnServiceDataFolder";
+    internal const string VpnServiceConfigFolderName = "vpn-service-config";
+    private const string VpnServiceDataFolderName = "vpn-service";
 
     // NEVPNProtocol.ServerAddress is a REQUIRED field (SaveToPreferences fails / the Settings entry is
     // invalid if it is nil), but it is purely cosmetic for a packet tunnel — it is only the text shown
@@ -55,8 +57,8 @@ public class IosDevice : IDevice
 
         // the service's own files in a folder of their own, kept out of backups; the proxies stay in the
         // folder they all shared before, which travels
-        VpnServiceConfigFolder = Path.Combine(sharedContainerPath, "vpn-service-config");
-        VpnServiceDataFolder = Path.Combine(sharedContainerPath, "vpn-service");
+        VpnServiceConfigFolder = Path.Combine(sharedContainerPath, VpnServiceConfigFolderName);
+        VpnServiceDataFolder = Path.Combine(sharedContainerPath, VpnServiceDataFolderName);
         IosNoBackupFolder.Create(VpnServiceConfigFolder);
         VhLogger.Instance.LogInformation("IosDevice created. VpnServiceConfigFolder={Folder}", VpnServiceConfigFolder);
     }

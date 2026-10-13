@@ -101,8 +101,8 @@
 	     by the shared assets package that nine other heads also build.
 
 	     It comes from the CONNECT product's own repo, where the rest of the promotion material lives
-	     (promotions/) - the same way Apps/Client reaches spa.zip through $(VhDir). A film changes on
-	     the product's schedule, not the code's, and this repo keeps code.
+	     (promotions/), through $(VhDir). A film changes on the product's schedule, not the code's, and
+	     this repo keeps code.
 
 	     Its own asset root, deliberately NOT under assets\: that is the UI's store, a zip extracted
 	     to storage, and a film inside it would be a second 1.8 MB on disk for no reason.
@@ -111,10 +111,9 @@
 	     the Android SDK, so the asset path is "ads/internal-ad.mp4".
 
 	     Optional on purpose: a build without that repo beside this one - a CI run that checks out only
-	     the code, a fork, a clone - simply carries no film, and the head shows no video. It is a
-	     promotion, not a feature, and the only thing that reads it is a fallback ad that already has
-	     to cope with having nothing to show. Without the condition this is error XA2001 and no
-	     package at all. -->
+	     the code, a fork, a clone - simply carries no film, and App.cs registers the still page as the
+	     internal ad instead. It is a promotion, not a feature. Without the condition this is error
+	     XA2001 and no package at all. -->
 	<ItemGroup Condition="Exists('$(VhDir)\Vpnhood.App.Connect\promotions\internal-ad.mp4')">
 		<AndroidAsset Include="$(VhDir)\Vpnhood.App.Connect\promotions\internal-ad.mp4"
 		              Link="assets\ads\internal-ad.mp4" Visible="false" />

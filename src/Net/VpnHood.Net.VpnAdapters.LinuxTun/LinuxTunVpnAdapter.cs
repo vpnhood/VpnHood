@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
@@ -476,13 +477,28 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     // Never cut off: an entry the command made after a stop's cleanup looked would stay, its flag unset, until
-    // the next connect clears it.
+    // the next connect clears it. -m 0 -x, as wg-quick: openresolv puts the entry first and uses it alone.
     private async Task SetDnsServersByResolvconf(IEnumerable<IPAddress> dnsServers)
     {
         var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
-        await ExecuteCommandAsync($"printf 'nameserver %s\\n' {allDns} | resolvconf -a {AdapterName}",
+        await ExecuteCommandAsync(
+            $"printf 'nameserver %s\\n' {allDns} | resolvconf -a {ResolvconfEntryName(AdapterName)} -m 0 -x",
             CancellationToken.None).Vhc();
         _isResolvconfDnsSet = true;
+    }
+
+    // Debian's resolvconf orders the entries by /etc/resolvconf/interface-order, where a bare name comes last,
+    // after the LAN's: the entry takes its first "<word>*" pattern as a prefix (tun* by default), as wg-quick's
+    // does. Other resolvconfs have no such file.
+    private static string ResolvconfEntryName(string adapterName)
+    {
+        const string orderFile = "/etc/resolvconf/interface-order";
+        var match = File.Exists(orderFile)
+            ? File.ReadLines(orderFile)
+                .Select(line => Regex.Match(line.Trim(), "^([A-Za-z0-9-]+)\\*$"))
+                .FirstOrDefault(x => x.Success)
+            : null;
+        return match != null ? $"{match.Groups[1].Value}.{adapterName}" : adapterName;
     }
 
     // The resolvconf fallback's entry outlives the interface, where resolvectl's per-link DNS goes
@@ -491,7 +507,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     // and never for a name another owner holds.
     private static string RemoveResolvconfDnsCommand(string adapterName)
     {
-        return $"if command -v resolvconf >/dev/null; then resolvconf -d {adapterName}; fi";
+        return $"if command -v resolvconf >/dev/null; then resolvconf -d {ResolvconfEntryName(adapterName)} -f; fi";
     }
 
     // An entry this adapter added must come off, so a failure there is a warning.

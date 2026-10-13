@@ -22,12 +22,6 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
     private int _disposeUnmanagedCount;
     public volatile bool IsBatchHeld;
 
-    // set, logging a packet the queue drops throws, as a failing logger would
-    public volatile bool FailDropLog;
-
-    // set, logging a packet a send failed on throws, as a failing logger would
-    public volatile bool FailSendErrorLog;
-
     // set, a batch holding a packet from this UDP source port fails to send
     public volatile int FailSendPort;
 
@@ -80,12 +74,6 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
             Interlocked.Increment(ref _sendsStarted);
             SendGate?.Wait();
         }
-
-        if (FailDropLog && message.StartsWith("Dropping the oldest packet", StringComparison.Ordinal))
-            throw new InvalidOperationException("Test: the logger failed.");
-
-        if (FailSendErrorLog && message == "Error in sending packet via channel.")
-            throw new InvalidOperationException("Test: the logger failed.");
 
         base.LogPacket(ipPacket, logLevel, exception, message, args);
     }

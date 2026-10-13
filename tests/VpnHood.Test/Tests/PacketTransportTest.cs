@@ -74,17 +74,6 @@ public class PacketTransportTest : TestBase
     }
 
     [TestMethod]
-    public async Task Failing_logger_does_not_fail_a_write_that_dropped_the_oldest()
-    {
-        using var transport = new TestHeldPacketTransport(queueCapacity: 1);
-        await FillHeldQueue(transport);
-        transport.FailDropLog = true;
-
-        Assert.IsTrue(transport.SendPacketQueued(BuildPacket(3)));
-        Assert.AreEqual(1, transport.PacketStat.DroppedPackets);
-    }
-
-    [TestMethod]
     public async Task Blocking_send_waits_for_room()
     {
         using var transport = new TestHeldPacketTransport(queueCapacity: 1, blocking: true);
@@ -477,26 +466,6 @@ public class PacketTransportTest : TestBase
         await AssertEqualsWait(1, () => transport.SentPorts.Count);
         Assert.AreEqual(2, transport.SentPorts[0]);
         GC.KeepAlive(failedPacket);
-    }
-
-    [TestMethod]
-    public async Task Send_loop_whose_cleanup_fails_disposes_its_batch_and_the_transport()
-    {
-        using var transport = new TestHeldPacketTransport(queueCapacity: 4) {
-            FailSendPort = 1,
-            FailSendErrorLog = true
-        };
-        transport.Release();
-
-        // the send fails, and so does logging it: the packet is disposed all the same, and the loop that cannot go
-        // on leaves the transport disposed, so later sends fail loud
-        var memory = BuildPacketMemory(1);
-        var ipPacket = PacketBuilder.Attach(memory);
-        Assert.IsTrue(transport.SendPacketQueued(ipPacket));
-        await AssertEqualsWait(true, () => transport.IsTransportDisposed);
-        Assert.IsTrue(memory.IsDisposed);
-        Assert.ThrowsExactly<ObjectDisposedException>(() => transport.SendPacketQueued(BuildPacket(2)));
-        GC.KeepAlive(ipPacket);
     }
 
     [TestMethod]

@@ -226,36 +226,20 @@ public abstract class FairPacketQueue : IDisposable
             catch (Exception ex) {
                 // Only a bug gets here. The queue never gives up, as its owner stays open until it is disposed: it
                 // drops what it holds and starts afresh
-                LogFault(ex);
+                VhLogger.Instance.LogError(ex, "A fair packet queue failed and starts afresh. Type: {Type}",
+                    VhLogger.FormatType(this));
                 foreach (var ipPacket in Restart())
                     DropPacket(ipPacket, null, "Dropping a packet. Send queue starts afresh.");
             }
         }
     }
 
-    // a packet that goes to no one: counted and disposed, even when the logger fails
+    // a packet that goes to no one: counted and disposed
     private void DropPacket(IpPacket ipPacket, Exception? exception, string message)
     {
         Interlocked.Increment(ref _droppedPackets);
-        try {
-            LogPacket(ipPacket, exception, message);
-        }
-        catch {
-            // a failing logger must fail neither a send whose packet was queued nor the loop
-        }
-
+        LogPacket(ipPacket, exception, message);
         ipPacket.Dispose();
-    }
-
-    private void LogFault(Exception exception)
-    {
-        try {
-            VhLogger.Instance.LogError(exception, "A fair packet queue failed and starts afresh. Type: {Type}",
-                VhLogger.FormatType(this));
-        }
-        catch {
-            // as in DropPacket, a failing logger must not end the loop
-        }
     }
 
     private void LogPacket(IpPacket ipPacket, Exception? exception, string message)

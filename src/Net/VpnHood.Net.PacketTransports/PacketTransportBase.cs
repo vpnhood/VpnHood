@@ -113,12 +113,8 @@ public abstract class PacketTransportBase : IPacketTransport
             packetReceived.Invoke(this, ipPacket);
         }
         catch (Exception ex) {
-            try {
-                LogPacket(ipPacket, ex, "Error while invoking the received packets.");
-            }
-            finally {
-                ipPacket.Dispose();
-            }
+            LogPacket(ipPacket, ex, "Error while invoking the received packets.");
+            ipPacket.Dispose();
         }
     }
 
@@ -251,17 +247,12 @@ public abstract class PacketTransportBase : IPacketTransport
         DropUnqueuedPacket(ipPacket, "Dropping a packet. Send queue stayed full.");
     }
 
-    // a packet the queue did not take went to no one, so it is disposed, even when the logger fails; the caller
-    // is told so
+    // a packet the queue did not take went to no one, so it is disposed; the caller is told so
     private void DropUnqueuedPacket(IpPacket ipPacket, string message)
     {
-        try {
-            LogPacket(ipPacket, LogLevel.Debug, null, message);
-        }
-        finally {
-            _stat.AddDroppedPacket();
-            ipPacket.Dispose();
-        }
+        LogPacket(ipPacket, LogLevel.Debug, null, message);
+        _stat.AddDroppedPacket();
+        ipPacket.Dispose();
     }
 
     // called by the queue for the packet it drops to make room, inside the write that took the new one: nothing
@@ -269,13 +260,7 @@ public abstract class PacketTransportBase : IPacketTransport
     private void DropQueuedPacket(IpPacket ipPacket)
     {
         _stat.AddDroppedPacket();
-        try {
-            LogPacket(ipPacket, LogLevel.Debug, null, "Dropping the oldest packet. Send queue is full.");
-        }
-        catch {
-            // a failing logger must not fail a write that succeeded
-        }
-
+        LogPacket(ipPacket, LogLevel.Debug, null, "Dropping the oldest packet. Send queue is full.");
         ipPacket.Dispose();
     }
 
@@ -361,21 +346,15 @@ public abstract class PacketTransportBase : IPacketTransport
         return true;
     }
 
-    // a batch that was not sent: every packet is counted and, when told, disposed, even when the logger fails
+    // a batch that was not sent: every packet is counted and, when told, disposed
     private void DropFailedPackets(IReadOnlyList<IpPacket> ipPackets, Exception exception, bool disposePackets)
     {
-        try {
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < ipPackets.Count; i++)
-                LogPacket(ipPackets[i], exception, "Error in sending packet via channel.");
-        }
-        finally {
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < ipPackets.Count; i++) {
-                _stat.AddDroppedPacket();
-                if (disposePackets)
-                    ipPackets[i].Dispose();
-            }
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++) {
+            LogPacket(ipPackets[i], exception, "Error in sending packet via channel.");
+            _stat.AddDroppedPacket();
+            if (disposePackets)
+                ipPackets[i].Dispose();
         }
     }
 

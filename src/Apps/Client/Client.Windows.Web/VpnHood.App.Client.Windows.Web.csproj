@@ -10,7 +10,9 @@
 		     shipped as com.vpnhood.client.windows before the website's builds said so in their ids, and
 		     the id is part of every install's client id. -->
 		<AssemblyName>$(VhAppPackageTitle)</AssemblyName>
-		<ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
+		<!-- The app's icon, beside its identity (../Directory.Build.props), which every desktop head names:
+		     the executable's, the installer's and the tray's. -->
+		<ApplicationIcon>..\app.ico</ApplicationIcon>
 		<EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
 		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<ApplicationManifest>Properties/app.manifest</ApplicationManifest>

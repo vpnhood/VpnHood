@@ -1,11 +1,11 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.App;
 using VpnHood.AppUi.Common;
 using VpnHood.Net.Toolkit.Logging;
 
@@ -15,7 +15,8 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 // in words when pointed at - and a menu that opens the window, connects, disconnects and ends the UI.
 // It follows the connection by asking the app each second over the window's API, so it shows the
 // service's app and the one in this process alike. Its words are the UI's, in the language the UI
-// shows; its pictures the UI store's branding. On the UI thread throughout.
+// shows; its pictures the app's own icon with the connection's badge (AvaloniaTrayBadge). On the UI
+// thread throughout.
 //
 // What it cannot do itself it asks of the window's host: bring the window forward, and end - Exit
 // while connected disconnects first ("Disconnect and exit"). The service runs on.
@@ -37,17 +38,22 @@ internal sealed class AvaloniaDesktopTray : IDisposable
     private readonly CancellationTokenSource _cancellation = new();
     private AppState? _state;
 
-    public AvaloniaDesktopTray(Application application, VpnHoodApi api, string appName, AppResources.AppIcons icons,
-        Action showWindow, Action exit)
+    public AvaloniaDesktopTray(Application application, VpnHoodApi api, string appName, Action showWindow, Action exit)
     {
         _api = api;
         _appName = appName;
         _showWindow = showWindow;
         _exit = exit;
-        var builtInIcons = new AppResources.AppIcons();
-        _connectedIcon = LoadIcon(icons.SystemTrayConnectedIconData, builtInIcons.SystemTrayConnectedIconData);
-        _connectingIcon = LoadIcon(icons.SystemTrayConnectingIconData, builtInIcons.SystemTrayConnectingIconData);
-        _disconnectedIcon = LoadIcon(icons.SystemTrayDisconnectedIconData, builtInIcons.SystemTrayDisconnectedIconData);
+        var appIcon = ReadAppIcon();
+        try {
+            _connectedIcon = AvaloniaTrayBadge.Connected(appIcon);
+            _connectingIcon = AvaloniaTrayBadge.Connecting(appIcon);
+            _disconnectedIcon = AvaloniaTrayBadge.Disconnected(appIcon);
+        }
+        finally {
+            foreach (var picture in appIcon)
+                picture.Dispose();
+        }
 
         _openItem = CreateItem(ShowWindow);
         _connectItem = CreateItem(() => _ = Connect());
@@ -82,24 +88,21 @@ internal sealed class AvaloniaDesktopTray : IDisposable
         return item;
     }
 
-    // The tray's pictures are icon files, which Avalonia reads on Windows and Linux alike. A branded
-    // one that cannot be read is logged, and the library's own takes its place rather than an empty
-    // icon no one could find.
-    private static WindowIcon LoadIcon(ReadOnlyMemory<byte>? iconData, ReadOnlyMemory<byte>? builtInIconData)
+    // The icon the badges go on. One the build lacks, or one that cannot be read, is logged, and the
+    // badges stand alone rather than leaving an empty icon no one could find.
+    private static IReadOnlyList<Bitmap> ReadAppIcon()
     {
         try {
-            return ReadIcon(iconData);
+            var appIcon = AvaloniaAppIcon.Read();
+            if (appIcon.Count == 0)
+                VhLogger.Instance.LogWarning("The app's build has no icon, so the tray shows the connection's badge alone.");
+
+            return appIcon;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "The tray could not read one of its icons, so it shows the built-in one.");
-            return ReadIcon(builtInIconData);
+            VhLogger.Instance.LogError(ex, "The tray could not read the app's icon, so it shows the connection's badge alone.");
+            return [];
         }
-    }
-
-    private static WindowIcon ReadIcon(ReadOnlyMemory<byte>? iconData)
-    {
-        var data = iconData ?? throw new ArgumentNullException(nameof(iconData));
-        return new WindowIcon(new MemoryStream(data.ToArray()));
     }
 
     // A language chosen while the UI runs: on the UI thread, where the words are read.

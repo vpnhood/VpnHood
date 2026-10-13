@@ -15,6 +15,10 @@
 		     its access code's device limit until its old entry expires - accepted by the owner on
 		     2026-08-26. -->
 		<VhAppIdChannel>web</VhAppIdChannel>
+		<!-- The app's icon, beside its identity (../Directory.Build.props), which every desktop head names:
+		     the build places its 256 px picture beside the binary as AppIcon.png, for the tray and the
+		     menu (VpnHood.AppUi.Hosting.Desktop.Linux's targets). -->
+		<ApplicationIcon>..\app.ico</ApplicationIcon>
 	</PropertyGroup>
 
 
@@ -53,12 +57,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="8.2.858" />
-	</ItemGroup>
-
-	<!-- The app's icon in the desktop's menu and dock: the picture the Windows head's icon holds at
-	     256 px, published beside the binary, where install-client.sh takes it for the icon theme. -->
-	<ItemGroup>
-		<None Update="Resources\AppIcon.png" Link="AppIcon.png" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way

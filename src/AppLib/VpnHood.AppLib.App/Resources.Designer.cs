@@ -151,35 +151,5 @@ namespace VpnHood.AppLib.App {
                 return ((byte[])(obj));
             }
         }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] VpnConnectedIcon {
-            get {
-                object obj = ResourceManager.GetObject("VpnConnectedIcon", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] VpnConnectingIcon {
-            get {
-                object obj = ResourceManager.GetObject("VpnConnectingIcon", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] VpnDisconnectedIcon {
-            get {
-                object obj = ResourceManager.GetObject("VpnDisconnectedIcon", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
     }
 }

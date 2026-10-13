@@ -11,6 +11,10 @@
 		     shipped as com.vpnhood.client.linux before the website's builds said so in their ids, and the
 		     id is part of every install's client id. -->
 		<AssemblyName>$(VhAppPackageTitle)</AssemblyName>
+		<!-- The app's icon, beside its identity (../Directory.Build.props), which every desktop head names:
+		     the build places its 256 px picture beside the binary as AppIcon.png, for the tray and the
+		     menu (VpnHood.AppUi.Hosting.Desktop.Linux's targets). -->
+		<ApplicationIcon>..\app.ico</ApplicationIcon>
 	</PropertyGroup>
 
 
@@ -32,12 +36,6 @@
 		<!-- The UI itself: the pages, the controls, the themes. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
-	</ItemGroup>
-
-	<!-- The app's icon in the desktop's menu and dock: the picture the Windows head's icon holds at
-	     256 px, published beside the binary, where install-client.sh takes it for the icon theme. -->
-	<ItemGroup>
-		<None Update="Resources\AppIcon.png" Link="AppIcon.png" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way

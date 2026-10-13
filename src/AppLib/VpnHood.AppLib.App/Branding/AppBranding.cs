@@ -4,18 +4,17 @@ using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Logging;
-using VpnHood.Net.Toolkit.Streams;
 
 namespace VpnHood.AppLib.App.Branding;
 
-// The look the OS chrome draws with - the window and bar colours, the tray icons - as the UI's
-// store carries it: branding/<theme>/manifest.json and the icon files it names, written by the
-// UI's own build. So the store is the single source of the whole visual identity, and a rebranded
-// store rebrands the native chrome with no .NET change.
+// The colours the OS chrome draws with - the window's, the bars' - as the UI's store carries them:
+// branding/<theme>/manifest.json, written by the UI's own build. So a rebranded store recolours the
+// native chrome with no .NET change. The tray's pictures are not the store's: the tray draws the
+// app's own icon, from its build.
 //
 // Read through the provider, from whatever the store is on this platform, and applied onto the
 // resources the app already holds - only what the manifest names changes. A theme the store does
-// not have, or a manifest that names an icon the store does not carry, is a build bug and throws.
+// not have is a build bug and throws.
 public static class AppBranding
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
@@ -54,16 +53,6 @@ public static class AppBranding
         else {
             VhLogger.Instance.LogWarning("The branding manifest names no colours; the native chrome keeps its defaults.");
         }
-
-        // the tray icons; the badge icons keep the library's own
-        if (manifest.Icons is { } icons) {
-            if (icons.SystemTrayConnected != null)
-                resources.Icons.SystemTrayConnectedIconData = await ReadIcon(assets, folder, icons.SystemTrayConnected, cancellationToken).Vhc();
-            if (icons.SystemTrayConnecting != null)
-                resources.Icons.SystemTrayConnectingIconData = await ReadIcon(assets, folder, icons.SystemTrayConnecting, cancellationToken).Vhc();
-            if (icons.SystemTrayDisconnected != null)
-                resources.Icons.SystemTrayDisconnectedIconData = await ReadIcon(assets, folder, icons.SystemTrayDisconnected, cancellationToken).Vhc();
-        }
     }
 
     private static async Task<AppBrandingManifest?> TryReadManifest(IAssetProvider assets, string folder,
@@ -75,14 +64,6 @@ public static class AppBranding
 
         return await JsonSerializer.DeserializeAsync<AppBrandingManifest>(stream, JsonOptions, cancellationToken).Vhc()
                ?? throw new InvalidOperationException($"The branding manifest '{folder}/manifest.json' is empty.");
-    }
-
-    private static async Task<ReadOnlyMemory<byte>> ReadIcon(IAssetProvider assets, string folder, string fileName,
-        CancellationToken cancellationToken)
-    {
-        await using var stream = await assets.OpenReadAsync($"{folder}/{fileName}", cancellationToken).Vhc();
-        var memoryStream = await stream.ToMemoryStreamAsync(cancellationToken).Vhc();
-        return memoryStream.ToArray();
     }
 
     private static VhColor? ParseColor(string? hex)

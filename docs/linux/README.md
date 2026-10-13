@@ -336,5 +336,7 @@ Points that are easy to get wrong:
 
 The installer is [`pub/lib/vh-installer/linux/install-client.sh`](../../pub/lib/vh-installer/linux/install-client.sh),
 which is **not** the server's `install.sh` next to it. Each head picks its template in its
-`_publish.ps1` (`-installTemplate`). The menu entry's icon is the head's `Resources/AppIcon.png`,
-which the build places beside the binary.
+`_publish.ps1` (`-installTemplate`). The menu entry's icon, and the tray's, is the head's own: the
+icon file it names as a Windows head does (`ApplicationIcon`), whose largest picture the build
+writes beside the binary as `AppIcon.png`. That picture must be stored as PNG in the icon, as icon
+editors store their 256 px one.

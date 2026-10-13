@@ -13,7 +13,9 @@
 		     access code's device limit until its old entry expires - accepted by the owner on
 		     2026-08-26. -->
 		<VhAppIdChannel>web</VhAppIdChannel>
-		<ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
+		<!-- The app's icon, beside its identity (../Directory.Build.props), which every desktop head names:
+		     the executable's, the installer's and the tray's. -->
+		<ApplicationIcon>..\app.ico</ApplicationIcon>
 		<EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
 		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<ApplicationManifest>Properties/app.manifest</ApplicationManifest>

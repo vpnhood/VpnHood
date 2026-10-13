@@ -48,18 +48,15 @@ public class AppResources
         public VhColor? ProgressBarColor { get; set; }
     }
 
-    // The OS chrome the app draws for itself: a tray icon, a taskbar badge. Every one always has an
-    // answer - what the head assigned, or this library's own copy - so an app that supplies nothing
-    // still draws something rather than nothing. A product replaces any of them at configure time by
-    // assigning; setting null re-arms the default on the next read. Nothing here reads a file or
-    // knows where a product keeps its artwork: that is the head's business, and this library must
-    // not reach out for it.
+    // The OS chrome the app draws for itself: a taskbar badge. The tray's pictures are not here: the
+    // tray draws the app's own icon, from its build. Every one always has an answer - what the head
+    // assigned, or this library's own copy - so an app that supplies nothing still draws something
+    // rather than nothing. A product replaces any of them at configure time by assigning; setting null
+    // re-arms the default on the next read. Nothing here reads a file or knows where a product keeps
+    // its artwork: that is the head's business, and this library must not reach out for it.
     public class AppIcons
     {
         public ReadOnlyMemory<byte>? BadgeConnectedIconData { get => field ??= Resources.BadgeConnectedIcon; set; }
         public ReadOnlyMemory<byte>? BadgeConnectingIconData { get => field ??= Resources.BadgeConnectingIcon; set; }
-        public ReadOnlyMemory<byte>? SystemTrayConnectedIconData { get => field ??= Resources.VpnConnectedIcon; set; }
-        public ReadOnlyMemory<byte>? SystemTrayConnectingIconData { get => field ??= Resources.VpnConnectingIcon; set; }
-        public ReadOnlyMemory<byte>? SystemTrayDisconnectedIconData { get => field ??= Resources.VpnDisconnectedIcon; set; }
     }
 }

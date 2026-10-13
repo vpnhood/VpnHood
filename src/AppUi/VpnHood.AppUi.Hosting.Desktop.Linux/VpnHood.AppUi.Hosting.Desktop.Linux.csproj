@@ -4,6 +4,13 @@
 		<Description>The VpnHood desktop host on Linux: systemd is the service, /opt is the install, XDG is the cache, and root is who runs the daemon. Everything the commands themselves do is VpnHood.AppUi.Hosting.Desktop</Description>
 	</PropertyGroup>
 
+	<!-- The app's icon as Linux reads it (buildTransitive/), for every Linux head that takes this
+	     package. Its whole path in the package: a folder alone as PackagePath would nest it twice. -->
+	<ItemGroup>
+		<None Update="buildTransitive\VpnHood.AppUi.Hosting.Desktop.Linux.targets" Pack="true"
+		      PackagePath="buildTransitive\VpnHood.AppUi.Hosting.Desktop.Linux.targets" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop\VpnHood.AppUi.Hosting.Desktop.csproj" />
 		<!-- The app as Linux hosts it: the single-instance lock, the command file, the adapter

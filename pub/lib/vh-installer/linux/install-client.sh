@@ -505,10 +505,10 @@ fi
 if [ "$withDesktop" == "y" ]; then
 	echo "Adding $productName to the application menu...";
 
-	# The head's own icon, published beside the binary: AppIcon.png, the picture its Windows icon
-	# holds at 256 px, placed at that size. Older installers put the UI's 60 px logo in 512x512, which
-	# the dock blew up into a blur, so it goes. No icon, and the entry is still a working entry, with
-	# the desktop's generic one.
+	# The head's own icon, published beside the binary: AppIcon.png, the 256 px picture of the icon
+	# the head names (ApplicationIcon), placed at that size. Older installers put the UI's 60 px logo
+	# in 512x512, which the dock blew up into a blur, so it goes. No icon, and the entry is still a
+	# working entry, with the desktop's generic one.
 	iconLine="";
 	iconDir="/usr/share/icons/hicolor/256x256/apps";
 	rm -f "/usr/share/icons/hicolor/512x512/apps/$assemblyName.png";

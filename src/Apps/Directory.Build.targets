@@ -16,4 +16,9 @@
   <Import Project="$(MSBuildThisFileDirectory)..\AppUi\VpnHood.AppUi.Hosting.Desktop.Windows\buildTransitive\VpnHood.AppUi.Hosting.Desktop.Windows.targets"
           Condition="$(TargetFramework.Contains('-windows'))" />
 
+  <!-- The app's icon beside a Linux head's binary, AppIcon.png, likewise: the Linux hosting package's
+       targets. They act only on an app that names an icon (ApplicationIcon). -->
+  <Import Project="$(MSBuildThisFileDirectory)..\AppUi\VpnHood.AppUi.Hosting.Desktop.Linux\buildTransitive\VpnHood.AppUi.Hosting.Desktop.Linux.targets"
+          Condition="'$(VhAppPlatform)' == 'linux'" />
+
 </Project>

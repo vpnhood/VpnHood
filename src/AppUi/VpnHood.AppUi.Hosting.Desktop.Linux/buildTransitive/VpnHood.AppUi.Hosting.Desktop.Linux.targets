@@ -1,0 +1,78 @@
+<Project>
+	<!-- The app's icon as Linux reads it. A Linux executable holds no icon, so the largest picture of
+	     the one the head names - ApplicationIcon, as a Windows head names it - is written out as
+	     AppIcon.png and placed beside the binary, built and published alike: the window's tray draws it
+	     with the connection's badge (AvaloniaDesktopTray), and the installer gives it the menu entry
+	     (install-client.sh). So an app has one icon, and the build makes what each platform reads of
+	     it. That picture must be stored as PNG in the icon, as icon editors store their 256 px one: a
+	     bitmap fails the build. A head that names no icon gets none - the menu shows the desktop's
+	     own, and the tray the badge alone. -->
+	<UsingTask TaskName="VhWriteAppIconPng" TaskFactory="RoslynCodeTaskFactory"
+	           AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<IconFile ParameterType="System.String" Required="true" />
+			<PngFile ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+		<Task>
+			<Code Type="Fragment" Language="cs"><![CDATA[
+// ICONDIR: reserved, type and count; then 16 bytes a picture - its width (0 is 256) first, its
+// length and offset last. An earlier build's picture goes first, so a failed one leaves none.
+File.Delete(PngFile);
+var icon = File.ReadAllBytes(IconFile);
+var count = icon.Length < 6 || BitConverter.ToUInt16(icon, 2) != 1 ? 0 : BitConverter.ToUInt16(icon, 4);
+var largest = -1;
+var largestWidth = 0;
+for (var i = 0; i < count && 6 + 16 * (i + 1) <= icon.Length; i++) {
+    var width = icon[6 + 16 * i] == 0 ? 256 : icon[6 + 16 * i];
+    if (width > largestWidth) {
+        largest = i;
+        largestWidth = width;
+    }
+}
+
+if (largest < 0) {
+    Log.LogError("The app's icon (ApplicationIcon) is not an icon file: {0}", IconFile);
+}
+else {
+    var length = (int)BitConverter.ToUInt32(icon, 6 + 16 * largest + 8);
+    var offset = (int)BitConverter.ToUInt32(icon, 6 + 16 * largest + 12);
+    var isPng = length > 8 && offset > 0 && offset + length <= icon.Length &&
+                icon[offset] == 0x89 && icon[offset + 1] == 0x50 && icon[offset + 2] == 0x4E && icon[offset + 3] == 0x47;
+    if (!isPng) {
+        Log.LogError("The app's icon (ApplicationIcon) stores its largest picture, {0} px, as a bitmap, which Linux cannot show: save the icon with that picture as PNG. {1}", largestWidth, IconFile);
+    }
+    else {
+        var png = new byte[length];
+        Array.Copy(icon, offset, png, 0, length);
+        Directory.CreateDirectory(Path.GetDirectoryName(PngFile));
+        File.WriteAllBytes(PngFile, png);
+    }
+}
+]]></Code>
+		</Task>
+	</UsingTask>
+
+	<Target Name="_VhGetAppIconPngPaths">
+		<PropertyGroup>
+			<_VhAppIconFile>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildProjectDirectory)', '$(ApplicationIcon)'))))</_VhAppIconFile>
+			<_VhAppIconPng>$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)AppIcon.png'))</_VhAppIconPng>
+		</PropertyGroup>
+	</Target>
+
+	<!-- Written only when the icon changed; placed also when the write is skipped as up to date, as
+	     MSBuild infers a skipped target's items. A failed write leaves no picture to place: the build
+	     goes on after it, and would otherwise fail a second time copying it. -->
+	<Target Name="_VhAddAppIconPngToOutput" BeforeTargets="AssignTargetPaths" DependsOnTargets="_VhGetAppIconPngPaths"
+	        Inputs="$(_VhAppIconFile)" Outputs="$(_VhAppIconPng)"
+	        Condition="('$(OutputType)' == 'Exe' Or '$(OutputType)' == 'WinExe') And '$(ApplicationIcon)' != ''">
+		<VhWriteAppIconPng IconFile="$(_VhAppIconFile)" PngFile="$(_VhAppIconPng)" />
+		<ItemGroup>
+			<FileWrites Include="$(_VhAppIconPng)" />
+			<None Include="$(_VhAppIconPng)" Condition="Exists('$(_VhAppIconPng)')">
+				<Link>AppIcon.png</Link>
+				<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+				<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+			</None>
+		</ItemGroup>
+	</Target>
+</Project>

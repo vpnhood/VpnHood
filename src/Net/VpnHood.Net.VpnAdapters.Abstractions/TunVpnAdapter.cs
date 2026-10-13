@@ -180,9 +180,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // We hope client await the start otherwise we need different state for adapters
             _isStarting = true;
             lock (_stopLock) {
-                // a disposal or a stop that got here first found nothing to stop, so nothing may start after it
+                // a disposal or a stop that got here first found nothing to stop, so nothing may start after it;
+                // a stop that cleared the flag before this start set it may still cancel this start's token
                 ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
-                if (!_keepStarted)
+                if (!_keepStarted || _keepStartedCts.IsCancellationRequested)
                     throw new OperationCanceledException("The VPN adapter has been stopped while starting.");
                 IsStarted = true;
                 wasStarted = true;

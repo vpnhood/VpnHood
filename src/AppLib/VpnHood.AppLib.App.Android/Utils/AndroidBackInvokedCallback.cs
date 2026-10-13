@@ -1,8 +1,8 @@
 ﻿using Android.Window;
 
-namespace VpnHood.AppUi.Hosting.WebView.Android;
+namespace VpnHood.AppLib.App.Android.Utils;
 
-internal sealed class AndroidBackInvokedCallback(Action onBackInvoked)
+public sealed class AndroidBackInvokedCallback(Action onBackInvoked)
     : Java.Lang.Object, IOnBackInvokedCallback
 {
     public void OnBackInvoked() => onBackInvoked();

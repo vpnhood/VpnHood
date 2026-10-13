@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppLib.App.Android.Activities;
+using VpnHood.AppLib.App.Android.Utils;
 using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;

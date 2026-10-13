@@ -41,6 +41,7 @@
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
 * Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts #android
 * Feature: The Android app from our website updates itself: "Update now" downloads the new version, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store such as IzzyOnDroid keeps updating there #android
+* Update: On most phones, the Android app from our website now updates with the version made for the phone's processor, a third of the download #android
 * Fix: On a slow connection, an ad you chose to watch - Watch Ad, Free Server by Ad, or more minutes for your session - is no longer cut off while it is still loading #android #connect
 * Update: The Android app from our website no longer contains AppsFlyer, so it no longer reports which link it was installed from #android #connect
 * Fix: A head built without the browser page starts and serves its API; only a request for the page fails, naming the missing file. A service that cannot start says why in its log, and on Windows in the Application event log under the service's name.

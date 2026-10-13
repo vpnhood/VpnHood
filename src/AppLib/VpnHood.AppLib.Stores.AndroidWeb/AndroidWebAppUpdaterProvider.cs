@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using Android.App;
 using Android.Content;
@@ -54,6 +55,16 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
     {
         return CalcIsSupported(signingCertificateSha256) ? new AndroidWebAppUpdaterProvider() : null;
     }
+
+    /// <summary>
+    /// The feed this install reads, as AppConfigs.GetUpdateInfoUrl names it: in an arm64 process the arm64
+    /// APK's, a third the size, else the universal APK's. The process decides, not the build: the universal
+    /// APK on an arm64 phone runs as arm64 too, so it moves to the arm64 APK at its next update. Every
+    /// release publishes both feeds (pub/lib/Publish-GithubRelease.ps1); never name another.
+    /// </summary>
+    public static string FeedDistribution => RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+        ? "android-web-arm64"
+        : "android-web";
 
     private static Context Context => Application.Context;
 

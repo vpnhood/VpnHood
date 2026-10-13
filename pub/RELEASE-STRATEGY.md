@@ -212,9 +212,10 @@ gh release upload <tag> --repo <owner/repo> <old-name>.json --clobber
 
 Currently aliased: the Android arm64 web build, renamed from `…-android-arm64-web` to
 `…-android-web-arm64` in v8.1.838 (client) / v8.1.847 (connect), aliased until 2026-12-01. Note this
-one never affected our own apps — both the universal and the arm64 APK are built from the same
-`*.Android.Web` project, whose update feed (`UpdateInfoUrl`, in its `App.cs`) has always named
-`VpnHood<App>-Android-web.json`.
+one never affected our own apps: through 8.2.854 both the universal and the arm64 APK, built from the
+same `*.Android.Web` project, read only `VpnHood<App>-android-web.json`; later releases on an arm64
+phone read `VpnHood<App>-android-web-arm64.json`, the new name
+(`AndroidWebAppUpdaterProvider.FeedDistribution`).
 
 ### NuGet smoke test (validate the pipeline without burning a version)
 

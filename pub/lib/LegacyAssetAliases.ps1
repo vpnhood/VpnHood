@@ -16,11 +16,12 @@
 # (new-name) APK. Anything still on the old URL therefore downloads the latest build from its canonical
 # location, and there is no reason to duplicate ~20 MB per release under a name we no longer publish.
 #
-# Note for whoever traces an actual update bug here: our OWN Android apps never polled these arm64
-# files. Both the universal and the arm64 APK are built from the same Client/Connect .Android.Web
-# project, whose update feed (UpdateInfoUrl, App.cs) has always named "VpnHood<App>-Android-web.json" (verified in
-# the shipped v7.9.811 APK). So the rename did not cut off in-app update notifications; this alias
-# exists for third parties and forks that polled the per-arch file directly.
+# Note for whoever traces an actual update bug here: our OWN Android apps never polled the OLD name.
+# Through 8.2.854 both APKs, built from the same Client/Connect .Android.Web project, read only the
+# universal feed, "VpnHood<App>-android-web.json"; later releases on an arm64 phone read
+# "VpnHood<App>-android-web-arm64.json", the new name (AndroidWebAppUpdaterProvider.FeedDistribution).
+# So the rename cut off no in-app update notice; this alias exists for third parties and forks that
+# polled the per-arch file directly.
 #
 # THIS IS TEMPORARY. Past the expiry below the alias stops being written and stops being attached — no
 # release changes shape, the extra file simply stops appearing. Delete this file and its two call sites

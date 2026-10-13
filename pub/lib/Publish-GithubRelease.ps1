@@ -145,6 +145,18 @@ $missingAssets = $assets | Where-Object { -not (Test-Path $_) };
 foreach ($missing in $missingAssets) {
 	Write-Warning "Release asset not found, skipping: $missing";
 }
+
+# The website APK's two feeds go out together: an arm64 install reads the arm64 one and any other the
+# universal one (AndroidWebAppUpdaterProvider.FeedDistribution), and latest/download answers 404 for a
+# feed the latest release lacks, so a release with one alone tells half the installs of no update.
+$webFeeds = @(@(
+	"$packageDir/android-web/$packageFileTitle-android-web.json",
+	"$packageDir/android-web-arm64/$packageFileTitle-android-web-arm64.json"
+) | Where-Object { Test-Path $_ });
+if ($webFeeds.Count -eq 1) {
+	throw "Only one of the website APK's two update feeds was produced ($webFeeds); publish both android-web and android-web-arm64, or neither.";
+}
+
 $assets = $assets | Where-Object { Test-Path $_ };
 if ($assets.Count -eq 0) {
 	throw "No release assets were produced; aborting release creation.";

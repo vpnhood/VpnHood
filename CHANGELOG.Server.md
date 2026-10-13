@@ -1,5 +1,6 @@
 # Latest
 
+* Improve: VpnHoodServer stops with one line and exit code 1 when its settings cannot be read - appsettings.json, naming the file and where its JSON breaks, or VH_APPSETTINGS - rather than crashing with a stack trace and dumping core at each restart.
 * Fix: A connection to VpnHoodServer no longer ends two days after it began while still in use. The server now reports an active session's traffic to its access manager every sync interval (20 minutes by default), not only once the session goes quiet, and a self-hosted server's session times out 48 hours after its last use.
 * Fix: A restart or an update of a self-hosted VpnHoodServer no longer ends a connected device's session as suppressed by another session, which could happen when that device had connected before in the last two days.
 * Update: VpnHoodServer passes each new session's analytics choice, which the client now sends in its hello, to the access manager (`SessionRequestEx.AllowAnonymousTracker`), so an access manager can report only the sessions that allow it. A client before this sends none, which reads as no.

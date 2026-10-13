@@ -130,9 +130,16 @@ public class ServerApp : IDisposable
         var appSettingsFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
-        return File.Exists(appSettingsFilePath)
-            ? (JsonUtils.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath)), appSettingsFilePath)
-            : (new AppSettings(), "the defaults");
+        if (!File.Exists(appSettingsFilePath))
+            return (new AppSettings(), "the defaults");
+
+        var appSettingsFileJson = File.ReadAllText(appSettingsFilePath);
+        try {
+            return (JsonUtils.Deserialize<AppSettings>(appSettingsFileJson), appSettingsFilePath);
+        }
+        catch (Exception ex) {
+            throw new InvalidDataException($"{appSettingsFilePath} holds no valid settings. {ex.Message}", ex);
+        }
     }
 
     // What a person types to run this server's commands: the launcher that started it, which the

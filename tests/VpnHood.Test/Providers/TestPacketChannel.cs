@@ -19,6 +19,12 @@ public class TestPacketChannel() : PacketChannel(new PacketChannelOptions {
     public long SentBytes => Interlocked.Read(ref _sentBytes);
     public override int OverheadLength => 0;
 
+    // a packet arriving from the other side
+    public void Receive(IpPacket ipPacket)
+    {
+        OnPacketReceived(ipPacket);
+    }
+
     // nothing to read: it waits until the channel is disposed
     protected override Task StartReadTask()
     {

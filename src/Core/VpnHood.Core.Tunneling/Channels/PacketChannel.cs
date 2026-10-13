@@ -133,25 +133,39 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
 
     protected override void OnPacketReceived(IpPacket ipPacket)
     {
-        // check close message
-        var message = PacketMessageHandler.ReadMessage(ipPacket);
-        if (message is ClosePacketMessage) {
-            VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
-                "PacketChannel received close message. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
-                ChannelId, PacketStat.CreatedTime, _lifespan);
-
-            // send close message if closed messaged has not been received before
-            if (_closeReceivedTime == null) {
-                _closeReceivedTime ??= FastDateTime.UtcNow;
-                _closeSentTime ??= FastDateTime.UtcNow;
-                SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
-            }
-
-            ipPacket.Dispose();
+        if (!PacketMessageHandler.IsPacketMessage(ipPacket)) {
+            base.OnPacketReceived(ipPacket);
             return;
         }
 
-        base.OnPacketReceived(ipPacket);
+        // A message is the channel's own, so it is disposed here. One it cannot handle, such as a newer peer's, is
+        // dropped as the base drops a packet it cannot deliver, rather than ending the channel
+        try {
+            if (PacketMessageHandler.ReadMessage(ipPacket) is ClosePacketMessage)
+                ReceiveClose();
+        }
+        catch (Exception ex) {
+            LogPacket(ipPacket, ex, "Dropping a packet message the channel could not handle.");
+        }
+        finally {
+            ipPacket.Dispose();
+        }
+    }
+
+    // the peer's close, answered once with the channel's own; a channel being disposed closes with no answer
+    private void ReceiveClose()
+    {
+        VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
+            "PacketChannel received close message. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
+            ChannelId, PacketStat.CreatedTime, _lifespan);
+
+        if (_closeReceivedTime != null)
+            return;
+
+        _closeReceivedTime = FastDateTime.UtcNow;
+        _closeSentTime ??= FastDateTime.UtcNow;
+        if (!IsDisposing && !IsDisposed)
+            SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
     }
 
     protected override void DisposeManaged()

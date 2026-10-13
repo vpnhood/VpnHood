@@ -475,9 +475,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         await ExecuteCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).Vhc();
     }
 
-    // No double quote in the command: ExecuteCommand wraps it in a pair for bash -c, and an inner one ended it
-    // early (bash ran only an echo, never resolvconf). Never cut off: an entry the command made after a stop's
-    // cleanup looked would stay, its flag unset, until the next connect clears it.
+    // Never cut off: an entry the command made after a stop's cleanup looked would stay, its flag unset, until
+    // the next connect clears it.
     private async Task SetDnsServersByResolvconf(IEnumerable<IPAddress> dnsServers)
     {
         var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
@@ -701,12 +700,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     private static string ExecuteCommand(string command)
     {
-        return OsUtils.ExecuteCommand("/bin/bash", $"-c \"{command}\"");
+        return OsUtils.ExecuteShellCommand(command);
     }
 
     private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken)
     {
-        return OsUtils.ExecuteCommandAsync("/bin/bash", $"-c \"{command}\"", cancellationToken);
+        return OsUtils.ExecuteShellCommandAsync(command, cancellationToken);
     }
 
     protected override void DisposeUnmanaged()

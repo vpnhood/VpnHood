@@ -85,6 +85,6 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
 
     private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken = default)
     {
-        return OsUtils.ExecuteCommandAsync("/bin/bash", $"-c \"{command}\"", cancellationToken);
+        return OsUtils.ExecuteShellCommandAsync(command, cancellationToken);
     }
 }

@@ -15,18 +15,52 @@ public static class OsUtils
     // a command still running at the timeout is killed
     public static string ExecuteCommand(string fileName, string command, TimeSpan timeout)
     {
-        VhLogger.Instance.LogDebug($"Executing: {fileName} {command}");
-        var processInfo = new ProcessStartInfo {
+        return Execute(CreateStartInfo(fileName, command), $"{fileName} {command}", timeout);
+    }
+
+    public static Task<string> ExecuteCommandAsync(string fileName, string command,
+        CancellationToken cancellationToken)
+    {
+        return ExecuteAsync(CreateStartInfo(fileName, command), $"{fileName} {command}", cancellationToken);
+    }
+
+    // A command line for bash, given to it as one argument, as written. Never through Arguments, which parses
+    // its quotes again by Windows' rules: an inner double quote could change the command bash runs
+    public static string ExecuteShellCommand(string command)
+    {
+        return Execute(CreateShellStartInfo(command), $"/bin/bash -c {command}", Timeout.InfiniteTimeSpan);
+    }
+
+    public static Task<string> ExecuteShellCommandAsync(string command, CancellationToken cancellationToken)
+    {
+        return ExecuteAsync(CreateShellStartInfo(command), $"/bin/bash -c {command}", cancellationToken);
+    }
+
+    private static ProcessStartInfo CreateStartInfo(string fileName, string arguments)
+    {
+        return new ProcessStartInfo {
             FileName = fileName,
-            Arguments = command,
+            Arguments = arguments,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+    }
 
+    private static ProcessStartInfo CreateShellStartInfo(string command)
+    {
+        var startInfo = CreateStartInfo("/bin/bash", arguments: "");
+        startInfo.ArgumentList.Add("-c");
+        startInfo.ArgumentList.Add(command);
+        return startInfo;
+    }
+
+    private static string Execute(ProcessStartInfo startInfo, string commandLine, TimeSpan timeout)
+    {
+        VhLogger.Instance.LogDebug($"Executing: {commandLine}");
         using var process = new Process();
-        process.StartInfo = processInfo;
+        process.StartInfo = startInfo;
         process.Start();
 
         // both streams at once: reading one to its end first stalls a command that fills the other's pipe
@@ -35,35 +69,26 @@ public static class OsUtils
         if (!process.WaitForExit(timeout)) {
             process.Kill(entireProcessTree: true);
             throw new TimeoutException(
-                $"The command has not finished in {timeout.TotalSeconds} seconds. Command: {fileName} {command}.");
+                $"The command has not finished in {timeout.TotalSeconds} seconds. Command: {commandLine}.");
         }
 
         var error = errorTask.GetAwaiter().GetResult();
         var output = outputTask.GetAwaiter().GetResult();
         if (process.ExitCode != 0)
-            throw new ExternalException(error, process.ExitCode);
+            throw new ExternalException($"{error}. Command: {commandLine}.", process.ExitCode);
 
         return output;
     }
 
-    public static async Task<string> ExecuteCommandAsync(string fileName, string command,
+    private static async Task<string> ExecuteAsync(ProcessStartInfo startInfo, string commandLine,
         CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogDebug($"Executing: {fileName} {command}");
-        var processInfo = new ProcessStartInfo {
-            FileName = fileName,
-            Arguments = command,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
+        VhLogger.Instance.LogDebug($"Executing: {commandLine}");
         using var process = new Process();
-        process.StartInfo = processInfo;
+        process.StartInfo = startInfo;
         process.Start();
 
-        // both streams at once, as in ExecuteCommand
+        // both streams at once, as in Execute
         var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
         var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var error = await errorTask;
@@ -71,7 +96,7 @@ public static class OsUtils
 
         await WaitForExitAsync(process, cancellationToken);
         if (process.ExitCode != 0) {
-            error += $". Command: {fileName} {command}.";
+            error += $". Command: {commandLine}.";
             throw new ExternalException(error, process.ExitCode);
         }
 

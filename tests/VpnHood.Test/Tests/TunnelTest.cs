@@ -9,8 +9,10 @@ using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
+using VpnHood.Core.Tunneling.DatagramMessaging;
 using VpnHood.Core.Tunneling.WebSockets;
 using VpnHood.Test.Packets;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -381,6 +383,60 @@ public class TunnelTest : TestBase
             else
                 Assert.AreEqual(10, memStream.Position, "Stream position mismatch for payload length > 0xFFFF");
         }
+    }
+
+    [TestMethod]
+    public void A_channel_added_to_a_full_tunnel_takes_a_closing_channels_place()
+    {
+        // a server's tunnel with all its channels, one of them closing as the client replaces it
+        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        var receivedPorts = new List<int>();
+        tunnel.PacketReceived += (_, ipPacket) => {
+            receivedPorts.Add(ipPacket.ExtractUdp().SourcePort);
+            ipPacket.Dispose();
+        };
+        var channels = Enumerable.Range(0, tunnel.MaxPacketChannelCount).Select(_ => new TestPacketChannel()).ToArray();
+        foreach (var channel in channels)
+            tunnel.AddChannel(channel);
+        var closingChannel = channels[2];
+        closingChannel.Receive(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
+
+        // the replacement takes the closing channel's place, and every live channel stays
+        var replacement = new TestPacketChannel();
+        tunnel.AddChannel(replacement);
+        var liveChannels = channels.Where(x => x != closingChannel).Append(replacement).ToArray();
+        CollectionAssert.AreEquivalent(liveChannels, tunnel.PacketChannels.ToArray());
+        Assert.IsTrue(liveChannels.All(x => x.State == PacketChannelState.Connected));
+
+        // the closing channel is left to its grace: what still arrives on it reaches the tunnel
+        Assert.AreEqual(PacketChannelState.Disconnecting, closingChannel.State);
+        closingChannel.Receive(PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("10.0.0.3"), 1, 53,
+            new byte[16]));
+        CollectionAssert.AreEqual(new[] { 1 }, receivedPorts);
+    }
+
+    [TestMethod]
+    [DataRow(8, 1)] // the server disposed the closing channel, which the replacement's request no longer lists
+    [DataRow(8, 8)] // a network change: the server disposed every old channel
+    [DataRow(1, 1)] // the one channel replaced
+    public void A_channel_added_to_a_full_tunnel_takes_the_place_of_disposed_ones(int maxChannelCount,
+        int disposedCount)
+    {
+        // a server's tunnel with all its channels, its last ones disposed but still listed, as its session leaves them
+        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions()) { MaxPacketChannelCount = maxChannelCount };
+        var channels = Enumerable.Range(0, maxChannelCount).Select(_ => new TestPacketChannel()).ToArray();
+        foreach (var channel in channels)
+            tunnel.AddChannel(channel);
+        var disposedChannels = channels.Skip(maxChannelCount - disposedCount).ToArray();
+        foreach (var channel in disposedChannels)
+            channel.Dispose();
+
+        // the replacement takes their place, and every live channel stays
+        var replacement = new TestPacketChannel();
+        tunnel.AddChannel(replacement);
+        var liveChannels = channels.Except(disposedChannels).Append(replacement).ToArray();
+        CollectionAssert.AreEquivalent(liveChannels, tunnel.PacketChannels.ToArray());
+        Assert.IsTrue(liveChannels.All(x => x.State == PacketChannelState.Connected));
     }
 
 }

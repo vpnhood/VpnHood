@@ -131,7 +131,9 @@ internal class ChannelManager : IDisposable
                 VhLogger.FormatType(channel), channel.ChannelId, _packetChannels.Count, channel.State);
         }
 
-        // remove excess packet channels if needed
+        // the closing and dead channels leave first, so only live ones count against the maximum: a client replacing a
+        // closing channel would otherwise cost a full tunnel its oldest healthy one
+        CleanupChannels();
         RemoveExcessPacketChannels();
     }
 

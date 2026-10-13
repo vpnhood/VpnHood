@@ -11,16 +11,15 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.Net.Quic.MsQuic.AndroidNative" Version="8.0.12" />
+		<!-- All native QUIC complexity (libmsquic.so per ABI + the Microsoft.Quic P/Invoke bindings) lives
+		     in this self-contained package. The fork's GitHub Actions publish a new 8.0.<run#> on every
+		     push, so the version is pinned and moves after a test. -->
+		<PackageReference Include="VpnHood.Net.Quic.MsQuic.AndroidNative" Version="8.0.13" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<!-- VpnHood.Net.Toolkit provides SystemSocketFactory and transitively Quic.Abstractions. -->
 		<ProjectReference Include="..\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
-		<!-- All native QUIC complexity (the committed libmsquic.so per ABI + the Microsoft.Quic P/Invoke
-		     bindings) lives in this self-contained, published package. It is built and published by the
-		     fork's GitHub Actions on every push (version 8.0.<run#>); floating on 8.0.* always restores
-		     the newest published build. -->
 	</ItemGroup>
 
 </Project>

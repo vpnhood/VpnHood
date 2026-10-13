@@ -33,7 +33,7 @@ public abstract class PacketTransportBase : IPacketTransport
     // any mode. One a send failed on, or left in the queue at the end, is disposed whenever the transport queues,
     // as no one else holds it; in passthrough mode only with AutoDisposePackets, as the subclass may have handed
     // it on. A delivered one only with AutoDisposePackets, as a transport that hands its packets on (a tunnel)
-    // must not dispose them
+    // must not dispose them. No disposal is guarded: a packet's Dispose only returns its buffer to the pool
     private readonly bool _disposeUnsentPackets;
     protected bool IsDisposed => _disposed;
 

@@ -51,7 +51,8 @@ public class Tunnel : PacketTransportBase
         OnPacketReceived(ipPacket);
     }
 
-    // one packet at a time, under the base's lock
+    // One packet at a time, under the base's lock. One that could not go still counts as sent in the tunnel's own
+    // stats; left so, as nothing reads them
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         SendPacketToChannel(ipPackets[0]);

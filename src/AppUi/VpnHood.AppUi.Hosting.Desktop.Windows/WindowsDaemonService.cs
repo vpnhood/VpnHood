@@ -16,6 +16,10 @@ namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 internal sealed class WindowsDaemonService : ServiceBase
 {
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(30);
+
+    // A little over StopTimeout, so a stop that takes all of it is not called hung (services.msc,
+    // net stop) a moment before it ends.
+    private static readonly TimeSpan StopWaitHint = StopTimeout + TimeSpan.FromSeconds(5);
     private readonly Func<CancellationToken, Task<int>> _run;
     private readonly CancellationTokenSource _cancellation = new();
     private Task<int>? _running;
@@ -64,7 +68,7 @@ internal sealed class WindowsDaemonService : ServiceBase
     // it disconnects, so it disconnects in the time Windows gives every service at shutdown.
     protected override void OnStop()
     {
-        RequestAdditionalTime((int)StopTimeout.TotalMilliseconds);
+        RequestAdditionalTime((int)StopWaitHint.TotalMilliseconds);
         EndRun();
     }
 

@@ -15,7 +15,7 @@
 
   <PropertyGroup>
     <!-- One version for the whole solution. Kept in sync with pub/PubVersion.json by the bump. -->
-    <Version>9.0.854</Version>
+    <Version>9.0.855</Version>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
   </PropertyGroup>
 

@@ -1,7 +1,6 @@
 using System.Buffers;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Streams;
-using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.TcpStack;
 
@@ -120,7 +119,7 @@ public sealed class LocalTcpStream : AsyncStream
 
         if (disposing) {
             _cts.TryCancel();
-            _connection.TryStartFin(_stack);
+            _connection.CloseFromApp(_stack);
             _cts.Dispose();
         }
         base.Dispose(disposing);
@@ -132,10 +131,7 @@ public sealed class LocalTcpStream : AsyncStream
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        // Graceful close: drain buffered app->net bytes into TCP segments before FIN.
-        await VhUtils.TryInvokeAsync("GracefulCloseAsync",
-            () => _connection.GracefulCloseAsync(_stack)).Vhc();
-
+        _connection.CloseFromApp(_stack);
         await _cts.TryCancelAsync();
         _cts.Dispose();
 

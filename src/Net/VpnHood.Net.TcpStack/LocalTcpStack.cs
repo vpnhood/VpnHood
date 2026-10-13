@@ -557,12 +557,10 @@ public sealed class LocalTcpStack : ITcpStack
     /// </summary>
     public void DropAllConnections()
     {
-        foreach (var kvp in _connections) {
-            if (_connections.TryRemove(kvp.Key, out var connection)) {
-                Diagnostics.SetConnectionCount(Interlocked.Decrement(ref _connectionCount));
-                connection.Dispose();
-            }
-        }
+        // Abort, not Dispose: the local app gets a RST instead of a black-holed socket, the stream's reader
+        // EOF; OnConnectionClosed removes the entry and keeps the count.
+        foreach (var kvp in _connections)
+            kvp.Value.Abort();
     }
 
     /// <summary>

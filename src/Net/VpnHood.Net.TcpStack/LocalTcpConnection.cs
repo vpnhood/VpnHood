@@ -55,6 +55,9 @@ internal sealed class LocalTcpConnection(
 
     private bool _finSent;
     private bool _finReceived;
+    private bool _readSideClosed; // the app closed its stream: new bytes from the peer are reset, not buffered
+    private bool _resetPending; // the app closed with unread bytes while our tail was in flight: reset once acked
+    private long _orphanProgressTicks; // set per idle tick once the app closed: when the sequence numbers last moved
     private bool _establishedCounted; // DIAGNOSTIC: whether we incremented LocalTcpStack.EstablishedConnections
     private bool _sndNxtAfterSynSet;
     private bool _disposed;
@@ -198,15 +201,37 @@ internal sealed class LocalTcpConnection(
     }
 
     /// <summary>
-    /// Gracefully closes the connection: marks the app→net direction as complete, then sends FIN.
-    /// Used by <see cref="LocalTcpStream.DisposeAsync"/> so closing the stream does not truncate data.
+    /// The app closed its stream, so both directions end. Bytes the app never read, or new bytes the peer
+    /// sends afterwards, reset the connection as a kernel does after close() (RFC 1122 4.2.2.13) - once our
+    /// own tail data is acknowledged (see <see cref="TryHandleIncoming"/>), so the peer does not drop that
+    /// tail unread; otherwise a FIN goes out and the peer's ACK of it ends the connection.
     /// </summary>
-    public Task GracefulCloseAsync(LocalTcpStack stack)
+    public void CloseFromApp(LocalTcpStack stack)
     {
-        if (_disposed) return Task.CompletedTask;
-        _appToNetCompleted = true;
+        bool reset;
+        long discarded;
+        lock (_seqLock) {
+            if (_disposed || _closedFlag) return;
+            _readSideClosed = true;
+            _appToNetCompleted = true;
+            // With our tail data still in flight the RST would make the peer drop it unread (RFC 7230 6.6):
+            // then the FIN goes first and the RST follows the ACK of the tail (TryHandleIncoming). The unread
+            // bytes leave the receive budget now either way; nobody will read them.
+            discarded = Interlocked.Exchange(ref _pipeUnread, 0);
+            reset = discarded > 0 && _sndUna == _sndNxt;
+            _resetPending = discarded > 0 && !reset;
+        }
+
+        if (discarded > 0)
+            diagnostics.AddPipeBufferedBytes(-discarded);
+
+        if (reset) {
+            Abort();
+            return;
+        }
+
+        CompleteNetToApp();
         TryStartFin(stack);
-        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -447,6 +472,8 @@ internal sealed class LocalTcpConnection(
             uint prevUna;
             uint sndNxtSnap;
             var shouldFastRetx = false;
+            var finExchangeComplete = false;
+            var resetUnread = false;
             lock (_seqLock) {
                 prevUna = _sndUna;
                 sndNxtSnap = _sndNxt;
@@ -469,6 +496,10 @@ internal sealed class LocalTcpConnection(
                     _dupAckCount = 0;
                     _lastDupAck = ack;
                     RestartRtoLocked(); // cumulative-ACK progress restarts the retransmission timer
+                    // LastAck: the peer acknowledged our FIN after its own; nothing is left to exchange.
+                    finExchangeComplete = _finSent && _finReceived && _sndUna == _sndNxt;
+                    // The reset CloseFromApp deferred (unread bytes, our tail in flight): everything is acked now.
+                    resetUnread = _resetPending && _sndUna == _sndNxt;
                 }
                 else if (diff == 0 && payload.Length == 0 && _retxBufferLen > 0 &&
                          scaledWindow == prevPeerWindow && !flags.HasFlag(TcpFlags.Fin)) {
@@ -496,12 +527,25 @@ internal sealed class LocalTcpConnection(
                 FastRetransmit();
             }
             TrySignalWindow();
+
+            if (resetUnread) {
+                Abort();
+                return (false, false);
+            }
+            if (finExchangeComplete) {
+                Close();
+                // A retransmitted peer FIN on this segment still needs its ACK, or its next retransmit meets
+                // an unknown-connection RST.
+                return (true, flags.HasFlag(TcpFlags.Fin));
+            }
         }
 
         try {
             bool needsAck;
             var processFin = false;
             var finCloses = false;
+            var dataAfterClose = false;
+            var resetAfterClose = false;
 
             lock (_seqLock) {
                 var seqDiff = (int)(seq - _rcvNxt);
@@ -517,7 +561,15 @@ internal sealed class LocalTcpConnection(
                 var overlap = -seqDiff; // already-received prefix of this segment
                 var truncated = false;
                 var acceptedNew = 0;
-                if (payload.Length > overlap) {
+                // New bytes after the app closed its stream have no reader: reset below, as a kernel does for
+                // data after close(), instead of buffering them into a dead pipe that pins the connection. While
+                // our own FIN or tail data is unacknowledged they are dropped without an ACK instead (a RST now
+                // would make the peer drop that tail unread); its retransmit draws the RST once all is acked.
+                dataAfterClose = payload.Length > overlap && _readSideClosed;
+                if (dataAfterClose) {
+                    resetAfterClose = _sndUna == _sndNxt;
+                }
+                else if (payload.Length > overlap) {
                     var newData = payload[overlap..];
                     // HARD receive-window enforcement: never buffer beyond the configured window, even if
                     // the peer ignores our advertisements. Real TCP receivers drop out-of-window bytes the
@@ -567,17 +619,22 @@ internal sealed class LocalTcpConnection(
                     needsAck = true;
                     processFin = true;
 
-                    // Check if both sides have sent FIN
-                    if (_finSent) {
-                        State = TcpConnectionState.Closed;
-                        finCloses = true;
-                    }
-                    else {
+                    // Both FINs exchanged: closed once ours is acknowledged too (this segment's ACK was
+                    // processed above), otherwise LastAck retransmits it until the ACK arrives.
+                    if (_finSent)
+                        State = _sndUna == _sndNxt ? TcpConnectionState.Closed : TcpConnectionState.LastAck;
+                    else
                         State = TcpConnectionState.Closing;
-                    }
+                    finCloses = State == TcpConnectionState.Closed;
                 }
 
                 UpdateMaintenanceInterestLocked();
+            }
+
+            if (dataAfterClose) {
+                if (resetAfterClose)
+                    Abort();
+                return (false, false);
             }
 
             if (processFin) {
@@ -719,8 +776,15 @@ internal sealed class LocalTcpConnection(
         Interlocked.Exchange(ref _lastActivityTicks, Stopwatch.GetTimestamp());
     }
 
-    /// <summary>Time since the last send/receive activity on this connection (drives LRU eviction).</summary>
-    internal TimeSpan IdleDuration => Stopwatch.GetElapsedTime(Interlocked.Read(ref _lastActivityTicks));
+    /// <summary>Time since the last send/receive activity on this connection (drives LRU eviction). For an
+    /// orphan (the app closed its stream) it is the time since the sequence numbers last moved, sampled by
+    /// the idle monitor, so a peer's no-progress ACKs cannot keep it from eviction.</summary>
+    internal TimeSpan IdleDuration {
+        get {
+            var progress = Volatile.Read(ref _orphanProgressTicks);
+            return Stopwatch.GetElapsedTime(progress != 0 ? progress : Interlocked.Read(ref _lastActivityTicks));
+        }
+    }
 
     /// <summary>True once this connection has been closed/disposed (skip it when picking an eviction victim).</summary>
     internal bool IsClosed => Volatile.Read(ref _closedFlag) || _disposed;
@@ -833,13 +897,32 @@ internal sealed class LocalTcpConnection(
     {
         try {
             using var timer = new PeriodicTimer(_idleCheckInterval);
+            var orphanTracked = false;
+            uint progressUna = 0;
+            uint progressRcv = 0;
             while (await timer.WaitForNextTickAsync(_cts.Token).Vhc()) {
                 if (_disposed || State == TcpConnectionState.Closed)
                     break;
 
-                var last = Interlocked.Read(ref _lastActivityTicks);
-                var elapsed = Stopwatch.GetElapsedTime(last);
-                if (elapsed >= _idleTimeout) {
+                if (_readSideClosed) {
+                    // An orphan (the app closed its stream) is idle when the sequence numbers stop moving: the
+                    // peer's window-0 ACKs of our retransmits or its keepalive probes would otherwise keep it
+                    // "active" and pin its slot forever. Sampled per tick, never per packet; IdleDuration (the
+                    // eviction's measure too) reads the sample.
+                    uint una, rcv;
+                    lock (_seqLock) {
+                        una = _sndUna;
+                        rcv = _rcvNxt;
+                    }
+                    if (!orphanTracked || una != progressUna || rcv != progressRcv) {
+                        orphanTracked = true;
+                        progressUna = una;
+                        progressRcv = rcv;
+                        Volatile.Write(ref _orphanProgressTicks, Stopwatch.GetTimestamp());
+                    }
+                }
+
+                if (IdleDuration >= _idleTimeout) {
                     // Abortive: tell the peer with an RST so it doesn't linger on a black-holed flow.
                     Abort();
                     break;
@@ -856,7 +939,6 @@ internal sealed class LocalTcpConnection(
         uint finSeq;
         uint finAck;
         ushort finWindow;
-        bool closeAfter;
 
         lock (_seqLock) {
             if (_finSent) return;
@@ -870,17 +952,15 @@ internal sealed class LocalTcpConnection(
             _sndNxt += 1; // FIN consumes one sequence number
             finWindow = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
 
-            closeAfter = _finReceived;
-            State = closeAfter ? TcpConnectionState.Closed : TcpConnectionState.FinWait1;
+            // The connection ends only when the peer acknowledges this FIN (TryHandleIncoming's ACK path);
+            // until then PollMaintenance retransmits it, and the idle timeout bounds a peer that never does.
+            State = _finReceived ? TcpConnectionState.LastAck : TcpConnectionState.FinWait1;
             UpdateMaintenanceInterestLocked();
         }
 
         // Built outside _seqLock: PacketBuilder rents pooled memory and needs no sequence state.
         var finPacket = BuildFinPacket(finSeq, finAck, finWindow);
         stack.SendPacket(finPacket);
-
-        if (closeAfter)
-            Close();
     }
 
     private IpPacket BuildFinPacket(uint seq, uint ackNum, ushort window)
@@ -1102,7 +1182,10 @@ internal sealed class LocalTcpConnection(
                 _establishedCounted = false;
                 decrementEstablished = true;
             }
-            rstSeq = _sndNxt;
+            // At SndUna, the peer's RCV.NXT: a RST at SndNxt is outside a zero window (a rejected probe byte
+            // advanced it) and silently dropped. Bytes the peer holds beyond SndUna draw its challenge ACK,
+            // which the stack answers with a RST at the exact number.
+            rstSeq = _sndUna;
             rstAck = _rcvNxt;
             UpdateMaintenanceInterestLocked();
         }

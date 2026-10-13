@@ -641,6 +641,347 @@ public sealed class LossRecoveryTest
         }
     }
 
+    /// <summary>
+    /// The proxy disposed the stream (its tunnel side ended) but the local app keeps uploading. Nobody can read
+    /// those bytes, so they must be answered with a RST and the connection reclaimed at once - not buffered into
+    /// a dead pipe whose zero-window probes keep the connection "active" forever.
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task StreamDisposed_PeerKeepsSending_IsResetAndReclaimed()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        await client.DisposeAsync();
+        lock (sync) {
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Finish), "a clean close sends a FIN first");
+            sent.Clear();
+        }
+
+        // The app's ACK of our FIN plus new data.
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: serverSeq + 2, payload: new byte[1024]));
+
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Reset), "data after the app's close must be reset");
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the connection must be reclaimed at once");
+    }
+
+    /// <summary>Bytes the app never read are gone with its stream: the close is a RST, like a kernel's.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task StreamDisposed_WithUnreadData_ResetsAtOnce()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: new byte[100]));
+        lock (sync) sent.Clear();
+
+        await client.DisposeAsync();
+
+        lock (sync) {
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Reset), "unread data at close must reset the connection");
+            Assert.IsFalse(sent.Any(p => p.ExtractTcp().Finish), "no FIN beside the RST");
+        }
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount);
+    }
+
+    /// <summary>
+    /// DropAllConnections (network change, after an ad) must abort: a RST to the local app, EOF to a parked
+    /// read, an error to the writer, and the slot freed - not a silent dispose that black-holes the app's socket.
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task DropAllConnections_SendsRstAndReleasesStreams()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, _) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        var readTask = client.Stream.ReadAsync(new byte[16]).AsTask();
+
+        tcpStack.DropAllConnections();
+
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Reset), "the local app must be told with a RST");
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        Assert.AreEqual(0, await readTask.WaitAsync(cts.Token), "a parked read ends with EOF");
+        await Assert.ThrowsExactlyAsync<IOException>(async () => await client.Stream.WriteAsync(new byte[8]));
+    }
+
+    /// <summary>
+    /// Passive close: the peer's FIN came first, then the app disposed. Our FIN must be retransmitted while it is
+    /// unacknowledged (LastAck), and the peer's final ACK ends the connection without a RST.
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task PassiveClose_LostFin_IsRetransmitted_AndFinalAckClosesWithoutRst()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitTimeout = TimeSpan.FromMilliseconds(200),
+            RetransmitMaxTimeout = TimeSpan.FromMilliseconds(400)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, fin: true, seq: 1001, ackNum: serverSeq + 1));
+        Assert.AreEqual(0, await client.Stream.ReadAsync(new byte[8]), "the app sees EOF");
+        lock (sync) sent.Clear();
+
+        await client.DisposeAsync(); // our FIN; the peer's ACK is "lost"
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => { lock (sync) return sent.Count(p => p.ExtractTcp().Finish) >= 2; }, cts.Token, 2000);
+        lock (sync)
+            Assert.IsGreaterThanOrEqualTo(2, sent.Count(p => p.ExtractTcp().Finish), "an unacknowledged FIN is retransmitted");
+        Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount, "the connection waits for the ACK of its FIN");
+
+        lock (sync) sent.Clear();
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1002, ackNum: serverSeq + 2));
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the final ACK ends the connection");
+        lock (sync)
+            Assert.IsFalse(sent.Any(p => p.ExtractTcp().Reset), "the final ACK is not answered with a RST");
+    }
+
+    /// <summary>
+    /// An orphan (the app closed its stream) whose peer only answers our retransmits with window-0 ACKs makes no
+    /// progress: those ACKs must not count as activity, or the slot is pinned until the peer's app resumes.
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task Orphan_PeerAcksWithoutProgress_IsReclaimedByIdleTimeout()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            IdleTimeout = TimeSpan.FromMilliseconds(400),
+            IdleCheckInterval = TimeSpan.FromMilliseconds(100)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        await client.Stream.WriteAsync(new byte[100]); // never acknowledged
+        await client.DisposeAsync();
+
+        // The peer's app is suspended: every 100 ms an ACK that acknowledges nothing, window 0.
+        for (var i = 0; i < 15 && tcpStack.Diagnostics.ConnectionCount > 0; i++) {
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
+            await Task.Delay(100);
+        }
+
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "an orphan making no progress is reclaimed");
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Reset), "the peer is told with a RST");
+    }
+
+    /// <summary>
+    /// Data after the app's close while our own tail is unacknowledged is dropped, not reset: a RST would make the
+    /// peer discard that tail unread. Once everything is acknowledged the peer's retransmit draws the RST.
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task DataAfterClose_WithTailInFlight_IsResetOnlyAfterTheTailIsAcked()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        await client.Stream.WriteAsync(new byte[100]); // the tail: [serverSeq+1, serverSeq+101)
+        await client.DisposeAsync(); // FIN at serverSeq+101
+        lock (sync) sent.Clear();
+
+        // The peer's next request arrives before it has acknowledged the tail.
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: new byte[50]));
+        lock (sync)
+            Assert.IsFalse(sent.Any(p => p.ExtractTcp().Reset), "no RST while the tail is in flight");
+        Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount);
+
+        // The peer acknowledges tail and FIN and retransmits its request.
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: serverSeq + 102, payload: new byte[50]));
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Reset), "the retransmit after the ACK draws the RST");
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount);
+    }
+
+    /// <summary>
+    /// Unread bytes plus our tail in flight at the app's close: the FIN goes first; once the peer acknowledges
+    /// tail and FIN - sending nothing more - the deferred reset must still go out, and the budget be released.
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task CloseWithUnreadData_TailInFlight_ResetsOnceTheTailIsAcked()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: new byte[1000])); // never read
+        await client.Stream.WriteAsync(new byte[100]); // the tail, unacknowledged
+        lock (sync) sent.Clear();
+        await client.DisposeAsync();
+        lock (sync) {
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Finish), "the FIN goes first");
+            Assert.IsFalse(sent.Any(p => p.ExtractTcp().Reset), "no RST while the tail is in flight");
+        }
+        Assert.AreEqual(0, tcpStack.Diagnostics.TotalPipeBufferedBytes, "the unread bytes leave the budget at the close");
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 2001, ackNum: serverSeq + 102));
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Reset), "the unread bytes are reset once all is acked");
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount);
+        Assert.AreEqual(0, tcpStack.Diagnostics.TotalPipeBufferedBytes, "the receive budget is released");
+    }
+
+    /// <summary>
+    /// An abort's RST must carry SndUna, the peer's RCV.NXT: after a zero-window probe whose byte the peer
+    /// rejected, a RST at SndNxt is outside its zero window and silently dropped.
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task Abort_AfterRejectedProbeByte_SendsRstAtSndUna()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        // The peer closes its window; our write parks and probes with one byte, which the peer rejects (no ACK).
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
+        var writeTask = client.Stream.WriteAsync(new byte[10]).AsTask();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => { lock (sync) return sent.Any(p => p.ExtractTcp().Payload.Length == 1); }, cts.Token, 2000);
+        lock (sync) sent.Clear();
+
+        tcpStack.DropAllConnections();
+
+        lock (sync) {
+            var rst = sent.Select(p => p.ExtractTcp()).FirstOrDefault(t => t.Reset);
+            Assert.IsNotNull(rst, "the abort sends a RST");
+            Assert.AreEqual(serverSeq + 1, rst.SequenceNumber, "the RST sits at SndUna, the peer's RCV.NXT");
+        }
+        await Assert.ThrowsExactlyAsync<IOException>(() => writeTask);
+    }
+
+    /// <summary>A retransmitted peer FIN that completes the exchange is still acknowledged after the close.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task LastAck_RetransmittedPeerFinWithOurAck_IsAcknowledged()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        await client.DisposeAsync(); // our FIN at serverSeq + 1
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, fin: true, seq: 1001, ackNum: serverSeq + 1)); // its FIN crosses ours
+        lock (sync) sent.Clear();
+
+        // Our ACK and its ACK were lost: the peer retransmits its FIN, now acknowledging ours.
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, fin: true, seq: 1001, ackNum: serverSeq + 2));
+
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the exchange is complete");
+        lock (sync) {
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp() is { Acknowledgment: true, Reset: false, AcknowledgmentNumber: 1002 }),
+                "the retransmitted FIN is acknowledged");
+            Assert.IsFalse(sent.Any(p => p.ExtractTcp().Reset), "no RST");
+        }
+    }
+
+    /// <summary>An orphan fed by no-progress ACKs must be evictable for a new connection at the cap.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task Orphan_PeerAcksWithoutProgress_IsEvictedForANewConnection()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            MaxConnections = 1,
+            EvictionMinIdle = TimeSpan.FromMilliseconds(300),
+            IdleTimeout = TimeSpan.FromSeconds(5),
+            IdleCheckInterval = TimeSpan.FromMilliseconds(100)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        await client.Stream.WriteAsync(new byte[100]); // never acknowledged
+        await client.DisposeAsync();
+        for (var i = 0; i < 6; i++) {
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
+            await Task.Delay(100);
+        }
+        lock (sync) sent.Clear();
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + 1, ServerIp, ServerPort, syn: true, seq: 5000));
+
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp() is { Synchronize: true, Acknowledgment: true, DestinationPort: ClientPort + 1 }),
+                "the orphan is evicted and the new connection admitted");
+    }
+
+    /// <summary>Simultaneous close: the peer's FIN arrives before it has acknowledged ours; we wait for that ACK.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task SimultaneousClose_WaitsForTheAckOfOurFin()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitTimeout = TimeSpan.FromMilliseconds(200),
+            RetransmitMaxTimeout = TimeSpan.FromMilliseconds(400)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        await client.DisposeAsync(); // our FIN at serverSeq + 1
+        // The peer's FIN crosses ours: it acknowledges only our data, not the FIN.
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, fin: true, seq: 1001, ackNum: serverSeq + 1));
+        Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount, "our FIN is still unacknowledged");
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => { lock (sync) return sent.Count(p => p.ExtractTcp().Finish) >= 2; }, cts.Token, 2000);
+        lock (sync)
+            Assert.IsGreaterThanOrEqualTo(2, sent.Count(p => p.ExtractTcp().Finish), "our FIN is retransmitted");
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1002, ackNum: serverSeq + 2));
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the ACK of our FIN ends the connection");
+    }
+
     // ---- helpers ----
 
     /// <summary>Completes a handshake and returns the accepted client plus the server's ISN.</summary>

@@ -6,5 +6,6 @@ internal enum TcpConnectionState
     Established,
     FinWait1,
     Closing,
+    LastAck, // both FINs exchanged, ours not yet acknowledged: it is retransmitted until the ACK arrives
     Closed
 }

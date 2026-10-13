@@ -46,7 +46,8 @@ public abstract class PacketTransportBase : IPacketTransport
     // itself what it does not hand on. In passthrough mode it must complete at once and never send on its own
     // transport, whose one-packet buffer the outer send still uses. Both rules are left unchecked by design:
     // telling which packets a failing send had handed on would take an API of its own, and catching a send
-    // on its own transport would cost every packet
+    // on its own transport would cost every packet. A failed send is packet loss, whatever the error, and the
+    // loop goes on: a subclass whose resource stays broken ends itself
     protected abstract ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets);
     protected virtual string Name => VhLogger.FormatType(this);
 

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
+using VpnHood.AppLib.Api.App;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -137,6 +138,26 @@ public sealed partial class Strings : INotifyPropertyChanged
     // The address the phone dials, before the listener has one. The web UI's dialog has no such
     // moment - it asks the app that is already running - so there is no key for it either.
     public string RemoteAccessStarting => "Starting…";
+
+    // A connection's state in words, as the home page and the desktop's tray show it.
+    public string ConnectionStateText(AppConnectionState connectionState)
+    {
+        return connectionState switch {
+            AppConnectionState.None => Disconnected,
+            AppConnectionState.Initializing => Initializing,
+            AppConnectionState.Waiting => Waiting,
+            AppConnectionState.Diagnosing => Diagnosing,
+            AppConnectionState.ValidatingProxies => ValidatingProxies,
+            AppConnectionState.Connecting => Connecting,
+            AppConnectionState.Connected => Connected,
+            AppConnectionState.Disconnecting => Disconnecting,
+            AppConnectionState.WaitingForAd => LoadingAd,
+            AppConnectionState.FindingReachableServer => FindingNetwork,
+            AppConnectionState.FindingBestServer => FindingBestServer,
+            AppConnectionState.Unstable => Unstable,
+            _ => connectionState.ToString()
+        };
+    }
 
     private string Get(string key)
     {

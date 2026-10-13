@@ -1,21 +1,31 @@
-﻿using System.IO.Pipes;
+﻿using System.Diagnostics;
+using System.Globalization;
+using System.IO.Pipes;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 
-// One window per person: the open window serves a named pipe of its own person's - .NET's pipes are
-// Unix sockets on Linux, so this one piece serves both desktops - and a second launch by the same
-// person asks it to come forward and ends. Another person's launch finds no pipe of theirs and gets
-// a window of its own. The pipe is asked before it is served, since on Linux a second server would
-// take the name over rather than fail, and the open window always has the next listener waiting,
-// so the name never goes unanswered between two launches.
+// One window per person and session: the open window serves a named pipe of its own person's and
+// session's - .NET's pipes are Unix sockets on Linux, so this one piece serves both desktops - and a
+// second launch there asks it to come forward and ends. Another person, or the same one in another
+// session (the console and Remote Desktop), finds no pipe of theirs and gets a window of its own.
+//
+// A launch looks for the window and, finding none, serves the name, both under a lock of the
+// session, so of two launches at once - the sign-in entry's and a person's click - one opens the
+// window and the other finds it. The pipe is asked before it is served, since on Linux a second
+// server would take the name over rather than fail, and the open window always has the next
+// listener waiting, so the name never goes unanswered between two launches.
 internal sealed class DesktopUiInstance : IAsyncDisposable
 {
     private const string ShowCommand = "show";
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan LockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan LockRetryDelay = TimeSpan.FromMilliseconds(50);
     private const PipeOptions Options = PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly;
     private readonly string _pipeName;
     private readonly IDesktopUi _ui;
@@ -30,37 +40,80 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     }
 
     // This launch's window, the UI a later launch brings forward, or null when this person already
-    // has one open, which has been asked to come forward.
-    public static async Task<DesktopUiInstance?> TryClaim(string instanceName, IDesktopUi ui,
-        CancellationToken cancellationToken)
+    // has one open in this session, which has been asked to come forward. On the calling thread
+    // throughout: the lock is let go only once this launch's server holds the name.
+    public static DesktopUiInstance? TryClaim(IAppDesktopPaths paths, IDesktopUi ui)
     {
-        var pipeName = BuildPipeName(instanceName);
-        if (await TryShowExisting(pipeName, cancellationToken).Vhc())
-            return null;
-
-        return new DesktopUiInstance(pipeName, ui);
+        var name = BuildName(paths.InstanceName);
+        using var sessionLock = TakeSessionLock(paths.UiDataPath, name);
+        return TryShowExisting(name) ? null : new DesktopUiInstance(name, ui);
     }
 
-    // one pipe per person and instance, in characters every platform's pipe names take
-    private static string BuildPipeName(string instanceName)
+    // one name per instance, person and session, in characters every platform's pipe and file names take
+    private static string BuildName(string instanceName)
     {
-        var name = $"{instanceName}-ui-{Environment.UserName}";
+        var name = GetSession() is { Length: > 0 } session
+            ? $"{instanceName}-ui-{Environment.UserName}-{session}"
+            : $"{instanceName}-ui-{Environment.UserName}";
         return new string(name.Select(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' ? c : '_').ToArray());
     }
 
-    private static async Task<bool> TryShowExisting(string pipeName, CancellationToken cancellationToken)
+    // The session the window opens in: Windows' own, which the console and each Remote Desktop
+    // session have apart; on Linux its display, which every app of a desktop session is started with,
+    // where logind's XDG_SESSION_ID is not: apps the user's systemd starts lack it. Empty with no
+    // display, and then the person's alone.
+    private static string GetSession()
     {
-        await using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, Options);
+        if (OperatingSystem.IsWindows()) {
+            using var process = Process.GetCurrentProcess();
+            return process.SessionId.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") is { Length: > 0 } waylandDisplay
+            ? waylandDisplay
+            : Environment.GetEnvironmentVariable("DISPLAY") ?? "";
+    }
+
+    // A file of the person's held with no sharing: an exclusive flock on Linux, a share lock on
+    // Windows, which the system lets go of with the process, so a launch that dies holding it leaves
+    // nothing behind. Another launch holds it for half a second at most, while it looks for the window.
+    private static FileStream TakeSessionLock(string folderPath, string name)
+    {
+        Directory.CreateDirectory(folderPath);
+        var options = new FileStreamOptions {
+            Mode = FileMode.OpenOrCreate,
+            Access = FileAccess.ReadWrite,
+            Share = FileShare.None
+        };
+
+        if (!OperatingSystem.IsWindows())
+            options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+
+        var path = Path.Combine(folderPath, $"{name}.lock");
+        var stopwatch = Stopwatch.StartNew();
+        while (true) {
+            try {
+                return new FileStream(path, options);
+            }
+            catch (IOException ex) when (InstanceLockFile.IsHeld(ex) && stopwatch.Elapsed < LockTimeout) {
+                Thread.Sleep(LockRetryDelay);
+            }
+        }
+    }
+
+    private static bool TryShowExisting(string pipeName)
+    {
+        using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, Options);
         try {
-            await client.ConnectAsync(ConnectTimeout, cancellationToken).Vhc();
+            client.Connect(ConnectTimeout);
         }
         catch (Exception ex) when (ex is TimeoutException or IOException) {
             return false; // nobody serves it: this launch is the window
         }
 
-        await using var writer = new StreamWriter(client);
-        await writer.WriteLineAsync(ShowCommand.AsMemory(), cancellationToken).Vhc();
-        await writer.FlushAsync(cancellationToken).Vhc();
+        using var writer = new StreamWriter(client);
+        writer.WriteLine(ShowCommand);
+        writer.Flush();
         return true;
     }
 

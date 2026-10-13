@@ -7,9 +7,9 @@
 public interface IDesktopUi
 {
     // Runs the UI on the calling thread - the host's main thread, which on Windows must be its STA
-    // thread - and returns when the UI's window is gone. Cancelling asks the UI to close it: the
-    // host's own end, a service manager's signal or a logout, and the process cannot end while
-    // this holds its main thread.
+    // thread - and returns when the UI ends: its window closed, or its tray's Exit where it keeps a
+    // tray. Cancelling asks the UI to end: the host's own end, a service manager's signal or a
+    // logout, and the process cannot end while this holds its main thread.
     void Run(DesktopUiParams uiParams, CancellationToken cancellationToken);
 
     // In place of Run when the host has no app to hand over: one message and a Close button, on the
@@ -17,7 +17,7 @@ public interface IDesktopUi
     // the app. BringToFront reaches this window too.
     void RunMessage(DesktopUiMessageParams messageParams, CancellationToken cancellationToken);
 
-    // Shows the running UI's window and brings it to the front, from any thread: the tray's Open, a
-    // second launch. Nothing while no run has a window.
+    // Shows the running UI's window and brings it to the front, from any thread: a second launch.
+    // Nothing while no run has a window.
     Task BringToFront(CancellationToken cancellationToken);
 }

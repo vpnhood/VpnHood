@@ -7,8 +7,8 @@ namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 
 // The machine facts Windows answers. The app runs in a LocalSystem service, "daemon" under the
 // service control manager, which "service install" registers and which stops it with a call; the
-// window and its tray run as whoever is signed in, not elevated, and reach the service over loopback;
-// the service's warnings and the window's go to the Application log under the service's name.
+// window runs as whoever is signed in, not elevated, and reaches the service over loopback; the
+// service's warnings and the window's go to the Application log under the service's name.
 public sealed class WindowsDesktopPlatform : IDesktopPlatform
 {
     private readonly WindowsDesktopPaths _paths;
@@ -30,12 +30,8 @@ public sealed class WindowsDesktopPlatform : IDesktopPlatform
     public ILoopbackPeerCheck PeerCheck { get; } = new WindowsLoopbackPeerCheck();
     public IAppInstanceSetup InstanceSetup { get; }
     public IAppDaemonHostFactory DaemonHostFactory { get; }
-    public bool IsTraySupported => true;
 
     public bool IsAdministrator() => WindowsAdministrators.IsCurrentUser();
-
-    public IDisposable CreateTray(DesktopTrayParams trayParams) =>
-        WindowsAppTray.Start(trayParams.Api, trayParams.UiAssets, trayParams.ShowWindow, trayParams.Exit);
 
     public ILoggerProvider CreateConsoleLoggerProvider() => new ConsoleLoggerProvider();
 

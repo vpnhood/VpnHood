@@ -95,8 +95,7 @@ the OS reads - its attributes, its `[Register]` name, its access keys.
   recovers).
 - **Windows** — WebView2 in a Win32 window, no WPF (2026-10-06): `WindowsWebViewUi` run in `dev` on
   the dev machine and the Windows VM shows the page with its focus on each activation, opens the
-  log link in a window of its own, minimizes and closes into the tray, comes back when asked, ends
-  on the host's cancel, shows the one message, and fits 1366x768 in landscape. The WPF window it
+  log link in a window of its own, comes back when asked, ends on the host's cancel, shows the one message, and fits 1366x768 in landscape. The WPF window it
   replaced ran over a service (2026-09-23). Still to try: the runtime-missing fallback, a display
   change, the taskbar badge seen.
 - **Android** — build-verified (adapter + full `Client.Android.Web` app). Still smoke-test on a
@@ -110,5 +109,6 @@ the OS reads - its attributes, its `[Register]` name, its access keys.
   supersedes it). `LoadFailed` is raised for main-frame connection errors; a dead render process
   rebuilds the WebView, then raises `ContentProcessGone`.
 - **Windows** — the WebView2 "runtime missing" fallback (hide the window, open the page in the
-  system browser) is `OnWebView2Unavailable`; the window hides rather than closes where the tray
-  keeps it, and its web view's profile is under the person's own folder, not the service's.
+  system browser) is `OnWebView2Unavailable`; it keeps no tray, so closing the window ends it and a
+  start in the tray (`ui --tray`) ends at once; its web view's profile is under the person's own
+  folder, not the service's.

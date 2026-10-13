@@ -23,11 +23,8 @@ public class DesktopUiParams
     // is not theirs to write when the app runs in a service.
     public required string UiDataPath { get; init; }
 
-    // Whether closing the window ends the UI: true where no tray keeps it (Linux); where one does,
-    // closing only hides the window.
-    public required bool ExitOnClose { get; init; }
-
-    // Whether the window stays closed at the start, the UI waiting in the tray until it is asked for
-    // (Windows, started at logon). Never where closing ends the UI: there would be nothing to ask.
+    // Whether the run starts with the window closed, waiting in the UI's tray until it is asked for:
+    // the entry an installer runs at sign-in. A UI with no tray to wait in ends at once. Whether
+    // closing the window ends the UI is the UI's own to decide, by its tray.
     public required bool StartHidden { get; init; }
 }

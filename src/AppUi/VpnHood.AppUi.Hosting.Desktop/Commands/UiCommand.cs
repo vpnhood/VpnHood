@@ -1,7 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.Abstractions;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Exceptions;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
@@ -26,19 +25,16 @@ internal static class UiCommand
     {
         var command = new Command("ui", "Open the app window. This is what the desktop entry starts.");
 
-        // Where a tray keeps the UI, an entry that starts at logon starts it there, with the window
-        // closed. For the entry an installer writes, not for a person, so help leaves it out.
+        // The entry an installer runs at sign-in starts the UI in its tray, with the window closed; a
+        // UI with no tray to show ends at once. For that entry, not for a person, so help leaves it out.
         var trayOption = new Option<bool>("--tray") {
             Description = "Start in the tray, with the window closed.",
             Hidden = true
         };
-
-        if (platform.IsTraySupported)
-            command.Options.Add(trayOption);
+        command.Options.Add(trayOption);
 
         command.SetAction((parseResult, cancellationToken) => Run(platform, initParams, mainThread,
-            startHidden: platform.IsTraySupported && parseResult.GetValue(trayOption),
-            cancellationToken));
+            startHidden: parseResult.GetValue(trayOption), cancellationToken));
 
         return command;
     }
@@ -51,9 +47,9 @@ internal static class UiCommand
         VhLogger.AddProvider(platform.CreateSystemLogLoggerProvider());
 
         try {
-            // One window per person: a second launch brings the open one forward, and that is all it does.
-            await using var uiInstance = await DesktopUiInstance.TryClaim(platform.Paths.InstanceName, initParams.Ui,
-                cancellationToken).Vhc();
+            // One window per person and session: a second launch brings the open one forward, and that
+            // is all it does.
+            await using var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, initParams.Ui);
             if (uiInstance == null)
                 return 0;
 
@@ -142,31 +138,20 @@ internal static class UiCommand
             platform.Paths.UiContentCachePath);
     }
 
-    // The window over a connection to the app, until it is gone: the service's app, or the one this
-    // process holds itself (DevCommand).
+    // The UI over a connection to the app, until it ends: the service's app, or the one this process
+    // holds itself (DevCommand). It ends by itself - its window closed, its tray's Exit - or with the
+    // command: a signal, a logout.
     internal static async Task RunWindow(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
         DaemonConnection connection, bool startHidden, CancellationToken cancellationToken)
     {
-        var uiAssets = CreateUiAssets(platform, initParams);
-
-        // The UI's run ends with the command - a signal, a logout - or with the tray's Exit.
-        using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        using var tray = platform.CreateTray(new DesktopTrayParams {
-            Api = connection.Api,
-            UiAssets = uiAssets,
-            ShowWindow = initParams.Ui.BringToFront,
-            Exit = uiCancellation.Cancel
-        });
-
-        // on the host's main thread, which a window needs; this waits until it is gone
+        // on the host's main thread, which a window needs; this waits until the UI ends
         var uiParams = new DesktopUiParams {
             Api = connection.Api,
-            UiAssetProvider = uiAssets,
+            UiAssetProvider = CreateUiAssets(platform, initParams),
             ApiUrlProvider = connection.ApiUrlProvider,
             UiDataPath = platform.Paths.UiDataPath,
-            ExitOnClose = !platform.IsTraySupported,
             StartHidden = startHidden
         };
-        await mainThread.Run(() => initParams.Ui.Run(uiParams, uiCancellation.Token)).Vhc();
+        await mainThread.Run(() => initParams.Ui.Run(uiParams, cancellationToken)).Vhc();
     }
 }

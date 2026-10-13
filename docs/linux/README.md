@@ -241,7 +241,7 @@ src/AppUi/
 │   ├── DesktopHost.cs                builds the command tree and dispatches
 │   ├── DesktopInitParams.cs          what a head declares: its init params, its UI, whether it takes keys
 │   ├── IDesktopPlatform.cs           what a platform implements: paths, the instance, how to be the daemon
-│   │                                 (and a debugger's), its logs, and what only some have: a tray,
+│   │                                 (and a debugger's), its logs, and what only some have:
 │   │                                 "service install"
 │   ├── DaemonConnection.cs           the API over loopback, following the address the channel gives it
 │   ├── MainThreadQueue.cs            the host's main thread, which the window gets
@@ -251,7 +251,7 @@ src/AppUi/
 │   ├── Channel/                      the channel the service hands its address over, to administrators
 │   │                                 only: its two ends, and the answer each call follows
 │   ├── Commands/                     one type per command, and what they share: the printer, the
-│   │                                 session, the profile lookup, one window per person
+│   │                                 session, the profile lookup, one window per person and session
 │   └── Exceptions/                   the daemon not running, or refusing the caller
 ├── VpnHood.AppUi.Hosting.Desktop.Linux/  systemd, /opt, XDG, root
 │   ├── LinuxDesktopHost.cs           a Linux head's entry point
@@ -273,9 +273,9 @@ an `IDesktopUi` (`VpnHood.AppUi.Hosting.Abstractions`), which the window runs on
 thread: `static int Main` returns `LinuxDesktopHost.Run(args, …)` — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
 project reads a static or names a platform: every command is handed an `IDesktopPlatform`, which
-each platform implements (`LinuxDesktopPlatform`, `WindowsDesktopPlatform`). Only Windows has a tray
-that keeps its window and `service install`, and a daemon run the service control manager stops by
-a call.
+each platform implements (`LinuxDesktopPlatform`, `WindowsDesktopPlatform`). Only Windows has
+`service install`, and a daemon run the service control manager stops by a call. The tray is the
+UI's, not the platform's (`AvaloniaDesktopUi`).
 `VpnHood.AppLib.App.Linux` is back to the one thing it always was, `VpnHoodLinuxApp`.
 
 **In a debugger** a head runs `dev`, which the desktop heads' launch profiles pass: the daemon and
@@ -317,11 +317,22 @@ Points that are easy to get wrong:
    would open nowhere, or as root. A plan sold on the web carries its checkout page
    (`SubscriptionPlan.CheckoutUrl`), and the window opens it as it opens any link, in the person's
    own browser.
-7. **One window per person.** The window serves a pipe named for its person (`DesktopUiInstance`;
-   .NET's pipes are Unix sockets here, `/tmp/CoreFxPipe_<instance>-ui-<user>`). A second launch
-   asks that pipe first and, if a window answers, brings it forward and ends; another person finds
-   no pipe of theirs and gets a window of their own. Closing the window ends its process — there is
-   no tray to keep a hidden one — and the service runs on.
+7. **One window per person and session.** The window serves a pipe named for its person and its
+   display (`DesktopUiInstance`; .NET's pipes are Unix sockets here,
+   `/tmp/CoreFxPipe_<instance>-ui-<user>-<display>`). A second launch asks that pipe first and, if a
+   window answers, brings it forward and ends; another person, or another display, finds no pipe of
+   theirs and gets a window of their own. The display, not logind's `XDG_SESSION_ID`, names the
+   session: apps the user's systemd starts, as GNOME's terminal is, lack the id. Looking and serving
+   run under a lock file in the person's UI folder, so a sign-in's start and a click at the same
+   moment open one window.
+8. **The tray is where the desktop shows one.** Avalonia's tray registers with whoever owns
+   `org.kde.StatusNotifierWatcher` on the session bus: KDE, and GNOME with Ubuntu's AppIndicator
+   extension; plain GNOME has none. Where there is one, closing the window only hides it — the
+   tray's Open or a second launch brings it back, its Exit ends the window's process — and where
+   there is none, closing ends it. The service runs on either way. The installer's
+   `/etc/xdg/autostart/<name>.desktop` runs `ui --tray` at every sign-in: an administrator's waits
+   up to 30 s for the desktop's tray and shows the icon with the window closed, and ends after that
+   wait on a desktop without one; a standard user's ends at once.
 
 The installer is [`pub/lib/vh-installer/linux/install-client.sh`](../../pub/lib/vh-installer/linux/install-client.sh),
 which is **not** the server's `install.sh` next to it. Each head picks its template in its

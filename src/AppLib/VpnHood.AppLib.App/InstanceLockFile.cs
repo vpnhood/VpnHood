@@ -32,7 +32,7 @@ public static class InstanceLockFile
     }
 
     // Held by another open: a sharing or lock violation on Windows, flock's EWOULDBLOCK on Linux.
-    private static bool IsHeld(IOException ex)
+    public static bool IsHeld(IOException ex)
     {
         return OperatingSystem.IsWindows()
             ? (ex.HResult & 0xFFFF) is 32 or 33

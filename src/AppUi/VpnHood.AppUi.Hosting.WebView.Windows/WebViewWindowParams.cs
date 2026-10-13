@@ -17,7 +17,4 @@ internal class WebViewWindowParams
 
     // the web view's profile, in the person's own folder
     public required string WebViewDataPath { get; init; }
-
-    public required bool ExitOnClose { get; init; }
-    public required bool StartHidden { get; init; }
 }

@@ -23,7 +23,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop\VpnHood.AppUi.Hosting.Desktop.csproj" />
-		<!-- The app as the service runs it, and the tray the window shows. -->
+		<!-- The app as the service runs it. -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Windows\VpnHood.AppLib.App.Windows.csproj" />
 	</ItemGroup>
 </Project>

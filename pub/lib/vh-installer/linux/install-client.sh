@@ -10,6 +10,7 @@
 #   /usr/local/bin/<launcher>    so the commands can be typed from anywhere
 #   /etc/systemd/system/<name>.service           the root service, headless
 #   /usr/share/applications/<name>.desktop       the window, in the app grid
+#   /etc/xdg/autostart/<name>.desktop            the tray, at every sign-in
 #   /usr/share/icons/hicolor/256x256/apps/<name>.png   its icon
 #
 # Ubuntu and Debian are what it is tested on; anything with systemd and apt, or systemd and the
@@ -548,6 +549,20 @@ $actionLines
 	# readable by the desktop even where an earlier run left the file at its caller's umask, as the icon
 	chmod 644 "/usr/share/applications/$assemblyName.desktop";
 	update-desktop-database /usr/share/applications >/dev/null 2>&1;
+
+	# The tray at every sign-in, one entry for everyone: an administrator's shows the app's icon where
+	# the desktop shows tray icons, the window closed; anyone else's, or one on a desktop that shows
+	# none, ends at once and shows nothing.
+	autostartEntry="[Desktop Entry]
+Type=Application
+Name=$productName
+Exec=/usr/local/bin/$launcher ui --tray
+$iconLine
+Terminal=false
+";
+	mkdir -p /etc/xdg/autostart;
+	echo "$autostartEntry" > "/etc/xdg/autostart/$assemblyName.desktop";
+	chmod 644 "/etc/xdg/autostart/$assemblyName.desktop";
 	if command -v gtk-update-icon-cache >/dev/null 2>&1; then
 		gtk-update-icon-cache -f -t /usr/share/icons/hicolor >/dev/null 2>&1;
 	fi

@@ -10,8 +10,8 @@ namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
 // The SPA in a window of its own, drawn with what WindowsWebViewUi read from the app before it: the
 // name, the look out of the UI's store, whether it is a TV. It follows the connection over the API
-// for its taskbar badge, hides rather than closes where a tray keeps the UI, fits its screen again
-// when that changes, and ends its thread's message loop when it is gone.
+// for its taskbar badge, fits its screen again when that changes, and ends its thread's message loop
+// when it is gone.
 internal sealed class WebViewMainWindow
 {
     private const uint WsCaption = 0x00C00000;
@@ -25,11 +25,9 @@ internal sealed class WebViewMainWindow
     private const uint WmDestroy = 0x0002;
     private const uint WmSize = 0x0005;
     private const uint WmActivate = 0x0006;
-    private const uint WmClose = 0x0010;
     private const uint WmSettingChange = 0x001A;
     private const uint WmDisplayChange = 0x007E;
     private const int SizeRestored = 0;
-    private const int SizeMinimized = 1;
     private const int SpiSetWorkArea = 0x002F;
     private static readonly TimeSpan StatePollInterval = TimeSpan.FromSeconds(1);
 
@@ -91,11 +89,6 @@ internal sealed class WebViewMainWindow
     private IntPtr? OnMessage(uint msg, IntPtr wParam, IntPtr lParam)
     {
         switch (msg) {
-            // where a tray keeps the UI, a minimized window waits in the tray
-            case WmSize when wParam == SizeMinimized && !_params.ExitOnClose:
-                _window.Window.Hide();
-                break;
-
             case WmSize when wParam == SizeRestored && _isFitPending:
                 Fit();
                 break;
@@ -104,11 +97,6 @@ internal sealed class WebViewMainWindow
             case WmActivate when (wParam & 0xFFFF) != 0:
                 _webViewHost.OnResume();
                 break;
-
-            // where a tray keeps the UI, closing only hides the window
-            case WmClose when !_params.ExitOnClose:
-                _window.Window.Hide();
-                return IntPtr.Zero;
 
             case WmDestroy:
                 _cancellation.Cancel();
@@ -131,7 +119,7 @@ internal sealed class WebViewMainWindow
         return null;
     }
 
-    // a minimized window, waiting in the tray or not, is fitted once restored
+    // a minimized window is fitted once restored
     private void Fit()
     {
         _isFitPending = _window.Window.IsMinimized;
@@ -148,8 +136,7 @@ internal sealed class WebViewMainWindow
 
         _isWebViewUnavailable = true;
         _window.Window.Hide();
-        if (!_params.StartHidden)
-            WindowsShell.OpenUrl(_params.WebHost.Urls[0]);
+        WindowsShell.OpenUrl(_params.WebHost.Urls[0]);
     }
 
     // The taskbar badge, from the app's state: the service's over loopback, or this process's own.

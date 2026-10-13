@@ -122,8 +122,8 @@ internal static class Program
             // store's zip beside this executable, which the build placed there (the same files
             // the web server serves at /assets/). It runs in the window a desktop head shows it
             // in, which is also the app's UI context: a store's sign-in and purchase ask for one.
-            AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, showWindow: true, app.Api, app.UiAssetProvider,
-                exitOnClose: true);
+            AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, app.Api, app.UiAssetProvider, useTray: false,
+                startHidden: false, CancellationToken.None);
         }
         finally {
             app.Dispose();

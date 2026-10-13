@@ -120,18 +120,6 @@
   <data name="AppName" xml:space="preserve">
     <value>VpnHood!</value>
   </data>
-  <data name="Connect" xml:space="preserve">
-    <value>Connect</value>
-  </data>
-  <data name="Disconnect" xml:space="preserve">
-    <value>Disconnect</value>
-  </data>
-  <data name="Disconnected" xml:space="preserve">
-    <value>Disconnected</value>
-  </data>
-  <data name="Exit" xml:space="preserve">
-    <value>Exit</value>
-  </data>
   <data name="Manage" xml:space="preserve">
     <value>Manage</value>
   </data>
@@ -149,9 +137,6 @@
   </data>
   <data name="MsgCantShowAd" xml:space="preserve">
     <value>This server requires a display Ad but could not display it.</value>
-  </data>
-  <data name="Open" xml:space="preserve">
-    <value>Open</value>
   </data>
   <data name="UpdateReadyToInstall" xml:space="preserve">
     <value>The update is ready to install.</value>

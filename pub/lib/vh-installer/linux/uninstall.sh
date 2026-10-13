@@ -85,6 +85,9 @@ if [ -f "$desktopEntry" ]; then
 	fi
 fi
 
+# The client's tray entry at sign-in
+rm -f "/etc/xdg/autostart/$assemblyName.desktop";
+
 if [ "$purge" = "y" ]; then
 	rm -rf "$destinationPath";
 else

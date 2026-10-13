@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using VpnHood.AppLib.Api.App;
 using Windows.UI.Notifications;
 using Microsoft.Maui.Handlers;
@@ -14,10 +13,6 @@ namespace VpnHood.AppUi.Hosting.Maui;
 
 internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoodAppMaui
 {
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
-
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetCurrentPackageFullName(ref int packageFullNameLength, IntPtr packageFullName);
 
@@ -28,7 +23,6 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
     private static readonly bool HasPackageIdentity = GetHasPackageIdentity();
 
     protected AppWindow? AppWindow;
-    private readonly WindowsAppTray _tray;
 
     private VpnHoodAppMauiWindows(AppInitParams initParams)
     {
@@ -36,17 +30,10 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         // person's storage folder, which holds its single-instance lock too - and it disconnects on
         // the way out. In this process on purpose, to keep a MAUI app simple: the tunnel runs here
         // too, so the app runs elevated. A shipped Windows app keeps the app in the machine service
-        // instead (VpnHood.AppUi.Hosting.Desktop.Windows), its window unelevated.
+        // instead (VpnHood.AppUi.Hosting.Desktop.Windows), its window unelevated. It keeps no tray, so
+        // the app ends with its window.
         var storagePath = initParams.ResolveStoragePath();
         VpnHoodWindowsApp.Init(initParams, storagePath, lockFolderPath: storagePath);
-
-        // the tray over the app's own API here; its requests come from its own thread
-        _tray = WindowsAppTray.Start(VpnHoodApp.Instance.Api, VpnHoodApp.Instance.UiAssetProvider,
-            showWindow: _ => {
-                MainThread.BeginInvokeOnMainThread(ShowMainWindow);
-                return Task.CompletedTask;
-            },
-            exit: () => MainThread.BeginInvokeOnMainThread(Exit));
 
         // initialize VpnHoodApp
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
@@ -69,7 +56,8 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         //customize WinUI main window
         if (AppWindow != null) {
             AppWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
-            AppWindow.Closing += AppWindow_Closing;
+            // the app goes with its window, disconnecting first
+            AppWindow.Closing += (_, _) => Dispose();
 
             var bgColorResource = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
             if (bgColorResource != null) {
@@ -81,30 +69,9 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         }
     }
 
-    protected virtual void ShowMainWindow()
-    {
-        AppWindow?.Show(true);
-        AppWindow?.MoveInZOrderAtTop();
-        var mainWindowHandle = Process.GetCurrentProcess().MainWindowHandle;
-        if (mainWindowHandle != nint.Zero)
-            SetForegroundWindow(mainWindowHandle);
-    }
-
-    protected virtual void Exit()
-    {
-        MauiWinUIApplication.Current.Exit();
-        Dispose();
-    }
-
     protected virtual void ConnectionStateChanged(object? sender, EventArgs e)
     {
         UpdateIcon();
-    }
-
-    protected virtual void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
-    {
-        args.Cancel = true;
-        sender.Hide();
     }
 
     protected virtual void UpdateIcon()
@@ -141,7 +108,6 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            _tray.Dispose();
             if (VpnHoodWindowsApp.IsInit)
                 VpnHoodWindowsApp.Instance.Dispose();
         }

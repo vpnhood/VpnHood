@@ -10,8 +10,8 @@ namespace VpnHood.AppUi.Hosting.WebView.Windows;
 // The SPA in a Win32 window over WebView2, as a desktop head names its UI (DesktopInitParams.Ui): the
 // page the app's web host serves - the service's, at the address the host hands over - with the
 // window's look read from the app and from the UI's store. It runs the window's message loop on the
-// host's STA main thread until the run is cancelled, or, where no tray keeps it, until the window
-// closes. No UI framework: Windows' own window, message box and taskbar.
+// host's STA main thread until the window closes or the run is cancelled. It keeps no tray, so a
+// start in the tray ends at once. No UI framework: Windows' own window, message box and taskbar.
 public class WindowsWebViewUi : IDesktopUi
 {
     // the running window, which BringToFront reaches from another thread; or the thread showing the
@@ -21,7 +21,7 @@ public class WindowsWebViewUi : IDesktopUi
 
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
-        if (cancellationToken.IsCancellationRequested)
+        if (cancellationToken.IsCancellationRequested || uiParams.StartHidden)
             return;
 
         // What the window draws with, read before it is made: a window that changes colour under the
@@ -38,9 +38,7 @@ public class WindowsWebViewUi : IDesktopUi
             AppName = info.Features.AppName,
             IsTv = info.Features.IsTv,
             Resources = resources,
-            WebViewDataPath = Path.Combine(uiParams.UiDataPath, "WebView2"),
-            ExitOnClose = uiParams.ExitOnClose,
-            StartHidden = uiParams.StartHidden
+            WebViewDataPath = Path.Combine(uiParams.UiDataPath, "WebView2")
         });
 
         var previousContext = SynchronizationContext.Current;
@@ -49,9 +47,7 @@ public class WindowsWebViewUi : IDesktopUi
         _window = window;
         try {
             using var registration = cancellationToken.Register(() => window.Window.Post(window.Close));
-            if (!uiParams.StartHidden)
-                window.Window.Show();
-
+            window.Window.Show();
             Win32Window.RunMessageLoop();
         }
         finally {

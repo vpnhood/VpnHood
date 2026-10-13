@@ -256,21 +256,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             AppConnectionState.Disconnecting => "disconnecting",
             _ => "connecting"
         };
-        StateText = connectionState switch {
-            AppConnectionState.None => Strings.Current.Disconnected,
-            AppConnectionState.Initializing => Strings.Current.Initializing,
-            AppConnectionState.Waiting => Strings.Current.Waiting,
-            AppConnectionState.Diagnosing => Strings.Current.Diagnosing,
-            AppConnectionState.ValidatingProxies => Strings.Current.ValidatingProxies,
-            AppConnectionState.Connecting => Strings.Current.Connecting,
-            AppConnectionState.Connected => Strings.Current.Connected,
-            AppConnectionState.Disconnecting => Strings.Current.Disconnecting,
-            AppConnectionState.WaitingForAd => Strings.Current.LoadingAd,
-            AppConnectionState.FindingReachableServer => Strings.Current.FindingNetwork,
-            AppConnectionState.FindingBestServer => Strings.Current.FindingBestServer,
-            AppConnectionState.Unstable => Strings.Current.Unstable,
-            _ => connectionState.ToString()
-        };
+        StateText = Strings.Current.ConnectionStateText(connectionState);
         UsageText = IsConnected ? BandwidthUsage(state) : "";
         StateGlyph = connectionState switch {
             AppConnectionState.Connected => !state.CanDiagnose ? Mdi.Stethoscope : UsageText.Length > 0 ? "" : Mdi.Check,

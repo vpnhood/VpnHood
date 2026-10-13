@@ -19,13 +19,20 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
 // An Avalonia UI in a window on a desktop. Which UI is the head's to name, once, as the type
-// argument of Run. Where a tray keeps the UI (Windows), the window hides rather than closes - the
-// app lives on in the tray and asks for the window again through ShowMainWindow - so the run ends
-// only with Shutdown, which the head calls as the app exits. Where none does (Linux, exitOnClose),
-// closing the window ends the run; the service lives on either way. Run takes the calling thread
-// as the UI thread until then.
+// argument of Run. With a tray, the app's icon sits in the desktop's tray beside the window, and
+// while the desktop shows tray icons - Windows always, Linux where its panel does - closing the
+// window only hides it: the tray's Open and a second launch bring it back, and the run ends with the
+// tray's Exit or Shutdown. Without one, or where the desktop shows none, closing the window ends the
+// run. The service lives on either way. Run takes the calling thread as the UI thread until then.
 public static class AvaloniaDesktopHost
 {
+    // How long a start in the tray waits for the desktop's panel, which a sign-in may start after it.
+    private static readonly TimeSpan TrayAreaWait = TimeSpan.FromSeconds(30);
+
+    // A second launch's ask for the window, kept when it comes before the run has one, so the window
+    // opens as the run starts rather than the ask being lost.
+    private static readonly TaskCompletionSource ShowRequest = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private static readonly Lock RunLock = new();
     private static ClassicDesktopStyleApplicationLifetime? _lifetime;
     private static Window? _window;
 
@@ -36,12 +43,21 @@ public static class AvaloniaDesktopHost
     // (VpnHoodApiHttpFactory) against an app running in another process, or an app's own controllers
     // in this one; the content store is the host's to name - a user's cache where the app's storage
     // belongs to the service. Nothing below this line knows which it was given; the pages never did.
-    // A run that starts in the background keeps the window back until ShowMainWindow.
-    public static void Run<TUi>(string[] args, bool showWindow, VpnHoodApi api,
-        IAssetProvider? uiAssetProvider, bool exitOnClose)
+    // A run that starts in the tray (startHidden) keeps the window back until ShowMainWindow, and with
+    // no tray to wait in, ends at once. Cancelling ends the run: before the window exists, here, with
+    // OperationCanceledException; after, through Shutdown, which the caller registers.
+    public static void Run<TUi>(string[] args, VpnHoodApi api, IAssetProvider? uiAssetProvider, bool useTray,
+        bool startHidden, CancellationToken cancellationToken)
         where TUi : Application, IAvaloniaUi, new()
     {
-        AvaloniaUiHosting.StartAsync<TUi>(api, uiAssetProvider, CancellationToken.None).GetAwaiter().GetResult();
+        using var trayArea = useTray ? AvaloniaTrayArea.Watch() : null;
+        if (startHidden && !WaitForTray(trayArea, cancellationToken)) {
+            cancellationToken.ThrowIfCancellationRequested();
+            VhLogger.Instance.LogInformation("The desktop shows no tray icons, so the start in the tray ends.");
+            return;
+        }
+
+        AvaloniaUiHosting.StartAsync<TUi>(api, uiAssetProvider, cancellationToken).GetAwaiter().GetResult();
 
         // the colours the OS chrome takes, out of the UI's store, and the phone's shape the window
         // opens in
@@ -58,24 +74,78 @@ public static class AvaloniaDesktopHost
                      throw new InvalidOperationException("The UI has made no main window.");
         AvaloniaWindowFit.Apply(window, resources.WindowSize, VhApp.IsTvUi);
         SetTitleBar(window, resources.Colors.WindowBackgroundColor);
-        if (exitOnClose) {
-            window.Closed += (_, _) => lifetime.Shutdown();
-        }
-        else {
-            window.Closing += (_, e) => {
-                e.Cancel = true;
-                window.Hide();
-            };
-        }
+
+        // A person's close only hides the window while the desktop shows the tray, which the UI waits
+        // in; otherwise it ends the run, as the run's own end and the system's shutdown close it.
+        Size? hiddenSize = null;
+        window.Closing += (_, e) => {
+            if (e.CloseReason != WindowCloseReason.WindowClosing || trayArea?.IsShown != true)
+                return;
+
+            e.Cancel = true;
+            hiddenSize = window.ClientSize;
+            window.Hide();
+        };
+
+        // Avalonia 12 on X11 draws the frame itself, and the window manager (KWin and Mutter alike) maps
+        // a hidden window again with the whole window at its content's old size, which Avalonia takes
+        // the frame off: each show would shrink the window. The platform's resizes after a show are
+        // watched until that one comes, which is undone; other resizes may come first (a frame-extents
+        // change is raised at once), and a person cannot resize this window to look like it.
+        window.Resized += (_, e) => {
+            if (e.Reason != WindowResizeReason.Unspecified || !window.IsVisible || hiddenSize is not { } size)
+                return;
+
+            if (window.FrameSize is not { } frameSize || !IsSameSize(frameSize, size))
+                return;
+
+            hiddenSize = null;
+            window.Width = size.Width;
+            window.Height = size.Height;
+        };
+        window.Closed += (_, _) => lifetime.Shutdown();
         AppUiContext.Context = new AvaloniaUiContext(window);
         window.Activated += (_, _) => AppUiContext.NotifyResumed();
-        _lifetime = lifetime;
-        _window = window;
 
-        // Start shows the main window it is given; the window it is not given waits for ShowMainWindow
-        if (!showWindow)
-            lifetime.MainWindow = null;
+        using var tray = trayArea == null
+            ? null
+            : new AvaloniaDesktopTray(Application.Current ?? throw new InvalidOperationException("Avalonia has no application."),
+                api, VhApp.Features.AppName, resources.Icons, ShowMainWindow, () => lifetime.Shutdown());
+
+        // Start shows the main window it is given; one kept back waits for ShowMainWindow, unless a
+        // launch has asked for it already
+        lock (RunLock) {
+            _lifetime = lifetime;
+            _window = window;
+            if (startHidden && !ShowRequest.Task.IsCompleted)
+                lifetime.MainWindow = null;
+        }
+
+        // a stop that came while the UI was made, when Shutdown had no lifetime to end yet
+        cancellationToken.ThrowIfCancellationRequested();
         lifetime.Start(args);
+    }
+
+    // Within a pixel: a size read back from the platform at a fractional scaling is rounded.
+    private static bool IsSameSize(Size a, Size b)
+    {
+        return Math.Abs(a.Width - b.Width) < 1 && Math.Abs(a.Height - b.Height) < 1;
+    }
+
+    // Whether a start in the tray goes on: once the desktop shows tray icons, or a launch asks for the
+    // window. A sign-in's start may come before the desktop's panel, so it waits a while; with neither,
+    // there is no tray to wait in. A stop ends the wait at once.
+    private static bool WaitForTray(AvaloniaTrayArea? trayArea, CancellationToken cancellationToken)
+    {
+        if (trayArea == null)
+            return ShowRequest.Task.IsCompleted;
+
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cancellation.CancelAfter(TrayAreaWait);
+        var shown = trayArea.WaitShownAsync(cancellation.Token);
+        Task.WaitAny(shown, ShowRequest.Task);
+        cancellation.Cancel();
+        return !cancellationToken.IsCancellationRequested && (ShowRequest.Task.IsCompleted || trayArea.IsShown);
     }
 
     // One message and a Close button, in the UI's default look, for a host with no app to give the
@@ -104,8 +174,11 @@ public static class AvaloniaDesktopHost
         SetTitleBar(window, color: null);
         window.Closed += (_, _) => lifetime.Shutdown();
         lifetime.MainWindow = window;
-        _lifetime = lifetime;
-        _window = window;
+        lock (RunLock) {
+            _lifetime = lifetime;
+            _window = window;
+        }
+
         lifetime.Start([]);
     }
 
@@ -127,28 +200,33 @@ public static class AvaloniaDesktopHost
         }
     }
 
-    // From any thread: the tray's click, a second launch's command.
+    // From any thread: the tray's click, a second launch's command. Before the run has a window the
+    // ask is kept for its start, and nothing of Avalonia is touched: its dispatcher belongs to the
+    // thread the run makes it on.
     public static void ShowMainWindow()
     {
-        Dispatcher.UIThread.Post(() => {
-            if (_lifetime == null || _window == null)
+        lock (RunLock) {
+            ShowRequest.TrySetResult();
+            if (_lifetime is not { } lifetime || _window is not { } window)
                 return;
 
-            _lifetime.MainWindow = _window;
-            _window.Show();
-            _window.WindowState = WindowState.Normal;
-            _window.Activate();
-        });
+            Dispatcher.UIThread.Post(() => {
+                lifetime.MainWindow = window;
+                window.Show();
+                window.WindowState = WindowState.Normal;
+                window.Activate();
+            });
+        }
     }
 
     // From any thread. Before a run has a lifetime there is nothing to end, and nothing of Avalonia
-    // is touched: its dispatcher belongs to the thread the run makes it on.
+    // is touched, as in ShowMainWindow.
     public static void Shutdown()
     {
-        if (_lifetime is not { } lifetime)
-            return;
-
-        Dispatcher.UIThread.Post(() => lifetime.Shutdown());
+        lock (RunLock) {
+            if (_lifetime is { } lifetime)
+                Dispatcher.UIThread.Post(() => lifetime.Shutdown());
+        }
     }
 
     // Windows draws its own title bar; X11's is the one Avalonia draws (BuildAvaloniaApp).

@@ -5,9 +5,8 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 
-// The machine facts Linux answers. No tray keeps a hidden window, so a closed one is gone; the
-// installer registers the unit; systemd's signal stops the daemon, which the parser turns into the
-// run's cancellation; the daemon's console is the journal where stdout is the journal, so no line
+// The machine facts Linux answers. The installer registers the unit; systemd's signal stops the
+// daemon, which the parser turns into the run's cancellation; the daemon's console is the journal where stdout is the journal, so no line
 // reaches it twice; and the window writes to the journal's socket, under the instance's name, which
 // "service log" reads beside the unit.
 public sealed class LinuxDesktopPlatform : IDesktopPlatform
@@ -28,11 +27,8 @@ public sealed class LinuxDesktopPlatform : IDesktopPlatform
     public ILoopbackPeerCheck PeerCheck { get; } = new LinuxLoopbackPeerCheck();
     public IAppInstanceSetup? InstanceSetup => null;
     public IAppDaemonHostFactory DaemonHostFactory { get; }
-    public bool IsTraySupported => false;
 
     public bool IsAdministrator() => LinuxAdministrators.IsCurrentUser();
-
-    public IDisposable? CreateTray(DesktopTrayParams trayParams) => null;
 
     public ILoggerProvider CreateConsoleLoggerProvider() => LinuxJournalLogger.IsConsole
         ? new LinuxJournalLoggerProvider()

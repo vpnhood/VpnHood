@@ -26,17 +26,10 @@ public interface IDesktopPlatform
     // The app for "daemon", which the systemd unit or the service control manager runs, and for "dev".
     IAppDaemonHostFactory DaemonHostFactory { get; }
 
-    // Whether a tray keeps the UI (Windows): closing the window then only hides it. Where there is
-    // none (Linux), closing the window ends the UI. The service runs on either way.
-    bool IsTraySupported { get; }
-
     // Whether whoever runs this process may use the app: an administrator, by the rule the service
     // applies to every caller of its channel. The window and the commands ask it first, so a standard
     // user is told at once, with no prompt and no wait; the service's own check stays the boundary.
     bool IsAdministrator();
-
-    // The tray, started beside the window over the same API; null where the platform has none.
-    IDisposable? CreateTray(DesktopTrayParams trayParams);
 
     // The console as this platform has it, for the process that holds the app ("daemon", "dev"),
     // which adds it to the log before anything logs: the journal's sink where stdout is the journal

@@ -476,8 +476,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     // Never cut off: an entry the command made after a stop's cleanup looked would stay, its flag unset, until
-    // the next connect clears it. -x first: openresolv uses the entry alone; Debian's resolvconf, which would
-    // keep the LAN's servers before ours, refuses the command, so the start fails closed.
+    // the next connect clears it. -x first: openresolv uses the newest exclusive entry alone; Debian's
+    // resolvconf, which has no exclusive mode, refuses the command, so the start fails closed.
     private async Task SetDnsServersByResolvconf(IEnumerable<IPAddress> dnsServers)
     {
         var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
@@ -514,7 +514,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         }
     }
 
-    // Usually there is nothing to remove, and systemd-resolved's resolvconf fails while systemd-resolved is off.
+    // Usually there is nothing to remove, which -f lets pass; systemd-resolved's resolvconf still fails
+    // without its service while the interface exists.
     private static void TryRemoveResolvconfDns(string adapterName)
     {
         VhUtils.TryInvoke($"remove the resolvconf DNS entry of {adapterName}", () =>
@@ -569,7 +570,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             // box without systemd-resolved (Arch's default) gets here, as its resolvconf is systemd-resolved's
             catch (Exception fallbackEx) {
                 throw new Exception(
-                    "Could not set the VPN's DNS servers. Turn on systemd-resolved " +
+                    "Could not set the VPN's DNS servers. Install and turn on systemd-resolved " +
                     "(systemctl enable --now systemd-resolved) and link /etc/resolv.conf to " +
                     "/run/systemd/resolve/stub-resolv.conf.\n" +
                     $"resolvectl error: {ex.Message}\n" +

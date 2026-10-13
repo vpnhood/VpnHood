@@ -9,8 +9,11 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 // owns the StatusNotifierWatcher name on the session bus - KDE, GNOME with Ubuntu's AppIndicator
 // extension - and plain GNOME does not. Avalonia's tray registers its icon with that same name
 // (DBusTrayIconImpl), so this is the answer the icon itself gets. Watched while the UI runs, since a
-// panel that restarts or an extension switched off changes it. The bus is Avalonia's own D-Bus
-// library (Tmds.DBus.Protocol, through Avalonia.FreeDesktop), so it moves with Avalonia's version.
+// panel that restarts or an extension switched off changes it. It cannot see a KDE panel whose
+// system tray widget a person removed: kded keeps the name and plasmashell its host
+// (IsStatusNotifierHostRegistered stays true), so a window hidden there comes back only with a
+// second launch. The bus is Avalonia's own D-Bus library (Tmds.DBus.Protocol, through
+// Avalonia.FreeDesktop), so it moves with Avalonia's version.
 internal sealed class AvaloniaTrayArea : IDisposable
 {
     private const string StatusNotifierWatcherName = "org.kde.StatusNotifierWatcher";

@@ -79,9 +79,21 @@ internal sealed class WindowsDaemonService : ServiceBase
     private void EndRun()
     {
         var endedByItself = _running is { IsCompleted: true };
-        _cancellation.Cancel();
+        CancelRun();
         var exitCode = WaitRun();
         ExitCode = endedByItself ? exitCode : 0;
+    }
+
+    // A callback on the run's token that throws is logged: out of OnStop or OnShutdown it would kill
+    // the process before the stop is reported. Every callback has still run, so the run ends anyway.
+    private void CancelRun()
+    {
+        try {
+            _cancellation.Cancel();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Cancelling the service's run threw.");
+        }
     }
 
     // The run's code once it ends; 1 for a run that failed or outlasted the stop.

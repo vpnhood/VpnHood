@@ -180,6 +180,16 @@ public class PacketTransportTest : TestBase
     }
 
     [TestMethod]
+    [DataRow(-2.0)]
+    [DataRow(4_294_967_295.0)]
+    public void Negative_or_too_long_blocking_timeout_is_refused(double milliseconds)
+    {
+        // with it, every blocking send that met a full queue would fail with its packet neither queued nor disposed
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new TestHeldPacketTransport(queueCapacity: 1,
+            blocking: true, blockingTimeout: TimeSpan.FromMilliseconds(milliseconds)));
+    }
+
+    [TestMethod]
     public async Task Async_send_refused_by_a_closed_queue_throws_and_disposes_its_packet()
     {
         var transport = new TestHeldPacketTransport(queueCapacity: 1, blocking: true);

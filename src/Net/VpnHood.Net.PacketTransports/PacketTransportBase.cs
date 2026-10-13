@@ -14,6 +14,9 @@ public abstract class PacketTransportBase : IPacketTransport
     // runs no send loop, saving each its own
     private static readonly Channel<IpPacket> PassthroughSendChannel = CreatePassthroughSendChannel();
 
+    // the longest a CancellationTokenSource times
+    private static readonly TimeSpan MaxBlockingTimeout = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+
     private readonly Channel<IpPacket> _sendChannel;
     private readonly int _queueCapacity;
     private readonly bool _autoDisposePackets;
@@ -63,6 +66,12 @@ public abstract class PacketTransportBase : IPacketTransport
     {
         if (passthrough && !singleMode)
             throw new ArgumentException("Passthrough mode should be used with single mode only.", nameof(passthrough));
+
+        // a CancellationTokenSource times each blocking wait: a timeout it refuses would fail every wait, after the
+        // send took its packet
+        if (options.BlockingTimeout < TimeSpan.Zero || options.BlockingTimeout > MaxBlockingTimeout)
+            throw new ArgumentOutOfRangeException(nameof(options.BlockingTimeout), options.BlockingTimeout,
+                $"{nameof(options.BlockingTimeout)} must be from zero to {MaxBlockingTimeout}.");
 
         _queueCapacity = options.QueueCapacity ?? PacketTransportOptions.DefaultQueueCapacity;
         _autoDisposePackets = options.AutoDisposePackets;

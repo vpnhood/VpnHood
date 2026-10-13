@@ -9,8 +9,10 @@ namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 
 // The daemon's run as the service control manager hosts it. The manager stops a service with a call,
 // not a signal, so its Stop - and a shutdown - cancels the run here, and waits while the run
-// disconnects. A run that ends by itself (a start that failed, say) stops the service with
-// it. Started by hand from a console instead, the run is simply run, and Ctrl+C cancels it.
+// disconnects. With Fast Startup on, Windows' default, "Shut down" hibernates the service instead of
+// stopping it: no shutdown reaches it, and it wakes at the next start as from a sleep. A run that
+// ends by itself (a start that failed, say) stops the service with it. Started by hand from a console
+// instead, the run is simply run, and Ctrl+C cancels it.
 internal sealed class WindowsDaemonService : ServiceBase
 {
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(30);
@@ -57,8 +59,12 @@ internal sealed class WindowsDaemonService : ServiceBase
         }, TaskScheduler.Default);
     }
 
+    // A stop is pending while the run disconnects, so it may ask for the time that takes. A shutdown is
+    // not: there RequestAdditionalTime throws (NotInPendingState), which would end the service before
+    // it disconnects, so it disconnects in the time Windows gives every service at shutdown.
     protected override void OnStop()
     {
+        RequestAdditionalTime((int)StopTimeout.TotalMilliseconds);
         EndRun();
     }
 
@@ -69,7 +75,6 @@ internal sealed class WindowsDaemonService : ServiceBase
 
     private void EndRun()
     {
-        RequestAdditionalTime((int)StopTimeout.TotalMilliseconds);
         _cancellation.Cancel();
 
         try {

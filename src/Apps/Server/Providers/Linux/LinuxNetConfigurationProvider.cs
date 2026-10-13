@@ -18,22 +18,34 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
 
     public async Task SetTcpCongestionControl(string value)
     {
+        // the access manager's value goes into root's commands, so a kernel algorithm's name only
+        if (!Regex.IsMatch(value, "^[a-z0-9_]{1,16}$"))
+            throw new ArgumentException($"Invalid TCP congestion control name. Value: {value}", nameof(value));
+
         // Check if the value is already set
         if (await GetTcpCongestionControl() == value)
             return;
 
         logger.LogInformation("Updating TcpCongestionControl to {value}...", value);
-        await ExecuteCommandAsync($"modprobe tcp_{value}");
 
-        var available = await ExecuteCommandAsync("sysctl net.ipv4.tcp_available_congestion_control");
-        if (!available.Contains(value, StringComparison.CurrentCultureIgnoreCase))
-            throw new InvalidOperationException($"{value} is not available.");
+        // a module only for one the kernel lacks: reno is built in and has none
+        if (!await IsTcpCongestionControlAvailable(value)) {
+            await ExecuteCommandAsync($"modprobe tcp_{value}");
+            if (!await IsTcpCongestionControlAvailable(value))
+                throw new InvalidOperationException($"{value} is not available.");
+        }
 
         // ReSharper disable StringLiteralTypo
         // Set new config
         await ExecuteCommandAsync("sysctl -w net.core.default_qdisc=fq");
         await ExecuteCommandAsync($"sysctl -w net.ipv4.tcp_congestion_control={value}");
         // ReSharper restore StringLiteralTypo
+    }
+
+    private static async Task<bool> IsTcpCongestionControlAvailable(string value)
+    {
+        var available = await ExecuteCommandAsync("sysctl net.ipv4.tcp_available_congestion_control");
+        return available.Split('=').Last().Split([' ', '\n'], StringSplitOptions.RemoveEmptyEntries).Contains(value);
     }
 
     private static void ValidateInterfaceName(string interfaceName)

@@ -177,6 +177,13 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
                 continue;
             }
 
+            // a name this app never gives (the constructor refuses it), which would go into root's commands
+            if (!IsValidAdapterName(tun.Name)) {
+                VhLogger.Instance.LogError("Leaving {AdapterName} alone: its name is not a valid adapter name.",
+                    tun.Name);
+                continue;
+            }
+
             VhLogger.Instance.LogInformation("Removing {AdapterName}, a tun a previous run left.", tun.Name);
             TryRemoveResolvconfDns(tun.Name);
             VhUtils.TryInvoke($"remove the leftover tun {tun.Name}", () =>
@@ -212,12 +219,20 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
+    // The first default route's interface: the word after "dev", as a route with no gateway has no "via <gateway>"
+    // before it (default dev ppp0 scope link). The name goes into root's commands, so a valid name only.
     private static async Task<string> GetPrimaryAdapterName(CancellationToken cancellationToken)
     {
-        var mainInterface = await ExecuteCommandAsync("ip route | grep default | awk '{print $5}'", cancellationToken).Vhc();
-        mainInterface = mainInterface.Split("\n").FirstOrDefault()?.Trim();
-        if (string.IsNullOrEmpty(mainInterface))
+        var words = (await ExecuteCommandAsync("ip route show default", cancellationToken).Vhc())
+            .Split([' ', '\t', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        var devIndex = Array.IndexOf(words, "dev");
+        var mainInterface = devIndex >= 0 && devIndex < words.Length - 1 ? words[devIndex + 1] : "";
+        if (mainInterface.Length == 0)
             throw new InvalidOperationException("No active network interface found.");
+
+        if (!IsValidAdapterName(mainInterface))
+            throw new InvalidOperationException(
+                $"The primary network interface's name is not supported in a command: {mainInterface}");
 
         return mainInterface;
     }

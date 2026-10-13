@@ -73,17 +73,31 @@ internal sealed class WindowsDaemonService : ServiceBase
         EndRun();
     }
 
+    // A run that ended by itself keeps its code, so the manager restarts a failed one
+    // (ServiceRegistration). A stop that was asked for reports success even when the run fails or
+    // outlasts it, or the manager would start the service again after an installer stopped it.
     private void EndRun()
     {
+        var endedByItself = _running is { IsCompleted: true };
         _cancellation.Cancel();
+        var exitCode = WaitRun();
+        ExitCode = endedByItself ? exitCode : 0;
+    }
 
+    // The run's code once it ends; 1 for a run that failed or outlasted the stop.
+    private int WaitRun()
+    {
         try {
             var running = _running ?? Task.FromResult(0);
-            ExitCode = running.Wait(StopTimeout) ? running.Result : 1;
+            if (running.Wait(StopTimeout))
+                return running.Result;
+
+            VhLogger.Instance.LogError("The service's run did not end within {StopTimeout} of the stop.", StopTimeout);
+            return 1;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "The service's run ended with an error.");
-            ExitCode = 1;
+            return 1;
         }
     }
 

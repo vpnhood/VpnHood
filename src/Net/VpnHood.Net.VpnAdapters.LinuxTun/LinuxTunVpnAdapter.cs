@@ -47,6 +47,11 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private string? _primaryAdapterName;
     private bool _isAdapterAdded;
     private bool _isResolvconfDnsSet;
+
+    // The networks AddNat added rules for, which AdapterRemove removes. Not the adapter's networks, which a stop
+    // clears, and kept after a removal: a start the stop overtook may still add rules, which its cleanup removes
+    private IpNetwork? _natNetworkV4;
+    private IpNetwork? _natNetworkV6;
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
@@ -274,10 +279,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // close if open
         AdapterClose();
 
-        if (_isAdapterAdded) {
-            // DNS comes off before the interface
+        // DNS comes off before the interface, and without it too: a start a stop overtook may set it after the
+        // stop removed the interface
+        if (_isAdapterAdded || _isResolvconfDnsSet)
             RemoveOwnResolvconfDns();
 
+        if (_isAdapterAdded) {
             if (LinuxTunInfo.InterfaceExists(AdapterName)) {
                 VhLogger.Instance.LogDebug("Removing the {AdapterName} TUN adapter...", AdapterName);
                 VhUtils.TryInvoke($"remove the {AdapterName} TUN adapter", () =>
@@ -291,14 +298,14 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         FreeRetiredTunAdapterFd();
 
         // Remove previous NAT iptables record
-        if (UseNat) {
+        if (_natNetworkV4 != null || _natNetworkV6 != null) {
             VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...",
                 AdapterName);
-            if (AdapterIpNetworkV4 != null)
-                TryRemoveNat(AdapterIpNetworkV4);
+            if (_natNetworkV4 != null)
+                TryRemoveNat(_natNetworkV4);
 
-            if (AdapterIpNetworkV6 != null)
-                TryRemoveNat(AdapterIpNetworkV6);
+            if (_natNetworkV6 != null)
+                TryRemoveNat(_natNetworkV6);
         }
     }
 
@@ -376,6 +383,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     {
         // remove old NAT rule if any
         TryRemoveNat(ipNetwork);
+
+        // recorded before its rules, so a removal finds a half-added set too
+        if (ipNetwork.IsV4)
+            _natNetworkV4 = ipNetwork;
+        else
+            _natNetworkV6 = ipNetwork;
 
         // Configure NAT with iptables
         var iptables = IpTables(ipNetwork);

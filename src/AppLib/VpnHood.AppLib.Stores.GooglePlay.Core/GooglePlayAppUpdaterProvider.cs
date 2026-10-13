@@ -1,6 +1,6 @@
 ﻿using Android.Gms.Extensions;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Updaters;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;

@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions.Updaters;
 
 namespace VpnHood.AppLib.App.Services.Updaters;
 

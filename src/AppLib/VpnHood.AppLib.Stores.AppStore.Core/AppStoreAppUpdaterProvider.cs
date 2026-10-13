@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Updaters;
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Exceptions;

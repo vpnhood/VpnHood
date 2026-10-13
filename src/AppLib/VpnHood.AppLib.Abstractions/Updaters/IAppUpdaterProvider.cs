@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
-namespace VpnHood.AppLib.Abstractions;
+namespace VpnHood.AppLib.Abstractions.Updaters;
 
 /// <summary>
 /// Each call takes the window, or null where none is open, as in the desktop service: a provider

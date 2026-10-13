@@ -30,7 +30,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         [IpNetwork.Parse("203.0.113.1/24"), IpNetwork.Parse("2001:4860:ffff::1234/48")];
 
     private readonly Lock _stopLock = new();
-    private bool _isStarting;
+    private volatile bool _isStarting;
     private bool _isStopping;
     private VpnAdapterOptions? _startOptions;
 
@@ -190,20 +190,22 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             }
             _ioErrorCount = 0; // a new run, not the errors that ended the last one
 
-            // get the WAN adapter IP (lets do it again)
             // A concurrent Stop() clears the adapter properties when the user disconnects mid-start,
             // so the rest of this method must read these locals, never the properties.
-            var primaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
-            var primaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
             var adapterIpNetworkV4 = options.VirtualIpNetworkV4;
             var adapterIpNetworkV6 = options.VirtualIpNetworkV6;
-            PrimaryAdapterIpV4 = primaryAdapterIpV4;
-            PrimaryAdapterIpV6 = primaryAdapterIpV6;
             AdapterIpNetworkV4 = adapterIpNetworkV4;
             AdapterIpNetworkV6 = adapterIpNetworkV6;
             UseNat = options.UseNat;
             _mtu = options.Mtu ?? _mtu;
+
+            // the host's addresses before the primary IPs, so a change between the two is one the start's look at
+            // its end sees; after the virtual networks, by which the record leaves our own adapter out
             _lastPrimaryAdapterAddresses = GetPrimaryAdapterAddresses();
+            var primaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
+            var primaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
+            PrimaryAdapterIpV4 = primaryAdapterIpV4;
+            PrimaryAdapterIpV6 = primaryAdapterIpV6;
 
             // report the primary adapter IPs
             VhLogger.Instance.LogInformation(
@@ -868,7 +870,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             if (currentAddresses.SetEquals(_lastPrimaryAdapterAddresses))
                 return;
             var isSameNetworks = IsSameNetworks(currentAddresses, _lastPrimaryAdapterAddresses);
-            _lastPrimaryAdapterAddresses = currentAddresses;
+
+            // a change a restart handles is recorded by its start: recorded here, a restart that a start under way
+            // drops would leave that start's look at its end no change to see
+            if (currentAddresses.Count == 0 || isSameNetworks || !RestartAfterNetworkAddressChanged)
+                _lastPrimaryAdapterAddresses = currentAddresses;
 
             // no primary network adapter up: nothing to look for. The empty set is recorded, so any address
             // that comes back, the old one included, is a network change
@@ -982,8 +988,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         // A stop or a disposal clears the keep flag, waits for this lock and then stops the adapter, so a
         // restart that sees the stop begun starts nothing; one already starting runs to its end, for that stop.
-        // An owner's start under way is left alone, as an address change's look that began before it may fire
-        // this: it looks at the addresses itself at its end.
+        // An owner's start under way is left alone: it looks at the addresses itself at its end.
         if (!_keepStarted || _isStarting || IsDisposing || IsDisposed)
             return;
 

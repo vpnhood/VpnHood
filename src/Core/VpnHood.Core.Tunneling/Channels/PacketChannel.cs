@@ -14,8 +14,9 @@ namespace VpnHood.Core.Tunneling.Channels;
 public abstract class PacketChannel : PacketTransport, IPacketChannel
 {
     private readonly TimeSpan? _lifespan;
-    private DateTime? _closeSentTime;
-    private DateTime? _closeReceivedTime;
+
+    // when the channel began closing, by its lifespan or by the peer's close: from then on it is Disconnecting
+    private DateTime? _closeTime;
     private bool _started;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Job _checkLifetimeJob;
@@ -50,7 +51,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
                 return
                     PacketChannelState.Disposed;
 
-            if (_closeSentTime != null || _closeReceivedTime != null)
+            if (_closeTime != null)
                 return PacketChannelState.Disconnecting;
 
             return _started
@@ -111,20 +112,19 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         if (_cancellationTokenSource.IsCancellationRequested)
             return default;
 
-        // dispose if its lifetime is over
-        if (_started && _closeSentTime == null &&
+        // the lifespan is over: Disconnecting first, so the tunnel stops queueing on the channel, then the close
+        if (_started && _closeTime == null &&
             _lifespan.HasValue && FastDateTime.UtcNow - PacketStat.CreatedTime > _lifespan.Value) {
             VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
                 "PacketChannel lifetime is over. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
                 ChannelId, PacketStat.CreatedTime, _lifespan);
 
-            // send close message if not already sent
+            _closeTime = FastDateTime.UtcNow;
             SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
-            _closeSentTime = FastDateTime.UtcNow; // mark as closing
         }
 
-        // dispose if _closeMessageTime is set and more than graceful timeout
-        if (FastDateTime.UtcNow - _closeSentTime > TransportDefaults.TcpGracefulTimeout)
+        // a closing channel goes after its grace, in which the packets already on their way arrive
+        if (FastDateTime.UtcNow - _closeTime > TransportDefaults.TcpGracefulTimeout)
             Dispose();
 
         return default;
@@ -152,20 +152,16 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         }
     }
 
-    // the peer's close, answered once with the channel's own; a channel being disposed closes with no answer
+    // The peer's close: the channel is Disconnecting and goes after its grace, as the peer's does. It sends no answer:
+    // each end reads for its whole grace, so a packet queued as the close arrived still comes through, where an end
+    // that closed on an answer would lose one queued behind it
     private void ReceiveClose()
     {
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
             "PacketChannel received close message. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
             ChannelId, PacketStat.CreatedTime, _lifespan);
 
-        if (_closeReceivedTime != null)
-            return;
-
-        _closeReceivedTime = FastDateTime.UtcNow;
-        _closeSentTime ??= FastDateTime.UtcNow;
-        if (!IsDisposing && !IsDisposed)
-            SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
+        _closeTime ??= FastDateTime.UtcNow;
     }
 
     protected override void DisposeManaged()

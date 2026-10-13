@@ -43,17 +43,33 @@ public class PacketChannelTest : TestBase
     }
 
     [TestMethod]
-    public void Close_received_once_the_channel_is_disposed_is_disposed_with_no_reply()
+    public async Task Channel_whose_lifespan_ends_is_disconnecting_and_sends_its_close()
     {
-        var channel = new TestPacketChannel();
-        channel.Dispose();
+        using var channel = new TestPacketChannel(lifespan: TimeSpan.Zero);
+        channel.Start();
 
-        // a read loop may still hand on a packet it read before the stop
+        // the lifetime job finds the lifespan over: its close goes out, and the tunnel picks the channel no more
+        await AssertEqualsWait(1, () => channel.SentPackets);
+        Assert.AreEqual(PacketChannelState.Disconnecting, channel.State);
+    }
+
+    [TestMethod]
+    public async Task Close_received_makes_the_channel_disconnecting_with_no_answer()
+    {
+        using var channel = new TestPacketChannel();
+        channel.Start();
+
         var memory = ToMemory(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
         var close = PacketBuilder.Attach(memory);
         channel.Receive(close);
         Assert.IsTrue(memory.IsDisposed);
-        Assert.AreEqual(0, channel.PacketStat.DroppedPackets);
+        Assert.AreEqual(PacketChannelState.Disconnecting, channel.State);
+
+        // a packet sent after it goes alone: no answer went before it
+        channel.SendPacketQueued(PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("10.0.0.3"), 1, 53,
+            new byte[16]));
+        await AssertEqualsWait(false, () => channel.IsSending);
+        Assert.AreEqual(1, channel.SentPackets);
         GC.KeepAlive(close);
     }
 }

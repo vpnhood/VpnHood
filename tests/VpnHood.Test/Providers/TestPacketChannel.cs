@@ -5,10 +5,10 @@ namespace VpnHood.Test.Providers;
 
 // A packet channel with no connection behind it: it counts the packets and bytes sent through it and disposes
 // the packets
-public class TestPacketChannel() : PacketChannel(new PacketChannelOptions {
+public class TestPacketChannel(TimeSpan? lifespan = null) : PacketChannel(new PacketChannelOptions {
     AutoDisposePackets = true,
     Blocking = false,
-    Lifespan = null,
+    Lifespan = lifespan,
     ChannelId = Guid.NewGuid().ToString()
 })
 {

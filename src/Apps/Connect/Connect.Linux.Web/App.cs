@@ -27,9 +27,7 @@ internal static class App
         // own shop.
         options.Premium = ConnectAppOptions.CreatePremium(allowImportAccessCode: true, isPurchaseUrlSupported: true);
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
-        options.UpdaterOptions = new AppUpdaterOptions {
-            PromptDelay = TimeSpan.FromDays(1)
-        };
+        options.UpdaterOptions = new AppUpdaterOptions();
         return options;
     }
 

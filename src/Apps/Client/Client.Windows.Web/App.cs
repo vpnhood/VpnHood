@@ -38,8 +38,7 @@ internal static class App
         var appConfigs = ClientAppConfigs.Load();
         var options = ClientAppOptions.Create(context, appConfigs);
         options.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "win-x64"),
-            PromptDelay = TimeSpan.Zero
+            UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "win-x64")
         };
         return options;
     }

@@ -31,9 +31,7 @@ internal static class App
     {
         var appConfigs = ClientAppConfigs.Load();
         var options = ClientAppOptions.Create(context, appConfigs);
-        options.UpdaterOptions = new AppUpdaterOptions {
-            PromptDelay = TimeSpan.Zero
-        };
+        options.UpdaterOptions = new AppUpdaterOptions();
         return options;
     }
 }

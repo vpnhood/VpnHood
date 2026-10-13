@@ -46,8 +46,7 @@ internal static class App
         options.Premium = ConnectAppOptions.CreatePremium(allowImportAccessCode: true, isPurchaseUrlSupported: true);
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
         options.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "win-x64"),
-            PromptDelay = TimeSpan.Zero
+            UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "win-x64")
         };
         return options;
     }

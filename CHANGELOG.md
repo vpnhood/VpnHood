@@ -67,6 +67,7 @@
 * Improve: The Quick Settings tile no longer starts Firebase in its own process, so it appears faster on low-end devices #android #connect
 * Fix: Timeouts no longer drift with the device's time zone or a daylight-saving change
 * Fix: On Linux without systemd-resolved, the VPN's DNS server stayed in resolv.conf after disconnecting #linux
+* Fix: On Linux without systemd-resolved, the VPN never set its DNS servers, so DNS went around the VPN; resolvconf now sets them, and where it cannot - NetworkManager without systemd-resolved, as Arch-based systems have by default - connecting stops with an error that says what to turn on #linux
 * Fix: Stopping the VPN service on Linux while connected now ends the session cleanly before the service exits #linux
 * Fix: On Linux, the VPN service's start now clears only its own leftover tunnel, never one another app is using under the same name #linux
 * Fix: On Linux, an app name longer than 15 characters or with spaces no longer keeps the VPN from creating its tunnel #linux

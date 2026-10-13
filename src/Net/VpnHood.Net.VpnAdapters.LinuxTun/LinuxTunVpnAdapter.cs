@@ -564,9 +564,13 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             try {
                 await SetDnsServersByResolvconf(dnsServers);
             }
+            // Fail-closed: a VPN up without its DNS servers sends the device's DNS around it. A NetworkManager
+            // box without systemd-resolved (Arch's default) gets here, as its resolvconf is systemd-resolved's
             catch (Exception fallbackEx) {
                 throw new Exception(
-                    $"Failed to set DNS using both resolvectl and resolvconf.\n" +
+                    "Could not set the VPN's DNS servers. Turn on systemd-resolved " +
+                    "(systemctl enable --now systemd-resolved) and link /etc/resolv.conf to " +
+                    "/run/systemd/resolve/stub-resolv.conf.\n" +
                     $"resolvectl error: {ex.Message}\n" +
                     $"resolvconf error: {fallbackEx.Message}", fallbackEx);
             }

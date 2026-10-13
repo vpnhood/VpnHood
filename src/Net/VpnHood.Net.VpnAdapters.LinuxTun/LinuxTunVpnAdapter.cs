@@ -407,7 +407,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     // The rules AddNat adds, each by its own spec: restoring a whole table would also drop a rule
-    // another tool, such as a firewall or Docker, adds meanwhile.
+    // another tool, such as a firewall or Docker, adds meanwhile. The spec names the current primary
+    // interface, so rules an earlier run added for another one stay; left so: they only pass and NAT
+    // the tunnel's own traffic through that interface.
     private void TryRemoveNat(IpNetwork ipNetwork)
     {
         var iptables = IpTables(ipNetwork);
@@ -473,11 +475,14 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         await ExecuteCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).Vhc();
     }
 
-    private async Task SetDnsServersByResolvconf(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
+    // No double quote in the command: ExecuteCommand wraps it in a pair for bash -c, and an inner one ended it
+    // early (bash ran only an echo, never resolvconf). Never cut off: an entry the command made after a stop's
+    // cleanup looked would stay, its flag unset, until the next connect clears it.
+    private async Task SetDnsServersByResolvconf(IEnumerable<IPAddress> dnsServers)
     {
-        var dnsPayload = string.Join("\n", dnsServers.Select(x => $"nameserver {x}")) + "\n";
-        var command = $"echo \"{dnsPayload}\" | resolvconf -a {AdapterName}";
-        await ExecuteCommandAsync(command, cancellationToken).Vhc();
+        var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
+        await ExecuteCommandAsync($"printf 'nameserver %s\\n' {allDns} | resolvconf -a {AdapterName}",
+            CancellationToken.None).Vhc();
         _isResolvconfDnsSet = true;
     }
 
@@ -550,11 +555,15 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             // --- Try systemd-resolved ---
             await SetDnsServersByResolvectl(dnsServers, cancellationToken);
         }
+        // a cancelled start is no resolvectl failure: no fallback, which runs uncancelled
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
         catch (Exception ex) {
             // --- Fallback: use resolvconf ---
             VhLogger.Instance.LogWarning(ex, "Failed to set DNS using resolvectl. Trying fallback to resolvconf...");
             try {
-                await SetDnsServersByResolvconf(dnsServers, cancellationToken);
+                await SetDnsServersByResolvconf(dnsServers);
             }
             catch (Exception fallbackEx) {
                 throw new Exception(

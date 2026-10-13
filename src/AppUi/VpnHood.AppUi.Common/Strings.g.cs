@@ -1543,6 +1543,9 @@ public sealed partial class Strings
     /// <summary>Premium info</summary>
     public string PremiumInfo => Get("PREMIUM_INFO");
 
+    /// <summary>Server key info</summary>
+    public string ServerKeyInfo => Get("SERVER_KEY_INFO");
+
     /// <summary>Premium by</summary>
     public string PremiumBy => Get("PREMIUM_BY");
 

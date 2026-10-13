@@ -36,7 +36,11 @@ public partial class StatisticsView : UserControl, IPage
         var isChina = string.Equals(state.ClientCountryInfo?.CountryCode, "CN", StringComparison.OrdinalIgnoreCase);
 
         if (isPremiumUser && access != null) {
-            var card = AddCard(s.PremiumInfo, Mdi.Crown, s.StatisticsDateCardDesc);
+            // a private key is premium by its token, but a build with no premium tier sells nothing:
+            // there it is the server key
+            var card = VhApp.IsPremiumSupported
+                ? AddCard(s.PremiumInfo, Mdi.Crown, s.StatisticsDateCardDesc)
+                : AddCard(s.ServerKeyInfo, Mdi.Key, s.StatisticsDateCardDesc);
             if (VhApp.IsPremiumSupported)
                 AddRow(card, s.PremiumBy, VhApp.IsPremiumByAccount ? s.PurchaseSubscription : s.PremiumCode, "active");
             AddRow(card, s.ActivatedOn, Format.ShortDate(access.CreatedTime), "active");

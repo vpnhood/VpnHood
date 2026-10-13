@@ -64,8 +64,9 @@ internal sealed class WindowsDaemonService : ServiceBase
     }
 
     // A stop is pending while the run disconnects, so it may ask for the time that takes. A shutdown is
-    // not: there RequestAdditionalTime throws (NotInPendingState), which would end the service before
-    // it disconnects, so it disconnects in the time Windows gives every service at shutdown.
+    // not: there RequestAdditionalTime would throw (NotInPendingState) and crash the process before the
+    // run disconnects. So a shutdown disconnects in what Windows gives every service then,
+    // WaitToKillServiceTimeout (5 s by default), well short of StopTimeout.
     protected override void OnStop()
     {
         RequestAdditionalTime((int)StopWaitHint.TotalMilliseconds);

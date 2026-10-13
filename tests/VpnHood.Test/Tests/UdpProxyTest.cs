@@ -25,12 +25,11 @@ public class UdpProxyTest : TestBase
             _receivedPackets.Enqueue(ipPacket);
         }
 
-        public Task WaitForUdpPacket(IpPacket ipPacket, TimeSpan? timeout = null)
+        public Task WaitForUdpPacket(IpPacket request, TimeSpan? timeout = null)
         {
-            // clone the request because the pool owns the queued packet; matching the payload
-            // makes each wait find its own echo even when an older packet with the same
-            // address signature is already queued
-            var request = ipPacket.Clone();
+            // the request is the test's own, as the pool disposes what it sent, so the test sends copies;
+            // matching the payload makes each wait find its own echo even when an older packet with the
+            // same address signature is already queued
             var requestUdp = request.ExtractUdp();
 
             return WaitForUdpPacket(p =>
@@ -83,8 +82,8 @@ public class UdpProxyTest : TestBase
             Guid.NewGuid().ToByteArray());
 
         // Test
-        proxyPool.SendPacketQueued(ipPacket);
-        proxyPool.SendPacketQueued(ipPacket);
+        proxyPool.SendPacketQueued(ipPacket.Clone());
+        proxyPool.SendPacketQueued(ipPacket.Clone());
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
         Assert.AreEqual(1, proxyPool.ClientCount);
 
@@ -93,7 +92,7 @@ public class UdpProxyTest : TestBase
         // -------------
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
-        proxyPool.SendPacketQueued(ipPacket);
+        proxyPool.SendPacketQueued(ipPacket.Clone());
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
         Assert.AreEqual(2, proxyPool.ClientCount,
             "New source with a same destination should create a new worker.");
@@ -104,7 +103,7 @@ public class UdpProxyTest : TestBase
         udpEndPoint = TestHelper.WebServer.LocalEps.UdpEchoEndPoint2;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.30:2000"),
             udpEndPoint, Guid.NewGuid().ToByteArray());
-        proxyPool.SendPacketQueued(ipPacket);
+        proxyPool.SendPacketQueued(ipPacket.Clone());
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
         Assert.AreEqual(2, proxyPool.ClientCount,
             "New source with a new destination should not create a new worker.");
@@ -115,7 +114,7 @@ public class UdpProxyTest : TestBase
         var udpEndPoint2 = TestHelper.WebServer.LocalEps.UdpEchoEndPoint1;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint2,
             Guid.NewGuid().ToByteArray());
-        proxyPool.SendPacketQueued(ipPacket);
+        proxyPool.SendPacketQueued(ipPacket.Clone());
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
         Assert.AreEqual(2, proxyPool.ClientCount,
             "new destination should not create a worker.");
@@ -129,7 +128,7 @@ public class UdpProxyTest : TestBase
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
         proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
-        proxyPool.SendPacketQueued(ipPacket);
+        proxyPool.SendPacketQueued(ipPacket.Clone());
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
         Assert.AreEqual(1, proxyPool.ClientCount);
         await VhTestUtil.AssertEqualsWait(0, () => proxyPool.ClientCount);
@@ -138,7 +137,7 @@ public class UdpProxyTest : TestBase
         udpEndPoint = TestHelper.WebServer.LocalEps.UdpEchoEndPoint1V6;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[::1]:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
-        proxyPool.SendPacketQueued(ipPacket);
+        proxyPool.SendPacketQueued(ipPacket.Clone());
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
     }
 

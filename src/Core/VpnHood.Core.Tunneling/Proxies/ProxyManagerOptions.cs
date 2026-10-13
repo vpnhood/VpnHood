@@ -17,6 +17,5 @@ public class ProxyManagerOptions
     public required TransferBufferSize? UdpBufferSize { get; init; }
     public required bool IsPingSupported { get; init; }
     public required IPacketProxyCallbacks? PacketProxyCallbacks { get; init; }
-    public required bool AutoDisposePackets { get; init; }
     public required LogScope? LogScope { get; init; }
 }

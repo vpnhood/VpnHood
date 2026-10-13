@@ -113,7 +113,6 @@ public class Session : IDisposable
             LogScope = logScope,
             IsPingSupported = true,
             PacketProxyCallbacks = new PacketProxyCallbacks(this),
-            AutoDisposePackets = true,
             PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity
         });
         _proxyManager.PacketReceived += Proxy_PacketsReceived;

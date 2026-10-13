@@ -16,6 +16,5 @@ public class UdpProxyPoolOptions
     public int MaxDnsClientCount { get; set; } = TransportDefaults.MaxUdpDnsClientCount;
     public required int PacketQueueCapacity { get; set; }
     public required TransferBufferSize? BufferSize { get; set; }
-    public required bool AutoDisposePackets { get; set; }
     public required LogScope? LogScope { get; set; }
 }

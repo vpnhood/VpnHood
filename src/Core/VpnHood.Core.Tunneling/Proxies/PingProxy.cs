@@ -10,9 +10,10 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class PingProxy(bool autoDisposePackets)
+public class PingProxy()
     : SinglePacketTransport(new PacketTransportOptions {
-            AutoDisposePackets = autoDisposePackets,
+            // a request's payload goes out as a ping and the request to no one, so each one sent is disposed
+            AutoDisposePackets = true,
             Blocking = false,
             QueueCapacity = 1
         })

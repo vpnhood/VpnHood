@@ -31,10 +31,10 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
     public DateTime LastUsedTime { get; set; }
     public new bool IsDisposed => base.IsDisposed;
 
-    public UdpProxy(Socket socket, TimeSpan udpTimeout, int queueCapacity, bool autoDisposePackets,
-        int receiveBufferSize)
+    public UdpProxy(Socket socket, TimeSpan udpTimeout, int queueCapacity, int receiveBufferSize)
         : base(new PacketTransportOptions {
-            AutoDisposePackets = autoDisposePackets,
+            // a packet's payload goes out on the socket and the packet to no one, so each one sent is disposed
+            AutoDisposePackets = true,
             Blocking = false,
             QueueCapacity = queueCapacity
         })

@@ -34,7 +34,6 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
             MaxClientCount = TransportDefaults.MaxUdpClientCount,
             PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
             BufferSize = null,
-            AutoDisposePackets = true,
             LogScope = null
         });
         _proxyPool.PacketReceived += Proxy_PacketReceived;

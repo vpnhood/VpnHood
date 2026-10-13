@@ -39,7 +39,6 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
     private readonly int _maxClientCount;
     private readonly int _maxDnsClientCount;
     private readonly int _packetQueueCapacity;
-    private readonly bool _autoDisposeSentPackets;
     private readonly Job _cleanupUdpWorkersJob;
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
@@ -52,7 +51,6 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
 
     public UdpProxyPool(UdpProxyPoolOptions options)
     {
-        _autoDisposeSentPackets = options.AutoDisposePackets;
         _packetProxyCallbacks = options.PacketProxyCallbacks;
         _socketFactory = options.SocketFactory;
         _packetQueueCapacity = options.PacketQueueCapacity;
@@ -171,7 +169,6 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
 
             // create a new worker
             udpProxy = new UdpProxy(CreateUdpSocket(addressFamily), proxyTimeout, _packetQueueCapacity,
-                _autoDisposeSentPackets,
                 isDns ? TransportDefaults.UdpDnsBufferSize : TransportDefaults.MaxUdpDatagramSize);
             udpProxy.PacketReceived += UdpProxy_OnPacketReceived;
             proxies.Add(udpProxy);

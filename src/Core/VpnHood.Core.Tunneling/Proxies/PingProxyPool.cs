@@ -12,7 +12,6 @@ namespace VpnHood.Core.Tunneling.Proxies;
 
 public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
 {
-    private readonly bool _autoDisposeSentPackets;
     private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
     private readonly List<PingProxy> _pingProxies = [];
     private readonly EventReporter _maxWorkerEventReporter;
@@ -26,7 +25,6 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
 
     public PingProxyPool(PingProxyPoolOptions options)
     {
-        _autoDisposeSentPackets = options.AutoDisposePackets;
         _maxClientCount = options.MaxClientCount;
         _packetProxyCallbacks = options.PacketProxyCallbacks;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.IcmpTimeout);
@@ -52,7 +50,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
                 return pingProxy;
 
             if (_pingProxies.Count < _maxClientCount) {
-                pingProxy = new PingProxy(_autoDisposeSentPackets);
+                pingProxy = new PingProxy();
                 pingProxy.PacketReceived += PingProxy_PacketReceived;
                 _pingProxies.Add(pingProxy);
                 isNew = true;

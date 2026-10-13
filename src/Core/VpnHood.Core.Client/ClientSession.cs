@@ -125,8 +125,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             PacketQueueCapacity = Config.Transport.UdpProxyQueueCapacity,
             IcmpTimeout = TransportDefaults.IcmpTimeout,
             UdpBufferSize = Config.Transport.UdpProxyBufferSize,
-            LogScope = null,
-            AutoDisposePackets = true
+            LogScope = null
         });
         _proxyManager.PacketReceived += Proxy_PacketReceived;
 

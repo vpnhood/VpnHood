@@ -55,8 +55,7 @@ public class ProxyManager : PassthroughPacketTransport
             MaxDnsClientCount = options.MaxUdpDnsClientCount,
             LogScope = options.LogScope,
             PacketQueueCapacity = options.PacketQueueCapacity,
-            BufferSize = options.UdpBufferSize,
-            AutoDisposePackets = options.AutoDisposePackets
+            BufferSize = options.UdpBufferSize
         };
 
         // create UDP proxy pool
@@ -75,7 +74,6 @@ public class ProxyManager : PassthroughPacketTransport
                 PacketProxyCallbacks = options.PacketProxyCallbacks,
                 IcmpTimeout = options.IcmpTimeout,
                 MaxClientCount = options.MaxPingClientCount,
-                AutoDisposePackets = options.AutoDisposePackets,
                 LogScope = options.LogScope
             });
             _pingProxyPool.PacketReceived += Proxy_PacketReceived;

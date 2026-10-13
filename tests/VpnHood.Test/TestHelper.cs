@@ -295,7 +295,6 @@ public class TestHelper : IDisposable
         var proxyPool = new UdpProxyPoolOptions {
             PacketProxyCallbacks = callbacks,
             SocketFactory = new BindingSocketFactory(new TestSocketFactory()),
-            AutoDisposePackets = false,
             UdpTimeout = TransportDefaults.UdpTimeout,
             MaxClientCount = 10,
             PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,

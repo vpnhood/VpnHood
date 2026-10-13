@@ -1,10 +1,13 @@
 using VpnHood.Net.Toolkit.Net;
 using System.Net;
+using System.Net.Sockets;
+using VpnHood.Net.Packets;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Test.Providers;
 using VpnHood.Core.Common.Configuration;
 
@@ -25,10 +28,10 @@ public class ProxyManagerTest
         }
     }
 
-    private static ProxyManager CreateProxyManager()
+    private static ProxyManager CreateProxyManager(bool isPingSupported = false)
     {
-        return new ProxyManager(new TestSocketFactory(), new ProxyManagerOptions {
-            IsPingSupported = false,
+        return new ProxyManager(new BindingSocketFactory(new TestSocketFactory()), new ProxyManagerOptions {
+            IsPingSupported = isPingSupported,
             PacketProxyCallbacks = null,
             UdpTimeout = TransportDefaults.UdpTimeout,
             IcmpTimeout = TransportDefaults.IcmpTimeout,
@@ -36,9 +39,52 @@ public class ProxyManagerTest
             MaxPingClientCount = TransportDefaults.MaxPingClientCount,
             PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
             UdpBufferSize = null,
-            LogScope = null,
-            AutoDisposePackets = true
+            LogScope = null
         });
+    }
+
+    // the packet's copy over a memory that records its disposal
+    private static TestMemoryOwner CopyToTestMemory(IpPacket ipPacket)
+    {
+        using (ipPacket)
+            return new TestMemoryOwner(ipPacket.Buffer.ToArray());
+    }
+
+    [TestMethod]
+    public async Task Udp_proxy_disposes_each_packet_it_sent()
+    {
+        using var proxyManager = CreateProxyManager();
+        using var peer = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+
+        // the payload goes out on the proxy's socket, and the packet to no one
+        var memory = CopyToTestMemory(PacketBuilder.BuildUdp(IPEndPoint.Parse("10.0.0.2:2000"),
+            peer.Client.GetLocalEndPoint(), new byte[16]));
+        var ipPacket = PacketBuilder.Attach(memory);
+        proxyManager.SendPacketQueued(ipPacket);
+        await peer.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitFor(() => memory.IsDisposed, "The UDP proxy should dispose the packet it sent.");
+        GC.KeepAlive(ipPacket);
+    }
+
+    [TestMethod]
+    public async Task Ping_proxy_disposes_each_request_it_sent()
+    {
+        using var proxyManager = CreateProxyManager(isPingSupported: true);
+        var replied = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        proxyManager.PacketReceived += (_, reply) => {
+            reply.Dispose();
+            replied.TrySetResult();
+        };
+
+        // the request goes out as a ping, and the request to no one; the reply shows it went. No payload: Linux
+        // refuses one to a process without raw sockets
+        var memory = CopyToTestMemory(PacketBuilder.BuildIcmpV4EchoRequest(IPAddress.Parse("10.0.0.2"),
+            IPAddress.Loopback, []));
+        var request = PacketBuilder.Attach(memory);
+        proxyManager.SendPacketQueued(request);
+        await replied.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitFor(() => memory.IsDisposed, "The ping proxy should dispose the request it sent.");
+        GC.KeepAlive(request);
     }
 
     [TestMethod]

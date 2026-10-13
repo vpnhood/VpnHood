@@ -39,6 +39,7 @@
 * Fix: A VPN started without opening the app - always-on, the quick-settings tile, or the system restarting it - follows your latest settings, "Share anonymous usage data" among them #android
 * Fix: Where Google Play works only through the VPN, its update now comes once you connect - after Play has had 3 days to update the app by itself - and an update you started and left comes back when you return to the app #android #store
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
+* Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts #android
 * Feature: The Android app from our website updates itself: "Update now" downloads the new version, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store such as IzzyOnDroid keeps updating there #android
 * Fix: On a slow connection, an ad you chose to watch - Watch Ad, Free Server by Ad, or more minutes for your session - is no longer cut off while it is still loading #android #connect
 * Update: The Android app from our website no longer contains AppsFlyer, so it no longer reports which link it was installed from #android #connect

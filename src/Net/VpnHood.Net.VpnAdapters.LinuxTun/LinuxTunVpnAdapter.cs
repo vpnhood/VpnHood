@@ -390,17 +390,16 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         else
             _natNetworkV6 = ipNetwork;
 
-        // Configure NAT with iptables
+        // Cancellable, unlike resolvconf's add: a rule a cancelled start's command adds after the cleanup serves
+        // only the removed tun, and the next start deletes it; uncancelled, -w 5 could hold such a start 15 s.
         var iptables = IpTables(ipNetwork);
         await ExecuteCommandAsync(
             $"{iptables} -t nat -A POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE",
             cancellationToken).Vhc();
 
-        // sudo iptables 
         await ExecuteCommandAsync($"{iptables} -A FORWARD -i {AdapterName} -o {_primaryAdapterName} -j ACCEPT",
             cancellationToken).Vhc();
 
-        // sudo iptables 
         await ExecuteCommandAsync(
             $"{iptables} -A FORWARD -i {_primaryAdapterName} -o {AdapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT",
             cancellationToken).Vhc();

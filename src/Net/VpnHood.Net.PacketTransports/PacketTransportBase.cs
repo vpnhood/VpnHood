@@ -308,8 +308,10 @@ public abstract class PacketTransportBase : IPacketTransport
     private async ValueTask<bool> SendPacketsInternalAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         // a transport disposed since the send's own check refuses the packets: the subclass never saw them, so
-        // they are disposed in any mode
+        // they are disposed in any mode. The loop's mark goes with them, or the transport would read as sending
+        // for good
         if (IsDisposed) {
+            _isSending = false;
             DropFailedPackets(ipPackets, new ObjectDisposedException(VhLogger.FormatType(this)),
                 disposePackets: true);
             return false;

@@ -309,6 +309,43 @@ public class PacketTransportTest : TestBase
     }
 
     [TestMethod]
+    public async Task Transport_disposed_as_its_loop_takes_a_batch_is_not_left_sending()
+    {
+        // Disposed while its loop, past its disposed check, takes a large batch from the queue, the transport
+        // refuses the batch. A dispose that lands too late, once the batch went to the send, is tried again
+        const int packetCount = 20_000;
+        for (var attempt = 0; attempt < 10; attempt++) {
+            var transport = new TestHeldPacketTransport(queueCapacity: packetCount);
+            Assert.IsTrue(transport.SendPacketQueued(BuildPacket(1)));
+            await AssertEqualsWait(true, () => transport.IsBatchHeld);
+            for (var i = 0; i < packetCount; i++)
+                Assert.IsTrue(transport.SendPacketQueued(BuildPacket(2)));
+
+            // disposed once the queue starts going down
+            var watching = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var disposeTask = Task.Run(() => {
+                watching.SetResult();
+                while (transport.QueueLength == packetCount)
+                    TestCt.ThrowIfCancellationRequested();
+                transport.Dispose();
+            }, TestCt);
+            await watching.Task;
+            transport.Release();
+            await disposeTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+            await AssertEqualsWait(packetCount + 1L,
+                () => transport.PacketStat.SentPackets + transport.PacketStat.DroppedPackets);
+            if (transport.PacketStat.DroppedPackets == 0)
+                continue;
+
+            Assert.AreEqual(packetCount, transport.PacketStat.DroppedPackets);
+            await AssertEqualsWait(false, () => transport.IsSending);
+            return;
+        }
+
+        Assert.Fail("The transport was never disposed while its loop took a batch.");
+    }
+
+    [TestMethod]
     public void Second_dispose_does_nothing()
     {
         var transport = new TestHeldPacketTransport(queueCapacity: 1);

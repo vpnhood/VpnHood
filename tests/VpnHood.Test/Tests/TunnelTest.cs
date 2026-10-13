@@ -405,7 +405,7 @@ public class TunnelTest : TestBase
         var replacement = new TestPacketChannel();
         tunnel.AddChannel(replacement);
         var liveChannels = channels.Where(x => x != closingChannel).Append(replacement).ToArray();
-        CollectionAssert.AreEquivalent(liveChannels, tunnel.PacketChannels.ToArray());
+        CollectionAssert.AreEquivalent(liveChannels, tunnel.GetPacketChannels().ToArray());
         Assert.IsTrue(liveChannels.All(x => x.State == PacketChannelState.Connected));
 
         // the closing channel is left to its grace: what still arrives on it reaches the tunnel
@@ -416,13 +416,14 @@ public class TunnelTest : TestBase
     }
 
     [TestMethod]
-    [DataRow(8, 1)] // the server disposed the closing channel, which the replacement's request no longer lists
-    [DataRow(8, 8)] // a network change: the server disposed every old channel
+    [DataRow(8, 1)] // one channel its peer ended
+    [DataRow(8, 8)] // every channel ended by its peer at once
     [DataRow(1, 1)] // the one channel replaced
     public void A_channel_added_to_a_full_tunnel_takes_the_place_of_disposed_ones(int maxChannelCount,
         int disposedCount)
     {
-        // a server's tunnel with all its channels, its last ones disposed but still listed, as its session leaves them
+        // a server's tunnel with all its channels, its last ones disposed but still listed, as a channel whose peer
+        // ended it is until the next cleanup
         using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions()) { MaxPacketChannelCount = maxChannelCount };
         var channels = Enumerable.Range(0, maxChannelCount).Select(_ => new TestPacketChannel()).ToArray();
         foreach (var channel in channels)
@@ -435,8 +436,24 @@ public class TunnelTest : TestBase
         var replacement = new TestPacketChannel();
         tunnel.AddChannel(replacement);
         var liveChannels = channels.Except(disposedChannels).Append(replacement).ToArray();
-        CollectionAssert.AreEquivalent(liveChannels, tunnel.PacketChannels.ToArray());
+        CollectionAssert.AreEquivalent(liveChannels, tunnel.GetPacketChannels().ToArray());
         Assert.IsTrue(liveChannels.All(x => x.State == PacketChannelState.Connected));
+    }
+
+    [TestMethod]
+    public void Packet_channels_read_while_the_list_changes_are_a_copy()
+    {
+        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        tunnel.AddChannel(new TestPacketChannel());
+
+        // a reader part-way through the channels as an add, here or on another thread, changes the list
+        using var reader = tunnel.GetPacketChannels().GetEnumerator();
+        Assert.IsTrue(reader.MoveNext());
+        tunnel.AddChannel(new TestPacketChannel());
+
+        // it reads on through its own copy, and the next read has both
+        Assert.IsFalse(reader.MoveNext());
+        Assert.AreEqual(2, tunnel.GetPacketChannels().Count);
     }
 
 }

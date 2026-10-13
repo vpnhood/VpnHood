@@ -401,7 +401,7 @@ public class Session : IDisposable
         // is on its way on it still arrives; after a network change they are the ones it abandoned. Only older ones,
         // as a channel the client is creating meanwhile is not listed yet
         if (request.ActiveChannelIds != null) {
-            var inactiveChannels = Tunnel.PacketChannels
+            var inactiveChannels = Tunnel.GetPacketChannels()
                 .OfType<StreamPacketChannel>()
                 .Where(x => x.RequestTime < request.RequestTime && !request.ActiveChannelIds.Contains(x.ChannelId));
 

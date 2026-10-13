@@ -18,7 +18,12 @@ internal class ChannelManager : IDisposable
     private bool _disposed;
     private readonly Job _cleanupJob;
 
-    public IReadOnlyList<IPacketChannel> PacketChannels => _packetChannels;
+    // a copy taken under the lock, as adds and cleanups change the list under its readers
+    public IReadOnlyList<IPacketChannel> GetPacketChannels()
+    {
+        lock (_channelListLock)
+            return _packetChannels.ToArray();
+    }
 
     public ChannelManager(int maxPacketChannelCount, EventHandler<IpPacket> channelPacketReceived)
     {

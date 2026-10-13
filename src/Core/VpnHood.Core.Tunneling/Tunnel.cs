@@ -16,7 +16,8 @@ public class Tunnel : PacketTransportBase
     public int PacketChannelCount => _channelManager.PacketChannelCount;
     public int StreamProxyChannelCount => _channelManager.ProxyChannelCount;
     public void RemoveChannels<T>() where T : IChannel => _channelManager.RemoveChannels<T>();
-    public IReadOnlyList<IPacketChannel> PacketChannels => _channelManager.PacketChannels;
+    // a copy, as channels are added and cleaned up under the reader
+    public IReadOnlyList<IPacketChannel> GetPacketChannels() => _channelManager.GetPacketChannels();
 
     public int MaxPacketChannelCount {
         get => _channelManager.MaxPacketChannelCount;

@@ -177,11 +177,9 @@ public sealed class LocalTcpStack : ITcpStack
             ProcessIncomingInternal(ipPacket);
         }
         catch (Exception ex) {
-            // Never let a malformed/unexpected packet disrupt the receive loop. Surface it only under
-            // verbose logging so a genuine bug isn't hidden behind a blind catch.
-            if (VerboseLogging)
-                VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack, ex,
-                    "TcpStack dropped a packet it could not process.");
+            // the packet's processing ends here and the receive loop goes on; this line is the only one: the
+            // transport's dispatch logs a handler's exception at Trace only
+            Diagnostics.LogFailure(nameof(ProcessIncoming), ex);
         }
     }
 
@@ -455,8 +453,7 @@ public sealed class LocalTcpStack : ITcpStack
                     kvp.Value.PollMaintenance();
         }
         catch (Exception ex) {
-            if (VerboseLogging)
-                VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack, ex, "Maintenance sweep failed.");
+            Diagnostics.LogFailure(nameof(SweepMaintenance), ex);
         }
         finally {
             Volatile.Write(ref _maintenanceSweeping, 0);
@@ -494,8 +491,7 @@ public sealed class LocalTcpStack : ITcpStack
                 kvp.Value.PollWindowReopen();
         }
         catch (Exception ex) {
-            if (VerboseLogging)
-                VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack, ex, "Window-reopen sweep failed.");
+            Diagnostics.LogFailure(nameof(SweepReopenedWindows), ex);
         }
         finally {
             Volatile.Write(ref _sweeping, 0);

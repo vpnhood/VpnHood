@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.TcpStack.Abstractions;
@@ -648,6 +649,60 @@ public sealed class LocalTcpStackTest
         Assert.IsNotNull(reply, "Stack should reply to conn C's SYN.");
         Assert.IsTrue(reply.Reset, "Conn C must be RST when no connection is idle enough to evict.");
         Assert.IsFalse(reply.Synchronize, "Conn C must not be admitted.");
+    }
+
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task SendThrows_OneErrorLineNamesIt_AndTheNextSynIsServed()
+    {
+        var log = LogCapture.Instance;
+        var marker = Guid.NewGuid().ToString("N");
+        using var stack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        var lockObj = new object();
+        var failSends = true;
+        stack.OnPacketSend = packet => {
+            if (failSends) throw new IOException("adapter down " + marker);
+            lock (lockObj) sent.Add(packet);
+        };
+        var listener = stack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+
+        // the SYN-ACK's send throws: the SYN is dropped, its connection with it, and one error line names the exception
+        stack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+        var lines = log.Lines(marker);
+        Assert.HasCount(1, lines);
+        Assert.AreEqual(LogLevel.Error, lines[0].Level);
+        StringAssert.Contains(lines[0].Message, "ProcessIncoming");
+        Assert.AreEqual(0, stack.Diagnostics.ConnectionCount);
+
+        // the adapter works again: the peer's retransmitted SYN establishes as if nothing had happened
+        failSends = false;
+        DoHandshake(stack, sent, lockObj, ClientPort, 1000);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        await client.DisposeAsync();
+    }
+
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task SendThrowsOnEveryPacket_OneLineASecond_CountsTheSuppressedOnes()
+    {
+        var log = LogCapture.Instance;
+        var marker = Guid.NewGuid().ToString("N");
+        using var stack = new LocalTcpStack();
+        stack.OnPacketSend = _ => throw new IOException("adapter down " + marker);
+        stack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+
+        for (var i = 0; i < 5; i++)
+            stack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + i, ServerIp, ServerPort, syn: true, seq: 1000));
+        Assert.HasCount(1, log.Lines(marker), "a burst of failures makes one line");
+
+        await Task.Delay(1100);
+        stack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + 5, ServerIp, ServerPort, syn: true, seq: 1000));
+        var lines = log.Lines(marker);
+        Assert.HasCount(2, lines);
+        StringAssert.Contains(lines[1].Message, "4 more since the last line");
     }
 
     // Completes a SYN / SYN-ACK / ACK handshake for the given client port against the server endpoint.

@@ -120,6 +120,27 @@ public sealed class TcpStackDiagnostics
             footprintMb.ToString("F1"), endPointPair);
     }
 
+    // ---- failures ------------------------------------------------------------------------------
+    private long _lastFailureLogTick;
+    private int _suppressedFailures;
+
+    /// <summary>
+    /// Logs an exception that escaped the receive path or a sweep, which went on without it. Nothing expected
+    /// throws there, so it is an error. One line per second, as a failure may repeat per packet: the line counts
+    /// the rest.
+    /// </summary>
+    internal void LogFailure(string where, Exception ex)
+    {
+        if (!ShouldLog(ref _lastFailureLogTick, 1000)) {
+            Interlocked.Increment(ref _suppressedFailures);
+            return;
+        }
+
+        VhLogger.Instance.LogError(TcpStackEventIds.TcpStack, ex,
+            "[TcpStack] {Where} failed; {Suppressed} more since the last line",
+            where, Interlocked.Exchange(ref _suppressedFailures, 0));
+    }
+
     // --- Verbose data-path tracing -------------------------------------------------------------
     // All hot-path trace logging lives here so LocalTcpConnection/LocalTcpStack stay free of
     // formatting, gating and throttling concerns. Each method is a no-op (a single bool read) when
@@ -136,7 +157,7 @@ public sealed class TcpStackDiagnostics
     /// </summary>
     public bool VerboseLogging { get; set; }
 
-    // Best-effort throttle: a race between threads may let two lines through, which is fine for a trace.
+    // Best-effort throttle: a race between threads may let two lines through, which is fine for a log line.
     private static bool ShouldLog(ref long lastTick, int minIntervalMs = 500)
     {
         var now = Environment.TickCount64;

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
 using VpnHood.Net.Packets;
@@ -140,17 +141,16 @@ public sealed class LossRecoveryTest
     }
 
     /// <summary>
-    /// Ring/sequence integrity: when the retx ring is FULL, a Zero Window Probe must NOT consume a new
-    /// byte it cannot store (the pre-fix behavior — a dropped probe then left a sequence number with no
-    /// backing byte: silent stream corruption or a permanent stall). It must probe with the byte at
-    /// SndUna instead, and the stream must survive intact once the peer resumes acknowledging.
+    /// A full retransmission ring is the RTO's business, not the zero-window probe's: while nothing is
+    /// acked the writer waits - no probe consumes a byte the ring cannot store (the 2026-07 corruption), no
+    /// segment is retransmitted beside the RTO - and the stream survives intact once the peer resumes.
     /// </summary>
     [TestMethod]
     [Timeout(15000)]
-    public async Task ZeroWindowProbe_RingFull_NeverConsumesUnstorableBytes()
+    public async Task RingFull_WriterWaitsWithoutProbing_AndStreamStaysIntact()
     {
         const int retxSize = 600;
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             MaxMss = 536,
             DefaultMss = 536,
             RetxBufferSize = retxSize,
@@ -165,23 +165,24 @@ public sealed class LossRecoveryTest
         var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
         lock (sync) sent.Clear();
 
-        // Server writes more than the ring can hold; the peer acks NOTHING, so the sender fills the
-        // ring (peer window 65535 >> ring 600) and then stalls with allowable == 0 and a FULL ring —
-        // exactly the state where the pre-fix probe consumed unstorable bytes.
+        // The server writes more than the ring holds; the peer acks nothing, so the ring fills (two
+        // segments: 536 + 64) and the writer parks on it.
         var payload = new byte[2000];
         RandomNumberGenerator.Fill(payload);
         var writeTask = stream.Stream.WriteAsync(payload, 0, payload.Length);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        // Wait until probes fire (packets beyond the initial ring-filling burst).
         await WaitForCondition(() => {
-            lock (sync) return sent.Count(p => p.ExtractTcp().Payload.Length > 0) >= 4;
+            lock (sync) return sent.Sum(p => p.ExtractTcp().Payload.Length) >= retxSize;
         }, cts.Token, 3000);
-        await Task.Delay(200, cts.Token); // let several more probe intervals elapse
+        await Task.Delay(400, cts.Token); // eight probe intervals: nothing may be sent in them
 
         var frontierLimit = serverSeq + 1 + retxSize; // first unsendable seq while nothing is acked
         lock (sync) {
-            foreach (var p in sent.Where(p => p.ExtractTcp().Payload.Length > 0)) {
+            var dataPackets = sent.Where(p => p.ExtractTcp().Payload.Length > 0).ToArray();
+            Assert.AreEqual(2, dataPackets.Length,
+                "a ring-limited writer neither probes nor retransmits on its own; the RTO alone recovers");
+            foreach (var p in dataPackets) {
                 var tcp = p.ExtractTcp();
                 var end = tcp.SequenceNumber + (uint)tcp.Payload.Length;
                 Assert.IsLessThanOrEqualTo(0, (int)(end - frontierLimit),
@@ -237,25 +238,21 @@ public sealed class LossRecoveryTest
 
     /// <summary>
     /// Burst loss with a parked writer: the peer loses an ENTIRE in-flight window (a batched TUN write
-    /// drop at peak rate) while the writer is parked on a FULL retx ring with more data pending, then —
-    /// like a real kernel — acks whatever arrives in order. This is the pathological regime for a
-    /// 1-byte ring-full probe: each 1-byte hole fill elicits a +1 cumulative ACK that RESTARTS the RTO
-    /// and resets the dup-ACK count, so neither the RTO nor fast retransmit ever fires and recovery
-    /// crawls at ~2 bytes per probe interval (the 2026-07-01 speedtest "collapse to ~1 then slowly
-    /// recover" incident). The ring-full probe must retransmit at SEGMENT granularity so the write
-    /// completes promptly.
+    /// drop at peak rate) while the writer is parked on a full retx ring with more data pending, then -
+    /// like a real kernel - acks whatever arrives in order. The RTO retransmits the first segment and each
+    /// partial ACK retransmits the next one at once (RFC 6582), so the write completes promptly and no
+    /// segment goes out more than twice - not one lost segment per timer tick (the 2026-07-01 speedtest
+    /// "collapse to ~1 then slowly recover" incident).
     /// </summary>
     [TestMethod]
     [Timeout(30000)]
-    public async Task BurstLoss_RingFullProbe_RecoversAtSegmentGranularity()
+    public async Task BurstLoss_PartialAcks_RecoverAtSegmentGranularity()
     {
         const int retxSize = 2048;
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             MaxMss = 536,
             DefaultMss = 536,
             RetxBufferSize = retxSize,
-            // Same ordering as production (200 ms ZWP < 500 ms RTO): the probe path, not the RTO,
-            // must carry the recovery, because each probe-elicited ACK restarts the RTO.
             ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50),
             RetransmitTimeout = TimeSpan.FromMilliseconds(150),
             RetransmitMaxTimeout = TimeSpan.FromSeconds(1)
@@ -311,11 +308,225 @@ public sealed class LossRecoveryTest
             }
         }, cts.Token);
 
-        // With segment-granularity recovery this completes in well under a second; with a 1-byte
-        // ring-full probe it needs ~1 byte per probe interval (minutes) and times out.
-        await writeTask.WaitAsync(TimeSpan.FromSeconds(10), cts.Token);
+        // Partial-ACK recovery completes this in well under a second; one segment per timer tick needs
+        // seconds, a 1-byte probe minutes.
+        await writeTask.WaitAsync(TimeSpan.FromSeconds(3), cts.Token);
         await echo;
 
+        lock (sync) {
+            var mostSentSeq = sent.Where(p => p.ExtractTcp().Payload.Length > 0)
+                .GroupBy(p => p.ExtractTcp().SequenceNumber).Max(g => g.Count());
+            Assert.IsLessThanOrEqualTo(2, mostSentSeq, "no segment goes out more than twice: one loss, one retransmission");
+        }
+
+        await stream.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Ring-limited and the peer silent: only the RTO retransmits (with backoff); the writer's probe
+    /// interval, far shorter than the RTO, must not add retransmissions of the same segment.
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task RingLimited_SilentPeer_OnlyTheRtoRetransmits()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            MaxMss = 536,
+            DefaultMss = 536,
+            RetxBufferSize = 1072, // two segments
+            ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50),
+            RetransmitTimeout = TimeSpan.FromMilliseconds(300),
+            RetransmitMaxTimeout = TimeSpan.FromMilliseconds(600)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        var writeTask = stream.Stream.WriteAsync(new byte[3000]).AsTask(); // fills the ring, then parks
+        await Task.Delay(1300); // RTO at 300 ms, backed off to 600 ms: at most 3 retransmissions
+
+        lock (sync) {
+            var first = sent.Where(p => p.ExtractTcp().Payload.Length > 0 && p.ExtractTcp().SequenceNumber == serverSeq + 1).Count();
+            Assert.IsGreaterThanOrEqualTo(2, first, "the RTO retransmits the first segment");
+            Assert.IsLessThanOrEqualTo(4, first, "no probe-interval retransmissions beside the RTO");
+        }
+        await stream.DisposeAsync();
+        try { await writeTask; } catch (IOException) { /* the parked write ends with the stream */ }
+    }
+
+    /// <summary>During one recovery, further duplicate ACKs do not retransmit the same segment again.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task DuplicateAcks_DuringRecovery_RetransmitOnce()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitTimeout = TimeSpan.FromSeconds(5),
+            RetransmitMaxTimeout = TimeSpan.FromSeconds(5)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        await stream.Stream.WriteAsync(new byte[5 * 536]); // five segments (default MSS 536)
+        for (var i = 0; i < 9; i++)
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: 1001, ackNum: serverSeq + 1));
+
+        lock (sync) {
+            var retx = sent.Count(p => p.ExtractTcp().Payload.Length > 0 && p.ExtractTcp().SequenceNumber == serverSeq + 1) - 1;
+            Assert.AreEqual(1, retx, "nine duplicate ACKs: one fast retransmission, not three");
+        }
+        await stream.DisposeAsync();
+    }
+
+    /// <summary>
+    /// A zero window is flow control, not loss: the ACKs of our probes must not start a recovery, or it would
+    /// outlive the window and swallow the real duplicate ACKs after it reopens, stalling the flow for an RTO.
+    /// </summary>
+    [TestMethod]
+    [Timeout(15000)]
+    public async Task ZeroWindow_ProbeAcksStartNoRecovery_DupAcksAfterReopenRetransmitAtOnce()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50),
+            RetransmitTimeout = TimeSpan.FromMilliseconds(400),
+            RetransmitMaxTimeout = TimeSpan.FromSeconds(4)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        // The peer closes its window; the writer probes with one byte at a time, each dropped and acked with
+        // window 0 (a real receiver discards out-of-window bytes). The RTO fires in this period too.
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
+        var writeTask = stream.Stream.WriteAsync(new byte[2000]).AsTask();
+        var probesAcked = 0;
+        var deadline = Stopwatch.StartNew();
+        while (deadline.ElapsedMilliseconds < 1000) {
+            int probes;
+            lock (sync) probes = sent.Count(p => p.ExtractTcp().Payload.Length > 0);
+            for (; probesAcked < probes; probesAcked++)
+                tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                    ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
+            await Task.Delay(10);
+        }
+        Assert.IsGreaterThanOrEqualTo(3, probesAcked, "the zero-window period produced probes");
+
+        // The window reopens: new data flows; the peer, still missing everything from serverSeq+1, answers
+        // each new segment with a duplicate ACK. The third must retransmit at once.
+        lock (sync) sent.Clear();
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1, window: 65535));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => { lock (sync) return sent.Any(p => p.ExtractTcp().Payload.Length > 1); }, cts.Token, 2000);
+        lock (sync) sent.Clear();
+        for (var i = 0; i < 3; i++)
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: 1001, ackNum: serverSeq + 1, window: 65535));
+
+        await WaitForCondition(() => {
+            lock (sync) return sent.Any(p => p.ExtractTcp() is { Payload.Length: > 0 } t && t.SequenceNumber == serverSeq + 1);
+        }, cts.Token, 100);
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp() is { Payload.Length: > 0 } t && t.SequenceNumber == serverSeq + 1),
+                "three duplicate ACKs after the window reopened must retransmit from SndUna at once");
+
+        await stream.DisposeAsync();
+        try { await writeTask; } catch (IOException) { /* the parked write ends with the stream */ }
+    }
+
+    /// <summary>A writer parked on a full ring must fail when the peer resets, without anyone reading or disposing.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task RingLimitedWriter_PeerRst_FailsTheWrite()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            MaxMss = 536,
+            DefaultMss = 536,
+            RetxBufferSize = 1072
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        var writeTask = stream.Stream.WriteAsync(new byte[3000]).AsTask(); // fills the ring, then parks
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => { lock (sync) return sent.Sum(p => p.ExtractTcp().Payload.Length) >= 1072; }, cts.Token, 2000);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, rst: true, seq: 1001));
+
+        await Assert.ThrowsExactlyAsync<IOException>(() => writeTask.WaitAsync(TimeSpan.FromSeconds(2)));
+    }
+
+    /// <summary>Tail and FIN lost together: once the partial ACKs reach the FIN, it is retransmitted at once.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task LostTailAndFin_PartialAckAtTheFin_RetransmitsItAtOnce()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitTimeout = TimeSpan.FromMilliseconds(300),
+            RetransmitMaxTimeout = TimeSpan.FromSeconds(2)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        await stream.Stream.WriteAsync(new byte[2 * 536]); // two segments
+        await stream.DisposeAsync(); // FIN at serverSeq + 1073; all three "lost"
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => {
+            lock (sync) return sent.Count(p => p.ExtractTcp().SequenceNumber == serverSeq + 1 && p.ExtractTcp().Payload.Length > 0) >= 2;
+        }, cts.Token, 2000); // the RTO retransmitted segment 1
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 536)); // partial: segment 2 goes out at once
+        lock (sync) sent.Clear();
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 1072)); // partial at the FIN
+
+        await WaitForCondition(() => { lock (sync) return sent.Any(p => p.ExtractTcp().Finish); }, cts.Token, 100);
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Finish), "the FIN is retransmitted on the partial ACK, not after the RTO");
+    }
+
+    /// <summary>A partial ACK during recovery retransmits the next lost segment at once, not after another RTO.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task PartialAck_RetransmitsTheNextLostSegmentAtOnce()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitTimeout = TimeSpan.FromMilliseconds(300),
+            RetransmitMaxTimeout = TimeSpan.FromSeconds(2)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        await stream.Stream.WriteAsync(new byte[3 * 536]); // three segments, all "lost"
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => {
+            lock (sync) return sent.Count(p => p.ExtractTcp().SequenceNumber == serverSeq + 1 && p.ExtractTcp().Payload.Length > 0) >= 2;
+        }, cts.Token, 2000); // the RTO retransmitted segment 1
+        lock (sync) sent.Clear();
+
+        // The peer got the retransmitted segment 1 and acks it: a partial ACK (segments 2 and 3 still lost).
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 536));
+
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().SequenceNumber == serverSeq + 1 + 536 && p.ExtractTcp().Payload.Length > 0),
+                "the partial ACK retransmits segment 2 at once");
         await stream.DisposeAsync();
     }
 

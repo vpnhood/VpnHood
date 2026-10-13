@@ -112,6 +112,8 @@ internal sealed class LocalTcpConnection(
     private int _retxBufferLen;     // number of valid unacked bytes
     private uint _lastDupAck;
     private int _dupAckCount;
+    private bool _inRecovery; // a retransmission started loss recovery, which ends when SndUna reaches _recoverySeq
+    private uint _recoverySeq; // SndNxt when the loss was detected (RFC 6582's recovery point)
     public IPEndPointPairValue IpEndPointPair => ipEndPointPair;
     public uint IsnLocal { get; } = isnLocal;
     public ushort Mss { get; } = ClampMss(peerMss, options);
@@ -357,21 +359,33 @@ internal sealed class LocalTcpConnection(
                 DrainWindowSignal();
 
                 uint pw, una, nxt;
+                int retxFree;
                 lock (_seqLock) {
+                    // Close and Dispose set these under this lock before they signal the window, so a writer
+                    // about to wait either sees them here or finds their signal after its drain - never both
+                    // missed, which would park it for good on a full ring.
+                    if (_disposed || _appToNetCompleted || _finSent)
+                        throw new IOException("The TCP connection was closed while writing.");
                     pw = _peerWindow; una = _sndUna; nxt = _sndNxt;
                     var inFlight = (long)(nxt - una);
                     var fromPeer = (int)Math.Max(0, _peerWindow - inFlight);
-                    var retxFree = _retxCapacity - _retxBufferLen;
+                    retxFree = _retxCapacity - _retxBufferLen;
                     allowable = Math.Min(fromPeer, retxFree);
                 }
 
                 if (allowable <= 0) {
                     diagnostics.TraceZeroWindowWait(ipEndPointPair, offset, data.Length, pw, una, nxt);
-                    // Wait for peer window (or retx-ring space) to open — signalled by TrySignalWindow
-                    // when an ACK arrives. On timeout send a Zero Window Probe (ZWP) as a stimulus: this
-                    // avoids a permanent stall when the peer (e.g. Android) expects one before it sends
-                    // the window update. Caller cancellation propagates as OperationCanceledException —
-                    // a partial write must never be silently reported as success.
+                    if (retxFree <= 0) {
+                        // The retransmission ring is the limit: a full window is in flight, and its loss is the
+                        // RTO's business (PollMaintenance). Wait for the ACK that frees ring space, or the
+                        // close; TrySignalWindow wakes this on both. Caller cancellation propagates as
+                        // OperationCanceledException - a partial write is never reported as success.
+                        await _windowSignal.WaitAsync(ct).Vhc();
+                        continue;
+                    }
+                    // The peer's window is the limit: after the interval, a zero-window probe carrying one
+                    // new byte (RFC 9293 3.8.6.1) draws the window update some peers (Android) send only to
+                    // a probe.
                     var signaled = await _windowSignal.WaitAsync(options.ZeroWindowProbeInterval, ct).Vhc();
                     if (!signaled && offset < data.Length) {
                         diagnostics.TraceZeroWindowProbe(ipEndPointPair, offset, pw);
@@ -472,6 +486,8 @@ internal sealed class LocalTcpConnection(
             uint prevUna;
             uint sndNxtSnap;
             var shouldFastRetx = false;
+            var partialAckRetx = false;
+            IpPacket? finRetx = null;
             var finExchangeComplete = false;
             var resetUnread = false;
             lock (_seqLock) {
@@ -496,21 +512,36 @@ internal sealed class LocalTcpConnection(
                     _dupAckCount = 0;
                     _lastDupAck = ack;
                     RestartRtoLocked(); // cumulative-ACK progress restarts the retransmission timer
+                    // Loss recovery (RFC 6582 partial ACK): an ACK that stops short of the recovery point names
+                    // the next lost segment; it is retransmitted now instead of after another RTO.
+                    if (_inRecovery) {
+                        if ((int)(_sndUna - _recoverySeq) >= 0)
+                            _inRecovery = false;
+                        else if (_retxBufferLen > 0)
+                            partialAckRetx = true;
+                        else if (_finSent && _sndNxt != _sndUna)
+                            // The data is acked and the FIN is the lost one: now, not after the RTO.
+                            finRetx = BuildFinPacket(_sndNxt - 1, _rcvNxt, UpdateAdvertisedWindowLocked());
+                    }
                     // LastAck: the peer acknowledged our FIN after its own; nothing is left to exchange.
                     finExchangeComplete = _finSent && _finReceived && _sndUna == _sndNxt;
                     // The reset CloseFromApp deferred (unread bytes, our tail in flight): everything is acked now.
                     resetUnread = _resetPending && _sndUna == _sndNxt;
                 }
-                else if (diff == 0 && payload.Length == 0 && _retxBufferLen > 0 &&
+                else if (diff == 0 && payload.Length == 0 && _retxBufferLen > 0 && scaledWindow != 0 &&
                          scaledWindow == prevPeerWindow && !flags.HasFlag(TcpFlags.Fin)) {
                     // Pure duplicate ACK (RFC 5681: no data, no FIN, UNCHANGED window): the peer is
                     // missing data starting at _sndUna. A pure window update (same ack, new window)
-                    // must NOT count, or three updates would trigger a spurious fast retransmit.
+                    // must NOT count, or three updates would trigger a spurious fast retransmit. Nor may a
+                    // zero window: its ACKs of our probes are flow control, not loss, and a recovery they
+                    // started would outlive the window and swallow the real duplicate ACKs after it reopens.
                     if (ack == _lastDupAck) _dupAckCount++;
                     else { _lastDupAck = ack; _dupAckCount = 1; }
-                    if (_dupAckCount >= 3) {
+                    // Three duplicate ACKs start one recovery; more of them during it retransmit nothing - the
+                    // partial ACKs above carry the recovery segment by segment.
+                    if (_dupAckCount >= 3 && !_inRecovery) {
                         shouldFastRetx = true;
-                        _dupAckCount = 0; // avoid retx flood; reset until next dup-ack triple
+                        EnterRecoveryLocked();
                     }
                 }
                 _peerWindow = scaledWindow;
@@ -521,10 +552,16 @@ internal sealed class LocalTcpConnection(
             diagnostics.TraceAck(ipEndPointPair, ackCount, ack, prevUna, sndNxtSnap, diff, windowSize,
                 newPw, payload.Length, _windowSignal.CurrentCount, _dupAckCount);
 
-            if (shouldFastRetx) {
+            // A failed send below is a lost packet, which the RTO retransmits; the rest of this segment (its
+            // window signal, data, FIN) must still be processed.
+            if (shouldFastRetx || partialAckRetx) {
                 var n = Interlocked.Increment(ref _retxCount);
                 diagnostics.TraceFastRetransmit(ipEndPointPair, n, ack, _retxBufferLen);
-                FastRetransmit();
+                try { FastRetransmit(); } catch { /* lost packet */ }
+            }
+            if (finRetx != null) {
+                var stack = _stack ?? throw new InvalidOperationException("The connection was not started.");
+                try { stack.SendPacket(finRetx); } catch { /* lost packet */ }
             }
             TrySignalWindow();
 
@@ -861,8 +898,14 @@ internal sealed class LocalTcpConnection(
                     BackoffRtoLocked();
                 }
                 else if (_sndNxt != _sndUna) {
-                    if (_retxBufferLen > 0)
+                    if (_retxBufferLen > 0) {
                         retxData = true;
+                        // The ACKs of this retransmission carry the rest segment by segment - unless the peer's
+                        // window is zero: that is flow control, not loss, and a recovery the zero window
+                        // interrupted ends here so the duplicate ACKs after it reopens count again.
+                        if (_peerWindow != 0) EnterRecoveryLocked();
+                        else _inRecovery = false;
+                    }
                     else if (_finSent)
                         // All data is acked; the single outstanding sequence number is the FIN.
                         finRetx = BuildFinPacket(_sndNxt - 1, _rcvNxt, UpdateAdvertisedWindowLocked());
@@ -884,6 +927,14 @@ internal sealed class LocalTcpConnection(
         }
         if (finRetx != null)
             try { stack.SendPacket(finRetx); } catch { /* SendPacket disposes the packet on failure */ }
+    }
+
+    // _seqLock must be held. Loss detected (three duplicate ACKs or the RTO): until SndUna passes today's
+    // SndNxt, every partial ACK retransmits the next lost segment and duplicate ACKs trigger nothing more.
+    private void EnterRecoveryLocked()
+    {
+        _inRecovery = true;
+        _recoverySeq = _sndNxt;
     }
 
     // _seqLock must be held.
@@ -1007,65 +1058,30 @@ internal sealed class LocalTcpConnection(
     }
 
     /// <summary>
-    /// Sends a Zero Window Probe to elicit a window-update ACK from a peer that advertised a zero
-    /// (or too-small) window, or when the retx ring is full and ACKs have gone silent.
-    /// INVARIANT (forward progress — do NOT remove): while the retx ring HAS ROOM, a probe carries a
-    /// NEW byte at _sndNxt, advances _sndNxt, stores the byte in the ring, and returns consumed = 1.
-    /// A probe that does not advance the sequence number never elicits a window-update ACK over QUIC's
-    /// tight per-stream window (the QUIC+TcpProxy download regression — see
-    /// ZeroWindowProbe_ShouldMakeForwardProgress and the quic-proxy-download-regression record).
-    /// INVARIANT (ring/sequence integrity — do NOT remove): a byte may only be consumed if it is stored
-    /// in the retx ring. When the ring is FULL the probe consumes nothing and instead retransmits up to
-    /// a full MSS from _sndUna (via <see cref="FastRetransmit"/>) and returns consumed = 0.
-    /// INVARIANT (segment-granularity recovery — do NOT shrink to 1 byte): the ring-full stimulus must
-    /// be a FULL SEGMENT, not the single byte at _sndUna. Under burst loss (a whole in-flight window
-    /// dropped by the TUN at peak rate) the writer parks on a full ring with more data pending, and the
-    /// probe interval (200 ms) beats the RTO (500 ms). A 1-byte probe then fills the hole one byte at a
-    /// time; each +1 cumulative ACK RESTARTS the RTO and resets the dup-ACK count, so neither the RTO
-    /// nor fast retransmit ever fires and the flow crawls at ~2 bytes per probe interval while looking
-    /// "active" (never idle-reaped, pinning its connection slot and QUIC window credit) — the
-    /// speedtest "collapse to ~1 then slowly recover" incident (2026-07-01, see
-    /// BurstLoss_RingFullProbe_RecoversAtSegmentGranularity).
+    /// Zero-window probe: one NEW byte at SndNxt, stored in the ring like any data. A probe that does not
+    /// advance the sequence number draws no window update over QUIC's tight per-stream window (see
+    /// ZeroWindowProbe_ShouldMakeForwardProgress). Returns the bytes consumed: 1, or 0 when nothing could
+    /// be sent (the connection is closing, or the ring has no room - the caller probes only while it has).
     /// </summary>
     private int SendZeroWindowProbe(LocalTcpStack stack, byte probeByte)
     {
         if (_disposed || _appToNetCompleted) return 0;
 
-        var ringFull = false;
-        uint probeSeq = 0;
-        uint probeAck = 0;
-        ushort probeWindow = 0;
+        uint probeSeq;
+        uint probeAck;
+        ushort probeWindow;
         lock (_seqLock) {
-            if (_disposed || _appToNetCompleted || _finSent) return 0;
+            if (_disposed || _appToNetCompleted || _finSent || _retxBufferLen >= _retxCapacity) return 0;
 
-            if (_retxBufferLen < _retxCapacity) {
-                // Room in the ring: consume (and store) a fresh byte so the stream makes forward progress.
-                probeSeq = _sndNxt;
-                if (_sndUna == _sndNxt)
-                    RestartRtoLocked();
-                _sndNxt += 1;
-                ReadOnlySpan<byte> one = [probeByte];
-                AppendToRetxBufferLocked(one);
-                probeAck = _rcvNxt;
-                probeWindow = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
-            }
-            else {
-                // Ring full: never consume a byte we cannot back. Retransmit a full segment from
-                // _sndUna instead (below, outside this lock) — still a valid probe stimulus (the peer
-                // answers with an ACK carrying its window) AND real recovery at MSS granularity (see
-                // the segment-granularity invariant above).
-                ringFull = true;
-            }
-
+            probeSeq = _sndNxt;
+            if (_sndUna == _sndNxt)
+                RestartRtoLocked();
+            _sndNxt += 1;
+            ReadOnlySpan<byte> one = [probeByte];
+            AppendToRetxBufferLocked(one);
+            probeAck = _rcvNxt;
+            probeWindow = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
             UpdateMaintenanceInterestLocked();
-        }
-
-        if (ringFull) {
-            // FastRetransmit re-takes _seqLock itself and no-ops if a racing ACK just drained the ring.
-            var n = Interlocked.Increment(ref _retxCount);
-            diagnostics.TraceFastRetransmit(ipEndPointPair, n, _lastDupAck, _retxBufferLen);
-            try { FastRetransmit(); } catch { /* best-effort; the next probe interval retries */ }
-            return 0;
         }
 
         IpPacket? probe = null;

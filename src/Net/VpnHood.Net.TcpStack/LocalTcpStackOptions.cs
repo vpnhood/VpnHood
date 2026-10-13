@@ -125,10 +125,12 @@ public sealed class LocalTcpStackOptions
 
     /// <summary>
     /// Maximum time a thinned (delayed) ACK may stay pending before the maintenance sweep flushes it.
-    /// Keeps an odd trailing full-size non-PSH segment acknowledged well within RFC 1122's 500 ms
-    /// delayed-ACK bound instead of stalling until the peer retransmits. Default: 200 ms.
+    /// Keeps an odd trailing full-size non-PSH segment acknowledged within RFC 1122's 500 ms delayed-ACK
+    /// bound. Default: 50 ms, so with the 100 ms maintenance tick the flush lands at 50-150 ms: under a
+    /// Linux or Android peer's 200 ms minimum RTO, which a later flush would trip into a spurious
+    /// retransmission.
     /// </summary>
-    public TimeSpan DelayedAckTimeout { get; init; } = TimeSpan.FromMilliseconds(200);
+    public TimeSpan DelayedAckTimeout { get; init; } = TimeSpan.FromMilliseconds(50);
 
     // ---- Aggregate bounds ----
 

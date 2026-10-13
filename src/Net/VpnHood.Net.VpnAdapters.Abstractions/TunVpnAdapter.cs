@@ -982,7 +982,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         // A stop or a disposal clears the keep flag, waits for this lock and then stops the adapter, so a
         // restart that sees the stop begun starts nothing; one already starting runs to its end, for that stop.
-        if (!_keepStarted || IsDisposing || IsDisposed)
+        // An owner's start under way is left alone, as an address change's look that began before it may fire
+        // this: it looks at the addresses itself at its end.
+        if (!_keepStarted || _isStarting || IsDisposing || IsDisposed)
             return;
 
         VhLogger.Instance.LogInformation("Restarting VPN Adapter");

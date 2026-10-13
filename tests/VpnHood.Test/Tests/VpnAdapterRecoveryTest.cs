@@ -254,6 +254,23 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     [TestMethod]
+    public async Task Restart_leaves_a_start_under_way_alone()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: true) { HoldBeforeAdd = true };
+
+        // an address change whose look began just before the owner's start fires a restart once that start has
+        // marked the adapter started: the restart leaves it alone, where its stop would tear the start down
+        var startTask = adapter.Start(CreateAdapterOptions(), TestCt);
+        await AssertEqualsWait(true, () => adapter.IsStartHeld);
+        var restartTask = adapter.Restart(TestCt);
+        adapter.ReleaseStart();
+        await restartTask;
+        await startTask;
+        Assert.IsTrue(adapter.IsStarted);
+        Assert.AreEqual(1, adapter.StartCount);
+    }
+
+    [TestMethod]
     public async Task A_packet_sent_while_starting_does_not_wait_out_the_send_backoff()
     {
         // a backoff of ~10 s, which a slow machine cannot pass for

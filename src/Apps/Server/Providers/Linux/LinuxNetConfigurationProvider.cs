@@ -19,7 +19,7 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
     public async Task SetTcpCongestionControl(string value)
     {
         // the access manager's value goes into root's commands, so a kernel algorithm's name only
-        if (!Regex.IsMatch(value, "^[a-z0-9_]{1,16}$"))
+        if (!Regex.IsMatch(value, @"\A[a-z0-9_]{1,16}\z"))
             throw new ArgumentException($"Invalid TCP congestion control name. Value: {value}", nameof(value));
 
         // Check if the value is already set
@@ -50,7 +50,7 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
 
     private static void ValidateInterfaceName(string interfaceName)
     {
-        const string pattern = "^[a-zA-Z0-9_-]+$";
+        const string pattern = @"\A[a-zA-Z0-9_-]+\z";
         var regex = new Regex(pattern);
 
         // Validate user input

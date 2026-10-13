@@ -219,18 +219,24 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
-    // The first default route's interface: the word after "dev", as a route with no gateway has no "via <gateway>"
-    // before it (default dev ppp0 scope link). The name goes into root's commands, so a valid name only.
-    private static async Task<string> GetPrimaryAdapterName(CancellationToken cancellationToken)
+    // The first default route's interface: the word after "dev", as a route with no gateway has no "via" before it
+    // (default dev ppp0 scope link). NAT puts the name in root's commands and covers that one interface, so it
+    // refuses an invalid name and a multipath route; a client only needs one.
+    private static async Task<string> GetPrimaryAdapterName(bool useNat, CancellationToken cancellationToken)
     {
-        var words = (await ExecuteCommandAsync("ip route show default", cancellationToken).Vhc())
-            .Split([' ', '\t', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        // -o: a route a line, the preferred first
+        var route = (await ExecuteCommandAsync("ip -o route show default", cancellationToken).Vhc()).Split('\n')[0];
+        var words = route.Split([' ', '\t', '\\'], StringSplitOptions.RemoveEmptyEntries);
         var devIndex = Array.IndexOf(words, "dev");
         var mainInterface = devIndex >= 0 && devIndex < words.Length - 1 ? words[devIndex + 1] : "";
         if (mainInterface.Length == 0)
             throw new InvalidOperationException("No active network interface found.");
 
-        if (!IsValidAdapterName(mainInterface))
+        if (useNat && words.Contains("nexthop"))
+            throw new InvalidOperationException(
+                "NAT does not support a multipath default route: its rules name one interface.");
+
+        if (useNat && !IsValidAdapterName(mainInterface))
             throw new InvalidOperationException(
                 $"The primary network interface's name is not supported in a command: {mainInterface}");
 
@@ -258,7 +264,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     {
         // Get the primary adapter name
         VhLogger.Instance.LogDebug("Getting the primary adapter name...");
-        _primaryAdapterName = await GetPrimaryAdapterName(cancellationToken);
+        _primaryAdapterName = await GetPrimaryAdapterName(UseNat, cancellationToken);
         VhLogger.Instance.LogDebug("Primary adapter name is {PrimaryAdapterName}", _primaryAdapterName);
 
         // the way clear: this adapter's own previous run, then whatever else has the name

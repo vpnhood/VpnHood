@@ -15,8 +15,10 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
 {
     private readonly TimeSpan? _lifespan;
 
-    // when the channel began closing, by its lifespan or by the peer's close: from then on it is Disconnecting
-    private DateTime? _closeTime;
+    // when the channel began closing, by its lifespan, the peer's close or its owner's, as ticks, 0 while open: from
+    // then on it is Disconnecting. The lifetime job, the read task and the owner may each close it, so the first
+    // close wins and starts the grace
+    private long _closeTicks;
     private bool _started;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Job _checkLifetimeJob;
@@ -51,7 +53,8 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
                 return
                     PacketChannelState.Disposed;
 
-            if (_closeTime != null)
+            // a plain read, as the tunnel reads the state per packet; a stale one is read again after its cleanup
+            if (_closeTicks != 0)
                 return PacketChannelState.Disconnecting;
 
             return _started
@@ -112,22 +115,50 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         if (_cancellationTokenSource.IsCancellationRequested)
             return default;
 
-        // the lifespan is over: Disconnecting first, so the tunnel stops queueing on the channel, then the close
-        if (_started && _closeTime == null &&
-            _lifespan.HasValue && FastDateTime.UtcNow - PacketStat.CreatedTime > _lifespan.Value) {
+        // the lifespan is over: the channel closes
+        if (_started && _lifespan.HasValue && FastDateTime.UtcNow - PacketStat.CreatedTime > _lifespan.Value &&
+            TryStartClose()) {
             VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
                 "PacketChannel lifetime is over. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
                 ChannelId, PacketStat.CreatedTime, _lifespan);
 
-            _closeTime = FastDateTime.UtcNow;
-            SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
+            SendClose();
         }
 
         // a closing channel goes after its grace, in which the packets already on their way arrive
-        if (FastDateTime.UtcNow - _closeTime > TransportDefaults.TcpGracefulTimeout)
+        var closeTicks = Volatile.Read(ref _closeTicks);
+        if (closeTicks != 0 && FastDateTime.UtcNow.Ticks - closeTicks > TransportDefaults.TcpGracefulTimeout.Ticks)
             Dispose();
 
         return default;
+    }
+
+    // Starts the channel's close, as its lifespan's end does, where Dispose would end it at once: it goes after its
+    // grace, in which what is on its way still arrives. One already closing or gone is left as it is, with no throw,
+    // as its owner's list may still hold a disposed channel
+    public void Close()
+    {
+        if (IsDisposed || IsDisposing || !TryStartClose())
+            return;
+
+        SendClose();
+    }
+
+    // Disconnecting first, so the tunnel stops queueing on the channel; the first close wins
+    private bool TryStartClose()
+    {
+        return Interlocked.CompareExchange(ref _closeTicks, FastDateTime.UtcNow.Ticks, 0) == 0;
+    }
+
+    // the close goes behind the packets already queued
+    private void SendClose()
+    {
+        try {
+            SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
+        }
+        catch (ObjectDisposedException) {
+            // disposed since the check: a channel gone needs no close
+        }
     }
 
 
@@ -157,11 +188,12 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
     // that closed on an answer would lose one queued behind it
     private void ReceiveClose()
     {
+        if (!TryStartClose())
+            return;
+
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
             "PacketChannel received close message. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
             ChannelId, PacketStat.CreatedTime, _lifespan);
-
-        _closeTime ??= FastDateTime.UtcNow;
     }
 
     protected override void DisposeManaged()

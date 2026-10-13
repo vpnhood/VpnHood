@@ -397,21 +397,19 @@ public class Session : IDisposable
             TrafficMeter = TrafficMeter
         });
 
-        // delete all inactive PacketChannels if ActiveChannelIds exists. InActive channel request time must be less than current request time
-        // to avoid deleting active channels when client is creating multiple channels at the same time.
+        // The older channels the client no longer lists are closed, not disposed: each goes after its grace, so what
+        // is on its way on it still arrives; after a network change they are the ones it abandoned. Only older ones,
+        // as a channel the client is creating meanwhile is not listed yet
         if (request.ActiveChannelIds != null) {
             var inactiveChannels = Tunnel.PacketChannels
-                .Where(x =>
-                    x is StreamPacketChannel streamPacketChannel &&
-                    streamPacketChannel.RequestTime < request.RequestTime &&
-                    !request.ActiveChannelIds.Contains(x.ChannelId));
+                .OfType<StreamPacketChannel>()
+                .Where(x => x.RequestTime < request.RequestTime && !request.ActiveChannelIds.Contains(x.ChannelId));
 
-            // dispose inactive channels
             foreach (var inactiveChannel in inactiveChannels) {
                 VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
-                    "Disposing an inactive PacketChannel. SessionId: {SessionId}, ChannelId: {ChannelId}",
+                    "Closing an inactive PacketChannel. SessionId: {SessionId}, ChannelId: {ChannelId}",
                     VhLogger.FormatSessionId(SessionId), inactiveChannel.ChannelId);
-                inactiveChannel.Dispose();
+                inactiveChannel.Close();
             }
         }
 

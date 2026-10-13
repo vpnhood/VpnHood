@@ -105,6 +105,16 @@ internal class AppController(IAppApi api) : ControllerBase
             await ctx.SendNoContent();
         });
 
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "start-update", async ctx => {
+            await api.StartUpdate(ctx.Token);
+            await ctx.SendNoContent();
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "complete-update", async ctx => {
+            await api.CompleteUpdate(ctx.Token);
+            await ctx.SendNoContent();
+        });
+
         mapper.AddStatic(HttpMethod.POST, baseUrl + "clear-last-error", async ctx => {
             await api.ClearLastError(ctx.Token);
             await ctx.SendNoContent();

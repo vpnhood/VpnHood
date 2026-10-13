@@ -43,6 +43,7 @@ public class AppResources
         public string MsgCantReadAccessKey => resources.GetString("MSG_CANT_READ_ACCESS_KEY") ?? Resources.MsgCantReadAccessKey;
         public string MsgUnsupportedContent => resources.GetString("MSG_UNSUPPORTED_CONTENT") ?? Resources.MsgUnsupportedContent;
         public string Open => resources.GetString("OPEN") ?? Resources.Open;
+        public string UpdateReadyToInstall => resources.GetString("UPDATE_READY_TO_INSTALL") ?? Resources.UpdateReadyToInstall;
     }
 
     public class AppColors

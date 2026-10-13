@@ -4,6 +4,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppUi.Hosting.Avalonia.Android;
 using VpnHood.AppLib.App.Android.Constants;
 using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.AppLib.Stores.AndroidWeb;
 
 namespace VpnHood.App.Client.Android.Web;
 
@@ -38,8 +39,18 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "android-web"),
-            PromptDelay = TimeSpan.FromDays(1)
+            // the notice downloads the APK and installs it, rather than opening the site; none over a
+            // store's install or a copy another key signed, whose notice keeps the site's link
+            UpdaterProvider = AndroidWebAppUpdaterProvider.TryCreate(ReleaseCertificateSha256)
         };
         return options;
     }
+
+    // The key our site's APK is signed with: a copy signed with another is never offered the update.
+    // A Debug build is signed with the machine's own key, so it takes any.
+#if DEBUG
+    private const string? ReleaseCertificateSha256 = null;
+#else
+    private const string ReleaseCertificateSha256 = "07491d8a6547058071691e5d5dffc1a8b2c2584e11f27857f49b58d0a6bb7bf4";
+#endif
 }

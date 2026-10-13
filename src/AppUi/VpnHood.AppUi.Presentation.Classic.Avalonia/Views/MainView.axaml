@@ -55,6 +55,14 @@
     <Border x:Name="UpdateNotice" Classes="snackbar update-alert" IsVisible="False" MaxWidth="570" HorizontalAlignment="Center">
       <StackPanel Spacing="8" MinWidth="320">
         <TextBlock x:Name="UpdateNoticeText" Classes="body-large" />
+        <!-- where the app updates itself: Update downloads the package, its progress, then Install -->
+        <Button x:Name="UpdateDownloadButton" Classes="update-btn" Click="OnUpdateDownloadClick" Content="{Binding UpdateNow, Source={x:Static res:Strings.Current}}" />
+        <StackPanel x:Name="UpdateProgress" Spacing="4">
+          <ProgressBar x:Name="UpdateProgressBar" Minimum="0" Maximum="100" />
+          <TextBlock x:Name="UpdateProgressText" Classes="body-small" TextAlignment="Center" />
+        </StackPanel>
+        <Button x:Name="UpdateInstallButton" Classes="update-btn" Click="OnUpdateInstallClick" Content="{Binding Install, Source={x:Static res:Strings.Current}}" />
+        <TextBlock x:Name="UpdatePackageText" Classes="body-small" TextAlignment="Center" TextWrapping="Wrap" />
         <Button x:Name="UpdateStoreButton" Classes="update-btn" Click="OnUpdateStoreClick" Content="{Binding UpdateFromGooglePlay, Source={x:Static res:Strings.Current}}" />
         <Button x:Name="UpdateDirectButton" Classes="update-btn" Click="OnUpdateDirectClick" Content="{Binding UpdateFromDirectLink, Source={x:Static res:Strings.Current}}" />
         <Button x:Name="UpdateNoStoreButton" Classes="update-btn tonal" Click="OnUpdateNoStoreClick" Content="{Binding DoNotHaveAccessToGooglePlay, Source={x:Static res:Strings.Current}}" />

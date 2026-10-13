@@ -167,7 +167,16 @@ namespace VpnHood.AppLib.App {
                 return ResourceManager.GetString("Open", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to The update is ready to install..
+        /// </summary>
+        internal static string UpdateReadyToInstall {
+            get {
+                return ResourceManager.GetString("UpdateReadyToInstall", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>

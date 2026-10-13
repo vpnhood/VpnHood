@@ -42,6 +42,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string? _shownErrorMessage;
     private DateTime? _ignoredSuppressTime;
     private bool _isUpdatePostponed;
+    private AppUpdateStage? _lastUpdateStage;
     private bool _isReviewShown;
     private bool _isQuickLaunchPrompted;
     private bool _isAnonymousTrackerPromptShown;
@@ -437,8 +438,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             }
         }
 
+        // a download the person started that finishes brings the notice back, Later or not: its Install
+        // is theirs to press
+        var updateStage = state.UpdaterStatus?.UpdateState?.Stage;
+        if (updateStage == AppUpdateStage.Downloaded && _lastUpdateStage != AppUpdateStage.Downloaded)
+            _isUpdatePostponed = false;
+        _lastUpdateStage = updateStage;
+
         if (state.UpdaterStatus?.Prompt == true && !_isUpdatePostponed && !host.IsUpdateNoticeShown)
             host.ShowUpdateNotice(state.UpdaterStatus);
+        else if (host.IsUpdateNoticeShown)
+            host.RefreshUpdateState(state.UpdaterStatus?.UpdateState);
 
         if (IsConnected && state.SessionInfo?.SuppressedTo == SessionSuppressType.Other &&
             _ignoredSuppressTime != state.ConnectRequestTime && !host.IsSnackbarShown)

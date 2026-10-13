@@ -43,6 +43,8 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
     public Task ClearLastError(CancellationToken cancellationToken) => Task.CompletedTask;
     public Task ClearReconnectRequired(CancellationToken cancellationToken) => Task.CompletedTask;
     public Task VersionCheckPostpone(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StartUpdate(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.StartUpdate");
+    public Task CompleteUpdate(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.CompleteUpdate");
 
     public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetSplitIpsViaApp");
     public Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitIpsViaApp");

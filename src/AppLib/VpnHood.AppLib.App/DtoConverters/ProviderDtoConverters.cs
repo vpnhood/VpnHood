@@ -2,10 +2,12 @@
 using VpnHood.AppLib.Api.Ads;
 using VpnHood.AppLib.Api.Billing;
 using VpnHood.AppLib.Api.Device;
+using VpnHood.AppLib.Api.Updaters;
 using ProviderAccounts = VpnHood.AppLib.Abstractions.Accounts;
 using ProviderAds = VpnHood.AppLib.Abstractions.Ads;
 using ProviderBilling = VpnHood.AppLib.Abstractions.Billing;
 using ProviderDevice = VpnHood.AppLib.Abstractions.Device;
+using ProviderUpdaters = VpnHood.AppLib.Abstractions.Updaters;
 
 namespace VpnHood.AppLib.App.DtoConverters;
 
@@ -150,6 +152,29 @@ public static class ProviderDtoConverters
         return new SystemBarsInfo {
             TopHeight = systemBarsInfo.TopHeight,
             BottomHeight = systemBarsInfo.BottomHeight
+        };
+    }
+
+    public static AppUpdateState ToAppDto(this ProviderUpdaters.AppUpdateState state, Version version)
+    {
+        return new AppUpdateState {
+            Version = version,
+            Stage = state.Stage.ToAppDto(),
+            DownloadedBytes = state.DownloadedBytes,
+            TotalBytes = state.TotalBytes,
+            ErrorMessage = state.ErrorMessage
+        };
+    }
+
+    public static AppUpdateStage ToAppDto(this ProviderUpdaters.AppUpdateStage stage)
+    {
+        return stage switch {
+            ProviderUpdaters.AppUpdateStage.None => AppUpdateStage.None,
+            ProviderUpdaters.AppUpdateStage.Available => AppUpdateStage.Available,
+            ProviderUpdaters.AppUpdateStage.Downloading => AppUpdateStage.Downloading,
+            ProviderUpdaters.AppUpdateStage.Downloaded => AppUpdateStage.Downloaded,
+            ProviderUpdaters.AppUpdateStage.Installing => AppUpdateStage.Installing,
+            ProviderUpdaters.AppUpdateStage.Failed => AppUpdateStage.Failed
         };
     }
 }

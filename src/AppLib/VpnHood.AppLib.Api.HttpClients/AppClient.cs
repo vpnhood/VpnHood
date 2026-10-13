@@ -130,6 +130,16 @@ internal sealed class AppClient(HttpClient httpClient) : AppApiClientBase(httpCl
         return HttpPostAsync(BaseUrl + "version-check-postpone", null, null, cancellationToken);
     }
 
+    public Task StartUpdate(CancellationToken cancellationToken)
+    {
+        return HttpPostAsync(BaseUrl + "start-update", null, null, cancellationToken);
+    }
+
+    public Task CompleteUpdate(CancellationToken cancellationToken)
+    {
+        return HttpPostAsync(BaseUrl + "complete-update", null, null, cancellationToken);
+    }
+
     public Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
         return HttpPostAsync(BaseUrl + "extend-by-rewarded-ad", null, null, cancellationToken);

@@ -411,13 +411,60 @@ public partial class MainView : UserControl
         UpdateNoticeText.Text = isDeprecated
             ? Strings.Current.VersionIsDeprecated(VhApp.Features.AppName)
             : Strings.Current.VersionIsOld;
-        UpdateStoreButton.IsVisible = publish.GooglePlayUrl != null;
-        UpdateDirectButton.IsVisible = publish.GooglePlayUrl == null;
-        UpdateNoStoreButton.IsVisible = publish.GooglePlayUrl != null;
+        // an app that updates itself offers its own Update instead of the links
+        var hasUpdateState = status.UpdateState != null;
+        UpdateStoreButton.IsVisible = !hasUpdateState && publish.GooglePlayUrl != null;
+        UpdateDirectButton.IsVisible = !hasUpdateState && publish.GooglePlayUrl == null;
+        UpdateNoStoreButton.IsVisible = !hasUpdateState && publish.GooglePlayUrl != null;
         UpdateAlternative.IsVisible = false;
         UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {VhApp.Features.Version.ToString(3)}";
         UpdateNewText.Text = $"{Strings.Current.NewVersion} {publish.Version}";
+        RefreshUpdateState(status.UpdateState);
         UpdateNotice.IsVisible = true;
+    }
+
+    // The update the app downloads and installs itself, read again every second while the notice shows:
+    // Update, its progress, then Install - which closes the app, and the VPN with it.
+    public void RefreshUpdateState(AppUpdateState? updateState)
+    {
+        var stage = updateState?.Stage;
+        UpdateDownloadButton.IsVisible = stage is AppUpdateStage.Available or AppUpdateStage.Failed;
+        UpdateProgress.IsVisible = stage == AppUpdateStage.Downloading;
+        UpdateInstallButton.IsVisible = stage is AppUpdateStage.Downloaded or AppUpdateStage.Installing;
+        UpdateInstallButton.IsEnabled = stage == AppUpdateStage.Downloaded;
+
+        var percent = updateState?.TotalBytes > 0 ? (int)(updateState.DownloadedBytes * 100 / updateState.TotalBytes.Value) : 0;
+        UpdateProgressBar.IsIndeterminate = updateState?.TotalBytes is null;
+        UpdateProgressBar.Value = percent;
+        UpdateProgressText.Text = updateState?.TotalBytes is null ? null : Strings.Current.UpdateDownloading(percent);
+
+        UpdatePackageText.Text = stage switch {
+            AppUpdateStage.Failed => Strings.Current.UpdateFailed(updateState?.ErrorMessage ?? string.Empty),
+            AppUpdateStage.Installing => Strings.Current.UpdateInstalling,
+            AppUpdateStage.Downloaded when VhApp.IsConnected() => Strings.Current.UpdateVpnDisconnects,
+            _ => null
+        };
+        UpdatePackageText.IsVisible = UpdatePackageText.Text != null;
+    }
+
+    private async void OnUpdateDownloadClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await VhApp.Api.App.StartUpdate(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async void OnUpdateInstallClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await VhApp.Api.App.CompleteUpdate(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnUpdateStoreClick(object? sender, RoutedEventArgs e)

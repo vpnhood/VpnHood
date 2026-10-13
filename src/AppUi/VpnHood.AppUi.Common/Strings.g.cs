@@ -349,6 +349,24 @@ public sealed partial class Strings
     /// <summary>Use only if you do not have access to Google Play</summary>
     public string UpdateFromAlternativeLinkNotice => Get("UPDATE_FROM_ALTERNATIVE_LINK_NOTICE");
 
+    /// <summary>Update now</summary>
+    public string UpdateNow => Get("UPDATE_NOW");
+
+    /// <summary>Downloading the update: {percent}%</summary>
+    public string UpdateDownloading(object percent) => Get("UPDATE_DOWNLOADING", ("percent", percent));
+
+    /// <summary>Installing the update...</summary>
+    public string UpdateInstalling => Get("UPDATE_INSTALLING");
+
+    /// <summary>The VPN disconnects while the update installs.</summary>
+    public string UpdateVpnDisconnects => Get("UPDATE_VPN_DISCONNECTS");
+
+    /// <summary>Could not update. {error}</summary>
+    public string UpdateFailed(object error) => Get("UPDATE_FAILED", ("error", error));
+
+    /// <summary>The update is ready to install.</summary>
+    public string UpdateReadyToInstall => Get("UPDATE_READY_TO_INSTALL");
+
     /// <summary>Your Version:</summary>
     public string CurrentVersion => Get("CURRENT_VERSION");
 

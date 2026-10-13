@@ -1,11 +1,14 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.Updaters;
+using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
+// the provider's update types share their names with the contract's, which this file speaks
+using ProviderUpdaters = VpnHood.AppLib.Abstractions.Updaters;
 
 namespace VpnHood.AppLib.App.Services.Updaters;
 
@@ -18,6 +21,7 @@ public class AppUpdaterService : IDisposable
     private string VersionCheckFilePath => Path.Combine(field, "version.json");
     private readonly Lazy<AppUpdaterData> _lazyData;
     private AppUpdaterData Data => _lazyData.Value;
+    private string? _lastUpdateStateError;
     private bool _disposed;
 
     /// <param name="isConnected">
@@ -47,16 +51,81 @@ public class AppUpdaterService : IDisposable
     public AppUpdaterStatus Status {
         get {
             var versionStatus = CalcVersionStatus();
+            var updateState = GetUpdateState();
             return new AppUpdaterStatus {
                 VersionStatus = versionStatus,
                 CheckedTime = Data.CheckedTime,
                 PublishInfo = Data.PublishInfo,
-                // the feed's notice is the way only where the store is not
-                Prompt = !IsUpdaterOffering &&
-                         versionStatus is VersionStatus.Old or VersionStatus.Deprecated &&
-                         !IsInPostponeTime
+                // the feed's notice is the way only where a store's own screen is not; an update the
+                // person started keeps it, whatever Later: their own choice, not a prompt
+                Prompt = updateState?.Stage is AppUpdateStage.Downloading or AppUpdateStage.Downloaded or
+                             AppUpdateStage.Installing or AppUpdateStage.Failed ||
+                         (!IsUpdaterOffering &&
+                          versionStatus is VersionStatus.Old or VersionStatus.Deprecated &&
+                          !IsInPostponeTime),
+                UpdateState = updateState
             };
         }
+    }
+
+    // The feed's release where it is newer than this version: the only one worth keeping
+    private ProviderUpdaters.AppRelease? NewerRelease =>
+        Data.PublishInfo is { } publishInfo && publishInfo.Version > _appVersion
+            ? new ProviderUpdaters.AppRelease { Version = publishInfo.Version, PackageUrl = publishInfo.PackageUrl }
+            : null;
+
+    // The updater whose update the notice offers: one with no screen of its own
+    private ProviderUpdaters.IAppUpdaterProvider? NoticeUpdater =>
+        _updateOptions.UpdaterProvider is { HasOwnScreen: false } updater ? updater : null;
+
+    // Asked on every read, which is what removes what another release left: an older one's, or the one
+    // just installed. An updater that fails says so in the notice, never in the whole state.
+    private AppUpdateState? GetUpdateState()
+    {
+        try {
+            var updater = NoticeUpdater;
+            if (updater is null)
+                return null;
+
+            var release = NewerRelease;
+            var state = updater.GetState(release);
+            _lastUpdateStateError = null;
+            return release is null ? null : state.ToAppDto(release.Version);
+        }
+        catch (Exception ex) {
+            // read every second by the UI: logged once per error, not once per read
+            if (_lastUpdateStateError != ex.Message)
+                VhLogger.Instance.LogError(ex, "Could not read the update's state.");
+
+            _lastUpdateStateError = ex.Message;
+            return NewerRelease is { } release
+                ? new AppUpdateState {
+                    Version = release.Version,
+                    Stage = AppUpdateStage.Failed,
+                    DownloadedBytes = 0,
+                    TotalBytes = null,
+                    ErrorMessage = ex.Message
+                }
+                : null;
+        }
+    }
+
+    // The notice's Update: the newer release's update, started the updater's own way
+    public Task StartUpdate(IUiContext? uiContext, CancellationToken cancellationToken)
+    {
+        var updater = NoticeUpdater ?? throw new NotSupportedException("The notice offers no update of its own.");
+        var release = NewerRelease;
+        VhLogger.Instance.LogInformation("Starting the update. Version: {Version}", release?.Version);
+        return updater.StartUpdate(release, uiContext, cancellationToken);
+    }
+
+    // The notice's Install: the downloaded update, handed to the platform's installer
+    public Task CompleteUpdate(IUiContext? uiContext, CancellationToken cancellationToken)
+    {
+        var updater = NoticeUpdater ?? throw new NotSupportedException("The notice offers no update of its own.");
+        var release = NewerRelease;
+        VhLogger.Instance.LogInformation("Completing the update. Version: {Version}", release?.Version);
+        return updater.CompleteUpdate(release, uiContext, cancellationToken);
     }
 
     // The store said lately that it has an update for the installed version: its own screen is the way.
@@ -139,10 +208,24 @@ public class AppUpdaterService : IDisposable
         }
 
         try {
+            // no store: the feed, and the app's own updater, if any, takes its release from it. Its
+            // answer counts with no connect, so the feed's read stamps the check
+            var updater = _updateOptions.UpdaterProvider;
+            if (updater is not { HasOwnScreen: true }) {
+                var isFeedRead = await TryUpdateByPublishInfoUrl(cancellationToken).Vhc();
+                if (isFeedRead || _updateOptions.UpdateInfoUrl == null)
+                    Data.CheckedTime = FastDateTime.UtcNow;
+
+                if (updater != null)
+                    await updater.Check(NewerRelease, uiContext, cancellationToken).Vhc();
+
+                return GetCheckResult(isAnswered: isFeedRead);
+            }
+
             // the store's updater first, then the feed. The store's "none" before a connect leaves the
             // check unstamped, whatever the feed said, so the try after the connect - through the
             // tunnel - asks the store again
-            var storeAnswer = await TryUpdateByProvider(uiContext, force, cancellationToken).Vhc();
+            var storeAnswer = await TryUpdateByStore(updater, uiContext, force, cancellationToken).Vhc();
             var hasStoreUpdate = storeAnswer is StoreAnswer.Offered or StoreAnswer.ScreenFailed;
             var isPublishInfoRead = !hasStoreUpdate && await TryUpdateByPublishInfoUrl(cancellationToken).Vhc();
             if (hasStoreUpdate ||
@@ -152,8 +235,7 @@ public class AppUpdaterService : IDisposable
             return storeAnswer switch {
                 StoreAnswer.Offered => VersionCheckResult.UpdateAvailable,
                 StoreAnswer.ScreenFailed => VersionCheckResult.Failed,
-                _ => GetCheckResult(isAnswered: isPublishInfoRead ||
-                                                (storeAnswer == StoreAnswer.None && _updateOptions.UpdaterProvider != null))
+                _ => GetCheckResult(isAnswered: isPublishInfoRead || storeAnswer == StoreAnswer.None)
             };
         }
         catch (UiContextNotAvailableException) {
@@ -216,49 +298,61 @@ public class AppUpdaterService : IDisposable
         ScreenFailed
     }
 
-    private async Task<StoreAnswer> TryUpdateByProvider(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
+    private async Task<StoreAnswer> TryUpdateByStore(ProviderUpdaters.IAppUpdaterProvider store, IUiContext? uiContext,
+        bool force, CancellationToken cancellationToken)
     {
+        ProviderUpdaters.AppUpdateState state;
         try {
-            var updater = _updateOptions.UpdaterProvider;
-            if (updater == null)
-                return StoreAnswer.None; // no updater provider. Job done
-
-            if (!await updater.IsUpdateAvailable(uiContext, cancellationToken))
-                return _isConnected() ? StoreAnswer.None : StoreAnswer.Unconfirmed;
-
-            // an offer belongs to the version it was made to: an install starts a new one
-            var now = FastDateTime.UtcNow;
-            if (!_appVersion.Equals(Data.UpdaterAvailableVersion)) {
-                Data.UpdaterAvailableVersion = _appVersion;
-                Data.UpdaterAvailableSince = null;
-            }
-            Data.UpdaterAvailableSince ??= now;
-            Data.UpdaterLastAvailableTime = now;
-
-            // wait while the user's postpone is active or the auto-updater has not had its chance yet
-            if (!force && (IsInPostponeTime || now - Data.UpdaterAvailableSince < _updateOptions.PromptDelay))
-                return StoreAnswer.Offered;
-
-            // the store's screen shows over the window, and Android opens none for an app in the
-            // background: a window there leaves the check for its return to the front
-            if (uiContext == null || !await uiContext.IsActive().Vhc())
-                throw new UiContextNotAvailableException();
-
-            if (!await updater.Update(uiContext, cancellationToken).Vhc())
-                return StoreAnswer.ScreenFailed;
-
-            // shown: the user updated or put it off, and the store's next offer waits PromptDelay again
-            Data.UpdaterAvailableSince = null;
-            MarkPostponed();
-            return StoreAnswer.Offered;
+            state = await store.Check(NewerRelease, uiContext, cancellationToken).Vhc();
         }
         catch (UiContextNotAvailableException) {
             throw;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not check version by UpdaterProvider.");
+            VhLogger.Instance.LogWarning(ex, "Could not check version by the store's updater.");
             return _isConnected() ? StoreAnswer.None : StoreAnswer.Unconfirmed;
         }
+
+        if (state.Stage == ProviderUpdaters.AppUpdateStage.None)
+            return _isConnected() ? StoreAnswer.None : StoreAnswer.Unconfirmed;
+
+        // an offer belongs to the version it was made to: an install starts a new one
+        var now = FastDateTime.UtcNow;
+        if (!_appVersion.Equals(Data.UpdaterAvailableVersion)) {
+            Data.UpdaterAvailableVersion = _appVersion;
+            Data.UpdaterAvailableSince = null;
+        }
+
+        // the store's own date where it names one (Play: the day it learned of the update), else the
+        // first offer seen here
+        Data.UpdaterAvailableSince = state.AvailableSince ?? Data.UpdaterAvailableSince ?? now;
+        Data.UpdaterLastAvailableTime = now;
+
+        // wait while the user's postpone is active or the store's own update has not had its chance yet
+        if (!force && (IsInPostponeTime || now - Data.UpdaterAvailableSince < _updateOptions.PromptDelay))
+            return StoreAnswer.Offered;
+
+        // the store's screen shows over the window, and Android opens none for an app in the
+        // background: a window there leaves the check for its return to the front
+        if (uiContext == null || !await uiContext.IsActive().Vhc())
+            throw new UiContextNotAvailableException();
+
+        try {
+            await store.StartUpdate(NewerRelease, uiContext, cancellationToken).Vhc();
+        }
+        catch (UiContextNotAvailableException) {
+            throw;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "The store's update screen failed.");
+            return StoreAnswer.ScreenFailed;
+        }
+
+        // shown: the user updated or put it off, and the store's next offer waits for Later's period,
+        // then for PromptDelay where the store names no date of its own
+        Data.UpdaterAvailableSince = null;
+        MarkPostponed();
+        return StoreAnswer.Offered;
     }
 
 

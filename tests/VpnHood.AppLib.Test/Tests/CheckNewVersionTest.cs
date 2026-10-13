@@ -10,6 +10,7 @@ using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Test;
 using VpnHood.Net.Toolkit.Utils;
+using ProviderUpdateStage = VpnHood.AppLib.Abstractions.Updaters.AppUpdateStage;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -17,6 +18,8 @@ namespace VpnHood.AppLib.Test.Tests;
 [DoNotParallelize] // timing-sensitive version checks; CPU contention shifts delays and stalls connects
 public class CheckNewVersionTest : TestAppBase
 {
+    // A release the app must see at once is dated in the past: the service reads FastDateTime, which
+    // trails DateTime.UtcNow by up to its one-second Precision, so a release dated now may not be out yet.
     private void SetNewRelease(Version version, DateTime releaseDate, TimeSpan? notificationDelay = null,
         Version? deprecatedVersion = null)
     {
@@ -220,7 +223,7 @@ public class CheckNewVersionTest : TestAppBase
 
         // the window's arrival checks at once, and the store's updater is asked
         await updaterService.CheckForUpdate(new TestHelper.TestAppUiContext(), force: false, TestCt);
-        Assert.AreEqual(1, updaterProvider.IsUpdateAvailableCalls);
+        Assert.AreEqual(1, updaterProvider.CheckCalls);
         Assert.IsNotNull(updaterService.Status.CheckedTime);
     }
 
@@ -241,7 +244,7 @@ public class CheckNewVersionTest : TestAppBase
 
         // offered: the store's own update has the delay first
         await updaterService.CheckForUpdate(uiContext, force: false, TestCt);
-        Assert.AreEqual(0, updaterProvider.UpdateCalls);
+        Assert.AreEqual(0, updaterProvider.StartUpdateCalls);
 
         // before a connect, out of reach
         updaterProvider.IsAvailable = false;
@@ -252,7 +255,7 @@ public class CheckNewVersionTest : TestAppBase
         updaterProvider.IsAvailable = true;
         await Task.Delay(TimeSpan.FromSeconds(2.5), TestCt); // the delay, on a clock of 1 s steps
         await updaterService.CheckForUpdate(uiContext, force: false, TestCt);
-        Assert.AreEqual(1, updaterProvider.UpdateCalls, "the store's prompt");
+        Assert.AreEqual(1, updaterProvider.StartUpdateCalls, "the store's prompt");
     }
 
     // The feed answering before a connect is no reason to wait a whole interval for a store that said
@@ -278,7 +281,7 @@ public class CheckNewVersionTest : TestAppBase
         isConnected = true;
         updaterProvider.IsAvailable = true;
         await updaterService.CheckForUpdate(uiContext, force: false, TestCt);
-        Assert.AreEqual(2, updaterProvider.IsUpdateAvailableCalls);
+        Assert.AreEqual(2, updaterProvider.CheckCalls);
         Assert.IsNotNull(updaterService.Status.CheckedTime);
     }
 
@@ -339,11 +342,11 @@ public class CheckNewVersionTest : TestAppBase
         // the store offers it, and its screen fails
         updaterProvider.IsAvailable = true;
         await updaterService.CheckForUpdate(uiContext, force: false, TestCt);
-        Assert.AreEqual(1, updaterProvider.UpdateCalls);
+        Assert.AreEqual(1, updaterProvider.StartUpdateCalls);
         Assert.IsFalse(updaterService.Status.Prompt);
 
         await updaterService.CheckForUpdate(uiContext, force: false, TestCt);
-        Assert.AreEqual(2, updaterProvider.UpdateCalls);
+        Assert.AreEqual(2, updaterProvider.StartUpdateCalls);
     }
 
     // The store's screen shows only over a window in front: a window in the background - one being
@@ -358,20 +361,20 @@ public class CheckNewVersionTest : TestAppBase
             PromptDelay = TimeSpan.Zero
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        await VhTestUtil.AssertEqualsWait(1, () => updaterProvider.IsUpdateAvailableCalls);
+        await VhTestUtil.AssertEqualsWait(1, () => updaterProvider.CheckCalls);
 
         // the store has the update, and the window is in the background
         updaterProvider.IsAvailable = true;
         var window = new TestWindowUiContext { IsInFront = false };
         AppUiContext.Context = window;
-        await VhTestUtil.AssertEqualsWait(2, () => updaterProvider.IsUpdateAvailableCalls);
-        Assert.AreEqual(0, updaterProvider.UpdateCalls);
+        await VhTestUtil.AssertEqualsWait(2, () => updaterProvider.CheckCalls);
+        Assert.AreEqual(0, updaterProvider.StartUpdateCalls);
         Assert.IsNull(app.State.UpdaterStatus?.CheckedTime);
 
         // back to the front
         window.IsInFront = true;
         AppUiContext.NotifyResumed();
-        await VhTestUtil.AssertEqualsWait(1, () => updaterProvider.UpdateCalls);
+        await VhTestUtil.AssertEqualsWait(1, () => updaterProvider.StartUpdateCalls);
     }
 
     // An update the person started and left before it finished comes back with the window in front,
@@ -389,7 +392,7 @@ public class CheckNewVersionTest : TestAppBase
 
         // the store's screen: the person starts the update, and leaves before it finishes
         await updaterService.CheckForUpdate(window, force: false, TestCt);
-        Assert.AreEqual(1, updaterProvider.UpdateCalls);
+        Assert.AreEqual(1, updaterProvider.StartUpdateCalls);
         updaterProvider.IsUpdateInProgress = true;
 
         // with the window in the background, nothing
@@ -401,7 +404,7 @@ public class CheckNewVersionTest : TestAppBase
         window.IsInFront = true;
         await updaterService.CheckForUpdate(window, force: false, TestCt);
         Assert.AreEqual(1, updaterProvider.ResumeUpdateCalls);
-        Assert.AreEqual(1, updaterProvider.UpdateCalls, "no new prompt");
+        Assert.AreEqual(1, updaterProvider.StartUpdateCalls, "no new prompt");
     }
 
     // A check the person asked for always answers: none while the feed cannot be read, then nothing
@@ -497,7 +500,7 @@ public class CheckNewVersionTest : TestAppBase
         Assert.AreNotEqual(VersionStatus.Old, updaterService.Status.VersionStatus);
 
         await updaterService.CheckForUpdate(uiContext, force: false, TestCt);
-        Assert.AreEqual(0, updaterProvider.UpdateCalls, "an offer to this version, which waits its delay");
+        Assert.AreEqual(0, updaterProvider.StartUpdateCalls, "an offer to this version, which waits its delay");
     }
 
     // Later and a running check both write version.json: Later waits for the check, and a restart
@@ -530,6 +533,170 @@ public class CheckNewVersionTest : TestAppBase
         Assert.IsNotNull(restartedService.Status.CheckedTime, "the check's stamp");
         Assert.AreEqual(VersionStatus.Old, restartedService.Status.VersionStatus);
         Assert.IsFalse(restartedService.Status.Prompt, "Later's postpone");
+    }
+
+    // A store that names the day it learned of the update (Play) has had its own update since then: its
+    // screen comes once PromptDelay has passed from that day, not from the first check here.
+    [TestMethod]
+    public async Task A_store_update_waits_from_the_day_the_store_learned_of_it()
+    {
+        var updaterProvider = new TestAppUpdaterProvider {
+            IsAvailable = true,
+            AvailableSince = DateTime.UtcNow.AddDays(-1)
+        };
+        using var updaterService = new AppUpdaterService(CreateUpdaterFolder(), CurrentAppVersion,
+            new AppUpdaterOptions {
+                UpdaterProvider = updaterProvider,
+                CheckInterval = TimeSpan.Zero,
+                PromptDelay = TimeSpan.FromDays(3)
+            }, isConnected: () => true);
+        var uiContext = new TestHelper.TestAppUiContext();
+
+        // known for a day: the store's own update still has its chance
+        await updaterService.CheckForUpdate(uiContext, force: false, TestCt);
+        Assert.AreEqual(0, updaterProvider.StartUpdateCalls);
+
+        // known for four days: its screen, though this app has seen the offer for a moment only
+        updaterProvider.AvailableSince = DateTime.UtcNow.AddDays(-4);
+        await updaterService.CheckForUpdate(uiContext, force: false, TestCt);
+        Assert.AreEqual(1, updaterProvider.StartUpdateCalls);
+    }
+
+    // Where the app updates itself, the notice offers the feed's release: Update starts that version's
+    // update from the feed's address, and Install completes that version.
+    [TestMethod]
+    public async Task Update_is_offered_in_the_notice_where_the_app_updates_itself()
+    {
+        var newVersion = new Version(CurrentAppVersion.Major + 1, 0, 0);
+        SetNewRelease(newVersion, DateTime.UtcNow.AddMinutes(-1));
+        var packageUpdater = new TestPackageUpdaterProvider();
+        using var updaterService = CreatePackageUpdaterService(packageUpdater);
+        await updaterService.CheckForUpdate(null, force: true, TestCt);
+
+        var updateState = updaterService.Status.UpdateState;
+        Assert.IsNotNull(updateState);
+        Assert.AreEqual(newVersion, updateState.Version);
+        Assert.AreEqual(AppUpdateStage.Available, updateState.Stage);
+        Assert.IsTrue(updaterService.Status.Prompt);
+
+        await updaterService.StartUpdate(null, TestCt);
+        Assert.AreEqual(newVersion, packageUpdater.StartedRelease?.Version);
+        Assert.AreEqual(new Uri("https://localhost/package.msi"), packageUpdater.StartedRelease?.PackageUrl);
+        Assert.AreEqual(AppUpdateStage.Downloading, updaterService.Status.UpdateState?.Stage);
+
+        await updaterService.CompleteUpdate(null, TestCt);
+        Assert.AreEqual(newVersion, packageUpdater.CompletedRelease?.Version);
+    }
+
+    // The app's own update never starts unpressed, not even on a check the person asked for: they may
+    // be on mobile data. The notice offers it.
+    [TestMethod]
+    public async Task Update_of_the_apps_own_never_starts_by_itself()
+    {
+        SetNewRelease(new Version(CurrentAppVersion.Major + 1, 0, 0), DateTime.UtcNow.AddMinutes(-1));
+        var packageUpdater = new TestPackageUpdaterProvider();
+        using var updaterService = new AppUpdaterService(CreateUpdaterFolder(), CurrentAppVersion,
+            new AppUpdaterOptions {
+                UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1,
+                UpdaterProvider = packageUpdater,
+                PromptDelay = TimeSpan.Zero
+            }, isConnected: () => true);
+
+        Assert.AreEqual(VersionCheckResult.UpdateAvailable,
+            await updaterService.CheckForUpdate(new TestHelper.TestAppUiContext(), force: true, TestCt));
+        Assert.IsNull(packageUpdater.StartedRelease);
+        Assert.IsTrue(updaterService.Status.Prompt, "the notice, with its Update");
+    }
+
+    // The app's own updater asks no store, so its answer counts before a connect: the check is stamped,
+    // and not made again at every window.
+    [TestMethod]
+    public async Task Update_of_the_apps_own_counts_before_a_connect()
+    {
+        SetNewRelease(new Version(CurrentAppVersion.Major + 1, 0, 0), DateTime.UtcNow);
+        var packageUpdater = new TestPackageUpdaterProvider();
+        using var updaterService = new AppUpdaterService(CreateUpdaterFolder(), CurrentAppVersion,
+            new AppUpdaterOptions {
+                UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1,
+                UpdaterProvider = packageUpdater
+            }, isConnected: () => false);
+
+        await updaterService.CheckForUpdate(new TestHelper.TestAppUiContext(), force: false, TestCt);
+        Assert.IsNotNull(updaterService.Status.CheckedTime);
+    }
+
+    // A store's install or a copy signed with another key has no updater of the app's own: the notice
+    // keeps the feed's link.
+    [TestMethod]
+    public async Task Update_is_not_offered_without_an_updater_of_the_apps_own()
+    {
+        SetNewRelease(new Version(CurrentAppVersion.Major + 1, 0, 0), DateTime.UtcNow.AddMinutes(-1));
+        using var updaterService = new AppUpdaterService(CreateUpdaterFolder(), CurrentAppVersion,
+            new AppUpdaterOptions { UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1 },
+            isConnected: () => true);
+        await updaterService.CheckForUpdate(null, force: true, TestCt);
+
+        Assert.IsNull(updaterService.Status.UpdateState);
+        Assert.IsTrue(updaterService.Status.Prompt, "the feed's notice, with its link");
+        await Assert.ThrowsExactlyAsync<NotSupportedException>(() => updaterService.StartUpdate(null, TestCt));
+    }
+
+    // No newer version: no update, and the updater is asked about none, which removes what an earlier
+    // release left - the one just installed included.
+    [TestMethod]
+    public async Task Update_is_removed_once_the_app_is_the_latest()
+    {
+        SetNewRelease(CurrentAppVersion, DateTime.UtcNow);
+        var packageUpdater = new TestPackageUpdaterProvider();
+        using var updaterService = CreatePackageUpdaterService(packageUpdater);
+        await updaterService.CheckForUpdate(null, force: true, TestCt);
+
+        Assert.IsNull(updaterService.Status.UpdateState);
+        Assert.IsTrue(packageUpdater.StateCalls > 0);
+        Assert.IsNull(packageUpdater.LastStateRelease);
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => updaterService.StartUpdate(null, TestCt));
+    }
+
+    // Later puts the notice off, but not an update the person started: its notice stays theirs.
+    [TestMethod]
+    public async Task Update_started_keeps_the_notice_after_later()
+    {
+        SetNewRelease(new Version(CurrentAppVersion.Major + 1, 0, 0), DateTime.UtcNow.AddMinutes(-1));
+        var packageUpdater = new TestPackageUpdaterProvider();
+        using var updaterService = CreatePackageUpdaterService(packageUpdater);
+        await updaterService.CheckForUpdate(null, force: true, TestCt);
+
+        await updaterService.Postpone(TestCt);
+        Assert.IsFalse(updaterService.Status.Prompt, "Later's postpone");
+
+        packageUpdater.Stage = ProviderUpdateStage.Downloaded;
+        Assert.IsTrue(updaterService.Status.Prompt, "a download the person started");
+    }
+
+    // A platform that fails to read its update says so in the notice; the app's state still reads.
+    [TestMethod]
+    public async Task Update_failure_is_shown_in_the_notice()
+    {
+        SetNewRelease(new Version(CurrentAppVersion.Major + 1, 0, 0), DateTime.UtcNow);
+        var packageUpdater = new TestPackageUpdaterProvider();
+        using var updaterService = CreatePackageUpdaterService(packageUpdater);
+        await updaterService.CheckForUpdate(null, force: true, TestCt);
+
+        packageUpdater.StateError = new InvalidOperationException("No storage.");
+        var updateState = updaterService.Status.UpdateState;
+        Assert.IsNotNull(updateState);
+        Assert.AreEqual(AppUpdateStage.Failed, updateState.Stage);
+        Assert.AreEqual("No storage.", updateState.ErrorMessage);
+    }
+
+    private AppUpdaterService CreatePackageUpdaterService(TestPackageUpdaterProvider packageUpdater)
+    {
+        return new AppUpdaterService(CreateUpdaterFolder(), CurrentAppVersion,
+            new AppUpdaterOptions {
+                UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1,
+                UpdaterProvider = packageUpdater
+            },
+            isConnected: () => true);
     }
 
     // each test's own version.json

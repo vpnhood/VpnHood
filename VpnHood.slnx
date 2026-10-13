@@ -91,6 +91,7 @@
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Stores/">
+    <Project Path="src/AppLib/VpnHood.AppLib.Stores.AndroidWeb/VpnHood.AppLib.Stores.AndroidWeb.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Stores.AppStore.Core/VpnHood.AppLib.Stores.AppStore.Core.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>

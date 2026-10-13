@@ -34,6 +34,8 @@ public interface IAppApi
     Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken);
     Task<VersionCheckResult> VersionCheck(CancellationToken cancellationToken);
     Task VersionCheckPostpone(CancellationToken cancellationToken);
+    Task StartUpdate(CancellationToken cancellationToken);
+    Task CompleteUpdate(CancellationToken cancellationToken);
     Task ExtendByRewardedAd(CancellationToken cancellationToken);
     Task ShowAdPrivacyOptions(CancellationToken cancellationToken);
     Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken);

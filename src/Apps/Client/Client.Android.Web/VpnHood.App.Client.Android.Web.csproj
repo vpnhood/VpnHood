@@ -46,6 +46,8 @@
 	
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Android\VpnHood.AppLib.App.Android.csproj" />
+		<!-- The APK updates itself; never in a store's head. -->
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.AndroidWeb\VpnHood.AppLib.Stores.AndroidWeb.csproj" />
 		<!-- The UI this head runs, which MainActivity is the activity of. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Android\VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->

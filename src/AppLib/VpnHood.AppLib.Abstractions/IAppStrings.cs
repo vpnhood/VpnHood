@@ -16,4 +16,5 @@ public interface IAppStrings
     string MsgCantReadAccessKey { get; }
     string MsgUnsupportedContent { get; }
     string Open { get; }
+    string UpdateReadyToInstall { get; }
 }

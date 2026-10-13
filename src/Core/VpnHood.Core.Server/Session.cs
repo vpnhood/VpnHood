@@ -319,7 +319,9 @@ public class Session : IDisposable
             ipPacket.UpdateAllChecksums();
         }
 
-        // send by the adapter where its NAT translates the version, else by the proxy
+        // send by the adapter where its NAT translates the version, else by the proxy. A session recovered by a
+        // server restarted without its adapter keeps its hello's TCP-packet offer, and the proxy refuses those
+        // packets: rare, left so
         if (_vpnAdapter != null && _vpnAdapter.IsNatSupported(ipVersion) && _vpnAdapter.IsIpVersionSupported(ipVersion))
             _vpnAdapter.SendPacketQueued(ipPacket);
         else

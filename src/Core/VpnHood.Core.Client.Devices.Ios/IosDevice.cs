@@ -12,7 +12,7 @@ namespace VpnHood.Core.Client.Devices.Ios;
 
 public class IosDevice : IDevice
 {
-    private readonly NETunnelProviderManager _vpnManager = new();
+    private NETunnelProviderManager _vpnManager = new();
 
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
     private const string VpnServiceDataFolderKey = "VpnServiceDataFolder";
@@ -65,6 +65,7 @@ public class IosDevice : IDevice
 
     public string VpnServiceConfigFolder { get; }
     public string VpnServiceDataFolder { get; }
+    internal NETunnelProviderManager VpnManager => _vpnManager;
 
     public bool IsBindProcessToVpnSupported => false;
     public bool IsTcpProxySupported => true;
@@ -113,12 +114,7 @@ public class IosDevice : IDevice
             VpnServiceConfigFolder);
 
         // ---- Pre-stop: detect stale tunnel ----
-        try {
-            await _vpnManager.LoadFromPreferencesAsync();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Pre-stop LoadFromPreferences failed.");
-        }
+        _vpnManager = await LoadVpnManager();
 
         NEVpnStatus initialStatus;
         try {
@@ -195,6 +191,40 @@ public class IosDevice : IDevice
         }
     }
 
+    // The configuration saved before, the running one first, as iOS Settings may have started it; a new
+    // one only the first time. A new manager saved at each launch is another entry in iOS Settings.
+    private static async Task<NETunnelProviderManager> LoadVpnManager()
+    {
+        var managers = (await NETunnelProviderManager.LoadAllFromPreferencesAsync())
+            .ToArray<NETunnelProviderManager>()
+            .OfType<NETunnelProviderManager>()
+            .ToArray();
+        var vpnManager =
+            managers.FirstOrDefault(x => x.Connection.Status is not (NEVpnStatus.Disconnected or NEVpnStatus.Invalid)) ??
+            managers.FirstOrDefault() ??
+            new NETunnelProviderManager();
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        await MigrateExtraVpnManagers(managers, vpnManager);
+#pragma warning restore CS0618 // Type or member is obsolete
+        return vpnManager;
+    }
+
+    // Older apps saved a new manager at each launch, so iOS Settings lists one entry per launch.
+    [Obsolete("Migration (2026-10): drop a few months after it ships, with its call in LoadVpnManager.")]
+    private static async Task MigrateExtraVpnManagers(IEnumerable<NETunnelProviderManager> managers,
+        NETunnelProviderManager vpnManager)
+    {
+        foreach (var manager in managers.Where(x => x != vpnManager)) {
+            try {
+                await manager.RemoveFromPreferencesAsync();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "Could not remove an extra VPN configuration.");
+            }
+        }
+    }
+
     // Starts the tunnel and surfaces the synchronous out-NSError as a managed exception.
     // On reconnect StartVpnTunnel commonly reports NEVPNErrorConfigurationStale (the config was
     // modified since this manager last loaded) or ...Disabled; silently ignoring it is why the
@@ -212,6 +242,6 @@ public class IosDevice : IDevice
 
     public IMessageClient CreateMessageClient()
     {
-        return new IosMessageClient(_vpnManager);
+        return new IosMessageClient(this);
     }
 }

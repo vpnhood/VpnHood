@@ -14,7 +14,7 @@ namespace VpnHood.Core.Client.Devices.Ios;
 // fails. The previous implementation called LoadAllFromPreferencesAsync on every 1 s status poll
 // (heavy + racy) and fell back to messaging Disconnected/Invalid sessions, which woke dead
 // extensions and surfaced a false "Connected" state after a jetsam kill.
-internal sealed class IosMessageClient(NETunnelProviderManager vpnManager) : IMessageClient
+internal sealed class IosMessageClient(IosDevice device) : IMessageClient
 {
     // Last known-live session; reused across polls so we avoid a LoadAllFromPreferences round trip
     // each second. Invalidated (set null) whenever a send fails so the next call re-resolves it.
@@ -69,7 +69,7 @@ internal sealed class IosMessageClient(NETunnelProviderManager vpnManager) : IMe
             return _session!;
 
         // 2. The app's own manager — authoritative when THIS app started the tunnel.
-        if (vpnManager.Connection is NETunnelProviderSession ownSession && IsLive(ownSession))
+        if (device.VpnManager.Connection is NETunnelProviderSession ownSession && IsLive(ownSession))
             return _session = ownSession;
 
         // 3. App relaunched while the extension kept running: find the live saved session.

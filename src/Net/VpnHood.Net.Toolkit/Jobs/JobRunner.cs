@@ -14,11 +14,29 @@ public class JobRunner
     private int _maxDegreeOfParallelism = 2;
     private readonly TimeSpan _cleanupTimeSpan = TimeSpan.FromSeconds(60);
     private DateTime _lastCleanupTime = FastDateTime.UtcNow;
+    private readonly Lock _intervalLock = new();
+
+    // a new period restarts its countdown, so a new interval applies at once, even to a runner asleep on the old one
+    private readonly PeriodicTimer _timer;
 
     public static JobRunner SlowInstance => SlowInstanceLazy.Value;
     public static JobRunner FastInstance => FastInstanceLazy.Value;
-    public TimeSpan Interval { get; set; }
     public ILogger? Logger { get; set; } = VhLogger.Instance;
+
+    // Locked, as the timer stores its period and restarts its countdown in two steps. The same interval again changes
+    // nothing: each set restarts the countdown, so repeated ones would keep putting off the tick
+    public TimeSpan Interval {
+        get {
+            lock (_intervalLock)
+                return _timer.Period;
+        }
+        set {
+            lock (_intervalLock) {
+                if (value != _timer.Period)
+                    _timer.Period = value;
+            }
+        }
+    }
 
     public int MaxDegreeOfParallelism {
         get => _maxDegreeOfParallelism;
@@ -32,7 +50,7 @@ public class JobRunner
 
     public JobRunner(TimeSpan interval)
     {
-        Interval = interval;
+        _timer = new PeriodicTimer(interval);
         _semaphore = new SemaphoreSlim(_maxDegreeOfParallelism);
         Task.Run(RunJobs);
     }
@@ -40,9 +58,7 @@ public class JobRunner
 
     private async Task RunJobs()
     {
-        while (true) {
-            await Task.Delay(Interval).Vhc();
-
+        while (await _timer.WaitForNextTickAsync().Vhc()) {
             // Periodic cleanup of dead jobs based on CleanupTimeSpan
             var now = FastDateTime.UtcNow;
             if (now - _lastCleanupTime >= _cleanupTimeSpan) {
@@ -53,8 +69,6 @@ public class JobRunner
             // Run jobs
             await RunJobsInternal().Vhc();
         }
-
-        // ReSharper disable once FunctionNeverReturns
     }
 
     private async Task RunJobsInternal()

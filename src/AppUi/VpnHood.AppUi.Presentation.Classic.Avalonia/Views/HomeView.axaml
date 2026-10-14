@@ -48,14 +48,15 @@
     <Grid Classes="page" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto,Auto">
 
       <!-- HomePageHeader: the drawer's door, the app name in the middle, the build at the end.
-           A row of its own height, held at the top. -->
+           A row of its own height, held at the top. The name at the web UI's size: an h4 there is
+           bold body text, 15px. -->
       <Grid Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,2*,*" Height="48" VerticalAlignment="Top">
         <Button x:Name="MenuButton" Classes="icon" HorizontalAlignment="Left" VerticalAlignment="Center"
                 IsVisible="{Binding IsNotTv}" Click="OnMenuClick"
                 AutomationProperties.Name="{Binding Menu, Source={x:Static res:Strings.Current}}">
           <TextBlock Classes="mdi" Text="{x:Static res:Mdi.Menu}" />
         </Button>
-        <TextBlock Grid.Column="1" Classes="h4" Text="{Binding AppName}" TextAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight" />
+        <TextBlock Grid.Column="1" Classes="h4" FontSize="15" Text="{Binding AppName}" TextAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight" />
         <!-- The version, and the way to the developer page: five taps, as the web UI counts them,
              or one once a debug field is set - which the chip shows by filling. It never takes the
              focus, as the web UI's chip does not (tabindex="-1"): a remote has no use for it. -->

@@ -92,7 +92,7 @@ public class VpnHoodClientFactory
 
         return trackerFactories.TryCreateTracker(new TrackerCreateParams {
             ClientId = clientOptions.ClientId,
-            ClientVersion = clientOptions.Version,
+            ClientVersion = clientOptions.TrackerClientVersion,
             UserAgent = clientOptions.TrackerUserAgent,
             IsEnabled = clientOptions.AllowAnonymousTracker
         });

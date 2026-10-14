@@ -10,6 +10,10 @@ public class AppOptionsContext
     public required string AppId { get; init; }
     public required string AppName { get; init; }
 
+    // The app's version, as the head passed it (AppInitParams.AppVersion). The app shows it and compares
+    // its updates with it; the servers get the library's (ClientOptions.Version).
+    public required Version AppVersion { get; init; }
+
     // The folder that holds the settings and the profiles, which travel with a backup.
     public required string StoragePath { get; init; }
 

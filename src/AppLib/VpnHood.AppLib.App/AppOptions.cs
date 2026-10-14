@@ -40,6 +40,7 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // the tray's picture is handed in: the colours are read out of the UI's store (AppBranding, under
     // UiTheme), and the tray draws the head's own icon, from its build.
     public string AppName => context.AppName;
+    public Version AppVersion => context.AppVersion;
 
     // The name without spaces, which the release files, a desktop executable and its service, and
     // the VPN adapter are called by: the build's (AppConstants.PackageTitle).

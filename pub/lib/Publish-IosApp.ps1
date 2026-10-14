@@ -79,10 +79,6 @@ $tfm = "net11.0-ios";
 $rid = "ios-arm64";
 $outputPath = Join-Path $projectDir "bin/Release-ios/publish/";
 
-# iOS build number: App Store Connect requires a monotonically increasing CFBundleVersion. Reuse the
-# patch component of the SemVer (matches the Android VersionCode fallback in Publish-AndroidApp.ps1).
-$buildNumber = if ($versionParam -match '^\d+\.\d+\.(\d+)$') { $Matches[1] } else { ($versionParam -replace '\D','') };
-
 Write-Host;
 Write-Host "*** Creating $module_packageFileName ..." -BackgroundColor Blue -ForegroundColor White;
 
@@ -96,14 +92,14 @@ try {
 		# NOTE (verify on first real CI run): the Network Extension (.appex) needs its OWN App Store
 		# profile. It is a ProjectReference, so if it doesn't pick up $extProvision here, set
 		# CodesignProvision in Extension's csproj (or add a per-project override) — see docs/cicd/deployment.md.
+		# The bundle's two versions follow from Version (VpnHood.AppLib.App.targets): the whole, and its
+		# third number as the build number App Store Connect takes only rising.
 		dotnet publish $projectFile -c Release -f $tfm -r $rid `
 			/verbosity:$msverbosity `
 			/p:SolutionDir=$solutionDir `
 			/p:RuntimeIdentifier=$rid `
 			/p:ArchiveOnBuild=true `
 			/p:Version=$versionParam `
-			/p:ApplicationDisplayVersion=$versionParam `
-			/p:ApplicationVersion=$buildNumber `
 			/p:AutomaticProvisioning=false `
 			/p:CodesignKey="$codesignKey" `
 			/p:CodesignProvision="$appProvision" `

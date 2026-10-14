@@ -36,6 +36,7 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
             AppId = NSBundle.MainBundle.BundleIdentifier ??
                     throw new InvalidOperationException("The app's bundle has no identifier."),
             AppName = AppConstants.AppName,
+            AppVersion = Version.Parse(AppConstants.AppVersion),
             StorageFolderName = StorageFolderName,
             AppGroupId = AppConstants.AppGroupId,
             ProviderBundleId = AppConstants.ProviderBundleId,
@@ -92,7 +93,7 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         // it describes downloadable packages, so naming one would make the UI offer a direct
         // download — the wrong install channel here, and an App Review problem.
         options.UpdaterOptions = new AppUpdaterOptions {
-            UpdaterProvider = new AppStoreAppUpdaterProvider()
+            UpdaterProvider = new AppStoreAppUpdaterProvider(options.AppVersion)
         };
         return options;
     }

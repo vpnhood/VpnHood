@@ -62,6 +62,7 @@ internal static class App
         return LinuxDesktopHost.Run(args, new DesktopInitParams {
             AppId = AppConstants.AppId,
             AppName = AppConstants.AppName,
+            AppVersion = Version.Parse(AppConstants.AppVersion),
             AppOptionsFactory = CreateAppOptions,
             // no profile to name: the profile commands and --profile are not offered
             IsAddAccessKeySupported = ConnectAppOptions.IsAddAccessKeySupported,

@@ -23,6 +23,9 @@ public class ClientOptions
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
 
+    // This client's version, which the servers get and may turn a client away by: the library's,
+    // whatever app runs it. An app's own version tells them nothing - a fork's 1.0.12 is no older a
+    // client than ours (TrackerClientVersion).
     [JsonConverter(typeof(VersionConverter))]
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version ?? new Version();
 
@@ -68,10 +71,14 @@ public class ClientOptions
     public bool UseNullCapture { get; set; }
     public LogServiceOptions LogServiceOptions { get; set; } = new();
 
-    // The app's tracker factories, which the VPN service makes again in its own process, and the user
-    // agent they send: UserAgent, which the server gets, with the device's model too.
+    // The app's tracker factories, which the VPN service makes again in its own process, and what they
+    // send: the user agent, UserAgent (which the server gets) with the device's model too, and the
+    // app's own version, where the server gets the client's (Version).
     public IReadOnlyList<TrackerFactoryInfo> TrackerFactoryInfos { get; set; } = [];
     public string TrackerUserAgent { get; set; } = Environment.OSVersion.ToString();
+
+    [JsonConverter(typeof(VersionConverter))]
+    public Version TrackerClientVersion { get; set; } = typeof(ClientOptions).Assembly.GetName().Version ?? new Version();
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DebugData1 { get; set; }

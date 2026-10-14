@@ -19,6 +19,7 @@ internal static class App
         return LinuxDesktopHost.Run(args, new DesktopInitParams {
             AppId = AppConstants.AppId,
             AppName = AppConstants.AppName,
+            AppVersion = Version.Parse(AppConstants.AppVersion),
             AppOptionsFactory = CreateAppOptions,
             IsAddAccessKeySupported = ClientAppOptions.IsAddAccessKeySupported,
             Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()

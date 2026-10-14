@@ -135,7 +135,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         string installId)
         : base(register: options.IsSingleton)
     {
-        var appVersion = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version();
+        var appVersion = options.AppVersion;
         Resources = new AppResources();
         StorageFolderPath = options.StorageFolderPath ??
                             throw new ArgumentNullException(nameof(options.StorageFolderPath));
@@ -883,7 +883,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // log general info
             VhLogger.Instance.LogInformation("AppVersion: {AppVersion}, AppId: {Features.AppId}",
-                GetType().Assembly.GetName().Version, Features.AppId);
+                Features.Version, Features.AppId);
             VhLogger.Instance.LogInformation("Time: {Time}", DateTime.UtcNow.ToString("u", new CultureInfo("en-US")));
             VhLogger.Instance.LogInformation("OS: {OsInfo}", _device.OsInfo);
             VhLogger.Instance.LogInformation("UserAgent: {UserAgent}", Services.TrackerService.UserAgent);
@@ -997,9 +997,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IncludeApps = splitTunneling.AppMode == SplitAppMode.Include ? [.. splitTunneling.Apps] : null,
                 DnsServers = dnsServers,
                 LogServiceOptions = GetLogOptions(),
-                Version = Features.Version,
                 TrackerFactoryInfos = Services.TrackerService.TrackerFactoryInfos,
                 TrackerUserAgent = Services.TrackerService.UserAgent,
+                TrackerClientVersion = Features.Version,
                 UserAgent = _userAgent,
                 EndPointStrategy = Features.AllowEndPointStrategy
                     ? UserSettings.EndPointStrategy.ToEngine()

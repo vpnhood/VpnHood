@@ -15,6 +15,11 @@ public class AppInitParams
     // its service and its message with it in the processes that never build the options.
     public required string AppName { get; init; }
 
+    // The app's version, Version.Parse(AppConstants.AppVersion): the Version it states beside its name,
+    // not the library's, so a version that is not numbers stops the app at its start. AppOptions
+    // carries it.
+    public required Version AppVersion { get; init; }
+
     // The folder, under the platform's own place for app data, that holds the settings and the
     // profiles; one of the same name under its device-only place holds the sign-in session, the log
     // and the caches (ResolveNoBackupStoragePath). Required where the platform names such a folder

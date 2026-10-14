@@ -17,8 +17,9 @@ namespace VpnHood.AppLib.Stores.AppStore;
 // declines — the update. AppUpdaterService drives the cadence: PromptDelay first gives the OS
 // auto-update a chance, and PostponePeriod suppresses re-prompting after the page opened. The lookup
 // returns no result for TestFlight-only or unreleased apps: "no update". A failure throws, which the
-// service treats like "none".
-public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
+// service treats like "none". appVersion: the installed app's (AppOptions.AppVersion), which the
+// store's is compared with.
+public class AppStoreAppUpdaterProvider(Version appVersion) : IAppUpdaterProvider
 {
     // the lookup result of the last successful check; StartUpdate reuses it for the store page URL
     private AppStoreAppInfo? _storeApp;
@@ -39,27 +40,20 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
 
         _storeApp = storeApp;
 
-        // Compare against the assembly version — the same source AppUpdaterService and the UI use.
-        // Every VpnHood assembly carries the one version from Directory.Build.props, so the
-        // abstractions' version is VpnHoodApp's, and this package needs no reference to the app.
-        // NOT CFBundleShortVersionString: the .NET iOS SDK injects that from ApplicationDisplayVersion,
-        // which only pub/lib/Publish-IosApp.ps1 sets, so every non-CI build reports the SDK default
-        // "1.0" and would see the live store listing as an endless update.
-        var currentVersion = typeof(IAppUpdaterProvider).Assembly.GetName().Version;
-        if (!Version.TryParse(storeApp.Version, out var storeVersion) || currentVersion == null) {
+        if (!Version.TryParse(storeApp.Version, out var storeVersion)) {
             VhLogger.Instance.LogDebug(
-                "App Store update is not available. Could not parse versions. Store: {Store}, Current: {Current}",
-                storeApp.Version, currentVersion);
+                "App Store update is not available. Could not parse the store's version. Store: {Store}",
+                storeApp.Version);
             _state = AppUpdateState.None;
             return _state;
         }
 
         VhLogger.Instance.LogDebug("App Store version: {StoreVersion}, Current version: {CurrentVersion}",
-            storeVersion, currentVersion);
+            storeVersion, appVersion);
 
         // Compare Major.Minor.Build only: the store's marketing version has no revision field, so an
         // unnormalized compare comes out on the undefined revision (-1) rather than the real numbers.
-        _state = Normalize(storeVersion) > Normalize(currentVersion)
+        _state = Normalize(storeVersion) > Normalize(appVersion)
             ? new AppUpdateState { Stage = AppUpdateStage.Available }
             : AppUpdateState.None;
         return _state;

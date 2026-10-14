@@ -63,6 +63,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppInitParams {
             AppId = PackageName ?? throw new InvalidOperationException("The app has no package name."),
             AppName = AppConstants.AppName,
+            AppVersion = Version.Parse(AppConstants.AppVersion),
             StorageFolderName = "VpnHoodConnect", // what every shipped build has used
             AppOptionsFactory = CreateAppOptions
         };

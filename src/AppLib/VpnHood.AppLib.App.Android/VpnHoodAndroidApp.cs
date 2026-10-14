@@ -43,6 +43,7 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
         var context = new AppOptionsContext {
             AppId = initParams.AppId,
             AppName = initParams.AppName,
+            AppVersion = initParams.AppVersion,
             StoragePath = storagePath,
             NoBackupStoragePath = noBackupStoragePath,
             PackagedAssetProvider = new AndroidAssetProvider(Application.Context)

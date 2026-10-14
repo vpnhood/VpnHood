@@ -54,6 +54,8 @@ internal static class Program
         var appOptionsContext = new AppOptionsContext {
             AppId = "com.vpnhood.avalonia.dev",
             AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
+            AppVersion = typeof(VpnHoodApp).Assembly.GetName().Version ??
+                         throw new InvalidOperationException("The library's assembly has no version."),
             StoragePath = storageFolderPath,
             NoBackupStoragePath = storageFolderPath,
             PackagedAssetProvider = platformAssets

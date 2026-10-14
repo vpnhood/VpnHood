@@ -1,34 +1,5 @@
 <Project>
 
-  <!--
-    Android store version code + display version, derived from the shared <Version> (pub/PubVersion.json,
-    mirrored into Directory.Build.props by the bump).
-
-    This MUST live in Directory.Build.targets, not Directory.Build.props: .props is imported at the very
-    top of the project, BEFORE the csproj body sets OutputType/TargetFramework, so a condition on them
-    there never matches and ApplicationVersion silently defaults to 1 (the AndroidManifest.xml value) —
-    every AAB then ships as versionCode 1 and Google Play rejects it as "already used". .targets is
-    imported AFTER the csproj body (and before the SDK targets that consume ApplicationVersion), so by
-    the time this evaluates the inner-build TargetFramework (e.g. net10.0-android36.1) and OutputType=Exe
-    are defined and the condition matches.
-
-    ApplicationVersion  -> android:versionCode (integer): the Build component of the version (8.0.826 -> 826).
-    ApplicationDisplayVersion -> android:versionName (string): the full version (8.0.826).
-  -->
-  <!-- Condition is ONLY on the target framework: a .NET Android APP compiles to OutputType=Library
-       (the "app-ness" is tracked by $(AndroidApplication), not OutputType), so a '$(OutputType)==Exe'
-       check never matches and ApplicationVersion silently defaults to 1. Setting these on an Android
-       *library* is harmless (a library produces no manifest/versionCode). -->
-  <!-- $(Version) is not always a bare X.Y.Z: a NuGet smoke publish stamps X.Y.Z.<run>-prerelease, and
-       System.Version cannot parse a semver suffix. That failure happens during EVALUATION, so every
-       android project errors out before a single target runs — it broke smoke publishing outright.
-       Strip the suffix before parsing; a stable X.Y.Z is unaffected (Split returns it unchanged). -->
-  <PropertyGroup Condition="$(TargetFramework.Contains('-android'))">
-    <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
-    <VersionNumeric>$(Version.Split('-')[0])</VersionNumeric>
-    <ApplicationVersion>$([System.Version]::Parse('$(VersionNumeric)').Build)</ApplicationVersion>
-  </PropertyGroup>
-
   <!-- Native symbol files never ship: the SkiaSharp and HarfBuzzSharp packages the Avalonia UI brings
        put libSkiaSharp.pdb (80 MB) and libHarfBuzzSharp.pdb (20 MB) beside their DLLs, and a publish
        would carry them into every desktop installer. Nothing reads them - a native crash is not

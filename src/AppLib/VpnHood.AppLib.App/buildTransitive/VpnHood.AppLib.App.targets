@@ -1,8 +1,8 @@
 <Project>
 	<!-- The app's identity, built from the two values the app states once (VhAppIdBase, VhAppName; see
 	     VpnHood.AppLib.App.props) after the head is read, so a head names no id and no name. What a
-	     head, or a build's command line, states itself is kept: every value here is set only where
-	     nothing is yet.
+	     head, or a build's command line, states itself is kept: every value here but the version
+	     numbers is set only where nothing is yet.
 
 	     The app's id is the base, the platform and, when the id names one, the channel, with .debug
 	     after it in a Debug build:
@@ -48,6 +48,28 @@
 		<VhAdMobApplicationId Condition="'$(VhAdMobApplicationId)' == ''">ca-app-pub-3940256099942544~3347511713</VhAdMobApplicationId>
 	</PropertyGroup>
 
+	<!-- The app's version: the Version it states beside its identity, which every assembly of the app
+	     carries and a head passes to the app (AppConstants.AppVersion). Android and iOS take two numbers
+	     of it: the whole, as the version people see (versionName,
+	     CFBundleShortVersionString), and its third number, as the one a store orders the builds by
+	     (versionCode, CFBundleVersion: 9.0.856 -> 856). So the third number counts the releases: one
+	     more with each and never reset, since a store takes only a higher one. Unlike the values above,
+	     these are set whatever they hold: Android's SDK has given the code its default, 1, by now. A
+	     build's command line still wins, as it always does. A NuGet smoke publish stamps
+	     X.Y.Z.<run>-prerelease, which System.Version cannot parse whole: the suffix goes first. -->
+	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And ('$(VhAppIsApp)' == 'true' Or '$(VhAppIsExtension)' == 'true') And ('$(VhAppPlatform)' == 'android' Or '$(VhAppPlatform)' == 'ios')">
+		<_VhAppVersionNumbers>$(Version.Split('-')[0])</_VhAppVersionNumbers>
+		<ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
+		<ApplicationVersion>$([System.Version]::Parse('$(_VhAppVersionNumbers)').Build)</ApplicationVersion>
+	</PropertyGroup>
+
+	<!-- Android takes no version code below 1, and its own error names an empty one. -->
+	<Target Name="VhCheckAppVersionCode" BeforeTargets="BeforeBuild"
+	        Condition="'$(VhAppIdBase)' != '' And '$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' == 'android'">
+		<Error Condition="'$(ApplicationVersion)' == '0'"
+		       Text="The app's version code is the third number of its Version, $(Version), and Android takes none below 1: state a Version whose third number is 1 or more, such as 1.0.1." />
+	</Target>
+
 	<!-- The command's name (VhAppCommandName), in the app's own assembly, where the desktop host reads
 	     it for the names its help and hints print: an attribute rather than a constant, so a head
 	     passes the host nothing. -->
@@ -81,8 +103,8 @@
 		<CustomEntitlements Include="com.apple.security.application-groups" Type="StringArray" Value="$(VhAppGroupId)" />
 	</ItemGroup>
 
-	<!-- What the code reads: AppConstants.AppId and AdMobApplicationId, AppName, CompanyName, PackageTitle
-	     and IsDebugMode, and on iOS AppGroupId and ProviderBundleId. The product library - a project of
+	<!-- What the code reads: AppConstants.AppId and AdMobApplicationId, AppName, AppVersion, CompanyName,
+	     PackageTitle and IsDebugMode, and on iOS AppGroupId and ProviderBundleId. The product library - a project of
 	     the app that is neither a head nor the iOS extension - gets the same but the ids, which are each
 	     head's own, so its options builder needs nothing from a head. Constants, because Android's manifest attributes take nothing else. In no
 	     namespace, so every file of the app finds it: the Android publish builds a copy of the head's
@@ -117,6 +139,7 @@
 internal static class AppConstants
 {$(_VhAppIdConstant)
     public const string AppName = @"$(VhAppDisplayName.Replace('"', '""'))";
+    public const string AppVersion = @"$(Version.Replace('"', '""'))";
     public const string CompanyName = @"$(Company.Replace('"', '""'))";
     public const string PackageTitle = @"$(VhAppPackageTitle.Replace('"', '""'))";
     public const bool IsDebugMode = $(_VhAppIsDebugCs);$(_VhAppIosConstants)

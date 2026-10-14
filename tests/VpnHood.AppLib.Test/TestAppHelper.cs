@@ -42,6 +42,9 @@ public class TestAppHelper : TestHelper
         var context = new AppOptionsContext {
             AppId = "com.vpnhood.client.test",
             AppName = "VpnHood! Test",
+            // the library's, which the update tests offer releases around (CheckNewVersionTest)
+            AppVersion = typeof(VpnHoodApp).Assembly.GetName().Version ??
+                         throw new InvalidOperationException("The library's assembly has no version."),
             StoragePath = storageFolderPath,
             NoBackupStoragePath = noBackupStoragePath ?? storageFolderPath,
             PackagedAssetProvider = AssetProvider

@@ -7,9 +7,10 @@
 	       VhAppName     Example VPN       its name, the same in every build; what a build shows is
 	                                       VhAppDisplayName: "Example VPN (DEBUG)" in Debug
 	       Company       Example Inc.      its maker, as the UI and the executable's details name it
+	       Version       1.0.12            its version, whose third number counts its releases
 
-	     and VpnHood.AppLib.App.targets builds the rest - the ids, each platform's name, the iOS App
-	     Group, a constants class - once the head is read. A head names none of them, so a new app is a
+	     and VpnHood.AppLib.App.targets builds the rest - the ids, each platform's name and version
+	     numbers, the iOS App Group, a constants class - once the head is read. A head names none of them, so a new app is a
 	     new base and a new name.
 
 	     VhAppPackageTitle is the name without spaces. The release files begin with it, the update feeds

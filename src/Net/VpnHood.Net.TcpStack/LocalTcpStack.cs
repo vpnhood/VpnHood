@@ -318,11 +318,15 @@ public sealed class LocalTcpStack : ITcpStack
         if (tcpPacket.Acknowledgment) flags |= TcpFlags.Ack;
         if (tcpPacket.Push) flags |= TcpFlags.Psh;
 
-        // Transition from SynReceived to Established only after the ACK proves it
-        // acknowledges our SYN-ACK and continues from the peer SYN.
+        // SynReceived: the ACK must acknowledge our SYN-ACK (see IsValidHandshakeAck); the data path
+        // below takes the segment from there. The right ack beyond the window gets a plain ACK (RFC 9293
+        // 3.10.7.4); a wrong ack, a stale or forged segment, keeps the old tolerance: a SYN-ACK.
         if (conn.State == TcpConnectionState.SynReceived && !tcpPacket.Reset) {
             if (!conn.IsValidHandshakeAck(tcpPacket.SequenceNumber, tcpPacket.AcknowledgmentNumber, flags)) {
-                SendSynAck(conn);
+                if (conn.AcknowledgesOurSyn(tcpPacket.AcknowledgmentNumber))
+                    SendAckOnly(conn);
+                else
+                    SendSynAck(conn);
                 return;
             }
 

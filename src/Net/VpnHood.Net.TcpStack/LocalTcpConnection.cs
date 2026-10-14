@@ -267,16 +267,29 @@ internal sealed class LocalTcpConnection(
         }
     }
 
+    /// <summary>
+    /// The ACK that completes the handshake acknowledges our SYN-ACK; its sequence may sit anywhere up to the
+    /// window's edge (RFC 9293 3.10.7.4; the edge too, where Linux takes a challenge ACK with the whole window in
+    /// flight): after a lost third ACK the peer's first data may be lost too, and the data path dup-acks the gap.
+    /// </summary>
     public bool IsValidHandshakeAck(uint seq, uint ack, TcpFlags flags)
     {
         if (!flags.HasFlag(TcpFlags.Ack))
             return false;
 
         lock (_seqLock) {
+            var seqDiff = (int)(seq - _rcvNxt);
             return State == TcpConnectionState.SynReceived &&
-                   seq == _rcvNxt &&
-                   ack == _sndNxt;
+                   ack == _sndNxt &&
+                   seqDiff >= 0 && seqDiff <= _lastAdvertisedWindow;
         }
+    }
+
+    /// <summary>Whether the ack acknowledges our SYN-ACK: the peer has seen it and is established on its side.</summary>
+    internal bool AcknowledgesOurSyn(uint ack)
+    {
+        lock (_seqLock)
+            return ack == _sndNxt;
     }
 
     public void Dispose()

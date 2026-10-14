@@ -75,6 +75,7 @@ public sealed class LocalTcpStackTest
         var badAckPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: synAckTcp.SequenceNumber);
         tcpStack.ProcessIncoming(badAckPacket);
+        Assert.AreEqual(2, sentPackets.Count(p => p.ExtractTcp().Synchronize), "a wrong ack keeps drawing the SYN-ACK");
 
         var wasAccepted = await Task.WhenAny(acceptTask, Task.Delay(200)) == acceptTask;
         Assert.IsFalse(wasAccepted, "Connection must not be accepted until the SYN-ACK is acknowledged.");
@@ -87,6 +88,116 @@ public sealed class LocalTcpStackTest
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var stream = await acceptTask.WaitAsync(cts.Token);
         await stream.DisposeAsync();
+    }
+
+    /// <summary>
+    /// A lost third ACK, then a lost first data segment: the second segment acknowledges our SYN-ACK with a
+    /// sequence inside the window, so it completes the handshake (RFC 9293 3.10.7.4) and the data path dup-acks the
+    /// gap. Requiring RcvNxt drew a SYN-ACK, and from the established peer a challenge ACK, until the peer's RTO.
+    /// </summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task TcpHandshake_LostFinalAckAndFirstSegment_LaterSegmentEstablishes()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+        uint serverSeq;
+        lock (sync) serverSeq = sent.Single().ExtractTcp().SequenceNumber;
+
+        // the third ACK and the first 100 bytes are lost; the second segment arrives
+        var first = new byte[100];
+        var second = new byte[100];
+        RandomNumberGenerator.Fill(first);
+        RandomNumberGenerator.Fill(second);
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1101, ackNum: serverSeq + 1, payload: second));
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        lock (sync) {
+            Assert.AreEqual(1, sent.Count(p => p.ExtractTcp().Synchronize), "no second SYN-ACK");
+            var dupAck = sent.Last().ExtractTcp();
+            Assert.IsTrue(dupAck is { Acknowledgment: true, Synchronize: false, Payload.Length: 0 }, "a dup ACK for the gap");
+            Assert.AreEqual(1001u, dupAck.AcknowledgmentNumber);
+        }
+
+        // the peer retransmits the first segment, then the second: both are acked and read in order
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: first));
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1101, ackNum: serverSeq + 1, payload: second));
+        var read = new byte[200];
+        await client.Stream.ReadExactlyAsync(read, cts.Token);
+        CollectionAssert.AreEqual(first.Concat(second).ToArray(), read);
+        lock (sync) Assert.AreEqual(1201u, sent.Last().ExtractTcp().AcknowledgmentNumber);
+        await client.DisposeAsync();
+    }
+
+    /// <summary>The established peer's pure ACK with its sequence ahead of RcvNxt completes the handshake too; a
+    /// challenge ACK with the whole window in flight sits at the window's right edge, which Linux takes.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task TcpHandshake_LostFinalAck_PureAckAtTheWindowEdgeEstablishes()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+        TcpPacket synAck;
+        lock (sync) synAck = sent.Single().ExtractTcp();
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001u + synAck.WindowSize, ackNum: synAck.SequenceNumber + 1));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        lock (sync) Assert.AreEqual(1, sent.Count(p => p.ExtractTcp().Synchronize), "no second SYN-ACK");
+        await client.DisposeAsync();
+    }
+
+    /// <summary>A sequence below RcvNxt or past the window's edge does not complete the handshake: the right ack
+    /// says the peer is established, so a plain ACK tells it where we are, no SYN-ACK; the handshake stays open
+    /// for a valid ACK.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task TcpHandshake_AckOutsideTheWindow_DoesNotEstablish()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+        TcpPacket synAck;
+        lock (sync) synAck = sent.Single().ExtractTcp();
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1000, ackNum: synAck.SequenceNumber + 1));
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1002u + synAck.WindowSize, ackNum: synAck.SequenceNumber + 1));
+        Assert.AreEqual(0, tcpStack.Diagnostics.EstablishedConnections, "a sequence outside the window must not complete the handshake");
+        lock (sync) {
+            Assert.AreEqual(1, sent.Count(p => p.ExtractTcp().Synchronize), "no SYN-ACK for a peer that acknowledged ours");
+            Assert.AreEqual(2, sent.Count(p => p.ExtractTcp() is { Synchronize: false, Acknowledgment: true, AcknowledgmentNumber: 1001 }),
+                "a plain ACK tells the peer where we are");
+        }
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: synAck.SequenceNumber + 1));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        await client.DisposeAsync();
     }
 
     /// <summary>
@@ -704,6 +815,12 @@ public sealed class LocalTcpStackTest
         Assert.HasCount(2, lines);
         StringAssert.Contains(lines[1].Message, "4 more since the last line");
     }
+
+    // The handshake tests' stack: no RTO, so the maintenance sweep never retransmits a SYN-ACK into their counts.
+    private static LocalTcpStackOptions NoRtoOptions => new() {
+        RetransmitTimeout = TimeSpan.FromSeconds(30),
+        RetransmitMaxTimeout = TimeSpan.FromSeconds(30)
+    };
 
     // Completes a SYN / SYN-ACK / ACK handshake for the given client port against the server endpoint.
     private static void DoHandshake(LocalTcpStack stack, List<IpPacket> sent, object lockObj,

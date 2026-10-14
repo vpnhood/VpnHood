@@ -67,7 +67,7 @@ public sealed class LocalTcpStackOptionsTest
     [Timeout(5000)]
     public async Task SmallReceiveWindow_ClientToServerData_RoundTrips()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16 * 1024, RetxBufferSize = 8 * 1024 });
+        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16 * 1024, RetransmitBufferSize = 8 * 1024 });
         var sent = new List<IpPacket>();
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
@@ -107,7 +107,7 @@ public sealed class LocalTcpStackOptionsTest
     {
         var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             ReceiveWindowSize = 8 * 1024,
-            RetxBufferSize = 2 * 1024,   // small ring -> forces multiple wraps
+            RetransmitBufferSize = 2 * 1024,   // small ring -> forces multiple wraps
             MaxMss = 512,
             DefaultMss = 512,            // peer SYN advertises none -> server uses this
         });
@@ -170,7 +170,7 @@ public sealed class LocalTcpStackOptionsTest
             "zero window must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16384, PipeResumeWriterThreshold = 16384 }),
             "resume threshold >= window must be rejected");
-        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { RetxBufferSize = 256, MaxMss = 1460 }),
+        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { RetransmitBufferSize = 256, MaxMss = 1460 }),
             "retx buffer smaller than MaxMss must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { IdleTimeout = TimeSpan.FromSeconds(30), IdleCheckInterval = TimeSpan.FromMinutes(1) }),
             "idle timeout <= idle check interval must be rejected");
@@ -206,7 +206,7 @@ public sealed class LocalTcpStackOptionsTest
     {
         var opt = LocalTcpStackOptions.ForCurrentPlatform();
         Assert.AreEqual(LocalTcpStackOptions.Default.ReceiveWindowSize, opt.ReceiveWindowSize);
-        Assert.AreEqual(LocalTcpStackOptions.Default.RetxBufferSize, opt.RetxBufferSize);
+        Assert.AreEqual(LocalTcpStackOptions.Default.RetransmitBufferSize, opt.RetransmitBufferSize);
         Assert.AreEqual(0, opt.MaxConnections, "non-Apple-mobile hosts must not impose a connection cap");
     }
 

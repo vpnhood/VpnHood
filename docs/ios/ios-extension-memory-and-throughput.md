@@ -163,7 +163,7 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 ## Current configuration (working tree)
 
 **iOS TCP-stack profile** — `src/Net/VpnHood.Net.TcpStack/LocalTcpStackOptions.cs` `Ios`:
-- `ReceiveWindowSize=0xFFFF (64 KB)`, `RetxBufferSize=16 KB`. No global receive budget: `MaxConnections` bounds the
+- `ReceiveWindowSize=0xFFFF (64 KB)`, `RetransmitBufferSize=16 KB`. No global receive budget: `MaxConnections` bounds the
   aggregate (40 × 64 KB = 2.5 MB unread at most; about 4.2 MB of TCP buffers with the pipes' 4 KB segments and the
   retransmit rings).
 - **`MaxConnections=40`**, `AcceptQueueCapacity=128`, **`IdleTimeout=20 s`**, **`IdleCheckInterval=5 s`**.

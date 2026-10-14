@@ -48,7 +48,7 @@ public sealed class LocalTcpStackOptions
     /// <para>Must be ≥ <see cref="MaxMss"/> (a single max-size segment has to fit).</para>
     /// Default: 64 KB; the iOS preset: 16 KB.
     /// </summary>
-    public int RetxBufferSize { get; init; } = 64 * 1024;
+    public int RetransmitBufferSize { get; init; } = 64 * 1024;
 
     // ---- Segmentation ----
 
@@ -123,7 +123,7 @@ public sealed class LocalTcpStackOptions
     /// <para><c>0</c> (default) means unbounded and short-circuits the check entirely (zero
     /// overhead on the SYN path).</para>
     /// On iOS this caps the worst-case aggregate buffer memory:
-    /// roughly (<see cref="ReceiveWindowSize"/> + <see cref="RetxBufferSize"/>) × MaxConnections.
+    /// roughly (<see cref="ReceiveWindowSize"/> + <see cref="RetransmitBufferSize"/>) × MaxConnections.
     /// </summary>
     public int MaxConnections { get; init; }
 
@@ -181,7 +181,7 @@ public sealed class LocalTcpStackOptions
         // (throughput ≈ window / RTT); MaxConnections bounds the aggregate: 40 × 64 KB = 2.5 MB unread at
         // most, and a flow holds unread bytes only while its app lags behind.
         ReceiveWindowSize = 0xFFFF,
-        RetxBufferSize = 16 * 1024,
+        RetransmitBufferSize = 16 * 1024,
         // Capped to prevent memory exhaustion under concurrent flow storms. Tuned 2026-07-02: 50 → 40.
         // Native transient spikes scale with concurrent full-rate streams, but capping too low (25)
         // backfires — a speedtest/browser wanting more connections gets SYN-RSTs and retries, churning
@@ -257,9 +257,9 @@ public sealed class LocalTcpStackOptions
             throw new ArgumentException(
                 $"{nameof(PipeResumeWriterThreshold)} ({resume}) must be between 1 and {nameof(ReceiveWindowSize)}-1 ({ReceiveWindowSize - 1}).");
 
-        if (RetxBufferSize < MaxMss)
+        if (RetransmitBufferSize < MaxMss)
             throw new ArgumentException(
-                $"{nameof(RetxBufferSize)} ({RetxBufferSize}) must be at least {nameof(MaxMss)} ({MaxMss}).");
+                $"{nameof(RetransmitBufferSize)} ({RetransmitBufferSize}) must be at least {nameof(MaxMss)} ({MaxMss}).");
 
         if (MinMss < 1 || MinMss > DefaultMss || DefaultMss > MaxMss)
             throw new ArgumentException(

@@ -312,7 +312,7 @@ public sealed class LocalTcpStackTest
         var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             DefaultMss = 512,
             MaxMss = 512,
-            RetxBufferSize = 1024,
+            RetransmitBufferSize = 1024,
             DelayedAckTimeout = TimeSpan.FromMilliseconds(500)
         });
         var sentPackets = new List<IpPacket>();

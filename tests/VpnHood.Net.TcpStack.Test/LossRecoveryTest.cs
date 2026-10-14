@@ -234,7 +234,7 @@ public sealed class LossRecoveryTest
         using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             MaxMss = 536,
             DefaultMss = 536,
-            RetxBufferSize = retxSize,
+            RetransmitBufferSize = retxSize,
             ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50),
             RetransmitTimeout = TimeSpan.FromSeconds(30), // keep the RTO out of this test
             RetransmitMaxTimeout = TimeSpan.FromSeconds(30)
@@ -333,7 +333,7 @@ public sealed class LossRecoveryTest
         using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             MaxMss = 536,
             DefaultMss = 536,
-            RetxBufferSize = retxSize,
+            RetransmitBufferSize = retxSize,
             ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50),
             RetransmitTimeout = TimeSpan.FromMilliseconds(150),
             RetransmitMaxTimeout = TimeSpan.FromSeconds(1)
@@ -414,7 +414,7 @@ public sealed class LossRecoveryTest
         using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             MaxMss = 536,
             DefaultMss = 536,
-            RetxBufferSize = 1072, // two segments
+            RetransmitBufferSize = 1072, // two segments
             ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50),
             RetransmitTimeout = TimeSpan.FromMilliseconds(300),
             RetransmitMaxTimeout = TimeSpan.FromMilliseconds(600)
@@ -530,7 +530,7 @@ public sealed class LossRecoveryTest
         using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             MaxMss = 536,
             DefaultMss = 536,
-            RetxBufferSize = 1072
+            RetransmitBufferSize = 1072
         });
         var sent = new List<IpPacket>();
         object sync = new();
@@ -725,7 +725,7 @@ public sealed class LossRecoveryTest
         var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             DefaultMss = 512,
             MaxMss = 512,
-            RetxBufferSize = 1024,
+            RetransmitBufferSize = 1024,
             DelayedAckTimeout = TimeSpan.FromMilliseconds(200)
         });
         var sent = new List<IpPacket>();

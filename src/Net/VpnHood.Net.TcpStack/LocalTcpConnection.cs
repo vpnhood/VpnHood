@@ -97,9 +97,9 @@ internal sealed class LocalTcpConnection(
     // On loopback we don't normally need retransmission, but TUN/kernel can drop
     // packets under heavy load (no real "loss" but the effect is identical).
     // RFC 5681 fast retransmit: 3 duplicate ACKs trigger retransmit of sndUna segment.
-    // PERF: capacity comes from options (RetxBufferSize, default 64 KB). Cached so the ring math
+    // PERF: capacity comes from options (RetransmitBufferSize, default 64 KB). Cached so the ring math
     // (% _retxCapacity) is a field read, identical cost to the former const. Bounds in-flight bytes.
-    private readonly int _retxCapacity = options.RetxBufferSize;
+    private readonly int _retxCapacity = options.RetransmitBufferSize;
     // Lazily allocated on the first send (AppendToRetxBufferLocked) so receive-only / idle flows never
     // pay the per-connection retx allocation — meaningful at MaxConnections under the iOS memory budget.
     // Every direct read of this array is guarded by _retxBufferLen > 0, which implies it is non-null.

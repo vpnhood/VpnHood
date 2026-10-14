@@ -86,6 +86,9 @@ adapter.SendPacketQueued()
 - **No congestion control.** A local link has no congestion to control; on a lossy network path the
   stack would not back off.
 - **No window scaling.** The receive window is at most 64 KB per connection.
+- **No out-of-order reassembly.** A segment ahead of the next expected byte is dropped and answered with a
+  duplicate ACK; the peer retransmits it. No SACK.
+- **No TIME_WAIT.** A closed connection's 4-tuple is free at once; a SYN on a live tuple draws a challenge ACK.
 - **A simplified state machine.** It covers what reliable local connections need, not every corner
   of RFC 9293.
 

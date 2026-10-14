@@ -4,10 +4,9 @@ using VpnHood.Net.Packets;
 namespace VpnHood.Net.TcpStack.Abstractions;
 
 /// <summary>
-/// Abstraction over a TCP stack (e.g. LocalTcpStack or LwipTcpStack).
-/// Implementations receive raw IP packets
-/// outbound IP packets via <see cref="OnPacketSend"/>. Accepted TCP connections are
-/// exposed as <see cref="ITcpClient"/> objects through an <see cref="ITcpListener"/>.
+/// A TCP stack fed raw IP packets through <see cref="ProcessIncoming"/>; it hands its outbound IP packets to
+/// <see cref="OnPacketSend"/>. Accepted TCP connections are exposed as <see cref="ITcpClient"/> objects through
+/// an <see cref="ITcpListener"/>.
 /// </summary>
 public interface ITcpStack : IDisposable
 {

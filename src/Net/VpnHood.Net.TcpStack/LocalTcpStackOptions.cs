@@ -9,13 +9,10 @@ namespace VpnHood.Net.TcpStack;
 /// </summary>
 /// <remarks>
 /// The class is immutable (init-only) and validated once via <see cref="Validated"/> when a
-/// stack is constructed. The defaults reproduce the historical hardcoded constants exactly, so
-/// a default-constructed instance is byte-for-byte identical to the pre-options behavior.
-/// IMPORTANT: keep the defaults equal to the historical constants — Android throughput was
-/// tuned against them and must not regress.
-/// (Exception: the loss-recovery options — <see cref="RetransmitTimeout"/>,
-/// <see cref="RetransmitMaxTimeout"/>, <see cref="DelayedAckTimeout"/> — are additive; the
-/// historical code had no retransmission timer at all, so tail loss stalled until the idle timeout.)
+/// stack is constructed. The buffer and window defaults are the full-size values Android throughput was
+/// tuned against: change them only with a throughput measurement. The timing defaults
+/// (<see cref="RetransmitTimeout"/>, <see cref="RetransmitMaxTimeout"/>, <see cref="DelayedAckTimeout"/>)
+/// follow RFC 6298 and the peers' minimum RTO.
 /// </remarks>
 public sealed class LocalTcpStackOptions
 {
@@ -34,8 +31,7 @@ public sealed class LocalTcpStackOptions
     /// <summary>
     /// Resume threshold (bytes) at which the reassembly pipe writer un-pauses. Must be in the
     /// range 1..<see cref="ReceiveWindowSize"/>-1.
-    /// <para><c>null</c> (default) means <see cref="ReceiveWindowSize"/> / 2, matching the
-    /// historical behavior. Most callers should leave this null.</para>
+    /// <para><c>null</c> (default) means <see cref="ReceiveWindowSize"/> / 2. Most callers should leave this null.</para>
     /// </summary>
     public int? PipeResumeWriterThreshold { get; init; }
 
@@ -132,10 +128,10 @@ public sealed class LocalTcpStackOptions
     /// (no send/receive activity) before it may be force-evicted to admit a NEW connection. The most
     /// idle ("most unused") eligible connection is closed immediately, which propagates EOF to its
     /// consumer (e.g. the proxy's QUIC stream or TCP channel) so the whole upstream flow tears down.
-    /// If no connection has been idle this long, the new SYN is rejected with an RST — the historical
-    /// behavior. Actively-transferring flows (idle ≈ 0) are therefore never evicted.
-    /// <para><see cref="TimeSpan.MaxValue"/> (default) DISABLES eviction entirely → identical to the
-    /// historical "reject when full" behavior. Only consulted when <see cref="MaxConnections"/> &gt; 0,
+    /// If no connection has been idle this long, the new SYN is rejected with an RST. Actively-transferring
+    /// flows (idle ≈ 0) are therefore never evicted.
+    /// <para><see cref="TimeSpan.MaxValue"/> (default) disables eviction: a full stack rejects the new SYN with
+    /// an RST. Only consulted when <see cref="MaxConnections"/> &gt; 0,
     /// so desktop/Android (unbounded by default) are unaffected.</para>
     /// </summary>
     public TimeSpan EvictionMinIdle { get; init; } = TimeSpan.MaxValue;
@@ -143,7 +139,7 @@ public sealed class LocalTcpStackOptions
     /// <summary>
     /// Capacity of a listener's pending-accept queue. When full, additional accepted connections
     /// are rejected (and disposed) rather than buffered.
-    /// <para><c>0</c> or less (default) means an unbounded queue, matching historical behavior.</para>
+    /// <para><c>0</c> or less (default) means an unbounded queue.</para>
     /// </summary>
     public int AcceptQueueCapacity { get; init; }
 
@@ -164,8 +160,7 @@ public sealed class LocalTcpStackOptions
     // ---- Presets ----
 
     /// <summary>
-    /// Full-size defaults equal to the historical hardcoded constants. Use on desktop/Android,
-    /// where throughput matters and memory is plentiful.
+    /// Full-size defaults for desktop and Android, where throughput matters and memory is plentiful.
     /// </summary>
     public static LocalTcpStackOptions Default => new();
 

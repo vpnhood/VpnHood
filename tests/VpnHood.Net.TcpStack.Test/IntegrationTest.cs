@@ -17,7 +17,7 @@ public sealed class TcpStackIntegrationTest
 {
     private static readonly IPAddress TestServerIp = IPAddress.Parse("11.0.0.1");
     private const int TestServerPort = 8080;
-    private const int TestDataSize = 20 * 1024 * 1024;  // 200 MB
+    private const int TestDataSize = 20 * 1024 * 1024;  // 20 MB
 
     /// <summary>
     /// Diagnostic test with minimal data to understand WinDivert integration issues
@@ -217,7 +217,7 @@ public sealed class TcpStackIntegrationTest
     }
 
     [TestMethod]
-    [Timeout(180000)] // 3 minutes for 200 MB
+    [Timeout(180000)] // 3 minutes for 20 MB
     public async Task TestTcpStackWithWinDivertAdapter_Echo_ShouldSucceed()
     {
         // Arrange

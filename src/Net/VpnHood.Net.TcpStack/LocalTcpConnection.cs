@@ -26,16 +26,16 @@ internal sealed class LocalTcpConnection(
     : IDisposable
 {
     // All memory/timeout sizing comes from the stack's validated options (see LocalTcpStackOptions).
-    // The values used on the data path below are cached into readonly fields once, here, so the
-    // hot path (send/recv/ACK) costs exactly what the old consts did — a field read, no recompute.
+    // The values used on the data path below are cached into readonly fields once, here: the hot path
+    // (send/recv/ACK) pays a field read, no recompute.
 
     private readonly TimeSpan _idleTimeout = options.IdleTimeout;
 
-    // Window-update ACK thresholds, scaled to the configured window. The old code hardcoded 16384/4096,
-    // which never fired for a small ReceiveWindowSize. _windowUpdateThreshold: re-advertise once the window
+    // Window-update ACK thresholds, scaled to the configured window so they fire for a small ReceiveWindowSize
+    // too. _windowUpdateThreshold: re-advertise once the window
     // has reopened by at least this much (1/4 window, but never below one MSS). _windowReopenFloor: also
-    // re-advertise once a previously-closed window has reopened to at least this. On the default/iOS 64 KB
-    // window these resolve to ~16383 and 4096, preserving the historical behavior.
+    // re-advertise once a closed window has reopened to at least this. On the 64 KB window these resolve to
+    // 16383 and 4096.
     private readonly int _windowUpdateThreshold = Math.Max(ClampMss(peerMss, options), options.ReceiveWindowSize / 4);
     private readonly int _windowReopenFloor = Math.Min(4096, options.ReceiveWindowSize);
 
@@ -98,8 +98,8 @@ internal sealed class LocalTcpConnection(
     // On loopback we don't normally need retransmission, but TUN/kernel can drop
     // packets under heavy load (no real "loss" but the effect is identical).
     // RFC 5681 fast retransmit: 3 duplicate ACKs trigger retransmit of sndUna segment.
-    // PERF: capacity comes from options (RetransmitBufferSize, default 64 KB). Cached so the ring math
-    // (% _retxCapacity) is a field read, identical cost to the former const. Bounds in-flight bytes.
+    // PERF: capacity comes from options (RetransmitBufferSize, default 64 KB), cached so the ring math
+    // (% _retxCapacity) is a field read. Bounds in-flight bytes.
     private readonly int _retxCapacity = options.RetransmitBufferSize;
     // Lazily allocated on the first send (AppendToRetxBufferLocked) so receive-only / idle flows never
     // pay the per-connection retx allocation — meaningful at MaxConnections under the iOS memory budget.
@@ -656,8 +656,7 @@ internal sealed class LocalTcpConnection(
 
                 // FIN consumes _rcvNxt only once every payload byte before it has been consumed. Checking
                 // the FIN's own sequence position (seq + payload length) instead of "seqDiff == 0" also
-                // processes a FIN that arrives inside a partially-overlapping retransmitted segment —
-                // previously such a FIN was silently ignored and the close waited for a pure-FIN retransmit.
+                // processes a FIN that arrives inside a partially-overlapping retransmitted segment.
                 if (flags.HasFlag(TcpFlags.Fin) && !_finReceived && seq + (uint)payload.Length == _rcvNxt) {
                     _rcvNxt += 1;
                     _finReceived = true;
@@ -1063,8 +1062,8 @@ internal sealed class LocalTcpConnection(
         catch {
             // Sequence state is already advanced and the consumed byte is stored in the retx ring, so
             // a failed send equals a dropped packet: the RTO sweep retransmits it. Returning 1 (not 0)
-            // keeps the caller's offset in sync with _sndNxt — returning 0 after advancing _sndNxt
-            // used to duplicate the byte in the stream.
+            // keeps the caller's offset in sync with _sndNxt; 0 after advancing _sndNxt would duplicate the
+            // byte in the stream.
             probe?.Dispose();
         }
         return 1;

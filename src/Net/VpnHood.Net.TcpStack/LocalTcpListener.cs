@@ -28,8 +28,8 @@ public sealed class LocalTcpListener : ITcpListener
 
     /// <param name="localEndPoint">The local endpoint this listener is bound to. Null = wildcard listener (any IPv4/IPv6).</param>
     /// <param name="acceptQueueCapacity">
-    /// Maximum number of accepted-but-not-yet-accepted clients to buffer. 0 or less = unbounded
-    /// (historical behavior). When bounded and full, <see cref="TryEnqueueAccept"/> returns false
+    /// Maximum number of established-but-not-yet-accepted clients to buffer. 0 or less = unbounded.
+    /// When bounded and full, <see cref="TryEnqueueAccept"/> returns false
     /// (FullMode = Wait makes TryWrite fail rather than block), so the caller disposes the client.
     /// </param>
     /// <param name="stack">The local TCP stack this listener is associated with.</param>

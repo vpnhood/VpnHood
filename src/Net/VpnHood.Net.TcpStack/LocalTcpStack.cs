@@ -68,8 +68,8 @@ public sealed class LocalTcpStack : ITcpStack
         // stack causes NO periodic wake-ups (battery matters on mobile).
         _maintenanceTimer = new Timer(_ => SweepMaintenance(), null,
             Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-        // Idle sweep: one timer at IdleCheckInterval over every connection (LocalTcpConnection.PollIdle), where each
-        // connection ran a task with a timer of its own. Parked while no connection exists, like the maintenance sweep.
+        // Idle sweep: one timer at IdleCheckInterval over every connection (LocalTcpConnection.PollIdle), parked
+        // while no connection exists, like the maintenance sweep.
         _idleTimer = new Timer(_ => SweepIdle(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
@@ -216,8 +216,7 @@ public sealed class LocalTcpStack : ITcpStack
                 // SYN on an already-established/closing connection (RFC 9293/5961): the peer most likely
                 // abandoned the old connection and reused the 4-tuple. Send a challenge ACK; if the old
                 // connection is truly dead on the peer's side it replies with RST, which closes our stale
-                // entry and lets the peer's SYN-retransmit open a fresh one. Previously this SYN was
-                // silently dropped, black-holing the new connection until the idle timeout.
+                // entry and lets the peer's SYN-retransmit open a fresh one.
                 SendAckOnly(existingConn);
             return;
         }
@@ -238,7 +237,7 @@ public sealed class LocalTcpStack : ITcpStack
         // constrained platforms (e.g. iOS). 0 = unbounded (default) and short-circuits with zero
         // overhead, so the Android/desktop SYN path is unchanged. When full, try to evict the most
         // idle ("most unused") connection to make room (EvictionMinIdle); if none qualifies, fall
-        // back to rejecting the new SYN with an RST — the historical behavior.
+        // back to rejecting the new SYN with an RST.
         if (_options.MaxConnections > 0 && Diagnostics.ConnectionCount >= _options.MaxConnections &&
             !TryEvictForAdmission()) {
             SendRst(ipEndPointPair.Destination, ipEndPointPair.Source, tcpPacket);
@@ -511,7 +510,7 @@ public sealed class LocalTcpStack : ITcpStack
     private bool TryEvictForAdmission()
     {
         if (_options.EvictionMinIdle == TimeSpan.MaxValue)
-            return false; // eviction disabled → caller falls back to RST (historical behavior)
+            return false; // eviction disabled: the caller rejects with a RST
 
         var victim = FindMostIdleEvictable(_options.EvictionMinIdle);
         if (victim == null)

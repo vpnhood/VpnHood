@@ -25,6 +25,8 @@ public class StreamConnectionDecorator(IStreamConnection streamConnection, Strea
         set => InnerStreamConnection.RequireHttpResponse = value;
     }
 
+    public virtual void PreventReuse() => InnerStreamConnection.PreventReuse();
+
     public virtual void Dispose()
     {
         if (Disposed) return;

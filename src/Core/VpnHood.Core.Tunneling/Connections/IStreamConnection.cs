@@ -12,4 +12,8 @@ public interface IStreamConnection : IDisposable, IAsyncDisposable
     IPEndPoint LocalEndPoint { get; }
     IPEndPoint RemoteEndPoint { get; }
     bool RequireHttpResponse { get; set; }
+
+    // its disposal then closes the connection rather than keeping it for another request; a decorator passes it on,
+    // so it reaches the reuse layer however the connection is wrapped
+    void PreventReuse();
 }

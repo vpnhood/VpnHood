@@ -28,12 +28,13 @@ public class ReusableStreamConnection : StreamConnectionDecorator
 
     private bool CanReuse => _allowReuse && Stream is ChunkStream { CanReuse: true };
 
-    public void PreventReuse()
+    public override void PreventReuse()
     {
         lock (_reuseLock) {
             _allowReuse = false;
             if (Stream is ChunkStream chunkStream)
                 chunkStream.PreventReuse();
+            base.PreventReuse();
         }
     }
 

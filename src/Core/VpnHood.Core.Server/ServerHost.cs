@@ -581,8 +581,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
 
         // Dispose client stream
-        if (streamConnection is ReusableStreamConnection reusableConnection)
-            reusableConnection.PreventReuse();
         await streamConnection.DisposeAsync(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken);
 
         // must be last

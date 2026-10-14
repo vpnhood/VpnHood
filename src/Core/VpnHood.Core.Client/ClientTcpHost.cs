@@ -120,6 +120,11 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         public IPEndPoint RemoteEndPoint { get; } = tcpClient.RemoteEndPoint;
         public bool RequireHttpResponse { get; set; }
 
+        // an app's own connection is never kept for another request
+        public void PreventReuse()
+        {
+        }
+
         public void Dispose()
         {
             if (_disposed) return;

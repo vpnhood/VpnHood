@@ -386,6 +386,9 @@ public class Session : IDisposable
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
             "Creating a TcpPacketChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
+        // the channel's connection ends with it, as the client, which marks it so too, never sends another request
+        // on it: the channel's disposal closes the socket rather than waiting for one
+        streamConnection.PreventReuse();
         var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
             BufferSize = ServerTransportDefaults.StreamPacketBufferSize,
             RequestTime = request.RequestTime,

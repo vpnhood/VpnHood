@@ -177,6 +177,7 @@ public class ProxyManagerTest
         public IPEndPoint LocalEndPoint { get; } = new(IPAddress.Loopback, 1);
         public IPEndPoint RemoteEndPoint { get; } = new(IPAddress.Loopback, 2);
         public bool RequireHttpResponse { get; set; }
+        public void PreventReuse() { }
         public void Dispose() => stream.Dispose();
         public ValueTask DisposeAsync() => stream.DisposeAsync();
     }

@@ -9,6 +9,7 @@ using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
+using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.DatagramMessaging;
 using VpnHood.Core.Tunneling.WebSockets;
 using VpnHood.Test.Packets;
@@ -337,6 +338,45 @@ public class TunnelTest : TestBase
         // read data from stream
         await cts.CancelAsync();
         tcpListener.Stop();
+    }
+
+    // connects the client over loopback and returns the server's end
+    private async Task<TcpStreamConnection> Accept(TcpClient client)
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        try {
+            var acceptTask = listener.AcceptTcpClientAsync(TestCt).AsTask();
+            await client.ConnectAsync((IPEndPoint)listener.LocalEndpoint, TestCt);
+            return new TcpStreamConnection(await acceptTask, connectionName: "test", isServer: true);
+        }
+        finally {
+            listener.Stop();
+        }
+    }
+
+    [TestMethod]
+    public async Task Reuse_prevented_through_a_wrapper_closes_the_connection_at_its_disposal()
+    {
+        using var client = new TcpClient();
+        var tcpConnection = await Accept(client);
+
+        // wrapped as the server wraps a WebSocket connection, under one more decorator, as the server's own
+        var webSocketStream = new WebSocketStream(tcpConnection.Stream, tcpConnection.ConnectionId, useBuffer: false,
+            isServer: true);
+        var reusableConnection = new ReusableStreamConnection(
+            new StreamConnectionDecorator(tcpConnection, webSocketStream), reused => reused.Dispose());
+        var connection = new StreamConnectionDecorator(reusableConnection);
+
+        connection.PreventReuse();
+        connection.Dispose();
+
+        // the socket closes at once: the client, which sends nothing more, reads to its end, where a reusable
+        // connection would first wait for the client to end the stream
+        var clientStream = client.GetStream();
+        var buffer = new byte[1024];
+        while (await clientStream.ReadAsync(buffer, TestCt).AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestCt) > 0) {
+        }
     }
 
     [TestMethod]

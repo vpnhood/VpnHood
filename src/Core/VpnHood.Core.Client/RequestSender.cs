@@ -176,7 +176,7 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
                 connection.ConnectionId, requestId);
 
             // dispose the connection
-            (connection as ReusableStreamConnection)?.PreventReuse();
+            connection.PreventReuse();
             connection.Dispose();
             throw;
         }

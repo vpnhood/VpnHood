@@ -42,8 +42,8 @@ public static class ConnectionExtensions
 
             // the connection must never be left for the GC to collect: a finalized socket is closed
             // abortively, and the reset discards the response the client has not read yet.
-            // reuse stays off here: no reply path has ever disposed its connection, so server-side reuse of
-            // a request connection has never actually run; turning it on is a separate decision
+            // reuse stays off here, by decision: a reply ends its connection, an Ok one included, so a client that
+            // pools one after a reply opens a new one for its next request; keeping it is a separate decision
             streamConnection.PreventReuse();
             await streamConnection.DisposeAsync().Vhc();
         }

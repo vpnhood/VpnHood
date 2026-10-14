@@ -22,6 +22,11 @@ public sealed class QuicStreamConnection : IStreamConnection
 
     public bool RequireHttpResponse { get; set; }
 
+    // reuse lives in the decorators above
+    public void PreventReuse()
+    {
+    }
+
     public QuicStreamConnection(Stream stream, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
         string connectionName, bool isServer, string? connectionId = null)
     {

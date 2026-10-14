@@ -10,11 +10,5 @@ public static class ConnectionExtensions
         {
             return new IPEndPointPair(streamConnection.LocalEndPoint, streamConnection.RemoteEndPoint);
         }
-
-        public void PreventReuse()
-        {
-            if (streamConnection is ReusableStreamConnection reusableConnection)
-                reusableConnection.PreventReuse();
-        }
     }
 }

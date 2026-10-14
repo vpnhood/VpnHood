@@ -44,6 +44,11 @@ public sealed class TcpStreamConnection : IStreamConnection
     public IPEndPoint RemoteEndPoint => _tcpClient.GetRemoteEndPoint();
     public bool RequireHttpResponse { get; set; }
 
+    // reuse lives in the decorators above
+    public void PreventReuse()
+    {
+    }
+
     public string ConnectionId {
         get;
         set {

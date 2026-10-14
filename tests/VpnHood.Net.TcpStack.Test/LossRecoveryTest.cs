@@ -141,6 +141,87 @@ public sealed class LossRecoveryTest
     }
 
     /// <summary>
+    /// A SYN with no final ACK held its connection - its pipe, idle task, stream and client - until the idle
+    /// timeout (15 min on desktop and Android, where there is no connection cap), so a local SYN flood was unbounded. A kernel
+    /// answers a retransmitted SYN-ACK at once, so once the backoff has reached its cap the silent peer is given
+    /// up with a RST, and a later packet on the tuple draws a RST as on any unknown connection.
+    /// </summary>
+    [TestMethod]
+    [Timeout(15000)]
+    public async Task HalfOpen_SilentPeers_AreResetOnceTheSynAckBackoffReachesItsCap()
+    {
+        const int synCount = 100;
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitTimeout = TimeSpan.FromMilliseconds(100),
+            RetransmitMaxTimeout = TimeSpan.FromMilliseconds(800) // 100, 200, 400, 800: four SYN-ACKs, the abort at 1.5 s
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+
+        for (var i = 0; i < synCount; i++)
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + i, ServerIp, ServerPort, syn: true, seq: 1000));
+        Assert.AreEqual(synCount, tcpStack.Diagnostics.ConnectionCount);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await WaitForCondition(() => tcpStack.Diagnostics.ConnectionCount == 0, cts.Token, 6000);
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "every half-open connection must be given up");
+
+        lock (sync) {
+            foreach (var port in Enumerable.Range(ClientPort, synCount)) {
+                var packets = sent.Where(p => p.ExtractTcp().DestinationPort == port).Select(p => p.ExtractTcp()).ToArray();
+                Assert.AreEqual(4, packets.Count(t => t is { Synchronize: true, Acknowledgment: true }), $"port {port}: SYN-ACKs");
+                Assert.AreEqual(1, packets.Count(t => t.Reset), $"port {port}: one RST");
+                var rst = packets[^1];
+                Assert.IsTrue(rst.Reset, $"port {port}: the RST is the last packet");
+                Assert.IsTrue(rst.Acknowledgment, $"port {port}: the RST carries the ACK a SYN-SENT peer needs");
+                Assert.AreEqual(1001u, rst.AcknowledgmentNumber, $"port {port}: ack = the peer's ISN + 1");
+                Assert.AreEqual(packets[0].SequenceNumber + 1, rst.SequenceNumber, $"port {port}: seq = our ISN + 1, the peer's RCV.NXT");
+            }
+            sent.Clear();
+        }
+
+        // the tuple is forgotten: a late ACK meets no connection and draws a RST
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, ack: true, seq: 1001, ackNum: 1));
+        lock (sync)
+            Assert.IsTrue(sent.Single().ExtractTcp().Reset);
+    }
+
+    /// <summary>The bound is for a silent peer only: a final ACK that arrives in the last interval, after the final
+    /// SYN-ACK and before the abort, establishes the connection.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task HalfOpen_LateFinalAckBeforeTheBound_Establishes()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitTimeout = TimeSpan.FromMilliseconds(100),
+            RetransmitMaxTimeout = TimeSpan.FromMilliseconds(1600) // the fifth SYN-ACK, at 1.5 s, is the last; the abort at 3.1 s
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+
+        // the ACK lands after the final SYN-ACK: the last interval is granted in full
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => {
+            lock (sync) return sent.Count(p => p.ExtractTcp() is { Synchronize: true, Acknowledgment: true }) >= 5;
+        }, cts.Token, 4000);
+
+        uint serverSeq;
+        lock (sync) serverSeq = sent[0].ExtractTcp().SequenceNumber;
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, ack: true, seq: 1001, ackNum: serverSeq + 1));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount);
+        lock (sync)
+            Assert.IsFalse(sent.Any(p => p.ExtractTcp().Reset), "no RST before the bound");
+        await client.DisposeAsync();
+    }
+
+    /// <summary>
     /// A full retransmission ring is the RTO's business, not the zero-window probe's: while nothing is
     /// acked the writer waits - no probe consumes a byte the ring cannot store (the 2026-07 corruption), no
     /// segment is retransmitted beside the RTO - and the stream survives intact once the peer resumes.

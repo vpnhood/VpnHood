@@ -120,7 +120,9 @@ public sealed class LocalTcpStackOptions
     /// </summary>
     public TimeSpan RetransmitTimeout { get; init; } = TimeSpan.FromMilliseconds(500);
 
-    /// <summary>Upper bound for the exponentially backed-off RTO. Default: 4 seconds.</summary>
+    /// <summary>Upper bound for the exponentially backed-off RTO. Once a handshake's SYN-ACK backoff has reached it,
+    /// the next expiry gives the connection up with a RST instead of another SYN-ACK; equal to
+    /// <see cref="RetransmitTimeout"/>, it leaves a handshake no retransmission at all. Default: 4 seconds.</summary>
     public TimeSpan RetransmitMaxTimeout { get; init; } = TimeSpan.FromSeconds(4);
 
     /// <summary>
@@ -289,9 +291,10 @@ public sealed class LocalTcpStackOptions
         if (IdleCheckInterval <= TimeSpan.Zero || ZeroWindowProbeInterval <= TimeSpan.Zero)
             throw new ArgumentException("IdleCheckInterval and ZeroWindowProbeInterval must be positive.");
 
-        if (RetransmitTimeout <= TimeSpan.Zero || RetransmitMaxTimeout < RetransmitTimeout)
+        // the RTO is kept in whole milliseconds: under 1 ms it would be 0, never back off and never reach its cap
+        if (RetransmitTimeout < TimeSpan.FromMilliseconds(1) || RetransmitMaxTimeout < RetransmitTimeout)
             throw new ArgumentException(
-                $"{nameof(RetransmitTimeout)} must be positive and {nameof(RetransmitMaxTimeout)} must be ≥ {nameof(RetransmitTimeout)}; " +
+                $"{nameof(RetransmitTimeout)} must be at least 1 ms and {nameof(RetransmitMaxTimeout)} must be ≥ {nameof(RetransmitTimeout)}; " +
                 $"was {RetransmitTimeout}/{RetransmitMaxTimeout}.");
 
         if (DelayedAckTimeout <= TimeSpan.Zero || DelayedAckTimeout > TimeSpan.FromMilliseconds(500))

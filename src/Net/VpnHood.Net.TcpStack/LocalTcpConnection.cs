@@ -863,7 +863,8 @@ internal sealed class LocalTcpConnection(
     /// Called by the stack's maintenance sweep (only while this connection holds maintenance interest).
     /// Provides the timer-driven behaviors a minimal TCP needs beyond fast retransmit:
     /// (a) SYN-ACK retransmission while the handshake is incomplete — a lost final ACK otherwise
-    ///     strands server-speaks-first connections in SynReceived until the idle timeout;
+    ///     strands server-speaks-first connections in SynReceived until the idle timeout; given up,
+    ///     with a RST, once the backoff has reached its cap and the peer is still silent;
     /// (b) a coarse RTO for unacked data / FIN — the ONLY recovery for tail loss, where no later
     ///     segment ever arrives to generate the 3 duplicate ACKs fast retransmit needs;
     /// (c) flushing a thinned (delayed) ACK so an odd trailing full-size segment is acknowledged
@@ -876,6 +877,7 @@ internal sealed class LocalTcpConnection(
         if (stack == null) return;
 
         var resendSynAck = false;
+        var abortHandshake = false;
         var retxData = false;
         var flushDelayedAck = false;
         IpPacket? finRetx = null;
@@ -894,8 +896,15 @@ internal sealed class LocalTcpConnection(
             var rtoElapsedMs = Stopwatch.GetElapsedTime(_rtoStartTicks).TotalMilliseconds;
             if (rtoElapsedMs >= _rtoCurrentMs) {
                 if (State == TcpConnectionState.SynReceived) {
-                    resendSynAck = true;
-                    BackoffRtoLocked();
+                    // A kernel answers a retransmitted SYN-ACK at once, with its ACK or a RST, so a peer still silent
+                    // when the backoff has reached its cap is gone or hostile: the handshake is given up, which bounds
+                    // what a SYN with no ACK can hold (a SYN flood from a local raw socket, a stuck handshake).
+                    if (_rtoCurrentMs >= _rtoMaxMs)
+                        abortHandshake = true;
+                    else {
+                        resendSynAck = true;
+                        BackoffRtoLocked();
+                    }
                 }
                 else if (_sndNxt != _sndUna) {
                     if (_retxBufferLen > 0) {
@@ -914,6 +923,11 @@ internal sealed class LocalTcpConnection(
             }
 
             UpdateMaintenanceInterestLocked();
+        }
+
+        if (abortHandshake) {
+            Abort();
+            return;
         }
 
         if (flushDelayedAck)

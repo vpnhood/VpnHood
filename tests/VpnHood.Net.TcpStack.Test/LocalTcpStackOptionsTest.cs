@@ -178,6 +178,8 @@ public sealed class LocalTcpStackOptionsTest
             "idle timeout <= idle check interval must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { MaxConnections = -1 }),
             "negative MaxConnections must be rejected");
+        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { RetransmitTimeout = TimeSpan.FromTicks(1) }),
+            "an RTO under 1 ms must be rejected");
     }
 
     /// <summary>

@@ -8,6 +8,7 @@
   </Configurations>
   <Folder Name="/pub/">
     <File Path="CHANGELOG.md" />
+    <File Path="CHANGELOG.Packages.md" />
     <File Path="pub/Invoke-VersionBump.ps1" />
     <File Path="pub/PubVersion.json" />
     <File Path="pub/RELEASE-STRATEGY.md" />

@@ -382,10 +382,6 @@ internal sealed class LocalTcpConnection(
                 var segLen = Math.Min(burst, mss);
                 var segmentData = data.Span.Slice(offset, segLen);
 
-                var packet = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
-                    options: ReadOnlySpan<byte>.Empty, payload: segmentData);
-                var tcp = packet.ExtractTcp();
-
                 uint seqForSegment;
                 uint ackForSegment;
                 ushort windowForSegment;
@@ -393,10 +389,8 @@ internal sealed class LocalTcpConnection(
                     // Recheck under the lock: StartFin takes its FIN sequence number under this same
                     // lock, so this guard guarantees no data segment is ever emitted at a sequence
                     // number beyond an already-sent FIN (which the peer would discard = data loss).
-                    if (_disposed || _appToNetCompleted || _finSent) {
-                        packet.Dispose();
+                    if (_disposed || _appToNetCompleted || _finSent)
                         throw new IOException("The TCP connection was closed while writing.");
-                    }
 
                     _retransmitBuffer.Append(segmentData); // first: a refused segment changes nothing else
                     seqForSegment = _sndNxt;
@@ -409,16 +403,8 @@ internal sealed class LocalTcpConnection(
                     HoldMaintenanceInterestLocked();
                 }
 
-                tcp.SequenceNumber = seqForSegment;
-                tcp.AcknowledgmentNumber = ackForSegment;
-                tcp.Acknowledgment = true;
-                tcp.WindowSize = windowForSegment;
-
-                // Set PSH on the last segment of the current write.
-                if (offset + segLen >= data.Length)
-                    tcp.Push = true;
-
-                stack.SendPacket(packet);
+                var flags = offset + segLen >= data.Length ? TcpFlags.Ack | TcpFlags.Psh : TcpFlags.Ack; // PSH ends the write
+                stack.SendPacket(BuildSegment(seqForSegment, ackForSegment, windowForSegment, flags, segmentData));
                 offset += segLen;
                 burst -= segLen;
             }
@@ -959,19 +945,20 @@ internal sealed class LocalTcpConnection(
         stack.SendPacket(finPacket);
     }
 
-    private IpPacket BuildFinPacket(uint seq, uint ackNum, ushort window)
-    {
-        var packet = PacketBuilder.BuildTcp(
-            IpEndPointPair.Destination, IpEndPointPair.Source,
-            options: ReadOnlySpan<byte>.Empty,
-            payload: ReadOnlySpan<byte>.Empty);
+    private IpPacket BuildFinPacket(uint seq, uint ackNum, ushort window) =>
+        BuildSegment(seq, ackNum, window, TcpFlags.Ack | TcpFlags.Fin, ReadOnlySpan<byte>.Empty);
 
+    // PacketBuilder rents the packet's memory; the send owns the packet from there. Inlined: it builds every data segment.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private IpPacket BuildSegment(uint seq, uint ack, ushort window, TcpFlags flags, ReadOnlySpan<byte> payload)
+    {
+        var packet = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
+            options: ReadOnlySpan<byte>.Empty, payload: payload);
         var tcp = packet.ExtractTcp();
         tcp.SequenceNumber = seq;
-        tcp.AcknowledgmentNumber = ackNum;
-        tcp.Finish = true;
-        tcp.Acknowledgment = true;
+        tcp.AcknowledgmentNumber = ack;
         tcp.WindowSize = window;
+        tcp.Flags = (byte)flags; // TcpFlags are the wire bits
         return packet;
     }
 
@@ -1028,28 +1015,10 @@ internal sealed class LocalTcpConnection(
             HoldMaintenanceInterestLocked();
         }
 
-        IpPacket? probe = null;
-        try {
-            ReadOnlySpan<byte> probeData = [probeByte];
-            probe = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
-                options: ReadOnlySpan<byte>.Empty, payload: probeData);
-            var tcp = probe.ExtractTcp();
-            tcp.SequenceNumber = probeSeq;
-            tcp.AcknowledgmentNumber = probeAck;
-            tcp.Acknowledgment = true;
-            tcp.WindowSize = probeWindow;
-
-            var toSend = probe;
-            probe = null; // SendPacket owns it from here (it disposes on its own failure)
-            stack.SendPacket(toSend);
-        }
-        catch {
-            // Sequence state is already advanced and the consumed byte is stored in the retx ring, so
-            // a failed send equals a dropped packet: the RTO sweep retransmits it. Returning 1 (not 0)
-            // keeps the caller's offset in sync with _sndNxt; 0 after advancing _sndNxt would duplicate the
-            // byte in the stream.
-            probe?.Dispose();
-        }
+        // The sequence state is advanced and the byte is in the buffer, so a failed send is a dropped packet that the RTO
+        // retransmits; 1 is returned either way, keeping the caller's offset in step with SndNxt (0 would duplicate the byte).
+        try { stack.SendPacket(BuildSegment(probeSeq, probeAck, probeWindow, TcpFlags.Ack, [probeByte])); }
+        catch { /* a lost packet */ }
         return 1;
     }
 
@@ -1063,7 +1032,6 @@ internal sealed class LocalTcpConnection(
         var stack = _stack;
         if (stack == null || _disposed) return;
 
-        // Build retransmit segment of up to MSS bytes from start of retx buffer.
         byte[] payloadCopy;
         uint seqForSegment;
         uint ackForSegment;
@@ -1080,15 +1048,7 @@ internal sealed class LocalTcpConnection(
 
         if (diagnostics.VerboseLogging)
             diagnostics.TraceFastRetransmit(ipEndPointPair, Interlocked.Increment(ref _retxCount), seqForSegment, retxLen);
-        var packet = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
-            options: ReadOnlySpan<byte>.Empty, payload: payloadCopy);
-        var tcp = packet.ExtractTcp();
-        tcp.SequenceNumber = seqForSegment;
-        tcp.AcknowledgmentNumber = ackForSegment;
-        tcp.Acknowledgment = true;
-        tcp.WindowSize = windowForSegment;
-        tcp.Push = true;
-
+        var packet = BuildSegment(seqForSegment, ackForSegment, windowForSegment, TcpFlags.Ack | TcpFlags.Psh, payloadCopy);
         try { stack.SendPacket(packet); } catch { /* a lost packet: the next ACK or the RTO retransmits */ }
     }
 
@@ -1158,16 +1118,7 @@ internal sealed class LocalTcpConnection(
     {
         var stack = _stack;
         if (stack == null) return;
-        try {
-            var packet = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
-                options: ReadOnlySpan<byte>.Empty, payload: ReadOnlySpan<byte>.Empty);
-            var tcp = packet.ExtractTcp();
-            tcp.SequenceNumber = seq;
-            tcp.AcknowledgmentNumber = ackNum;
-            tcp.Reset = true;
-            tcp.Acknowledgment = true;
-            stack.SendPacket(packet);
-        }
+        try { stack.SendPacket(BuildSegment(seq, ackNum, window: 0, TcpFlags.Ack | TcpFlags.Rst, ReadOnlySpan<byte>.Empty)); }
         catch { /* best-effort notification */ }
     }
 }

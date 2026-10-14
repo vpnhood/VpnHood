@@ -409,6 +409,37 @@ public sealed class LocalTcpStackTest
         await stream.DisposeAsync();
     }
 
+    /// <summary>A write of several segments: every segment carries ACK, and PSH only the last one.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task ServerWrite_SeveralSegments_PshOnlyOnTheLast()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sentPackets = new List<IpPacket>();
+        object lockObj = new();
+        tcpStack.OnPacketSend = p => { lock (lockObj) sentPackets.Add(p); };
+
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+        var serverSeq = SynAckSequence(sentPackets, lockObj, ClientPort);
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1));
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        lock (lockObj) sentPackets.Clear();
+
+        await client.Stream.WriteAsync(new byte[3500], cts.Token); // more than one MSS
+
+        var segments = Snapshot(sentPackets, lockObj).Select(p => p.ExtractTcp()).Where(t => t.Payload.Length > 0).ToArray();
+        Assert.IsGreaterThan(1, segments.Length, "the write went out in several segments");
+        Assert.IsTrue(segments.All(t => t.Acknowledgment), "every segment carries ACK");
+        Assert.IsTrue(segments[..^1].All(t => !t.Push), "no PSH before the last segment");
+        Assert.IsTrue(segments[^1].Push, "PSH ends the write");
+        await client.DisposeAsync();
+    }
+
     /// <summary>
     /// Tests echo functionality through the TCP stack
     /// </summary>

@@ -136,7 +136,8 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    ```
 
 2. Maintain the CHANGELOG **by hand**: put the next release's notes under a leading `# Latest`
-   heading in `CHANGELOG.md` (server notes go in `CHANGELOG.Server.md`). Lines route themselves with
+   heading in `CHANGELOG.md` (server notes go in `CHANGELOG.Server.md`, and what an app built on the
+   NuGet packages must change in `CHANGELOG.Packages.md`). Lines route themselves with
    **trailing tags**: `#client` / `#connect` pick the product; `#android #ios #windows #linux` limit
    platforms (inclusive — no platform tag = every platform, `#android #ios` ships to both); `#store`
    marks the few lines for Google Play's short per-release note (Play caps it at 500 characters).

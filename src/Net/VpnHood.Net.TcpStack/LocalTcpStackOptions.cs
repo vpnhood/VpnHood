@@ -77,8 +77,8 @@ public sealed class LocalTcpStackOptions
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromMinutes(15);
 
     /// <summary>
-    /// How often the per-connection idle monitor wakes to check <see cref="IdleTimeout"/>.
-    /// Larger intervals mean fewer timer wake-ups (less power). Default: 1 minute.
+    /// How often the stack's idle sweep checks every connection against <see cref="IdleTimeout"/>.
+    /// A larger interval means fewer timer wake-ups (less power). Default: 1 minute.
     /// Must be smaller than <see cref="IdleTimeout"/>.
     /// </summary>
     public TimeSpan IdleCheckInterval { get; init; } = TimeSpan.FromMinutes(1);
@@ -265,8 +265,12 @@ public sealed class LocalTcpStackOptions
             throw new ArgumentException(
                 $"MSS values must satisfy 0 < {nameof(MinMss)} ≤ {nameof(DefaultMss)} ≤ {nameof(MaxMss)}; was {MinMss}/{DefaultMss}/{MaxMss}.");
 
-        if (IdleCheckInterval <= TimeSpan.Zero || ZeroWindowProbeInterval <= TimeSpan.Zero)
-            throw new ArgumentException("IdleCheckInterval and ZeroWindowProbeInterval must be positive.");
+        if (ZeroWindowProbeInterval <= TimeSpan.Zero)
+            throw new ArgumentException("ZeroWindowProbeInterval must be positive.");
+
+        // a Timer's range: under 1 ms it would be a one-shot, beyond 49 days Timer.Change throws
+        if (IdleCheckInterval < TimeSpan.FromMilliseconds(1) || IdleCheckInterval.TotalMilliseconds > uint.MaxValue - 1)
+            throw new ArgumentException($"{nameof(IdleCheckInterval)} must be between 1 ms and 49 days; was {IdleCheckInterval}.");
 
         // the RTO is kept in whole milliseconds: under 1 ms it would be 0, never back off and never reach its cap
         if (RetransmitTimeout < TimeSpan.FromMilliseconds(1) || RetransmitMaxTimeout < RetransmitTimeout)

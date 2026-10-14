@@ -29,7 +29,6 @@ internal sealed class LocalTcpConnection(
     // hot path (send/recv/ACK) costs exactly what the old consts did — a field read, no recompute.
 
     private readonly TimeSpan _idleTimeout = options.IdleTimeout;
-    private readonly TimeSpan _idleCheckInterval = options.IdleCheckInterval;
 
     // Window-update ACK thresholds, scaled to the configured window. The old code hardcoded 16384/4096,
     // which never fired for a small ReceiveWindowSize. _windowUpdateThreshold: re-advertise once the window
@@ -44,7 +43,6 @@ internal sealed class LocalTcpConnection(
     private readonly Pipe _netToAppPipe = new(pipeOptions);
 
     private readonly Lock _seqLock = new();
-    private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _windowSignal = new(0, 1);
     private LocalTcpClient? _pendingClient;
     private LocalTcpStack? _stack;
@@ -54,6 +52,8 @@ internal sealed class LocalTcpConnection(
     private bool _readSideClosed; // the app closed its stream: new bytes from the peer are reset, not buffered
     private bool _resetPending; // the app closed with unread bytes while our tail was in flight: reset once acked
     private long _orphanProgressTicks; // set per idle tick once the app closed: when the sequence numbers last moved
+    private uint _progressUna; // the sequence numbers at the last orphan sample
+    private uint _progressRcv;
     private bool _establishedCounted; // DIAGNOSTIC: whether we incremented LocalTcpStack.EstablishedConnections
     private bool _sndNxtAfterSynSet;
     private bool _disposed;
@@ -167,7 +167,7 @@ internal sealed class LocalTcpConnection(
     }
 
     /// <summary>
-    /// Wires the stack reference and starts background tasks for this connection.
+    /// Wires the stack reference and registers with the stack's maintenance sweep.
     /// Called BEFORE the first SYN-ACK is sent so maintenance (SYN-ACK retransmission) is armed
     /// from the very first packet.
     /// </summary>
@@ -186,9 +186,6 @@ internal sealed class LocalTcpConnection(
         // retransmission service until the handshake completes.
         lock (_seqLock)
             UpdateMaintenanceInterestLocked();
-
-        // Start idle monitor
-        _ = Task.Run(MonitorIdleAsync);
     }
 
     /// <summary>
@@ -319,15 +316,12 @@ internal sealed class LocalTcpConnection(
         // A direct Dispose() — DropAllConnections, LocalTcpStack.Dispose, or a failed _connections.TryAdd —
         // does NOT go through Close(), so it must unblock the app side itself: complete the net->app pipe so
         // a parked ReadAsync returns EOF, dispose any not-yet-accepted client, and release a SendAppDataAsync
-        // waiting on the window signal (the connection's _cts is not in the stream's read-cancel set). Without
-        // this the proxy copy loop hangs and the connection + its pipe leak. CompleteNetToApp self-locks, so
-        // it can never race WriteToAppPipe.
+        // waiting on the window signal. Without this the proxy copy loop hangs and the connection + its pipe
+        // leak. CompleteNetToApp self-locks, so it can never race WriteToAppPipe.
         abandoned?.Dispose();
         CompleteNetToApp();
         _appToNetCompleted = true;
         TrySignalWindow();
-
-        try { _cts.Cancel(); } catch { /* ignore */ }
     }
 
     /// <summary>
@@ -781,7 +775,7 @@ internal sealed class LocalTcpConnection(
 
     /// <summary>Time since the last send/receive activity on this connection (drives LRU eviction). For an
     /// orphan (the app closed its stream) it is the time since the sequence numbers last moved, sampled by
-    /// the idle monitor, so a peer's no-progress ACKs cannot keep it from eviction.</summary>
+    /// the idle sweep (<see cref="PollIdle"/>), so a peer's no-progress ACKs cannot keep it from eviction.</summary>
     internal TimeSpan IdleDuration {
         get {
             var progress = Volatile.Read(ref _orphanProgressTicks);
@@ -924,45 +918,33 @@ internal sealed class LocalTcpConnection(
         _rtoCurrentMs = Math.Min(_rtoCurrentMs * 2, _rtoMaxMs);
     }
 
-    private async Task MonitorIdleAsync()
+    /// <summary>
+    /// Called by the stack's idle sweep every IdleCheckInterval. An orphan (the app closed its stream) is idle when the
+    /// sequence numbers stop moving: the peer's window-0 ACKs of our retransmits or its keepalives would otherwise keep
+    /// it "active" and pin its slot forever; sampled per tick, never per packet, and IdleDuration (the eviction's
+    /// measure too) reads the sample. An idle connection is aborted: the peer gets a RST, not a black hole.
+    /// </summary>
+    internal void PollIdle()
     {
-        try {
-            using var timer = new PeriodicTimer(_idleCheckInterval);
-            var orphanTracked = false;
-            uint progressUna = 0;
-            uint progressRcv = 0;
-            while (await timer.WaitForNextTickAsync(_cts.Token).Vhc()) {
-                if (_disposed || State == TcpConnectionState.Closed)
-                    break;
+        if (_disposed || IsClosed) return;
 
-                if (_readSideClosed) {
-                    // An orphan (the app closed its stream) is idle when the sequence numbers stop moving: the
-                    // peer's window-0 ACKs of our retransmits or its keepalive probes would otherwise keep it
-                    // "active" and pin its slot forever. Sampled per tick, never per packet; IdleDuration (the
-                    // eviction's measure too) reads the sample.
-                    uint una, rcv;
-                    lock (_seqLock) {
-                        una = _sndUna;
-                        rcv = _rcvNxt;
-                    }
-                    if (!orphanTracked || una != progressUna || rcv != progressRcv) {
-                        orphanTracked = true;
-                        progressUna = una;
-                        progressRcv = rcv;
-                        Volatile.Write(ref _orphanProgressTicks, Stopwatch.GetTimestamp());
-                    }
-                }
-
-                if (IdleDuration >= _idleTimeout) {
-                    // Abortive: tell the peer with an RST so it doesn't linger on a black-holed flow.
-                    Abort();
-                    break;
-                }
+        if (_readSideClosed) {
+            var (una, rcv) = SnapshotSequenceNumbers();
+            if (_orphanProgressTicks == 0 || una != _progressUna || rcv != _progressRcv) {
+                _progressUna = una;
+                _progressRcv = rcv;
+                Volatile.Write(ref _orphanProgressTicks, Stopwatch.GetTimestamp());
             }
         }
-        catch (OperationCanceledException) {
-            // Expected on disposal/close
-        }
+
+        if (IdleDuration >= _idleTimeout)
+            Abort();
+    }
+
+    private (uint Una, uint Rcv) SnapshotSequenceNumbers()
+    {
+        lock (_seqLock)
+            return (_sndUna, _rcvNxt);
     }
 
     public void StartFin(LocalTcpStack stack)

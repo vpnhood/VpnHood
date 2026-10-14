@@ -871,6 +871,43 @@ public sealed class LocalTcpStackTest
             await client.DisposeAsync();
     }
 
+    /// <summary>The idle sweep parks while no connection exists and comes back for the next one: a timer left parked
+    /// would stop reaping every later idle connection, a leak on iOS.</summary>
+    [TestMethod]
+    [Timeout(15000)]
+    public async Task IdleSweep_ParkedAtZeroConnections_ReapsTheNextConnectionToo()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            IdleTimeout = TimeSpan.FromMilliseconds(300),
+            IdleCheckInterval = TimeSpan.FromMilliseconds(100)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+        // the first connection idles out; the sweep then parks on its next tick
+        var acceptA = AcceptConnectionAsync(listener);
+        DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
+        var clientA = await acceptA.WaitAsync(cts.Token);
+        await WaitForCondition(() => tcpStack.Diagnostics.ConnectionCount == 0, cts.Token, 3000);
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the first connection idles out");
+        await Task.Delay(400, cts.Token);
+
+        // the second one must idle out too
+        var acceptB = AcceptConnectionAsync(listener);
+        DoHandshake(tcpStack, sent, sync, ClientPort + 1, 1000);
+        var clientB = await acceptB.WaitAsync(cts.Token);
+        await WaitForCondition(() => tcpStack.Diagnostics.ConnectionCount == 0, cts.Token, 3000);
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the sweep came back for the second connection");
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp() is { Reset: true, DestinationPort: ClientPort + 1 }), "the second connection's RST");
+
+        await clientA.DisposeAsync();
+        await clientB.DisposeAsync();
+    }
+
     // The handshake tests' stack: no RTO, so the maintenance sweep never retransmits a SYN-ACK into their counts.
     private static LocalTcpStackOptions NoRtoOptions => new() {
         RetransmitTimeout = TimeSpan.FromSeconds(30),

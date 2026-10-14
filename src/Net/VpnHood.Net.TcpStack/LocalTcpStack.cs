@@ -57,6 +57,9 @@ public sealed class LocalTcpStack : ITcpStack
         // stack causes NO periodic wake-ups (battery matters on mobile).
         _maintenanceTimer = new Timer(_ => SweepMaintenance(), null,
             Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        // Idle sweep: one timer at IdleCheckInterval over every connection (LocalTcpConnection.PollIdle), where each
+        // connection ran a task with a timer of its own. Parked while no connection exists, like the maintenance sweep.
+        _idleTimer = new Timer(_ => SweepIdle(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
     /// <summary>
@@ -85,6 +88,8 @@ public sealed class LocalTcpStack : ITcpStack
     private readonly Timer _maintenanceTimer;
     private int _maintenanceInterest; // # connections currently needing maintenance service
     private int _maintenanceSweeping; // reentrancy guard so a slow sweep never overlaps itself
+    private readonly Timer _idleTimer;
+    private int _idleSweeping;
 
     /// <summary>
     /// Callback invoked when a TCP packet needs to be sent out. The callback takes ownership of the packet.
@@ -253,15 +258,18 @@ public sealed class LocalTcpStack : ITcpStack
 
         // Guard the check-then-act race with Dispose(): if the stack was disposed while we were adding,
         // its dispose loop may have already drained _connections — remove and tear down immediately so
-        // the connection (and its idle-monitor task) cannot outlive the stack for the full IdleTimeout.
+        // the connection cannot outlive the stack for the full IdleTimeout.
         if (_disposed) {
             if (_connections.TryRemove(ipEndPointPair, out _))
                 connection.Dispose();
             return;
         }
 
-        // DIAGNOSTIC: track concurrent-connection count + high-water mark.
-        Diagnostics.SetConnectionCount(Interlocked.Increment(ref _connectionCount));
+        // DIAGNOSTIC: track concurrent-connection count + high-water mark. The first connection arms the idle sweep.
+        var connectionCount = Interlocked.Increment(ref _connectionCount);
+        Diagnostics.SetConnectionCount(connectionCount);
+        if (connectionCount == 1)
+            _idleTimer.Change(_options.IdleCheckInterval, _options.IdleCheckInterval);
 
         try {
             // Start() before the SYN-ACK so the connection is fully wired (stack reference, maintenance
@@ -402,9 +410,9 @@ public sealed class LocalTcpStack : ITcpStack
     /// 0 → 1 transition; the sweep parks itself again once interest returns to zero.</summary>
     internal void AddMaintenanceInterest()
     {
+        // Timer.Change after Dispose returns false and throws nothing (so in every Change below).
         if (Interlocked.Increment(ref _maintenanceInterest) == 1 && !_disposed)
-            try { _maintenanceTimer.Change(MaintenanceInterval, MaintenanceInterval); }
-            catch (ObjectDisposedException) { /* stack disposed concurrently */ }
+            _maintenanceTimer.Change(MaintenanceInterval, MaintenanceInterval);
     }
 
     /// <summary>Unregisters a connection from the maintenance sweep. The timer is parked by the sweep
@@ -447,13 +455,44 @@ public sealed class LocalTcpStack : ITcpStack
         // Park the timer when nothing needs service. Re-check afterward: an AddMaintenanceInterest
         // racing the park may have had its Change() overwritten — re-arm so its connection is not
         // left unserviced.
-        if (Volatile.Read(ref _maintenanceInterest) == 0)
-            try {
-                _maintenanceTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-                if (Volatile.Read(ref _maintenanceInterest) > 0)
-                    _maintenanceTimer.Change(MaintenanceInterval, MaintenanceInterval);
-            }
-            catch (ObjectDisposedException) { /* stack disposed concurrently */ }
+        if (Volatile.Read(ref _maintenanceInterest) == 0) {
+            _maintenanceTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            if (Volatile.Read(ref _maintenanceInterest) > 0)
+                _maintenanceTimer.Change(MaintenanceInterval, MaintenanceInterval);
+        }
+    }
+
+    /// <summary>
+    /// Timer callback: every IdleCheckInterval each connection samples its orphan progress and aborts itself once
+    /// idle for IdleTimeout (see <see cref="LocalTcpConnection.PollIdle"/>). Never throws — an unhandled exception
+    /// in a Timer callback terminates the whole process.
+    /// </summary>
+    private void SweepIdle()
+    {
+        if (_disposed)
+            return;
+
+        if (Interlocked.Exchange(ref _idleSweeping, 1) != 0)
+            return;
+
+        try {
+            foreach (var kvp in _connections)
+                kvp.Value.PollIdle();
+        }
+        catch (Exception ex) {
+            Diagnostics.LogFailure(nameof(SweepIdle), ex);
+        }
+        finally {
+            Volatile.Write(ref _idleSweeping, 0);
+        }
+
+        // Park the timer when no connection is left; re-check afterward, as a SYN racing the park may have had
+        // its Change() overwritten.
+        if (Volatile.Read(ref _connectionCount) == 0) {
+            _idleTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            if (Volatile.Read(ref _connectionCount) > 0)
+                _idleTimer.Change(_options.IdleCheckInterval, _options.IdleCheckInterval);
+        }
     }
 
     /// <summary>
@@ -603,6 +642,7 @@ public sealed class LocalTcpStack : ITcpStack
         _disposed = true;
 
         _maintenanceTimer.Dispose();
+        _idleTimer.Dispose();
 
         if (ActiveDiagnostics == Diagnostics)
             ActiveDiagnostics = null;

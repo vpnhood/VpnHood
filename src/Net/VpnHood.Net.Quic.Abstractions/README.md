@@ -7,8 +7,8 @@ VpnHood uses QUIC purely as a transport (a custom protocol with the same binary 
 HTTP/3; `SslApplicationProtocol.Http3` is used only as the ALPN token). `System.Net.Quic` is a managed
 wrapper over the native **MsQuic** library and is only officially supported on **Windows and Linux** —
 on Android/iOS `QuicConnection.IsSupported`/`QuicListener.IsSupported` are `false` and the APIs throw.
-This abstraction lets us keep MsQuic as one implementation today and add platform-specific
-implementations (e.g. P/Invoke to a native QUIC library) for iOS/Android later.
+This abstraction keeps MsQuic as one implementation beside the platform-specific ones for iOS and
+Android.
 
 This project is **BCL-only** (no VpnHood or native dependencies) so it is safe to reference from the
 low-level `VpnHood.Net.Toolkit`.
@@ -37,8 +37,11 @@ Implementations:
   `Microsoft.Native.Quic.MsQuic.OpenSSL` native package. `MsQuicClient.IsSupported` /
   `MsQuicServer.IsSupported` report platform availability. Client **and** server.
 - **`VpnHood.Net.Quic.Ios`** (iOS 15+) — `IosQuicClient`, `IosQuicConnection`, `IosQuicStream`,
-  `IosQuicSocketFactory`, built on Apple's Network.framework (`NWMultiplexGroup` /
+  `IosSocketFactory`, built on Apple's Network.framework (`NWMultiplexGroup` /
   `NWConnectionGroup` / `NWProtocolQuicOptions`). **Client only** (iOS is never a server).
+- **`VpnHood.Net.Quic.Android`** — `AndroidQuicClient`, `AndroidQuicConnection`, `AndroidQuicStream`,
+  `AndroidSocketFactory`, over a `libmsquic.so` built for Android (see that project's README).
+  **Client only**.
 
 ### Client — through `ISocketFactory`
 `ISocketFactory` (in `VpnHood.Net.Toolkit`) exposes QUIC capability:
@@ -51,9 +54,8 @@ IQuicClient CreateQuicClient(); // throws NotSupportedException when !IsQuicSupp
 The per-platform `VpnService` picks the socket factory, which is the seam that decides QUIC support:
 
 - Windows / Linux `VpnService` → `new MsQuicSocketFactory()` (QUIC enabled).
-- iOS `VpnService` → `new IosQuicSocketFactory()` (QUIC enabled, iOS 15+).
-- Android `VpnService` → plain `new SystemSocketFactory()` (`IsQuicSupported == false`) until a
-  native implementation exists.
+- iOS `VpnService` → `new IosSocketFactory(…)` (QUIC enabled, iOS 15+).
+- Android `VpnService` → `new AndroidSocketFactory()` (QUIC wherever the native library loads).
 
 The socket factory flows `VpnService → VpnHoodClient → ConnectorService`, where
 `QuicStreamConnectionFactory` is built from `socketFactory.CreateQuicClient()` (only when
@@ -65,13 +67,10 @@ The server QUIC listener provider is passed explicitly (not via `ISocketFactory`
 `ServerOptions.QuicServer` → `VpnHoodServer` → `ServerHost` → `QuicListenerHost`. `ServerApp` sets it
 to `MsQuicServer.IsSupported ? new MsQuicServer() : null`.
 
-## Adding the Android implementation later
+## Adding another platform
 
-iOS is done via Network.framework (see `VpnHood.Net.Quic.Ios`). Android is the remaining gap —
-`System.Net.Quic`/MsQuic is unsupported there.
-
-1. Implement `IQuicClient` + `IQuicConnection` backed by a native QUIC library — e.g. P/Invoke to a
-   self-built `libmsquic.so`, or a JNI binding to a Java/Kotlin QUIC library.
+1. Implement `IQuicClient` + `IQuicConnection` over the platform's QUIC, as `VpnHood.Net.Quic.Ios`
+   does over Network.framework and `VpnHood.Net.Quic.Android` over a self-built `libmsquic.so`.
 2. Expose it through an `ISocketFactory` whose `IsQuicSupported` is `true` and whose `CreateQuicClient()`
    returns your `IQuicClient`.
 3. Have that platform's `VpnService` construct/use that socket factory instead of `SystemSocketFactory`.

@@ -107,7 +107,7 @@ links its own OpenSSL, so no `libcrypto`/`libssl`/.NET-OpenSSL-shim is needed.
   be missing for an ABI, `IsQuicSupported` is `false` there and the client transparently falls back
   to TCP.
 
-Wiring: `AndroidQuicSocketFactory` (returned by `AndroidVpnService`) exposes `IsQuicSupported` /
+Wiring: `AndroidSocketFactory` (which `AndroidVpnService` hands the client) exposes `IsQuicSupported` /
 `CreateQuicClient()` → `AndroidQuicClient`. QUIC engages only when the client's `ChannelProtocol`
 is `Quic` and the server advertises a `QuicPort` (otherwise TCP).
 

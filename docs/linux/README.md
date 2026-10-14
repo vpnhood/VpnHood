@@ -298,7 +298,7 @@ Points that are easy to get wrong:
    hard-coded port.
 2. **The UI must not reach for `VpnHoodApp.Instance`.** It gets a `VpnHoodApi` — in process on
    Android and iOS, over loopback here and on Windows — and the presentation layer already knows
-   only `VhApp`. `AvaloniaDesktopHost.Run` has an overload for each.
+   only `VhApp`. `AvaloniaDesktopHost.Run` takes either.
 3. **The seam is "the running instance", not "the service".** On Linux that is a systemd unit, which
    a signal stops; on Windows a service under the service control manager, which stops it with a
    call (`IDesktopPlatform.HostDaemon`, `ServiceBase`). A Store build, whose app runs in its own process,

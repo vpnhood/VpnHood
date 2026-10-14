@@ -86,6 +86,8 @@ Supplement No. 8 to Part 742):
 - **Deadline:** received by **February 1** of the year after the calendar year of export.
 - BIS sends no confirmation — the sent email + CSV are the record. No console anywhere reflects it.
 - A fork files **its own** report under its own entity name.
+- Have something remind a person of the deadline every year: a date written in a document is
+  easily missed. Keep the filled CSV, with its contact details, out of a public repo.
 
 Cover-email template:
 
@@ -109,17 +111,3 @@ With the App Store Connect API (same key CI uses): per-build state is on `/v1/bu
 `/v1/appEncryptionDeclarations` does **not** show questionnaire entries created in the console UI
 (verified 2026-07-30: it returned zero while the record clearly existed) — don't let an empty
 response mislead you.
-
-## Status (maintainers)
-
-- Plists set to `false` on 2026-07-31 (Client build 836 was the first prompt-free upload). The
-  `true` misconfiguration existed 2026-07-06 → 2026-07-31 and blocked all Client uploads.
-- BIS annual self-classification: filed 2026 — contact in
-  [EXPORT_COMPLIANCE.md](EXPORT_COMPLIANCE.md). Next one due by 2027-02-01. **You do not have to
-  remember this date:** [`compliance_reminder.yml`](../../../.github/workflows/compliance_reminder.yml)
-  opens an issue on 1 December and again on 1 January of each cycle. If that workflow is ever
-  removed, put the deadline somewhere else that notifies a human — a date buried in this file is
-  how it was missed before.
-- The **private** filing kit (CSV with entity/contact details, send steps, checklist) is
-  deliberately outside this repo: `.user/legals/FILING-INSTRUCTIONS.md` — never published; this
-  public doc stays PII-free.

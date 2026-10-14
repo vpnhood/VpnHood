@@ -25,8 +25,11 @@ throughput. See the shared record in the app repo's
 | `IosQuicClient.cs` | `IQuicClient`. `ConnectAsync` stands up the QUIC tunnel: builds `NWParameters.CreateQuic` (ALPN `h3`, **flow-control windows**, pinned-cert TLS bridge), starts an `NWConnectionGroup` over an `NWMultiplexGroup`, waits for `Ready`. |
 | `IosQuicConnection.cs` | `IQuicConnection`. Opens outbound streams (`nw_connection_group_extract_connection` with a NULL endpoint) and accepts inbound (peer-initiated) streams from a channel; brings each up on a queue until `Ready`. |
 | `IosQuicStream.cs` | `Stream` adapter over a single QUIC stream (`NWConnection`). One armed native receive per `ReadAsync`, no read-ahead; per-operation callback state prevents late native completions from completing a later operation. |
+| `IosQuicStreamReadOperation.cs`, `IosQuicStreamWriteOperation.cs` | That per-operation state: one read's or one write's value-task source, which its native completion reserves before it touches the caller's buffer. |
 | `ReusableValueTaskSource.cs`, `ReusableValueTaskSource_1.cs` | `IValueTaskSource[<T>]` bridge used by read/write operation state to complete Network.framework callbacks as `ValueTask`s. |
 | `IosQuicTls.cs` | Configures `SecProtocolOptions`: ALPN + the pinned-certificate verify callback bridge. |
+| `NWConnectionExtensions.cs`, `NWConnectionGroupExtensions.cs` | Best-effort teardown of a stream and of the group: each call is attempted and logged, never masking the failure that led to it. |
+| `IosQuicDiagnostics.cs`, `IosQuicEventIds.cs` | The stream counters and `[VHQUIC]` log lines (see Diagnostics), and their log event id. |
 | `IosSocketFactory.cs` | Small factory glue. |
 
 ## Connection & stream model
@@ -95,10 +98,10 @@ per-stream queue pool.
 
 - **Read:** one native `ReceiveReadOnlyData(min:1, max:min(buf, 16 KB))` per `ReadAsync`; the
   completion **reserves** the value-task source *before* touching the caller buffer
-  (`_readSource.TryReserve()`) — if cancellation/Dispose already completed the read, the buffer may
-  have been returned to a shared pool and re-rented, so copying into it would corrupt unrelated
-  memory. Empty completion ⇒ EOF (returns 0); a non-empty final chunk is returned and the next read
-  observes empty → 0.
+  (`TryReserve()` on the read operation's `Source`) — if cancellation/Dispose already completed the
+  read, the buffer may have been returned to a shared pool and re-rented, so copying into it would
+  corrupt unrelated memory. Empty completion ⇒ EOF (returns 0); a non-empty final chunk is returned
+  and the next read observes empty → 0.
 - **Write:** `isComplete:false` always (never signals FIN mid-stream). Non-array-backed buffers are
   copied through a pooled rental returned in the write completion (idempotent via
   `Interlocked.Exchange`).
@@ -107,12 +110,12 @@ per-stream queue pool.
   read/write and reclaim an in-flight write's rental. Second native completions are no-ops via the
   value-task source's state guard.
 
-## Diagnostics (temporary — marked `ToDo: remove diagnose`)
+## Diagnostics
 
-`IosQuicClient.LiveStreamCount` / `StreamSeq` and the `[VHQUIC] +CONN/-CONN live=… id=…` log lines
-in `IosQuicStream` exist to confirm streams (= native `NWConnection`s) are released promptly at
-flow-end rather than lingering. `LiveStreamCount` is `public static` so the iOS memory probe in
-another assembly can read it. Remove once the lifecycle is settled.
+`IosQuicDiagnostics` holds the stream counters and the `[VHQUIC] +CONN/-CONN live=… id=…` log lines,
+which confirm streams (= native `NWConnection`s) are released promptly at flow-end rather than
+lingering. Every call is a no-op unless it is enabled, so production pays nothing. `LiveStreamCount`
+is `public static` so the iOS memory probe in another assembly can read it.
 
 ## Targeting
 

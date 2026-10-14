@@ -58,12 +58,12 @@ jobs:
               `ECCN 5D992.c — it is not optional, and nothing else in the pipeline checks it.`,
               ``,
               `- Background and classification: [docs/legal/developer/EXPORT_COMPLIANCE.md](../blob/develop/docs/legal/developer/EXPORT_COMPLIANCE.md)`,
-              `- App Store side and maintainer status: [docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md](../blob/develop/docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md)`,
+              `- App Store side: [docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md](../blob/develop/docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md)`,
               `- **How to file** (entity details, CSV, send steps): \`.user/legals/FILING-INSTRUCTIONS.md\` —`,
               `  deliberately kept out of this public repo.`,
               ``,
-              `Close this issue once the report has been sent, and update the "Status (maintainers)"`,
-              `section of APP_STORE_EXPORT_COMPLIANCE.md with the filing date.`
+              `Close this issue once the report has been sent, and add the filing date to the Status`,
+              `section of \`.user/legals/FILING-INSTRUCTIONS.md\`.`
             ].join('\n');
 
             const issue = await github.rest.issues.create({

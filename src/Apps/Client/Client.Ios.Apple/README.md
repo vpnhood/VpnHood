@@ -1,6 +1,6 @@
 # VpnHood iOS — Client (host app)
 
-Thin host shell for the iOS Client app: the `AppDelegate` / `SceneDelegate` / `Main` bootstrap, which
+Thin host shell for the iOS Client app: the `App` (`Main`) and `AppDelegate` bootstrap, which
 states the storage folder every shipped build has used and loads the product's settings
 (`ClientAppConfigs`). Its bundle id, name, App Group and extension bundle id come from the product's
 identity (`../Directory.Build.props`), which the build turns into the bundle, the entitlements and

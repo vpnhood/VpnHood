@@ -4,6 +4,7 @@ using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.TcpStack.Primitives;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Memory;
 using VpnHood.Net.Toolkit.Net;
 
 // ReSharper disable StringLiteralTypo
@@ -236,7 +237,8 @@ internal sealed class LocalTcpConnection(
     {
         LocalTcpClient? clientToEnqueue;
         lock (_seqLock) {
-            if (State != TcpConnectionState.SynReceived) return;
+            // after a dispose nobody is left to count it down; after a close its client must not reach the accept queue
+            if (_disposed || _closedFlag || State != TcpConnectionState.SynReceived) return;
             State = TcpConnectionState.Established;
             _establishedCounted = true;
             clientToEnqueue = _pendingClient;
@@ -300,6 +302,7 @@ internal sealed class LocalTcpConnection(
             UpdateMaintenanceInterestLocked();
         }
 
+        VhTypeTracker.Record("LocalTcpConnection.disposed"); // every teardown ends here, a close's as well as a direct dispose's
         if (decrementEstablished)
             diagnostics.DecrementEstablishedConnections(ipEndPointPair, "dispose"); // DIAGNOSTIC (counts + logs)
 
@@ -562,7 +565,7 @@ internal sealed class LocalTcpConnection(
         if (shouldFastRetx || partialAckRetx) {
             if (diagnostics.VerboseLogging)
                 diagnostics.TraceFastRetransmit(ipEndPointPair, Interlocked.Increment(ref _retxCount), ack, _retxBufferLen);
-            try { FastRetransmit(); } catch { /* lost packet */ }
+            FastRetransmit();
         }
         if (finRetx != null) {
             var stack = _stack ?? throw new InvalidOperationException("The connection was not started.");
@@ -893,7 +896,7 @@ internal sealed class LocalTcpConnection(
         if (retxData) {
             if (diagnostics.VerboseLogging)
                 diagnostics.TraceFastRetransmit(ipEndPointPair, Interlocked.Increment(ref _retxCount), _lastDupAck, _retxBufferLen);
-            try { FastRetransmit(); } catch { /* next sweep retries */ }
+            FastRetransmit();
         }
         if (finRetx != null)
             try { stack.SendPacket(finRetx); } catch { /* SendPacket disposes the packet on failure */ }
@@ -1125,7 +1128,7 @@ internal sealed class LocalTcpConnection(
         tcp.WindowSize = windowForSegment;
         tcp.Push = true;
 
-        stack.SendPacket(packet);
+        try { stack.SendPacket(packet); } catch { /* a lost packet: the next ACK or the RTO retransmits */ }
     }
 
     /// <summary>Graceful close: used when the peer already knows the connection is over (its RST, or a
@@ -1139,7 +1142,8 @@ internal sealed class LocalTcpConnection(
 
     private void Close(bool sendRst)
     {
-        if (Interlocked.Exchange(ref _closedFlag, true))
+        // after a direct Dispose there is nothing left to close or to tell the peer
+        if (_disposed || Interlocked.Exchange(ref _closedFlag, true))
             return;
 
         LocalTcpClient? abandoned;

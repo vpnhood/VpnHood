@@ -89,10 +89,6 @@ public sealed class LocalTcpStack : ITcpStack
     private LocalTcpListener? _anyListener;
     private bool _disposed;
 
-    // PERF: kept in lockstep with _connections membership so the SYN-path cap check and the
-    // diagnostics never call ConcurrentDictionary.Count (which locks every stripe).
-    private int _connectionCount;
-
     // Maintenance sweep cadence. Retransmit timing granularity is this interval; RetransmitTimeout
     // (default 500 ms) stays a comfortable multiple of it.
     private static readonly TimeSpan MaintenanceInterval = TimeSpan.FromMilliseconds(100);
@@ -243,7 +239,7 @@ public sealed class LocalTcpStack : ITcpStack
         // overhead, so the Android/desktop SYN path is unchanged. When full, try to evict the most
         // idle ("most unused") connection to make room (EvictionMinIdle); if none qualifies, fall
         // back to rejecting the new SYN with an RST — the historical behavior.
-        if (_options.MaxConnections > 0 && Volatile.Read(ref _connectionCount) >= _options.MaxConnections &&
+        if (_options.MaxConnections > 0 && Diagnostics.ConnectionCount >= _options.MaxConnections &&
             !TryEvictForAdmission()) {
             SendRst(ipEndPointPair.Destination, ipEndPointPair.Source, tcpPacket);
             return;
@@ -257,23 +253,27 @@ public sealed class LocalTcpStack : ITcpStack
         VhTypeTracker.Track(connection);
         connection.OnClosed += OnConnectionClosed;
 
+        // The count lives in the diagnostics (never ConcurrentDictionary.Count, which locks every stripe) and is taken
+        // before the table holds the connection, so whoever removes the entry always has a count to give back.
+        var connectionCount = Diagnostics.AddConnections(1);
+        var entry = new KeyValuePair<IPEndPointPairValue, LocalTcpConnection>(ipEndPointPair, connection);
         if (!_connections.TryAdd(ipEndPointPair, connection)) {
+            Diagnostics.AddConnections(-1);
             connection.Dispose();
             return;
         }
 
-        // Guard the check-then-act race with Dispose(): if the stack was disposed while we were adding,
-        // its dispose loop may have already drained _connections — remove and tear down immediately so
-        // the connection cannot outlive the stack for the full IdleTimeout.
+        // Guard the check-then-act race with Dispose(): if the stack was disposed while we were adding, its dispose
+        // loop may have already drained _connections and taken the count; otherwise remove and tear down here, so the
+        // connection cannot outlive the stack for the full IdleTimeout.
         if (_disposed) {
-            if (_connections.TryRemove(ipEndPointPair, out _))
-                connection.Dispose();
+            if (_connections.TryRemove(entry))
+                Diagnostics.AddConnections(-1);
+            connection.Dispose();
             return;
         }
 
-        // DIAGNOSTIC: track concurrent-connection count + high-water mark. The first connection arms the idle sweep.
-        var connectionCount = Interlocked.Increment(ref _connectionCount);
-        Diagnostics.SetConnectionCount(connectionCount);
+        // The first connection arms the idle sweep.
         if (connectionCount == 1)
             _idleTimer.Change(_options.IdleCheckInterval, _options.IdleCheckInterval);
 
@@ -287,8 +287,8 @@ public sealed class LocalTcpStack : ITcpStack
         catch {
             // A failed SYN-ACK send must not leave a zombie in _connections with no client and no
             // pending accept — it would linger until the idle timeout while holding a connection slot.
-            if (_connections.TryRemove(ipEndPointPair, out _))
-                Diagnostics.SetConnectionCount(Interlocked.Decrement(ref _connectionCount));
+            if (_connections.TryRemove(entry))
+                Diagnostics.AddConnections(-1);
             connection.Dispose();
             throw;
         }
@@ -407,9 +407,9 @@ public sealed class LocalTcpStack : ITcpStack
 
     private void OnConnectionClosed(LocalTcpConnection conn)
     {
-        VhTypeTracker.Record("LocalTcpConnection.closed");
-        if (_connections.TryRemove(conn.IpEndPointPair, out _))
-            Diagnostics.SetConnectionCount(Interlocked.Decrement(ref _connectionCount));
+        // by key and value: a late close of a connection already replaced on its tuple must not remove the successor
+        if (_connections.TryRemove(new KeyValuePair<IPEndPointPairValue, LocalTcpConnection>(conn.IpEndPointPair, conn)))
+            Diagnostics.AddConnections(-1);
     }
 
     /// <summary>Registers a connection with the maintenance sweep. Arms the parked timer on the
@@ -494,9 +494,9 @@ public sealed class LocalTcpStack : ITcpStack
 
         // Park the timer when no connection is left; re-check afterward, as a SYN racing the park may have had
         // its Change() overwritten.
-        if (Volatile.Read(ref _connectionCount) == 0) {
+        if (Diagnostics.ConnectionCount == 0) {
             _idleTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-            if (Volatile.Read(ref _connectionCount) > 0)
+            if (Diagnostics.ConnectionCount > 0)
                 _idleTimer.Change(_options.IdleCheckInterval, _options.IdleCheckInterval);
         }
     }
@@ -667,7 +667,7 @@ public sealed class LocalTcpStack : ITcpStack
 
         foreach (var kvp in _connections) {
             if (_connections.TryRemove(kvp.Key, out var connection)) {
-                Diagnostics.SetConnectionCount(Interlocked.Decrement(ref _connectionCount));
+                Diagnostics.AddConnections(-1);
                 connection.Dispose();
             }
         }

@@ -69,15 +69,18 @@ public sealed class TcpStackDiagnostics
         return mb.HasValue ? $"{mb.Value,5:F1}" : "  n/a";
     }
 
-    internal void SetConnectionCount(int count)
+    /// <summary>Adds to the connection count (+1 on a SYN admitted, -1 on a close) and returns the new count; the
+    /// peak follows. The stack reads <see cref="ConnectionCount"/> for its cap, so the two can never drift apart.</summary>
+    internal int AddConnections(int delta)
     {
-        Volatile.Write(ref _connectionCount, count);
-
-        int peak;
-        do {
-            peak = Volatile.Read(ref _peakConnectionCount);
-            if (count <= peak) break;
-        } while (Interlocked.CompareExchange(ref _peakConnectionCount, count, peak) != peak);
+        var count = Interlocked.Add(ref _connectionCount, delta);
+        var peak = Volatile.Read(ref _peakConnectionCount);
+        while (count > peak) {
+            var seen = Interlocked.CompareExchange(ref _peakConnectionCount, count, peak);
+            if (seen == peak) break;
+            peak = seen;
+        }
+        return count;
     }
 
     /// <summary>

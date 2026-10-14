@@ -948,6 +948,40 @@ public sealed class LocalTcpStackTest
         Assert.AreEqual(0, tcpStack.Diagnostics.TotalPipeBufferedBytes);
     }
 
+    /// <summary>The connection count is one atomic in the diagnostics: fifty connections reset from many threads at
+    /// once leave it at zero, with the peak at fifty.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task ConcurrentCloses_LeaveTheConnectionCountExact()
+    {
+        const int count = 50;
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = Task.Run(async () => {
+            var clients = new List<ITcpClient>();
+            await foreach (var client in listener.AcceptAllAsync(CancellationToken.None)) {
+                clients.Add(client);
+                if (clients.Count == count) break;
+            }
+            return clients;
+        });
+        for (var i = 0; i < count; i++)
+            DoHandshake(tcpStack, sent, sync, ClientPort + i, 1000);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var clients = await acceptTask.WaitAsync(cts.Token);
+        Assert.AreEqual(count, tcpStack.Diagnostics.ConnectionCount);
+
+        Parallel.For(0, count, i => tcpStack.ProcessIncoming(
+            CreateTcpPacket(ClientIp, ClientPort + i, ServerIp, ServerPort, rst: true, ack: true, seq: 1001)));
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "every reset connection left the count");
+        Assert.AreEqual(count, tcpStack.Diagnostics.PeakConnectionCount);
+        foreach (var client in clients)
+            await client.DisposeAsync();
+    }
+
     // The handshake tests' stack: no RTO, so the maintenance sweep never retransmits a SYN-ACK into their counts.
     private static LocalTcpStackOptions NoRtoOptions => new() {
         RetransmitTimeout = TimeSpan.FromSeconds(30),

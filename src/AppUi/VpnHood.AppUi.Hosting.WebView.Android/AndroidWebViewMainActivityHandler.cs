@@ -63,7 +63,7 @@ public class AndroidWebViewMainActivityHandler(
             _spaWebView = new AndroidWebView(ActivityEvent, options, colors);
             var webHost = VpnHoodApp.Instance.LocalWebHost ??
                           throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
-            _host = new WebViewHost(_spaWebView, webHost);
+            _host = new WebViewHost(_spaWebView, new AppWebViewPageHost(webHost));
             _host.Start();
 
             // Register back callback for Android 13+ (API 33+) with default priority (0). Android 13-15

@@ -34,6 +34,9 @@ the shared logic is a **controller** (`WebViewHost`) that talks to a per-OS **ad
 - **`WebViewHost`** — owns server `Init`, launch-URL computation (`?nocache={SpaHash}` plus an
   optional `LaunchUrlBuilder` hook), resume→`AppUiContext.NotifyResumed()`, and reload after a
   failure or server restart.
+- **`IWebViewPageHost`** — what the controller needs of the page's server: `EnsureStarted` (the
+  address to load) and `Restarted` (bound again: load the page again). `AppWebViewPageHost` is the
+  app's own web host as one, where the app runs in the host's process.
 - **`WebViewHostOptions`** — `LaunchUrlBuilder`.
 
 ## Keeping the server up (in `VpnHoodAppWebHost`)
@@ -66,10 +69,11 @@ while the server remains healthy. A full reload resets the current route and uns
 
 1. Implement `IWebView` wrapping the native web view; raise the events from its navigation
    callbacks (drop cancelled/superseded loads, e.g. iOS `NSURLErrorCancelled -999`).
-2. In the OS host: construct the adapter, `new WebViewHost(adapter, webHost)` - the web host the
-   page is served from: the app's own `LocalWebHost` when the app runs in this process, or
-   `DesktopWebViewPageHost` over the address a desktop's service published - call `Start()` on create,
-   `OnResume()` from the platform's foreground/resume hook, `Dispose()` on teardown.
+2. In the OS host: construct the adapter, `new WebViewHost(adapter, pageHost)` - the page's server:
+   the app's own `LocalWebHost` in an `AppWebViewPageHost` when the app runs in this process, or on
+   a desktop the address its service hands the window (`DesktopWebViewPageHost`, WebView.Windows) -
+   call `Start()` on create, `OnResume()` from the platform's foreground/resume hook, `Dispose()` on
+   teardown.
 3. Keep OS-only chrome (safe area, status bar, tray icon, hardware back, window state) in the host.
 
 ## Current adapters

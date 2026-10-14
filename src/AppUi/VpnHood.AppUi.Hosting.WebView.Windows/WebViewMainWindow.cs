@@ -59,10 +59,10 @@ internal sealed class WebViewMainWindow
         _connectedIcon = LoadIcon(resources.Icons.BadgeConnectedIconData);
         _connectingIcon = LoadIcon(resources.Icons.BadgeConnectingIconData);
 
-        // The SPA through the shared WebViewHost (the launch URL, reload on failure), from the web
-        // host it is handed: the service's address, or the app's own host in this process.
+        // The SPA through the shared WebViewHost (the launch URL, reload on failure), at the address
+        // the host hands the window: the service's, or in dev the app's own in this process.
         var webView = new WindowsWebView(_window, windowParams.WebViewDataPath, windowParams.IsTv, OnWebView2Unavailable);
-        _webViewHost = new WebViewHost(webView, windowParams.WebHost);
+        _webViewHost = new WebViewHost(webView, new DesktopWebViewPageHost(windowParams.ApiUrlProvider));
         _webViewHost.Start();
         _ = FollowState(_cancellation.Token);
     }
@@ -73,7 +73,7 @@ internal sealed class WebViewMainWindow
     public void ShowOrOpen()
     {
         if (_isWebViewUnavailable) {
-            WindowsShell.OpenUrl(_params.WebHost.Urls[0]);
+            WindowsShell.OpenUrl(_params.ApiUrlProvider.Current);
             return;
         }
 
@@ -136,7 +136,7 @@ internal sealed class WebViewMainWindow
 
         _isWebViewUnavailable = true;
         _window.Window.Hide();
-        WindowsShell.OpenUrl(_params.WebHost.Urls[0]);
+        WindowsShell.OpenUrl(_params.ApiUrlProvider.Current);
     }
 
     // The taskbar badge, from the app's state: the service's over loopback, or this process's own.

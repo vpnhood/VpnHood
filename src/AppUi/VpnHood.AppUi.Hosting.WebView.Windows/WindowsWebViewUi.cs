@@ -33,7 +33,7 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
 
         var window = new WebViewMainWindow(new WebViewWindowParams {
             Api = uiParams.Api,
-            WebHost = new DesktopWebViewPageHost(uiParams.ApiUrlProvider),
+            ApiUrlProvider = uiParams.ApiUrlProvider,
             AppName = info.Features.AppName,
             IsTv = info.Features.IsTv,
             Colors = colors,

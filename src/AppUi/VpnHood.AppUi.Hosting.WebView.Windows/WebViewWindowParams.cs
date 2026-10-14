@@ -1,6 +1,5 @@
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.App;
-using VpnHood.AppLib.App.WebHosting;
 using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.WebView.Branding;
 
@@ -10,7 +9,9 @@ namespace VpnHood.AppUi.Hosting.WebView.Windows;
 internal class WebViewWindowParams
 {
     public required VpnHoodApi Api { get; init; }
-    public required IAppWebHost WebHost { get; init; }
+
+    // the page's address, which a rebind moves (DesktopUiParams.ApiUrlProvider)
+    public required IDesktopApiUrlProvider ApiUrlProvider { get; init; }
     public required string AppName { get; init; }
     public required bool IsTv { get; init; }
 

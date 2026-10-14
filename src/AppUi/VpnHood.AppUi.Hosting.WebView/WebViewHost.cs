@@ -2,15 +2,15 @@
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
-using VpnHood.AppLib.App.WebHosting;
 
 namespace VpnHood.AppUi.Hosting.WebView;
 
-// Platform-neutral controller that hosts the VpnHood SPA in a web view: starts the web host it is
+// Platform-neutral controller that hosts the VpnHood SPA in a web view: starts the page host it is
 // handed, computes the launch URL, drives the loading/error state and loads the SPA again after the
 // web view reports a failure. Only the native web-view mechanics live in the per-platform IWebView;
-// the web host keeps itself alive (see IAppWebHost). Which web host is the OS host's to say - the
-// app's own local one when the app runs in the host's process - so nothing here assumes the app is.
+// the web host keeps itself alive (see IAppWebHost). Which page host is the OS host's to say - the
+// app's own local web host when the app runs in the host's process (AppWebViewPageHost) - so nothing
+// here assumes the app is.
 //
 // Lifecycle from the OS host: construct one per web view, call Start() when the host UI is created,
 // OnResume() from the platform's foreground/resume hook, and Dispose() when it is torn down.
@@ -18,7 +18,7 @@ public sealed class WebViewHost : IDisposable
 {
     private static readonly TimeSpan ReloadDelay = TimeSpan.FromSeconds(1);
     private readonly IWebView _view;
-    private readonly IAppWebHost _webHost;
+    private readonly IWebViewPageHost _pageHost;
     private readonly WebViewHostOptions _options;
     private Uri? _launchUrl;
     private bool _viewInitialized;
@@ -26,25 +26,25 @@ public sealed class WebViewHost : IDisposable
     private bool _isLoadFailing;
     private bool _disposed;
 
-    public WebViewHost(IWebView view, IAppWebHost webHost, WebViewHostOptions? options = null)
+    public WebViewHost(IWebView view, IWebViewPageHost pageHost, WebViewHostOptions? options = null)
     {
         _view = view ?? throw new ArgumentNullException(nameof(view));
-        _webHost = webHost ?? throw new ArgumentNullException(nameof(webHost));
+        _pageHost = pageHost ?? throw new ArgumentNullException(nameof(pageHost));
         _options = options ?? new WebViewHostOptions();
 
         _view.PageLoaded += OnPageLoaded;
         _view.LoadFailed += OnLoadFailed;
         _view.ContentProcessGone += OnContentProcessGone;
-        _webHost.Restarted += OnServerRestarted;
+        _pageHost.Restarted += OnServerRestarted;
     }
 
-    // Start the web host off the UI thread (it extracts the web root and binds a socket), then
-    // build the web view and load the SPA back on the UI thread.
+    // Start the page host off the UI thread (the app's own extracts the web root and binds a socket),
+    // then build the web view and load the SPA back on the UI thread.
     public void Start()
     {
         Task.Run(async () => {
             try {
-                _launchUrl = await _webHost.EnsureStarted(CancellationToken.None).Vhc();
+                _launchUrl = await _pageHost.EnsureStarted(CancellationToken.None).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to start the SPA web server.");
@@ -139,7 +139,7 @@ public sealed class WebViewHost : IDisposable
         Task.Run(async () => {
             try {
                 // one real connect check, and a rebind when the listener really is gone
-                _launchUrl = await _webHost.EnsureStarted(CancellationToken.None).Vhc();
+                _launchUrl = await _pageHost.EnsureStarted(CancellationToken.None).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to check the SPA web server after a failed load.");
@@ -163,6 +163,6 @@ public sealed class WebViewHost : IDisposable
         _view.PageLoaded -= OnPageLoaded;
         _view.LoadFailed -= OnLoadFailed;
         _view.ContentProcessGone -= OnContentProcessGone;
-        _webHost.Restarted -= OnServerRestarted;
+        _pageHost.Restarted -= OnServerRestarted;
     }
 }

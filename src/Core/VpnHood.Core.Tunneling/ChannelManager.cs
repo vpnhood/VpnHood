@@ -136,8 +136,11 @@ internal class ChannelManager : IDisposable
                 VhLogger.FormatType(channel), channel.ChannelId, _packetChannels.Count, channel.State);
         }
 
-        // the closing and dead channels leave first, so only live ones count against the maximum: a client replacing a
-        // closing channel would otherwise cost a full tunnel its oldest healthy one
+        // The closing and dead channels leave first, so only live ones count against the maximum: a client replacing a
+        // closing channel would otherwise cost a full tunnel its oldest healthy one. One that starts closing or dies
+        // after the cleanup still counts, as neither takes a lock, and the trim may dispose the oldest instead, healthy
+        // or not, with its queued packets. Left so: the gap is microseconds, and a lock would tie every channel, its
+        // Dispose included, to a manager it is built before
         CleanupChannels();
         RemoveExcessPacketChannels();
     }

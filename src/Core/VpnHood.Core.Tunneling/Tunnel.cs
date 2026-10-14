@@ -68,8 +68,7 @@ public class Tunnel : PacketTransportBase
         try {
             var channel = FindChannelForPacket(ipPacket);
             VerifyMtu(ipPacket, TransportDefaults.MtuOverhead);
-            channel.SendPacketQueued(ipPacket);
-            return true;
+            return channel.SendPacketQueued(ipPacket);
         }
         catch (Exception ex) {
             LogPacket(ipPacket, ex, "Could not send a packet to a channel.");

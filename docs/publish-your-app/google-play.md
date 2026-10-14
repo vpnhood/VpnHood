@@ -155,6 +155,14 @@ different. In Play Console → **Android developer verification → Register pac
 The status moves from *In review* to *Registered*, usually within minutes. It is a one-off: you
 register again only for a new package name or a new signing key, never per release.
 
+**Its updates.** The website build downloads and installs its own update. It reads the feed for its
+phone's processor under `UpdateInfoBaseUrl` in your private appsettings: `<title>-android-web.json`,
+or on an arm64 phone `<title>-android-web-arm64.json`. The release publishes both with their APKs,
+and refuses to publish one without the other. The head names the SHA-256 of the key the website
+build is signed with (`ReleaseCertificateSha256` in its `App.cs`): put your key's there
+(`apksigner verify --print-certs` on your website APK shows it). The app offers the download only to
+a copy signed with that key, so until you do, your website build shows the update's link instead.
+
 ---
 
 ## 9. See the in-app update before a release

@@ -595,8 +595,9 @@ internal sealed class LocalTcpConnection(
             lock (_seqLock) {
                 var seqDiff = (int)(seq - _rcvNxt);
 
-                if (seqDiff > 0) {
-                    // Out of order - send duplicate ACK to trigger fast retransmit
+                if (seqDiff > 0 || seqDiff == int.MinValue) {
+                    // Out of order - send duplicate ACK to trigger fast retransmit (a start exactly half the space
+                    // away counts as ahead: its negation would overflow the overlap below)
                     return (true, true);
                 }
 

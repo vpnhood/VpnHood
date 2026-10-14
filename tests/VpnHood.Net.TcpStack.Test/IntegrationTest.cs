@@ -31,7 +31,7 @@ public sealed class TcpStackIntegrationTest
         Console.WriteLine("=== DIAGNOSTIC TEST START ===");
         Console.WriteLine($"Test Server: {diagServerIp}:{diagServerPort}");
 
-        var tcpStack = new LocalTcpStack();
+        using var tcpStack = new LocalTcpStack();
         var adapterSettings = new WinDivertVpnAdapterSettings {
             AdapterName = "VpnHoodDiag",
             ExcludeLocalNetwork = false,
@@ -222,7 +222,7 @@ public sealed class TcpStackIntegrationTest
     {
         // Arrange
         var testData = GenerateRandomTestData(TestDataSize);
-        var tcpStack = new LocalTcpStack();
+        using var tcpStack = new LocalTcpStack();
         var completionSource = new TaskCompletionSource<bool>();
         var receivedData = new List<byte>();
 

@@ -32,7 +32,7 @@ public sealed class LossRecoveryTest
     [Timeout(10000)]
     public async Task TailLoss_RtoRetransmitsUnackedData()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             RetransmitTimeout = TimeSpan.FromMilliseconds(300),
             RetransmitMaxTimeout = TimeSpan.FromSeconds(1)
         });
@@ -79,7 +79,7 @@ public sealed class LossRecoveryTest
     [Timeout(10000)]
     public async Task LostFin_IsRetransmitted()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             RetransmitTimeout = TimeSpan.FromMilliseconds(300),
             RetransmitMaxTimeout = TimeSpan.FromSeconds(1)
         });
@@ -115,7 +115,7 @@ public sealed class LossRecoveryTest
     [Timeout(10000)]
     public async Task LostFinalHandshakeAck_SynAckIsRetransmitted()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             RetransmitTimeout = TimeSpan.FromMilliseconds(300),
             RetransmitMaxTimeout = TimeSpan.FromSeconds(1)
         });
@@ -620,7 +620,7 @@ public sealed class LossRecoveryTest
     [Timeout(10000)]
     public async Task Rst_SequenceValidation_BlocksBlindReset()
     {
-        var tcpStack = new LocalTcpStack();
+        using var tcpStack = new LocalTcpStack();
         var sent = new List<IpPacket>();
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
@@ -669,7 +669,7 @@ public sealed class LossRecoveryTest
     [Timeout(10000)]
     public async Task WindowUpdates_AreNotDupAcks_ButRealDupAcksRetransmit()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             RetransmitTimeout = TimeSpan.FromSeconds(30), // keep the RTO out of this test
             RetransmitMaxTimeout = TimeSpan.FromSeconds(30)
         });
@@ -722,7 +722,7 @@ public sealed class LossRecoveryTest
     [Timeout(10000)]
     public async Task DelayedAck_TrailingFullSizeSegment_IsFlushed()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             DefaultMss = 512,
             MaxMss = 512,
             RetransmitBufferSize = 1024,
@@ -858,7 +858,7 @@ public sealed class LossRecoveryTest
     public async Task ReceiveWindow_IsHardEnforced_AgainstWindowIgnoringPeer()
     {
         const int windowSize = 4096;
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = windowSize });
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = windowSize });
         var sent = new List<IpPacket>();
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
@@ -900,7 +900,7 @@ public sealed class LossRecoveryTest
     [Timeout(10000)]
     public async Task Fin_InsideOverlappingRetransmit_IsProcessed()
     {
-        var tcpStack = new LocalTcpStack();
+        using var tcpStack = new LocalTcpStack();
         var sent = new List<IpPacket>();
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
@@ -945,7 +945,7 @@ public sealed class LossRecoveryTest
     [Timeout(10000)]
     public async Task IdleTimeout_AbortsWithRst()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             IdleTimeout = TimeSpan.FromMilliseconds(300),
             IdleCheckInterval = TimeSpan.FromMilliseconds(100)
         });
@@ -982,7 +982,7 @@ public sealed class LossRecoveryTest
     [Timeout(10000)]
     public async Task GracefulClose_DuringBlockedWrite_NeverSendsDataAfterFin()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             ZeroWindowProbeInterval = TimeSpan.FromSeconds(30) // suppress probes; keep the writer parked
         });
         var sent = new List<IpPacket>();

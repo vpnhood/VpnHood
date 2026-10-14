@@ -28,7 +28,7 @@ public sealed class LocalTcpStackOptionsTest
     [Timeout(5000)]
     public void DefaultOptions_SynAck_AdvertisesHistoricalWindowAndMss()
     {
-        var tcpStack = new LocalTcpStack(LocalTcpStackOptions.Default); // explicit, host-independent
+        using var tcpStack = new LocalTcpStack(LocalTcpStackOptions.Default); // explicit, host-independent
         var sent = new List<IpPacket>();
         tcpStack.OnPacketSend = sent.Add;
         tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
@@ -47,7 +47,7 @@ public sealed class LocalTcpStackOptionsTest
     [Timeout(5000)]
     public void CustomOptions_SynAck_AdvertisesConfiguredWindowAndMss()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16 * 1024, MaxMss = 1000 });
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16 * 1024, MaxMss = 1000 });
         var sent = new List<IpPacket>();
         tcpStack.OnPacketSend = sent.Add;
         tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
@@ -67,7 +67,7 @@ public sealed class LocalTcpStackOptionsTest
     [Timeout(5000)]
     public async Task SmallReceiveWindow_ClientToServerData_RoundTrips()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16 * 1024, RetransmitBufferSize = 8 * 1024 });
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16 * 1024, RetransmitBufferSize = 8 * 1024 });
         var sent = new List<IpPacket>();
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
@@ -105,9 +105,9 @@ public sealed class LocalTcpStackOptionsTest
     [Timeout(15000, CooperativeCancellation = true)]
     public async Task SmallRetxBuffer_ServerToClientData_RoundTripsWithRingWrap()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             ReceiveWindowSize = 8 * 1024,
-            RetransmitBufferSize = 2 * 1024,   // small ring -> forces multiple wraps
+            RetransmitBufferSize = 1300,   // a small ring, no multiple of the MSS: segments straddle its end
             MaxMss = 512,
             DefaultMss = 512,            // peer SYN advertises none -> server uses this
         });
@@ -130,30 +130,52 @@ public sealed class LocalTcpStackOptionsTest
         var reassembled = new List<byte>();
         var expectedNext = serverSeq + 1; // server data starts at ISN+1
         var consumed = 0;
+        var retransmissions = 0;
+        var straddling = 0;
         while (reassembled.Count < payload.Length) {
             cts.Token.ThrowIfCancellationRequested();
             IpPacket[] batch;
             lock (sync) { batch = sent.Skip(consumed).ToArray(); consumed = sent.Count; }
 
             var progressed = false;
+            var lastLength = 0;
             foreach (var p in batch) {
                 var tcp = p.ExtractTcp();
                 if (tcp.Payload.Length == 0) continue;
-                if (tcp.SequenceNumber != expectedNext) continue; // ignore any out-of-order/retx
+                if ((int)(tcp.SequenceNumber - expectedNext) < 0) {
+                    // a retransmission read back out of the ring: its bytes must be the ones first sent at that sequence
+                    var offset = (int)(tcp.SequenceNumber - (serverSeq + 1));
+                    CollectionAssert.AreEqual(payload[offset..(offset + tcp.Payload.Length)], tcp.Payload.ToArray(),
+                        $"a retransmission at offset {offset} must carry the original bytes");
+                    retransmissions++;
+                    if (offset % 1300 + tcp.Payload.Length > 1300) straddling++;
+                    continue;
+                }
+                if (tcp.SequenceNumber != expectedNext) continue; // ahead: not yet
                 reassembled.AddRange(tcp.Payload.ToArray());
                 expectedNext += (uint)tcp.Payload.Length;
+                lastLength = tcp.Payload.Length;
                 progressed = true;
             }
 
-            if (progressed)
-                tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
-                    ack: true, seq: 1001, ackNum: expectedNext));
+            // Ack all but the last segment until the end: a whole-batch ack empties the ring and resets its start, so
+            // the ring would never wrap; one segment held back keeps the start moving through the ring.
+            if (progressed) {
+                var held = reassembled.Count < payload.Length ? (uint)lastLength : 0;
+                var ack = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, ack: true, seq: 1001, ackNum: expectedNext - held);
+                tcpStack.ProcessIncoming(ack);
+                // three duplicates of it: the fast retransmit reads the held segment back out of the ring
+                for (var i = 0; held > 0 && i < 3; i++)
+                    tcpStack.ProcessIncoming(ack);
+            }
             else
                 await Task.Delay(5, cts.Token);
         }
 
         await writeTask.WaitAsync(cts.Token);
         CollectionAssert.AreEqual(payload, reassembled.ToArray(), "all data must round-trip through a small retx ring");
+        Assert.IsGreaterThan(0, retransmissions, "the duplicate ACKs drew retransmissions out of the ring");
+        Assert.IsGreaterThan(0, straddling, "one of them straddled the ring's end");
         await stream.DisposeAsync();
     }
 
@@ -217,7 +239,7 @@ public sealed class LocalTcpStackOptionsTest
     [Timeout(5000)]
     public void MaxConnections_OverLimitSyn_GetsRst()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { MaxConnections = 1 });
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { MaxConnections = 1 });
         var sent = new List<IpPacket>();
         tcpStack.OnPacketSend = sent.Add;
         tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
@@ -241,7 +263,7 @@ public sealed class LocalTcpStackOptionsTest
     [Timeout(5000)]
     public async Task BoundedAcceptQueue_WhenFull_DropsOverflowGracefully()
     {
-        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { AcceptQueueCapacity = 1 });
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { AcceptQueueCapacity = 1 });
         var sent = new List<IpPacket>();
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };

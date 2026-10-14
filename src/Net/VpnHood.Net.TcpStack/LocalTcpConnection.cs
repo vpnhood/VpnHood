@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.TcpStack.Primitives;
@@ -442,135 +443,126 @@ internal sealed class LocalTcpConnection(
     }
 
     /// <summary>
-    /// Handles incoming TCP data from network.
-    /// Returns: (handled, needsAck) - handled indicates if packet was processed, needsAck if ACK should be sent
+    /// Processes a segment from the peer that passed the stack's handshake check (a RST skips it): its RST, else its ACK,
+    /// then its data and FIN. Returns whether the segment was processed and whether it needs an ACK.
     /// </summary>
     public (bool handled, bool needsAck) TryHandleIncoming(uint seq, uint ack, ushort windowSize, TcpFlags flags, ReadOnlySpan<byte> payload)
     {
         if (_disposed) return (false, false);
         var now = Stopwatch.GetTimestamp();
 
-        if (flags.HasFlag(TcpFlags.Rst)) {
-            // RFC 5961 §3.2: accept an RST only when its sequence number exactly matches RCV.NXT. An
-            // in-window (but inexact) RST gets a challenge ACK; anything else is dropped. Without this,
-            // any local app able to inject one packet into the TUN could blind-reset arbitrary flows.
-            bool exact, inWindow;
-            lock (_seqLock) {
-                var rstDiff = (int)(seq - _rcvNxt);
-                exact = rstDiff == 0;
-                inWindow = rstDiff > 0 && rstDiff < Math.Max(1, (int)_lastAdvertisedWindow);
-            }
-
-            if (exact) {
-                Close();
-                return (false, false);
-            }
-            return inWindow ? (true, true) : (false, false); // challenge ACK / drop
-        }
+        if (flags.HasFlag(TcpFlags.Rst))
+            return HandleRst(seq);
 
         // After the handshake every segment carries an ACK (RFC 9293 3.10.7.4): one without is dropped with its data.
         if (!flags.HasFlag(TcpFlags.Ack))
             return (false, false);
 
-        // Process the ACK: advance _sndUna and update the peer's window.
-        uint newPw;
-        long diff;
-        uint prevUna;
-        uint sndNxtSnap;
-        var shouldFastRetx = false;
-        var partialAckRetx = false;
-        IpPacket? finRetx = null;
+        return HandleAck(seq, ack, windowSize, flags, payload.Length, now) ?? HandleData(seq, flags, payload, now);
+    }
+
+    // RFC 5961 3.2: a RST is taken only at exactly RCV.NXT; elsewhere inside the window it draws a challenge ACK, outside
+    // it is dropped - so a local app able to inject one packet into the TUN cannot blind-reset a flow.
+    private (bool handled, bool needsAck) HandleRst(uint seq)
+    {
+        bool exact, inWindow;
+        lock (_seqLock) {
+            var rstDiff = (int)(seq - _rcvNxt);
+            exact = rstDiff == 0;
+            inWindow = rstDiff > 0 && rstDiff < Math.Max(1, (int)_lastAdvertisedWindow);
+        }
+
+        if (exact) {
+            Close();
+            return (false, false);
+        }
+        return inWindow ? (true, true) : (false, false);
+    }
+
+    /// <summary>
+    /// The ACK every segment carries: an acceptable one advances SndUna and takes the peer's window, a pure duplicate is
+    /// counted, and the retransmissions they call for go out. Returns the segment's result when the ACK alone settles it
+    /// (a challenge ACK, the reset CloseFromApp deferred, the end of the FIN exchange), null when its data and FIN are
+    /// still to be processed.
+    /// </summary>
+    private (bool handled, bool needsAck)? HandleAck(uint seq, uint ack, ushort windowSize, TcpFlags flags, int payloadLength, long now)
+    {
+        var fin = flags.HasFlag(TcpFlags.Fin);
+        bool acceptable, challenge;
+        var retransmit = false;
+        IpPacket? finRetransmit = null;
         var finExchangeComplete = false;
         var resetUnread = false;
-        var challenge = false;
-        var acceptable = false;
+        uint prevUna, sndNxt, peerWindow;
         lock (_seqLock) {
             prevUna = _sndUna;
-            sndNxtSnap = _sndNxt;
-            var prevPeerWindow = _peerWindow;
+            sndNxt = _sndNxt;
             var scaledWindow = (uint)windowSize << _peerWsShift;
-            diff = ack - _sndUna;
             // RFC 9293 3.10.7.4: only a segment inside the receive window with an ack within [SndUna, SndNxt] is
-            // processed, carries the peer's window and counts as its activity (a keepalive, one below RcvNxt, too);
-            // an ack of data never sent draws a challenge ACK and nothing else (RFC 5961 5.2).
-            var ackCurrent = diff <= _sndNxt - _sndUna;
+            // acceptable - processed, carrying the peer's window, counting as its activity (a keepalive, one below RcvNxt,
+            // too); an ack of data never sent draws a challenge ACK and nothing else (RFC 5961 5.2).
+            var acked = ack - _sndUna;
+            var ackCurrent = acked <= _sndNxt - _sndUna;
             challenge = !ackCurrent && (int)(ack - _sndNxt) > 0;
-            var seqDiff = (int)(seq - _rcvNxt);
-            var seqInWindow = seqDiff >= 0
-                ? seqDiff <= _lastAdvertisedWindow
-                : seqDiff + payload.Length + (flags.HasFlag(TcpFlags.Fin) ? 1 : 0) > 0 || seqDiff == -1 && payload.Length <= 1;
-            acceptable = ackCurrent && seqInWindow;
-            if (seqInWindow && ackCurrent && diff > 0) {
+            acceptable = ackCurrent && SegmentInWindowLocked(seq, payloadLength, fin);
+
+            if (acceptable && acked > 0) {
                 _sndUna = ack;
-                // Drop acknowledged bytes from retx buffer.
-                var n = (int)diff;
-                if (n >= _retxBufferLen) {
-                    _retxBufferLen = 0;
-                    _retxRingStart = 0;
-                }
-                else {
-                    _retxRingStart = (_retxRingStart + n) % _retxCapacity;
-                    _retxBufferLen -= n;
-                }
+                TrimRetxRingLocked((int)acked);
                 _dupAckCount = 0;
                 _lastDupAck = ack;
                 if (_sndUna != _sndNxt)
                     RestartRtoLocked(now); // progress restarts the RTO; an emptied flight needs none, the next send arms it
-                // Loss recovery (RFC 6582 partial ACK): an ACK that stops short of the recovery point names
-                // the next lost segment; it is retransmitted now instead of after another RTO.
+                // Loss recovery (RFC 6582): a partial ACK, short of the recovery point, names the next lost segment,
+                // retransmitted now instead of after another RTO - the FIN when the data is all acked and it is the lost one.
                 if (_inRecovery) {
                     if ((int)(_sndUna - _recoverySeq) >= 0)
                         _inRecovery = false;
                     else if (_retxBufferLen > 0)
-                        partialAckRetx = true;
+                        retransmit = true;
                     else if (_finSent && _sndNxt != _sndUna)
-                        // The data is acked and the FIN is the lost one: now, not after the RTO.
-                        finRetx = BuildFinPacket(_sndNxt - 1, _rcvNxt, UpdateAdvertisedWindowLocked());
+                        finRetransmit = BuildFinPacket(_sndNxt - 1, _rcvNxt, UpdateAdvertisedWindowLocked());
                 }
                 // LastAck: the peer acknowledged our FIN after its own; nothing is left to exchange.
                 finExchangeComplete = _finSent && _finReceived && _sndUna == _sndNxt;
                 // The reset CloseFromApp deferred (unread bytes, our tail in flight): everything is acked now.
                 resetUnread = _resetPending && _sndUna == _sndNxt;
             }
-            else if (seqInWindow && diff == 0 && payload.Length == 0 && _retxBufferLen > 0 && scaledWindow != 0 &&
-                     scaledWindow == prevPeerWindow && !flags.HasFlag(TcpFlags.Fin)) {
-                // Pure duplicate ACK (RFC 5681: no data, no FIN, UNCHANGED window): the peer is
-                // missing data starting at _sndUna. A pure window update (same ack, new window)
-                // must NOT count, or three updates would trigger a spurious fast retransmit. Nor may a
-                // zero window: its ACKs of our probes are flow control, not loss, and a recovery they
-                // started would outlive the window and swallow the real duplicate ACKs after it reopens.
+
+            // A pure duplicate ACK (RFC 5681: no data, no FIN, the window unchanged and open) says the peer misses the
+            // data at SndUna. A window update must not count, or three of them would trigger a spurious fast retransmit;
+            // nor may a zero window, whose ACKs of our probes are flow control, not loss - a recovery they started would
+            // outlive the window and swallow the real duplicate ACKs after it reopens.
+            var duplicateAck = acceptable && acked == 0 && payloadLength == 0 && !fin && _retxBufferLen > 0 &&
+                               scaledWindow == _peerWindow && scaledWindow != 0;
+            if (duplicateAck) {
                 if (ack == _lastDupAck) _dupAckCount++;
                 else { _lastDupAck = ack; _dupAckCount = 1; }
-                // Three duplicate ACKs start one recovery; more of them during it retransmit nothing - the
-                // partial ACKs above carry the recovery segment by segment.
+                // Three duplicate ACKs start one recovery; more of them during it retransmit nothing - the partial ACKs
+                // above carry the recovery segment by segment.
                 if (_dupAckCount >= 3 && !_inRecovery) {
-                    shouldFastRetx = true;
+                    retransmit = true;
                     EnterRecoveryLocked();
                 }
             }
+
             if (acceptable)
                 _peerWindow = scaledWindow;
-            newPw = _peerWindow;
+            peerWindow = _peerWindow;
         }
+
         if (challenge)
             return (true, true);
         if (acceptable)
             Touch(now);
         if (diagnostics.VerboseLogging)
-            diagnostics.TraceAck(ipEndPointPair, ++_ackCount, ack, prevUna, sndNxtSnap, diff, windowSize,
-                newPw, payload.Length, _windowSignal.CurrentCount, _dupAckCount);
+            diagnostics.TraceAck(ipEndPointPair, ++_ackCount, ack, prevUna, sndNxt, ack - prevUna, windowSize, peerWindow,
+                payloadLength, _windowSignal.CurrentCount, _dupAckCount);
 
-        // A failed send below is a lost packet, which the RTO retransmits; the rest of this segment (its
-        // window signal, data, FIN) must still be processed.
-        if (shouldFastRetx || partialAckRetx) {
-            if (diagnostics.VerboseLogging)
-                diagnostics.TraceFastRetransmit(ipEndPointPair, Interlocked.Increment(ref _retxCount), ack, _retxBufferLen);
+        if (retransmit)
             FastRetransmit();
-        }
-        if (finRetx != null) {
-            var stack = _stack ?? throw new InvalidOperationException("The connection was not started.");
-            try { stack.SendPacket(finRetx); } catch { /* lost packet */ }
-        }
+        if (finRetransmit != null)
+            TrySendPacket(finRetransmit);
         if (acceptable)
             TrySignalWindow();
 
@@ -580,99 +572,88 @@ internal sealed class LocalTcpConnection(
         }
         if (finExchangeComplete) {
             Close();
-            // A retransmitted peer FIN on this segment still needs its ACK, or its next retransmit meets
-            // an unknown-connection RST.
-            return (true, flags.HasFlag(TcpFlags.Fin));
+            // A retransmitted peer FIN on this segment still needs its ACK, or its next retransmit meets an
+            // unknown-connection RST.
+            return (true, fin);
         }
+        return null;
+    }
 
+    // _seqLock must be held. RFC 9293 3.10.7.4's test of a segment's sequence numbers against the receive window: it
+    // starts inside the window (the edge included), or it started before RcvNxt and reaches past it (a retransmission
+    // carrying new bytes or the FIN), or it is a keepalive: at most one byte at RcvNxt - 1.
+    // AggressiveInlining, here and on the receive path's three other helpers: they run per segment and were inline before
+    // they had names; on its own Mono (Android) inlines nothing this size, and RyuJIT (iOS, desktop) only when its
+    // heuristic agrees.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool SegmentInWindowLocked(uint seq, int payloadLength, bool fin)
+    {
+        var seqDiff = (int)(seq - _rcvNxt);
+        if (seqDiff >= 0)
+            return seqDiff <= _lastAdvertisedWindow;
+        return seqDiff + payloadLength + (fin ? 1 : 0) > 0 || seqDiff == -1 && payloadLength <= 1;
+    }
+
+    // _seqLock must be held. Drops the acknowledged bytes from the front of the retransmit ring.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void TrimRetxRingLocked(int acked)
+    {
+        if (acked >= _retxBufferLen) {
+            _retxBufferLen = 0;
+            _retxRingStart = 0;
+        }
+        else {
+            _retxRingStart = (_retxRingStart + acked) % _retxCapacity;
+            _retxBufferLen -= acked;
+        }
+    }
+
+    /// <summary>The segment's data and FIN, after its ACK.</summary>
+    private (bool handled, bool needsAck) HandleData(uint seq, TcpFlags flags, ReadOnlySpan<byte> payload, long now)
+    {
         try {
-            bool needsAck;
-            var processFin = false;
+            bool needsAck, dataAfterClose, resetAfterClose, finTaken;
             var finCloses = false;
-            var dataAfterClose = false;
-            var resetAfterClose = false;
-
             lock (_seqLock) {
                 var seqDiff = (int)(seq - _rcvNxt);
-
-                if (seqDiff > 0 || seqDiff == int.MinValue) {
-                    // Out of order - send duplicate ACK to trigger fast retransmit (a start exactly half the space
-                    // away counts as ahead: its negation would overflow the overlap below)
+                // Ahead of RcvNxt: a duplicate ACK names the gap and no reassembly holds the segment (a start exactly half
+                // the sequence space away counts as ahead: its negation would overflow the overlap below).
+                if (seqDiff > 0 || seqDiff == int.MinValue)
                     return (true, true);
-                }
 
-                // seqDiff <= 0: consume any bytes beyond _rcvNxt. This single path covers both the
-                // in-order case (seqDiff == 0) and a partially-overlapping retransmission (seqDiff < 0).
+                // At or before RcvNxt: in order (seqDiff == 0) or a retransmission overlapping what was received
+                // (seqDiff < 0); the bytes past RcvNxt are the new ones.
                 var isRetransmit = seqDiff < 0;
-                var overlap = -seqDiff; // already-received prefix of this segment
-                var truncated = false;
-                var acceptedNew = 0;
-                // New bytes after the app closed its stream have no reader: reset below, as a kernel does for
-                // data after close(), instead of buffering them into a dead pipe that pins the connection. While
-                // our own FIN or tail data is unacknowledged they are dropped without an ACK instead (a RST now
-                // would make the peer drop that tail unread); its retransmit draws the RST once all is acked.
-                dataAfterClose = payload.Length > overlap && _readSideClosed;
-                if (dataAfterClose) {
-                    resetAfterClose = _sndUna == _sndNxt;
-                }
-                else if (payload.Length > overlap) {
-                    var newData = payload[overlap..];
-                    // HARD receive-window enforcement: never buffer beyond the configured window, even if
-                    // the peer ignores our advertisements. Real TCP receivers drop out-of-window bytes the
-                    // same way; a compliant peer never hits this, a hostile one retransmits into a bounded
-                    // buffer instead of exhausting memory. (This is also what keeps the reassembly pipe
-                    // below its pause threshold — see LocalTcpStackOptions.CreatePipeOptions.)
-                    int headroom = AdvertisedWindowLocked;
-                    acceptedNew = Math.Min(newData.Length, headroom);
-                    if (acceptedNew > 0) {
-                        WriteToAppPipe(newData[..acceptedNew]);
-                        _rcvNxt += (uint)acceptedNew;
-                    }
-                    truncated = acceptedNew < newData.Length;
-                }
+                var overlap = -seqDiff;
+                var newBytes = payload.Length - overlap;
 
-                needsAck = isRetransmit || acceptedNew > 0 || truncated;
-
-                // Allocation-free delayed ACK policy:
-                // - ACK PSH/FIN, short segments, retransmits and truncations immediately.
-                // - For clean in-order full-size data, ACK every 2nd segment to avoid flooding the iOS
-                //   packet path. A pending (thinned) ACK is flushed by the maintenance sweep within
-                //   DelayedAckTimeout so an odd trailing segment never waits for the peer's RTO.
-                if (needsAck && !isRetransmit && !truncated &&
-                    !flags.HasFlag(TcpFlags.Fin) && !flags.HasFlag(TcpFlags.Psh) &&
-                    payload.Length >= Mss) {
-                    _unackedSegments++;
-                    if (_unackedSegments < 2) {
-                        needsAck = false;
-                        _delayedAckSinceTicks = now;
-                        HoldMaintenanceInterestLocked(); // the sweep flushes this ACK if no second segment comes
-                    }
-                    else {
-                        _unackedSegments = 0;
-                    }
+                // New bytes after the app closed its stream have no reader: rather than fill a dead pipe that pins the
+                // connection, they reset it, as a kernel does after close(), once our own tail is acknowledged; until then
+                // they are dropped without an ACK (a RST now would make the peer drop that tail unread) and their
+                // retransmission draws the RST.
+                dataAfterClose = newBytes > 0 && _readSideClosed;
+                resetAfterClose = dataAfterClose && _sndUna == _sndNxt;
+                // The advertised window is enforced: bytes beyond it are dropped, as a kernel drops them, so a peer that
+                // ignores the window retransmits into a bounded pipe - which also stays below its pause threshold
+                // (LocalTcpStackOptions.CreatePipeOptions).
+                var accepted = newBytes > 0 && !dataAfterClose ? Math.Min(newBytes, AdvertisedWindowLocked) : 0;
+                if (accepted > 0) {
+                    WriteToAppPipe(payload.Slice(overlap, accepted));
+                    _rcvNxt += (uint)accepted;
                 }
-                else if (needsAck) {
-                    _unackedSegments = 0;
-                }
+                var truncated = accepted < newBytes && !dataAfterClose;
 
-                // FIN consumes _rcvNxt only once every payload byte before it has been consumed. Checking
-                // the FIN's own sequence position (seq + payload length) instead of "seqDiff == 0" also
-                // processes a FIN that arrives inside a partially-overlapping retransmitted segment.
-                if (flags.HasFlag(TcpFlags.Fin) && !_finReceived && seq + (uint)payload.Length == _rcvNxt) {
-                    _rcvNxt += 1;
-                    _finReceived = true;
+                // Only a segment with something to acknowledge reaches AckNowLocked: its reset of the count would cancel a
+                // pending delayed ACK with no ACK sent.
+                var delayable = !isRetransmit && !truncated && payload.Length >= Mss &&
+                                !flags.HasFlag(TcpFlags.Fin) && !flags.HasFlag(TcpFlags.Psh);
+                needsAck = (isRetransmit || accepted > 0 || truncated) && AckNowLocked(delayable, now);
+                finTaken = TakeFinLocked(flags, seq + (uint)payload.Length);
+                if (finTaken) {
                     needsAck = true;
-                    processFin = true;
-
-                    // Both FINs exchanged: closed once ours is acknowledged too (this segment's ACK was
-                    // processed above), otherwise LastAck retransmits it until the ACK arrives.
-                    if (_finSent)
-                        State = _sndUna == _sndNxt ? TcpConnectionState.Closed : TcpConnectionState.LastAck;
-                    else
-                        State = TcpConnectionState.Closing;
                     finCloses = State == TcpConnectionState.Closed;
                 }
-
+                // The after-close exit is below the ACK bookkeeping, which a retransmission after the close goes through too.
             }
 
             if (dataAfterClose) {
@@ -680,20 +661,51 @@ internal sealed class LocalTcpConnection(
                     Abort();
                 return (false, false);
             }
-
-            if (processFin) {
+            if (finTaken) {
                 CompleteNetToApp();
                 if (finCloses)
                     Close();
             }
-
             return (true, needsAck);
         }
         catch (InvalidOperationException) {
-            // Pipe was completed/broken - abort (the peer gets an RST instead of a silent black hole)
+            // a pipe that throws: the peer gets a RST instead of a black hole
             Abort();
             return (false, false);
         }
+    }
+
+    // _seqLock must be held and the segment has something to acknowledge. The delayed-ACK policy, allocation-free: a
+    // delayable segment (clean, in order, full size) is acknowledged every second one, the odd one by the maintenance
+    // sweep within DelayedAckTimeout, so the iOS packet path is not flooded; everything else at once.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool AckNowLocked(bool delayable, long now)
+    {
+        if (delayable && ++_unackedSegments < 2) {
+            _delayedAckSinceTicks = now;
+            HoldMaintenanceInterestLocked(); // the sweep flushes this ACK if no second segment comes
+            return false;
+        }
+        _unackedSegments = 0;
+        return true;
+    }
+
+    // _seqLock must be held. Takes the peer's FIN once every byte before it is consumed; its own position (seq + payload
+    // length) is checked, not seqDiff == 0, so a FIN inside a partially overlapping retransmission is taken too.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TakeFinLocked(TcpFlags flags, uint finSeq)
+    {
+        if (!flags.HasFlag(TcpFlags.Fin) || _finReceived || finSeq != _rcvNxt)
+            return false;
+        _rcvNxt += 1;
+        _finReceived = true;
+        // Both FINs exchanged: closed once ours is acknowledged too (this segment's ACK was processed first); otherwise
+        // LastAck retransmits it until the ACK arrives.
+        if (_finSent)
+            State = _sndUna == _sndNxt ? TcpConnectionState.Closed : TcpConnectionState.LastAck;
+        else
+            State = TcpConnectionState.Closing;
+        return true;
     }
 
     private void WriteToAppPipe(ReadOnlySpan<byte> data)
@@ -712,7 +724,7 @@ internal sealed class LocalTcpConnection(
             _windowClosed = true;
 
         // Flush is fire-and-forget on this packet-receive critical path. That is safe because the caller
-        // (TryHandleIncoming) hard-enforces the advertised window, so the unread backlog never exceeds
+        // (HandleData) hard-enforces the advertised window, so the unread backlog never exceeds
         // ReceiveWindowSize — which sits BELOW the pipe's pause threshold (ReceiveWindowSize + MaxMss).
         // FlushAsync therefore always completes synchronously; discarding a completed ValueTask is a
         // plain struct drop, never a pending IValueTaskSource (which must not be abandoned).
@@ -893,13 +905,10 @@ internal sealed class LocalTcpConnection(
             try { stack.SendAckOnly(this); } catch { /* next sweep retries */ }
         if (resendSynAck)
             try { stack.SendSynAck(this); } catch { /* next sweep retries */ }
-        if (retxData) {
-            if (diagnostics.VerboseLogging)
-                diagnostics.TraceFastRetransmit(ipEndPointPair, Interlocked.Increment(ref _retxCount), _lastDupAck, _retxBufferLen);
+        if (retxData)
             FastRetransmit();
-        }
         if (finRetx != null)
-            try { stack.SendPacket(finRetx); } catch { /* SendPacket disposes the packet on failure */ }
+            TrySendPacket(finRetx);
     }
 
     // _seqLock must be held. Loss detected (three duplicate ACKs or the RTO): until SndUna passes today's
@@ -964,7 +973,7 @@ internal sealed class LocalTcpConnection(
             _sndNxt += 1; // FIN consumes one sequence number
             finWindow = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
 
-            // The connection ends only when the peer acknowledges this FIN (TryHandleIncoming's ACK path);
+            // The connection ends only when the peer acknowledges this FIN (HandleAck);
             // until then PollMaintenance retransmits it, and the idle timeout bounds a peer that never does.
             State = _finReceived ? TcpConnectionState.LastAck : TcpConnectionState.FinWait1;
             UpdateMaintenanceInterestLocked();
@@ -1105,8 +1114,10 @@ internal sealed class LocalTcpConnection(
         uint seqForSegment;
         uint ackForSegment;
         ushort windowForSegment;
+        int retxLen;
         lock (_seqLock) {
             if (_retxBufferLen == 0) return;
+            retxLen = _retxBufferLen;
             var segLen = Math.Min(_retxBufferLen, Mss);
             payloadCopy = new byte[segLen];
             var ring = _retxBuffer ?? throw new InvalidOperationException("The retransmit ring holds bytes but was never allocated.");
@@ -1119,6 +1130,8 @@ internal sealed class LocalTcpConnection(
             windowForSegment = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
         }
 
+        if (diagnostics.VerboseLogging)
+            diagnostics.TraceFastRetransmit(ipEndPointPair, Interlocked.Increment(ref _retxCount), seqForSegment, retxLen);
         var packet = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
             options: ReadOnlySpan<byte>.Empty, payload: payloadCopy);
         var tcp = packet.ExtractTcp();
@@ -1184,6 +1197,13 @@ internal sealed class LocalTcpConnection(
 
         try { OnClosed?.Invoke(this); } catch { /* ignore subscriber errors */ }
         Dispose();
+    }
+
+    // A failed send is a lost packet, which the RTO retransmits; SendPacket disposes the packet on its own failure.
+    private void TrySendPacket(IpPacket packet)
+    {
+        var stack = _stack ?? throw new InvalidOperationException("The connection was not started.");
+        try { stack.SendPacket(packet); } catch { /* a lost packet */ }
     }
 
     private void TrySendRst(uint seq, uint ackNum)

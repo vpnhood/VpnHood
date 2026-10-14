@@ -27,7 +27,7 @@ public sealed class LocalTcpStackOptions
     /// receive-side memory cost.
     /// <para>Range: 1..65535. The advertised value lives in the 16-bit TCP window field, and we
     /// do NOT advertise a window-scale shift (shift = 0), so values above 65535 are rejected.</para>
-    /// Default: 65535. iOS typically shrinks this to 16–32 KB.
+    /// Default: 65535, the iOS preset's value too.
     /// </summary>
     public int ReceiveWindowSize { get; init; } = 0xFFFF;
 
@@ -39,24 +39,6 @@ public sealed class LocalTcpStackOptions
     /// </summary>
     public int? PipeResumeWriterThreshold { get; init; }
 
-    /// <summary>
-    /// Global cap (bytes) on the SUM of every connection's unread reassembly-pipe backlog. Each
-    /// connection's advertised window is additionally clamped by the remaining global headroom, so a
-    /// FEW active flows can use a large per-connection <see cref="ReceiveWindowSize"/> (full speed)
-    /// while MANY concurrent flows stay bounded in aggregate. This decouples per-flow throughput from
-    /// total memory — the key to surviving 100+ concurrent connections on a memory-capped host.
-    /// <para>Default: unbounded (<see cref="long.MaxValue"/>) so desktop/Android keep a pure
-    /// per-connection window. Constrained hosts (iOS) set a few MB.</para>
-    /// <para>NOTE: against a compliant peer this budget holds, but against a WINDOW-IGNORING sender it
-    /// is advisory: the hard per-packet enforcement drops bytes beyond the per-connection
-    /// <see cref="ReceiveWindowSize"/> only. Clamping enforcement by the global headroom would drop
-    /// in-window data from compliant peers whenever OTHER flows fill the budget after a window was
-    /// advertised (cross-flow retransmit storms), so the adversarial worst case is intentionally
-    /// <see cref="ReceiveWindowSize"/> × active connections — size <see cref="MaxConnections"/>
-    /// accordingly (iOS preset: 64 KB × 50 ≈ 3.2 MB, within the jetsam margin).</para>
-    /// </summary>
-    public long GlobalReceiveBudget { get; init; } = long.MaxValue;
-
     // ---- Send / Download buffering (app stream -> stack -> tun) ----
 
     /// <summary>
@@ -64,7 +46,7 @@ public sealed class LocalTcpStackOptions
     /// in-flight unacknowledged data we will send before waiting for ACKs, so it is the dominant
     /// per-connection send-side memory cost.
     /// <para>Must be ≥ <see cref="MaxMss"/> (a single max-size segment has to fit).</para>
-    /// Default: 64 KB. iOS typically shrinks this to 8–16 KB.
+    /// Default: 64 KB; the iOS preset: 16 KB.
     /// </summary>
     public int RetxBufferSize { get; init; } = 64 * 1024;
 
@@ -190,17 +172,15 @@ public sealed class LocalTcpStackOptions
     /// <summary>
     /// Small footprint tuned for an iOS Network Extension's tight memory budget. The numbers are
     /// sensible starting points — tune against real traffic.
-    /// <para>Footprint math: receive side is capped by the 6 MB global budget (not per-connection:
-    /// 64 KB window × 50 connections only matters while the budget has headroom); send side is
-    /// 16 KB retx × 50 connections = 0.8 MB. Worst case ≈ 7 MB for TCP buffers.</para>
+    /// <para>Footprint math: receive side 64 KB window × 40 connections = 2.5 MB unread at most, held in the
+    /// pipes' 4 KB segments (two MSS writes fit in one) ≈ 3.6 MB; send side 16 KB retx × 40 connections = 0.6 MB.
+    /// Worst case ≈ 4.2 MB for TCP buffers.</para>
     /// </summary>
     public static LocalTcpStackOptions Ios => new() {
-        // Large PER-CONNECTION window (the 16-bit max, no scaling) so a few active flows get full
-        // upload/download speed (throughput ≈ window / RTT), but a GLOBAL budget caps the aggregate so
-        // 100+ concurrent flows can't blow the 52 MB jetsam limit. A flow only consumes window when it
-        // is actively transferring; idle keep-alive sit near zero.
+        // The 16-bit max window (no scaling) so a few active flows get full upload/download speed
+        // (throughput ≈ window / RTT); MaxConnections bounds the aggregate: 40 × 64 KB = 2.5 MB unread at
+        // most, and a flow holds unread bytes only while its app lags behind.
         ReceiveWindowSize = 0xFFFF,
-        GlobalReceiveBudget = 6 * 1024 * 1024,
         RetxBufferSize = 16 * 1024,
         // Capped to prevent memory exhaustion under concurrent flow storms. Tuned 2026-07-02: 50 → 40.
         // Native transient spikes scale with concurrent full-rate streams, but capping too low (25)
@@ -276,9 +256,6 @@ public sealed class LocalTcpStackOptions
         if (resume < 1 || resume >= ReceiveWindowSize)
             throw new ArgumentException(
                 $"{nameof(PipeResumeWriterThreshold)} ({resume}) must be between 1 and {nameof(ReceiveWindowSize)}-1 ({ReceiveWindowSize - 1}).");
-
-        if (GlobalReceiveBudget <= 0)
-            throw new ArgumentException($"{nameof(GlobalReceiveBudget)} must be positive; was {GlobalReceiveBudget}.");
 
         if (RetxBufferSize < MaxMss)
             throw new ArgumentException(

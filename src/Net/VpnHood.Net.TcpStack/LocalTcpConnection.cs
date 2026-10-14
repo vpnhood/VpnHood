@@ -28,10 +28,6 @@ internal sealed class LocalTcpConnection(
     // The values used on the data path below are cached into readonly fields once, here, so the
     // hot path (send/recv/ACK) costs exactly what the old consts did — a field read, no recompute.
 
-    // Aggregate cap on the SUM of every connection's unread reassembly-pipe backlog. AdvertisedWindow
-    // clamps each connection's window by the remaining global headroom (see LocalTcpStackOptions).
-    private readonly long _globalReceiveBudget = options.GlobalReceiveBudget;
-
     private readonly TimeSpan _idleTimeout = options.IdleTimeout;
     private readonly TimeSpan _idleCheckInterval = options.IdleCheckInterval;
 
@@ -94,7 +90,7 @@ internal sealed class LocalTcpConnection(
     // per-connection pipe memory even against a peer that ignores our advertisements.
     // Written with Interlocked so the lock-free readers (AdvertisedWindow) never see a torn value on 32-bit.
     private long _pipeUnread;
-    private volatile bool _windowClosed; // set once we've advertised a (near-)zero window
+    private bool _windowClosed; // set once we advertised a zero window; guarded by _seqLock
     private ushort _lastAdvertisedWindow = (ushort)options.ReceiveWindowSize;
 
     // Retransmission ring buffer: holds unacked bytes starting at _sndUna.
@@ -126,22 +122,15 @@ internal sealed class LocalTcpConnection(
     /// per-connection receive memory on every platform.</summary>
     public ushort AdvertisedWindow {
         get {
-            // Per-connection headroom: the configured window minus this connection's unread backlog.
-            var perConnFree = field - Interlocked.Read(ref _pipeUnread);
-            if (perConnFree <= 0) return 0;
-            // Global headroom: the shared budget minus the total backlog across ALL connections. This
-            // is what keeps a large per-connection window safe when many flows are active at once.
-            var globalFree = _globalReceiveBudget - diagnostics.TotalPipeBufferedBytes;
-            var free = perConnFree < globalFree ? perConnFree : globalFree;
+            // the configured window minus this connection's unread backlog
+            var free = field - Interlocked.Read(ref _pipeUnread);
             if (free <= 0) return 0;
             return free >= field ? field : (ushort)free;
         }
     } = (ushort)options.ReceiveWindowSize;
 
     // _seqLock must be held. Recomputes the advertised window, records it (for RST validation and
-    // window-update deltas) and remembers when it closed so OnAppConsumed / the window sweep know to
-    // re-advertise. A zero can happen on ANY send path (e.g. the global budget emptied between drains),
-    // not just when this connection's own pipe fills.
+    // window-update deltas) and remembers when it closed so OnAppConsumed knows to re-advertise.
     private ushort UpdateAdvertisedWindowLocked()
     {
         var win = AdvertisedWindow;
@@ -218,7 +207,7 @@ internal sealed class LocalTcpConnection(
             _appToNetCompleted = true;
             // With our tail data still in flight the RST would make the peer drop it unread (RFC 7230 6.6):
             // then the FIN goes first and the RST follows the ACK of the tail (TryHandleIncoming). The unread
-            // bytes leave the receive budget now either way; nobody will read them.
+            // bytes leave the pipe total now either way; nobody will read them.
             discarded = Interlocked.Exchange(ref _pipeUnread, 0);
             reset = discarded > 0 && _sndUna == _sndNxt;
             _resetPending = discarded > 0 && !reset;
@@ -697,13 +686,11 @@ internal sealed class LocalTcpConnection(
         var span = _netToAppPipe.Writer.GetSpan(data.Length);
         data.CopyTo(span);
         _netToAppPipe.Writer.Advance(data.Length);
-        // FLOW CONTROL input, not just a metric: feeds the shared GlobalReceiveBudget headroom in
-        // AdvertisedWindow across ALL connections.
-        diagnostics.AddPipeBufferedBytes(data.Length);
+        diagnostics.AddPipeBufferedBytes(data.Length); // the stack-wide unread total, a diagnostic
 
         // FLOW CONTROL: track the unread backlog so AdvertisedWindow shrinks as the pipe fills. If the
-        // effective window is now 0 (this pipe is full OR the shared global budget is exhausted), mark
-        // it closed so OnAppConsumed sends a window-update ACK once headroom returns.
+        // window is now 0 (this pipe is full), mark it closed so OnAppConsumed sends a window-update ACK
+        // once the app drains.
         Interlocked.Add(ref _pipeUnread, data.Length);
         if (AdvertisedWindow == 0)
             _windowClosed = true;
@@ -718,7 +705,7 @@ internal sealed class LocalTcpConnection(
 
     /// Called by LocalTcpStream after the app drains bytes from the reassembly pipe. This is a
     /// FLOW-CONTROL step, not a diagnostic: lowering the unread backlog is what reopens
-    /// AdvertisedWindow, and this method is the primary sender of the window-update ACK that lets a
+    /// AdvertisedWindow, and this method is the one sender of the window-update ACK that lets a
     /// throttled peer resume immediately instead of waiting for its zero-window-probe timer.
     public void OnAppConsumed(long count)
     {
@@ -731,31 +718,19 @@ internal sealed class LocalTcpConnection(
             var unread = Interlocked.Read(ref _pipeUnread);
             actualConsumed = Math.Min(unread, count);
             Interlocked.Add(ref _pipeUnread, -actualConsumed);
-            var pipeUnreadSnap = unread - actualConsumed;
             var currentWin = AdvertisedWindow;
             var lastWin = _lastAdvertisedWindow;
 
             // Send a window update ACK if:
-            // 1. The window was closed (or near-closed) and has reopened to at least effectiveReopenFloor.
+            // 1. The window was closed and has reopened to at least _windowReopenFloor.
             // 2. Or the window has opened up by at least _windowUpdateThreshold (~1/4 window) to prevent
             //    stalls and keep the peer's window sliding smoothly.
-            // Under a tight global receive budget, the maximum possible window we can currently advertise
-            // might be constrained below _windowReopenFloor. If the connection's buffer is fully drained,
-            // we should send a reopen update for whatever space is actually available rather than stay closed.
-            var maxConnFree = (long)options.ReceiveWindowSize;
-            var globalFree = _globalReceiveBudget - diagnostics.TotalPipeBufferedBytes;
-            var maxPossible = Math.Max(0, Math.Min(maxConnFree, globalFree));
-            var effectiveReopenFloor = Math.Min(_windowReopenFloor, maxPossible);
-
-            // Reopen-floor budget starvation: keep _windowClosed = true while currentWin is still below the
-            // real floor (a tiny slot under budget throttling), so subsequent drains keep sending updates
-            // immediately; only clear it once the window is genuinely back above _windowReopenFloor.
             // The decision AND the flag-clear both run under _seqLock so a concurrent WriteToAppPipe that
             // just re-closed the window can never be overwritten by a stale snapshot.
-            var isReopened = (currentWin >= effectiveReopenFloor || pipeUnreadSnap == 0) && currentWin > 0;
+            var isReopened = currentWin >= _windowReopenFloor;
             var windowOpenedSignificantly = currentWin - lastWin >= _windowUpdateThreshold;
             if ((_windowClosed && isReopened) || windowOpenedSignificantly) {
-                if (currentWin >= _windowReopenFloor)
+                if (isReopened)
                     _windowClosed = false;
                 sendUpdate = true;
             }
@@ -766,46 +741,6 @@ internal sealed class LocalTcpConnection(
 
         if (sendUpdate)
             try { _stack?.SendAckOnly(this); } catch { /* best-effort window update */ }
-    }
-
-    /// <summary>
-    /// Periodic re-advertisement of a receive window that closed under flow control and has since
-    /// reopened, for a flow whose app has gone quiet. <see cref="OnAppConsumed"/> is the only other
-    /// path that sends a window-update ACK, and it only fires while THIS flow is draining bytes. But
-    /// the window can also reopen because OTHER flows drained and freed the shared
-    /// <see cref="LocalTcpStackOptions.GlobalReceiveBudget"/> — at which point this flow advertises
-    /// a healthy window again but, with its own app stalled at the zero-window we sent, no drain
-    /// occurs to deliver that update. The peer then stays frozen until its own zero-window persist
-    /// timer expires (hundreds of ms to seconds) — the "upload freezes then suddenly resumes" stall.
-    /// The stack's window sweep calls this so the update goes out within a sweep interval instead.
-    /// Returns true if a window-update ACK was sent.
-    /// </summary>
-    internal bool PollWindowReopen()
-    {
-        // Lock-free pre-check: only a flow we've throttled to (near-)zero is a candidate.
-        // (_appToNetCompleted is deliberately NOT checked: it describes the SEND direction, while this
-        // services the RECEIVE window — a half-closed flow can still be uploading to us.)
-        if (!_windowClosed || _disposed)
-            return false;
-
-        bool reopened;
-        lock (_seqLock) {
-            if (!_windowClosed || _disposed)
-                return false;
-            // Only re-advertise once the window is genuinely back above the real floor — not a tiny
-            // slot still pinned by per-connection backlog or a tight global budget (matches the
-            // _windowClosed-clear condition in OnAppConsumed). If it's still small, stay closed and
-            // let a later sweep (or an OnAppConsumed drain) carry it.
-            reopened = AdvertisedWindow >= _windowReopenFloor;
-            if (reopened)
-                _windowClosed = false;
-        }
-
-        if (!reopened)
-            return false;
-
-        try { _stack?.SendAckOnly(this); } catch { /* best-effort window update */ }
-        return true;
     }
 
     private void Touch()

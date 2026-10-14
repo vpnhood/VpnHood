@@ -763,6 +763,92 @@ public sealed class LossRecoveryTest
     }
 
     /// <summary>
+    /// The app's drain is the one path that reopens a closed window (the window sweep went with the global budget):
+    /// with the pipe full and the peer silent, reading to the 4 KB floor sends exactly one window update.
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task ClosedWindow_ReopensOnTheAppDrainAlone_OneUpdateAtTheFloor()
+    {
+        const int windowSize = 0xFFFF;
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        // the peer fills the window, the app reads nothing: the last ACK advertises 0
+        var payload = new byte[1460];
+        uint seq = 1001;
+        var remaining = windowSize;
+        while (remaining > 0) {
+            var len = Math.Min(payload.Length, remaining);
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: seq, ackNum: serverSeq + 1, payload: payload[..len]));
+            seq += (uint)len;
+            remaining -= len;
+        }
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => {
+            lock (sync) return sent.Any(p => p.ExtractTcp() is { Acknowledgment: true, WindowSize: 0 });
+        }, cts.Token, 2000);
+        lock (sync) {
+            Assert.AreEqual(0, sent.Last().ExtractTcp().WindowSize, "the full pipe advertises a zero window");
+            sent.Clear();
+        }
+
+        // the app reads to the floor: one pure ACK carries the reopened window and nothing else goes out
+        await client.Stream.ReadExactlyAsync(new byte[4096], cts.Token);
+        await WaitForCondition(() => { lock (sync) return sent.Count > 0; }, cts.Token);
+        await Task.Delay(200, cts.Token);
+        lock (sync) {
+            Assert.HasCount(1, sent, "exactly one window update");
+            var update = sent[0].ExtractTcp();
+            Assert.IsTrue(update is { Acknowledgment: true, Payload.Length: 0 }, "a pure ACK");
+            Assert.AreEqual(4096, update.WindowSize);
+        }
+        await client.DisposeAsync();
+    }
+
+    /// <summary>A window under the 4 KB floor reopens on the full drain only: a read that leaves it short of the
+    /// floor and under the update step sends nothing.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task SmallWindow_ReopensOnTheFullDrainOnly()
+    {
+        const int windowSize = 2048;
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = windowSize });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        for (var i = 0; i < 2; i++)
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: (uint)(1001 + i * 1024), ackNum: serverSeq + 1, payload: new byte[1024]));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => {
+            lock (sync) return sent.Any(p => p.ExtractTcp() is { Acknowledgment: true, WindowSize: 0 });
+        }, cts.Token, 2000);
+        lock (sync) sent.Clear();
+
+        // 512 read: the window is 512, under the 536-byte update step and the floor (the whole window): nothing
+        await client.Stream.ReadExactlyAsync(new byte[512], cts.Token);
+        await Task.Delay(200, cts.Token);
+        lock (sync) Assert.IsEmpty(sent, "a window short of the floor sends no update");
+
+        // the rest: the window is whole again, one update
+        await client.Stream.ReadExactlyAsync(new byte[windowSize - 512], cts.Token);
+        await WaitForCondition(() => { lock (sync) return sent.Count > 0; }, cts.Token);
+        await Task.Delay(200, cts.Token);
+        lock (sync) {
+            Assert.HasCount(1, sent, "exactly one window update");
+            Assert.AreEqual(windowSize, sent[0].ExtractTcp().WindowSize);
+        }
+        await client.DisposeAsync();
+    }
+
+    /// <summary>
     /// Hard receive-window enforcement: a peer that ignores our advertised window must not grow the
     /// reassembly pipe past ReceiveWindowSize (pre-fix: unbounded memory against a hostile sender).
     /// The overflow is dropped, ACKs stall at the window edge, and the data flows once the app drains.
@@ -1118,7 +1204,7 @@ public sealed class LossRecoveryTest
 
     /// <summary>
     /// Unread bytes plus our tail in flight at the app's close: the FIN goes first; once the peer acknowledges
-    /// tail and FIN - sending nothing more - the deferred reset must still go out, and the budget be released.
+    /// tail and FIN - sending nothing more - the deferred reset must still go out, and the pipe total be released.
     /// </summary>
     [TestMethod]
     [Timeout(10000)]
@@ -1139,14 +1225,14 @@ public sealed class LossRecoveryTest
             Assert.IsTrue(sent.Any(p => p.ExtractTcp().Finish), "the FIN goes first");
             Assert.IsFalse(sent.Any(p => p.ExtractTcp().Reset), "no RST while the tail is in flight");
         }
-        Assert.AreEqual(0, tcpStack.Diagnostics.TotalPipeBufferedBytes, "the unread bytes leave the budget at the close");
+        Assert.AreEqual(0, tcpStack.Diagnostics.TotalPipeBufferedBytes, "the unread bytes leave the pipe total at the close");
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 2001, ackNum: serverSeq + 102));
         lock (sync)
             Assert.IsTrue(sent.Any(p => p.ExtractTcp().Reset), "the unread bytes are reset once all is acked");
         Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount);
-        Assert.AreEqual(0, tcpStack.Diagnostics.TotalPipeBufferedBytes, "the receive budget is released");
+        Assert.AreEqual(0, tcpStack.Diagnostics.TotalPipeBufferedBytes, "the pipe total is released");
     }
 
     /// <summary>

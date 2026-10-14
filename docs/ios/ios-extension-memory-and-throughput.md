@@ -29,8 +29,8 @@ so treat them as the preview.5 baseline).
   CoreCLR's registrar otherwise can't find the principal class's assembly.)
 - Proxy mode had **two memory failure modes**, both fixed: (A) **connection pile-up** — full-tunnel browsing
   opens ~190 concurrent flows × ~180 KB; (B) **upload-burst pipe balloon** — a fixed window never throttled the
-  sender. Fixes: **dynamic receive window + global budget** (B + bounds pipe memory), **connection cap (100) +
-  fast idle reaping (20 s)** (A).
+  sender. Fixes: **dynamic receive window** (B + bounds pipe memory; a global budget sat beside it until 2026-10,
+  when it went: it never bound), **connection cap (100, since 2026-07 40) + fast idle reaping (20 s)** (A).
 - **Throughput fix = the dynamic window's RE-OPEN**, not buffer sizes. A correct proactive window-update keeps
   the device's send window sliding → **upload 38 Mbps / download 50 Mbps** (was ~2/4). Proven by A/B test.
 - **Native write is now batched** (Part 4): `SendPacketsAsync` flushes up to 32 packets per
@@ -78,7 +78,8 @@ channel — so `PacketChannelBufferSize`/`MaxPacketChannelCount` are irrelevant 
   retried — a cap of 100 was initially tested, but under heavy browsing it still let memory drift up too close to the Jetsam limit. 40 keeps a healthy margin) + `IdleTimeout 2 min → 20 s` (`IdleCheckInterval 5 s`) so finished keep-alives free memory fast.
 - **Mode B — upload-burst pipe balloon:** a fixed receive window never throttled a fast uploader, so data backed
   up unboundedly in the reassembly pipes + downstream write buffers (`pipeBuf` 8.4 MB, `gcLive` 34 MB → jetsam).
-  **Fix:** the dynamic receive window + global budget (below) bounds it (`pipeBuf` → ~0).
+  **Fix:** the dynamic receive window bounds it (`pipeBuf` → ~0); the global budget beside it never bound and went
+  in 2026-10.
 
 ---
 
@@ -100,7 +101,7 @@ RULED OUT — neither changed it:** (1) the receive window (16 KB → 64 KB), (2
 **The fix** (in `LocalTcpConnection`): track the last window advertised (`_lastAdvertisedWindow`, set by
 `UpdateAdvertisedWindow()` on every send) and send a window-update ACK whenever the window **slides open by
 ≥16 KB** (`currentWin − lastWin ≥ 16384`) — standard TCP window-update. The device's send window now stays
-fresh and large → full speed. Memory stays bounded because the *shrink* half (global budget) is unchanged.
+fresh and large → full speed. Memory stays bounded because the *shrink* half (the per-connection window) is unchanged.
 
 **A/B proof (2026-06-19):** with that one clause disabled (everything else identical), upload **stalled** —
 `up` frozen at 10.5 MB while download flowed to 75 MB, and the stalled flows were reaped by the 20 s idle
@@ -162,7 +163,9 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 ## Current configuration (working tree)
 
 **iOS TCP-stack profile** — `src/Net/VpnHood.Net.TcpStack/LocalTcpStackOptions.cs` `Ios`:
-- `ReceiveWindowSize=0xFFFF (64 KB)`, **`GlobalReceiveBudget=6 MB`**, `RetxBufferSize=16 KB`.
+- `ReceiveWindowSize=0xFFFF (64 KB)`, `RetxBufferSize=16 KB`. No global receive budget: `MaxConnections` bounds the
+  aggregate (40 × 64 KB = 2.5 MB unread at most; about 4.2 MB of TCP buffers with the pipes' 4 KB segments and the
+  retransmit rings).
 - **`MaxConnections=40`**, `AcceptQueueCapacity=128`, **`IdleTimeout=20 s`**, **`IdleCheckInterval=5 s`**.
 - **`AdmissionMemoryLimitMb=42.0`** — Memory admission gate. When the process footprint matches or exceeds 42.0 MB, new TCP SYNs are dropped silently so the peer's own SYN-retransmit backoff acts as a natural pacing mechanism until memory recedes.
 
@@ -170,9 +173,9 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 - **Connection Handshake Gate** — `ConnectMemoryLimitMb=41.0` (in `ConnectorService.cs`). When the process footprint reaches 41.0 MB, new server connection handshakes are held, serialized behind a thread-count gate (max 3 concurrent on iOS).
 - **Panic Watchdog Recycle** — `PanicFootprintMb=44.0` (in `QuicStreamConnectionFactory.cs`). A dedicated 250 ms watchdog thread runs on iOS. If the footprint reaches 44.0 MB, it triggers `RecycleAll()`, severing and disposing of all active QUIC connections to instantly release native buffers, recovering to baseline in ~130 ms.
 
-**Dynamic window** — `LocalTcpConnection.AdvertisedWindow = min(ReceiveWindowSize − pipeUnread,
-GlobalReceiveBudget − totalPipeBuffered)`; `UpdateAdvertisedWindow()` tracks `_lastAdvertisedWindow`;
-`OnAppConsumed` sends a window-update when `(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`.
+**Dynamic window** — `LocalTcpConnection.AdvertisedWindow = ReceiveWindowSize − pipeUnread`;
+`UpdateAdvertisedWindowLocked()` tracks `_lastAdvertisedWindow`; `OnAppConsumed` sends a window-update when
+`(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`.
 
 **Host** — nothing app-side tunes the transport any more: `MaxPacketChannelCount` is a preset knob
 (`LimitedMemory` = **2**, `NormalMemory` = `TransportDefaults.MaxPacketChannelCount`), not a user setting,
@@ -243,6 +246,7 @@ The next A/B also detaches `QuicStreamConnection._stream` during disposal. Devic
 
 ## Key insight
 `memory = per-flow-cost × concurrent-flows`; `throughput = window/RTT` **but only if the window keeps
-re-opening.** On a 52 MB budget with concurrent flows the strategy is: **global budgets** (few active
-flows get big windows = full speed; many flows bounded in aggregate) + **a correct window re-open** (proactive
-window-update so senders never stall) + **fast idle reaping + a connection cap** + **cascading memory gates (41 MB / 42 MB / 44 MB) to prevent Jetsam kills.** Callback retention remains under measurement; it is not yet treated as proven. CoreCLR provides the baseline headroom that makes it all fit.
+re-opening.** On a 52 MB budget with concurrent flows the strategy is: **a connection cap (40) with a full 64 KB
+window per flow** (every flow at full speed; the cap bounds the aggregate at 40 × 64 KB; the global budget that
+once sat beside it never bound and went in 2026-10) + **a correct window re-open** (a window-update on the app
+drain so senders never stall) + **fast idle reaping** + **cascading memory gates (41 MB / 42 MB / 44 MB) to prevent Jetsam kills.** Callback retention remains under measurement; it is not yet treated as proven. CoreCLR provides the baseline headroom that makes it all fit.

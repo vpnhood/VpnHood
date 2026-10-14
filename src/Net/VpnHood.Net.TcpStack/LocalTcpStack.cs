@@ -51,17 +51,6 @@ public sealed class LocalTcpStack : ITcpStack
         Diagnostics.ConfiguredMaxConnections = _options.MaxConnections;
         ActiveDiagnostics = Diagnostics;
 
-        // Window re-advertisement sweep. A flow throttled to a (near-)zero receive window under the
-        // shared GlobalReceiveBudget can have its window reopen when OTHER flows drain the budget;
-        // with its own app stalled at that zero window, no OnAppConsumed drain fires to deliver the
-        // update, so the peer freezes until its slow zero-window persist timer (the "upload freezes
-        // then resumes" stall). This timer re-advertises such reopened windows promptly. Only armed
-        // when the budget is bounded (iOS): with the default unbounded budget (Android/desktop)
-        // cross-flow starvation cannot occur, so that path stays completely unchanged.
-        if (_options.GlobalReceiveBudget != long.MaxValue)
-            _windowSweepTimer = new Timer(_ => SweepReopenedWindows(), null,
-                WindowSweepInterval, WindowSweepInterval);
-
         // Maintenance sweep: SYN-ACK retransmission, coarse RTO for unacked data/FIN (the only recovery
         // for tail loss — see LocalTcpConnection.PollMaintenance) and delayed-ACK flushing. Created
         // parked; armed only while at least one connection has registered interest, so a fully idle
@@ -89,14 +78,6 @@ public sealed class LocalTcpStack : ITcpStack
     // PERF: kept in lockstep with _connections membership so the SYN-path cap check and the
     // diagnostics never call ConcurrentDictionary.Count (which locks every stripe).
     private int _connectionCount;
-
-    // Re-advertise reopened-but-quiet receive windows this often. 50 ms caps the added stall to well
-    // under a peer's zero-window persist RTO (~hundreds of ms, then exponential), so the freeze is
-    // bounded to one sweep instead. Per tick, it only flag-checks each connection; lock/send work
-    // happens solely for flows actually waiting on a reopened window.
-    private static readonly TimeSpan WindowSweepInterval = TimeSpan.FromMilliseconds(50);
-    private readonly Timer? _windowSweepTimer;
-    private int _sweeping; // reentrancy guard so a slow sweep never overlaps itself
 
     // Maintenance sweep cadence. Retransmit timing granularity is this interval; RetransmitTimeout
     // (default 500 ms) stays a comfortable multiple of it.
@@ -472,33 +453,6 @@ public sealed class LocalTcpStack : ITcpStack
     }
 
     /// <summary>
-    /// Timer callback: re-advertises any flow whose receive window closed under flow control and has
-    /// since reopened (see <see cref="LocalTcpConnection.PollWindowReopen"/>). Never throws — an
-    /// unhandled exception in a Timer callback terminates the whole process.
-    /// </summary>
-    private void SweepReopenedWindows()
-    {
-        if (_disposed)
-            return;
-
-        // Skip if a previous sweep is still running (defensive; a sweep is normally microseconds).
-        if (Interlocked.Exchange(ref _sweeping, 1) != 0)
-            return;
-
-        try {
-            // PERF: lock-free enumerator — see SweepMaintenance for why .Values is avoided in sweeps.
-            foreach (var kvp in _connections)
-                kvp.Value.PollWindowReopen();
-        }
-        catch (Exception ex) {
-            Diagnostics.LogFailure(nameof(SweepReopenedWindows), ex);
-        }
-        finally {
-            Volatile.Write(ref _sweeping, 0);
-        }
-    }
-
-    /// <summary>
     /// At the <see cref="LocalTcpStackOptions.MaxConnections"/> cap, closes the single most idle
     /// ("most unused") connection to free a slot for a new one — but only if its idle time meets
     /// <see cref="LocalTcpStackOptions.EvictionMinIdle"/>, so actively-transferring flows are never
@@ -644,7 +598,6 @@ public sealed class LocalTcpStack : ITcpStack
 
         _disposed = true;
 
-        _windowSweepTimer?.Dispose();
         _maintenanceTimer.Dispose();
 
         if (ActiveDiagnostics == Diagnostics)

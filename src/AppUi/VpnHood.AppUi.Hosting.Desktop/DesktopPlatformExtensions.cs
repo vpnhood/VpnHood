@@ -1,3 +1,5 @@
+using VpnHood.AppUi.Hosting.Desktop.Platform;
+
 namespace VpnHood.AppUi.Hosting.Desktop;
 
 internal static class DesktopPlatformExtensions

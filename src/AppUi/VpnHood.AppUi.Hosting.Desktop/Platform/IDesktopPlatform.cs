@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
-using VpnHood.AppUi.Hosting.Desktop.Platform;
 
-namespace VpnHood.AppUi.Hosting.Desktop;
+namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
 // What the platform says for itself: the four answers every command reaches for that are not the
 // app's, and the ones only some platforms have. A platform package (Desktop.Linux, Desktop.Windows)

@@ -95,12 +95,12 @@ RULED OUT — neither changed it:** (1) the receive window (16 KB → 64 KB), (2
 - **Re-open** — as we drain, advertise a bigger window. **A stopped (zero-window) sender sends nothing, so it
   never sees a normal ACK; without a *proactive* window-update it just sends slow persist-probes → throughput
   collapses.** The first implementation only sent the proactive update after a *full* window close
-  (`_windowClosed && win ≥ 4 KB`), which rarely fired under a steady upload → the device throttled/stalled
+  (`closed && win ≥ 4096`), which rarely fired under a steady upload → the device throttled/stalled
   → ~2 Mbps. **This is why enlarging the window/buffer looked useless — the broken re-open was the real cap.**
 
-**The fix** (in `LocalTcpConnection`): track the last window advertised (`_lastAdvertisedWindow`, set by
-`UpdateAdvertisedWindow()` on every send) and send a window-update ACK whenever the window **slides open by
-≥16 KB** (`currentWin − lastWin ≥ 16384`) — standard TCP window-update. The device's send window now stays
+**The fix** (today in `ReceiveWindow`, the connection's component): track the last window advertised
+(`LastAdvertised`, set by `Advertise()` on every send) and send a window-update ACK whenever the window **slides open by
+a quarter** (`win − LastAdvertised ≥ 16383` on the 64 KB window) — standard TCP window-update. The device's send window now stays
 fresh and large → full speed. Memory stays bounded because the *shrink* half (the per-connection window) is unchanged.
 
 **A/B proof (2026-06-19):** with that one clause disabled (everything else identical), upload **stalled** —
@@ -173,9 +173,9 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 - **Connection Handshake Gate** — `ConnectMemoryLimitMb=41.0` (in `ConnectorService.cs`). When the process footprint reaches 41.0 MB, new server connection handshakes are held, serialized behind a thread-count gate (max 3 concurrent on iOS).
 - **Panic Watchdog Recycle** — `PanicFootprintMb=44.0` (in `QuicStreamConnectionFactory.cs`). A dedicated 250 ms watchdog thread runs on iOS. If the footprint reaches 44.0 MB, it triggers `RecycleAll()`, severing and disposing of all active QUIC connections to instantly release native buffers, recovering to baseline in ~130 ms.
 
-**Dynamic window** — `LocalTcpConnection`'s advertised window `= ReceiveWindowSize − pipeUnread`;
-`UpdateAdvertisedWindowLocked()` tracks `_lastAdvertisedWindow`; `OnAppConsumed` sends a window-update when
-`(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`.
+**Dynamic window** — `ReceiveWindow`, the connection's component: the advertised window `= ReceiveWindowSize −
+unread`; `Advertise()` records `LastAdvertised` on every segment out; `Consume` (the app's drain, `OnAppConsumed`) calls
+for a window-update ACK when `(closed && win ≥ 4096) || (win − LastAdvertised ≥ 16383)` on the 64 KB window.
 
 **Host** — nothing app-side tunes the transport any more: `MaxPacketChannelCount` is a preset knob
 (`LimitedMemory` = **2**, `NormalMemory` = `TransportDefaults.MaxPacketChannelCount`), not a user setting,

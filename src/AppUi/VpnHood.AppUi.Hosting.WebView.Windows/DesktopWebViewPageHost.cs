@@ -2,15 +2,15 @@ using System.Net;
 using VpnHood.AppLib.App.WebHosting;
 using VpnHood.AppUi.Hosting.Abstractions;
 
-namespace VpnHood.AppUi.Hosting.WebView;
+namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
 // The app's local web host as a UI in another process sees it: an API URL the service serves and
 // moves. A new URL is a Restarted, on which WebViewHost loads the page again.
-public sealed class ExternalAppWebHost : IAppWebHost
+public sealed class DesktopWebViewPageHost : IAppWebHost
 {
     private readonly IDesktopApiUrlProvider _apiUrlProvider;
 
-    public ExternalAppWebHost(IDesktopApiUrlProvider apiUrlProvider)
+    public DesktopWebViewPageHost(IDesktopApiUrlProvider apiUrlProvider)
     {
         _apiUrlProvider = apiUrlProvider;
         _apiUrlProvider.Changed += OnApiUrlChanged;

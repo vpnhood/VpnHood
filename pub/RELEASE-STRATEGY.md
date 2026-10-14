@@ -71,6 +71,11 @@ Rule of thumb: **same repo = ProjectReference, third-party = PackageReference, r
    per-library churn is not worth the machinery. Genuine per-component independence is deferred to a
    future `modules/` folder (see Deferred options). This supersedes an earlier idea of a separate
    library-publish trigger.
+   - **A new Major or Minor is set by hand**, since the bump increments only Build: change it in
+     `PubVersion.json` and `Directory.Build.props`, keep Build (`8.2.854` → `9.0.854`), commit, push,
+     then bump as usual. Build is Android's `versionCode`, so it must never go back; restarting it at 0
+     makes Play refuse every later upload. Module repos take the new line at their next publish (see
+     Module repos).
 
 ## Deferred options (recorded for the future)
 

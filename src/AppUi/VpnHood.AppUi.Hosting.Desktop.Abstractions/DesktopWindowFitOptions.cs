@@ -1,6 +1,6 @@
 using VpnHood.Net.Toolkit.Graphics;
 
-namespace VpnHood.AppUi.Hosting.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 // The shape a desktop UI's window takes on its screen (DesktopWindowFit), in the screen's logical
 // units. It is the UI's layout's, so the UI states it: an Avalonia UI its own

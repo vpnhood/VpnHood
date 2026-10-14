@@ -2,8 +2,8 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using VpnHood.AppUi.Common;
-using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Styles;

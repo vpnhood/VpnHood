@@ -1,6 +1,6 @@
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Windows;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 

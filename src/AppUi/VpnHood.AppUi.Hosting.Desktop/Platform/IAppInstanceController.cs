@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
 // The running instance - the one process on this machine that holds the app - as the commands
 // start, stop and look at it. Deliberately not "the service" in its members: on Linux it is a systemd

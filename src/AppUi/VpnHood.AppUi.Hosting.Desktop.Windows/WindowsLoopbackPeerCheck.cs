@@ -1,6 +1,6 @@
 using System.Net;
 using System.Runtime.InteropServices;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Windows;

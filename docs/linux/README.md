@@ -269,7 +269,7 @@ src/AppUi/
 ```
 
 A head is then its options — the product's, and its channel's lines — and one line naming its UI,
-an `IDesktopUi` (`VpnHood.AppUi.Hosting.Abstractions`), which the window runs on the host's main
+an `IDesktopUi` (`VpnHood.AppUi.Hosting.Desktop.Abstractions`), which the window runs on the host's main
 thread: `static int Main` returns `LinuxDesktopHost.Run(args, …)` — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
 project reads a static or names a platform: every command is handed an `IDesktopPlatform`, which

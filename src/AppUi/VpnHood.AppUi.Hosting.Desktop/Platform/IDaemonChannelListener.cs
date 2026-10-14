@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
 // The channel as the service holds it open: the next caller, each time one connects.
 public interface IDaemonChannelListener : IAsyncDisposable

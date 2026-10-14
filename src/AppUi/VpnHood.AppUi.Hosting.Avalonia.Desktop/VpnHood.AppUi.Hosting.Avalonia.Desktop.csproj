@@ -15,7 +15,7 @@
 		<!-- The window as the app's UI context (AvaloniaUiContext), which a store's sign-in and purchase ask for. -->
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 		<!-- IDesktopUi, which a desktop head names this UI as. -->
-		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Abstractions\VpnHood.AppUi.Hosting.Abstractions.csproj" />
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop.Abstractions\VpnHood.AppUi.Hosting.Desktop.Abstractions.csproj" />
 		<!-- The web server extracts the bundle whose assets folder the UI draws from. -->
 	</ItemGroup>
 </Project>

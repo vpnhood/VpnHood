@@ -3,8 +3,8 @@ using System.Globalization;
 using System.IO.Pipes;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
-using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 

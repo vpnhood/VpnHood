@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows.WinNative;

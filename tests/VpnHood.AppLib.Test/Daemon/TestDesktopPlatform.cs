@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.Desktop;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 
 namespace VpnHood.AppLib.Test.Daemon;
 

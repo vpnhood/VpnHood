@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
 // Where the service hands its API's address and token, to an administrator alone: a named pipe on
 // Windows, a Unix socket on Linux, each telling who calls.

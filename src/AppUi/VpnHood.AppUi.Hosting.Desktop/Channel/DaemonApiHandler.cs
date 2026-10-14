@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Exceptions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Channel;

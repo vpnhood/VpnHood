@@ -19,6 +19,6 @@
 		<!-- The app as a UI sees it (VhApp), which every host configures at start. -->
 		<ProjectReference Include="..\VpnHood.AppUi.Common\VpnHood.AppUi.Common.csproj" />
 		<!-- The shape of a desktop window (DesktopWindowFitOptions), which a UI states for its layout. -->
-		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Abstractions\VpnHood.AppUi.Hosting.Abstractions.csproj" />
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop.Abstractions\VpnHood.AppUi.Hosting.Desktop.Abstractions.csproj" />
 	</ItemGroup>
 </Project>

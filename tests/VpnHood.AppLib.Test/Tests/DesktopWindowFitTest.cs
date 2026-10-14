@@ -1,4 +1,4 @@
-using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppLib.Test.Tests;

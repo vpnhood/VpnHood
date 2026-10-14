@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App.Windows;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Windows;

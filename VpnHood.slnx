@@ -113,7 +113,6 @@
     <Project Path="src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.csproj" />
   </Folder>
   <Folder Name="/src/AppUi/Hosting/">
-    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Abstractions/VpnHood.AppUi.Hosting.Abstractions.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Avalonia/VpnHood.AppUi.Hosting.Avalonia.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Avalonia.Android/VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Avalonia.Browser/VpnHood.AppUi.Hosting.Avalonia.Browser.csproj" />
@@ -122,6 +121,7 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop/VpnHood.AppUi.Hosting.Desktop.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Abstractions/VpnHood.AppUi.Hosting.Desktop.Abstractions.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Linux/VpnHood.AppUi.Hosting.Desktop.Linux.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Windows/VpnHood.AppUi.Hosting.Desktop.Windows.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView/VpnHood.AppUi.Hosting.WebView.csproj" />

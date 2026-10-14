@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppUi.Hosting.Abstractions;
+﻿namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 // A UI a desktop head names - Avalonia's window, a web view, a fork's own - which the head's host
 // runs. The host decides where the app is, and so what it hands over (DesktopUiParams); the UI

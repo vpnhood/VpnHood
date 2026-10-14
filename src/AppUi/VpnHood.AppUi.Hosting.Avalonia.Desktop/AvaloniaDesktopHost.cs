@@ -8,7 +8,7 @@ using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api;
 using VpnHood.AppUi.Common;
-using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Graphics;

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.ServiceProcess;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Windows.Utils;
 using VpnHood.Net.Toolkit.Extensions;
 

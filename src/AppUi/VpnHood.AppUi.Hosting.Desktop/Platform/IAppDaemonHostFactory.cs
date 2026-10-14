@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
 // How this OS builds the app for the two commands that hold it: "daemon", the service, and "dev",
 // a debugger's run with the window in one process.

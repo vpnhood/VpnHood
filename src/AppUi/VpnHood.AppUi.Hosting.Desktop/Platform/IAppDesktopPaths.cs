@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
 // Where an install keeps things, as the commands need to know it. Two of these differ by platform
 // and one by distribution: /opt on Linux, ProgramData on Windows, a package folder in a Store

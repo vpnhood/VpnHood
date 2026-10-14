@@ -1,6 +1,6 @@
 using VpnHood.Net.Toolkit.Assets;
 
-namespace VpnHood.AppUi.Hosting.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 // What a desktop host hands a UI that cannot run (IDesktopUi.RunMessage): the one message to show,
 // and the UI's own content to show it with. Nothing here reaches the app, which may not be running,

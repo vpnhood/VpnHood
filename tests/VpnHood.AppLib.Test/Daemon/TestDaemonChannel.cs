@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 
 namespace VpnHood.AppLib.Test.Daemon;
 

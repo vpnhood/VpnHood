@@ -1,7 +1,7 @@
 using VpnHood.AppLib.Api;
 using VpnHood.Net.Toolkit.Assets;
 
-namespace VpnHood.AppUi.Hosting.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 // What a desktop host hands the UI it runs (IDesktopUi): everything a UI reads the app through.
 public class DesktopUiParams

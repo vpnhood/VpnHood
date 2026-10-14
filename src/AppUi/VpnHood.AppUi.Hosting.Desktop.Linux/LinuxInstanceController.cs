@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Linux.Utils;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 

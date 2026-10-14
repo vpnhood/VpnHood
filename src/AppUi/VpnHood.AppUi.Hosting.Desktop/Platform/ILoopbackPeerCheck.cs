@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
 // Whether the far end of a loopback connection this process made is the process it meant to reach:
 // the service frees a dead listener's port before its channel names the next, and anyone may take it.

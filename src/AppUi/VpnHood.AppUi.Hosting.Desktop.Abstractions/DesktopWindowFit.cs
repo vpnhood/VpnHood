@@ -1,6 +1,6 @@
 using VpnHood.Net.Toolkit.Graphics;
 
-namespace VpnHood.AppUi.Hosting.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 // Where a desktop UI's window opens and at what size. The window hands over its screen's work area,
 // its frame - the title bar and the borders - and its UI's shape (DesktopWindowFitOptions), in the

@@ -1,5 +1,5 @@
 using System.Reflection;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 

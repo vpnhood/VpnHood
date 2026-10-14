@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using VpnHood.AppUi.Common;
-using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;

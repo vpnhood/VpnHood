@@ -1,6 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
-using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;

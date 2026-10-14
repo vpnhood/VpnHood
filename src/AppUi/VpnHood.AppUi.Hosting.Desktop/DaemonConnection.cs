@@ -1,10 +1,10 @@
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppLib.App.WebHosting;
-using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Channel;
 using VpnHood.AppUi.Hosting.Desktop.Exceptions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop;

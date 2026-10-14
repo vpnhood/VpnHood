@@ -2,9 +2,9 @@ using System.ComponentModel;
 using System.Diagnostics.Eventing.Reader;
 using System.ServiceProcess;
 using VpnHood.AppLib.App;
-using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Channel;
 using VpnHood.AppUi.Hosting.Desktop.Exceptions;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Windows.Utils;
 using VpnHood.Net.Toolkit.Extensions;
 

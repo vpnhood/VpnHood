@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.Abstractions;
+namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 // What a UI's one message is about (DesktopUiMessageParams), so a UI with words of its own can say it
 // in the person's language.

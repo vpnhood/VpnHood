@@ -139,6 +139,9 @@ $json = @{
     ExeFile = $launcher_exeFile; 
     UpdateInfoUrl = "$repoBaseUrl/releases/latest/download/$module_infoFileName";
     InstallScriptUrl = $module_installerUrl;
+    # The compatibility contract: changed only when an existing install or image cannot apply or run the
+    # release (its layout, launcher or updater; a container's OS). A change stops every auto-update with
+    # an error to reinstall or pull the image, so that release ships its image.
     UpdateCode = "5EE5047D-6E67-43D4-A90D-665813CA1E7F"
 };
     

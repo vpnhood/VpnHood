@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.Settings;
 using VpnHood.AppLib.App.WebHosting;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 // ReSharper disable ShortLivedHttpClient
@@ -16,6 +18,22 @@ namespace VpnHood.AppLib.Test.Tests;
 public class WebServerTest : TestAppBase
 {
     private const string PageTitle = "web-root-test";
+
+    // a JPEG's start and end markers: the promotion image the test plants and reads back
+    private static readonly byte[] PromotionImageBytes = [0xFF, 0xD8, 0xFF, 0xD9];
+
+    // The promotion image as the app keeps it after a download - the remote settings that name it, and
+    // the file (AppSettingsService) - written before the app starts. Its settings address answers
+    // nothing, so no download replaces them.
+    private static void PlantPromotionImage(AppOptions appOptions)
+    {
+        var storagePath = appOptions.StorageFolderPath;
+        Directory.CreateDirectory(Path.Combine(storagePath, "promotions"));
+        File.WriteAllBytes(Path.Combine(storagePath, "promotions", "image.jpg"), PromotionImageBytes);
+        File.WriteAllText(Path.Combine(storagePath, "remote_settings.json"),
+            JsonSerializer.Serialize(new RemoteSettings { PromotionImageUrl = new Uri("https://example.com/promotion.jpg") }));
+        appOptions.RemoteSettingsUrl = new Uri("http://127.0.0.1:9/remote_settings.json");
+    }
 
     private AppOptions CreateWebHostOptions(bool isDebugMode)
     {
@@ -236,6 +254,7 @@ public class WebServerTest : TestAppBase
     {
         // a release build: a loopback call to the API carries the token the local address does
         var appOptions = CreateWebHostOptions(isDebugMode: false);
+        PlantPromotionImage(appOptions);
         await using var app = TestAppHelper.CreateClientApp(appOptions);
         var local = RequireHost(app.LocalWebHost, "local");
         var localUrl = await local.EnsureStarted(CancellationToken.None);
@@ -263,7 +282,8 @@ public class WebServerTest : TestAppBase
 
         // the promotion image holds nothing secret, and a preflight carries no credentials
         using var promotion = await http.GetAsync(new Uri(localUrl, "api/app/promotion.jpg"));
-        Assert.AreNotEqual(HttpStatusCode.Unauthorized, promotion.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, promotion.StatusCode);
+        CollectionAssert.AreEqual(PromotionImageBytes, await promotion.Content.ReadAsByteArrayAsync());
         using var preflight = new HttpRequestMessage(HttpMethod.Options, new Uri(localUrl, "api/app/state"));
         using var preflightResponse = await http.SendAsync(preflight);
         Assert.AreEqual(HttpStatusCode.OK, preflightResponse.StatusCode);

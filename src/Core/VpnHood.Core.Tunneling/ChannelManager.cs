@@ -169,7 +169,12 @@ internal class ChannelManager : IDisposable
     public void RemoveChannel(IChannel channel, bool dispose = true)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        RemoveChannelInternal(channel, dispose);
+    }
 
+    // also the manager's own disposal, which removes every channel once it reads as disposed
+    private void RemoveChannelInternal(IChannel channel, bool dispose)
+    {
         switch (channel) {
             case PacketChannel packetChannel:
                 packetChannel.PacketReceived -= _channelPacketReceived;
@@ -279,13 +284,17 @@ internal class ChannelManager : IDisposable
 
         // remove all channels and dispose them
         lock (_channelListLock) {
+            // first, so an add waiting on the lock, or one a channel's own disposal makes, is refused rather than
+            // joining a manager that lets its channels go
+            _disposed = true;
+
             // dispose proxy channels
             foreach (var channel in _proxyChannels.ToArray())
-                RemoveChannel(channel);
+                RemoveChannelInternal(channel, dispose: true);
 
             // dispose packet channels
             foreach (var channel in _packetChannels.ToArray())
-                RemoveChannel(channel);
+                RemoveChannelInternal(channel, dispose: true);
 
             // dispose all disposing channels
             foreach (var channel in _disposingChannels) {
@@ -298,6 +307,5 @@ internal class ChannelManager : IDisposable
         }
 
         _cleanupJob.Dispose();
-        _disposed = true; // must be set after disposing channels
     }
 }

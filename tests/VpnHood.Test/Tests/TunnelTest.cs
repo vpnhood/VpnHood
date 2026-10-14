@@ -456,4 +456,36 @@ public class TunnelTest : TestBase
         Assert.AreEqual(2, tunnel.GetPacketChannels().Count);
     }
 
+    // a channel whose disposal adds another to its tunnel: an add in the middle of the tunnel's disposal, as one
+    // waiting on the channel list's lock gets
+    private class ChannelAddingOnDispose(Tunnel tunnel, IChannel channel) : TestPacketChannel
+    {
+        public Exception? AddError { get; private set; }
+
+        protected override void DisposeManaged()
+        {
+            try {
+                tunnel.AddChannel(channel, disposeIfFailed: true);
+            }
+            catch (Exception ex) {
+                AddError = ex;
+            }
+
+            base.DisposeManaged();
+        }
+    }
+
+    [TestMethod]
+    public void A_channel_added_while_the_tunnel_is_disposed_is_refused_and_disposed()
+    {
+        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        var lateChannel = new TestPacketChannel();
+        var addingChannel = new ChannelAddingOnDispose(tunnel, lateChannel);
+        tunnel.AddChannel(addingChannel);
+
+        tunnel.Dispose();
+
+        Assert.IsInstanceOfType<ObjectDisposedException>(addingChannel.AddError);
+        Assert.AreEqual(PacketChannelState.Disposed, lateChannel.State);
+    }
 }

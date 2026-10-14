@@ -173,7 +173,7 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 - **Connection Handshake Gate** — `ConnectMemoryLimitMb=41.0` (in `ConnectorService.cs`). When the process footprint reaches 41.0 MB, new server connection handshakes are held, serialized behind a thread-count gate (max 3 concurrent on iOS).
 - **Panic Watchdog Recycle** — `PanicFootprintMb=44.0` (in `QuicStreamConnectionFactory.cs`). A dedicated 250 ms watchdog thread runs on iOS. If the footprint reaches 44.0 MB, it triggers `RecycleAll()`, severing and disposing of all active QUIC connections to instantly release native buffers, recovering to baseline in ~130 ms.
 
-**Dynamic window** — `LocalTcpConnection.AdvertisedWindow = ReceiveWindowSize − pipeUnread`;
+**Dynamic window** — `LocalTcpConnection`'s advertised window `= ReceiveWindowSize − pipeUnread`;
 `UpdateAdvertisedWindowLocked()` tracks `_lastAdvertisedWindow`; `OnAppConsumed` sends a window-update when
 `(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`.
 

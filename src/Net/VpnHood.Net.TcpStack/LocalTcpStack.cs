@@ -31,7 +31,17 @@ public sealed class LocalTcpStack : ITcpStack
     private readonly PipeOptions _pipeOptions;
 
     /// <summary>Gets the diagnostic metrics for this stack instance.</summary>
-    public TcpStackDiagnostics Diagnostics { get; } = new();
+    public TcpStackDiagnostics Diagnostics { get; }
+
+    /// <summary>The unread bytes in every connection's reassembly pipe, summed on read: nothing is counted per packet.</summary>
+    internal long PipeBufferedBytes {
+        get {
+            long total = 0;
+            foreach (var kvp in _connections)
+                total += kvp.Value.PipeUnread;
+            return total;
+        }
+    }
 
     /// <summary>Exposes the active stack's diagnostics globally for external processes (such as the iOS memory probe).</summary>
     public static TcpStackDiagnostics? ActiveDiagnostics { get; private set; }
@@ -45,6 +55,7 @@ public sealed class LocalTcpStack : ITcpStack
     /// </summary>
     public LocalTcpStack(LocalTcpStackOptions? options = null)
     {
+        Diagnostics = new TcpStackDiagnostics(this);
         _options = (options ?? LocalTcpStackOptions.ForCurrentPlatform()).Validated();
         _pipeOptions = _options.CreatePipeOptions();
         Diagnostics.ConfiguredReceiveWindow = _options.ReceiveWindowSize;   // DIAGNOSTIC: confirm active profile

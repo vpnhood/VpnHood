@@ -908,6 +908,46 @@ public sealed class LocalTcpStackTest
         await clientB.DisposeAsync();
     }
 
+    /// <summary>The pipe total is the sum of the connections' unread bytes, read on demand.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task PipeTotal_IsTheSumOfTheConnectionsUnreadBytes()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = Task.Run(async () => {
+            var clients = new List<ITcpClient>();
+            await foreach (var client in listener.AcceptAllAsync()) {
+                clients.Add(client);
+                if (clients.Count == 2) break;
+            }
+            return clients;
+        });
+        DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
+        DoHandshake(tcpStack, sent, sync, ClientPort + 1, 1000);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var clients = await acceptTask.WaitAsync(cts.Token);
+        var isnA = SynAckSequence(sent, sync, ClientPort);
+        var isnB = SynAckSequence(sent, sync, ClientPort + 1);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: isnA + 1, payload: new byte[100]));
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + 1, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: isnB + 1, payload: new byte[300]));
+        Assert.AreEqual(400, tcpStack.Diagnostics.TotalPipeBufferedBytes);
+
+        var clientA = clients.Single(c => c.RemoteEndPoint.Port == ClientPort);
+        await clientA.Stream.ReadExactlyAsync(new byte[100], cts.Token);
+        Assert.AreEqual(300, tcpStack.Diagnostics.TotalPipeBufferedBytes);
+
+        foreach (var client in clients)
+            await client.DisposeAsync();
+        Assert.AreEqual(0, tcpStack.Diagnostics.TotalPipeBufferedBytes);
+    }
+
     // The handshake tests' stack: no RTO, so the maintenance sweep never retransmits a SYN-ACK into their counts.
     private static LocalTcpStackOptions NoRtoOptions => new() {
         RetransmitTimeout = TimeSpan.FromSeconds(30),

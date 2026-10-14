@@ -18,10 +18,15 @@ namespace VpnHood.Net.TcpStack;
 /// </remarks>
 public sealed class TcpStackDiagnostics
 {
+    private readonly LocalTcpStack _stack;
     private int _connectionCount;
     private int _peakConnectionCount;
     private int _establishedConnections;
-    private long _totalPipeBufferedBytes;
+
+    internal TcpStackDiagnostics(LocalTcpStack stack)
+    {
+        _stack = stack;
+    }
 
     /// <summary>Gets the number of concurrent connections currently tracked.</summary>
     public int ConnectionCount => Volatile.Read(ref _connectionCount);
@@ -32,9 +37,9 @@ public sealed class TcpStackDiagnostics
     /// <summary>Gets the number of tracked connections that have successfully established a handshake.</summary>
     public int EstablishedConnections => Volatile.Read(ref _establishedConnections);
 
-    /// <summary>Gets the aggregate number of bytes buffered across all connection reassembly pipes: a diagnostic
-    /// (the iOS memory monitor logs it), no flow-control input.</summary>
-    public long TotalPipeBufferedBytes => Volatile.Read(ref _totalPipeBufferedBytes);
+    /// <summary>Gets the bytes buffered across all connection reassembly pipes, summed on read: a diagnostic (the iOS
+    /// memory monitor logs it), no flow-control input, nothing counted per packet.</summary>
+    public long TotalPipeBufferedBytes => _stack.PipeBufferedBytes;
 
     /// <summary>Gets the window size of receive configured for this stack profile.</summary>
     public int ConfiguredReceiveWindow { get; internal set; }
@@ -100,8 +105,6 @@ public sealed class TcpStackDiagnostics
         LogConn("-CONN", live, $"{endPointPair} ({reason})");
     }
 
-    internal void AddPipeBufferedBytes(long bytes) => Interlocked.Add(ref _totalPipeBufferedBytes, bytes);
-
     // ---- memory admission gate -----------------------------------------------------------------
     private long _lastAdmissionLogTick;
 
@@ -141,8 +144,8 @@ public sealed class TcpStackDiagnostics
 
     // --- Verbose data-path tracing -------------------------------------------------------------
     // All hot-path trace logging lives here so LocalTcpConnection/LocalTcpStack stay free of
-    // formatting, gating and throttling concerns. Each method is a no-op (a single bool read) when
-    // VerboseLogging is off, so leaving the call sites in the data path costs nothing in production.
+    // formatting, gating and throttling concerns. The hot call sites check VerboseLogging first, so a
+    // disabled trace costs one bool read there; each method checks it again for its other callers.
     // Throttling is per-stack (this object is one-per-stack); messages carry the endpoint pair so
     // they remain attributable across connections.
 

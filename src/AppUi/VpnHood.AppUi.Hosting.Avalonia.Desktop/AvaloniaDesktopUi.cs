@@ -11,16 +11,13 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 public class AvaloniaDesktopUi<TUi> : IDesktopUi
     where TUi : Application, IAvaloniaUi, new()
 {
-    // The shape the window takes on its screen: the classic UI's unless the head names its UI's own.
-    public DesktopWindowFitOptions WindowFit { get; init; } = new();
-
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             return;
 
         using var registration = cancellationToken.Register(AvaloniaDesktopHost.Shutdown);
-        AvaloniaDesktopHost.Run<TUi>([], uiParams.Api, uiParams.UiAssetProvider, WindowFit, useTray: true,
+        AvaloniaDesktopHost.Run<TUi>([], uiParams.Api, uiParams.UiAssetProvider, useTray: true,
             startHidden: uiParams.StartHidden, cancellationToken);
     }
 

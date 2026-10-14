@@ -12,15 +12,13 @@ namespace VpnHood.AppUi.Hosting.WebView.Windows;
 // window's look read from the app and from the UI's store. It runs the window's message loop on the
 // host's STA main thread until the window closes or the run is cancelled. It keeps no tray, so a
 // start in the tray ends at once. No UI framework: Windows' own window, message box and taskbar.
-public class WindowsWebViewUi : IDesktopUi
+// The head states the shape the web UI's layout needs of the window (windowFit), as a page cannot.
+public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
 {
     // the running window, which BringToFront reaches from another thread; or the thread showing the
     // message in its place
     private volatile WebViewMainWindow? _window;
     private volatile uint _messageThreadId;
-
-    // The shape the window takes on its screen: the classic UI's unless the head names its UI's own.
-    public DesktopWindowFitOptions WindowFit { get; init; } = new();
 
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
@@ -39,7 +37,7 @@ public class WindowsWebViewUi : IDesktopUi
             AppName = info.Features.AppName,
             IsTv = info.Features.IsTv,
             Colors = colors,
-            WindowFit = WindowFit,
+            WindowFit = windowFit,
             Resources = new AppResources(),
             WebViewDataPath = Path.Combine(uiParams.UiDataPath, "WebView2")
         });

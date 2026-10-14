@@ -3,15 +3,16 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;
 
 // The Avalonia Application a VpnHood UI derives from: one view, whatever hosts it. A single-view
 // host (Android, tvOS, a browser) gets it as the main view; a desktop host gets it in a window that
-// is never resized or maximized, at the size and place the host gives it (AvaloniaDesktopHost). The
-// head gives the UI the app's API before this runs (VhApp.Init) and configures it before the view
-// is made (VhApp.Configure); the views read nothing else.
+// is never resized or maximized, in the shape the UI states (WindowFit), fitted to its screen
+// (AvaloniaDesktopHost). The head gives the UI the app's API before this runs (VhApp.Init) and
+// configures it before the view is made (VhApp.Configure); the views read nothing else.
 public abstract class VpnHoodAvaloniaAppBase : Application
 {
     // The UI itself, made once the head has configured it.
@@ -23,6 +24,10 @@ public abstract class VpnHoodAvaloniaAppBase : Application
     public VhColor? ChromeColor => ThemeBrush("ChromeBrush") is ISolidColorBrush brush
         ? VhColor.FromArgb(brush.Color.A, brush.Color.R, brush.Color.G, brush.Color.B)
         : null;
+
+    // The shape a desktop window takes for this UI (DesktopWindowFit): its layout's, which only its
+    // design knows, so the UI states it and a head names the UI alone.
+    public abstract DesktopWindowFitOptions WindowFit { get; }
 
     public override void OnFrameworkInitializationCompleted()
     {

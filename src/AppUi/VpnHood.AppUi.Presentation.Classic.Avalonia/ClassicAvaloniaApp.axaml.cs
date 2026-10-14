@@ -2,6 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -9,6 +10,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Styles;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
 
@@ -20,6 +22,17 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
 {
     // The words this UI has, which the head declares to the app (VhApp.Configure).
     public static IReadOnlyList<string> AvailableCultures => Strings.AvailableCultures;
+
+    // The window on a desktop: a phone's shape where its screen has room for it; else landscape, as
+    // wide as the home needs to show its rows whole in every language (Client's "no server selected"
+    // in Spanish and Portuguese is the longest), which also puts them beside the circle, as it does
+    // over 600, and never lower than the home with the countdown, which takes about 380 (the plain
+    // one breaks at 340).
+    public override DesktopWindowFitOptions WindowFit { get; } = new() {
+        PhoneSize = new VhSize(400, 700),
+        LandscapeWidth = 800,
+        MinLandscapeHeight = 400
+    };
 
     // What this UI needs before its first view, out of the store the head hands in: the words, and
     // the fonts. The head calls it, so the moment is the head's - on Android before the activity's

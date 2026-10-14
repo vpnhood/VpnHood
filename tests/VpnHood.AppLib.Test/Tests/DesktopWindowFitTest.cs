@@ -8,10 +8,15 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class DesktopWindowFitTest
 {
-    private static readonly DesktopWindowFitOptions ClassicUi = new();
+    // the classic UI's shape (ClassicAvaloniaApp.WindowFit)
+    private static readonly DesktopWindowFitOptions ClassicUi = new() {
+        PhoneSize = new VhSize(400, 700),
+        LandscapeWidth = 800,
+        MinLandscapeHeight = 400
+    };
     private static readonly VhSize WindowsFrame = new(16, 39);
 
-    // a UI laid out for another shape, as a fork's head names it
+    // a UI laid out for another shape, as a fork's own UI states it
     private static readonly DesktopWindowFitOptions OwnUi = new() {
         PhoneSize = new VhSize(500, 800),
         LandscapeWidth = 1000,

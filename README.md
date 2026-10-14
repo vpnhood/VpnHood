@@ -70,6 +70,7 @@ VpnHood underwent a comprehensive security audit by the Open Tech Fund. Read the
 * [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work)
 * [Can a network provider block VpnHood?](https://github.com/vpnhood/VpnHood/wiki/Can-a-network-provider-block-VpnHood)
 * [Changelog](https://github.com/vpnhood/VpnHood/blob/develop/CHANGELOG.md)
+* [Changelog of the NuGet packages](https://github.com/vpnhood/VpnHood/blob/develop/CHANGELOG.Packages.md): what an app built on them must change
 * [More...](https://github.com/vpnhood/VpnHood/wiki)
 
 ## Support & Community

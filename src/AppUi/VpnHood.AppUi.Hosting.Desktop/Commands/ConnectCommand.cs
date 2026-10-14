@@ -11,6 +11,9 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 //
 // The profile may be named rather than numbered, because a person reading "profile list" sees names
 // and a Guid typed by hand is a typo waiting to happen.
+//
+// It connects even before the window's first-run page is answered: that page gates the window only,
+// and no tracker reports until it is answered (AppTrackerService).
 internal static class ConnectCommand
 {
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromMinutes(2);

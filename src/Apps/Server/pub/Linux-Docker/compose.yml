@@ -1,4 +1,6 @@
 services:
+  # One container and no updater beside it: the image updates itself (vhsupervisor.sh), as it must
+  # where a service takes a single container and gives no docker.sock.
   vpnhoodserver:
     image: vpnhood/vpnhoodserver
     container_name: VpnHoodServer

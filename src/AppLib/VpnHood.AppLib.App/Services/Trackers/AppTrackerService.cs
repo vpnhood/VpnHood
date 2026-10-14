@@ -11,8 +11,10 @@ namespace VpnHood.AppLib.App.Services.Trackers;
 
 // The app's trackers and when they report: one from each of the head's factories, none in a Debug
 // build, switched by the first-run terms where the head asks for them and by the usage-data switch,
-// which counts only once answered where the law wants a yes first. The VPN service makes its own
-// from the same factories, with what this says it may.
+// which counts only once answered where the law wants a yes first - the app's own question, not
+// Google's consent mode, which would steer Firebase alone and not the servers' reports, whose
+// switch rides in the hello. The VPN service makes its own from the same factories, with what this
+// says it may.
 public class AppTrackerService
 {
     // Where the law wants a yes before usage data - the EEA, the UK and Switzerland - as the app's region

@@ -138,7 +138,9 @@ public static class VhApp
 
     public static bool IsConnected() => IsConnected(State);
 
-    // A build with no premium tier is the full app: nothing sold, no crown, everything allowed.
+    // A build with no premium tier is the full app: nothing sold, no crown, everything allowed. Left
+    // so: a public key whose own plans include premium still shows them there (the locations' crowns,
+    // the countdown, the promote page), since they describe that key.
     public static bool IsPremiumSupported => Features.Premium != null;
     public static bool IsPremiumUser => State.VpnProfile?.IsPremium == true;
     public static bool IsPremiumByAccount => IsPremiumUser && Account?.Subscription != null;

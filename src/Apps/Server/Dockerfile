@@ -4,7 +4,8 @@
 # Docker architecture (amd64, arm64) the release's package and install script, as package.tar.gz and
 # install.sh. It is bind-mounted rather than copied, so no package stays behind in a layer. The
 # install runs with -container, as vhupdate runs it here later: no units (no systemd here), the
-# server's libraries brought current, and no storage folder - the server or a mount makes it.
+# server's libraries brought current, and no storage folder - the server or a mount makes it. A
+# build cache imported from an earlier build would keep that step's libraries old: CI imports none.
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
 ARG TARGETARCH
 RUN --mount=type=bind,target=/context \

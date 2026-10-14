@@ -816,11 +816,74 @@ public sealed class LocalTcpStackTest
         StringAssert.Contains(lines[1].Message, "4 more since the last line");
     }
 
+    /// <summary>Only an acceptable segment counts as the peer's activity: a connection fed ACKs with a stale ack
+    /// number, or with a current ack at a sequence out of the window, times out as idle while one fed current ACKs
+    /// stays.</summary>
+    [TestMethod]
+    [Timeout(20000)]
+    public async Task IdleTimeout_IsNotPostponedByUnacceptableSegments()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            IdleTimeout = TimeSpan.FromSeconds(1),
+            IdleCheckInterval = TimeSpan.FromMilliseconds(200)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = Task.Run(async () => {
+            var clients = new List<ITcpClient>();
+            await foreach (var client in listener.AcceptAllAsync()) {
+                clients.Add(client);
+                if (clients.Count == 3) break;
+            }
+            return clients;
+        });
+
+        // A: stale ack numbers; B: current ACKs; C: current acks at a sequence out of the window
+        const int portA = ClientPort, portB = ClientPort + 1, portC = ClientPort + 2;
+        DoHandshake(tcpStack, sent, sync, portA, 1000);
+        DoHandshake(tcpStack, sent, sync, portB, 1000);
+        DoHandshake(tcpStack, sent, sync, portC, 1000);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var clients = await acceptTask.WaitAsync(cts.Token);
+        var isnA = SynAckSequence(sent, sync, portA);
+        var isnB = SynAckSequence(sent, sync, portB);
+        var isnC = SynAckSequence(sent, sync, portC);
+
+        // 2 s of feeding every 50 ms: twice the idle timeout
+        for (var i = 0; i < 40; i++) {
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, portA, ServerIp, ServerPort, ack: true, seq: 1001, ackNum: isnA));
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, portB, ServerIp, ServerPort, ack: true, seq: 1001, ackNum: isnB + 1));
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, portC, ServerIp, ServerPort, ack: true, seq: 1001 + 100_000, ackNum: isnC + 1));
+            await Task.Delay(50, cts.Token);
+        }
+        Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount, "A and C timed out, B stays");
+
+        // B is the survivor: its data still reaches its app; A's and C's apps read EOF
+        var clientB = clients.Single(c => c.RemoteEndPoint.Port == portB);
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, portB, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: isnB + 1, payload: new byte[10]));
+        Assert.AreEqual(10, await clientB.Stream.ReadAsync(new byte[10], cts.Token));
+        foreach (var client in clients.Where(c => c != clientB))
+            Assert.AreEqual(0, await client.Stream.ReadAsync(new byte[10], cts.Token), "an aborted connection's app reads EOF");
+        foreach (var client in clients)
+            await client.DisposeAsync();
+    }
+
     // The handshake tests' stack: no RTO, so the maintenance sweep never retransmits a SYN-ACK into their counts.
     private static LocalTcpStackOptions NoRtoOptions => new() {
         RetransmitTimeout = TimeSpan.FromSeconds(30),
         RetransmitMaxTimeout = TimeSpan.FromSeconds(30)
     };
+
+    // The server's ISN for a client port: its SYN-ACK's sequence number.
+    private static uint SynAckSequence(List<IpPacket> sent, object sync, int clientPort)
+    {
+        lock (sync)
+            return sent.First(p => p.ExtractTcp() is { Synchronize: true } t && t.DestinationPort == clientPort)
+                .ExtractTcp().SequenceNumber;
+    }
 
     // Completes a SYN / SYN-ACK / ACK handshake for the given client port against the server endpoint.
     private static void DoHandshake(LocalTcpStack stack, List<IpPacket> sent, object lockObj,

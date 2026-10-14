@@ -1360,6 +1360,104 @@ public sealed class LossRecoveryTest
         Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the ACK of our FIN ends the connection");
     }
 
+    /// <summary>
+    /// A zero window on an ACK whose ack number is stale (below SndUna) is not the peer's window: it is ignored, so
+    /// a packet that knows only the 4-tuple cannot freeze the sender (RFC 9293 3.10.7.4 takes the window from an
+    /// acceptable ACK only).
+    /// </summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task StaleAckWithZeroWindow_DoesNotFreezeTheSender()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        // 1000 bytes out and acked
+        await client.Stream.WriteAsync(new byte[1000]);
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 1000));
+
+        // a zero window with the handshake's ack number: stale, ignored
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
+        lock (sync) sent.Clear();
+
+        // the next write goes out at once
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await client.Stream.WriteAsync(new byte[500], cts.Token);
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Payload.Length == 500), "the stale zero window must not hold the data");
+        await client.DisposeAsync();
+    }
+
+    /// <summary>An ack of data never sent draws a challenge ACK and changes nothing (RFC 5961 5.2): its zero window
+    /// is not applied, its data and FIN are dropped.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task AckOfUnsentData_DrawsAChallengeAck_AndAppliesNoWindow()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, fin: true, seq: 1001, ackNum: serverSeq + 1 + 5000, window: 0, payload: new byte[100]));
+        lock (sync) {
+            Assert.HasCount(1, sent, "one challenge ACK");
+            var challenge = sent[0].ExtractTcp();
+            Assert.IsTrue(challenge is { Acknowledgment: true, Synchronize: false, Finish: false, Reset: false, Payload.Length: 0 }, "a pure ACK");
+            Assert.AreEqual(serverSeq + 1, challenge.SequenceNumber);
+            Assert.AreEqual(1001u, challenge.AcknowledgmentNumber);
+            sent.Clear();
+        }
+        var readTask = client.Stream.ReadAsync(new byte[100]).AsTask();
+        await Task.Delay(100);
+        Assert.IsFalse(readTask.IsCompleted, "its data and FIN were dropped");
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await client.Stream.WriteAsync(new byte[500], cts.Token);
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp().Payload.Length == 500), "the bogus zero window must not hold the data");
+        await client.DisposeAsync();
+    }
+
+    /// <summary>After the handshake every segment carries an ACK: data without one is dropped unanswered (RFC 9293
+    /// 3.10.7.4), and delivered once it comes with the ACK.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task DataWithoutTheAckBit_IsDropped()
+    {
+        using var tcpStack = new LocalTcpStack();
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        var payload = new byte[100];
+        RandomNumberGenerator.Fill(payload);
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            psh: true, seq: 1001, payload: payload));
+        var buffer = new byte[100];
+        var readTask = client.Stream.ReadAsync(buffer).AsTask();
+        await Task.Delay(100);
+        lock (sync) Assert.IsEmpty(sent, "a segment without the ACK bit is dropped unanswered");
+        Assert.IsFalse(readTask.IsCompleted, "nothing reached the app");
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: payload));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        Assert.AreEqual(100, await readTask.WaitAsync(cts.Token));
+        CollectionAssert.AreEqual(payload, buffer);
+        await client.DisposeAsync();
+    }
+
     // ---- helpers ----
 
     /// <summary>Completes a handshake and returns the accepted client plus the server's ISN.</summary>

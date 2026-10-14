@@ -4,12 +4,14 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.DatagramMessaging;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Net.Toolkit.Streams;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests.Servers;
@@ -32,15 +34,27 @@ public class SessionTest : TestBase
         }
     }
 
+    private static Session CreateSession(IAccessManager accessManager, NetFilter netFilter)
+    {
+        return new Session(accessManager, vpnAdapter: null, new TestSocketFactory(), netFilter,
+            new SessionResponseEx { ErrorCode = SessionErrorCode.Ok, SessionId = 1, SessionKey = new byte[16] },
+            new SessionOptions(), new TrackingOptions(), new SessionExtraData(),
+            new VirtualIpBundle { IpV4 = IPAddress.Parse("10.10.0.2"), IpV6 = IPAddress.Parse("fd00::2") });
+    }
+
+    // the request as the server reads it, from what the client writes
+    private async Task<T> ReadAsServer<T>(T request) where T : ClientRequest
+    {
+        using var stream = new MemoryStream(StreamUtils.ObjectToJsonBuffer(request).ToArray());
+        return await StreamUtils.ReadObjectAsync<T>(stream, TestCt);
+    }
+
     [TestMethod]
     public async Task Channel_request_closes_the_older_channels_the_client_no_longer_lists()
     {
         using var accessManager = TestHelper.CreateAccessManager();
         using var netFilter = new NetFilter();
-        using var session = new Session(accessManager, vpnAdapter: null, new TestSocketFactory(), netFilter,
-            new SessionResponseEx { ErrorCode = SessionErrorCode.Ok, SessionId = 1, SessionKey = new byte[16] },
-            new SessionOptions(), new TrackingOptions(), new SessionExtraData(),
-            new VirtualIpBundle { IpV4 = IPAddress.Parse("10.10.0.2"), IpV6 = IPAddress.Parse("fd00::2") });
+        using var session = CreateSession(accessManager, netFilter);
 
         // an older channel, which the client's next request does not list, as it is replacing it
         using var oldClient = new TcpClient();
@@ -70,5 +84,41 @@ public class SessionTest : TestBase
         Assert.IsNotNull(sent);
         Assert.IsInstanceOfType<ClosePacketMessage>(PacketMessageHandler.ReadMessage(sent));
         Assert.AreEqual(PacketChannelState.Disconnecting, oldChannel.State);
+    }
+
+    // a request a network change cut off, which reaches the server after the channel that replaced it
+    [TestMethod]
+    public async Task Late_request_leaves_the_newer_channels_open()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        using var netFilter = new NetFilter();
+        using var session = CreateSession(accessManager, netFilter);
+
+        using var newerClient = new TcpClient();
+        var newerChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
+            StreamConnection = await Accept(newerClient),
+            RequestTime = DateTime.UtcNow,
+            ChannelId = "newer",
+            AutoDisposePackets = true,
+            Blocking = false,
+            Lifespan = null
+        });
+        session.Tunnel.AddChannel(newerChannel);
+
+        // made before the newer channel's request, so it lists nothing of it
+        var requestTime = DateTime.UtcNow - TimeSpan.FromMinutes(1);
+        var lateRequest = await ReadAsServer(new TcpPacketChannelRequest {
+            RequestId = "late",
+            ChannelId = "late",
+            SessionId = session.SessionId,
+            SessionKey = session.SessionKey,
+            ActiveChannelIds = [],
+            RequestTime = requestTime
+        });
+        Assert.AreEqual(requestTime, lateRequest.RequestTime);
+        using var lateClient = new TcpClient();
+        await session.ProcessTcpPacketChannelRequest(lateRequest, await Accept(lateClient), TestCt);
+
+        Assert.AreEqual(PacketChannelState.Connected, newerChannel.State);
     }
 }

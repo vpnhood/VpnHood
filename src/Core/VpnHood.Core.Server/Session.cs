@@ -399,7 +399,9 @@ public class Session : IDisposable
 
         // The older channels the client no longer lists are closed, not disposed: each goes after its grace, so what
         // is on its way on it still arrives; after a network change they are the ones it abandoned. Only older ones,
-        // as a channel the client is creating meanwhile is not listed yet
+        // as a channel the client is creating meanwhile is not listed yet. Older by the client's clock, as a request a
+        // network change cut off may arrive after its replacement; a step back of that clock can still close a newer
+        // channel, or keep older ones until it catches up. Left so, as rare
         if (request.ActiveChannelIds != null) {
             var inactiveChannels = Tunnel.GetPacketChannels()
                 .OfType<StreamPacketChannel>()

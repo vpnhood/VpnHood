@@ -22,7 +22,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel>
                 <TextBlock Classes="body-medium" FontWeight="Bold" Text="{Binding SelectedFreeServer, Source={x:Static res:Strings.Current}}" />
-                <TextBlock x:Name="FreeDesc" Classes="body-small" Opacity="0.4" TextWrapping="Wrap" />
+                <TextBlock x:Name="FreeDesc" Classes="body-small muted" TextWrapping="Wrap" />
               </StackPanel>
               <Border Grid.Column="1" Classes="chip flat-btn2 comfortable" Margin="8,0,0,0">
                 <TextBlock Text="{Binding Connect, Source={x:Static res:Strings.Current}}" />
@@ -33,7 +33,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel>
                 <TextBlock Classes="body-medium" FontWeight="Bold" Text="{Binding SelectedFreeServerByRewardedAd, Source={x:Static res:Strings.Current}}" />
-                <TextBlock x:Name="FreeAdDesc" Classes="body-small" Opacity="0.4" TextWrapping="Wrap" />
+                <TextBlock x:Name="FreeAdDesc" Classes="body-small muted" TextWrapping="Wrap" />
               </StackPanel>
               <Border Grid.Column="1" Classes="chip flat-btn2 comfortable" Margin="8,0,0,0">
                 <TextBlock Text="{Binding Connect, Source={x:Static res:Strings.Current}}" />

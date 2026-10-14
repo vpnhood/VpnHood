@@ -31,7 +31,7 @@ $utf8Bom = New-Object System.Text.UTF8Encoding($true);
 $tonalKeys = @(
     "btn-style-2", "btn-style-4", "btn-style-5", "highlight", "active", "error", "warning", "enable-premium",
     "switch-btn", "tonal-icon-btn", "dialog-alert-btn", "go-premium-btn", "count-down-normal",
-    "count-down-alert", "count-down-warning", "rate-icon", "premium-code-btn", "info", "on-note",
+    "count-down-alert", "count-down-warning", "rate-icon", "premium-code-btn", "info", "note-chip",
     "on-general-dialog", "update-snackbar-alert", "update-snackbar-warning", "btn-on-update-snackbar");
 
 function ToPascal([string] $key) {

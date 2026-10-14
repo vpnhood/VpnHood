@@ -14,11 +14,14 @@
     <FontFamily x:Key="IconFont">fonts:VpnHood#Material Design Icons</FontFamily>
 
     <!-- What the web UI writes as an opacity rather than a colour, so the same in both products:
-         white text at Vuetify's emphasis levels, its 3% border, the ring, a tonal wash of white,
-         and the scrim behind a dialog (override.css: black at 60%). -->
+         secondary text at Vuetify's medium emphasis (60%: 4.5:1 or more on every surface of both
+         themes, where the web UI's 38% and 40% fell to 3.1:1), but the home's values, statistics
+         and version, kept at the web UI's 50% and 40%: faded on purpose, under 4.5:1, so they do
+         not draw the eye; white at half for a line or a mark, its 3% border, the ring, a tonal
+         wash of white, and the scrim behind a dialog (override.css: black at 60%). -->
+    <SolidColorBrush x:Key="AppText60Brush" Color="#99FFFFFF" />
     <SolidColorBrush x:Key="AppText50Brush" Color="#80FFFFFF" />
     <SolidColorBrush x:Key="AppText40Brush" Color="#66FFFFFF" />
-    <SolidColorBrush x:Key="AppDisabledBrush" Color="#61FFFFFF" />
     <SolidColorBrush x:Key="AppBorderBrush" Color="#1FFFFFFF" />
     <SolidColorBrush x:Key="AppFocusBrush" Color="#FFFFFF" />
     <SolidColorBrush x:Key="WhiteBrush" Color="#FFFFFF" />
@@ -175,13 +178,13 @@
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="TextBlock.muted">
-    <Setter Property="Foreground" Value="{StaticResource AppText50Brush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
   </Style>
   <Style Selector="TextBlock.muted40">
     <Setter Property="Foreground" Value="{StaticResource AppText40Brush}" />
   </Style>
   <Style Selector="TextBlock.disabled">
-    <Setter Property="Foreground" Value="{StaticResource AppDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
   </Style>
   <Style Selector="TextBlock.error">
     <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
@@ -225,7 +228,7 @@
   </Style>
   <Style Selector="TextBlock.address">
     <Setter Property="FontSize" Value="14" />
-    <Setter Property="Foreground" Value="{StaticResource AppText50Brush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="Border.note">
@@ -645,15 +648,15 @@
     <Setter Property="Padding" Value="16,10" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="Foreground" Value="{StaticResource AppDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
   </Style>
   <Style Selector="ToggleButton.group-header:checked /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource AppDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
   </Style>
   <Style Selector="ToggleButton.group-header:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="{StaticResource AppDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
   </Style>
   <Style Selector="ToggleButton.group-header:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
@@ -817,9 +820,10 @@
     <Setter Property="Background" Value="{StaticResource ErrorTonalBrush}" />
     <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
   </Style>
+  <!-- the page's dark colour as text: white on the error red is 3.2:1 -->
   <Style Selector="Button.flat-error">
     <Setter Property="Background" Value="{StaticResource ErrorBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource BackgroundBrush}" />
   </Style>
   <Style Selector="Button.text-error">
     <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
@@ -926,7 +930,7 @@
   <Style Selector="TextBlock.card-subtitle">
     <Setter Property="FontSize" Value="12" />
     <Setter Property="LineHeight" Value="20" />
-    <Setter Property="Foreground" Value="{StaticResource AppDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="TextBlock.highlight">
@@ -948,7 +952,7 @@
   </Style>
   <Style Selector="TextBlock.section-title">
     <Setter Property="FontSize" Value="12" />
-    <Setter Property="Foreground" Value="{StaticResource AppDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
   </Style>
   <!-- a rule (v-divider) -->
   <Style Selector="Border.divider">
@@ -978,8 +982,9 @@
     <Setter Property="Background" Value="{StaticResource WhiteTonalBrush}" />
     <Setter Property="Opacity" Value="0.6" />
   </Style>
+  <!-- white under the chip's fade: 60% text, where 50% under it fell to 3:1 -->
   <Style Selector="Border.chip.status-off TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource AppText50Brush}" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
   </Style>
   <Style Selector="Border.chip.warning">
     <Setter Property="Background" Value="{StaticResource WarningTonalBrush}" />
@@ -1017,11 +1022,13 @@
   <Style Selector="Border.chip.active TextBlock">
     <Setter Property="Foreground" Value="{StaticResource ActiveBrush}" />
   </Style>
+  <!-- in a key of its own, not on-note's: the client's on-note is dark, for its light note card,
+       and was unreadable on a dark card -->
   <Style Selector="Border.chip.on-note">
-    <Setter Property="Background" Value="{StaticResource OnNoteTonalBrush}" />
+    <Setter Property="Background" Value="{StaticResource NoteChipTonalBrush}" />
   </Style>
   <Style Selector="Border.chip.on-note TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource OnNoteBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NoteChipBrush}" />
   </Style>
   <Style Selector="Border.chip.flat-btn2">
     <Setter Property="Background" Value="{StaticResource BtnStyle2Brush}" />
@@ -1133,7 +1140,7 @@
     <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
   </Style>
   <Style Selector="Button.option-row TextBlock.mark">
-    <Setter Property="Foreground" Value="{StaticResource AppDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
     <Setter Property="FontSize" Value="24" />
     <Setter Property="Margin" Value="0,0,12,0" />
     <Setter Property="VerticalAlignment" Value="Top" />
@@ -1148,7 +1155,7 @@
   <Style Selector="Button.option-row TextBlock.option-desc">
     <Setter Property="FontSize" Value="12" />
     <Setter Property="LineHeight" Value="18" />
-    <Setter Property="Foreground" Value="{StaticResource AppDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
@@ -1309,28 +1316,13 @@
     <Setter Property="Margin" Value="16,20" />
     <Setter Property="Background" Value="{StaticResource HighlightBrush}" />
   </Style>
-  <Style Selector="Border.snackbar.active">
-    <Setter Property="Background" Value="{StaticResource ActiveBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.active TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.warning">
-    <Setter Property="Background" Value="{StaticResource WarningBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.warning TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource OnWarningBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.suppress">
-    <Setter Property="Background" Value="{StaticResource SuppressSnackbarBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.suppress TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource OnSuppressSnackbarBrush}" />
-  </Style>
+  <!-- the page's dark colour as text, white being under 3:1 on the highlight; before the kinds,
+       so the style each kind names below wins -->
   <Style Selector="Border.snackbar TextBlock">
     <Setter Property="FontSize" Value="14" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{StaticResource BackgroundBrush}" />
   </Style>
   <Style Selector="Border.snackbar Button">
     <Setter Property="FontSize" Value="12" />
@@ -1338,6 +1330,38 @@
     <Setter Property="Padding" Value="10,2" />
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{StaticResource BackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource BackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar.active">
+    <Setter Property="Background" Value="{StaticResource ActiveBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar.active TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar.active Button">
+    <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource OnActiveBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar.warning">
+    <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar.warning TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource OnWarningBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar.warning Button">
+    <Setter Property="Foreground" Value="{StaticResource OnWarningBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource OnWarningBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar.suppress">
+    <Setter Property="Background" Value="{StaticResource SuppressSnackbarBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar.suppress TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource OnSuppressSnackbarBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar.suppress Button">
+    <Setter Property="Foreground" Value="{StaticResource OnSuppressSnackbarBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource OnSuppressSnackbarBrush}" />
   </Style>
   <Style Selector="Border.snackbar Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderThickness" Value="1" />
@@ -1370,14 +1394,14 @@
   </Style>
   <Style Selector="TextBlock.step-number">
     <Setter Property="FontSize" Value="12" />
-    <Setter Property="Foreground" Value="{StaticResource AppDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
     <Setter Property="Margin" Value="0,0,8,0" />
   </Style>
   <Style Selector="TextBlock.step">
     <Setter Property="FontSize" Value="12" />
     <Setter Property="LineHeight" Value="20" />
     <Setter Property="TextWrapping" Value="Wrap" />
-    <Setter Property="Foreground" Value="{StaticResource AppText50Brush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
   </Style>
 
   <!-- a spinner: one glyph turning (v-progress-circular indeterminate) -->
@@ -1423,9 +1447,6 @@
     <Setter Property="MinHeight" Value="24" />
     <Setter Property="Padding" Value="8,0,4,0" />
   </Style>
-  <Style Selector="Border.chip.countdown Button.countdown-extend TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
-  </Style>
   <Style Selector="Border.chip.countdown.alert">
     <Setter Property="Background" Value="{StaticResource CountDownAlertTonalBrush}" />
   </Style>
@@ -1443,6 +1464,11 @@
   </Style>
   <Style Selector="Border.chip.countdown.warning-time Button.countdown-extend">
     <Setter Property="Background" Value="{StaticResource CountDownWarningBrush}" />
+  </Style>
+  <!-- after the three tones: each tone's text colour matches the button's label too, which then
+       vanished into the button's own colour under 15 minutes -->
+  <Style Selector="Border.chip.countdown Button.countdown-extend TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
   </Style>
   <Style Selector="Button.status-on-btn">
     <Setter Property="Background" Value="{StaticResource EnablePremiumTonalBrush}" />

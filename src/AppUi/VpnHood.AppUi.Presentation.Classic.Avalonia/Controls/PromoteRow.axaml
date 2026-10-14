@@ -9,7 +9,7 @@
                  Foreground="{StaticResource PromotePremiumColorPremiumBrush}" />
       <StackPanel Grid.Column="1">
         <TextBlock x:Name="TitleText" Classes="body-medium" FontWeight="Bold" />
-        <TextBlock x:Name="DescriptionText" Classes="body-small" Opacity="0.4" TextWrapping="Wrap" />
+        <TextBlock x:Name="DescriptionText" Classes="body-small muted" TextWrapping="Wrap" />
       </StackPanel>
       <Border Grid.Column="2" Classes="chip flat-premium comfortable" Margin="8,0,0,0">
         <TextBlock x:Name="ButtonText" />

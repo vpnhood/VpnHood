@@ -33,7 +33,7 @@
         </StackPanel>
         <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="20" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
       </Grid>
-      <TextBlock x:Name="ErrorText" Classes="body-small disabled" Opacity="0.6" TextWrapping="Wrap" IsVisible="False" />
+      <TextBlock x:Name="ErrorText" Classes="body-small disabled" TextWrapping="Wrap" IsVisible="False" />
     </StackPanel>
   </Button>
 </UserControl>

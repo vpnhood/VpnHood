@@ -123,7 +123,7 @@ internal static partial class RichText
                 "text-active" => "ActiveBrush",
                 "text-error" => "ErrorBrush",
                 "text-white" => "WhiteBrush",
-                "text-disabled" => "AppDisabledBrush",
+                "text-disabled" => "AppText60Brush",
                 _ => null
             };
             if (key != null && context.TryFindResource(key, out var value) && value is IBrush brush)

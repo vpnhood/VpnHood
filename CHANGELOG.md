@@ -41,6 +41,7 @@
 * Fix: Where Google Play works only through the VPN, its update now comes once you connect - after Play has had 3 days to update the app by itself - and an update you started and left comes back when you return to the app #android #store
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
 * Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts #android
+* Fix: The "Extend it" button on a session's countdown keeps its label in the last 15 minutes #android #connect
 * Feature: The Android app from our website updates itself: "Update now" downloads the new version, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store such as IzzyOnDroid keeps updating there #android
 * Update: On most phones, the Android app from our website now updates with the version made for the phone's processor, a third of the download #android
 * Fix: On a slow connection, an ad you chose to watch - Watch Ad, Free Server by Ad, or more minutes for your session - is no longer cut off while it is still loading #android #connect
@@ -68,6 +69,7 @@
 * Fix: Your settings and servers now go into your phone's backup and come back on a new phone - the backup used to be too big for Google's limit - while your sign-in, the app's logs and its unpacked files stay on the phone they belong to #android #ios
 * Improve: Buying on the website opens the checkout in the app's language #connect
 * Improve: The Quick Settings tile no longer starts Firebase in its own process, so it appears faster on low-end devices #android #connect
+* Improve: Text is easier to read: descriptions, section titles, buttons and chips have more contrast
 * Fix: Timeouts no longer drift with the device's time zone or a daylight-saving change
 * Fix: On Linux without systemd-resolved, the VPN's DNS server stayed in resolv.conf after disconnecting #linux
 * Fix: On Linux without systemd-resolved, the VPN never set its DNS servers, so DNS went around the VPN; resolvconf now sets them, and where it cannot - NetworkManager without systemd-resolved, as Arch-based systems have by default - connecting stops with an error that says what to turn on #linux

@@ -14,6 +14,7 @@
   <Color x:Key="Gray700">#3f3f3f</Color>
   <Color x:Key="Gray800">#1e1e1e</Color>
   <Color x:Key="Blue20">#eaeff6</Color>
+  <Color x:Key="Blue50">#52bbfe</Color>
   <Color x:Key="Blue100">#16a3fe</Color>
   <Color x:Key="Blue200">#1940b0</Color>
   <Color x:Key="Blue280">#1a2d8b</Color>
@@ -26,6 +27,7 @@
   <Color x:Key="Blue500">#030b30</Color>
   <Color x:Key="Purple20">#e1e1ff</Color>
   <Color x:Key="Purple100">#8d9fe4</Color>
+  <Color x:Key="Purple150">#9796fe</Color>
   <Color x:Key="Purple200">#7b7afe</Color>
   <Color x:Key="Purple300">#2f296e</Color>
   <Color x:Key="Purple400">#211951</Color>
@@ -38,6 +40,7 @@
   <Color x:Key="Green200">#15f5ba</Color>
   <Color x:Key="Green300">#23c99d</Color>
   <Color x:Key="Green400">#078362</Color>
+  <Color x:Key="Green500">#067255</Color>
   <Color x:Key="Yellow50">#fce68f</Color>
   <Color x:Key="Yellow100">#ffe066</Color>
   <Color x:Key="Yellow200">#ffe648</Color>
@@ -45,6 +48,7 @@
   <Color x:Key="Orange100">#fb8c00</Color>
   <Color x:Key="Orange300">#4a2800</Color>
   <Color x:Key="Cream100">#e7b481</Color>
-  <Color x:Key="Red100">#ff5252</Color>
+  <Color x:Key="Red50">#ff8b8b</Color>
+  <Color x:Key="Red100">#ff7070</Color>
 
 </ResourceDictionary>

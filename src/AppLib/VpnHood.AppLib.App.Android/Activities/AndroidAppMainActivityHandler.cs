@@ -7,6 +7,7 @@ using VpnHood.AppLib.App.Android.Utils;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
 
@@ -16,13 +17,18 @@ public class AndroidAppMainActivityHandler
 {
     private readonly string[] _accessKeySchemes;
     private readonly string[] _accessKeyMimes;
+    private readonly Task<VhColor?> _chromeColor;
     protected IActivityEvent ActivityEvent { get; }
 
-    public AndroidAppMainActivityHandler(IActivityEvent activityEvent, AndroidMainActivityOptions options)
+    // chromeColor: the UI's colour for the system bars and the ground behind them, from the UI that
+    // hosts this activity, as it becomes known; null, and they keep the system's.
+    public AndroidAppMainActivityHandler(IActivityEvent activityEvent, AndroidMainActivityOptions options,
+        Task<VhColor?> chromeColor)
     {
         ActivityEvent = activityEvent;
         _accessKeySchemes = options.AccessKeySchemes;
         _accessKeyMimes = options.AccessKeyMimes;
+        _chromeColor = chromeColor;
 
         activityEvent.CreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
         activityEvent.NewIntentEvent += (_, args) => OnNewIntent(args.Intent);
@@ -45,7 +51,7 @@ public class AndroidAppMainActivityHandler
 
         // initialize the window
         VhUtils.TryInvoke("ConfigureWindowInsets", () =>
-            WindowInsetUtils.Configure(ActivityEvent.Activity.Window, false, false, false));
+            WindowInsetUtils.Configure(ActivityEvent.Activity.Window, false, false, false, _chromeColor));
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);

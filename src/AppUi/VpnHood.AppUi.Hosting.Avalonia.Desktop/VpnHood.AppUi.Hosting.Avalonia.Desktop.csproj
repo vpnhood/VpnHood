@@ -9,8 +9,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- The UI itself, over the app's API alone: the engine (VpnHood.AppLib.App) is the service's, and
+		     the window's look is the UI's. -->
 		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Avalonia\VpnHood.AppUi.Hosting.Avalonia.csproj" />
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<!-- The window as the app's UI context (AvaloniaUiContext), which a store's sign-in and purchase ask for. -->
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 		<!-- IDesktopUi, which a desktop head names this UI as. -->
 		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Abstractions\VpnHood.AppUi.Hosting.Abstractions.csproj" />
 		<!-- The web server extracts the bundle whose assets folder the UI draws from. -->

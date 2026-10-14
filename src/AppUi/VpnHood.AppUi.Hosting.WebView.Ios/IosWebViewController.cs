@@ -3,7 +3,9 @@ using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Ios;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppUi.Hosting.WebView;
+using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.WebView.Ios;
 
@@ -24,10 +26,6 @@ public class IosWebViewController : UIViewController
     public override UIInterfaceOrientationMask GetSupportedInterfaceOrientations() =>
         AllowRotation ? UIInterfaceOrientationMask.All : UIInterfaceOrientationMask.Portrait;
 
-    // Edge-to-edge: paint the whole window (incl. the status-bar and home-indicator safe areas)
-    // with the SPA's window background so the system bars blend into the app, matching Android.
-    private static UIColor BackgroundColor => GetWindowBackgroundColor() ?? UIColor.SystemBackground;
-
     // The SPA uses a dark window background, so the status bar should use light (white) content.
     public override UIStatusBarStyle PreferredStatusBarStyle() => UIStatusBarStyle.LightContent;
 
@@ -46,11 +44,13 @@ public class IosWebViewController : UIViewController
     private async Task CreateContentWhenReady()
     {
         try {
-            await VpnHoodApp.Instance.ResourcesLoaded;
-            View!.BackgroundColor = BackgroundColor;
+            // Edge-to-edge: the whole window, the status-bar and home-indicator safe areas included, in
+            // the web UI's branded window background, so the system bars blend into the app, as on Android.
+            var backgroundColor = ToUiColor((await AppBranding.AppColors).WindowBackgroundColor) ?? UIColor.SystemBackground;
+            View!.BackgroundColor = backgroundColor;
 
             // the app's own web host: the platform started the app in this process
-            var webView = new IosWebView(this, BackgroundColor);
+            var webView = new IosWebView(this, backgroundColor);
             var webHost = VpnHoodApp.Instance.LocalWebHost ??
                           throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
             _host = new WebViewHost(webView, webHost);
@@ -66,14 +66,11 @@ public class IosWebViewController : UIViewController
         }
     }
 
-    private static UIColor? GetWindowBackgroundColor()
+    private static UIColor? ToUiColor(VhColor? color)
     {
-        var color = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
-        if (color == null)
-            return null;
-
-        var c = color.Value;
-        return UIColor.FromRGBA(c.R / 255f, c.G / 255f, c.B / 255f, c.A / 255f);
+        return color is { } c
+            ? UIColor.FromRGBA(c.R / 255f, c.G / 255f, c.B / 255f, c.A / 255f)
+            : null;
     }
 
     protected override void Dispose(bool disposing)

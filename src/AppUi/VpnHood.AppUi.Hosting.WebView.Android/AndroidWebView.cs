@@ -4,6 +4,7 @@ using VpnHood.AppLib.App;
 using Android.Webkit;
 using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppUi.Hosting.WebView;
+using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using Uri = System.Uri;
@@ -19,6 +20,7 @@ public sealed class AndroidWebView : IWebView
 {
     private readonly IActivityEvent _activityEvent;
     private readonly AndroidWebViewMainActivityOptions _options;
+    private readonly AppBrandingColors _colors;
     private NativeWebView? _webView;
     private bool _webViewShown;
     private string? _localToken;
@@ -29,13 +31,15 @@ public sealed class AndroidWebView : IWebView
     public event EventHandler? LoadFailed;
     public event EventHandler? ContentProcessGone;
 
-    public AndroidWebView(IActivityEvent activityEvent, AndroidWebViewMainActivityOptions options)
+    public AndroidWebView(IActivityEvent activityEvent, AndroidWebViewMainActivityOptions options,
+        AppBrandingColors colors)
     {
         _activityEvent = activityEvent;
         _options = options;
+        _colors = colors;
 
         // Loading screen shown until the SPA first renders (swapped out in SetLoading(false)).
-        AndroidAppLoader.Init(Activity);
+        AndroidAppLoader.Init(Activity, colors);
     }
 
     public void Initialize()
@@ -46,9 +50,8 @@ public sealed class AndroidWebView : IWebView
         _webView.Settings.MediaPlaybackRequiresUserGesture = false;
         _webView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
         _webView.Settings.SetSupportMultipleWindows(true);
-        if (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor != null)
-            _webView.SetBackgroundColor(VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value
-                .ToAndroidColor());
+        if (_colors.WindowBackgroundColor is { } backgroundColor)
+            _webView.SetBackgroundColor(backgroundColor.ToAndroidColor());
 
         var webViewClient = new AndroidWebViewClient(() => _localToken);
         webViewClient.PageLoaded += (_, _) => PageLoaded?.Invoke(this, EventArgs.Empty);
@@ -124,7 +127,7 @@ public sealed class AndroidWebView : IWebView
         if (!_webViewShown)
             return;
 
-        AndroidAppLoader.Init(Activity);
+        AndroidAppLoader.Init(Activity, _colors);
         _webViewShown = false;
     }
 
@@ -137,10 +140,8 @@ public sealed class AndroidWebView : IWebView
         _webViewShown = true;
 
         // Compatibility for Android 9 and below to set the navigation-bar color.
-        if (!OperatingSystem.IsAndroidVersionAtLeast(29) &&
-            VpnHoodApp.Instance.Resources.Colors.NavigationBarColor != null)
-            Activity.Window?.SetNavigationBarColor(
-                VpnHoodApp.Instance.Resources.Colors.NavigationBarColor.Value.ToAndroidColor());
+        if (!OperatingSystem.IsAndroidVersionAtLeast(29) && _colors.NavigationBarColor is { } navigationBarColor)
+            Activity.Window?.SetNavigationBarColor(navigationBarColor.ToAndroidColor());
     }
 
     // The bundled SPA is served from the app's web host; if the installed system WebView is older

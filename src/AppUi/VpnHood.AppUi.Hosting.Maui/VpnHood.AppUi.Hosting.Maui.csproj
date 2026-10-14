@@ -20,6 +20,11 @@
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.110" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<!-- The web UI's branding (AppBranding): a page cannot colour the native chrome around it. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.WebView\VpnHood.AppUi.Hosting.WebView.csproj" />
+	</ItemGroup>
+
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Android\VpnHood.AppLib.App.Android.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />

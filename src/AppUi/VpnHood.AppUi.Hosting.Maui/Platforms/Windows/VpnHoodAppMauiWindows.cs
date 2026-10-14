@@ -7,6 +7,7 @@ using Microsoft.UI.Windowing;
 using VpnHood.AppLib.App.Windows;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
+using VpnHood.AppUi.Hosting.WebView.Branding;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppUi.Hosting.Maui;
@@ -49,7 +50,7 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         return app;
     }
 
-    private void MappingMethod(IWindowHandler handler, IWindow _)
+    private void MappingMethod(IWindowHandler handler, IWindow window)
     {
         AppWindow = handler.PlatformView.GetAppWindow();
 
@@ -59,14 +60,21 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
             // the app goes with its window, disconnecting first
             AppWindow.Closing += (_, _) => Dispose();
 
-            var bgColorResource = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
-            if (bgColorResource != null) {
-                var bgColor = Windows.UI.Color.FromArgb(bgColorResource.Value.A, bgColorResource.Value.R, bgColorResource.Value.G, bgColorResource.Value.B);
-                AppWindow.TitleBar.ButtonBackgroundColor = bgColor;
-                AppWindow.TitleBar.BackgroundColor = bgColor;
-                AppWindow.TitleBar.ForegroundColor = bgColor;
-            }
+            _ = SetTitleBarColor(AppWindow.TitleBar);
         }
+    }
+
+    // the title bar in the web UI's branded window background, once it is read; the wait comes back
+    // to the window's thread
+    private static async Task SetTitleBarColor(AppWindowTitleBar titleBar)
+    {
+        if ((await AppBranding.AppColors).WindowBackgroundColor is not { } color)
+            return;
+
+        var bgColor = Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B);
+        titleBar.ButtonBackgroundColor = bgColor;
+        titleBar.BackgroundColor = bgColor;
+        titleBar.ForegroundColor = bgColor;
     }
 
     protected virtual void ConnectionStateChanged(object? sender, EventArgs e)

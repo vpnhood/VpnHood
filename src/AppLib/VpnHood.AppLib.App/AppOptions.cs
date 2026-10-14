@@ -36,9 +36,9 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // Starts at the preset for this platform, so a memory-capped head is safe without opting in.
     public ClientTransportOptions Transport { get; set; } = ClientTransportOptions.ForCurrentPlatform();
     public AppUpdaterOptions? UpdaterOptions { get; set; }
-    // What the ENGINE reads of a head's identity. Neither the colours the OS chrome draws with nor
-    // the tray's picture is handed in: the colours are read out of the UI's store (AppBranding, under
-    // UiTheme), and the tray draws the head's own icon, from its build.
+    // What the ENGINE reads of a head's identity. The window's look is not among it: the UI paints the
+    // window and the chrome around it in its own colours (UiTheme names its palette), and the tray
+    // draws the head's own icon, from its build.
     public string AppName => context.AppName;
     public Version AppVersion => context.AppVersion;
 

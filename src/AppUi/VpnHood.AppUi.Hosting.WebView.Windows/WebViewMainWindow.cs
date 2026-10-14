@@ -46,12 +46,12 @@ internal sealed class WebViewMainWindow
     {
         _params = windowParams;
         var resources = windowParams.Resources;
-        var backgroundColor = resources.Colors.WindowBackgroundColor;
+        var backgroundColor = windowParams.Colors.WindowBackgroundColor;
 
         // The TV's viewport, or the phone's shape where the screen has room for it, from the frame
         // this style gives the window.
         _window = new WebView2Window(windowParams.AppName, WindowStyle, owner: IntPtr.Zero, backgroundColor, OnMessage);
-        Win32WindowFit.Apply(_window.Window, resources.WindowSize, windowParams.IsTv);
+        Win32WindowFit.Apply(_window.Window, windowParams.WindowSize, windowParams.IsTv);
         if (backgroundColor != null)
             WindowsShell.SetTitleBarColor(_window.Window.Handle, backgroundColor.Value);
 
@@ -124,7 +124,7 @@ internal sealed class WebViewMainWindow
     {
         _isFitPending = _window.Window.IsMinimized;
         if (!_isFitPending)
-            Win32WindowFit.Apply(_window.Window, _params.Resources.WindowSize, _params.IsTv);
+            Win32WindowFit.Apply(_window.Window, _params.WindowSize, _params.IsTv);
     }
 
     private void OnWebView2Unavailable()

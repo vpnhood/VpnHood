@@ -1,9 +1,10 @@
 using System.IO;
 using VpnHood.AppLib.App;
-using VpnHood.AppLib.App.Branding;
 using VpnHood.AppUi.Hosting.Abstractions;
+using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
@@ -19,6 +20,9 @@ public class WindowsWebViewUi : IDesktopUi
     private volatile WebViewMainWindow? _window;
     private volatile uint _messageThreadId;
 
+    // The size the window opens in, where its screen has room for it (DesktopWindowFit).
+    public VhSize WindowSize { get; init; } = DesktopWindowFit.PhoneSize;
+
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested || uiParams.StartHidden)
@@ -28,16 +32,16 @@ public class WindowsWebViewUi : IDesktopUi
         // person is seen, one that appears a moment later is not. The calls do not come back to this
         // thread, which has no loop running yet.
         var info = uiParams.Api.App.GetInfo(cancellationToken).GetAwaiter().GetResult();
-        var resources = new AppResources();
-        if (uiParams.UiAssetProvider != null)
-            AppBranding.LoadAsync(resources, uiParams.UiAssetProvider, info.Features.UiTheme).GetAwaiter().GetResult();
+        var colors = AppBranding.LoadAsync(uiParams.UiAssetProvider, info.Features.UiTheme).GetAwaiter().GetResult();
 
         var window = new WebViewMainWindow(new WebViewWindowParams {
             Api = uiParams.Api,
             WebHost = new ExternalAppWebHost(uiParams.ApiUrlProvider),
             AppName = info.Features.AppName,
             IsTv = info.Features.IsTv,
-            Resources = resources,
+            Colors = colors,
+            WindowSize = WindowSize,
+            Resources = new AppResources(),
             WebViewDataPath = Path.Combine(uiParams.UiDataPath, "WebView2")
         });
 

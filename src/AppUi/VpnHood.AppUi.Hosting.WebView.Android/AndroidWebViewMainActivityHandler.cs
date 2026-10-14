@@ -6,8 +6,10 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppLib.App.Android.Utils;
 using VpnHood.AppUi.Hosting.WebView;
+using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.WebView.Android;
 
@@ -17,7 +19,7 @@ namespace VpnHood.AppUi.Hosting.WebView.Android;
 public class AndroidWebViewMainActivityHandler(
     IActivityEvent activityEvent,
     AndroidWebViewMainActivityOptions options)
-    : AndroidAppMainActivityHandler(activityEvent, options)
+    : AndroidAppMainActivityHandler(activityEvent, options, WindowBackgroundColor())
 {
     private AndroidWebView? _spaWebView;
     private WebViewHost? _host;
@@ -29,30 +31,36 @@ public class AndroidWebViewMainActivityHandler(
         _ = CreateContentWhenReady();
     }
 
-    // The loading screen and the web view draw with the app's look, so they are made once it is
-    // final - nothing shows before, where a colour that changed under the user would be seen. The
+    // the web UI's branding, for the system bars and the ground behind them (WindowInsetUtils)
+    private static async Task<VhColor?> WindowBackgroundColor()
+    {
+        return (await AppBranding.AppColors).WindowBackgroundColor;
+    }
+
+    // The loading screen and the web view draw with the web UI's branding, so they are made once it
+    // is read - nothing shows before, where a colour that changed under the user would be seen. The
     // wait comes back to the main looper, where views are made.
     private async Task CreateContentWhenReady()
     {
         try {
-            await VpnHoodApp.Instance.ResourcesLoaded;
+            var colors = await AppBranding.AppColors;
             if (ActivityEvent.Activity.IsDestroyed)
                 return; // gone while the look was read
 
-            CreateContent();
+            CreateContent(colors);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create the app's web view.");
         }
     }
 
-    private void CreateContent()
+    private void CreateContent(AppBrandingColors colors)
     {
         // Experimental. Fixing: Window couldn't find content container view.
         // Some OEMs are subject to this issue, so postpone the content setup.
         ActivityEvent.Activity.Window?.DecorView.Post(() => {
             // the app's own web host: the platform started the app in this process
-            _spaWebView = new AndroidWebView(ActivityEvent, options);
+            _spaWebView = new AndroidWebView(ActivityEvent, options, colors);
             var webHost = VpnHoodApp.Instance.LocalWebHost ??
                           throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
             _host = new WebViewHost(_spaWebView, webHost);

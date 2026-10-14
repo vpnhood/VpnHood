@@ -1,6 +1,8 @@
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.WebHosting;
+using VpnHood.AppUi.Hosting.WebView.Branding;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
@@ -12,7 +14,13 @@ internal class WebViewWindowParams
     public required string AppName { get; init; }
     public required bool IsTv { get; init; }
 
-    // the look out of the UI's store, and the library's own badge icons
+    // the web UI's branding, for the window's ground and its title bar
+    public required AppBrandingColors Colors { get; init; }
+
+    // the size the window opens in where its screen has room (DesktopWindowFit)
+    public required VhSize WindowSize { get; init; }
+
+    // the library's own badge icons
     public required AppResources Resources { get; init; }
 
     // the web view's profile, in the person's own folder

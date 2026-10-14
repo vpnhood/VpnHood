@@ -11,7 +11,6 @@ using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.App.ApiImpl;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.App.Branding;
 using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Api.Settings;
@@ -102,12 +101,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public Diagnoser Diagnoser { get; } = new();
     public AppResources Resources { get; }
 
-    // Completes when Resources are final: the look read out of the UI's store, or the built-in one
-    // when there is no store or it could not be read. Anything the user would SEE change waits for
-    // this and draws once - a tray icon or a window that appears a moment later goes unnoticed, one
-    // that switches under them does not. Never faulted, so a waiter needs no catch for it.
-    public Task ResourcesLoaded { get; }
-
     public IAssetProvider? UiAssetProvider { get; }
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
@@ -152,9 +145,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, NoBackupStorageFolderPath, "web-root"),
             options.WebUiPort);
 
-        // The look the OS chrome draws with, out of the UI's store, read while the rest of the app
-        // comes up; whatever draws with it waits for ResourcesLoaded, not for this line.
-        ResourcesLoaded = AppBranding.LoadAsync(Resources, UiAssetProvider, options.UiTheme);
         _device = device;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _logService = logService;

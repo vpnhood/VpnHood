@@ -45,8 +45,10 @@ public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityE
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        // before base.OnCreate, so the handler is subscribed when the create event fires
-        MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions());
+        // before base.OnCreate, so the handler is subscribed when the create event fires; the system bars
+        // take the UI's colour, its palette having been merged as the process's Application started it
+        MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions(),
+            Task.FromResult((AvaloniaApplication.Current as VpnHoodAvaloniaAppBase)?.ChromeColor));
 
         // Also before base.OnCreate, which makes the view (the UI hands this activity its
         // factory): the second half of the UI's start, whose first the Application ran

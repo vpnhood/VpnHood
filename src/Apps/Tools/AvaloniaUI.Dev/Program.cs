@@ -4,6 +4,7 @@ using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App;
+using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.WebHost;
@@ -124,8 +125,8 @@ internal static class Program
             // store's zip beside this executable, which the build placed there (the same files
             // the web server serves at /assets/). It runs in the window a desktop head shows it
             // in, which is also the app's UI context: a store's sign-in and purchase ask for one.
-            AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, app.Api, app.UiAssetProvider, useTray: false,
-                startHidden: false, CancellationToken.None);
+            AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, app.Api, app.UiAssetProvider, DesktopWindowFit.PhoneSize,
+                useTray: false, startHidden: false, CancellationToken.None);
         }
         finally {
             app.Dispose();

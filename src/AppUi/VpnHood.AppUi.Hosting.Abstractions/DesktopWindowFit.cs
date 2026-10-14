@@ -3,12 +3,15 @@ using VpnHood.Net.Toolkit.Graphics;
 namespace VpnHood.AppUi.Hosting.Abstractions;
 
 // Where a desktop UI's window opens and at what size, the same for every desktop UI. The window
-// hands over its screen's work area, its frame - the title bar and the borders - and the phone's
-// shape it opens in (AppResources.WindowSize), in the screen's logical units: a WPF window's DIPs,
-// an Avalonia window's logical pixels. It opens in the middle of the work area, its title bar on
-// the screen.
+// hands over its screen's work area, its frame - the title bar and the borders - and the size it
+// opens in (the UI's WindowSize, PhoneSize unless the head names another), in the screen's logical
+// units: a WPF window's DIPs, an Avalonia window's logical pixels. It opens in the middle of the work
+// area, its title bar on the screen.
 public static class DesktopWindowFit
 {
+    // the phone's shape both desktop UIs are laid out for
+    public static readonly VhSize PhoneSize = new(400, 700);
+
     // Android TV lays out at 960x540 dp - a 1920x1080 panel at xhdpi, a 4K one at twice the density -
     // and a dp is a web view's CSS px and Avalonia's logical px. A desktop's window takes this size to
     // simulate a TV; an actual TV has no window: the view fills the screen, whatever its size.

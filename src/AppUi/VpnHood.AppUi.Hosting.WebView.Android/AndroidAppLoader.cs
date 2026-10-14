@@ -2,7 +2,7 @@
 using Android.Util;
 using Android.Views;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.App;
+using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -12,17 +12,17 @@ namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 internal static class AndroidAppLoader
 {
-    public static void Init(Activity activity)
+    public static void Init(Activity activity, AppBrandingColors colors)
     {
         try {
-            activity.SetContentView(Create(activity));
+            activity.SetContentView(Create(activity, colors));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to initialize loading screen.");
         }
     }
 
-    private static View Create(Activity activity)
+    private static View Create(Activity activity, AppBrandingColors colors)
     {
         // Build the loading layout inline (no XML resource)
         var metrics = activity.Resources?.DisplayMetrics;
@@ -38,7 +38,7 @@ internal static class AndroidAppLoader
         linearLayout.SetPadding(DpToPx(60), DpToPx(0), DpToPx(60), DpToPx(0));
 
         // set window background color
-        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
+        var backgroundColor = colors.WindowBackgroundColor?.ToAndroidColor();
         if (backgroundColor != null)
             VhUtils.TryInvoke("linearLayout.SetBackgroundColor", () =>
                 linearLayout.SetBackgroundColor(backgroundColor.Value));
@@ -52,7 +52,7 @@ internal static class AndroidAppLoader
         };
 
         // set progressbar color
-        var progressBarColor = VpnHoodApp.Instance.Resources.Colors.ProgressBarColor?.ToAndroidColor();
+        var progressBarColor = colors.ProgressBarColor?.ToAndroidColor();
         if (progressBarColor != null)
             VhUtils.TryInvoke("progressBar.IndeterminateTintList", () =>
                 progressBar.IndeterminateTintList = ColorStateList.ValueOf(progressBarColor.Value));

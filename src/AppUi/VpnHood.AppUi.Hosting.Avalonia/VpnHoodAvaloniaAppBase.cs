@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using VpnHood.AppUi.Common;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;
 
@@ -15,6 +16,13 @@ public abstract class VpnHoodAvaloniaAppBase : Application
 {
     // The UI itself, made once the head has configured it.
     protected abstract Control CreateMainView();
+
+    // The colour of the OS chrome around the UI - a desktop window's title bar, Android's system bars -
+    // which the UI's palette names ChromeBrush, so the host paints it as the UI is painted; null where
+    // the palette names none, and the chrome keeps the system's.
+    public VhColor? ChromeColor => ThemeBrush("ChromeBrush") is ISolidColorBrush brush
+        ? VhColor.FromArgb(brush.Color.A, brush.Color.R, brush.Color.G, brush.Color.B)
+        : null;
 
     public override void OnFrameworkInitializationCompleted()
     {

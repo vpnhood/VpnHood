@@ -1,13 +1,12 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppLib.App;
 
+// What the engine itself shows: its own words and the taskbar badge. The window's look - its size, its
+// colours, the chrome around it - is the UI's, which the engine never draws.
 public class AppResources
 {
-    public VhSize WindowSize { get; set; } = new(400, 700);
-
     // Each word is resolved on read - the provider, or this library's own English - so a language
     // chosen while the app runs is the one shown.
     public IAppStrings Strings { get; }
@@ -15,7 +14,6 @@ public class AppResources
     // The UI's words, pushed through ConfigParams.Strings; null, and every word is the resx's.
     public IStringProvider? StringProvider { get; set; }
 
-    public AppColors Colors { get; set; } = new();
     public AppIcons Icons { get; set; } = new();
 
     public AppResources()
@@ -39,13 +37,6 @@ public class AppResources
         public string MsgCantReadAccessKey => resources.GetString("MSG_CANT_READ_ACCESS_KEY") ?? Resources.MsgCantReadAccessKey;
         public string MsgUnsupportedContent => resources.GetString("MSG_UNSUPPORTED_CONTENT") ?? Resources.MsgUnsupportedContent;
         public string UpdateReadyToInstall => resources.GetString("UPDATE_READY_TO_INSTALL") ?? Resources.UpdateReadyToInstall;
-    }
-
-    public class AppColors
-    {
-        public VhColor? NavigationBarColor { get; set; }
-        public VhColor? WindowBackgroundColor { get; set; }
-        public VhColor? ProgressBarColor { get; set; }
     }
 
     // The OS chrome the app draws for itself: a taskbar badge. The tray's pictures are not here: the

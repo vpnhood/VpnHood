@@ -4,7 +4,6 @@ using VpnHood.AppUi.Hosting.Abstractions;
 using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
@@ -20,8 +19,8 @@ public class WindowsWebViewUi : IDesktopUi
     private volatile WebViewMainWindow? _window;
     private volatile uint _messageThreadId;
 
-    // The size the window opens in, where its screen has room for it (DesktopWindowFit).
-    public VhSize WindowSize { get; init; } = DesktopWindowFit.PhoneSize;
+    // The shape the window takes on its screen: the classic UI's unless the head names its UI's own.
+    public DesktopWindowFitOptions WindowFit { get; init; } = new();
 
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
@@ -40,7 +39,7 @@ public class WindowsWebViewUi : IDesktopUi
             AppName = info.Features.AppName,
             IsTv = info.Features.IsTv,
             Colors = colors,
-            WindowSize = WindowSize,
+            WindowFit = WindowFit,
             Resources = new AppResources(),
             WebViewDataPath = Path.Combine(uiParams.UiDataPath, "WebView2")
         });

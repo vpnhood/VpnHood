@@ -43,10 +43,10 @@ public static class AvaloniaDesktopHost
     // belongs to the service. Nothing below this line knows which it was given; the pages never did.
     // A run that starts in the tray (startHidden) keeps the window back until ShowMainWindow, and with
     // no tray to wait in, ends at once. Cancelling ends the run: before the window exists, here, with
-    // OperationCanceledException; after, through Shutdown, which the caller registers. The window opens
-    // at windowSize where its screen has room (DesktopWindowFit), its title bar in the UI's colour.
-    public static void Run<TUi>(string[] args, VpnHoodApi api, IAssetProvider? uiAssetProvider, VhSize windowSize,
-        bool useTray, bool startHidden, CancellationToken cancellationToken)
+    // OperationCanceledException; after, through Shutdown, which the caller registers. The window takes
+    // the shape windowFit gives it on its screen (DesktopWindowFit), its title bar in the UI's colour.
+    public static void Run<TUi>(string[] args, VpnHoodApi api, IAssetProvider? uiAssetProvider,
+        DesktopWindowFitOptions windowFit, bool useTray, bool startHidden, CancellationToken cancellationToken)
         where TUi : Application, IAvaloniaUi, new()
     {
         using var trayArea = useTray ? AvaloniaTrayArea.Watch() : null;
@@ -66,7 +66,7 @@ public static class AvaloniaDesktopHost
 
         var window = lifetime.MainWindow ??
                      throw new InvalidOperationException("The UI has made no main window.");
-        AvaloniaWindowFit.Apply(window, windowSize, VhApp.IsTvUi);
+        AvaloniaWindowFit.Apply(window, windowFit, VhApp.IsTvUi);
         SetTitleBar(window, (Application.Current as VpnHoodAvaloniaAppBase)?.ChromeColor);
 
         // A person's close only hides the window while the desktop shows the tray, which the UI waits

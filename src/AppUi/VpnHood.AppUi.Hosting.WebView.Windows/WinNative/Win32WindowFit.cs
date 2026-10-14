@@ -13,7 +13,7 @@ internal static class Win32WindowFit
 {
     private const uint MonitorDefaultToPrimary = 1;
 
-    public static void Apply(Win32Window window, VhSize phoneSize, bool isTv)
+    public static void Apply(Win32Window window, DesktopWindowFitOptions options, bool isTv)
     {
         var monitorInfo = new MonitorInfo { cbSize = (uint)Marshal.SizeOf<MonitorInfo>() };
         if (!GetMonitorInfoW(MonitorFromWindow(window.Handle, MonitorDefaultToPrimary), ref monitorInfo))
@@ -27,7 +27,7 @@ internal static class Win32WindowFit
         var workArea = monitorInfo.rcWork;
         var placement = DesktopWindowFit.Fit(
             new VhRect(workArea.Left / scale, workArea.Top / scale, workArea.Width / scale, workArea.Height / scale),
-            new VhSize(frameWidth / scale, frameHeight / scale), phoneSize, isTv);
+            new VhSize(frameWidth / scale, frameHeight / scale), options, isTv);
 
         window.SetBounds(
             (int)Math.Round(placement.Left * scale),

@@ -1,6 +1,5 @@
 ﻿using Avalonia;
 using VpnHood.AppUi.Hosting.Abstractions;
-using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
@@ -12,8 +11,8 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 public class AvaloniaDesktopUi<TUi> : IDesktopUi
     where TUi : Application, IAvaloniaUi, new()
 {
-    // The size the window opens in, where its screen has room for it (DesktopWindowFit).
-    public VhSize WindowSize { get; init; } = DesktopWindowFit.PhoneSize;
+    // The shape the window takes on its screen: the classic UI's unless the head names its UI's own.
+    public DesktopWindowFitOptions WindowFit { get; init; } = new();
 
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
@@ -21,7 +20,7 @@ public class AvaloniaDesktopUi<TUi> : IDesktopUi
             return;
 
         using var registration = cancellationToken.Register(AvaloniaDesktopHost.Shutdown);
-        AvaloniaDesktopHost.Run<TUi>([], uiParams.Api, uiParams.UiAssetProvider, WindowSize, useTray: true,
+        AvaloniaDesktopHost.Run<TUi>([], uiParams.Api, uiParams.UiAssetProvider, WindowFit, useTray: true,
             startHidden: uiParams.StartHidden, cancellationToken);
     }
 

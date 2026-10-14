@@ -99,7 +99,7 @@ public sealed class TcpStackIntegrationTest
         var serverReceivedData = new List<byte>();
         _ = Task.Run(async () => {
             Console.WriteLine("[SERVER] Waiting for connection...");
-            await foreach (var stream in listener.AcceptAllAsync()) {
+            await foreach (var stream in listener.AcceptAllAsync(CancellationToken.None)) {
                 Console.WriteLine("[SERVER] ✅ Connection accepted!");
                 try {
                     var buffer = new byte[1024];
@@ -347,7 +347,7 @@ public sealed class TcpStackIntegrationTest
                 Console.WriteLine("[ECHO SERVER] Starting...");
                 Console.WriteLine($"[ECHO SERVER] Listening on {listener.LocalEndPoint}");
 
-                await foreach (var stream in listener.AcceptAllAsync()) {
+                await foreach (var stream in listener.AcceptAllAsync(CancellationToken.None)) {
                     Console.WriteLine("[ECHO SERVER] ✅ New connection accepted!");
 
                     // Handle connection in background

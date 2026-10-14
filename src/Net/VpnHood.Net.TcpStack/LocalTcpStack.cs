@@ -130,11 +130,6 @@ public sealed class LocalTcpStack : ITcpStack
     ITcpListener ITcpStack.ListenAny() => ListenAny();
     ITcpListener ITcpStack.Listen(IPEndPoint localEndPoint) => Listen(localEndPoint.ToValue());
 
-    public bool StopListening(IPEndPoint localEndPoint)
-    {
-        return StopListening(localEndPoint.ToValue());
-    }
-
     /// <summary>
     /// Stops listening on the specified endpoint and removes the listener.
     /// </summary>

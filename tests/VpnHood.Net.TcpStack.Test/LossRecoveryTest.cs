@@ -21,7 +21,7 @@ public sealed class LossRecoveryTest
     private static readonly IPAddress ClientIp = IPAddress.Parse("10.0.0.2");
     private const int ServerPort = 8080;
     private const int ClientPort = 54321;
-    public TestContext TestContext { get; set; } = null!;
+    public required TestContext TestContext { get; set; }
 
     /// <summary>
     /// Tail loss: the LAST data segment of a burst produces no duplicate ACKs (nothing arrives after
@@ -1483,7 +1483,7 @@ public sealed class LossRecoveryTest
 
     private static async Task<ITcpClient> AcceptConnectionAsync(ITcpListener listener)
     {
-        await foreach (var client in listener.AcceptAllAsync())
+        await foreach (var client in listener.AcceptAllAsync(CancellationToken.None))
             return client;
         throw new InvalidOperationException("No connection accepted");
     }

@@ -39,19 +39,16 @@ public sealed class LocalTcpStream : AsyncStream
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         // Link only when the caller's token is cancelable — saves a CTS allocation per read on the
-        // proxy copy loop's hot path. Dispose the linked CTS so it does not stay rooted on the parent
-        // tokens' registration lists.
-        CancellationTokenSource? linkedCts = null;
+        // proxy copy loop's hot path. The linked CTS is disposed with the read so it does not stay rooted
+        // on the parent tokens' registration lists.
         try
         {
-            var token = _cts.Token;
-            if (cancellationToken.CanBeCanceled) {
-                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
-                token = linkedCts.Token;
-            }
-
+            using var linkedCts = cancellationToken.CanBeCanceled
+                ? CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken)
+                : null;
+            var token = linkedCts?.Token ?? _cts.Token;
             var reader = _connection.NetToAppReader;
-            var readResult = await reader.ReadAsync(token);
+            var readResult = await reader.ReadAsync(token).Vhc();
 
             if (readResult.IsCanceled || readResult is { IsCompleted: true, Buffer.IsEmpty: true })
                 return 0;
@@ -75,10 +72,6 @@ public sealed class LocalTcpStream : AsyncStream
             // post-dispose read — EOF.
             return 0;
         }
-        finally
-        {
-            linkedCts?.Dispose();
-        }
     }
 
     /// <inheritdoc />
@@ -87,24 +80,17 @@ public sealed class LocalTcpStream : AsyncStream
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         // Cancel the write when either the caller cancels or the stream is disposed (see ReadAsync).
-        CancellationTokenSource? linkedCts = null;
         try
         {
-            var token = _cts.Token;
-            if (cancellationToken.CanBeCanceled) {
-                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
-                token = linkedCts.Token;
-            }
-
-            await _connection.SendAppDataAsync(buffer, token);
+            using var linkedCts = cancellationToken.CanBeCanceled
+                ? CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken)
+                : null;
+            var token = linkedCts?.Token ?? _cts.Token;
+            await _connection.SendAppDataAsync(buffer, token).Vhc();
         }
         catch (OperationCanceledException) when (_cts.IsCancellationRequested)
         {
             // Stream disposed
-        }
-        finally
-        {
-            linkedCts?.Dispose();
         }
     }
 
@@ -132,7 +118,7 @@ public sealed class LocalTcpStream : AsyncStream
             return;
 
         _connection.CloseFromApp(_stack);
-        await _cts.TryCancelAsync();
+        await _cts.TryCancelAsync().Vhc();
         _cts.Dispose();
 
         base.Dispose(false);

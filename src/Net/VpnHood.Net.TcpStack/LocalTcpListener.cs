@@ -59,7 +59,7 @@ public sealed class LocalTcpListener : ITcpListener
     /// <summary>
     /// Asynchronously accepts all incoming connections.
     /// </summary>
-    public IAsyncEnumerable<LocalTcpClient> AcceptAllAsync(CancellationToken cancellationToken = default)
+    public IAsyncEnumerable<LocalTcpClient> AcceptAllAsync(CancellationToken cancellationToken)
     {
         return _acceptQueue.Reader.ReadAllAsync(cancellationToken);
     }
@@ -73,7 +73,7 @@ public sealed class LocalTcpListener : ITcpListener
     /// <summary>
     /// Asynchronously accepts a single incoming connection.
     /// </summary>
-    public ValueTask<LocalTcpClient> AcceptAsync(CancellationToken cancellationToken = default)
+    public ValueTask<LocalTcpClient> AcceptAsync(CancellationToken cancellationToken)
     {
         return _acceptQueue.Reader.ReadAsync(cancellationToken);
     }

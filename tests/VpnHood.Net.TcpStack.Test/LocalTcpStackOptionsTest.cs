@@ -171,7 +171,7 @@ public sealed class LocalTcpStackOptionsTest
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16384, PipeResumeWriterThreshold = 16384 }),
             "resume threshold >= window must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { RetransmitBufferSize = 256, MaxMss = 1460 }),
-            "retx buffer smaller than MaxMss must be rejected");
+            "a retransmit buffer smaller than MaxMss must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { IdleTimeout = TimeSpan.FromSeconds(30), IdleCheckInterval = TimeSpan.FromMinutes(1) }),
             "idle timeout <= idle check interval must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { MaxConnections = -1 }),
@@ -286,7 +286,7 @@ public sealed class LocalTcpStackOptionsTest
 
     private static async Task<ITcpClient> AcceptConnectionAsync(ITcpListener listener)
     {
-        await foreach (var client in listener.AcceptAllAsync())
+        await foreach (var client in listener.AcceptAllAsync(CancellationToken.None))
             return client;
         throw new InvalidOperationException("No connection accepted");
     }

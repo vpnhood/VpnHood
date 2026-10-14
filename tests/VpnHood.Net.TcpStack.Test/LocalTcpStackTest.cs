@@ -445,7 +445,7 @@ public sealed class LocalTcpStackTest
 
         // Start echo server
         _ = Task.Run(async () => {
-            await foreach (var stream in listener.AcceptAllAsync()) {
+            await foreach (var stream in listener.AcceptAllAsync(CancellationToken.None)) {
                 var buffer = new byte[1024];
                 while (true) {
                     var bytesRead = await stream.Stream.ReadAsync(buffer, 0, buffer.Length);
@@ -664,7 +664,7 @@ public sealed class LocalTcpStackTest
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
         var accepted = new System.Collections.Concurrent.ConcurrentDictionary<int, ITcpClient>();
         _ = Task.Run(async () => {
-            await foreach (var c in listener.AcceptAllAsync())
+            await foreach (var c in listener.AcceptAllAsync(CancellationToken.None))
                 accepted[c.RemoteEndPoint.Port] = c;
         });
 
@@ -714,7 +714,7 @@ public sealed class LocalTcpStackTest
         var completed = false;
 
         var acceptLoop = Task.Run(async () => {
-            await foreach (var _ in listener.AcceptAllAsync()) { }
+            await foreach (var _ in listener.AcceptAllAsync(CancellationToken.None)) { }
             completed = true;
         });
 
@@ -744,7 +744,7 @@ public sealed class LocalTcpStackTest
         tcpStack.OnPacketSend = p => { lock (lockObj) sentPackets.Add(p); };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        _ = Task.Run(async () => { await foreach (var _ in listener.AcceptAllAsync()) { } });
+        _ = Task.Run(async () => { await foreach (var _ in listener.AcceptAllAsync(CancellationToken.None)) { } });
 
         DoHandshake(tcpStack, sentPackets, lockObj, clientPort: 1001, clientSeq: 1000);
         DoHandshake(tcpStack, sentPackets, lockObj, clientPort: 1002, clientSeq: 2000);
@@ -833,7 +833,7 @@ public sealed class LocalTcpStackTest
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
         var acceptTask = Task.Run(async () => {
             var clients = new List<ITcpClient>();
-            await foreach (var client in listener.AcceptAllAsync()) {
+            await foreach (var client in listener.AcceptAllAsync(CancellationToken.None)) {
                 clients.Add(client);
                 if (clients.Count == 3) break;
             }
@@ -920,7 +920,7 @@ public sealed class LocalTcpStackTest
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
         var acceptTask = Task.Run(async () => {
             var clients = new List<ITcpClient>();
-            await foreach (var client in listener.AcceptAllAsync()) {
+            await foreach (var client in listener.AcceptAllAsync(CancellationToken.None)) {
                 clients.Add(client);
                 if (clients.Count == 2) break;
             }
@@ -981,7 +981,7 @@ public sealed class LocalTcpStackTest
 
     private static async Task<ITcpClient> AcceptConnectionAsync(ITcpListener listener)
     {
-        await foreach (var client in listener.AcceptAllAsync()) {
+        await foreach (var client in listener.AcceptAllAsync(CancellationToken.None)) {
             return client;
         }
         throw new InvalidOperationException("No connection accepted");

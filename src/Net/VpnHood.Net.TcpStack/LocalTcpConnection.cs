@@ -320,7 +320,7 @@ internal sealed class LocalTcpConnection(
     /// connection is (or becomes) closed for writing, and <see cref="OperationCanceledException"/>
     /// on caller cancellation — a partial write is never silently reported as success.
     /// </summary>
-    public async ValueTask SendAppDataAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default)
+    public async ValueTask SendAppDataAsync(ReadOnlyMemory<byte> data, CancellationToken ct)
     {
         ThrowIfWriteClosed();
         Touch(Stopwatch.GetTimestamp());
@@ -1106,10 +1106,11 @@ internal sealed class LocalTcpConnection(
             if (_retxBufferLen == 0) return;
             var segLen = Math.Min(_retxBufferLen, Mss);
             payloadCopy = new byte[segLen];
+            var ring = _retxBuffer ?? throw new InvalidOperationException("The retransmit ring holds bytes but was never allocated.");
             var firstChunk = Math.Min(segLen, _retxCapacity - _retxRingStart);
-            Array.Copy(_retxBuffer!, _retxRingStart, payloadCopy, 0, firstChunk);
+            Array.Copy(ring, _retxRingStart, payloadCopy, 0, firstChunk);
             if (firstChunk < segLen)
-                Array.Copy(_retxBuffer!, 0, payloadCopy, firstChunk, segLen - firstChunk);
+                Array.Copy(ring, 0, payloadCopy, firstChunk, segLen - firstChunk);
             seqForSegment = _sndUna;
             ackForSegment = _rcvNxt;
             windowForSegment = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window

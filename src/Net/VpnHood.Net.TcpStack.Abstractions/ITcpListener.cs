@@ -11,12 +11,12 @@ public interface ITcpListener : IDisposable
     /// Completes when the listener is stopped/disposed; throws
     /// <see cref="OperationCanceledException"/> when <paramref name="cancellationToken"/> is cancelled.
     /// </summary>
-    IAsyncEnumerable<ITcpClient> AcceptAllAsync(CancellationToken cancellationToken = default);
+    IAsyncEnumerable<ITcpClient> AcceptAllAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Asynchronously accepts a single incoming connection.
     /// </summary>
-    ValueTask<ITcpClient> AcceptAsync(CancellationToken cancellationToken = default);
+    ValueTask<ITcpClient> AcceptAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Stops the listener and disposes any unaccepted connections.

@@ -95,19 +95,9 @@ internal sealed class LocalTcpConnection(
     private bool _windowClosed; // set once we advertised a zero window; guarded by _seqLock
     private ushort _lastAdvertisedWindow = (ushort)options.ReceiveWindowSize;
 
-    // Retransmission ring buffer: holds unacked bytes starting at _sndUna.
-    // On loopback we don't normally need retransmission, but TUN/kernel can drop
-    // packets under heavy load (no real "loss" but the effect is identical).
-    // RFC 5681 fast retransmit: 3 duplicate ACKs trigger retransmit of sndUna segment.
-    // PERF: capacity comes from options (RetransmitBufferSize, default 64 KB), cached so the ring math
-    // (% _retxCapacity) is a field read. Bounds in-flight bytes.
-    private readonly int _retxCapacity = options.RetransmitBufferSize;
-    // Lazily allocated on the first send (AppendToRetxBufferLocked) so receive-only / idle flows never
-    // pay the per-connection retx allocation — meaningful at MaxConnections under the iOS memory budget.
-    // Every direct read of this array is guarded by _retxBufferLen > 0, which implies it is non-null.
-    private byte[]? _retxBuffer;
-    private int _retxRingStart;     // index in buffer corresponding to _sndUna
-    private int _retxBufferLen;     // number of valid unacked bytes
+    // Kept for fast retransmit (RFC 5681) and the RTO: on loopback the TUN or the kernel drops packets under load, with
+    // the effect of loss. It bounds the bytes in flight.
+    private readonly RetransmitBuffer _retransmitBuffer = new(options.RetransmitBufferSize);
     private uint _lastDupAck;
     private int _dupAckCount;
     private bool _inRecovery; // a retransmission started loss recovery, which ends when SndUna reaches _recoverySeq
@@ -353,21 +343,21 @@ internal sealed class LocalTcpConnection(
                 lock (_seqLock) {
                     // Close and Dispose set these under this lock before they signal the window, so a writer
                     // about to wait either sees them here or finds their signal after its drain - never both
-                    // missed, which would park it for good on a full ring.
+                    // missed, which would park it for good on a full buffer.
                     if (_disposed || _appToNetCompleted || _finSent)
                         throw new IOException("The TCP connection was closed while writing.");
                     pw = _peerWindow; una = _sndUna; nxt = _sndNxt;
                     var inFlight = (long)(nxt - una);
                     var fromPeer = (int)Math.Max(0, _peerWindow - inFlight);
-                    retxFree = _retxCapacity - _retxBufferLen;
+                    retxFree = _retransmitBuffer.Free;
                     allowable = Math.Min(fromPeer, retxFree);
                 }
 
                 if (allowable <= 0) {
                     diagnostics.TraceZeroWindowWait(ipEndPointPair, offset, data.Length, pw, una, nxt);
                     if (retxFree <= 0) {
-                        // The retransmission ring is the limit: a full window is in flight, and its loss is the
-                        // RTO's business (PollMaintenance). Wait for the ACK that frees ring space, or the
+                        // The retransmit buffer is the limit: a full window is in flight, and its loss is the
+                        // RTO's business (PollMaintenance). Wait for the ACK that frees buffer space, or the
                         // close; TrySignalWindow wakes this on both. Caller cancellation propagates as
                         // OperationCanceledException - a partial write is never reported as success.
                         await _windowSignal.WaitAsync(ct).Vhc();
@@ -408,14 +398,13 @@ internal sealed class LocalTcpConnection(
                         throw new IOException("The TCP connection was closed while writing.");
                     }
 
+                    _retransmitBuffer.Append(segmentData); // first: a refused segment changes nothing else
                     seqForSegment = _sndNxt;
                     ackForSegment = _rcvNxt;
                     // RTO: (re)arm when this segment opens a new in-flight window.
                     if (_sndUna == _sndNxt)
                         RestartRtoLocked(Stopwatch.GetTimestamp());
                     _sndNxt += (uint)segLen;
-                    // Append into retx ring buffer for fast retransmit / RTO support.
-                    AppendToRetxBufferLocked(segmentData);
                     windowForSegment = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
                     HoldMaintenanceInterestLocked();
                 }
@@ -508,7 +497,7 @@ internal sealed class LocalTcpConnection(
 
             if (acceptable && acked > 0) {
                 _sndUna = ack;
-                TrimRetxRingLocked((int)acked);
+                _retransmitBuffer.Trim((int)acked);
                 _dupAckCount = 0;
                 _lastDupAck = ack;
                 if (_sndUna != _sndNxt)
@@ -518,7 +507,7 @@ internal sealed class LocalTcpConnection(
                 if (_inRecovery) {
                     if ((int)(_sndUna - _recoverySeq) >= 0)
                         _inRecovery = false;
-                    else if (_retxBufferLen > 0)
+                    else if (_retransmitBuffer.Length > 0)
                         retransmit = true;
                     else if (_finSent && _sndNxt != _sndUna)
                         finRetransmit = BuildFinPacket(_sndNxt - 1, _rcvNxt, UpdateAdvertisedWindowLocked());
@@ -533,7 +522,7 @@ internal sealed class LocalTcpConnection(
             // data at SndUna. A window update must not count, or three of them would trigger a spurious fast retransmit;
             // nor may a zero window, whose ACKs of our probes are flow control, not loss - a recovery they started would
             // outlive the window and swallow the real duplicate ACKs after it reopens.
-            var duplicateAck = acceptable && acked == 0 && payloadLength == 0 && !fin && _retxBufferLen > 0 &&
+            var duplicateAck = acceptable && acked == 0 && payloadLength == 0 && !fin && _retransmitBuffer.Length > 0 &&
                                scaledWindow == _peerWindow && scaledWindow != 0;
             if (duplicateAck) {
                 if (ack == _lastDupAck) _dupAckCount++;
@@ -582,7 +571,7 @@ internal sealed class LocalTcpConnection(
     // _seqLock must be held. RFC 9293 3.10.7.4's test of a segment's sequence numbers against the receive window: it
     // starts inside the window (the edge included), or it started before RcvNxt and reaches past it (a retransmission
     // carrying new bytes or the FIN), or it is a keepalive: at most one byte at RcvNxt - 1.
-    // AggressiveInlining, here and on the receive path's three other helpers: they run per segment and were inline before
+    // AggressiveInlining, here and on the receive path's two other helpers: they run per segment and were inline before
     // they had names; on its own Mono (Android) inlines nothing this size, and RyuJIT (iOS, desktop) only when its
     // heuristic agrees.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -592,20 +581,6 @@ internal sealed class LocalTcpConnection(
         if (seqDiff >= 0)
             return seqDiff <= _lastAdvertisedWindow;
         return seqDiff + payloadLength + (fin ? 1 : 0) > 0 || seqDiff == -1 && payloadLength <= 1;
-    }
-
-    // _seqLock must be held. Drops the acknowledged bytes from the front of the retransmit ring.
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void TrimRetxRingLocked(int acked)
-    {
-        if (acked >= _retxBufferLen) {
-            _retxBufferLen = 0;
-            _retxRingStart = 0;
-        }
-        else {
-            _retxRingStart = (_retxRingStart + acked) % _retxCapacity;
-            _retxBufferLen -= acked;
-        }
     }
 
     /// <summary>The segment's data and FIN, after its ACK.</summary>
@@ -878,7 +853,7 @@ internal sealed class LocalTcpConnection(
                     }
                 }
                 else if (_sndNxt != _sndUna) {
-                    if (_retxBufferLen > 0) {
+                    if (_retransmitBuffer.Length > 0) {
                         retxData = true;
                         // The ACKs of this retransmission carry the rest segment by segment - unless the peer's
                         // window is zero: that is flow control, not loss, and a recovery the zero window
@@ -1028,10 +1003,10 @@ internal sealed class LocalTcpConnection(
     }
 
     /// <summary>
-    /// Zero-window probe: one NEW byte at SndNxt, stored in the ring like any data. A probe that does not
+    /// Zero-window probe: one NEW byte at SndNxt, stored in the retransmit buffer like any data. A probe that does not
     /// advance the sequence number draws no window update over QUIC's tight per-stream window (see
     /// ZeroWindowProbe_ShouldMakeForwardProgress). Returns the bytes consumed: 1, or 0 when nothing could
-    /// be sent (the connection is closing, or the ring has no room - the caller probes only while it has).
+    /// be sent (the connection is closing, or the buffer has no room - the caller probes only while it has).
     /// </summary>
     private int SendZeroWindowProbe(LocalTcpStack stack, byte probeByte)
     {
@@ -1041,14 +1016,13 @@ internal sealed class LocalTcpConnection(
         uint probeAck;
         ushort probeWindow;
         lock (_seqLock) {
-            if (_disposed || _appToNetCompleted || _finSent || _retxBufferLen >= _retxCapacity) return 0;
+            if (_disposed || _appToNetCompleted || _finSent || _retransmitBuffer.Free == 0) return 0;
 
+            _retransmitBuffer.Append([probeByte]); // first, like the data segment's
             probeSeq = _sndNxt;
             if (_sndUna == _sndNxt)
                 RestartRtoLocked(Stopwatch.GetTimestamp());
             _sndNxt += 1;
-            ReadOnlySpan<byte> one = [probeByte];
-            AppendToRetxBufferLocked(one);
             probeAck = _rcvNxt;
             probeWindow = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
             HoldMaintenanceInterestLocked();
@@ -1084,26 +1058,6 @@ internal sealed class LocalTcpConnection(
         while (_windowSignal.Wait(0)) { }
     }
 
-    // _seqLock must be held.
-    private void AppendToRetxBufferLocked(ReadOnlySpan<byte> segment)
-    {
-        if (segment.Length == 0) return;
-        // Ring/sequence INVARIANT: ring offset k always holds the byte at sequence _sndUna + k (the
-        // ACK-trim and FastRetransmit both rely on it). Every caller must room-check first; overflowing
-        // would wrap over unacked bytes and silently corrupt the retransmitted stream.
-        Debug.Assert(segment.Length <= _retxCapacity - _retxBufferLen,
-            "retx ring overflow: caller must enforce capacity before appending");
-        // Lazy allocation of the ring buffer to avoid memory footprint spikes under high connection
-        // counts: we only allocate the buffer when data is actually sent.
-        _retxBuffer ??= new byte[_retxCapacity];
-        var writeIdx = (_retxRingStart + _retxBufferLen) % _retxCapacity;
-        var firstChunk = Math.Min(segment.Length, _retxCapacity - writeIdx);
-        segment[..firstChunk].CopyTo(_retxBuffer.AsSpan(writeIdx));
-        if (firstChunk < segment.Length)
-            segment[firstChunk..].CopyTo(_retxBuffer.AsSpan(0));
-        _retxBufferLen += segment.Length;
-    }
-
     private void FastRetransmit()
     {
         var stack = _stack;
@@ -1116,15 +1070,9 @@ internal sealed class LocalTcpConnection(
         ushort windowForSegment;
         int retxLen;
         lock (_seqLock) {
-            if (_retxBufferLen == 0) return;
-            retxLen = _retxBufferLen;
-            var segLen = Math.Min(_retxBufferLen, Mss);
-            payloadCopy = new byte[segLen];
-            var ring = _retxBuffer ?? throw new InvalidOperationException("The retransmit ring holds bytes but was never allocated.");
-            var firstChunk = Math.Min(segLen, _retxCapacity - _retxRingStart);
-            Array.Copy(ring, _retxRingStart, payloadCopy, 0, firstChunk);
-            if (firstChunk < segLen)
-                Array.Copy(ring, 0, payloadCopy, firstChunk, segLen - firstChunk);
+            if (_retransmitBuffer.Length == 0) return;
+            retxLen = _retransmitBuffer.Length;
+            payloadCopy = _retransmitBuffer.CopyFront(Mss);
             seqForSegment = _sndUna;
             ackForSegment = _rcvNxt;
             windowForSegment = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window

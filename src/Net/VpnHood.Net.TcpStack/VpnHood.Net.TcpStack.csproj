@@ -9,6 +9,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.Net.TcpStack.Test" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Net.TcpStack.Abstractions\VpnHood.Net.TcpStack.Abstractions.csproj" />
 		<ProjectReference Include="..\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
 	</ItemGroup>

@@ -69,18 +69,42 @@ public sealed class TcpStackDiagnostics
         return mb.HasValue ? $"{mb.Value,5:F1}" : "  n/a";
     }
 
-    /// <summary>Adds to the connection count (+1 on a SYN admitted, -1 on a close) and returns the new count; the
-    /// peak follows. The stack reads <see cref="ConnectionCount"/> for its cap, so the two can never drift apart.</summary>
+    /// <summary>Adds to the connection count (+1 on a SYN admitted with no cap, -1 on a close or a slot given back) and
+    /// returns the new count; the peak follows. The stack's cap takes its slots from this count too
+    /// (<see cref="TryReserveConnection"/>), so the two can never drift apart.</summary>
     internal int AddConnections(int delta)
     {
         var count = Interlocked.Add(ref _connectionCount, delta);
+        RaisePeak(count);
+        return count;
+    }
+
+    /// <summary>Takes one connection slot while the count is below <paramref name="max"/>: the test and the add are one
+    /// atomic step, so SYNs racing at the cap cannot all pass it, and a refused one leaves the count and its peak as
+    /// they were. <paramref name="count"/> is the new count, or the full one.</summary>
+    internal bool TryReserveConnection(int max, out int count)
+    {
+        count = Volatile.Read(ref _connectionCount);
+        while (count < max) {
+            var seen = Interlocked.CompareExchange(ref _connectionCount, count + 1, count);
+            if (seen == count) {
+                count++;
+                RaisePeak(count);
+                return true;
+            }
+            count = seen;
+        }
+        return false;
+    }
+
+    private void RaisePeak(int count)
+    {
         var peak = Volatile.Read(ref _peakConnectionCount);
         while (count > peak) {
             var seen = Interlocked.CompareExchange(ref _peakConnectionCount, count, peak);
             if (seen == peak) break;
             peak = seen;
         }
-        return count;
     }
 
     /// <summary>

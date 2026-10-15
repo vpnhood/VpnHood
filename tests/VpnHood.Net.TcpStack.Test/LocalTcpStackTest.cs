@@ -1653,6 +1653,33 @@ public sealed class LocalTcpStackTest
         lock (sync) Assert.IsEmpty(sent, "and no reply");
     }
 
+    /// <summary>The connection cap holds against SYNs from several threads at once: its test and the slot's add are
+    /// one atomic step. A refused SYN raises no peak count.</summary>
+    [TestMethod]
+    [Timeout(20000)]
+    public void MaxConnections_ConcurrentSyns_NeverPassTheCap()
+    {
+        const int workers = 16;
+        for (var attempt = 1; attempt <= 5; attempt++) {
+            using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { MaxConnections = 1 });
+            tcpStack.OnPacketSend = p => p.Dispose();
+            tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+            var syns = Enumerable.Range(0, workers)
+                .Select(i => CreateTcpPacket(ClientIp, ClientPort + i, ServerIp, ServerPort, syn: true, seq: 1000))
+                .ToArray();
+            using var gate = new Barrier(workers);
+            var threads = syns.Select(syn => new Thread(() => {
+                gate.SignalAndWait();
+                tcpStack.ProcessIncoming(syn);
+            })).ToArray();
+            foreach (var thread in threads) thread.Start();
+            foreach (var thread in threads) thread.Join();
+
+            Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount, $"attempt {attempt}: one connection, the cap");
+            Assert.AreEqual(1, tcpStack.Diagnostics.PeakConnectionCount, $"attempt {attempt}: the refused SYNs raised no peak");
+        }
+    }
+
     private static async Task WaitForCondition(Func<bool> condition, CancellationToken ct, int timeoutMs = 1000)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

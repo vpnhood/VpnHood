@@ -231,30 +231,15 @@ public sealed class LocalTcpStack : ITcpStack
         // constrained platforms (e.g. iOS). 0 = unbounded (default) and short-circuits with zero
         // overhead, so the Android/desktop SYN path is unchanged. When full, try to evict the most
         // idle ("most unused") connection to make room (EvictionMinIdle); if none qualifies, fall
-        // back to rejecting the new SYN with an RST.
-        if (_options.MaxConnections > 0 && Diagnostics.ConnectionCount >= _options.MaxConnections &&
-            !TryEvictForAdmission()) {
+        // back to rejecting the new SYN with an RST. The count lives in the diagnostics (never
+        // ConcurrentDictionary.Count, which locks every stripe) and is taken before the table holds the
+        // connection, so whoever removes the entry always has a count to give back.
+        if (!TryTakeConnectionSlot(out var connectionCount)) {
             SendRst(ipEndPointPair.Destination, ipEndPointPair.Source, tcpPacket);
             return;
         }
 
-        Span<byte> isnBytes = stackalloc byte[4];
-        RandomNumberGenerator.Fill(isnBytes); // all 32 bits random (RFC 6528)
-        var isnLocal = BinaryPrimitives.ReadUInt32LittleEndian(isnBytes);
-        var peerMss = ParseMssOption(tcpPacket.Options.Span);
-        var peerWsShift = ParseWindowScaleOption(tcpPacket.Options.Span);
-        var connection = new LocalTcpConnection(key, ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss, listener,
-            peerWsShift, _options, _pipeOptions, Diagnostics);
-        VhTypeTracker.Track(connection);
-        connection.OnClosed += OnConnectionClosed;
-        // Wired (the stack reference, the stream, the maintenance interest for the SYN-ACK's retransmission) before the
-        // table publishes it to the sweeps, DropAllConnections and the receive path. The listener still gets the stream
-        // only after the final ACK arrives (MarkEstablished).
-        connection.Start(this);
-
-        // The count lives in the diagnostics (never ConcurrentDictionary.Count, which locks every stripe) and is taken
-        // before the table holds the connection, so whoever removes the entry always has a count to give back.
-        var connectionCount = Diagnostics.AddConnections(1);
+        var connection = CreateConnection(key, ipEndPointPair, tcpPacket, listener);
         var entry = new KeyValuePair<ConnectionKey, LocalTcpConnection>(key, connection);
         if (!_connections.TryAdd(key, connection)) {
             Diagnostics.AddConnections(-1);
@@ -285,6 +270,45 @@ public sealed class LocalTcpStack : ITcpStack
             if (_connections.TryRemove(entry))
                 Diagnostics.AddConnections(-1);
             connection.Dispose();
+            throw;
+        }
+    }
+
+    // Takes the new connection's slot. Under a cap the test and the add are one atomic step, so SYNs racing at the cap
+    // cannot all pass it; a full table evicts its most idle connection and tries once more.
+    private bool TryTakeConnectionSlot(out int connectionCount)
+    {
+        if (_options.MaxConnections <= 0) {
+            connectionCount = Diagnostics.AddConnections(1);
+            return true;
+        }
+
+        return Diagnostics.TryReserveConnection(_options.MaxConnections, out connectionCount) ||
+               TryEvictForAdmission() && Diagnostics.TryReserveConnection(_options.MaxConnections, out connectionCount);
+    }
+
+    // The SYN's connection, wired (the stack reference, the stream, the maintenance interest for the SYN-ACK's
+    // retransmission) before the table publishes it to the sweeps, DropAllConnections and the receive path; the
+    // listener still gets the stream only after the final ACK arrives (MarkEstablished). Its slot is taken already: a
+    // throw here gives it back, or the count would stay one high for the stack's life.
+    private LocalTcpConnection CreateConnection(ConnectionKey key, IPEndPointPairValue ipEndPointPair, TcpPacket tcpPacket,
+        LocalTcpListener listener)
+    {
+        try {
+            Span<byte> isnBytes = stackalloc byte[4];
+            RandomNumberGenerator.Fill(isnBytes); // all 32 bits random (RFC 6528)
+            var isnLocal = BinaryPrimitives.ReadUInt32LittleEndian(isnBytes);
+            var peerMss = ParseMssOption(tcpPacket.Options.Span);
+            var peerWsShift = ParseWindowScaleOption(tcpPacket.Options.Span);
+            var connection = new LocalTcpConnection(key, ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss,
+                listener, peerWsShift, _options, _pipeOptions, Diagnostics);
+            VhTypeTracker.Track(connection);
+            connection.OnClosed += OnConnectionClosed;
+            connection.Start(this);
+            return connection;
+        }
+        catch {
+            Diagnostics.AddConnections(-1);
             throw;
         }
     }

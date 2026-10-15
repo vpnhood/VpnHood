@@ -226,7 +226,7 @@ cannot be undone, does not cancel the subscription (cancel it in the store where
 access keeps working until the period ends, and invoices are retained under the name they were
 issued with. For App Review notes: state that path explicitly so the reviewer finds it. Google Play
 additionally requires a **web deletion path declared in the Data safety form**; use
-`https://www.vpnhood.com/user-account-deletion-request`, which explains the in-app route and links
+`https://www.vpnhood.com/user-account-deletion-request/`, which explains the in-app route and links
 the sign-in–protected web deletion page.
 
 **Nothing blocks a deletion.** Deletion never touches a running service or a store subscription, and

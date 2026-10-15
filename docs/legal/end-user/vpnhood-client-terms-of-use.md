@@ -6,7 +6,7 @@ These Terms of Use ("Terms") are an agreement between you and **OmegaHood LLC** 
 "our") for the official **VpnHood! CLIENT** application (the "App"). By downloading or
 using the App, you agree to these Terms. If you do not agree, do not use the App.
 
-Our [Privacy Policy](https://www.vpnhood.com/vpnhood-client-privacy-policy) explains how the App
+Our [Privacy Policy](https://www.vpnhood.com/vpnhood-client-privacy-policy/) explains how the App
 handles data. A store or platform through which you obtain the App may also impose terms that apply
 to your download and use.
 

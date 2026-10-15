@@ -109,7 +109,7 @@ Connection activity stays only in server log files; it never enters our database
 If you have signed in, you can permanently delete your account at any time:
 
 - **In the app**: Account page → **Delete my account**.
-- **Without the app**: follow the steps on our [account deletion page](https://www.vpnhood.com/user-account-deletion-request).
+- **Without the app**: follow the steps on our [account deletion page](https://www.vpnhood.com/user-account-deletion-request/).
 - **By email**: if you can do neither — you only ever signed in in the app, so our website has no
   password for you — write to **[legal@vpnhood.com](mailto:legal@vpnhood.com)** from the address you
   sign in with, and we delete the account for you.

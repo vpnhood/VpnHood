@@ -8,10 +8,10 @@ namespace VpnHood.AppLib.App.Linux;
 
 // The app as Linux runs it: one per app id on the machine, in a root service. Init takes the
 // single-instance lock before anything is built - a second daemon, started by hand or by a unit
-// restarted while one still runs, touches nothing, not even the head's options - then clears the
-// tuns a crashed run left, and starts the app. Stopping it is disposing it, and
-// asynchronously, so the tunnel comes down before the process ends. The storage path is the
-// host's (the daemon's folder beside its versions), so the init params name no folder here.
+// restarted while one still runs, touches nothing, not even the head's options - then starts the
+// app and clears what a crashed run left. Stopping it is disposing it, and asynchronously, so the
+// tunnel comes down before the process ends. The storage path is the host's (the daemon's folder
+// beside its versions), so the init params name no folder here.
 public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 {
     private static FileStream? _singleInstanceLock;
@@ -32,9 +32,6 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 
         _singleInstanceLock = InstanceLockFile.Take(lockFolderPath, initParams.AppId);
 
-        // after the lock, so a tun of this app id is never one another of its instances is using
-        LinuxTunVpnAdapter.RemoveLeftovers(initParams.AppId);
-
         // its owner's alone, as the installer makes it; one made here is made so too
         Directory.CreateDirectory(storagePath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         var context = new AppOptionsContext {
@@ -50,8 +47,14 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 
         // the service manager stops the daemon with a signal, and the tunnel must end with it
         appOptions.DisconnectOnDispose = true;
+        var app = new VpnHoodLinuxApp(appOptions);
 
-        return new VpnHoodLinuxApp(appOptions);
+        // after the lock, so a tun of this app id is never one another of its instances is using; the
+        // adapter's name as LinuxVpnService gives it
+        LinuxTunVpnAdapter.RemoveLeftovers(initParams.AppId,
+            LinuxTunVpnAdapter.GetValidAdapterName(VpnHoodApp.Instance.Config.AdapterName));
+
+        return app;
     }
 
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.

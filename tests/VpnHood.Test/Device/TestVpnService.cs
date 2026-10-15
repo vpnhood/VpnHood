@@ -22,7 +22,8 @@ public class TestVpnService
     public TestVpnService(
         string configFolder,
         NetFilter netFilter,
-        Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory)
+        Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory,
+        IVpnTunnelLock? tunnelLock = null)
     {
         _vpnAdapterFactory = vpnAdapterFactory;
         _netFilter = netFilter;
@@ -32,7 +33,8 @@ public class TestVpnService
             this,
             socketFactory: new TestSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),
-            withLogger: false);
+            withLogger: false,
+            tunnelLock: tunnelLock);
     }
 
         // it is not async to simulate real environment

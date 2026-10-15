@@ -22,7 +22,8 @@ public class WindowsVpnService : IVpnServiceHandler, IDisposable
             vpnServiceHandler: this,
             socketFactory: new MsQuicSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),
-            withLogger: false);
+            withLogger: false,
+            tunnelLock: new WindowsVpnTunnelLock());
     }
 
     public void OnConnect()

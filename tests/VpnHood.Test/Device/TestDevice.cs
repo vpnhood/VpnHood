@@ -2,6 +2,7 @@
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
+using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -35,6 +36,9 @@ public class TestDevice(
     public bool IsAlwaysOnSupported => false;
     public DeviceMemInfo? MemInfo => null;
     public TimeSpan StartServiceDelay { get; set; } = TimeSpan.Zero;
+
+    // the machine's one tunnel, where a test plays a desktop
+    public IVpnTunnelLock? TunnelLock { get; init; }
 
     public IReadOnlyList<DeviceAppInfo> InstalledApps => throw new NotSupportedException();
 
@@ -73,7 +77,8 @@ public class TestDevice(
 
         // create service
         if (VpnService == null || VpnService.IsDisposed)
-            VpnService = new TestVpnService(VpnServiceConfigFolder, testHelper.ClientNetFilter, vpnAdapterFactory);
+            VpnService = new TestVpnService(VpnServiceConfigFolder, testHelper.ClientNetFilter, vpnAdapterFactory,
+                TunnelLock);
 
         VpnService.OnConnect();
     }

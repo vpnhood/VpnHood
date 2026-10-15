@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Net.Toolkit.ApiClients;
@@ -15,13 +16,17 @@ using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
-public class VpnServiceHost : IDisposable
+public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 {
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
+    private readonly IVpnTunnelLock? _tunnelLock;
     private readonly string _dataFolder;
     private readonly LogService? _logService;
+    private IDisposable? _tunnelHold;
+    private IVpnAdapter? _vpnAdapter; // the last connect's, which a revoke takes down at once
+    private Exception? _disconnectException;
     private CancellationTokenSource _connectCts = new();
     private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(3);
     private bool _disposed;
@@ -47,13 +52,15 @@ public class VpnServiceHost : IDisposable
     internal VpnServiceContext Context { get; }
     public static ConnectionInfo DefaultConnectionInfo => ConnectionInfo.Default;
 
-    // configFolder and dataFolder: IDevice's VpnServiceConfigFolder and VpnServiceDataFolder
+    // configFolder and dataFolder: IDevice's VpnServiceConfigFolder and VpnServiceDataFolder.
+    // tunnelLock: the machine's one tunnel, where the platform has one (the desktops).
     public VpnServiceHost(string configFolder,
         string dataFolder,
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,
         IMessageListener messageListener,
-        bool withLogger = true)
+        bool withLogger = true,
+        IVpnTunnelLock? tunnelLock = null)
     {
         // the service may start before the app has made its folder: always-on, after an update
         Directory.CreateDirectory(configFolder);
@@ -64,6 +71,7 @@ public class VpnServiceHost : IDisposable
         Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
+        _tunnelLock = tunnelLock;
 
         // A log file of its own where the VPN service has a process of its own (withLogger), opened at
         // each start request; in the app's process its lines go to the app's file, through the same
@@ -86,10 +94,11 @@ public class VpnServiceHost : IDisposable
         if (client is null || Client != client)
             return; // the active client is changed, so ignore the event
 
-        // update last sate
+        // update last sate; a disconnect asked for with a reason - a revoke, say - carries it, since this
+        // write and TryDisconnect's own may land in either order
         VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}",
             client.State, client.Session?.Status.Error);
-        _ = UpdateConnectionInfo(client, CancellationToken.None);
+        _ = UpdateConnectionInfo(client, _disconnectException, CancellationToken.None);
 
         // if client is not disposed, we can show notification
         if (client.State is not ClientState.Disposed) {
@@ -98,7 +107,9 @@ public class VpnServiceHost : IDisposable
             return;
         }
 
-        // client is disposed so stop the notification and service
+        // client is disposed, its adapter with it, so the tunnel is free for another app; stop the
+        // notification and service
+        ReleaseTunnel();
         VhLogger.Instance.LogDebug("VpnServiceHost requests to stop the notification and service.");
         _vpnServiceHandler.StopNotification();
 
@@ -117,6 +128,7 @@ public class VpnServiceHost : IDisposable
 
         try {
             _disconnectRequested = false;
+            _disconnectException = null;
             var oldClient= Client;
 
             // handle previous client
@@ -193,11 +205,18 @@ public class VpnServiceHost : IDisposable
                 AutoDisposePackets = true
             };
 
+            // The machine's one tunnel, before an adapter comes up: an app that holds it drops its adapter
+            // and lets go, and this host keeps it across its own reconnects until its client is gone or
+            // another app asks for it. A null-capture makes no adapter, so it takes none.
+            if (_tunnelLock != null && !clientOptions.UseNullCapture && _tunnelHold == null)
+                _tunnelHold = await _tunnelLock.Take(this, cancellationToken).Vhc();
+
             // null-capture is host debug plumbing, so the adapter is resolved here and handed to the
             // handler ready-made
             var vpnAdapter = clientOptions.UseNullCapture
                 ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
                 : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1);
+            _vpnAdapter = vpnAdapter;
 
             // assign Client member to monitor states while connecting, even if the client is not connected yet.
             // This is important to update the connection info file and notification correctly.
@@ -241,6 +260,8 @@ public class VpnServiceHost : IDisposable
             await Client.Connect(cancellationToken).Vhc();
         }
         catch (Exception ex) when (Client is null) {
+            // no client, so no adapter is up: the tunnel goes back
+            ReleaseTunnel();
             await UpdateConnectionInfo(ClientState.Disposed, null, ex, _connectCts.Token).Vhc();
             _vpnServiceHandler.StopNotification();
             _vpnServiceHandler.StopSelf();
@@ -308,10 +329,14 @@ public class VpnServiceHost : IDisposable
 
         try {
             _disconnectRequested = true;
+            _disconnectException = exception;
             if (exception != null)
                 VhLogger.Instance.LogError(exception, "VpnServiceHost is disconnecting due to an error...");
             else
                 VhLogger.Instance.LogDebug(exception, "VpnServiceHost is disconnecting...");
+
+            // a start still on its way - waiting for the tunnel, say - ends too, rather than connecting after
+            _connectCts.TryCancel();
 
             // let dispose in the background
             var client = Client;
@@ -327,6 +352,30 @@ public class VpnServiceHost : IDisposable
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not disconnect the client.");
         }
+    }
+
+    // Another app took the machine's one tunnel, which goes to it once this returns. The adapter goes now,
+    // on this thread, as Android takes a revoked VPN's, or the next app's routes would meet its own: first,
+    // so the client's dispose, which it may set off, cannot be the one tearing it down meanwhile. The
+    // session ends in its own time, and a connect still on its way, which may not have its adapter yet,
+    // ends too. The hold ends itself, so a reconnect takes the tunnel anew.
+    void IVpnTunnelHolder.OnTunnelRevoked()
+    {
+        VhLogger.Instance.LogInformation("Another VPN app asked for the tunnel, so this one lets it go.");
+        Interlocked.Exchange(ref _tunnelHold, null);
+
+        // before the adapter goes, so the client's end it brings tells of the revoke
+        var exception = new VpnServiceRevokedException();
+        _disconnectRequested = true;
+        _disconnectException = exception;
+        _vpnAdapter?.Dispose();
+        _ = TryDisconnect(exception);
+    }
+
+    // Once no adapter of this host is up.
+    private void ReleaseTunnel()
+    {
+        Interlocked.Exchange(ref _tunnelHold, null)?.Dispose();
     }
 
     public void Dispose()
@@ -345,6 +394,8 @@ public class VpnServiceHost : IDisposable
             client.StateChanged -= VpnHoodClient_StateChanged; // after VpnHoodClient disposed
             client.Dispose();
         }
+
+        ReleaseTunnel();
 
         // dispose api controller
         _apiController.Dispose();

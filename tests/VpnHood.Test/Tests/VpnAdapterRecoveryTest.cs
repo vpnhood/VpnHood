@@ -243,14 +243,48 @@ public class VpnAdapterRecoveryTest : TestBase
         };
 
         // the owner's stop or dispose lands before the start adds the adapter, so it finds nothing; the start
-        // adds and opens it anyway, then reports the stop, and what it added goes with it: after a dispose no
-        // later start would clear it
+        // adds it anyway, as a step that ignores the token does, then ends before its routes and reports the
+        // stop, and what it added goes with it: after a dispose no later start would clear it
         await Assert.ThrowsExactlyAsync<OperationCanceledException>(() =>
             adapter.Start(CreateAdapterOptions(), TestCt));
-        Assert.AreEqual(1, adapter.OpenCount);
-        Assert.IsFalse(adapter.IsOpen);
+        Assert.AreEqual(0, adapter.RouteCount);
+        Assert.AreEqual(0, adapter.OpenCount);
         Assert.IsFalse(adapter.IsAdded);
         Assert.AreEqual(0, adapter.ReadingCount);
+    }
+
+    [TestMethod]
+    public async Task Start_overtaken_at_its_routes_opens_no_device()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) { StopAtRoute = true };
+
+        // the owner's stop lands in a route step that ignores the token: the start opens no device after it
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() =>
+            adapter.Start(CreateAdapterOptions(), TestCt));
+        Assert.AreEqual(0, adapter.OpenCount);
+        Assert.IsFalse(adapter.IsAdded);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Stop_ends_a_start_under_way_at_its_next_step(bool dispose)
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) { HoldBeforeAdd = true };
+
+        // the owner's stop or dispose cancels the start held before its add, which then adds nothing, rather
+        // than adding the rest after the stop until its end finds it stopped
+        var startTask = adapter.Start(CreateAdapterOptions(), TestCt);
+        await AssertEqualsWait(true, () => adapter.IsStartHeld);
+        if (dispose)
+            adapter.Dispose();
+        else
+            adapter.Stop();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            startTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+        Assert.IsFalse(adapter.IsAdded);
+        Assert.AreEqual(0, adapter.OpenCount);
     }
 
     [TestMethod]

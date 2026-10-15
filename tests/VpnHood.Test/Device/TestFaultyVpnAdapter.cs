@@ -1,4 +1,5 @@
 using VpnHood.Net.Packets;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Test.Device;
@@ -27,6 +28,7 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     public volatile bool StopAfterOpen; // the owner's stop overtakes the start, between its open and its reader
     public volatile bool StopBeforeAdd; // the owner's stop overtakes the start before it adds the adapter
     public volatile bool DisposeBeforeAdd; // the owner's dispose does
+    public volatile bool StopAtRoute; // the owner's stop overtakes the start in its first route
     public volatile bool IsAdded;
     public volatile bool IsOpen;
     public volatile bool IsReaderHeld;
@@ -35,6 +37,7 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     public int ReadingCount; // readers running, this run's and any that outlived their stop
     public TimeSpan ReaderWaitTimeout = TimeSpan.FromSeconds(5); // the stop's wait for the reader
     public int StartCount; // starts tried
+    public int RouteCount; // routes the starts added
     public int OpenCount; // starts completed: IsStarted is true from a start's first step on
     public bool? ReaderEndedAtClose; // what the stop's wait for the reader answered
     public bool? SenderEndedAtClose; // what the stop's wait for the sender answered
@@ -66,6 +69,15 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     {
         base.AdapterRemove();
         IsAdded = false;
+    }
+
+    // as WinTun's: the step runs to its end past a stop
+    protected override async Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    {
+        if (Interlocked.Increment(ref RouteCount) == 1 && StopAtRoute)
+            Stop();
+
+        await base.AddRoute(ipNetwork, cancellationToken);
     }
 
     protected override async Task AdapterOpen(CancellationToken cancellationToken)

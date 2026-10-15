@@ -41,11 +41,15 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private readonly TimeSpan _senderStopWaitTimeout;
 
     private readonly string? _adapterAlias;
+
+    // The tun AdapterAdd made, held until AdapterRemove has deleted it: while a file holds a tun, no other can
+    // take its name. The reader and the sender use a copy (_tunAdapterFd), which AdapterClose retires.
+    private readonly Lock _ownTunAdapterFdLock = new();
+    private int _ownTunAdapterFd = InvalidFd;
     private int _tunAdapterFd = InvalidFd;
     private int _retiredTunAdapterFd = InvalidFd;
     private int? _metric;
     private string? _primaryAdapterName;
-    private bool _isAdapterAdded;
     private bool _isResolvconfDnsSet;
 
     // The networks AddNat added rules for, which AdapterRemove removes. Not the adapter's networks, which a stop
@@ -164,11 +168,27 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         return tun.Name == adapterName;
     }
 
-    // At the daemon's start, after its single-instance lock, rather than at the next connect: a crash
-    // leaves its tun with the routes on. Every tun that carries this app's id and no process holds -
-    // a down one too - goes, its DNS entry first; nothing here throws. An untagged one, known only by
-    // the adapter's name, the adapter's own start clears.
-    public static void RemoveLeftovers(string appId)
+    // At the daemon's start, after its single-instance lock, rather than at the next connect: what a crashed
+    // run left. Its tun went with its process, but the resolvconf fallback's DNS entry outlives it, which
+    // would keep resolv.conf on the VPN's nameserver. Nothing here throws but for a name the kernel refuses.
+    public static void RemoveLeftovers(string appId, string adapterName)
+    {
+        if (!IsValidAdapterName(adapterName))
+            throw new ArgumentException($"'{adapterName}' is not a valid Linux interface name.", nameof(adapterName));
+
+        if (!LinuxTunInfo.InterfaceExists(adapterName))
+            TryRemoveResolvconfDns(adapterName);
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        RemoveKeptTuns(appId);
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    // A version before made a tun that outlived its process (ip tuntap add), so a crash left it up with
+    // its routes on. Every tun that carries this app's id and no process holds - a down one too - goes,
+    // its DNS entry first. An untagged one, known only by the adapter's name, the adapter's own start clears.
+    [Obsolete("Migration (2026-10): drop a few months after it ships, with its call in RemoveLeftovers.")]
+    private static void RemoveKeptTuns(string appId)
     {
         var adapterAlias = GetAdapterAlias(appId);
         foreach (var tun in TryListTuns().Where(x => x.Alias == adapterAlias)) {
@@ -272,12 +292,14 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         AdapterRemove();
         ClearAdapterName();
 
-        // Create and configure tun interface
-        // Never cut off: a tun the command made after the cleanup looked would stay, down, until the
-        // next start clears it.
+        // Made by this process, not by ip(8), whose tun outlives the process: the kernel removes this one,
+        // its routes and its DNS with it, once the process ends, by a crash too, as WinTun does its adapter.
+        // None after a stop that came meanwhile.
+        cancellationToken.ThrowIfCancellationRequested();
         VhLogger.Instance.LogDebug("Creating tun adapter...");
-        await ExecuteCommandAsync($"ip tuntap add dev {AdapterName} mode tun", CancellationToken.None).Vhc();
-        _isAdapterAdded = true;
+        var tunAdapterFd = OpenTunAdapter(AdapterName, false);
+        lock (_ownTunAdapterFdLock)
+            _ownTunAdapterFd = tunAdapterFd;
 
         // The alias derived from the app id lets a later start tell this tun from another app's.
         if (_adapterAlias != null)
@@ -300,19 +322,22 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // close if open
         AdapterClose();
 
+        // held until its delete, so the name is this adapter's tun's throughout: the DNS entry's removal and
+        // the delete never meet another's
+        var tunAdapterFd = TakeOwnTunAdapterFd();
+
         // DNS comes off before the interface, and without it too: a start a stop overtook may set it after the
         // stop removed the interface
-        if (_isAdapterAdded || _isResolvconfDnsSet)
+        if (tunAdapterFd != InvalidFd || _isResolvconfDnsSet)
             RemoveOwnResolvconfDns();
 
-        if (_isAdapterAdded) {
-            if (LinuxTunInfo.InterfaceExists(AdapterName)) {
-                VhLogger.Instance.LogDebug("Removing the {AdapterName} TUN adapter...", AdapterName);
-                VhUtils.TryInvoke($"remove the {AdapterName} TUN adapter", () =>
-                    ExecuteCommand($"ip link delete {AdapterName}"));
-            }
-
-            _isAdapterAdded = false;
+        // the tun goes with its last open file, which a reader's poll may still hold: the delete takes it
+        // now, and wakes that poll
+        if (tunAdapterFd != InvalidFd) {
+            VhLogger.Instance.LogDebug("Removing the {AdapterName} TUN adapter...", AdapterName);
+            VhUtils.TryInvoke($"remove the {AdapterName} TUN adapter", () =>
+                ExecuteCommand($"ip link delete {AdapterName}"));
+            LinuxAPI.close(tunAdapterFd);
         }
 
         // the device is gone, which wakes a reader in its poll
@@ -332,27 +357,49 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
-        // Open TUN Adapter
         VhLogger.Instance.LogDebug("Opening the TUN adapter...");
-        _tunAdapterFd = OpenTunAdapter(AdapterName, false);
+        var tunAdapterFd = CopyOwnTunAdapterFd();
+        _tunAdapterFd = tunAdapterFd;
         _pollFdReads = [
             new StructPollfd {
-                Fd = _tunAdapterFd, Events = OsConstants.Pollin
+                Fd = tunAdapterFd, Events = OsConstants.Pollin
             }
         ];
         _pollFdWrites = [
             new StructPollfd {
-                Fd = _tunAdapterFd, Events = OsConstants.Pollout
+                Fd = tunAdapterFd, Events = OsConstants.Pollout
             }
         ];
 
         return Task.CompletedTask;
     }
 
-    // The reader and the sender read the tun's number from the field, so one may still hold it after the
+    // The reader's and the sender's copy of the tun AdapterAdd made, never a child's either. Under the lock
+    // AdapterRemove takes that one under, so its number is not closed under the copying.
+    private int CopyOwnTunAdapterFd()
+    {
+        lock (_ownTunAdapterFdLock) {
+            if (_ownTunAdapterFd == InvalidFd)
+                throw new InvalidOperationException("The TUN adapter has not been added.");
+
+            var fd = LinuxAPI.fcntl(_ownTunAdapterFd, OsConstants.FDupfdCloexec, 0);
+            return fd >= 0 ? fd : throw new PInvokeException("Could not open the TUN adapter.");
+        }
+    }
+
+    private int TakeOwnTunAdapterFd()
+    {
+        lock (_ownTunAdapterFdLock) {
+            var fd = _ownTunAdapterFd;
+            _ownTunAdapterFd = InvalidFd;
+            return fd;
+        }
+    }
+
+    // The reader and the sender read the copy's number from the field, so one may still hold it after the
     // clearing; were the number closed, the next file the process opens could take it and get their read or
-    // write. /dev/null takes the tun's place under it in one step (dup2), which lets the tun go and gives a
-    // late read an end and a late write a sink; AdapterRemove frees the number once both have left.
+    // write. /dev/null takes the tun's place under it in one step (dup2), which gives a late read an end and a
+    // late write a sink; AdapterRemove frees the number once both have left.
     protected override void AdapterClose()
     {
         var fd = Interlocked.Exchange(ref _tunAdapterFd, InvalidFd);
@@ -683,27 +730,29 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     private static int OpenTunAdapter(string adapterName, bool blockingMode)
     {
-        // Open the TUN device file
-        var tunDeviceFd = LinuxAPI.open("/dev/net/tun", OsConstants.ORdwr);
+        // Open the TUN device file; never a child's, which would keep the tun past this process
+        var tunDeviceFd = LinuxAPI.open("/dev/net/tun", OsConstants.ORdwr | OsConstants.OCloexec);
         if (tunDeviceFd < 0)
             throw new InvalidOperationException("Failed to open TUN device.");
 
-        // Configure the device
+        // A new tun, as ip(8) makes one: one that already has the name, made since the start's checks, is
+        // refused (EBUSY) rather than taken over
         var ifr = new Ifreq {
             ifr_name = adapterName,
-            ifr_flags = (short)(InterfaceFlag.IffTun | InterfaceFlag.IffNoPi)
+            ifr_flags = unchecked((short)(InterfaceFlag.IffTun | InterfaceFlag.IffNoPi | InterfaceFlag.IffTunExcl))
         };
 
-        var ioctlResult = LinuxAPI.ioctl(tunDeviceFd, OsConstants.Tunsetiff, ref ifr);
-        if (ioctlResult < 0) {
+        if (LinuxAPI.ioctl(tunDeviceFd, OsConstants.Tunsetiff, ref ifr) < 0) {
+            var errorCode = Marshal.GetLastWin32Error(); // before the close, which would replace it
             LinuxAPI.close(tunDeviceFd);
-            throw new PInvokeException($"Failed to configure TUN device. IoctlResult: {ioctlResult}");
+            throw new PInvokeException($"Could not create the TUN device {adapterName}. ErrorCode: {errorCode}", errorCode);
         }
 
         if (!blockingMode) {
             if (LinuxAPI.fcntl(tunDeviceFd, OsConstants.FSetfl, OsConstants.ONonblock) < 0) {
+                var errorCode = Marshal.GetLastWin32Error(); // before the close, which would replace it
                 LinuxAPI.close(tunDeviceFd);
-                throw new PInvokeException("Failed to set TUN device to non-blocking mode.");
+                throw new PInvokeException("Failed to set TUN device to non-blocking mode.", errorCode);
             }
         }
 
@@ -740,7 +789,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // that already happened via Stop(), but the finalizer path never runs Stop(), so we must clean
         // NAT here too. A leftover MASQUERADE rule referencing a deleted interface can break the host
         // network, so cleaning it (even on the finalizer thread) is the lesser evil versus leaking it.
-        if (_tunAdapterFd != InvalidFd)
+        if (_tunAdapterFd != InvalidFd || _ownTunAdapterFd != InvalidFd)
             AdapterRemove();
 
         base.DisposeUnmanaged();

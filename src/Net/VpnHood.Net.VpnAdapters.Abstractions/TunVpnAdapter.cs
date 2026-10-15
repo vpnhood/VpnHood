@@ -144,15 +144,21 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return ipVersion == IpVersion.IPv4 ? AdapterIpNetworkV4 : AdapterIpNetworkV6;
     }
 
+    // The owner awaits a start before the next: one a stop overtook stops the adapter as it fails, and so a
+    // start made meanwhile
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
 
         // the owner's start: from here the adapter keeps itself started, until the owner's Stop or Dispose
         _keepStarted = true;
-        _keepStartedCts = new CancellationTokenSource();
+        var keepStartedCts = new CancellationTokenSource();
+        _keepStartedCts = keepStartedCts;
         try {
-            await StartCore(options, cancellationToken).Vhc();
+            // a Stop or a Dispose meanwhile ends the start at its next step, rather than letting it add the
+            // rest - a tun, routes, DNS - after the stop, until its end finds it stopped
+            using var startCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, keepStartedCts.Token);
+            await StartCore(options, startCts.Token).Vhc();
         }
         catch {
             _keepStarted = false; // the caller has the exception: nothing to keep started
@@ -288,7 +294,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                     .ToArray();
             }
 
-            // add routes
+            // add routes; not after a stop, which a step that ignores the token (WinTun's, Android's) ran past
+            cancellationToken.ThrowIfCancellationRequested();
             VhLogger.Instance.LogDebug("Adding routes...");
             if (adapterIpNetworkV4 != null)
                 await AddRouteHelper(includeNetworks, AddressFamily.InterNetwork, cancellationToken).Vhc();
@@ -309,7 +316,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             if (IsAppFilterSupported)
                 await SetAppFilters(options.IncludeApps, options.ExcludeApps, cancellationToken);
 
-            // open the adapter
+            // open the adapter; not after a stop, as the routes
+            cancellationToken.ThrowIfCancellationRequested();
             VhLogger.Instance.LogInformation("Opening TUN adapter...");
             await AdapterOpen(cancellationToken).Vhc();
 

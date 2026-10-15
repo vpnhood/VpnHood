@@ -20,7 +20,8 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
             vpnServiceHandler: this,
             socketFactory: new MsQuicSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),
-            withLogger: false);
+            withLogger: false,
+            tunnelLock: new LinuxVpnTunnelLock());
     }
 
     public void OnConnect()

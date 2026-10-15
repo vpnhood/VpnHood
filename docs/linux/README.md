@@ -305,13 +305,16 @@ Points that are easy to get wrong:
    is a third `IAppDesktopPaths` + `IAppInstanceController` pair, not a third design.
 4. **Hints print `CommandName`, not the binary's name.** `vhclient` is on the `PATH`;
    `VpnHoodClient` is not. The launcher script says its own name in `VH_LAUNCHER_NAME`.
-5. **A tun says whose it is.** A tun device outlives a crash with its routes and DNS, and its name
-   says nothing about its owner, so the adapter writes the app id on each one it creates as the
-   interface's alias (`ip link set dev VpnHoodClient alias <app id>`; the server writes
-   `com.vpnhood.server`), or its first 64 characters, a dash and a hash where an alias cannot hold it
-   as it is. The service's start, after its single-instance lock on the same app id, clears
-   only a tun no process holds that carries that tag, and takes its `resolvconf` entry off first. A
-   connect clears the same under its own name — and, from a version before tags, an untagged one —
+5. **A tun lives with its process, and says whose it is.** The adapter makes its tun itself
+   (`TUNSETIFF`), not with `ip tuntap add`, whose tun outlives its process: the kernel removes it, its
+   routes and its `resolvectl` DNS with it, once the service ends, by a crash too, as WinTun does on
+   Windows. Only the `resolvconf` fallback's DNS entry outlives a crash, and the service's start,
+   after its single-instance lock on the app id, takes it off. A tun's name says nothing about its
+   owner, so the adapter writes the app id on each one as the interface's alias
+   (`ip link set dev VpnHoodClient alias <app id>`; the server writes `com.vpnhood.server`), or its
+   first 64 characters, a dash and a hash where an alias cannot hold it as it is. A version before
+   kept its tun past a crash, so the start also clears a tun no process holds that carries that tag;
+   a connect clears the same under its own name — and, from a version before tags, an untagged one —
    and refuses a name another owner holds, and says whose (`LinuxTunVpnAdapter`, `LinuxTunInfo`).
 6. **The service opens nothing for a person.** It runs as root with no session, so a page it opened
    would open nowhere, or as root. A plan sold on the web carries its checkout page
@@ -333,6 +336,13 @@ Points that are easy to get wrong:
    `/etc/xdg/autostart/<name>.desktop` runs `ui --tray` at every sign-in: an administrator's waits
    up to 30 s for the desktop's tray and shows the icon with the window closed, and ends after that
    wait on a desktop without one; a standard user's ends at once.
+9. **One tunnel on the machine, whichever app made it.** Every app built on VpnHood takes the tunnel
+   before its adapter comes up (`IVpnTunnelLock`): a lock file in `/run/vpnhood-tunnel/`, root's alone,
+   and beside it a socket on which the holder hears another app ask it to let go. As on Android, the
+   holder drops its tun at once and lets go, then ends its session with the error a revoked VPN shows
+   there; the new app waits for nothing else of it. A crash lets the lock go with the process, and the
+   tun with it (point 5). A connect with `/null-capture` makes no adapter and takes no tunnel. Windows
+   does the same with a mutex and an event in an administrators' namespace (`WindowsVpnTunnelLock`).
 
 The installer is [`pub/lib/vh-installer/linux/install-client.sh`](../../pub/lib/vh-installer/linux/install-client.sh),
 which is **not** the server's `install.sh` next to it. Each head picks its template in its

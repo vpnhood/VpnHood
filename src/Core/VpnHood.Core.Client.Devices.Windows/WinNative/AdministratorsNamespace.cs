@@ -2,14 +2,14 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 
-namespace VpnHood.AppLib.App.Windows.WinNative;
+namespace VpnHood.Core.Client.Devices.Windows.WinNative;
 
 // A private namespace whose boundary names Administrators: SYSTEM and an elevated administrator may
 // make it and enter it, a standard user can do neither, so a name in it cannot be taken first the way
 // one in the Global namespace can. The caller names it: the boundary's name, the same namespace in
 // every session whichever process made it, and this process's prefix for it, under which an object in
 // it is named Name(...).
-internal sealed class AdministratorsNamespace : IDisposable
+public sealed class AdministratorsNamespace : IDisposable
 {
     private const int ErrorAlreadyExists = 183;
     private const int ErrorPathNotFound = 3;

@@ -1,4 +1,4 @@
-using VpnHood.AppLib.App.Windows.WinNative;
+using VpnHood.Core.Client.Devices.Windows.WinNative;
 using VpnHood.Core.Common.Exceptions;
 
 namespace VpnHood.AppLib.App.Windows;

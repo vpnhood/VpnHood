@@ -4,6 +4,7 @@ using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.TcpStack.Abstractions;
 using VpnHood.Net.Toolkit.Net;
+using static VpnHood.Net.TcpStack.Test.TcpTestHarness;
 
 namespace VpnHood.Net.TcpStack.Test;
 
@@ -306,13 +307,6 @@ public sealed class LocalTcpStackOptionsTest
             ack: true, seq: clientIsn + 1, ackNum: serverSeq + 1));
     }
 
-    private static async Task<ITcpClient> AcceptConnectionAsync(ITcpListener listener)
-    {
-        await foreach (var client in listener.AcceptAllAsync(CancellationToken.None))
-            return client;
-        throw new InvalidOperationException("No connection accepted");
-    }
-
     /// <summary>Parses the MSS (kind=2,len=4) option value from a packet's TCP options, or -1 if absent.</summary>
     private static int GetMssOption(TcpPacket tcp)
     {
@@ -329,32 +323,5 @@ public sealed class LocalTcpStackOptionsTest
             i += len;
         }
         return -1;
-    }
-
-    private static IpPacket CreateTcpPacket(
-        IPAddress srcIp, int srcPort,
-        IPAddress dstIp, int dstPort,
-        bool syn = false, bool ack = false, bool fin = false, bool psh = false, bool rst = false,
-        uint seq = 0, uint ackNum = 0,
-        byte[]? payload = null)
-    {
-        var packet = PacketBuilder.BuildTcp(
-            new IPEndPoint(srcIp, srcPort),
-            new IPEndPoint(dstIp, dstPort),
-            ReadOnlySpan<byte>.Empty,
-            payload ?? ReadOnlySpan<byte>.Empty);
-
-        var tcp = packet.ExtractTcp();
-        tcp.Synchronize = syn;
-        tcp.Acknowledgment = ack;
-        tcp.Finish = fin;
-        tcp.Push = psh;
-        tcp.Reset = rst;
-        tcp.SequenceNumber = seq;
-        tcp.AcknowledgmentNumber = ackNum;
-        tcp.WindowSize = 65535;
-
-        packet.UpdateAllChecksums();
-        return packet;
     }
 }

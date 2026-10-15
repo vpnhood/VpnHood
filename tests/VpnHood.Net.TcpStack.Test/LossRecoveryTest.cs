@@ -472,6 +472,59 @@ public sealed class LossRecoveryTest
         await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => writeTask, "the dispose ends the parked write");
     }
 
+    /// <summary>A fast retransmission restarts the RTO: the timer does not resend the segment within an RTO of it (RFC 6298
+    /// 5), where it fired at the original send's deadline, moments after the fast retransmission.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task FastRetransmit_RestartsTheRto()
+    {
+        const int rtoMs = 2000;
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitTimeout = TimeSpan.FromMilliseconds(rtoMs),
+            RetransmitMaxTimeout = TimeSpan.FromSeconds(8),
+            DefaultMss = 100,
+            MaxMss = 100
+        });
+        var sent = new List<IpPacket>();
+        var sentAt = new List<long>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => {
+            lock (sync) {
+                sent.Add(p);
+                sentAt.Add(Stopwatch.GetTimestamp());
+            }
+        };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        // the copies of the first segment, by the time each went out
+        long[] CopiesOfTheFirst()
+        {
+            lock (sync)
+                return sent.Select((p, i) => (Tcp: p.ExtractTcp(), At: sentAt[i]))
+                    .Where(x => x.Tcp.Payload.Length > 0 && x.Tcp.SequenceNumber == serverSeq + 1)
+                    .Select(x => x.At)
+                    .ToArray();
+        }
+
+        // four segments; the first is lost, and the three after it draw three duplicate ACKs before its RTO deadline
+        await client.Stream.WriteAsync(new byte[400]);
+        await Task.Delay(600);
+        Assert.HasCount(1, CopiesOfTheFirst(), "no retransmission before the duplicate ACKs");
+        for (var i = 0; i < 3; i++)
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: 1001, ackNum: serverSeq + 1));
+        Assert.HasCount(2, CopiesOfTheFirst(), "the fast retransmission");
+
+        // nothing is acknowledged: the RTO resends it, an RTO after the fast retransmission
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(6));
+        await WaitForCondition(() => CopiesOfTheFirst().Length >= 3, cts.Token, 4000);
+        var copies = CopiesOfTheFirst();
+        Assert.IsGreaterThanOrEqualTo(3, copies.Length, "the RTO resends it");
+        var gapMs = Stopwatch.GetElapsedTime(copies[1], copies[2]).TotalMilliseconds;
+        Assert.IsGreaterThanOrEqualTo(rtoMs - 150.0, gapMs, $"the RTO's copy came {gapMs:F0} ms after the fast retransmission");
+        await client.DisposeAsync();
+    }
+
     /// <summary>During one recovery, further duplicate ACKs do not retransmit the same segment again.</summary>
     [TestMethod]
     [Timeout(10000)]

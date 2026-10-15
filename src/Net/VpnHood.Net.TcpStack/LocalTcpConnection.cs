@@ -481,10 +481,12 @@ internal sealed class LocalTcpConnection(
                 if (ack == _lastDupAck) _dupAckCount++;
                 else { _lastDupAck = ack; _dupAckCount = 1; }
                 // Three duplicate ACKs start one recovery; more of them during it retransmit nothing - the partial ACKs
-                // above carry the recovery segment by segment.
+                // above carry the recovery segment by segment. The retransmission restarts the RTO, which must not
+                // resend the segment within an RTO of it (RFC 6298 5).
                 if (_dupAckCount >= 3 && !_inRecovery) {
                     retransmit = true;
                     EnterRecoveryLocked();
+                    RestartRtoLocked(now);
                 }
             }
 

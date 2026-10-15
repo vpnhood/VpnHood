@@ -164,6 +164,10 @@ public class ProxyChannel : IProxyChannel
             // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {
+            // the other pump finished first and the teardown disposed the streams under this one: a normal shutdown
+            if (_isClosing && VhLogger.IsSocketCloseException(ex))
+                return;
+
             VhLogger.Instance.LogDebug(ex,
                 "ProxyChannel: Error while copying from tunnel. ChannelId: {ChannelId}, IsDisposed: {IsDisposed}"
                 , ChannelId, IsDisposed);

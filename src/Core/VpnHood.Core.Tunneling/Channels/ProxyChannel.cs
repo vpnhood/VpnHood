@@ -119,7 +119,7 @@ public class ProxyChannel : IProxyChannel
             // the other pump's wait on the speed limit ends at once: its bytes have nowhere to go
             _throttleCancellationTokenSource.TryCancel();
 
-            // just to ensure that both tasks are completed gracefully, Connection should also handle it
+            // ends the tunnel's logical stream with its peer and closes the host, which ends both pumps
             await Task.WhenAll(
                     _hostStreamConnection.Stream.DisposeAsync().AsTask(),
                     _tunnelStreamConnection.Stream.DisposeAsync().AsTask())
@@ -132,6 +132,9 @@ public class ProxyChannel : IProxyChannel
             catch {
                 // Ignore. The exceptions are already logged inside CopyFromTunnelAsync / CopyToTunnelAsync
             }
+
+            // released only once both pumps are done, as a reused connection carries the next request
+            await _tunnelStreamConnection.DisposeAsync().Vhc();
         }
         catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it

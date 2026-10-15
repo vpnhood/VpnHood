@@ -332,9 +332,6 @@ public class TunnelTest : TestBase
         await CheckStreamEcho(await binaryStream.CreateReuse(), cts.Token);
         Assert.IsTrue(binaryStream.CanReuse);
 
-        binaryStream.PreventReuse();
-        await Assert.ThrowsAsync<InvalidOperationException>(binaryStream.CreateReuse);
-
         // read data from stream
         await cts.CancelAsync();
         tcpListener.Stop();
@@ -361,22 +358,67 @@ public class TunnelTest : TestBase
         using var client = new TcpClient();
         var tcpConnection = await Accept(client);
 
-        // wrapped as the server wraps a WebSocket connection, under one more decorator, as the server's own
+        // wrapped as the server wraps a WebSocket connection: a reusable one under its own decorator
         var webSocketStream = new WebSocketStream(tcpConnection.Stream, tcpConnection.ConnectionId, useBuffer: false,
             isServer: true);
-        var reusableConnection = new ReusableStreamConnection(
-            new StreamConnectionDecorator(tcpConnection, webSocketStream), reused => reused.Dispose());
-        var connection = new StreamConnectionDecorator(reusableConnection);
+        var connection = new StreamConnectionDecorator(
+            new ReusableStreamConnection(tcpConnection, webSocketStream, reused => reused.Dispose()));
 
         connection.PreventReuse();
         connection.Dispose();
 
-        // the socket closes at once: the client, which sends nothing more, reads to its end, where a reusable
-        // connection would first wait for the client to end the stream
+        // the socket closes at once: the client, which sends nothing more, reads to its end, where a release would
+        // first wait for the client to end the logical stream
         var clientStream = client.GetStream();
         var buffer = new byte[1024];
         while (await clientStream.ReadAsync(buffer, TestCt).AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestCt) > 0) {
         }
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Disposal_hands_a_cleanly_ended_connection_to_its_owner(bool disposeAsync)
+    {
+        using var tcpClient = new TcpClient();
+        var serverTransport = await Accept(tcpClient);
+        var clientTransport = new TcpStreamConnection(tcpClient, connectionName: "test", isServer: false);
+
+        // each end as a client and a server wrap a WebSocket connection
+        var serverReused = new TaskCompletionSource<ReusableStreamConnection>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var clientReused = new TaskCompletionSource<ReusableStreamConnection>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var serverConnection = new ReusableStreamConnection(serverTransport,
+            new WebSocketStream(serverTransport.Stream, "server", useBuffer: false, isServer: true),
+            reused => serverReused.TrySetResult(reused));
+        var clientConnection = new ReusableStreamConnection(clientTransport,
+            new WebSocketStream(clientTransport.Stream, "client", useBuffer: false, isServer: false),
+            reused => clientReused.TrySetResult(reused));
+
+        var buffer = new byte[1];
+        await clientConnection.Stream.WriteAsync(new byte[] { 1 }, TestCt);
+        await serverConnection.Stream.ReadExactlyAsync(buffer, TestCt);
+        Assert.AreEqual(1, buffer[0]);
+
+        // the logical stream ends once both ends have released it, which Dispose leaves to run
+        if (disposeAsync) {
+            await Task.WhenAll(serverConnection.DisposeAsync().AsTask(), clientConnection.DisposeAsync().AsTask())
+                .WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        }
+        else {
+            serverConnection.Dispose();
+            clientConnection.Dispose();
+        }
+
+        // the transport carries the next one, closed at the end of the test
+        using var serverNext = await serverReused.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        using var clientNext = await clientReused.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        serverNext.PreventReuse();
+        clientNext.PreventReuse();
+        await clientNext.Stream.WriteAsync(new byte[] { 2 }, TestCt);
+        await serverNext.Stream.ReadExactlyAsync(buffer, TestCt);
+        Assert.AreEqual(2, buffer[0]);
     }
 
     [TestMethod]

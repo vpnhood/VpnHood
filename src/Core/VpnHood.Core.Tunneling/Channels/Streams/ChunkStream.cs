@@ -4,11 +4,8 @@ namespace VpnHood.Core.Tunneling.Channels.Streams;
 
 public abstract class ChunkStream : StreamDecoratorAsync
 {
-    protected bool AllowReuse = true;
-
     public abstract bool CanReuse { get; }
     public abstract Task<ChunkStream> CreateReuse();
-    public void PreventReuse() => AllowReuse = false;
     public int ReusedCount { get; }
     public int ReadChunkCount { get; protected set; }
     public int WroteChunkCount { get; protected set; }

@@ -5,7 +5,6 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
-using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Connections;
@@ -44,7 +43,7 @@ public sealed class TcpStreamConnection : IStreamConnection
     public IPEndPoint RemoteEndPoint => _tcpClient.GetRemoteEndPoint();
     public bool RequireHttpResponse { get; set; }
 
-    // reuse lives in the decorators above
+    // reuse lives in the ReusableStreamConnection above
     public void PreventReuse()
     {
     }
@@ -58,8 +57,6 @@ public sealed class TcpStreamConnection : IStreamConnection
                     field, value);
 
             field = value;
-            if (Stream is ChunkStream chunkStream)
-                chunkStream.StreamId = value;
         }
     }
 

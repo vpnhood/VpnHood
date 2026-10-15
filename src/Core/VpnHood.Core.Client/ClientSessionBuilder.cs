@@ -131,7 +131,6 @@ internal class ClientSessionBuilder(
             };
 
             using var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
-            requestResult.StreamConnection.PreventReuse();
             connectorService.AllowChannelReuse = config.AllowStreamReuse;
 
             var helloResponse = requestResult.Response;

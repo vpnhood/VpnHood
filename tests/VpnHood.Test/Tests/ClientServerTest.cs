@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Net.Toolkit.Logging;
@@ -742,8 +743,42 @@ public class ClientServerTest : TestBase
                 () => client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount);
         }
 
-        // wait for free the used connections 
+        // wait for free the used connections
         await AssertEqualsWait(3, () => client.RequiredSession.Status.ConnectorStatus.FreeConnectionCount);
+    }
+
+    [TestMethod]
+    [DoNotParallelize] // sets the process-wide connection lifespan
+    public async Task Connection_past_its_lifespan_is_closed_rather_than_reused()
+    {
+        var minLifespan = ConnectorService.MinConnectionLifespan;
+        var maxLifespan = ConnectorService.MaxConnectionLifespan;
+        ConnectorService.MinConnectionLifespan = TimeSpan.Zero;
+        ConnectorService.MaxConnectionLifespan = TimeSpan.Zero;
+        try {
+            await using var server = await TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessToken(server);
+            await using var client = await TestHelper.CreateClient(
+                clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
+
+            await TestHelper.Test_Https();
+            var createdConnectionCount = client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount;
+
+            // once the request's channel is gone its connection is back, and closed rather than kept
+            var session = server.SessionManager.GetSessionById(client.SessionId);
+            await AssertEqualsWait(0, () => session?.TcpChannelCount);
+            await Task.Delay(500, TestCt);
+            Assert.AreEqual(0, client.RequiredSession.Status.ConnectorStatus.FreeConnectionCount);
+
+            await TestHelper.Test_Https();
+            Assert.AreEqual(createdConnectionCount + 1,
+                client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount);
+            Assert.AreEqual(0, client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount);
+        }
+        finally {
+            ConnectorService.MinConnectionLifespan = minLifespan;
+            ConnectorService.MaxConnectionLifespan = maxLifespan;
+        }
     }
 
     [TestMethod]

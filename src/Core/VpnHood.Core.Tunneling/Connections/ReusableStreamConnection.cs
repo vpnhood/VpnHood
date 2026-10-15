@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Net;
+using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
@@ -7,125 +8,108 @@ using VpnHood.Core.Tunneling.Channels.Streams;
 namespace VpnHood.Core.Tunneling.Connections;
 
 public delegate void ReuseConnectionCallback(ReusableStreamConnection reusableStreamConnection);
-public class ReusableStreamConnection : StreamConnectionDecorator
-{
-    private readonly Lock _reuseLock = new();
-    private readonly ReuseConnectionCallback _reuseConnectionCallback;
-    private bool _allowReuse = true;
-    private bool _reusing;
 
-    public ReusableStreamConnection(IStreamConnection streamConnection, ReuseConnectionCallback reuseConnectionCallback)
-        : base(streamConnection)
+// Carries one logical stream of the many its transport carries in turn. Its release ends that stream with the peer
+// and, if it ends cleanly, hands the transport, under its next logical stream, to the reuse callback, which keeps or
+// closes it. PreventReuse, an unclean end or no callback closes the transport instead
+public class ReusableStreamConnection : IStreamConnection
+{
+    private readonly IStreamConnection _transport;
+    private readonly ChunkStream _stream;
+    private readonly ReuseConnectionCallback? _reuseCallback;
+    private volatile bool _reusePrevented;
+    private bool _disposed;
+
+    public ReusableStreamConnection(IStreamConnection transport, ChunkStream stream,
+        ReuseConnectionCallback? reuseCallback)
     {
-        _reuseConnectionCallback = reuseConnectionCallback;
+        _transport = transport;
+        _stream = stream;
+        _reuseCallback = reuseCallback;
         VhTypeTracker.Track(this);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Stream,
             "A ReusableConnection has been created. ConnectionId: {ConnectionId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-            ConnectionId, streamConnection.Stream.GetType().Name, VhLogger.Format(LocalEndPoint),
-            VhLogger.Format(RemoteEndPoint));
+            ConnectionId, stream.GetType().Name, VhLogger.Format(LocalEndPoint), VhLogger.Format(RemoteEndPoint));
     }
 
-    private bool CanReuse => _allowReuse && Stream is ChunkStream { CanReuse: true };
+    public bool Connected => !_disposed && _transport.Connected;
+    public Stream Stream => _stream;
+    public IPEndPoint LocalEndPoint => _transport.LocalEndPoint;
+    public IPEndPoint RemoteEndPoint => _transport.RemoteEndPoint;
+    public bool IsServer => _transport.IsServer;
+    public string ConnectionName => _transport.ConnectionName;
 
-    public override void PreventReuse()
-    {
-        lock (_reuseLock) {
-            _allowReuse = false;
-            if (Stream is ChunkStream chunkStream)
-                chunkStream.PreventReuse();
-            base.PreventReuse();
+    public string ConnectionId {
+        get => _transport.ConnectionId;
+        set {
+            _transport.ConnectionId = value;
+            _stream.StreamId = value;
         }
     }
 
-    private async Task ReuseThenDispose()
+    public bool RequireHttpResponse {
+        get => _transport.RequireHttpResponse;
+        set => _transport.RequireHttpResponse = value;
+    }
+
+    public void PreventReuse() => _reusePrevented = true;
+
+    // from here on the transport is this release's alone: a Dispose meanwhile neither closes nor hands it on
+    private async Task Release()
     {
+        if (_reusePrevented || _reuseCallback == null) {
+            Close();
+            return;
+        }
+
+        // up to the hand-off, any failure closes: a Dispose after this one would find nothing left to do
         try {
-            _reusing = true;
-            VhLogger.Instance.LogDebug(GeneralEventId.Stream,
-                "Reusing a connection. ConnectionId: {ConnectionId}", ConnectionId);
+            // ends the logical stream with the peer; it throws when the stream did not end cleanly
+            var nextStream = await _stream.CreateReuse().Vhc();
+            if (_reusePrevented) {
+                Close(); // prevented while the stream was ending
+                return;
+            }
 
-            // verify if we can reuse the stream
-            if (Stream is not ChunkStream chunkStream)
-                throw new InvalidOperationException("Can not reuse the stream when stream is not ChunkStream.");
+            VhTypeTracker.Track(nextStream, $"ReusableStreamConnection.{nextStream.GetType().Name}");
+            var reusedConnection = new ReusableStreamConnection(_transport, nextStream, _reuseCallback);
+            VhTypeTracker.Record("ReusableStreamConnection.reused");
 
-            await Reuse(chunkStream, _reuseConnectionCallback).Vhc();
+            // the next request on the connection starts clean, not inside this one's log scopes, which
+            // would nest deeper with each reuse
+            using var suppressFlow = ExecutionContext.SuppressFlow();
+            _ = Task.Run(() => _reuseCallback(reusedConnection))
+                .ContinueWith(task => {
+                    VhLogger.Instance.LogError(GeneralEventId.Stream, task.Exception,
+                        "Reuse callback failed. ConnectionId: {ConnectionId}", reusedConnection.ConnectionId);
+                    reusedConnection.PreventReuse();
+                    reusedConnection.Dispose();
+                }, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Could not reuse the connection. ConnectionId: {ConnectionId}", ConnectionId);
-
-            // dispose and we should not try to reuse the stream
-            PreventReuse();
-            await DisposeAsync();
-        }
-        finally {
-            _reusing = false;
+            Close();
         }
     }
 
-    private async Task Reuse(ChunkStream chunkStream, ReuseConnectionCallback reuseConnectionCallback)
+    private void Close()
     {
-        var newStream = await chunkStream.CreateReuse().Vhc();
-        VhTypeTracker.Track(newStream, $"ReusableStreamConnection.{newStream.GetType().Name}");
-        lock (_reuseLock) {
-            ObjectDisposedException.ThrowIf(Disposed, this);
-
-            // we don't call SuppressFlow on debug to allow MsTest shows console output in nested task
-            using IDisposable? suppressFlow = IsDebug ? null : ExecutionContext.SuppressFlow();
-            var connectionDecorator = new StreamConnectionDecorator(InnerStreamConnection, newStream);
-            var reusableConnection = new ReusableStreamConnection(connectionDecorator, reuseConnectionCallback);
-            Task.Run(() => reuseConnectionCallback(reusableConnection))
-                .ContinueWith(task => VhLogger.Instance.LogError(GeneralEventId.Stream, task.Exception,
-                        "Reuse callback failed. ConnectionId: {ConnectionId}", ConnectionId),
-                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
-            
-            Disposed = true;
-            VhTypeTracker.Record("ReusableStreamConnection.reused");
-        }
+        _stream.Dispose();
+        _transport.Dispose();
+        VhTypeTracker.Record("ReusableStreamConnection.disposed");
     }
 
-    public override void Dispose()
+    public void Dispose()
     {
-        // prevent dispose when reuse is almost done. the owner is going to change soon 
-        lock (_reuseLock) {
-            if (Disposed)
-                return;
-
-            // If reuse is allowed, and we're not currently reusing, start reuse.
-            if (_allowReuse) {
-                // check if we are in the process of reusing the stream
-                if (_reusing)
-                    return;
-
-                // reuse the stream in background
-                // it will set _disposed to true 
-                if (CanReuse) {
-                    _ = ReuseThenDispose();
-                    return;
-                }
-            }
-
-            // prevent future reuse and stream reuse
-            PreventReuse();
-
-            // close stream and let cancel reuse if it is in progress
-            base.Dispose();
-            Disposed = true;
-            VhTypeTracker.Record("ReusableStreamConnection.disposed");
-        }
+        if (Interlocked.Exchange(ref _disposed, true)) return;
+        _ = Release();
     }
 
-    public override ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        Dispose();
-        return ValueTask.CompletedTask;
+        if (Interlocked.Exchange(ref _disposed, true)) return;
+        await Release().Vhc();
     }
-
-#if DEBUG
-    private static bool IsDebug => true;
-#else
-    private static bool IsDebug => false;
-#endif
-
 }

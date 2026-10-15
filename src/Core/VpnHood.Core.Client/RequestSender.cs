@@ -31,8 +31,9 @@ namespace VpnHood.Core.Client;
 ///   <item>Serialize the request, write it to the stream, read back the <see cref="VpnHood.Core.Common.Messaging.SessionResponse"/>.</item>
 /// </list>
 /// </para>
-/// Only TCP connections are added to the reuse pool. QUIC streams are not reused because each QUIC
-/// stream is already a lightweight, independent channel within the same QUIC connection.
+/// Connections framed as WebSocket go back to the pool once their logical stream ends cleanly, QUIC streams
+/// included: a reused stream skips the WebSocket upgrade's round trip and a stream open, which costs native
+/// memory on iOS and counts toward its QUIC connection's lifetime stream limit.
 /// </remarks>
 internal class RequestSender(ConnectorService connectorService) : IDisposable
 {
@@ -123,7 +124,8 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
                 };
             }
             catch (SessionException) {
-                // let the caller handle the exception. there is no error in connection
+                // let the caller handle the exception; the server ends a connection after its reply
+                reusableConnection.PreventReuse();
                 await reusableConnection.DisposeAsync();
                 throw;
             }
@@ -166,7 +168,8 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
             };
         }
         catch (SessionException) {
-            // let the caller handle the exception. there is no error in connection
+            // let the caller handle the exception; the server ends a connection after its reply
+            connection.PreventReuse();
             connection.Dispose();
             throw;
         }

@@ -518,10 +518,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 : TimeSpan.FromSeconds(new Random().Next((int)Config.MinPacketChannelLifespan.TotalSeconds,
                     (int)Config.MaxPacketChannelLifespan.TotalSeconds));
 
-            // Packet channels have transport-specific socket sizing and must never return to the
-            // generic proxy/control pool. This also keeps a finite channel lifespan meaningful.
-            requestResult.StreamConnection.PreventReuse();
-
             // add the new channel; it never holds the adapter's reader, which carries all the device's
             // traffic: a full queue drops its oldest packet, as a router on the path would
             var channel = new StreamPacketChannel(new StreamPacketChannelOptions {

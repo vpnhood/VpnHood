@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
-using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Connections;
@@ -22,7 +21,7 @@ public sealed class QuicStreamConnection : IStreamConnection
 
     public bool RequireHttpResponse { get; set; }
 
-    // reuse lives in the decorators above
+    // reuse lives in the ReusableStreamConnection above
     public void PreventReuse()
     {
     }
@@ -47,8 +46,6 @@ public sealed class QuicStreamConnection : IStreamConnection
                     "QuicConnectionId has been changed. ConnectionId: {ConnectionId}, NewConnectionId: {NewConnectionId}",
                     field, value);
             field = value;
-            if (Stream is ChunkStream chunkStream)
-                chunkStream.StreamId = value;
         }
     }
 

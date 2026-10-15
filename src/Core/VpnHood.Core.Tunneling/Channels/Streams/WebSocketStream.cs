@@ -26,7 +26,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private Task? _closeStreamTask;
     private readonly Lock _closeStreamLock = new();
     private bool _disposed;
-    public override bool CanReuse => !_isConnectionClosed && _exception == null && AllowReuse;
+    public override bool CanReuse => !_isConnectionClosed && _exception == null;
     public int PreserveWriteBufferLength => ChunkHeaderLength;
 
     public WebSocketStream(Stream sourceStream, string streamId, bool useBuffer, bool isServer)
@@ -286,10 +286,6 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             throw new EndOfStreamException(
                 $"Could not reuse a WebSocketStream that its underling stream has been closed . StreamId: {StreamId}");
 
-        // check if the stream can be reused
-        if (!CanReuse)
-            throw new InvalidOperationException("Can not reuse the stream.");
-
         // create a new WebSocketStream with the same source stream and stream id
         return new WebSocketStream(SourceStream, StreamId, ReusedCount + 1, isServer: _isServer);
     }
@@ -352,16 +348,9 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     {
         _disposed = true; // don't return if already disposed. DisposeAsync may call set this
 
-        if (disposing) {
-            if (CanReuse) {
-                // let it run in the background, the stream owner will close it
-                // CloseStream already handles the disposal and logging
-                _ = VhUtils.TryInvokeAsync($"Closing Stream: {StreamId}", CloseStreamAsync);
-            }
-            else {
-                SourceStream.Dispose();
-            }
-        }
+        // one that can still carry the next logical stream leaves its source to the owner, to reuse or close
+        if (disposing && !CanReuse)
+            SourceStream.Dispose();
 
         base.Dispose(disposing);
     }

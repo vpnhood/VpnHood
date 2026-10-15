@@ -160,8 +160,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         // create WebSocket stream without handshake
                         var websocketStream = new WebSocketStream(
                             streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
-                        var websocketConnection = new StreamConnectionDecorator(streamConnection, websocketStream);
-                        var reusableConnection = new ReusableStreamConnection(websocketConnection, ReuseConnection);
+                        var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
                         return new ServerStreamConnection(reusableConnection) {
                             ConnectionId = connectionId,
                             ClientIp = clientIp,
@@ -180,8 +179,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
                         var websocketStream = new WebSocketStream(
                             streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
-                        var websocketConnection = new StreamConnectionDecorator(streamConnection, websocketStream);
-                        var reusableConnection = new ReusableStreamConnection(websocketConnection, ReuseConnection);
+                        var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
                         return new ServerStreamConnection(reusableConnection) {
                             ConnectionId = connectionId,
                             ClientIp = clientIp,

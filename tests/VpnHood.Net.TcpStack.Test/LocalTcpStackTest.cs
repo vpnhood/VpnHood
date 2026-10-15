@@ -1680,6 +1680,35 @@ public sealed class LocalTcpStackTest
         }
     }
 
+    /// <summary>A ListenAny that Dispose overtakes throws instead of returning a listener the disposed stack would never
+    /// close: its disposed check is under the lock Dispose takes after setting the flag.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public void ListenAny_OvertakenByDispose_Throws()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        // the stack's own lock, held here, parks ListenAny at it while Dispose runs (Lock is reentrant)
+        var listenerLock = typeof(LocalTcpStack)
+            .GetField("_anyListenerLock", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
+            .GetValue(tcpStack) as Lock ?? throw new InvalidOperationException("The stack's listener lock was not found.");
+        LocalTcpListener? listener = null;
+        Exception? error = null;
+        var thread = new Thread(() => {
+            try { listener = tcpStack.ListenAny(); }
+            catch (Exception ex) { error = ex; }
+        });
+        lock (listenerLock) {
+            thread.Start();
+            Assert.IsTrue(SpinWait.SpinUntil(() => (thread.ThreadState & ThreadState.WaitSleepJoin) != 0, 2000),
+                "ListenAny waits at the lock");
+            tcpStack.Dispose();
+        }
+
+        Assert.IsTrue(thread.Join(2000), "ListenAny returned");
+        Assert.IsNull(listener, "no listener after Dispose");
+        Assert.IsInstanceOfType<ObjectDisposedException>(error);
+    }
+
     private static async Task WaitForCondition(Func<bool> condition, CancellationToken ct, int timeoutMs = 1000)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

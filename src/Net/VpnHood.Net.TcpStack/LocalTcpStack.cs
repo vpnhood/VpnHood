@@ -110,7 +110,15 @@ public sealed class LocalTcpStack : ITcpStack
     public LocalTcpListener Listen(IpEndPointValue localEndPoint)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        return _listeners.GetOrAdd(localEndPoint, ep => new LocalTcpListener(this, ep, _options.AcceptQueueCapacity));
+        var listener = _listeners.GetOrAdd(localEndPoint, ep => new LocalTcpListener(this, ep, _options.AcceptQueueCapacity));
+
+        // A Dispose that drained the table before this add would leave the listener open for good: stopped here instead,
+        // the check-then-act guard HandleSynPacket has for connections.
+        if (!_disposed)
+            return listener;
+
+        listener.Stop();
+        throw new ObjectDisposedException(GetType().FullName);
     }
 
     /// <summary>
@@ -118,8 +126,10 @@ public sealed class LocalTcpStack : ITcpStack
     /// </summary>
     public LocalTcpListener ListenAny()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
         lock (_anyListenerLock) {
+            // under the lock Dispose takes after it sets _disposed: a call it overtook throws instead of publishing a
+            // listener the disposed stack would never close
+            ObjectDisposedException.ThrowIf(_disposed, this);
             return _anyListener ??= new LocalTcpListener(this, null, _options.AcceptQueueCapacity);
         }
     }

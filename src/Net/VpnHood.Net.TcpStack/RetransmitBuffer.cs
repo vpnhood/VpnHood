@@ -6,6 +6,7 @@ namespace VpnHood.Net.TcpStack;
 /// The bytes a connection sent and the peer has not acknowledged, from SndUna on, kept for fast retransmit and the RTO:
 /// a ring of RetransmitBufferSize bytes whose offset k holds the byte at sequence SndUna + k, allocated on the first
 /// send so a receive-only connection never pays for it. Used under its connection's lock; not thread-safe on its own.
+/// A class, not a struct: in the connection's readonly field a struct's changes would land on copies.
 /// </summary>
 internal sealed class RetransmitBuffer(int capacity)
 {

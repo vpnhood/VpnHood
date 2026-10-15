@@ -401,6 +401,8 @@ internal sealed class LocalTcpConnection(
         if ((flags & TcpFlags.Ack) == 0)
             return (false, false);
 
+        // A segment with data takes the lock twice: its ACK's retransmissions and wake-ups go out between the two
+        // steps, before its data is in.
         return HandleAck(seq, ack, windowSize, flags, payload.Length, now) ?? HandleData(seq, flags, payload, now);
     }
 
@@ -443,7 +445,9 @@ internal sealed class LocalTcpConnection(
             var scaledWindow = (uint)windowSize << _peerWsShift;
             // RFC 9293 3.10.7.4: only a segment inside the receive window with an ack within [SndUna, SndNxt] is
             // acceptable - processed, carrying the peer's window, counting as its activity (a keepalive, one below RcvNxt,
-            // too); an ack of data never sent draws a challenge ACK and nothing else (RFC 5961 5.2).
+            // too); an ack of data never sent draws a challenge ACK and nothing else (RFC 5961 5.2). Its lower bound,
+            // SND.UNA - MAX.SND.WND, is not kept: a field and a compare per ACK against blind data injection, which on
+            // the TUN takes a privileged local app.
             var acked = ack - _sndUna;
             var ackCurrent = acked <= _sndNxt - _sndUna;
             challenge = !ackCurrent && (int)(ack - _sndNxt) > 0;
@@ -458,6 +462,8 @@ internal sealed class LocalTcpConnection(
                     RestartRtoLocked(now); // progress restarts the RTO; an emptied flight needs none, the next send arms it
                 // Loss recovery (RFC 6582): a partial ACK, short of the recovery point, names the next lost segment,
                 // retransmitted now instead of after another RTO - the FIN when the data is all acked and it is the lost one.
+                // One segment per partial ACK, as RFC 6582 has it: a peer that delays its ACK of a lone segment (Windows:
+                // 200 ms) paces a lost tail at one segment per delay.
                 if (_inRecovery) {
                     if ((int)(_sndUna - _recoverySeq) >= 0)
                         _inRecovery = false;
@@ -494,6 +500,8 @@ internal sealed class LocalTcpConnection(
             // The writer waits for room: an ACK that frees some or widens the window wakes it, one that brings neither
             // (the peer's own data, the ACK of a probe) leaves it parked.
             signalWindow = acceptable && (acked > 0 || scaledWindow > _peerWindow);
+            // No SND.WL1/WL2 check (RFC 9293 3.10.7.4): a TUN does not reorder a flow, so an older segment's window
+            // never arrives after a newer one's.
             if (acceptable)
                 _peerWindow = scaledWindow;
             peerWindow = _peerWindow;

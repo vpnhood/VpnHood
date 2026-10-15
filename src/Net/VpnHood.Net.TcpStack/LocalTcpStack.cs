@@ -190,6 +190,8 @@ public sealed class LocalTcpStack : ITcpStack
         if (ipPacket.Protocol != IpProtocol.Tcp)
             return;
 
+        // IPv4 fragments are not checked for: the kernel's TCP sets DF and fits the TUN's MTU, so only a crafted packet
+        // is one, and the check would cost every packet a header read.
         var tcpPacket = ipPacket.ExtractTcp();
         // The table's key, read from the packet's bytes: a segment of a known connection costs no IPAddress; the SYN
         // and the RST below build their endpoints.
@@ -689,6 +691,7 @@ public sealed class LocalTcpStack : ITcpStack
         if (_disposed)
             return;
 
+        // the flag first, the listeners' drain after the timers: Listen's re-check after its add rests on this order
         _disposed = true;
 
         _maintenanceTimer.Dispose();

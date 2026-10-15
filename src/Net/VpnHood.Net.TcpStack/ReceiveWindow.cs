@@ -8,7 +8,8 @@ namespace VpnHood.Net.TcpStack;
 /// and the 16-bit window - ReceiveWindowSize minus the unread bytes - which closes as the pipe fills and reopens as the app
 /// drains. The connection bounds each write by <see cref="Available"/>, which makes ReceiveWindowSize the cap on the
 /// per-connection receive memory on every platform. Used under the connection's lock; <see cref="Reader"/> and
-/// <see cref="Unread"/> are used without it. Not thread-safe on its own.
+/// <see cref="Unread"/> are used without it. Not thread-safe on its own. A class, not a struct: in the connection's
+/// readonly field a struct's changes would land on copies.
 /// </summary>
 internal sealed class ReceiveWindow(LocalTcpStackOptions options, PipeOptions pipeOptions, ushort mss)
 {
@@ -75,7 +76,8 @@ internal sealed class ReceiveWindow(LocalTcpStackOptions options, PipeOptions pi
         return due;
     }
 
-    /// <summary>Zeroes the unread count; the bytes stay in the pipe. Returns the count.</summary>
+    /// <summary>Zeroes the unread count; the bytes stay in the pipe until the stream is collected, as the reader is the
+    /// stream's and completing it here could race a pending read. Returns the count.</summary>
     public int ClearUnread()
     {
         var unread = _unread;

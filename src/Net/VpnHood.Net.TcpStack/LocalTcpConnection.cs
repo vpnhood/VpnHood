@@ -322,17 +322,17 @@ internal sealed class LocalTcpConnection(
 
                 if (allowable <= 0) {
                     diagnostics.TraceZeroWindowWait(ipEndPointPair, offset, data.Length, pw, una, nxt);
-                    if (retxFree <= 0) {
-                        // The retransmit buffer is the limit: a full window is in flight, and its loss is the
-                        // RTO's business (PollMaintenance). Wait for the ACK that frees buffer space, or the
+                    if (retxFree <= 0 || pw != 0) {
+                        // A full window is in flight, the retransmit buffer's or the peer's open one, and its loss
+                        // is the RTO's business (PollMaintenance). Wait for the ACK that frees room, or the
                         // close; TrySignalWindow wakes this on both. Caller cancellation propagates as
                         // OperationCanceledException - a partial write is never reported as success.
                         await _windowSignal.WaitAsync(ct).Vhc();
                         continue;
                     }
-                    // The peer's window is the limit: after the interval, a zero-window probe carrying one
-                    // new byte (RFC 9293 3.8.6.1) draws the window update some peers (Android) send only to
-                    // a probe.
+                    // The peer's window is zero: after the interval, a zero-window probe carrying one new byte
+                    // (RFC 9293 3.8.6.1) draws the window update some peers (Android) send only to a probe. An
+                    // open window is never probed: the probe's byte would land past its right edge.
                     var signaled = await _windowSignal.WaitAsync(options.ZeroWindowProbeInterval, ct).Vhc();
                     if (!signaled && offset < data.Length) {
                         diagnostics.TraceZeroWindowProbe(ipEndPointPair, offset, pw);

@@ -221,6 +221,40 @@ public sealed class LossRecoveryTest
         await client.DisposeAsync();
     }
 
+    /// <summary>A full but open window is not probed (RFC 9293 3.8.6.1 probes a zero window): the probe's byte would
+    /// land past the window's right edge. The writer waits for the ACK, and the RTO covers a lost one.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task FullOpenWindow_WriterWaitsWithoutProbing()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50),
+            RetransmitTimeout = TimeSpan.FromSeconds(5),
+            RetransmitMaxTimeout = TimeSpan.FromSeconds(5)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        // a 1000-byte window: a 3000-byte write fills it and waits through six probe intervals
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1, window: 1000));
+        lock (sync) sent.Clear();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var writeTask = client.Stream.WriteAsync(new byte[3000], cts.Token).AsTask();
+        await Task.Delay(300, cts.Token);
+        lock (sync)
+            Assert.AreEqual(1000, sent.Sum(p => p.ExtractTcp().Payload.Length), "the window's bytes and no probe past it");
+        Assert.IsFalse(writeTask.IsCompleted, "the rest waits for the ACK");
+
+        // the ACK of the window opens the next one: the rest goes out
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 1000, window: 2000));
+        await writeTask;
+        await client.DisposeAsync();
+    }
+
     /// <summary>
     /// A full retransmission ring is the RTO's business, not the zero-window probe's: while nothing is
     /// acked the writer waits - no probe consumes a byte the ring cannot store (the 2026-07 corruption), no

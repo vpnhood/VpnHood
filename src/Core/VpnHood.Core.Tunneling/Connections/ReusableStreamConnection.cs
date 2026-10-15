@@ -58,13 +58,14 @@ public class ReusableStreamConnection : IStreamConnection
     // from here on the transport is this release's alone: a Dispose meanwhile neither closes nor hands it on
     private async Task Release()
     {
-        if (_reusePrevented || _reuseCallback == null) {
-            Close();
-            return;
-        }
-
-        // up to the hand-off, any failure closes: a Dispose after this one would find nothing left to do
+        // up to the hand-off, any failure is logged and closes: nothing awaits a Dispose's release, and a Dispose
+        // after this one would find nothing left to do
         try {
+            if (_reusePrevented || _reuseCallback == null) {
+                Close();
+                return;
+            }
+
             // ends the logical stream with the peer; it throws when the stream did not end cleanly
             var nextStream = await _stream.CreateReuse().Vhc();
             if (_reusePrevented) {
@@ -89,7 +90,7 @@ public class ReusableStreamConnection : IStreamConnection
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
-                "Could not reuse the connection. ConnectionId: {ConnectionId}", ConnectionId);
+                "Could not release the connection. ConnectionId: {ConnectionId}", ConnectionId);
             Close();
         }
     }

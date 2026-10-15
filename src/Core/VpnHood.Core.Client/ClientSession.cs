@@ -731,7 +731,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                         byteCts.Token)
                     .Vhc();
 
-                requestResult.StreamConnection.PreventReuse();
                 requestResult.StreamConnection.Dispose();
                 VhLogger.Instance.LogInformation("Session has been closed on the server successfully.");
             }

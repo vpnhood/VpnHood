@@ -83,6 +83,11 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
             var ret = await SendRequest<T>(payload, request.RequestId, isTcpPacketChannel,
                 OnAttempt, requestCts.Token).Vhc();
 
+            // the server ends a connection after its reply, but for a channel request's, which carries the channel:
+            // ending the logical stream would only wait for the server's close
+            if (request.RequestCode is not ((byte)RequestCode.ProxyChannel or (byte)RequestCode.TcpPacketChannel))
+                ret.StreamConnection.PreventReuse();
+
             // log the response
             VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.",
                 ret.Response.ErrorCode);

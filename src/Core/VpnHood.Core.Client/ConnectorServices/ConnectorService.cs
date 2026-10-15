@@ -354,11 +354,12 @@ internal class ConnectorService : IDisposable
     }
 
     // The host moved to other networks: every connection is from the old ones, so none goes back to the
-    // pool, the idle ones close, and QUIC's pooled connections go
+    // pool, the idle ones close, and QUIC's pooled connections go. QUIC's go first: an idle QUIC stream's close
+    // waits for its peer's acknowledgment, which on a dead network never comes until its connection is closed
     public void DropConnections()
     {
-        RetireConnections();
         _quicConnectionFactory?.DropConnections();
+        RetireConnections();
     }
 
     public bool AllowChannelReuse {

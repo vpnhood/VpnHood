@@ -651,8 +651,9 @@ public sealed class LocalTcpStackTest
             $"{probeSequences.Count} distinct probe sequence number(s) were sent — the sender is stuck " +
             "retransmitting the same byte (regression).");
 
-        // The frontier should have advanced across the full payload (first byte at serverSeq+1).
-        Assert.AreEqual(serverSeq + (uint)payload.Length, probeSequences.Max(),
+        // The frontier should have advanced across the full payload, measured as offsets from the first byte
+        // (serverSeq+1) so a sequence wrap cannot reorder them.
+        Assert.AreEqual(payload.Length - 1, probeSequences.Max(s => (int)(s - (serverSeq + 1))),
             "Probes should have advanced through the entire payload.");
 
         await stream.DisposeAsync();
@@ -1065,6 +1066,25 @@ public sealed class LocalTcpStackTest
         Assert.AreEqual(serverSeq + 1, challenge.SequenceNumber);
         Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount, "the connection stays");
         await client.DisposeAsync();
+    }
+
+    /// <summary>The ISN draws all 32 bits: among 64 handshakes one has the top bit set (all of them clear: 2^-64).</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public void SynAck_Isn_DrawsAll32Bits()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+
+        for (var i = 0; i < 64; i++)
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + i, ServerIp, ServerPort, syn: true, seq: 1000));
+
+        var isns = Snapshot(sent, sync).Select(p => p.ExtractTcp()).Where(t => t.Synchronize).Select(t => t.SequenceNumber).ToArray();
+        Assert.HasCount(64, isns, "one SYN-ACK per SYN");
+        Assert.IsTrue(isns.Any(isn => isn >= 0x80000000u), "the top bit is random too");
     }
 
     /// <summary>The peer's sequence numbers wrap around 2^32 within a transfer: a segment crosses 2^32 inside

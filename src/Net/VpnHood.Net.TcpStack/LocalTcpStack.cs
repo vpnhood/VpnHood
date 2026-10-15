@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Net;
@@ -244,7 +245,9 @@ public sealed class LocalTcpStack : ITcpStack
             return;
         }
 
-        var isnLocal = (uint)RandomNumberGenerator.GetInt32(int.MaxValue);
+        Span<byte> isnBytes = stackalloc byte[4];
+        RandomNumberGenerator.Fill(isnBytes); // all 32 bits random (RFC 6528)
+        var isnLocal = BinaryPrimitives.ReadUInt32LittleEndian(isnBytes);
         var peerMss = ParseMssOption(tcpPacket.Options.Span);
         var peerWsShift = ParseWindowScaleOption(tcpPacket.Options.Span);
         var connection = new LocalTcpConnection(

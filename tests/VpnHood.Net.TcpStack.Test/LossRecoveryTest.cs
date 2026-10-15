@@ -279,9 +279,10 @@ public sealed class LossRecoveryTest
             while (!writeTask.IsCompleted) {
                 uint highest;
                 lock (sync) {
-                    highest = sent.Where(p => p.ExtractTcp().Payload.Length > 0)
-                        .Select(p => p.ExtractTcp().SequenceNumber + (uint)p.ExtractTcp().Payload.Length)
-                        .DefaultIfEmpty(serverSeq + 1)
+                    // by offset from the first byte, so a sequence wrap cannot reorder the segments
+                    highest = serverSeq + 1 + (uint)sent.Where(p => p.ExtractTcp().Payload.Length > 0)
+                        .Select(p => (int)(p.ExtractTcp().SequenceNumber + (uint)p.ExtractTcp().Payload.Length - (serverSeq + 1)))
+                        .DefaultIfEmpty(0)
                         .Max();
                 }
                 if (highest != acked) {

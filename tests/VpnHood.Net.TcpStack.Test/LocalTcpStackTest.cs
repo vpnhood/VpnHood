@@ -1543,6 +1543,41 @@ public sealed class LocalTcpStackTest
         await client.DisposeAsync();
     }
 
+    /// <summary>A TCP header shorter than its 20-byte minimum is rejected before it reaches a connection: a data offset
+    /// of 4 handed the checksum and urgent pointer on as four bytes of data.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task ShortTcpHeader_IsRejected_NoBytesReachTheConnection()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+        DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
+        var serverSeq = SynAckSequence(sent, sync, ClientPort);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        lock (sync) sent.Clear();
+
+        // an in-sequence ACK whose data offset says 16 bytes, parsed from its bytes as the TUN's packets are
+        using var built = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, ack: true, seq: 1001, ackNum: serverSeq + 1);
+        built.Payload.Span[12] = 0x40;
+        using var malformed = PacketBuilder.Parse(built.Buffer.Span);
+        tcpStack.ProcessIncoming(malformed);
+        Assert.AreEqual(0L, tcpStack.PipeBufferedBytes, "no header bytes taken as data");
+        lock (sync) Assert.IsEmpty(sent, "the segment is dropped unanswered");
+
+        // the connection goes on: the next well-formed segment's data arrives at the same sequence number
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: [7, 8]));
+        var buffer = new byte[8];
+        Assert.AreEqual(2, await client.Stream.ReadAsync(buffer, cts.Token));
+        CollectionAssert.AreEqual(new byte[] { 7, 8 }, buffer[..2]);
+        await client.DisposeAsync();
+    }
+
     private static async Task WaitForCondition(Func<bool> condition, CancellationToken ct, int timeoutMs = 1000)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

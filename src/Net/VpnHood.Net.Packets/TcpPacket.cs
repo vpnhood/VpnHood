@@ -13,6 +13,11 @@ public class TcpPacket : IChecksumPayloadPacket
         if (buffer.Length < 20)
             throw new ArgumentException("Buffer too small for TCP header.", nameof(buffer));
 
+        // the data offset is the header's length: below the 20-byte minimum, Payload would hand header bytes on as data
+        var headerLength = (buffer.Span[12] >> 4) * 4;
+        if (headerLength < 20 || headerLength > buffer.Length)
+            throw new ArgumentException("Invalid TCP data offset.", nameof(buffer));
+
         _buffer = buffer;
     }
 

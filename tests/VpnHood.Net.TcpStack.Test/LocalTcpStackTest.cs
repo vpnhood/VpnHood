@@ -837,10 +837,10 @@ public sealed class LocalTcpStackTest
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             await WaitForCondition(() => tcpStack.Diagnostics.ConnectionCount == 0, cts.Token, 2000);
             Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the handshake is given up");
-            var lines = log.Messages("handshake given up");
+            // its own port's: a test MSTest abandoned on its timeout keeps running and may give one up meanwhile
+            var lines = log.Messages("handshake given up").Where(line => line.Message.Contains($"{port}")).ToArray();
             Assert.HasCount(1, lines);
             Assert.AreEqual(LogLevel.Debug, lines[0].Level);
-            StringAssert.Contains(lines[0].Message, $"{port}");
         }
         finally {
             VhLogger.MinLogLevel = minLogLevel;

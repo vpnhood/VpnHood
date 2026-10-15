@@ -15,8 +15,8 @@ the same machine. That is what keeps it small and fast.
   every connection, as a transparent proxy does
 - **Sized per platform**: `LocalTcpStackOptions` sets windows, buffers and connection limits; the
   `Ios` preset fits an iOS Network Extension's memory limit
-- **Loss recovery**: a retransmission timer and delayed ACKs, so a lost segment does not stall a
-  connection
+- **Loss recovery**: a retransmission timer, fast retransmit and recovery on partial ACKs, so a lost
+  segment does not stall a connection
 - **Pure library**: no native code; it builds on `VpnHood.Net.Packets` for parsing and building packets
 
 ## Quick start
@@ -85,10 +85,12 @@ adapter.SendPacketQueued()
 
 - **No congestion control.** A local link has no congestion to control; on a lossy network path the
   stack would not back off.
-- **No window scaling.** The receive window is at most 64 KB per connection.
+- **No receive window scaling.** Our window is at most 64 KB per connection; the peer's scale is honored.
 - **No out-of-order reassembly.** A segment ahead of the next expected byte is dropped and answered with a
   duplicate ACK; the peer retransmits it. No SACK.
 - **No TIME_WAIT.** A closed connection's 4-tuple is free at once; a SYN on a live tuple draws a challenge ACK.
+  A FIN the peer retransmits because our last ACK was lost draws a RST: it had acknowledged our FIN and every
+  byte before it, so nothing is lost, where TIME_WAIT would hold the connection for 2 MSL (on iOS, one of 40 slots).
 - **A simplified state machine.** It covers what reliable local connections need, not every corner
   of RFC 9293.
 

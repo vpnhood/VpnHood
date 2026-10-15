@@ -209,6 +209,8 @@ internal sealed class LocalTcpConnection(
         // here, so the count+log can run outside the lock.
         diagnostics.IncrementEstablishedConnections(ipEndPointPair); // DIAGNOSTIC (counts + logs)
 
+        // An abort landing just after the lock (the handshake's give-up, the idle timeout, an eviction) leaves the
+        // listener a stream that ends at once, as a kernel's accept can return a socket the peer has reset; nothing leaks.
         if (clientToEnqueue != null && !listener.TryEnqueueAccept(clientToEnqueue)) {
             // Listener stopped or its accept queue is full: abort so the peer gets an RST immediately
             // instead of a fully-established connection that lingers half-closed buffering data it can

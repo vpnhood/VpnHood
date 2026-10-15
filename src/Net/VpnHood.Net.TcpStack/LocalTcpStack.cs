@@ -366,10 +366,11 @@ public sealed class LocalTcpStack : ITcpStack
         var flags = (TcpFlags)tcpPacket.Flags & (TcpFlags.Fin | TcpFlags.Syn | TcpFlags.Rst | TcpFlags.Psh | TcpFlags.Ack);
 
         // A SYN on a tracked tuple, checked after the RST (RFC 9293 3.10.7.4), so a SYN with RST is the RST's. A bare SYN
-        // in SynReceived is the peer's retransmission before our SYN-ACK arrived: the SYN-ACK again. Any other, on an
-        // established or closing connection or with ACK (an answer to an open we never made), draws a challenge ACK
-        // (RFC 5961 4) and is dropped with its data: a peer that abandoned the old connection answers it with a RST,
-        // which closes our stale entry and lets its SYN retransmission open a fresh one.
+        // in SynReceived is the peer's retransmission before our SYN-ACK arrived: the SYN-ACK again (a restarted client's,
+        // with a new ISN, finds that SYN-ACK's ack wrong and answers with a RST, which clears this entry for its next
+        // SYN). Any other, on an established or closing connection or with ACK (an answer to an open we never made), draws
+        // a challenge ACK (RFC 5961 4) and is dropped with its data: a peer that abandoned the old connection answers it
+        // with a RST, which closes our stale entry and lets its SYN retransmission open a fresh one.
         if ((flags & TcpFlags.Syn) != 0 && (flags & TcpFlags.Rst) == 0) {
             if (conn.State == TcpConnectionState.SynReceived && (flags & TcpFlags.Ack) == 0)
                 SendSynAck(conn);

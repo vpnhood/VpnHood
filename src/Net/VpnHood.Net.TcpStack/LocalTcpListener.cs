@@ -92,10 +92,7 @@ public sealed class LocalTcpListener : ITcpListener
 
         _acceptQueue.Writer.TryComplete();
 
-        if (LocalEndPoint.HasValue)
-            _stack.StopListening(LocalEndPoint.Value);
-        else
-            _stack.StopListeningAny();
+        _stack.RemoveListener(this);
 
         // Dispose any unaccepted clients to release their connections.
         while (_acceptQueue.Reader.TryRead(out var client))

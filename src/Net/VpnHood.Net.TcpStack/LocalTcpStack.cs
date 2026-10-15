@@ -150,16 +150,19 @@ public sealed class LocalTcpStack : ITcpStack
     }
 
     /// <summary>
-    /// Stops the wildcard listener that accepts connections on any endpoint.
+    /// Takes a stopping listener out of its slot, only if it still holds it: a replacement registered on its endpoint
+    /// after StopListening took it out stays.
     /// </summary>
-    internal bool StopListeningAny()
+    internal void RemoveListener(LocalTcpListener listener)
     {
-        lock (_anyListenerLock) {
-            if (_anyListener == null)
-                return false;
+        if (listener.LocalEndPoint is { } localEndPoint) {
+            _listeners.TryRemove(new KeyValuePair<IpEndPointValue, LocalTcpListener>(localEndPoint, listener));
+            return;
+        }
 
-            _anyListener = null;
-            return true;
+        lock (_anyListenerLock) {
+            if (_anyListener == listener)
+                _anyListener = null;
         }
     }
 

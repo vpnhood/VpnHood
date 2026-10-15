@@ -1709,6 +1709,32 @@ public sealed class LocalTcpStackTest
         Assert.IsInstanceOfType<ObjectDisposedException>(error);
     }
 
+    /// <summary>A stopping listener leaves its slot only if it still holds it: the old listener's late removal (its
+    /// Stop, racing a Listen after StopListening took it out) keeps the replacement registered and accepting.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task StoppedListener_LeavesItsReplacementRegistered()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var endPoint = new IpEndPointValue(ServerIp, ServerPort);
+        var old = tcpStack.Listen(endPoint);
+        Assert.IsTrue(tcpStack.StopListening(endPoint));
+        var replacement = tcpStack.Listen(endPoint);
+        Assert.AreNotSame(old, replacement);
+
+        tcpStack.RemoveListener(old);
+        Assert.AreSame(replacement, tcpStack.Listen(endPoint), "the replacement stays registered");
+
+        var acceptTask = AcceptConnectionAsync(replacement);
+        DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        await client.DisposeAsync();
+    }
+
     private static async Task WaitForCondition(Func<bool> condition, CancellationToken ct, int timeoutMs = 1000)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

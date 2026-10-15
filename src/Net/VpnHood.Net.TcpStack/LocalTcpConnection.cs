@@ -308,8 +308,8 @@ internal sealed class LocalTcpConnection(
                 uint pw, una, nxt;
                 int retxFree;
                 lock (_seqLock) {
-                    // Close and Dispose set these under this lock before they signal the window, so a writer
-                    // about to wait either sees them here or finds their signal after its drain - never both
+                    // Close, Dispose and StartFin set these under this lock before they signal the window, so a
+                    // writer about to wait either sees them here or finds their signal after its drain - never both
                     // missed, which would park it for good on a full buffer.
                     if (_disposed || _appToNetCompleted || _finSent)
                         throw new IOException("The TCP connection was closed while writing.");
@@ -871,6 +871,9 @@ internal sealed class LocalTcpConnection(
             State = _finReceived ? TcpConnectionState.LastAck : TcpConnectionState.FinWait1;
             UpdateMaintenanceInterestLocked();
         }
+
+        // A writer parked on the window wakes to the closed write side, as on Close and Dispose.
+        TrySignalWindow();
 
         // Built outside _seqLock: PacketBuilder rents pooled memory and needs no sequence state.
         var finPacket = BuildFinPacket(finSeq, finAck, finWindow);

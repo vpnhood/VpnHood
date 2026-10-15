@@ -82,6 +82,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CultureInfo? _systemUiCulture;
     private IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>? _installedApps;
     private bool _isConnecting;
+    private int _connectNumber; // the latest connect's: an older one, which it cancelled, leaves the app to it
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
     private readonly AppWebHostManager _webHostManager;
@@ -702,9 +703,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _lastConnectionState = connectionState;
 
         // a session ended: always on sorts why, where nobody has - a connect's failure is its connect's, and a
-        // person's disconnect stops it already
+        // person's disconnect stops it already. The reason is the app's own or the service's, not LastError's,
+        // which a diagnose turns into "no error found"
         if (connectionState == AppConnectionState.None && lastConnectionState is not null)
-            _alwaysOnService.SessionEnded(LastError);
+            _alwaysOnService.SessionEnded(_appPersistState.LastError ?? ConnectionInfo.Error);
 
         Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));
     }
@@ -826,6 +828,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         var stopwatch = Stopwatch.StartNew(); // a failed connect's report tells how long it ran
         connectOptions ??= new ConnectOptions();
+        var connectNumber = Interlocked.Increment(ref _connectNumber);
         var alwaysOnConnectNumber = _alwaysOnService.BeginConnect(connectOptions.IsAlwaysOn);
         try {
             VhLogger.Instance.LogInformation(
@@ -851,13 +854,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex) {
             _errorReporter.ReportConnectError(ex, stopwatch.Elapsed);
+
+            // a newer connect cancelled this one: its error, its disconnect and its end are the newer one's
+            if (connectNumber != _connectNumber)
+                throw;
+
             _appPersistState.LastError = ex.ToApiError();
-            await TryDisconnect(); // await, to prevent VpnService_StateChanged clear the LastError
+            await TryDisconnect(connectNumber); // await, to prevent VpnService_StateChanged clear the LastError
             _alwaysOnService.EndConnect(alwaysOnConnectNumber, ex);
             throw;
         }
         finally {
-            _isConnecting = false;
+            if (connectNumber == _connectNumber)
+                _isConnecting = false;
             FireConnectionStateChanged();
         }
     }
@@ -1388,11 +1397,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // the app's own disconnect: a failed connect's, a failed ad's, a new connect's, a dispose's
-    public async Task TryDisconnect()
+    // the app's own disconnect: a failed ad's, a new connect's, a dispose's
+    public Task TryDisconnect() => TryDisconnect(connectNumber: null);
+
+    // connectNumber: a failed connect's own, which leaves a newer connect alone
+    private async Task TryDisconnect(int? connectNumber)
     {
         try {
-            await DisconnectCore().Vhc();
+            await DisconnectCore(connectNumber).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not disconnect gracefully.");
@@ -1403,15 +1415,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public Task Disconnect()
     {
         _alwaysOnService.PersonDisconnecting();
-        return DisconnectCore();
+        return DisconnectCore(connectNumber: null);
     }
 
     private readonly AsyncLock _disconnectLock = new();
-    private async Task DisconnectCore()
+    private async Task DisconnectCore(int? connectNumber)
     {
         using var scopeLock = await _disconnectLock.LockAsync();
         if (_isDisconnecting)
             return; // already disconnecting
+
+        // a newer connect began while the failed one waited here: it has disconnected what the failed one left
+        if (connectNumber != null && connectNumber != _connectNumber)
+            return;
 
         try {
             // set _isDisconnecting

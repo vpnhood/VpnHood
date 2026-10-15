@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
@@ -103,8 +104,9 @@ internal sealed class AppAlwaysOnService : IDisposable
         }
     }
 
-    // How the connect BeginConnect numbered ended: its session is up, or it failed. A cancel is the
-    // canceller's to sort: a person's disconnect stops always on itself, and a newer connect ends its own way.
+    // How the connect BeginConnect numbered ended: its session is up, or it failed. The app's own cancel is
+    // the canceller's to sort: a person's disconnect stops always on itself, and a newer connect ends its own
+    // way; a caller that gave up on its connect is sorted as a failure.
     public void EndConnect(int connectNumber, Exception? exception)
     {
         lock (_lock) {
@@ -117,13 +119,13 @@ internal sealed class AppAlwaysOnService : IDisposable
             }
 
             if (exception is not UserCanceledException)
-                Sort(exception.ToApiError());
+                Sort(exception.ToApiError(), sessionWasUp: false);
         }
     }
 
     // The latest connect's session ended outside a connect and a disconnect: by itself (the server's end,
     // the network's, a revoke), or by the app over an ad it could not show. One that held starts the pauses
-    // over.
+    // over, and one that gave no reason stops always on as an error does, not as a person's disconnect.
     public void SessionEnded(ApiError? error)
     {
         lock (_lock) {
@@ -134,7 +136,8 @@ internal sealed class AppAlwaysOnService : IDisposable
             if (FastDateTime.UtcNow - sessionTime >= _options.RetryPausesResetTime)
                 _retryCount = 0;
 
-            Sort(error);
+            error ??= new VpnServiceException("The VPN service ended the session without a reason.").ToApiError();
+            Sort(error, sessionWasUp: true);
         }
     }
 
@@ -202,20 +205,20 @@ internal sealed class AppAlwaysOnService : IDisposable
 
     // Under the lock. A revoke is kept across restarts, whether always on is on or not; with it on, a failure
     // to reach a working server waits its pause, and anything else stops it.
-    private void Sort(ApiError? error)
+    private void Sort(ApiError error, bool sessionWasUp)
     {
         if (!IsSupported || _disposed)
             return;
 
-        var isRevoke = error?.Is<VpnServiceRevokedException>() == true;
+        var isRevoke = error.Is<VpnServiceRevokedException>();
         if (isRevoke)
             _persistState.IsVpnServiceRevoked = true;
 
         if (!_app.UserSettings.AlwaysOn)
             return;
 
-        if (error is null || !IsTriedAgain(error)) {
-            Stop(error, plan: error is null || isRevoke ? null : GetPlan());
+        if (!IsTriedAgain(error, sessionWasUp)) {
+            Stop(error, plan: isRevoke ? null : GetPlan());
             return;
         }
 
@@ -229,7 +232,7 @@ internal sealed class AppAlwaysOnService : IDisposable
         _ = RetryAfter(pause, _retryCts.Token);
     }
 
-    // Under the lock. A null error is a person's disconnect, or an end that gave no reason.
+    // Under the lock. A null error is a person's disconnect.
     private void Stop(ApiError? error, (Guid?, string?, string?, bool)? plan)
     {
         CancelRetry();
@@ -242,13 +245,19 @@ internal sealed class AppAlwaysOnService : IDisposable
     }
 
     // A failure to reach a working server: no network yet, as at boot; a server, its name or a proxy out of
-    // reach; a timeout; a session the server or the network ended; a server busy or down for maintenance.
-    private static bool IsTriedAgain(ApiError error)
+    // reach; a timeout, a broken connection or handshake, or a connect its caller gave up on; the app's own VPN
+    // service out of reach for a while; a session the server or the network ended, or one the server lost,
+    // whose access error after the session was up is no refused key (a key it refuses fails the next connect,
+    // and an HTTP 401, UnauthorizedAccessException, is one); a server busy or down for maintenance.
+    internal static bool IsTriedAgain(ApiError error, bool sessionWasUp)
     {
         if (error.Is<SessionException>() || error.Is<MaintenanceException>())
-            return error.Data.GetValueOrDefault(nameof(SessionResponse.ErrorCode)) is
+            return error.Data.GetValueOrDefault(nameof(SessionResponse.ErrorCode)) switch {
                 nameof(SessionErrorCode.SessionClosed) or nameof(SessionErrorCode.SessionExpired) or
-                nameof(SessionErrorCode.NoServerAvailable) or nameof(SessionErrorCode.Maintenance);
+                    nameof(SessionErrorCode.NoServerAvailable) or nameof(SessionErrorCode.Maintenance) => true,
+                nameof(SessionErrorCode.AccessError) => sessionWasUp,
+                _ => false
+            };
 
         return error.Is<NoInternetException>() ||
                error.Is<UnreachableServerException>() ||
@@ -257,7 +266,14 @@ internal sealed class AppAlwaysOnService : IDisposable
                error.Is<EndPointDiscoveryException>() ||
                error.Is<ConnectionTimeoutException>() ||
                error.Is<SocketException>() ||
-               error.Is<TimeoutException>();
+               error.Is<TimeoutException>() ||
+               error.Is<IOException>() ||
+               error.Is<AuthenticationException>() ||
+               error.Is<OperationCanceledException>() ||
+               error.Is<TaskCanceledException>() ||
+               error.Is<VpnServiceUnreachableException>() ||
+               error.Is<VpnServiceNotReadyException>() ||
+               error.Is<VpnServiceTimeoutException>();
     }
 
     // what a plan change is: another profile, key or code, or the profile's premium coming or going

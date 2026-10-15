@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Authentication;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Api.Premium;
@@ -10,6 +11,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Test;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
@@ -35,6 +37,7 @@ public class AlwaysOnTest : TestAppBase
         await using (var app = CreateApp(storagePath)) {
             Assert.AreEqual(AlwaysOnSupport.App, app.Features.AlwaysOnSupport);
             Assert.AreEqual(AlwaysOnStatus.Off, app.State.AlwaysOnState?.Status);
+            await Task.Delay(TimeSpan.FromSeconds(1), TestCt); // the app's start, a task of its own, has looked
             app.UserSettings.AlwaysOn = true;
             app.SettingsService.Save();
             await Task.Delay(TimeSpan.FromSeconds(1), TestCt);
@@ -205,11 +208,129 @@ public class AlwaysOnTest : TestAppBase
         Assert.AreEqual(AlwaysOnStatus.On, app.State.AlwaysOnState?.Status);
     }
 
+    [TestMethod]
+    public async Task A_persons_connect_takes_over_from_always_ons_connect_on_its_way()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
+
+        // always on's start connect waits for a VPN service slow to start, and a person connects meanwhile
+        var device = CreateDevice();
+        device.StartServiceDelay = TimeSpan.FromSeconds(3);
+        await using var app = CreateApp(storagePath, device: device);
+        await AssertEqualsWait(AppConnectionState.Initializing, () => app.State.ConnectionState);
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestCt); // the slow start has begun its wait
+        device.StartServiceDelay = TimeSpan.Zero;
+        await app.Connect(vpnProfileId, cancellationToken: TestCt);
+
+        // the older connect's end, which the person's cancelled, leaves the person's session alone
+        await Task.Delay(TimeSpan.FromSeconds(4), TestCt);
+        Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
+        Assert.AreEqual(AlwaysOnStatus.On, app.State.AlwaysOnState?.Status);
+    }
+
+    [TestMethod]
+    public async Task A_diagnose_connects_session_is_sorted_by_how_it_ended()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
+        var tunnelLock = new TestVpnTunnelLock();
+
+        // a person's diagnose connect after the start's
+        await using var app = CreateApp(storagePath, tunnelLock);
+        await app.WaitForState(AppConnectionState.Connected);
+        await app.Connect(vpnProfileId, diagnose: true, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+
+        // another app takes the tunnel: always on stops for the revoke, not for the diagnose's "no error found"
+        using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
+        await AssertEqualsWait(AlwaysOnStatus.Stopped, () => app.State.AlwaysOnState?.Status);
+        Assert.AreEqual(nameof(VpnServiceRevokedException), app.State.AlwaysOnState?.Error?.TypeName);
+    }
+
+    [TestMethod]
+    public async Task A_connect_its_caller_gave_up_on_is_tried_again()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
+
+        // after the start's connect, a person's, slow to start, whose caller gives up on it, as a window's
+        // timed-out request does
+        var device = CreateDevice();
+        await using var app = CreateApp(storagePath, device: device, retryPauses: [TimeSpan.FromSeconds(1)]);
+        await app.WaitForState(AppConnectionState.Connected);
+        device.StartServiceDelay = TimeSpan.FromSeconds(3);
+        using var callerCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        callerCts.CancelAfter(TimeSpan.FromMilliseconds(500));
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            app.Connect(vpnProfileId, cancellationToken: callerCts.Token));
+
+        // tried again, and connected
+        device.StartServiceDelay = TimeSpan.Zero;
+        var retry = await WaitForRetry(app, previousRetryTime: null);
+        Assert.IsTrue(retry.Error?.TypeName is nameof(OperationCanceledException) or nameof(TaskCanceledException),
+            $"Error: {retry.Error?.TypeName}");
+        await app.WaitForState(AppConnectionState.Connected, timeout: 10000);
+    }
+
+    [TestMethod]
+    public async Task An_end_with_no_reason_stops_it_as_an_error_does()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
+
+        // the VPN service ends the session by itself, giving no reason
+        var device = CreateDevice();
+        await using var app = CreateApp(storagePath, device: device);
+        await app.WaitForState(AppConnectionState.Connected);
+        var vpnService = device.VpnService ?? throw new InvalidOperationException("The VPN service is not running.");
+        vpnService.OnStop();
+
+        // stopped with a reason, so it reads as no person's disconnect
+        await AssertEqualsWait(AlwaysOnStatus.Stopped, () => app.State.AlwaysOnState?.Status);
+        Assert.AreEqual(nameof(VpnServiceException), app.State.AlwaysOnState?.Error?.TypeName);
+    }
+
+    // What the cases above do not reach: the app's own VPN service out of reach, a broken connection or
+    // handshake and a connect its caller gave up on are tried again, and so is an access error once the
+    // session was up, from a server that lost it; at a connect it is a refused key, as an HTTP 401 is.
+    [TestMethod]
+    public void What_is_tried_again()
+    {
+        ApiError[] triedAgain = [
+            new VpnServiceUnreachableException("unreachable").ToApiError(),
+            new VpnServiceNotReadyException("not ready").ToApiError(),
+            new VpnServiceTimeoutException("timeout") { TimeoutDuration = TimeSpan.FromSeconds(30) }.ToApiError(),
+            new IOException().ToApiError(),
+            new AuthenticationException().ToApiError(),
+            new OperationCanceledException().ToApiError(),
+            new TaskCanceledException().ToApiError()
+        ];
+        foreach (var error in triedAgain)
+            Assert.IsTrue(AppAlwaysOnService.IsTriedAgain(error, sessionWasUp: false), error.TypeName);
+
+        var accessError = new SessionException(SessionErrorCode.AccessError).ToApiError();
+        Assert.IsTrue(AppAlwaysOnService.IsTriedAgain(accessError, sessionWasUp: true));
+        Assert.IsFalse(AppAlwaysOnService.IsTriedAgain(accessError, sessionWasUp: false));
+
+        ApiError[] stopping = [
+            new UnauthorizedAccessException().ToApiError(),
+            new SessionException(SessionErrorCode.SessionSuppressedBy).ToApiError(),
+            new InvalidOperationException().ToApiError()
+        ];
+        foreach (var error in stopping)
+            Assert.IsFalse(AppAlwaysOnService.IsTriedAgain(error, sessionWasUp: true), error.TypeName);
+    }
+
     // The app as a desktop's service runs it, with short pauses. Made by Init alone: its always on connects as
     // it starts, while the helper's CreateClientApp would still be writing the settings SaveSettings has saved.
     private VpnHoodApp CreateApp(string storagePath, TestVpnTunnelLock? tunnelLock = null,
         AppPremiumOptions? premium = null, IReadOnlyList<TimeSpan>? retryPauses = null,
-        TimeSpan? retryPausesResetTime = null, bool capture = false)
+        TimeSpan? retryPausesResetTime = null, bool capture = false, TestDevice? device = null)
     {
         var appOptions = TestAppHelper.CreateAppOptions(storagePath: storagePath);
         appOptions.AlwaysOnOptions = new AppAlwaysOnOptions {
@@ -219,13 +340,18 @@ public class AlwaysOnTest : TestAppBase
         if (premium != null)
             appOptions.Premium = premium;
 
+        return VpnHoodApp.Init(device ?? CreateDevice(tunnelLock, capture), appOptions);
+    }
+
+    // a desktop's device, which keeps always on itself
+    private TestDevice CreateDevice(TestVpnTunnelLock? tunnelLock = null, bool capture = false)
+    {
         var adapterOptions = TestHelper.CreateTestVpnAdapterOptions();
-        var device = new TestDevice(TestAppHelper,
+        return new TestDevice(TestAppHelper,
             _ => capture ? new TestVpnAdapter(adapterOptions) : new TestNullVpnAdapter()) {
             IsAlwaysOnSupported = true,
             TunnelLock = tunnelLock
         };
-        return VpnHoodApp.Init(device, appOptions);
     }
 
     // What a person set before the service started: the profile and the switch. The app that saves them

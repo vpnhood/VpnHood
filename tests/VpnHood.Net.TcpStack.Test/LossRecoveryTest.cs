@@ -1330,6 +1330,39 @@ public sealed class LossRecoveryTest
                 "the orphan is evicted and the new connection admitted");
     }
 
+    /// <summary>The orphan's idle clock starts at the close: before the first idle sweep, an orphan fed by no-progress
+    /// ACKs is already evictable for a new connection at the cap.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task Orphan_PeerAcksWithoutProgress_IsEvictableBeforeTheFirstIdleSweep()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            MaxConnections = 1,
+            EvictionMinIdle = TimeSpan.FromMilliseconds(300),
+            IdleTimeout = TimeSpan.FromMinutes(2),
+            IdleCheckInterval = TimeSpan.FromMinutes(1) // no idle sweep within the test
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+
+        await client.Stream.WriteAsync(new byte[100]); // never acknowledged
+        await client.DisposeAsync();
+        for (var i = 0; i < 6; i++) {
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
+            await Task.Delay(100);
+        }
+        lock (sync) sent.Clear();
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + 1, ServerIp, ServerPort, syn: true, seq: 5000));
+
+        lock (sync)
+            Assert.IsTrue(sent.Any(p => p.ExtractTcp() is { Synchronize: true, Acknowledgment: true, DestinationPort: ClientPort + 1 }),
+                "the orphan, idle since its close, is evicted and the new connection admitted");
+    }
+
     /// <summary>Simultaneous close: the peer's FIN arrives before it has acknowledged ours; we wait for that ACK.</summary>
     [TestMethod]
     [Timeout(10000)]

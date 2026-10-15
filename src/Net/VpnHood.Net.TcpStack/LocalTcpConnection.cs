@@ -46,7 +46,7 @@ internal sealed class LocalTcpConnection(
     private bool _finReceived;
     private bool _readSideClosed; // the app closed its stream: new bytes from the peer are reset, not buffered
     private bool _resetPending; // the app closed with unread bytes while our tail was in flight: reset once acked
-    private long _orphanProgressTicks; // set per idle tick once the app closed: when the sequence numbers last moved
+    private long _orphanProgressTicks; // once the app closed: the close, then when the sequence numbers last moved
     private uint _progressUna; // the sequence numbers at the last orphan sample
     private uint _progressRcv;
     private bool _establishedCounted; // DIAGNOSTIC: whether we incremented LocalTcpStack.EstablishedConnections
@@ -153,6 +153,10 @@ internal sealed class LocalTcpConnection(
             if (_disposed || _closedFlag) return;
             _readSideClosed = true;
             _appToNetCompleted = true;
+            // the orphan's idle clock starts here, not at the idle sweep after the close (PollIdle)
+            _progressUna = _sndUna;
+            _progressRcv = _rcvNxt;
+            Volatile.Write(ref _orphanProgressTicks, Stopwatch.GetTimestamp());
             // With our tail data still in flight the RST would make the peer drop it unread (RFC 7230 6.6):
             // then the FIN goes first and the RST follows the ACK of the tail (TryHandleIncoming). The unread
             // bytes leave the pipe total now either way; nobody will read them.
@@ -658,8 +662,9 @@ internal sealed class LocalTcpConnection(
     }
 
     /// <summary>Time since the last send/receive activity on this connection (drives LRU eviction). For an
-    /// orphan (the app closed its stream) it is the time since the sequence numbers last moved, sampled by
-    /// the idle sweep (<see cref="PollIdle"/>), so a peer's no-progress ACKs cannot keep it from eviction.</summary>
+    /// orphan (the app closed its stream) it is the time since the close or since the sequence numbers last moved,
+    /// sampled by the idle sweep (<see cref="PollIdle"/>), so a peer's no-progress ACKs cannot keep it from
+    /// eviction.</summary>
     internal TimeSpan IdleDuration {
         get {
             var progress = Volatile.Read(ref _orphanProgressTicks);
@@ -816,8 +821,9 @@ internal sealed class LocalTcpConnection(
     /// <summary>
     /// Called by the stack's idle sweep every IdleCheckInterval. An orphan (the app closed its stream) is idle when the
     /// sequence numbers stop moving: the peer's window-0 ACKs of our retransmits or its keepalives would otherwise keep
-    /// it "active" and pin its slot forever; sampled per tick, never per packet, and IdleDuration (the eviction's
-    /// measure too) reads the sample. An idle connection is aborted: the peer gets a RST, not a black hole.
+    /// it "active" and pin its slot forever; sampled at the close, then per tick, never per packet, and IdleDuration
+    /// (the eviction's measure too) reads the sample. An idle connection is aborted: the peer gets a RST, not a black
+    /// hole.
     /// </summary>
     internal void PollIdle()
     {
@@ -825,7 +831,7 @@ internal sealed class LocalTcpConnection(
 
         if (_readSideClosed) {
             var (una, rcv) = SnapshotSequenceNumbers();
-            if (_orphanProgressTicks == 0 || una != _progressUna || rcv != _progressRcv) {
+            if (una != _progressUna || rcv != _progressRcv) {
                 _progressUna = una;
                 _progressRcv = rcv;
                 Volatile.Write(ref _orphanProgressTicks, Stopwatch.GetTimestamp());

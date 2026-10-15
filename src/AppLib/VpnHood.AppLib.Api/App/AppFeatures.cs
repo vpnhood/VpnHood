@@ -49,6 +49,10 @@ public class AppFeatures
 
     public required bool IsTcpProxySupported { get; init; }
     public required bool IsQuicSupported { get; init; }
+
+    // Whether the app keeps always on itself, by UserSettings.AlwaysOn: the desktops' service. False on
+    // Android, whose always on is the system's (DeviceIntentFeatures.IsAlwaysOnSettingsSupported).
+    public required bool IsAlwaysOnSupported { get; init; }
     public required bool IsSplitDomainSupported { get; init; }
 
     // Whether this build has the IP-location data (AppOptions.IpLocationZipAsset) a country split

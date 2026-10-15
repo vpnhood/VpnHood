@@ -78,7 +78,12 @@ public partial class SettingsView : UserControl, IPage
         AlwaysOnItem.Title = s.AlwaysOn;
         AlwaysOnItem.Subtitle = s.AlwaysOnDesc;
         AlwaysOnItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn);
-        AlwaysOnItem.IsVisible = intents.IsAlwaysOnSettingsSupported;
+        // the app's own switch (a desktop's service), or the system's setting (Android), whose state
+        // the app cannot read
+        var isAlwaysOnSupported = VhApp.Features.IsAlwaysOnSupported;
+        AlwaysOnItem.IsVisible = isAlwaysOnSupported || intents.IsAlwaysOnSettingsSupported;
+        if (isAlwaysOnSupported)
+            AlwaysOnItem.SetStatus(settings.AlwaysOn, s.On, s.Off);
     }
 
     public void FocusDefault()

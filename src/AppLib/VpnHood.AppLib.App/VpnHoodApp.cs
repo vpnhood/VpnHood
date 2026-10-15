@@ -223,6 +223,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AuthProviderIds = options.AccountProvider?.AuthenticationProvider.ProviderIds ?? [],
             IsTcpProxySupported = device.IsTcpProxySupported,
             IsQuicSupported = device.IsQuicSupported,
+            IsAlwaysOnSupported = device.IsAlwaysOnSupported,
             IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
             IsSplitCountrySupported = options.IpLocationZipAsset != null,
             IsUserReviewSupported = options.UserReviewProvider != null,

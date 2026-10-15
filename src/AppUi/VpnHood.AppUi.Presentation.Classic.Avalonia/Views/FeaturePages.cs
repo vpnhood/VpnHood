@@ -75,8 +75,23 @@ public static class FeaturePages
         });
     }
 
+    // the app's own switch where the app keeps always on itself (a desktop's service); else the steps to
+    // the system's setting (Android)
     public static FeaturePageView AlwaysOn(MainView host)
     {
+        if (VhApp.Features.IsAlwaysOnSupported) {
+            return new FeaturePageView(host, new FeaturePageOptions {
+                Title = S.AlwaysOnColored,
+                Description = S.AlwaysOnDesc,
+                Image = "always-on.webp",
+                Kind = FeaturePageKind.Switch,
+                SwitchTitle = S.AlwaysOn,
+                IsSwitchOn = VhApp.UserSettings.AlwaysOn,
+                SwitchAction = SetAlwaysOn,
+                IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn)
+            });
+        }
+
         return new FeaturePageView(host, new FeaturePageOptions {
             Title = S.AlwaysOnColored,
             Description = S.AlwaysOnDesc,
@@ -87,6 +102,13 @@ public static class FeaturePages
             IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn),
             IsActionAvailable = VhApp.Intents.IsAlwaysOnSettingsSupported
         });
+    }
+
+    private static async Task SetAlwaysOn(bool isOn)
+    {
+        var settings = VhApp.UserSettings;
+        settings.AlwaysOn = isOn;
+        await VhApp.SaveUserSettings(settings, CancellationToken.None);
     }
 
     public static FeaturePageView PrivateDns(MainView host)

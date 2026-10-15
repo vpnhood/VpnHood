@@ -14,6 +14,11 @@ public sealed record FeaturePageOptions
     public bool IsActionAvailable { get; init; }
     public bool ShowSkip { get; init; }
 
+    // a Switch page's: the switch's title, where it stands, and what turning it writes
+    public string? SwitchTitle { get; init; }
+    public bool IsSwitchOn { get; init; }
+    public Func<bool, Task>? SwitchAction { get; init; }
+
     // opened on its own by what the person just did, not chosen: it ends with OK, since the back
     // button would read as undoing that (cloak mode's page, when Cloak is first turned on)
     public bool IsPrompt { get; init; }

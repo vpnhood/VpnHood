@@ -31,6 +31,7 @@ public class AndroidDevice : IDevice
     public bool IsIncludeAppsSupported => true;
     public bool IsTcpProxySupported => true;
     public bool IsQuicSupported => AndroidQuicClient.IsSupported;
+    public bool IsAlwaysOnSupported => false; // the system's
     public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
     public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
         Platform = $"Linux; Android {Build.VERSION.Release}",

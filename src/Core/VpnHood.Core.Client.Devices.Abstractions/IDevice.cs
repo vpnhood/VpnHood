@@ -18,6 +18,10 @@ public interface IDevice : IDisposable
     bool IsBindProcessToVpnSupported { get; }
     bool IsTcpProxySupported { get; }
     bool IsQuicSupported { get; }
+
+    // Whether the app keeps always on itself (the app's AlwaysOn setting): a desktop's service, which
+    // starts at boot. Android's is the system's, which the app only opens.
+    bool IsAlwaysOnSupported { get; }
     string OsInfo { get; }
     DeviceUserAgentInfo UserAgentInfo { get; }
     DeviceMemInfo? MemInfo { get; }

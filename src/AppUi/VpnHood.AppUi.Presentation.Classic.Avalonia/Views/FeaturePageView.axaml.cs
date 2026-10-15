@@ -11,11 +11,13 @@ public partial class FeaturePageView : UserControl, IPage
 {
     private readonly MainView _host;
     private readonly Func<Task>? _action;
+    private readonly Func<bool, Task>? _switchAction;
 
     public FeaturePageView(MainView host, FeaturePageOptions options)
     {
         _host = host;
         _action = options.Action;
+        _switchAction = options.SwitchAction;
         InitializeComponent();
 
         BackButton.IsVisible = !VhApp.IsTvUi;
@@ -33,6 +35,16 @@ public partial class FeaturePageView : UserControl, IPage
                 if (options.IsPrompt)
                     BackButton.IsVisible = false;
                 RichText.Apply(CloakText1, Strings.Current.CloakModeDesc1);
+                break;
+
+            case FeaturePageKind.Switch when !options.IsPremium || VhApp.IsPremiumUser:
+                SwitchItem.IsVisible = true;
+                SwitchItem.Title = options.SwitchTitle ?? "";
+                SwitchItem.IsOn = options.IsSwitchOn;
+                break;
+
+            case FeaturePageKind.Switch:
+                PremiumCard.IsVisible = true;
                 break;
 
             case FeaturePageKind.PrivateDnsError when !VhApp.IsPremiumUser:
@@ -72,6 +84,7 @@ public partial class FeaturePageView : UserControl, IPage
     public void FocusDefault()
     {
         if (ActionButton.IsVisible) ActionButton.LandFocus();
+        else if (SwitchItem.IsVisible) SwitchItem.FindFirstButton()?.LandFocus();
         else if (OkButton.IsVisible && CloakCard.IsVisible) OkButton.LandFocus();
         else if (PremiumButton.IsVisible && PremiumCard.IsVisible) PremiumButton.LandFocus();
         else if (TurnOffButton.IsVisible && PrivateDnsCard.IsVisible) TurnOffButton.LandFocus();
@@ -88,6 +101,25 @@ public partial class FeaturePageView : UserControl, IPage
                 await _action();
             }
             catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    // the setting follows the switch; one that could not be written puts the switch back
+    private async void OnSwitchToggled(object? sender, EventArgs e)
+    {
+        try {
+            if (_switchAction == null)
+                return;
+            try {
+                await _switchAction(SwitchItem.IsOn);
+            }
+            catch (Exception ex) {
+                SwitchItem.IsOn = !SwitchItem.IsOn;
                 await _host.ProcessError(ex);
             }
         }

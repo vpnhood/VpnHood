@@ -107,6 +107,7 @@ public class UiPageWalkTest
     [DataRow("SplitTunnelingItem", "Split Tunneling")]
     [DataRow("DnsItem", "DNS")]
     [DataRow("PrivacyItem", "Privacy")]
+    [DataRow("AlwaysOnItem", "Always On")]
     public void SettingsRowOpensItsPage(string control, string expectedTitle)
     {
         OpenSettings();

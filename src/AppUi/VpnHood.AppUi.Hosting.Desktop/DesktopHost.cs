@@ -54,6 +54,7 @@ public static class DesktopHost
         rootCommand.Subcommands.Add(DisconnectCommand.Create(platform));
         rootCommand.Subcommands.Add(StatusCommand.Create(platform));
         rootCommand.Subcommands.Add(LocationsCommand.Create(platform, initParams.IsAddAccessKeySupported));
+        rootCommand.Subcommands.Add(AlwaysOnCommand.Create(platform));
 
         // Only a head that can be given an access key has profiles to manage. On one that cannot,
         // the whole group is absent rather than present and refusing - help that lists a command

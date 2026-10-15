@@ -21,6 +21,7 @@ public class LinuxDevice(string storageFolder) : IDevice
     public bool IsIncludeAppsSupported => false;
     public bool IsTcpProxySupported => true;
     public bool IsQuicSupported => MsQuicClient.IsSupported;
+    public bool IsAlwaysOnSupported => true;
     public bool IsTv => false;
 
     public DeviceMemInfo MemInfo {

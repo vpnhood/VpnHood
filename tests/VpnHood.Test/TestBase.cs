@@ -7,22 +7,23 @@ namespace VpnHood.Test;
 
 public abstract class TestBase
 {
-    protected TestHelper TestHelper { get; private set; } = null!;
-    public TestContext TestContext { get; set; } = null!;
+    private TestHelper? _testHelper;
+    protected TestHelper TestHelper =>
+        _testHelper ?? throw new InvalidOperationException("The TestHelper is created in TestInitialize.");
+    public required TestContext TestContext { get; set; }
     protected virtual CancellationToken TestCt => TestContext.CancellationToken;
 
     [TestInitialize]
     public void TestInitialize()
     {
-        TestHelper = CreateTestHelper();
+        _testHelper = CreateTestHelper();
     }
 
     [TestCleanup]
     public void TestCleanup()
     {
-        // TestHelper is null when TestInitialize failed; don't mask the root error with an NRE
-        // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-        TestHelper?.Dispose();
+        // null when TestInitialize failed, whose error stays the one reported
+        _testHelper?.Dispose();
     }
 
     protected static void Log(string message)

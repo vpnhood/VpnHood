@@ -260,6 +260,10 @@ public sealed class LocalTcpStack : ITcpStack
             peerWsShift, _options, _pipeOptions, Diagnostics);
         VhTypeTracker.Track(connection);
         connection.OnClosed += OnConnectionClosed;
+        // Wired (the stack reference, the stream, the maintenance interest for the SYN-ACK's retransmission) before the
+        // table publishes it to the sweeps, DropAllConnections and the receive path. The listener still gets the stream
+        // only after the final ACK arrives (MarkEstablished).
+        connection.Start(this);
 
         // The count lives in the diagnostics (never ConcurrentDictionary.Count, which locks every stripe) and is taken
         // before the table holds the connection, so whoever removes the entry always has a count to give back.
@@ -286,10 +290,6 @@ public sealed class LocalTcpStack : ITcpStack
             _idleTimer.Change(_options.IdleCheckInterval, _options.IdleCheckInterval);
 
         try {
-            // Start() before the SYN-ACK so the connection is fully wired (stack reference, maintenance
-            // interest for SYN-ACK retransmission) by the time the peer can answer. The listener still
-            // gets the stream only after the final ACK arrives (MarkEstablished).
-            connection.Start(this);
             SendSynAck(connection);
         }
         catch {

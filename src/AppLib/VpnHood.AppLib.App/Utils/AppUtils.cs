@@ -43,6 +43,12 @@ public static class AppUtils
         return isDebugMode ? $"{packageTitle}_dbg" : packageTitle;
     }
 
+    // the adapter's name as the app takes it from a head's options (VpnHoodAppConfig.AdapterName)
+    public static string GetAdapterName(AppOptions options)
+    {
+        return options.AdapterName ?? GetAdapterName(options.PackageTitle, options.IsDebugMode);
+    }
+
     // The user agent of a browser on this device, which Google Analytics parses the OS, the device and
     // the browser from, with the app after it: "Mozilla/5.0 (Linux; Android 14; Pixel 5) AppleWebKit/537.36
     // (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36 VpnHoodConnect/8.2.854". The model only when

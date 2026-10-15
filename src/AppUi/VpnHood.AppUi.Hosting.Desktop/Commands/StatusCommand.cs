@@ -10,7 +10,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 // answer for a script that would rather branch than parse: 0 connected, 3 not.
 //
 // --json prints the app's own AppState, untouched. Everything the UI reads is in it, so a script
-// that outgrows these eight lines does not outgrow the command.
+// that outgrows these few lines does not outgrow the command.
 internal static class StatusCommand
 {
     private const int NotConnectedExitCode = 3;
@@ -76,6 +76,21 @@ internal static class StatusCommand
         if (state.LastError != null)
             fields.Add(("Last error", state.LastError.Message));
 
+        if (state.AlwaysOnState != null)
+            fields.Add(("Always on", Describe(state.AlwaysOnState)));
+
         return fields;
+    }
+
+    // why it waits and until when, or why it stopped; a person's connect starts it again either way
+    private static string Describe(AlwaysOnState alwaysOnState)
+    {
+        return alwaysOnState.Status switch {
+            AlwaysOnStatus.Waiting =>
+                $"waiting until {alwaysOnState.RetryTime?.ToLocalTime():T}: {alwaysOnState.Error?.Message}",
+            AlwaysOnStatus.Stopped when alwaysOnState.Error is null => "stopped until the next connect",
+            AlwaysOnStatus.Stopped => $"stopped until the next connect: {alwaysOnState.Error.Message}",
+            _ => alwaysOnState.Status.ToString().ToLowerInvariant()
+        };
     }
 }

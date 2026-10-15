@@ -15,8 +15,8 @@ public class UserSettings
     public string? CountryCode { get; set; }
     public Guid? VpnProfileId { get; set; }
 
-    // Where the app keeps always on itself (AppFeatures.IsAlwaysOnSupported): the service connects when it
-    // starts, before anyone signs in, and again after a failure.
+    // Where the app keeps always on itself (AlwaysOnSupport.App): the service connects when it starts,
+    // before anyone signs in, and again after a failure.
     public bool AlwaysOn { get; set; }
     public SplitTunnelingSettings SplitTunneling { get; set; } = new();
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;

@@ -49,4 +49,7 @@ public class AppState
     public required bool PromotionExists { get; init; }
     public required TcpProxyUsageReason TcpProxyUsageReason { get; init; }
     public required SplitTunnelingState SplitTunnelingState { get; init; }
+
+    // null where the app does not keep always on itself (AppFeatures.AlwaysOnSupport)
+    public required AlwaysOnState? AlwaysOnState { get; init; }
 }

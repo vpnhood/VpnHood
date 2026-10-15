@@ -36,6 +36,9 @@ public class VpnProfileService
     private VpnProfileInfo? _cashInfo;
     private string? _cashInfoRegion;
 
+    // after each write of the store, off the writer's thread and lock
+    public event EventHandler? Changed;
+
     private string VpnProfilesFilePath => GetVpnProfilesFilePath(field);
 
     private static string GetVpnProfilesFilePath(string folderPath) => Path.Combine(folderPath, FilenameProfiles);
@@ -437,6 +440,8 @@ public class VpnProfileService
             // clear cache
             _cashInfo = null;
         }
+
+        Task.Run(() => Changed?.Invoke(this, EventArgs.Empty));
     }
 
     public void Reload()

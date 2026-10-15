@@ -104,6 +104,7 @@ vhclient status
 | `vhclient disconnect` | Drops the tunnel. The service keeps running. |
 | `vhclient status [--json] [--watch]` | What the app is doing. |
 | `vhclient locations [--profile P] [--json]` | The server locations a profile offers. |
+| `vhclient always-on [on\|off]` | Connects when the service starts, before anyone signs in, and again after a failure to reach a server, waiting longer each time; a refused key, a used-up quota or a disconnect stops it until the next connect. Bare, it says which; `status` says what it is doing. |
 | `vhclient profile list [--json]` *(CLIENT only)* | Profiles on this device; `*` marks the one connect uses. |
 | `vhclient profile add <key-or-file>` *(CLIENT only)* | Adds a profile from an access key. |
 | `vhclient profile remove <profile>` *(CLIENT only)* | Removes one. |

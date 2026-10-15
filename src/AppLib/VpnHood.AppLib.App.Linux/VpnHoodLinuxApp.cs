@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Client.Devices.Linux;
+﻿using VpnHood.AppLib.App.Utils;
+using VpnHood.Core.Client.Devices.Linux;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
@@ -45,16 +46,19 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 
         var appOptions = initParams.AppOptionsFactory(context);
 
+        // a server may have no window or command asking for the state, and always on must still see a
+        // session end
+        appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
+
         // the service manager stops the daemon with a signal, and the tunnel must end with it
         appOptions.DisconnectOnDispose = true;
-        var app = new VpnHoodLinuxApp(appOptions);
 
-        // after the lock, so a tun of this app id is never one another of its instances is using; the
-        // adapter's name as LinuxVpnService gives it
+        // after the lock, so a tun of this app id is never one another of its instances is using, and before
+        // the app, whose always on connects as it starts; the adapter's name as LinuxVpnService gives it
         LinuxTunVpnAdapter.RemoveLeftovers(initParams.AppId,
-            LinuxTunVpnAdapter.GetValidAdapterName(VpnHoodApp.Instance.Config.AdapterName));
+            LinuxTunVpnAdapter.GetValidAdapterName(AppUtils.GetAdapterName(appOptions)));
 
-        return app;
+        return new VpnHoodLinuxApp(appOptions);
     }
 
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.

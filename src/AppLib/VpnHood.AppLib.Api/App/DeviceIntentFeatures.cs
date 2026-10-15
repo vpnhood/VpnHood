@@ -17,7 +17,6 @@ public class DeviceIntentFeatures
     public required bool IsRequestNotificationSupported { get; init; }
     public required bool IsPrivateDnsSettingsSupported { get; init; }
     public required bool IsKillSwitchSettingsSupported { get; init; }
-    public required bool IsAlwaysOnSettingsSupported { get; init; }
     public required bool IsSettingsSupported { get; init; }
     public required bool IsAppSettingsSupported { get; init; }
     public required bool IsAppNotificationSettingsSupported { get; init; }

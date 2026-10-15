@@ -23,6 +23,7 @@ using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.AppLib.App.Services;
 using VpnHood.AppLib.App.Services.Accounts;
 using VpnHood.AppLib.App.Services.Ads;
+using VpnHood.AppLib.App.Services.AlwaysOn;
 using VpnHood.AppLib.App.Services.Proxies;
 using VpnHood.AppLib.App.Services.Trackers;
 using VpnHood.AppLib.App.Services.Updaters;
@@ -85,6 +86,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _quickLaunchRecommended;
     private readonly AppWebHostManager _webHostManager;
     private readonly AppErrorReporter _errorReporter;
+    private readonly AppAlwaysOnService _alwaysOnService;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     internal IIpRangeLocationProvider? IpRangeLocationProvider => _ipRangeLocationProvider;
     public string TempFolderPath => Path.Combine(NoBackupStorageFolderPath, FolderNameTemp);
@@ -157,7 +159,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ConnectTimeout = options.ConnectTimeout,
             LogServiceOptions = options.LogServiceOptions,
             Transport = options.Transport,
-            AdapterName = options.AdapterName ?? AppUtils.GetAdapterName(options.PackageTitle, options.IsDebugMode)
+            AdapterName = AppUtils.GetAdapterName(options)
         };
 
         _ipRangeLocationProvider = options.IpLocationZipAsset is { } ipLocationZipAsset
@@ -223,7 +225,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AuthProviderIds = options.AccountProvider?.AuthenticationProvider.ProviderIds ?? [],
             IsTcpProxySupported = device.IsTcpProxySupported,
             IsQuicSupported = device.IsQuicSupported,
-            IsAlwaysOnSupported = device.IsAlwaysOnSupported,
+            AlwaysOnSupport = GetAlwaysOnSupport(device, deviceUiProvider),
             IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
             IsSplitCountrySupported = options.IpLocationZipAsset != null,
             IsUserReviewSupported = options.UserReviewProvider != null,
@@ -249,6 +251,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         };
 
         VpnProfileService = new VpnProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles), Features);
+        _alwaysOnService = new AppAlwaysOnService(this, options.AlwaysOnOptions, _appPersistState);
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
         // add a default test public server if not added yet
@@ -345,6 +348,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task OnStartup()
     {
+        // before the rest, none of which it needs, so a failure there cannot keep the VPN down
+        _alwaysOnService.Start();
+
 #pragma warning disable CS0618 // Type or member is obsolete
         MigrateLegacyTempFolder();
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -423,6 +429,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // the developer's open door, opened or shut from the running app
             _webHostManager.ApplySettings();
+
+            // the always-on switch, and the profile, which may be another plan
+            _alwaysOnService.ApplySettings();
 
             // apply the last known client country (reported by the server); fall back to the device region
             if (UserSettings.CountryCode != null)
@@ -594,6 +603,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             PromotionExists = PromotionExists(),
             TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo, this),
             SplitTunnelingState = StateHelper.GetSplitTunnelingState(UserSettings, connectionInfo?.SessionInfo, this),
+            AlwaysOnState = _alwaysOnService.State,
             SystemBarsInfo = uiContext != null
                 ? Services.DeviceUiProvider.GetBarsInfo(uiContext).ToAppDto()
                 : VpnHood.AppLib.Api.Device.SystemBarsInfo.Default
@@ -687,8 +697,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // check changed state
         var connectionState = ConnectionState;
-        if (connectionState == _lastConnectionState) return;
+        var lastConnectionState = _lastConnectionState;
+        if (connectionState == lastConnectionState) return;
         _lastConnectionState = connectionState;
+
+        // a session ended: always on sorts why, where nobody has - a connect's failure is its connect's, and a
+        // person's disconnect stops it already
+        if (connectionState == AppConnectionState.None && lastConnectionState is not null)
+            _alwaysOnService.SessionEnded(LastError);
+
         Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));
     }
 
@@ -732,6 +749,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return File.Exists(filePath) && Guid.TryParse(File.ReadAllText(filePath).Trim(), out var installId)
             ? installId.ToString()
             : null;
+    }
+
+    // the app's own where the device says it keeps always on itself (a desktop's service), else the
+    // device's setting where the app can open it (Android's)
+    private static AlwaysOnSupport GetAlwaysOnSupport(IDevice device, IDeviceUiProvider deviceUiProvider)
+    {
+        if (device.IsAlwaysOnSupported)
+            return AlwaysOnSupport.App;
+
+        return deviceUiProvider.IsAlwaysOnSettingsSupported ? AlwaysOnSupport.Device : AlwaysOnSupport.None;
     }
 
     // The id was ClientId in settings.json, which a backup carries; an update keeps it. The file is
@@ -798,12 +825,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew(); // a failed connect's report tells how long it ran
+        connectOptions ??= new ConnectOptions();
+        var alwaysOnConnectNumber = _alwaysOnService.BeginConnect(connectOptions.IsAlwaysOn);
         try {
-            connectOptions ??= new ConnectOptions();
             VhLogger.Instance.LogInformation(
-                "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}",
+                "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}, AlwaysOn: {AlwaysOn}",
                 connectOptions.VpnProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
-                connectOptions.Diagnose);
+                connectOptions.Diagnose, connectOptions.IsAlwaysOn);
 
             // protect double call
             if (!IsIdle) {
@@ -819,11 +847,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClearLastError();
             _appPersistState.IsReconnectRequired = false; // this connect applies every pending change
             await ConnectInternal1(uiContext, connectOptions, linkedCts.Token);
+            _alwaysOnService.EndConnect(alwaysOnConnectNumber, exception: null);
         }
         catch (Exception ex) {
             _errorReporter.ReportConnectError(ex, stopwatch.Elapsed);
             _appPersistState.LastError = ex.ToApiError();
             await TryDisconnect(); // await, to prevent VpnService_StateChanged clear the LastError
+            _alwaysOnService.EndConnect(alwaysOnConnectNumber, ex);
             throw;
         }
         finally {
@@ -896,6 +926,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     accessCode: vpnProfile.AccessCode,
                     allowUpdateToken: true,
                     allowAccessCodeRepair: true,
+                    isAlwaysOn: connectOptions.IsAlwaysOn,
                     cancellationToken: linkedCts.Token)
                 .Vhc();
         }
@@ -922,7 +953,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task ConnectInternal2(IUiContext? uiContext, Token token, string? serverLocation,
         Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
-        CancellationToken cancellationToken)
+        bool isAlwaysOn, CancellationToken cancellationToken)
     {
         var profileInfo = CurrentVpnProfileInfo ?? throw new NotExistsException("VpnProfile is not set.");
 
@@ -1000,6 +1031,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionName = profileInfo.VpnProfileName,
                 CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
+                IsAlwaysOn = isAlwaysOn,
                 UserReview = Settings.UserReview
             };
 
@@ -1065,6 +1097,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                         accessCode: repairedProfile.AccessCode,
                         allowUpdateToken: false,
                         allowAccessCodeRepair: false,
+                        isAlwaysOn: isAlwaysOn,
                         cancellationToken: cancellationToken)
                     .Vhc();
                 return;
@@ -1085,6 +1118,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                         accessCode: accessCode,
                         allowUpdateToken: false,
                         allowAccessCodeRepair: allowAccessCodeRepair,
+                        isAlwaysOn: isAlwaysOn,
                         cancellationToken: cancellationToken)
                     .Vhc();
                 return;
@@ -1354,18 +1388,26 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
+    // the app's own disconnect: a failed connect's, a failed ad's, a new connect's, a dispose's
     public async Task TryDisconnect()
     {
         try {
-            await Disconnect().Vhc();
+            await DisconnectCore().Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not disconnect gracefully.");
         }
     }
 
+    // A person's disconnect, which also stops always on until a person connects or the service restarts.
+    public Task Disconnect()
+    {
+        _alwaysOnService.PersonDisconnecting();
+        return DisconnectCore();
+    }
+
     private readonly AsyncLock _disconnectLock = new();
-    public async Task Disconnect()
+    private async Task DisconnectCore()
     {
         using var scopeLock = await _disconnectLock.LockAsync();
         if (_isDisconnecting)
@@ -1544,6 +1586,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_disposed)
             return;
 
+        // first, so the disconnect is not a session end it tries again after
+        _alwaysOnService.Dispose();
+
         if (Config.DisconnectOnDispose && ConnectionState.CanDisconnect())
             await TryDisconnect().Vhc();
 
@@ -1556,6 +1601,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return;
 
         _disposed = true;
+        _alwaysOnService.Dispose();
         SettingsService.BeforeSave -= SettingsBeforeSave;
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
         Services.SplitCountryService.StateChanged -= LocationService_StateChanged;

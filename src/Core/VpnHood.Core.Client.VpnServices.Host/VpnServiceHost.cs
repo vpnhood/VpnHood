@@ -177,8 +177,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             var clientOptions = serviceOptions.ClientOptions;
             _logService?.Start(clientOptions.LogServiceOptions);
 
-            // check if auto start is allowed
-            if (isAlwaysOn && !clientOptions.AllowAlwaysOn)
+            // check if auto start is allowed: the system's (Android's), or the app's own (a desktop's)
+            if ((isAlwaysOn || clientOptions.IsAlwaysOn) && !clientOptions.AllowAlwaysOn)
                 throw new AlwaysOnNotAllowedException("Auto start is only available for premium accounts.");
 
             VhLogger.Instance.LogInformation("VpnService is connecting... ProcessId: {ProcessId}",

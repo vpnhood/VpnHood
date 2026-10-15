@@ -96,6 +96,11 @@ public class ClientOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool AllowAlwaysOn { get; set; }
 
+    // The connect is always on's, which a desktop's app makes itself; Android's system says so to the
+    // service instead. Either is refused without AllowAlwaysOn.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsAlwaysOn { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public UserReview? UserReview { get; set; }
 

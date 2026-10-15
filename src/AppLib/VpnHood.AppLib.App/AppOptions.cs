@@ -5,6 +5,7 @@ using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.App.Services.Ads;
+using VpnHood.AppLib.App.Services.AlwaysOn;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
@@ -109,6 +110,7 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromMinutes(4).WhenNoDebugger();
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
+    public AppAlwaysOnOptions AlwaysOnOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }
     public string? DeviceId { get; set; }
     public TimeSpan? EventWatcherInterval { get; set; } // set if you don't call State periodically

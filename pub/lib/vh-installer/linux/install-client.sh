@@ -413,12 +413,14 @@ ln -sf "$destinationPath/$launcher" "/usr/local/bin/$launcher";
 # "daemon", not the bare binary: the bare binary now opens a window, and a unit that asks for one
 # on a machine with no display restarts forever without ever saying why. No ExecStop: systemd's
 # SIGTERM stops the daemon, which disconnects the tunnel before it exits. The paths are quoted: the
-# install's folder may hold a space.
+# install's folder may hold a space. network-online rather than network, which says nothing of a
+# working network: always on connects as the daemon starts, and would otherwise wait out a pause first.
 echo "Writing the $assemblyName service...";
 service="
 [Unit]
 Description=$productName
-After=network.target
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=simple

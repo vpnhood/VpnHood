@@ -33,7 +33,7 @@ public class TestDevice(
     public bool IsTv => false;
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
-    public bool IsAlwaysOnSupported => false;
+    public bool IsAlwaysOnSupported { get; init; } // a desktop's, where a test plays one
     public DeviceMemInfo? MemInfo => null;
     public TimeSpan StartServiceDelay { get; set; } = TimeSpan.Zero;
 

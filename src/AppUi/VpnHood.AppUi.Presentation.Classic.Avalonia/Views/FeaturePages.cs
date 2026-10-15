@@ -76,10 +76,11 @@ public static class FeaturePages
     }
 
     // the app's own switch where the app keeps always on itself (a desktop's service); else the steps to
-    // the system's setting (Android)
+    // the device's setting (Android's)
     public static FeaturePageView AlwaysOn(MainView host)
     {
-        if (VhApp.Features.IsAlwaysOnSupported) {
+        var alwaysOnSupport = VhApp.Features.AlwaysOnSupport;
+        if (alwaysOnSupport == AlwaysOnSupport.App) {
             return new FeaturePageView(host, new FeaturePageOptions {
                 Title = S.AlwaysOnColored,
                 Description = S.AlwaysOnDesc,
@@ -100,7 +101,7 @@ public static class FeaturePages
             ButtonText = S.OpenVpnSettings,
             Action = () => VhApp.Api.Intents.OpenAlwaysOnSettings(CancellationToken.None),
             IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn),
-            IsActionAvailable = VhApp.Intents.IsAlwaysOnSettingsSupported
+            IsActionAvailable = alwaysOnSupport == AlwaysOnSupport.Device
         });
     }
 

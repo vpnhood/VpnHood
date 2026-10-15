@@ -3,6 +3,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 
@@ -29,7 +30,7 @@ public partial class PremiumFeaturesCarousel : UserControl
             ("split-ip.webp", s.SplitIpAddresses, s.SplitIpAddressesPremiumDesc, true),
             ("private-dns.webp", s.PrivateAndCustomDns, s.PrivateAndCustomDnsDesc, intents.IsPrivateDnsSettingsSupported),
             ("quick-launch.webp", s.QuickLaunch, s.QuickLaunchDesc, intents.IsQuickLaunchSupported),
-            ("always-on.webp", s.AlwaysOn, s.AlwaysOnPremiumDesc, intents.IsAlwaysOnSettingsSupported),
+            ("always-on.webp", s.AlwaysOn, s.AlwaysOnPremiumDesc, features.AlwaysOnSupport != AlwaysOnSupport.None),
             ("support.webp", s._247Support, s._247SupportDesc, true)
         };
         _slides = slides.Where(x => x.IsSupported).Select(x => (x.Image, x.Title, x.Description)).ToArray();

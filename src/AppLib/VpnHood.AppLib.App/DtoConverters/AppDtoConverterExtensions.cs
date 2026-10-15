@@ -157,7 +157,6 @@ public static class AppDtoConverterExtensions
             IsRequestNotificationSupported = uiProvider?.IsRequestNotificationSupported ?? false,
             IsPrivateDnsSettingsSupported = uiProvider?.IsPrivateDnsSettingsSupported ?? false,
             IsKillSwitchSettingsSupported = uiProvider?.IsKillSwitchSettingsSupported ?? false,
-            IsAlwaysOnSettingsSupported = uiProvider?.IsAlwaysOnSettingsSupported ?? false,
             IsSettingsSupported = uiProvider?.IsSettingsSupported ?? false,
             IsAppSettingsSupported = uiProvider?.IsAppSettingsSupported ?? false,
             IsAppNotificationSettingsSupported = uiProvider?.IsAppNotificationSettingsSupported ?? false

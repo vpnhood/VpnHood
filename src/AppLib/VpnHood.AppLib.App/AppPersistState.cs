@@ -22,6 +22,7 @@ internal class AppPersistState(string filePath)
         public bool HasDiagnoseRequested { get; set; }
         public int SuccessfulConnectionsCount { get; set; }
         public bool IsReconnectRequired { get; set; }
+        public bool IsVpnServiceRevoked { get; set; }
     }
 
     public int SuccessfulConnectionsCount {
@@ -87,6 +88,19 @@ internal class AppPersistState(string filePath)
                 return;
 
             Data.IsReconnectRequired = value;
+            Save();
+        }
+    }
+
+    // Another app took the tunnel (VpnServiceRevokedException). Kept across a restart and a reboot, since
+    // always on would otherwise take the tunnel back at the next start; a person's connect clears it.
+    public bool IsVpnServiceRevoked {
+        get => Data.IsVpnServiceRevoked;
+        set {
+            if (Data.IsVpnServiceRevoked == value)
+                return;
+
+            Data.IsVpnServiceRevoked = value;
             Save();
         }
     }

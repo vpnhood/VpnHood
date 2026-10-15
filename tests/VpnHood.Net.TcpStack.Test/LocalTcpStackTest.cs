@@ -1039,6 +1039,32 @@ public sealed class LocalTcpStackTest
         await client.DisposeAsync();
     }
 
+    /// <summary>The SYN-ACK carries our Window Scale option only in answer to the SYN's own (RFC 7323 2.2): without
+    /// it neither side scales.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public void SynAck_WindowScale_OnlyWhenTheSynCarriedOne()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+
+        // MSS 1000 alone, then MSS 1000, NOP, window scale shift 2
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000,
+            options: [2, 4, 0x03, 0xE8]));
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + 1, ServerIp, ServerPort, syn: true, seq: 1000,
+            options: [2, 4, 0x03, 0xE8, 1, 3, 3, 2]));
+
+        var synAcks = Snapshot(sent, sync).Select(p => p.ExtractTcp()).Where(t => t.Synchronize).ToArray();
+        var noOffer = synAcks.Single(t => t.DestinationPort == ClientPort).Options.ToArray();
+        var offer = synAcks.Single(t => t.DestinationPort == ClientPort + 1).Options.ToArray();
+        Assert.HasCount(4, noOffer, "our MSS alone");
+        Assert.AreEqual((byte)2, noOffer[0], "the MSS option");
+        CollectionAssert.AreEqual(new byte[] { 1, 3, 3, 0 }, offer[4..], "a NOP and our shift, 0, after the MSS");
+    }
+
     /// <summary>A SYN on an established tuple is not a new connection: it draws a challenge ACK (RFC 5961), and the
     /// connection stays.</summary>
     [TestMethod]

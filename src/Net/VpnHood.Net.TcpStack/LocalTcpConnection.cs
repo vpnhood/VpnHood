@@ -20,7 +20,7 @@ internal sealed class LocalTcpConnection(
     uint isnRemote,
     ushort? peerMss,
     LocalTcpListener listener,
-    byte peerWsShift,
+    byte? peerWsShift,
     LocalTcpStackOptions options,
     PipeOptions pipeOptions,
     TcpStackDiagnostics diagnostics)
@@ -56,7 +56,7 @@ internal sealed class LocalTcpConnection(
     private bool _appToNetCompleted;
     private uint _sndNxt = isnLocal; // SYN sequence; bumped to ISN+1 after SYN-ACK is sent.
     private uint _sndUna = isnLocal; // Oldest unacknowledged byte.
-    private readonly byte _peerWsShift = peerWsShift > 14 ? (byte)14 : peerWsShift; // Peer's window scale shift (RFC 1323).
+    private readonly byte _peerWsShift = Math.Min(peerWsShift ?? 0, (byte)14); // Peer's window scale shift (RFC 7323), 0 without the option.
     private uint _peerWindow = 0xFFFF; // Peer's last advertised receive window (scaled). Initial guess until the first ACK.
     private uint _rcvNxt = isnRemote + 1; // We have already "consumed" the peer's SYN.
     private int _unackedSegments; // Count of in-order full-size data segments not yet acknowledged.
@@ -85,6 +85,8 @@ internal sealed class LocalTcpConnection(
     public IPEndPointPairValue IpEndPointPair => ipEndPointPair;
     public uint IsnLocal { get; } = isnLocal;
     public ushort Mss { get; } = ClampMss(peerMss, options);
+    /// <summary>The SYN carried a Window Scale option, which the SYN-ACK answers with ours (RFC 7323 2.2).</summary>
+    public bool PeerOfferedWindowScale { get; } = peerWsShift.HasValue;
     public TcpConnectionState State { get; private set; } = TcpConnectionState.SynReceived;
 
     /// <summary>The unread bytes in the pipe, for the stack-wide diagnostic total.</summary>

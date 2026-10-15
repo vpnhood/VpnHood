@@ -302,15 +302,16 @@ public sealed class LocalTcpStack : ITcpStack
         // Without this option, the peer will send us 536-byte packets which dramatically
         // increases packet count (≈2.7x) and slows down the receiving path.
         // Format: kind=2, len=4, value=MSS (16-bit big-endian).
-        // Window Scale option (kind=3, len=3, shift=0): enables WS negotiation so the peer
-        // can advertise windows larger than 64 KB in its ACKs. Our own shift stays 0 (we never
+        // Window Scale option (kind=3, len=3, shift=0): completes the WS negotiation so the peer
+        // can advertise windows larger than 64 KB in its ACKs; only in answer to the SYN's own (RFC 7323
+        // 2.2), as without it neither side scales. Our own shift stays 0 (we never
         // advertise a window > 65535 — ReceiveWindowSize is validated to fit the 16-bit field).
         var advertisedMss = _options.MaxMss;
-        // MSS(4) + NOP(1) + WS(3) = 8 bytes, 4-byte aligned.
+        // MSS(4) + NOP(1) + WS(3) = 8 bytes, or the MSS alone; both 4-byte aligned.
         ReadOnlySpan<byte> options = [2, 4, (byte)(advertisedMss >> 8), (byte)(advertisedMss & 0xFF), 1, 3, 3, 0];
         var packet = PacketBuilder.BuildTcp(
             conn.IpEndPointPair.Destination, conn.IpEndPointPair.Source,
-            options: options,
+            options: conn.PeerOfferedWindowScale ? options : options[..4],
             payload: ReadOnlySpan<byte>.Empty);
 
         var tcp = packet.ExtractTcp();
@@ -621,25 +622,25 @@ public sealed class LocalTcpStack : ITcpStack
 
     /// <summary>
     /// Parses the TCP "Window Scale" option (kind=3, len=3) from the SYN options.
-    /// Returns 0 when the option is absent or malformed (no scaling).
+    /// Returns null when the option is absent or malformed: neither side scales, and the SYN-ACK carries none.
     /// </summary>
-    private static byte ParseWindowScaleOption(ReadOnlySpan<byte> options)
+    private static byte? ParseWindowScaleOption(ReadOnlySpan<byte> options)
     {
         var i = 0;
         while (i < options.Length) {
             var kind = options[i];
             switch (kind) {
-                case 0: return 0; // End of option list
+                case 0: return null; // End of option list
                 case 1: i++; continue; // NOP
             }
-            if (i + 1 >= options.Length) return 0;
+            if (i + 1 >= options.Length) return null;
             var len = options[i + 1];
-            if (len < 2 || i + len > options.Length) return 0;
+            if (len < 2 || i + len > options.Length) return null;
             if (kind == 3 && len == 3) // Window Scale
                 return options[i + 2];
             i += len;
         }
-        return 0;
+        return null;
     }
 
     public void Dispose()

@@ -1578,6 +1578,81 @@ public sealed class LocalTcpStackTest
         await client.DisposeAsync();
     }
 
+    /// <summary>A SYN+ACK on an established tuple is a SYN there (RFC 9293 3.10.7.4): a challenge ACK, and the segment
+    /// is dropped with its data, where it passed as an ordinary data segment.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task SynAckOnEstablishedTuple_DrawsAChallengeAck_TakesNoData()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+        DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
+        var serverSeq = SynAckSequence(sent, sync, ClientPort);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        lock (sync) sent.Clear();
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            syn: true, ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: [0x42, 0x41, 0x44]));
+        Assert.AreEqual(0L, tcpStack.PipeBufferedBytes, "its data is dropped");
+        var reply = Snapshot(sent, sync).Single().ExtractTcp();
+        Assert.IsTrue(reply is { Acknowledgment: true, Synchronize: false, Reset: false, Payload.Length: 0 }, "a challenge ACK");
+        Assert.AreEqual(1001u, reply.AcknowledgmentNumber, "acknowledging nothing new");
+        Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount, "the connection stays");
+        await client.DisposeAsync();
+    }
+
+    /// <summary>A SYN+ACK with the right ack does not complete a handshake as the third ACK does: a challenge ACK, and
+    /// the connection waits in SynReceived for the real ACK.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task SynAckInSynReceived_DoesNotCompleteTheHandshake()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+        var serverSeq = SynAckSequence(sent, sync, ClientPort);
+        lock (sync) sent.Clear();
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            syn: true, ack: true, seq: 1001, ackNum: serverSeq + 1));
+        await Task.Delay(100);
+        Assert.IsFalse(acceptTask.IsCompleted, "no connection is accepted");
+        Assert.IsTrue(Snapshot(sent, sync).Single().ExtractTcp() is { Acknowledgment: true, Synchronize: false }, "a challenge ACK");
+
+        // the real third ACK still completes it
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        await client.DisposeAsync();
+    }
+
+    /// <summary>A SYN with RST opens no connection and draws no reply: a RST to a listener is ignored (RFC 9293
+    /// 3.10.7.2), where the SYN opened one.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public void SynWithRst_OpensNoConnection()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, rst: true, seq: 1000));
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "no connection");
+        lock (sync) Assert.IsEmpty(sent, "and no reply");
+    }
+
     private static async Task WaitForCondition(Func<bool> condition, CancellationToken ct, int timeoutMs = 1000)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

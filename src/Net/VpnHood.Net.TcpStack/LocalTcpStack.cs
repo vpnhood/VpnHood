@@ -182,15 +182,16 @@ public sealed class LocalTcpStack : ITcpStack
         // and the RST below build their endpoints.
         var key = ConnectionKey.From(ipPacket, tcpPacket);
 
-        // Handle SYN packets (new connection requests)
-        if (tcpPacket is { Synchronize: true, Acknowledgment: false }) {
-            HandleSynPacket(key, GetEndPointPair(ipPacket, tcpPacket), tcpPacket);
+        // A tracked tuple's segment, a SYN too: its connection answers it
+        if (_connections.TryGetValue(key, out var existing)) {
+            HandleExistingConnection(existing, tcpPacket);
             return;
         }
 
-        // Handle packets for existing connections
-        if (_connections.TryGetValue(key, out var existing)) {
-            HandleExistingConnection(existing, tcpPacket);
+        // A SYN alone opens a connection. With ACK it answers an open we never made, and with RST it is dropped (RFC 9293
+        // 3.10.7.2): both take the unknown connection's path below.
+        if (tcpPacket is { Synchronize: true, Acknowledgment: false, Reset: false }) {
+            HandleSynPacket(key, GetEndPointPair(ipPacket, tcpPacket), tcpPacket);
             return;
         }
 
@@ -211,20 +212,6 @@ public sealed class LocalTcpStack : ITcpStack
         if (listener == null) {
             // No listener - send RST
             SendRst(ipEndPointPair.Destination, ipEndPointPair.Source, tcpPacket);
-            return;
-        }
-
-        // SYN for a 4-tuple we already track.
-        if (_connections.TryGetValue(key, out var existingConn)) {
-            if (existingConn.State == TcpConnectionState.SynReceived)
-                // SYN retransmit before our SYN-ACK was acknowledged: re-send SYN-ACK.
-                SendSynAck(existingConn);
-            else
-                // SYN on an already-established/closing connection (RFC 9293/5961): the peer most likely
-                // abandoned the old connection and reused the 4-tuple. Send a challenge ACK; if the old
-                // connection is truly dead on the peer's side it replies with RST, which closes our stale
-                // entry and lets the peer's SYN-retransmit open a fresh one.
-                SendAckOnly(existingConn);
             return;
         }
 
@@ -335,16 +322,26 @@ public sealed class LocalTcpStack : ITcpStack
 
     private void HandleExistingConnection(LocalTcpConnection conn, TcpPacket tcpPacket)
     {
-        var flags = (TcpFlags)0;
-        if (tcpPacket.Finish) flags |= TcpFlags.Fin;
-        if (tcpPacket.Reset) flags |= TcpFlags.Rst;
-        if (tcpPacket.Acknowledgment) flags |= TcpFlags.Ack;
-        if (tcpPacket.Push) flags |= TcpFlags.Psh;
+        // One read of the flags byte: TcpFlags are its wire bits, and URG, ECE and CWR are not the stack's.
+        var flags = (TcpFlags)tcpPacket.Flags & (TcpFlags.Fin | TcpFlags.Syn | TcpFlags.Rst | TcpFlags.Psh | TcpFlags.Ack);
+
+        // A SYN on a tracked tuple, checked after the RST (RFC 9293 3.10.7.4), so a SYN with RST is the RST's. A bare SYN
+        // in SynReceived is the peer's retransmission before our SYN-ACK arrived: the SYN-ACK again. Any other, on an
+        // established or closing connection or with ACK (an answer to an open we never made), draws a challenge ACK
+        // (RFC 5961 4) and is dropped with its data: a peer that abandoned the old connection answers it with a RST,
+        // which closes our stale entry and lets its SYN retransmission open a fresh one.
+        if (flags.HasFlag(TcpFlags.Syn) && !flags.HasFlag(TcpFlags.Rst)) {
+            if (conn.State == TcpConnectionState.SynReceived && !flags.HasFlag(TcpFlags.Ack))
+                SendSynAck(conn);
+            else
+                SendAckOnly(conn);
+            return;
+        }
 
         // SynReceived: the ACK must acknowledge our SYN-ACK (see IsValidHandshakeAck); the data path
         // below takes the segment from there. The right ack beyond the window gets a plain ACK (RFC 9293
         // 3.10.7.4); a wrong ack, a stale or forged segment, keeps the old tolerance: a SYN-ACK.
-        if (conn.State == TcpConnectionState.SynReceived && !tcpPacket.Reset) {
+        if (conn.State == TcpConnectionState.SynReceived && !flags.HasFlag(TcpFlags.Rst)) {
             if (!conn.IsValidHandshakeAck(tcpPacket.SequenceNumber, tcpPacket.AcknowledgmentNumber, flags)) {
                 if (conn.AcknowledgesOurSyn(tcpPacket.AcknowledgmentNumber))
                     SendAckOnly(conn);

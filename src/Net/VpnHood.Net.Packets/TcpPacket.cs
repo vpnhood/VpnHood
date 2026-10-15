@@ -23,9 +23,6 @@ public class TcpPacket : IChecksumPayloadPacket
 
     public TcpPacket(Memory<byte> buffer, int optionsLength)
     {
-        if (buffer.Length < 20)
-            throw new ArgumentException("Buffer too small for TCP header.", nameof(buffer));
-
         if (optionsLength is < 0 or > 40)
             throw new ArgumentOutOfRangeException(nameof(optionsLength),
                 "Options length must be between 0 and 40 bytes.");
@@ -34,11 +31,15 @@ public class TcpPacket : IChecksumPayloadPacket
             throw new ArgumentOutOfRangeException(nameof(optionsLength),
                 "Options length must be a multiple of 4 bytes.");
 
+        var headerLength = 20 + optionsLength;
+        if (buffer.Length < headerLength)
+            throw new ArgumentException("Buffer too small for TCP header and its options.", nameof(buffer));
+
         // the header only: the IP packet it is built in was cleared whole
-        buffer.Span[..(20 + optionsLength)].Clear();
+        buffer.Span[..headerLength].Clear();
 
         // Set Data Offset (header length in 32-bit words)
-        var dataOffset = (20 + optionsLength) / 4;
+        var dataOffset = headerLength / 4;
         buffer.Span[12] = (byte)(dataOffset << 4);
 
         _buffer = buffer;

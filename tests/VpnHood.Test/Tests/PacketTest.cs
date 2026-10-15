@@ -305,6 +305,15 @@ public class PacketTest : TestBase
     }
 
     [TestMethod]
+    public void Tcp_build_names_a_buffer_short_of_its_options()
+    {
+        using var ipPacket = PacketBuilder.BuildIp(GetRandomIp(IpVersion.IPv4), GetRandomIp(IpVersion.IPv4),
+            IpProtocol.Tcp, payloadLength: 20);
+        var ex = Assert.ThrowsExactly<ArgumentException>(() => ipPacket.BuildTcp(optionsLength: 4));
+        Assert.AreEqual("buffer", ex.ParamName);
+    }
+
+    [TestMethod]
     public void IcmpV4()
     {
         var ipPacket = PacketBuilder.BuildIcmpV4EchoRequest(

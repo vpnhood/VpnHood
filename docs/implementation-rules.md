@@ -32,14 +32,15 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
 11. No object made and dropped in one statement, kept alive only by the handlers it subscribed
     (`new X(...).Apply()`): a static method whose handlers capture what they need, as
     `AvaloniaWindowFit.Apply` does.
+12. `Dispose` and `DisposeAsync` are a class's last members; only its nested types follow them.
 
 ## Design
 
-12. The access-manager protocol needs to be compatible one way only: the access manager is updated
+13. The access-manager protocol needs to be compatible one way only: the access manager is updated
     first, so a new server may count on it, but the access manager keeps supporting old servers.
-13. The access manager is under heavy load: rather a cost on the server than more requests to it.
+14. The access manager is under heavy load: rather a cost on the server than more requests to it.
     After an outage, the waiting requests are merged, never queued up to bombard it.
-14. The service opens no UI and no links; the UI does, as on iOS.
-15. A Debug build's name must stand out.
-16. An updater runs apart from what it updates, as a standalone script: an app that fails to run
+15. The service opens no UI and no links; the UI does, as on iOS.
+16. A Debug build's name must stand out.
+17. An updater runs apart from what it updates, as a standalone script: an app that fails to run
     must still get the release that fixes it.

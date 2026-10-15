@@ -112,6 +112,8 @@ public class ProxyChannel : IProxyChannel
                 cancellationToken, cancellationToken); // host => tunnel
             VhTypeTracker.Track(tunnelWriteTask, "ProxyChannel.WritePumpTask");
 
+            // Either pump's end ends the channel, both streams with it: a host that half-closes (shuts its send side
+            // and waits for the reply) loses the rest of the reply.
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).Vhc();
             _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
             _isClosing = true; // before the host stream goes: the alive check must not take this for an error

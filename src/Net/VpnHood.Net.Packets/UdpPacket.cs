@@ -14,7 +14,7 @@ public class UdpPacket : IChecksumPayloadPacket
 
         // write udpLength
         if (building) {
-            buffer.Span.Clear();
+            buffer.Span[..8].Clear(); // the header only: the IP packet it is built in was cleared whole
             BinaryPrimitives.WriteUInt16BigEndian(buffer.Span.Slice(4, 2), (ushort)buffer.Length);
         }
         else {

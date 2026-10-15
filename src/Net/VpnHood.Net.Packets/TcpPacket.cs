@@ -34,7 +34,8 @@ public class TcpPacket : IChecksumPayloadPacket
             throw new ArgumentOutOfRangeException(nameof(optionsLength),
                 "Options length must be a multiple of 4 bytes.");
 
-        buffer.Span.Clear();
+        // the header only: the IP packet it is built in was cleared whole
+        buffer.Span[..(20 + optionsLength)].Clear();
 
         // Set Data Offset (header length in 32-bit words)
         var dataOffset = (20 + optionsLength) / 4;

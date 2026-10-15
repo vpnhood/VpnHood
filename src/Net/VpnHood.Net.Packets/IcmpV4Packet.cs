@@ -17,7 +17,7 @@ public class IcmpV4Packet : IChecksumPayloadPacket
             throw new ArgumentException("Buffer too large for ICMPv4 packet.");
 
         if (building)
-            buffer.Span.Clear();
+            buffer.Span[..8].Clear(); // the header only: the IP packet it is built in was cleared whole
 
         _buffer = buffer;
     }

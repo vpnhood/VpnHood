@@ -284,7 +284,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     {
         // Get the primary adapter name
         VhLogger.Instance.LogDebug("Getting the primary adapter name...");
-        _primaryAdapterName = await GetPrimaryAdapterName(UseNat, cancellationToken);
+        _primaryAdapterName = await GetPrimaryAdapterName(UseNat, cancellationToken).Vhc();
         VhLogger.Instance.LogDebug("Primary adapter name is {PrimaryAdapterName}", _primaryAdapterName);
 
         // the way clear: this adapter's own previous run, then whatever else has the name
@@ -624,8 +624,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             // --- Try systemd-resolved ---
             await SetDnsServersByResolvectl(dnsServers, cancellationToken);
         }
-        // a cancelled start is no resolvectl failure: no fallback, which runs uncancelled
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+        // a cancelled start, whatever ended resolvectl: no fallback, which runs uncancelled
+        catch (Exception) when (cancellationToken.IsCancellationRequested) {
             throw;
         }
         catch (Exception ex) {

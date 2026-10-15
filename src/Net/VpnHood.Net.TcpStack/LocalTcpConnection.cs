@@ -795,6 +795,7 @@ internal sealed class LocalTcpConnection(
         }
 
         if (abortHandshake) {
+            diagnostics.OnHandshakeGivenUp(ipEndPointPair);
             Abort();
             return;
         }

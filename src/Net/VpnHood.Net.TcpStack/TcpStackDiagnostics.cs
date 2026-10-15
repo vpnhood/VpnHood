@@ -148,6 +148,21 @@ public sealed class TcpStackDiagnostics
             footprintMb.ToString("F1"), endPointPair);
     }
 
+    // ---- handshakes given up ---------------------------------------------------------------------
+    private long _lastHandshakeLogTick;
+
+    /// <summary>
+    /// Records a handshake given up: no ACK came for our SYN-ACKs, which a kernel answers at once, so the path to it is
+    /// broken or the SYN was not a kernel's. Throttled to ~1/s, as a SYN flood gives many up together.
+    /// </summary>
+    internal void OnHandshakeGivenUp(IPEndPointPairValue endPointPair)
+    {
+        if (!ShouldLog(ref _lastHandshakeLogTick, 1000))
+            return;
+        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStack,
+            "[TcpStack] handshake given up: no ACK of our SYN-ACKs from {EndPointPair}", endPointPair);
+    }
+
     // ---- failures ------------------------------------------------------------------------------
     private long _lastFailureLogTick;
     private int _suppressedFailures;

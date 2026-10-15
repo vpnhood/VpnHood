@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.TcpStack.Abstractions;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using static VpnHood.Net.TcpStack.Test.TcpTestHarness;
 
@@ -777,6 +778,38 @@ public sealed class LocalTcpStackTest
         Assert.IsNotNull(reply, "Stack should reply to conn C's SYN.");
         Assert.IsTrue(reply.Reset, "Conn C must be RST when no connection is idle enough to evict.");
         Assert.IsFalse(reply.Synchronize, "Conn C must not be admitted.");
+    }
+
+    /// <summary>A handshake given up logs one Debug line naming the peer, so a broken path to the kernel shows.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    [DoNotParallelize] // raises the process-wide log level
+    public async Task HandshakeGivenUp_LogsOneDebugLine()
+    {
+        var log = LogCapture.Instance;
+        var minLogLevel = VhLogger.MinLogLevel;
+        VhLogger.MinLogLevel = LogLevel.Debug;
+        try {
+            using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+                RetransmitTimeout = TimeSpan.FromMilliseconds(50),
+                RetransmitMaxTimeout = TimeSpan.FromMilliseconds(100) // SYN-ACKs at 0 and 50 ms, the give-up at 150 ms
+            });
+            tcpStack.OnPacketSend = _ => { };
+            tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+            const int port = 40404;
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, port, ServerIp, ServerPort, syn: true, seq: 1000));
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            await WaitForCondition(() => tcpStack.Diagnostics.ConnectionCount == 0, cts.Token, 2000);
+            Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the handshake is given up");
+            var lines = log.Messages("handshake given up");
+            Assert.HasCount(1, lines);
+            Assert.AreEqual(LogLevel.Debug, lines[0].Level);
+            StringAssert.Contains(lines[0].Message, $"{port}");
+        }
+        finally {
+            VhLogger.MinLogLevel = minLogLevel;
+        }
     }
 
     [TestMethod]

@@ -5,7 +5,8 @@ namespace VpnHood.Net.TcpStack.Test;
 
 /// <summary>
 /// The process log's test sink: a test reads the lines whose exception carries its marker, so it sees what
-/// its stack logged while other tests run beside it. Registered once, on first use.
+/// its stack logged while other tests run beside it, or the lines whose message holds a text. Registered once, on first
+/// use.
 /// </summary>
 internal sealed class LogCapture : ILoggerProvider, ILogger
 {
@@ -23,6 +24,12 @@ internal sealed class LogCapture : ILoggerProvider, ILogger
     {
         lock (_lines)
             return _lines.Where(line => line.Exception?.Message.Contains(marker) == true).ToArray();
+    }
+
+    public IReadOnlyList<(LogLevel Level, string Message, Exception? Exception)> Messages(string text)
+    {
+        lock (_lines)
+            return _lines.Where(line => line.Message.Contains(text)).ToArray();
     }
 
     public ILogger CreateLogger(string categoryName) => this;

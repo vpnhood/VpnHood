@@ -434,7 +434,7 @@ public sealed class LossRecoveryTest
             Assert.IsLessThanOrEqualTo(4, first, "no probe-interval retransmissions beside the RTO");
         }
         await stream.DisposeAsync();
-        try { await writeTask; } catch (IOException) { /* the parked write ends with the stream */ }
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => writeTask, "the dispose ends the parked write");
     }
 
     /// <summary>During one recovery, further duplicate ACKs do not retransmit the same segment again.</summary>
@@ -518,8 +518,8 @@ public sealed class LossRecoveryTest
             Assert.IsTrue(sent.Any(p => p.ExtractTcp() is { Payload.Length: > 0 } t && t.SequenceNumber == serverSeq + 1),
                 "three duplicate ACKs after the window reopened must retransmit from SndUna at once");
 
+        await writeTask; // the reopened window took the rest of the write
         await stream.DisposeAsync();
-        try { await writeTask; } catch (IOException) { /* the parked write ends with the stream */ }
     }
 
     /// <summary>A writer parked on a full ring must fail when the peer resets, without anyone reading or disposing.</summary>
@@ -1001,7 +1001,7 @@ public sealed class LossRecoveryTest
 
         // Dispose (graceful close) while the write is parked, then reopen the window.
         await stream.DisposeAsync();
-        await writeTask; // swallowed by the stream's dispose semantics
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => writeTask, "the dispose interrupted the write");
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1, window: 65535));
         await Task.Delay(200);

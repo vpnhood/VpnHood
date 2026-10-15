@@ -88,9 +88,11 @@ public sealed class LocalTcpStream : AsyncStream
             var token = linkedCts?.Token ?? _cts.Token;
             await _connection.SendAppDataAsync(buffer, token).Vhc();
         }
-        catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+        catch (Exception ex) when ((ex is OperationCanceledException or IOException) && IsDisposed)
         {
-            // Stream disposed
+            // disposed under the write, parked (the cancellation) or active (the closed connection): not every byte went
+            // out, so it fails as a write after the dispose does
+            throw new ObjectDisposedException("The stream was disposed while writing.", ex);
         }
     }
 

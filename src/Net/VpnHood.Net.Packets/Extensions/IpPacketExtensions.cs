@@ -24,6 +24,8 @@ public static class IpPacketExtensions
             return (UdpPacket)ipPacket.PayloadPacket;
         }
 
+        /// <summary>Builds the UDP layer of a built packet, not a parsed one: the packet's build cleared it whole, so
+        /// the layer clears only its header.</summary>
         public UdpPacket BuildUdp()
         {
             if (ipPacket.Protocol != IpProtocol.Udp)
@@ -42,6 +44,8 @@ public static class IpPacketExtensions
             return (TcpPacket)ipPacket.PayloadPacket;
         }
 
+        /// <summary>Builds the TCP layer of a built packet, not a parsed one: the packet's build cleared it whole, so
+        /// the layer clears only its header.</summary>
         public TcpPacket BuildTcp(int optionsLength = 0)
         {
             if (ipPacket.Protocol != IpProtocol.Tcp)
@@ -51,6 +55,8 @@ public static class IpPacketExtensions
             return (TcpPacket)ipPacket.PayloadPacket;
         }
 
+        /// <summary>Builds the ICMPv4 layer of a built packet, not a parsed one: the packet's build cleared it whole, so
+        /// the layer clears only its header.</summary>
         public IcmpV4Packet BuildIcmpV4()
         {
             if (ipPacket.Protocol != IpProtocol.IcmpV4)
@@ -69,6 +75,8 @@ public static class IpPacketExtensions
             return (IcmpV4Packet)ipPacket.PayloadPacket;
         }
 
+        /// <summary>Builds the ICMPv6 layer of a built packet, not a parsed one: the packet's build cleared it whole, so
+        /// the layer clears only its header.</summary>
         public IcmpV6Packet BuildIcmpV6()
         {
             if (ipPacket.Protocol != IpProtocol.IcmpV6)

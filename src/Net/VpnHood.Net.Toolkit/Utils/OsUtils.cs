@@ -83,6 +83,8 @@ public static class OsUtils
     private static async Task<string> ExecuteAsync(ProcessStartInfo startInfo, string commandLine,
         CancellationToken cancellationToken)
     {
+        // a cancel ends the wait for a command, not the command, so none starts after one
+        cancellationToken.ThrowIfCancellationRequested();
         VhLogger.Instance.LogDebug($"Executing: {commandLine}");
         using var process = new Process();
         process.StartInfo = startInfo;

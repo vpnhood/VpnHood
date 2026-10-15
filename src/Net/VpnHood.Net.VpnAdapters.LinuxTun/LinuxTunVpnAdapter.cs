@@ -290,16 +290,17 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // the way clear: this adapter's own previous run, then whatever else has the name
         VhLogger.Instance.LogDebug("Clean previous tun adapter...");
         AdapterRemove();
-        ClearAdapterName();
 
         // Made by this process, not by ip(8), whose tun outlives the process: the kernel removes this one,
         // its routes and its DNS with it, once the process ends, by a crash too, as WinTun does its adapter.
-        // None after a stop that came meanwhile.
-        cancellationToken.ThrowIfCancellationRequested();
-        VhLogger.Instance.LogDebug("Creating tun adapter...");
-        var tunAdapterFd = OpenTunAdapter(AdapterName, false);
-        lock (_ownTunAdapterFdLock)
-            _ownTunAdapterFd = tunAdapterFd;
+        // Until the adapter holds it, nothing keeps the name from the app a revoke hands it to, so the
+        // clearing and the making run under the lock a stop takes the tun under, and none after a stop.
+        lock (_ownTunAdapterFdLock) {
+            cancellationToken.ThrowIfCancellationRequested();
+            ClearAdapterName();
+            VhLogger.Instance.LogDebug("Creating tun adapter...");
+            _ownTunAdapterFd = OpenTunAdapter(AdapterName, false);
+        }
 
         // The alias derived from the app id lets a later start tell this tun from another app's.
         if (_adapterAlias != null)

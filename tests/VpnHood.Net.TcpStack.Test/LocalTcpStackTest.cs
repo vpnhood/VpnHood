@@ -5,6 +5,7 @@ using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.TcpStack.Abstractions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Memory;
 using VpnHood.Net.Toolkit.Net;
 using static VpnHood.Net.TcpStack.Test.TcpTestHarness;
 
@@ -778,6 +779,40 @@ public sealed class LocalTcpStackTest
         Assert.IsNotNull(reply, "Stack should reply to conn C's SYN.");
         Assert.IsTrue(reply.Reset, "Conn C must be RST when no connection is idle enough to evict.");
         Assert.IsFalse(reply.Synchronize, "Conn C must not be admitted.");
+    }
+
+    /// <summary>The memory admission gate: while the footprint is at its limit a SYN draws nothing - no connection, no
+    /// RST - and the peer's retransmitted SYN is served once the footprint has receded.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    [DoNotParallelize] // swaps the process-wide memory reader
+    public async Task AdmissionGate_DropsTheSynSilently_UntilTheFootprintRecedes()
+    {
+        var memory = new TestMemory { FootprintMb = 50 };
+        var originalMemory = VhMemory.Instance;
+        VhMemory.Instance = memory;
+        try {
+            using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions { AdmissionMemoryLimitMb = 42 });
+            var sent = new List<IpPacket>();
+            object sync = new();
+            tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+            var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+            var acceptTask = AcceptConnectionAsync(listener);
+
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+            Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "no connection at the limit");
+            lock (sync)
+                Assert.HasCount(0, sent, "no reply at the limit, not even a RST");
+
+            memory.FootprintMb = 30;
+            DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            var client = await acceptTask.WaitAsync(cts.Token);
+            await client.DisposeAsync();
+        }
+        finally {
+            VhMemory.Instance = originalMemory;
+        }
     }
 
     /// <summary>A handshake given up logs one Debug line naming the peer, so a broken path to the kernel shows.</summary>

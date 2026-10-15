@@ -67,7 +67,7 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
     {
         try {
             // request reward from server
-            using var requestResult = await session.SendRequest<SessionResponse>(
+            var requestResult = await session.SendRequest<SessionResponse>(
                 new RewardedAdRequest {
                     RequestId = UniqueIdFactory.Create(),
                     SessionId = session.Config.SessionId,
@@ -76,6 +76,7 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
                 },
                 cancellationToken).Vhc();
 
+            _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
             SetAdOk();
         }
         catch (Exception ex) {

@@ -62,14 +62,14 @@ public class ReusableStreamConnection : IStreamConnection
         // after this one would find nothing left to do
         try {
             if (_reusePrevented || _reuseCallback == null) {
-                Close();
+                await CloseAsync().Vhc();
                 return;
             }
 
             // ends the logical stream with the peer; it throws when the stream did not end cleanly
             var nextStream = await _stream.CreateReuse().Vhc();
             if (_reusePrevented) {
-                Close(); // prevented while the stream was ending
+                await CloseAsync().Vhc(); // prevented while the stream was ending
                 return;
             }
 
@@ -91,14 +91,15 @@ public class ReusableStreamConnection : IStreamConnection
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Could not release the connection. ConnectionId: {ConnectionId}", ConnectionId);
-            Close();
+            await CloseAsync().Vhc();
         }
     }
 
-    private void Close()
+    // The transport's async close: its sync one may wait for the peer, as a QUIC stream's does. It ends the logical
+    // stream with it; the stream's own close would first end that with the peer
+    private async Task CloseAsync()
     {
-        _stream.Dispose();
-        _transport.Dispose();
+        await _transport.DisposeAsync().Vhc();
         VhTypeTracker.Record("ReusableStreamConnection.disposed");
     }
 

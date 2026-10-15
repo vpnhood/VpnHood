@@ -130,7 +130,8 @@ internal class ClientSessionBuilder(
                 AllowAnonymousTracker = config.AllowAnonymousTracker
             };
 
-            using var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
+            var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
+            _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
             connectorService.AllowChannelReuse = config.AllowStreamReuse;
 
             var helloResponse = requestResult.Response;

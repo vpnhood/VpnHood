@@ -534,7 +534,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             CreatedPacketChannelCount++;
         }
         catch {
-            requestResult.Dispose();
+            _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
             throw;
         }
     }
@@ -598,7 +598,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
             // client is disposed meanwhile
             if (_disposed) {
-                requestResult.Dispose();
+                _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
                 ObjectDisposedException.ThrowIf(_disposed, this);
             }
 
@@ -674,7 +674,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public async Task UpdateStatus(CancellationToken cancellationToken)
     {
         // all request will update the status
-        using var requestResult = await SendRequest<SessionResponse>(
+        var requestResult = await SendRequest<SessionResponse>(
                 new SessionStatusRequest {
                     RequestId = UniqueIdFactory.Create(),
                     SessionId = Config.SessionId,
@@ -682,6 +682,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 },
                 cancellationToken)
             .Vhc();
+
+        _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
     }
 
 
@@ -722,7 +724,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 // don't use SendRequest because it can be disposed
                 var byeTimeout = TransportDefaults.ByeTimeout.WhenNoDebugger();
                 using var byteCts = new CancellationTokenSource(byeTimeout);
-                using var requestResult = await _requestSender.SendRequest<SessionResponse>(
+                var requestResult = await _requestSender.SendRequest<SessionResponse>(
                         new ByeRequest {
                             RequestId = UniqueIdFactory.Create(),
                             SessionId = Config.SessionId,
@@ -731,7 +733,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                         byteCts.Token)
                     .Vhc();
 
-                requestResult.StreamConnection.Dispose();
+                _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
                 VhLogger.Instance.LogInformation("Session has been closed on the server successfully.");
             }
             catch (Exception ex) {

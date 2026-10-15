@@ -236,7 +236,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
         catch (Exception ex) {
             streamConnection.PreventReuse();
-            streamConnection.Dispose();
+            await streamConnection.DisposeAsync().Vhc();
             if (ex is ISelfLog loggable) loggable.Log();
             else
                 VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
@@ -663,13 +663,17 @@ public class ServerHost : IDisposable, IAsyncDisposable
             _quicListenerHost.DisposeAsync().AsTask(), 
             _tcpListenerHost.DisposeAsync().AsTask()).Vhc();
 
-        // dispose connections
+        // dispose connections, their async closes all at once: a sync one may wait for the peer, as a QUIC stream's does
         VhLogger.Instance.LogDebug("Disposing Connections...");
+        IStreamConnection[] connections;
         lock (_connections)
-            foreach (var connection in _connections) {
-                connection.PreventReuse();
-                connection.Dispose();
-            }
+            connections = _connections.ToArray();
+
+        foreach (var connection in connections)
+            connection.PreventReuse();
+
+        await Task.WhenAll(connections.Select(connection =>
+            VhUtils.TryInvokeAsync("Dispose a connection", connection.DisposeAsync))).Vhc();
     }
 }
 

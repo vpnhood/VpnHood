@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
 using VpnHood.Net.Toolkit.Net;
@@ -83,7 +84,7 @@ public sealed class TcpStreamConnection : IStreamConnection
     {
         if (Interlocked.Exchange(ref _disposed, true)) return;
 
-        await Stream.DisposeAsync();
+        await Stream.DisposeAsync().Vhc();
         _tcpClient.Dispose();
         VhTypeTracker.Record($"TcpStreamConnection.{ConnectionName}.disposed");
 

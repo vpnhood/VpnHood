@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -419,6 +420,78 @@ public class TunnelTest : TestBase
         await clientNext.Stream.WriteAsync(new byte[] { 2 }, TestCt);
         await serverNext.Stream.ReadExactlyAsync(buffer, TestCt);
         Assert.AreEqual(2, buffer[0]);
+    }
+
+    // a connection that records which of its closes ran
+    private sealed class CloseRecordingConnection : IStreamConnection
+    {
+        public bool SyncClosed { get; private set; }
+        public TaskCompletionSource AsyncClosed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public string ConnectionId { get; set; } = "test";
+        public string ConnectionName => "test";
+        public bool IsServer => false;
+        public bool Connected => !SyncClosed && !AsyncClosed.Task.IsCompleted;
+        public Stream Stream { get; } = new MemoryStream();
+        public IPEndPoint LocalEndPoint { get; } = new(IPAddress.Loopback, 1);
+        public IPEndPoint RemoteEndPoint { get; } = new(IPAddress.Loopback, 2);
+        public bool RequireHttpResponse { get; set; }
+        public void PreventReuse() { }
+        public void Dispose() => SyncClosed = true;
+
+        public ValueTask DisposeAsync()
+        {
+            AsyncClosed.TrySetResult();
+            return default;
+        }
+    }
+
+    // An owner closes its connection through the async dispose: the sync one may wait for the peer, as a QUIC
+    // stream's does, and a channel is disposed under the tunnel's lock and on its packet path
+    [TestMethod]
+    public async Task Packet_channel_closes_its_connection_through_its_async_dispose()
+    {
+        var connection = new CloseRecordingConnection();
+        var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
+            StreamConnection = connection,
+            ChannelId = "test",
+            RequestTime = DateTime.UtcNow,
+            AutoDisposePackets = true,
+            Blocking = false,
+            Lifespan = null
+        });
+
+        channel.Dispose();
+
+        await connection.AsyncClosed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsFalse(connection.SyncClosed);
+    }
+
+    [TestMethod]
+    public async Task Proxy_channel_closes_its_connections_through_their_async_dispose()
+    {
+        var hostConnection = new CloseRecordingConnection();
+        var tunnelConnection = new CloseRecordingConnection();
+        var channel = new ProxyChannel("test", hostConnection, tunnelConnection, new TransferBufferSize(4096, 4096));
+
+        channel.Dispose();
+
+        await Task.WhenAll(hostConnection.AsyncClosed.Task, tunnelConnection.AsyncClosed.Task)
+            .WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsFalse(hostConnection.SyncClosed);
+        Assert.IsFalse(tunnelConnection.SyncClosed);
+    }
+
+    [TestMethod]
+    public async Task Reusable_connection_closes_its_transport_through_its_async_dispose()
+    {
+        var transport = new CloseRecordingConnection();
+        var connection = new ReusableStreamConnection(transport,
+            new WebSocketStream(transport.Stream, "test", useBuffer: false, isServer: false), reuseCallback: null);
+
+        connection.Dispose();
+
+        await transport.AsyncClosed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsFalse(transport.SyncClosed);
     }
 
     [TestMethod]

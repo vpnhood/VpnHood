@@ -274,7 +274,8 @@ internal class ConnectorService : IDisposable
                 return connection;
             }
             catch {
-                rawConnection.Dispose();
+                // not waited for: the gate's slot would be held while a QUIC stream's close waits for the peer
+                _ = VhUtils.TryInvokeAsync("Dispose a failed connection", rawConnection.DisposeAsync);
                 throw;
             }
         }

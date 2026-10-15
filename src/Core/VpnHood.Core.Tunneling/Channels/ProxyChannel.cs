@@ -343,8 +343,10 @@ public class ProxyChannel : IProxyChannel
         _throttleCancellationTokenSource.Dispose();
         _checkAliveJob.Dispose();
         _started = false;
-        _hostStreamConnection.Dispose();
-        _tunnelStreamConnection.Dispose();
+
+        // their async closes, not awaited: a sync one may wait for the peer, as a QUIC stream's does
+        _ = VhUtils.TryInvokeAsync("Dispose the host connection", _hostStreamConnection.DisposeAsync);
+        _ = VhUtils.TryInvokeAsync("Dispose the tunnel connection", _tunnelStreamConnection.DisposeAsync);
         VhTypeTracker.Record("ProxyChannel.disposed");
     }
 }

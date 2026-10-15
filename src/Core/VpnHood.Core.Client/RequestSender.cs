@@ -130,15 +130,13 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
             }
             catch (SessionException) {
                 // let the caller handle the exception; the server ends a connection after its reply
-                reusableConnection.PreventReuse();
-                await reusableConnection.DisposeAsync();
+                CloseConnection(reusableConnection);
                 throw;
             }
             catch (Exception ex) {
                 // dispose the connection and retry with new connection
                 lock (ConnectorService.Stat) ConnectorService.Stat.ReusedConnectionFailedCount++;
-                reusableConnection.PreventReuse();
-                await reusableConnection.DisposeAsync();
+                CloseConnection(reusableConnection);
                 VhLogger.Instance.LogError(GeneralEventId.Stream, ex,
                     "Error in reusing the Connection. Try a new connection. ConnectionId: {ConnectionId}, RequestId: {requestId}",
                     reusableConnection.ConnectionId, requestId);
@@ -174,8 +172,7 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
         }
         catch (SessionException) {
             // let the caller handle the exception; the server ends a connection after its reply
-            connection.PreventReuse();
-            connection.Dispose();
+            CloseConnection(connection);
             throw;
         }
         catch (Exception ex) {
@@ -184,10 +181,17 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
                 connection.ConnectionId, requestId);
 
             // dispose the connection
-            connection.PreventReuse();
-            connection.Dispose();
+            CloseConnection(connection);
             throw;
         }
+    }
+
+    // not waited for: the close may wait for the peer, as a QUIC stream's does, and would hold the request's
+    // failure back
+    private static void CloseConnection(IStreamConnection connection)
+    {
+        connection.PreventReuse();
+        _ = VhUtils.TryInvokeAsync("Dispose a request's connection", connection.DisposeAsync);
     }
 
     private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken)

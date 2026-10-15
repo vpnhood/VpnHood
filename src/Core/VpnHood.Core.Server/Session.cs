@@ -555,7 +555,8 @@ public class Session : IDisposable
         }
         catch {
             tcpClientHost?.Dispose();
-            tcpConnectionHost?.Dispose();
+            if (tcpConnectionHost != null)
+                await tcpConnectionHost.DisposeAsync().Vhc();
             throw;
         }
         finally {

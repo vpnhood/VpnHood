@@ -2,6 +2,7 @@
 using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Connections;
 
 namespace VpnHood.Core.Tunneling.Channels;
@@ -95,7 +96,10 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
     protected override void DisposeManaged()
     {
         Stop();
-        _streamConnection.Dispose();
+
+        // the connection's async close, not awaited: its sync one may wait for the peer, as a QUIC stream's does,
+        // and a channel is disposed under the tunnel's lock and on its packet path
+        _ = VhUtils.TryInvokeAsync("Dispose the channel's connection", _streamConnection.DisposeAsync);
 
         base.DisposeManaged();
     }

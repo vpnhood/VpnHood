@@ -83,6 +83,7 @@ internal sealed class LocalTcpConnection(
     private int _dupAckCount;
     private bool _inRecovery; // a retransmission started loss recovery, which ends when SndUna reaches _recoverySeq
     private uint _recoverySeq; // SndNxt when the loss was detected (RFC 6582's recovery point)
+    private uint _retxHigh; // the end of what this recovery has retransmitted, where a partial ACK resumes
     public ConnectionKey Key => key;
     public IPEndPointPairValue IpEndPointPair => ipEndPointPair;
     public uint IsnLocal { get; } = isnLocal;
@@ -434,7 +435,7 @@ internal sealed class LocalTcpConnection(
     {
         var fin = (flags & TcpFlags.Fin) != 0;
         bool acceptable, challenge, signalWindow;
-        var retransmit = false;
+        var retransmitSegments = 0;
         IpPacket? finRetransmit = null;
         var finExchangeComplete = false;
         var resetUnread = false;
@@ -462,13 +463,13 @@ internal sealed class LocalTcpConnection(
                     RestartRtoLocked(now); // progress restarts the RTO; an emptied flight needs none, the next send arms it
                 // Loss recovery (RFC 6582): a partial ACK, short of the recovery point, names the next lost segment,
                 // retransmitted now instead of after another RTO - the FIN when the data is all acked and it is the lost one.
-                // One segment per partial ACK, as RFC 6582 has it: a peer that delays its ACK of a lone segment (Windows:
-                // 200 ms) paces a lost tail at one segment per delay.
+                // Two segments where RFC 6582 sends one: a peer that delays its ACK of a lone segment (Windows: 200 ms)
+                // acks two at once, so a lost tail is not paced at one segment per delay.
                 if (_inRecovery) {
                     if ((int)(_sndUna - _recoverySeq) >= 0)
                         _inRecovery = false;
                     else if (_retransmitBuffer.Length > 0)
-                        retransmit = true;
+                        retransmitSegments = 2;
                     else if (_finSent && _sndNxt != _sndUna)
                         finRetransmit = BuildFinPacket(_sndNxt - 1, _rcvNxt, _receiveWindow.Advertise());
                 }
@@ -488,10 +489,10 @@ internal sealed class LocalTcpConnection(
                 if (ack == _lastDupAck) _dupAckCount++;
                 else { _lastDupAck = ack; _dupAckCount = 1; }
                 // Three duplicate ACKs start one recovery; more of them during it retransmit nothing - the partial ACKs
-                // above carry the recovery segment by segment. The retransmission restarts the RTO, which must not
-                // resend the segment within an RTO of it (RFC 6298 5).
+                // above carry the recovery. The retransmission restarts the RTO, which must not resend the segment
+                // within an RTO of it (RFC 6298 5).
                 if (_dupAckCount >= 3 && !_inRecovery) {
-                    retransmit = true;
+                    retransmitSegments = 1;
                     EnterRecoveryLocked();
                     RestartRtoLocked(now);
                 }
@@ -515,8 +516,8 @@ internal sealed class LocalTcpConnection(
             diagnostics.TraceAck(ipEndPointPair, ++_ackCount, ack, prevUna, sndNxt, ack - prevUna, windowSize, peerWindow,
                 payloadLength, _windowSignal.CurrentCount, _dupAckCount);
 
-        if (retransmit)
-            FastRetransmit();
+        if (retransmitSegments > 0)
+            FastRetransmit(retransmitSegments);
         if (finRetransmit != null)
             TrySendPacket(finRetransmit);
         if (signalWindow)
@@ -786,7 +787,7 @@ internal sealed class LocalTcpConnection(
                 else if (_sndNxt != _sndUna) {
                     if (_retransmitBuffer.Length > 0) {
                         retxData = true;
-                        // The ACKs of this retransmission carry the rest segment by segment - unless the peer's
+                        // The ACKs of this retransmission carry the rest, up to two segments each - unless the peer's
                         // window is zero: that is flow control, not loss, and a recovery the zero window
                         // interrupted ends here so the duplicate ACKs after it reopens count again.
                         if (_peerWindow != 0) EnterRecoveryLocked();
@@ -813,17 +814,18 @@ internal sealed class LocalTcpConnection(
         if (resendSynAck)
             try { stack.SendSynAck(this); } catch { /* next sweep retries */ }
         if (retxData)
-            FastRetransmit();
+            FastRetransmit(1);
         if (finRetx != null)
             TrySendPacket(finRetx);
     }
 
     // _seqLock must be held. Loss detected (three duplicate ACKs or the RTO): until SndUna passes today's
-    // SndNxt, every partial ACK retransmits the next lost segment and duplicate ACKs trigger nothing more.
+    // SndNxt, every partial ACK retransmits the next lost segments and duplicate ACKs trigger nothing more.
     private void EnterRecoveryLocked()
     {
         _inRecovery = true;
         _recoverySeq = _sndNxt;
+        _retxHigh = _sndUna;
     }
 
     // _seqLock must be held.
@@ -972,7 +974,9 @@ internal sealed class LocalTcpConnection(
         while (_windowSignal.Wait(0)) { }
     }
 
-    private void FastRetransmit()
+    // Retransmits up to the given number of segments from SndUna. In a recovery, only what it has not resent and nothing
+    // sent after the loss: a peer that acks every segment draws no third copy of one.
+    private void FastRetransmit(int segments)
     {
         var stack = _stack;
         if (stack == null || _disposed) return;
@@ -983,18 +987,25 @@ internal sealed class LocalTcpConnection(
         ushort windowForSegment;
         int retxLen;
         lock (_seqLock) {
-            if (_retransmitBuffer.Length == 0) return;
+            var offset = _inRecovery ? Math.Max(0, (int)(_retxHigh - _sndUna)) : 0;
+            var end = _inRecovery ? Math.Min(segments * Mss, (int)(_recoverySeq - _sndUna)) : segments * Mss;
+            payloadCopy = _retransmitBuffer.CopyAt(offset, end - offset);
+            if (payloadCopy.Length == 0) return;
             retxLen = _retransmitBuffer.Length;
-            payloadCopy = _retransmitBuffer.CopyFront(Mss);
-            seqForSegment = _sndUna;
+            seqForSegment = _sndUna + (uint)offset;
+            _retxHigh = seqForSegment + (uint)payloadCopy.Length;
             ackForSegment = _rcvNxt;
             windowForSegment = _receiveWindow.Advertise();
         }
 
         if (diagnostics.VerboseLogging)
             diagnostics.TraceFastRetransmit(ipEndPointPair, Interlocked.Increment(ref _retxCount), seqForSegment, retxLen);
-        var packet = BuildSegment(seqForSegment, ackForSegment, windowForSegment, TcpFlags.Ack | TcpFlags.Psh, payloadCopy);
-        try { stack.SendPacket(packet); } catch { /* a lost packet: the next ACK or the RTO retransmits */ }
+        for (var position = 0; position < payloadCopy.Length; position += Mss) {
+            var payload = payloadCopy.AsSpan(position, Math.Min(Mss, payloadCopy.Length - position));
+            var packet = BuildSegment(seqForSegment + (uint)position, ackForSegment, windowForSegment,
+                TcpFlags.Ack | TcpFlags.Psh, payload);
+            try { stack.SendPacket(packet); } catch { /* a lost packet: the next ACK or the RTO retransmits */ }
+        }
     }
 
     /// <summary>Graceful close: used when the peer already knows the connection is over (its RST, or a

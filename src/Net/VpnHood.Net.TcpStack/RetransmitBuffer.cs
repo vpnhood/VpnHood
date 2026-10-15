@@ -50,15 +50,16 @@ internal sealed class RetransmitBuffer(int capacity)
         }
     }
 
-    /// <summary>Copies the front - the segment at SndUna, up to maxLength bytes - for a retransmission.</summary>
-    public byte[] CopyFront(int maxLength)
+    /// <summary>Copies the segment at SndUna + offset, up to maxLength bytes, for a retransmission.</summary>
+    public byte[] CopyAt(int offset, int maxLength)
     {
-        var length = Math.Min(Length, maxLength);
-        if (length == 0) return [];
+        var length = Math.Min(Length - offset, maxLength);
+        if (length <= 0) return [];
         var buffer = _buffer ?? throw new InvalidOperationException("The retransmit buffer holds bytes but was never allocated.");
         var copy = new byte[length];
-        var firstChunk = Math.Min(length, _capacity - _start);
-        Array.Copy(buffer, _start, copy, 0, firstChunk);
+        var readIndex = (_start + offset) % _capacity;
+        var firstChunk = Math.Min(length, _capacity - readIndex);
+        Array.Copy(buffer, readIndex, copy, 0, firstChunk);
         if (firstChunk < length)
             Array.Copy(buffer, 0, copy, firstChunk, length - firstChunk);
         return copy;

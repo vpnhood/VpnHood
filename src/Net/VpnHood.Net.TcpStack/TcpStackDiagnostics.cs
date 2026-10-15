@@ -245,11 +245,11 @@ public sealed class TcpStackDiagnostics
     }
 
     /// <summary>Traces a fast-retransmit event.</summary>
-    internal void TraceFastRetransmit(IPEndPointPairValue endPointPair, long retxCount, uint sndUna, int retxBufferLen)
+    internal void TraceFastRetransmit(IPEndPointPairValue endPointPair, long retxCount, uint seq, int retxBufferLen)
     {
         if (!VerboseLogging) return;
         VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack,
-            "[RETX#{RetxCount}] {EndPointPair} fast retransmit at sndUna={SndUna} retxLen={RetxBufferLen}",
-            retxCount, endPointPair, sndUna, retxBufferLen);
+            "[RETX#{RetxCount}] {EndPointPair} fast retransmit at seq={Seq} retxLen={RetxBufferLen}",
+            retxCount, endPointPair, seq, retxBufferLen);
     }
 }

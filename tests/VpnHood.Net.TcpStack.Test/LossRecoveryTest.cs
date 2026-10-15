@@ -357,7 +357,7 @@ public sealed class LossRecoveryTest
     /// Burst loss with a parked writer: the peer loses an ENTIRE in-flight window (a batched TUN write
     /// drop at peak rate) while the writer is parked on a full retx ring with more data pending, then -
     /// like a real kernel - acks whatever arrives in order. The RTO retransmits the first segment and each
-    /// partial ACK retransmits the next one at once (RFC 6582), so the write completes promptly and no
+    /// partial ACK retransmits the next ones at once (RFC 6582), so the write completes promptly and no
     /// segment goes out more than twice - not one lost segment per timer tick (the 2026-07-01 speedtest
     /// "collapse to ~1 then slowly recover" incident).
     /// </summary>
@@ -668,35 +668,60 @@ public sealed class LossRecoveryTest
             Assert.IsTrue(sent.Any(p => p.ExtractTcp().Finish), "the FIN is retransmitted on the partial ACK, not after the RTO");
     }
 
-    /// <summary>A partial ACK during recovery retransmits the next lost segment at once, not after another RTO.</summary>
+    /// <summary>A partial ACK during recovery retransmits the next two segments at once, not after another RTO: a peer
+    /// that delays its ACK of a lone segment acks two at once.</summary>
     [TestMethod]
     [Timeout(10000)]
-    public async Task PartialAck_RetransmitsTheNextLostSegmentAtOnce()
+    public async Task PartialAck_RetransmitsTheNextTwoSegmentsAtOnce()
     {
         using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
-            RetransmitTimeout = TimeSpan.FromMilliseconds(300),
+            RetransmitTimeout = TimeSpan.FromSeconds(1), // no RTO between the test's steps
             RetransmitMaxTimeout = TimeSpan.FromSeconds(2)
         });
-        var sent = new List<IpPacket>();
-        object sync = new();
-        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
-        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
-        lock (sync) sent.Clear();
+        var (stream, serverSeq, sentOffsets) = await LoseFiveSegmentsAsync(tcpStack);
 
-        await stream.Stream.WriteAsync(new byte[3 * 536]); // three segments, all "lost"
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await WaitForCondition(() => {
-            lock (sync) return sent.Count(p => p.ExtractTcp().SequenceNumber == serverSeq + 1 && p.ExtractTcp().Payload.Length > 0) >= 2;
-        }, cts.Token, 2000); // the RTO retransmitted segment 1
-        lock (sync) sent.Clear();
-
-        // The peer got the retransmitted segment 1 and acks it: a partial ACK (segments 2 and 3 still lost).
+        // The peer got the retransmitted segment 1 and acks it: a partial ACK.
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1 + 536));
+        CollectionAssert.AreEqual(new[] { 536, 1072 }, sentOffsets(), "segments 2 and 3 at once");
 
-        lock (sync)
-            Assert.IsTrue(sent.Any(p => p.ExtractTcp().SequenceNumber == serverSeq + 1 + 536 && p.ExtractTcp().Payload.Length > 0),
-                "the partial ACK retransmits segment 2 at once");
+        // It acks the second of the two at once.
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 1608));
+        CollectionAssert.AreEqual(new[] { 1608, 2144 }, sentOffsets(), "segments 4 and 5 at once");
+        await stream.DisposeAsync();
+    }
+
+    /// <summary>A peer that acks every segment draws one retransmission of each: a partial ACK resends only what the
+    /// recovery has not, and nothing sent after the loss.</summary>
+    [TestMethod]
+    [Timeout(10000)]
+    public async Task PartialAcks_OfEverySegment_ResendEachLostSegmentOnce()
+    {
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitTimeout = TimeSpan.FromSeconds(1), // no RTO between the test's steps
+            RetransmitMaxTimeout = TimeSpan.FromSeconds(2)
+        });
+        var (stream, serverSeq, sentOffsets) = await LoseFiveSegmentsAsync(tcpStack);
+        await stream.Stream.WriteAsync(new byte[536]);
+        CollectionAssert.AreEqual(new[] { 2680 }, sentOffsets(), "segment 6, sent after the loss");
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 536));
+        CollectionAssert.AreEqual(new[] { 536, 1072 }, sentOffsets(), "segments 2 and 3");
+
+        // It acks segment 2 alone, the copy of 3 still on its way: 4 goes out, not 3 again.
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 1072));
+        CollectionAssert.AreEqual(new[] { 1608 }, sentOffsets(), "segment 4 alone");
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 1608));
+        CollectionAssert.AreEqual(new[] { 2144 }, sentOffsets(), "segment 5 alone");
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 2144));
+        Assert.IsEmpty(sentOffsets(), "5 is resent already, and 6 went out after the loss");
         await stream.DisposeAsync();
     }
 
@@ -1581,6 +1606,34 @@ public sealed class LossRecoveryTest
     }
 
     // ---- helpers ----
+
+    /// <summary>Five segments of 536 bytes, all lost, and the RTO's retransmission of the first: a recovery. Returns a
+    /// reader of the data segments sent since its last call, by their offset in the stream.</summary>
+    private static async Task<(ITcpClient stream, uint serverSeq, Func<int[]> sentOffsets)> LoseFiveSegmentsAsync(
+        LocalTcpStack tcpStack)
+    {
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        await stream.Stream.WriteAsync(new byte[5 * 536]);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await WaitForCondition(() => {
+            lock (sync) return sent.Count(p => p.ExtractTcp().SequenceNumber == serverSeq + 1 && p.ExtractTcp().Payload.Length > 0) >= 2;
+        }, cts.Token, 3000);
+        lock (sync) sent.Clear();
+
+        return (stream, serverSeq, () => {
+            lock (sync) {
+                var offsets = sent.Select(p => p.ExtractTcp()).Where(tcp => tcp.Payload.Length > 0)
+                    .Select(tcp => (int)(tcp.SequenceNumber - (serverSeq + 1))).ToArray();
+                sent.Clear();
+                return offsets;
+            }
+        });
+    }
 
     /// <summary>Completes a handshake and returns the accepted client plus the server's ISN.</summary>
     private static async Task<(ITcpClient client, uint serverSeq)> EstablishAsync(

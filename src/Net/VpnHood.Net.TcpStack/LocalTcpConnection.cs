@@ -224,7 +224,7 @@ internal sealed class LocalTcpConnection(
     /// </summary>
     public bool IsValidHandshakeAck(uint seq, uint ack, TcpFlags flags)
     {
-        if (!flags.HasFlag(TcpFlags.Ack))
+        if ((flags & TcpFlags.Ack) == 0)
             return false;
 
         lock (_seqLock) {
@@ -393,11 +393,12 @@ internal sealed class LocalTcpConnection(
         if (_disposed) return (false, false);
         var now = Stopwatch.GetTimestamp();
 
-        if (flags.HasFlag(TcpFlags.Rst))
+        // Bit tests, not Enum.HasFlag, which boxes in the JIT's first-tier code (per segment until the method tiers up).
+        if ((flags & TcpFlags.Rst) != 0)
             return HandleRst(seq);
 
         // After the handshake every segment carries an ACK (RFC 9293 3.10.7.4): one without is dropped with its data.
-        if (!flags.HasFlag(TcpFlags.Ack))
+        if ((flags & TcpFlags.Ack) == 0)
             return (false, false);
 
         return HandleAck(seq, ack, windowSize, flags, payload.Length, now) ?? HandleData(seq, flags, payload, now);
@@ -429,7 +430,7 @@ internal sealed class LocalTcpConnection(
     /// </summary>
     private (bool handled, bool needsAck)? HandleAck(uint seq, uint ack, ushort windowSize, TcpFlags flags, int payloadLength, long now)
     {
-        var fin = flags.HasFlag(TcpFlags.Fin);
+        var fin = (flags & TcpFlags.Fin) != 0;
         bool acceptable, challenge;
         var retransmit = false;
         IpPacket? finRetransmit = null;
@@ -576,7 +577,7 @@ internal sealed class LocalTcpConnection(
                 // Only a segment with something to acknowledge reaches AckNowLocked: its reset of the count would cancel a
                 // pending delayed ACK with no ACK sent.
                 var delayable = !isRetransmit && !truncated && payload.Length >= Mss &&
-                                !flags.HasFlag(TcpFlags.Fin) && !flags.HasFlag(TcpFlags.Psh);
+                                (flags & (TcpFlags.Fin | TcpFlags.Psh)) == 0;
                 needsAck = (isRetransmit || accepted > 0 || truncated) && AckNowLocked(delayable, now);
                 finTaken = TakeFinLocked(flags, seq + (uint)payload.Length);
                 if (finTaken) {
@@ -626,7 +627,7 @@ internal sealed class LocalTcpConnection(
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool TakeFinLocked(TcpFlags flags, uint finSeq)
     {
-        if (!flags.HasFlag(TcpFlags.Fin) || _finReceived || finSeq != _rcvNxt)
+        if ((flags & TcpFlags.Fin) == 0 || _finReceived || finSeq != _rcvNxt)
             return false;
         _rcvNxt += 1;
         _finReceived = true;

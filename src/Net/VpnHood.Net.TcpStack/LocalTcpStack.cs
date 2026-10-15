@@ -359,7 +359,8 @@ public sealed class LocalTcpStack : ITcpStack
 
     private void HandleExistingConnection(LocalTcpConnection conn, TcpPacket tcpPacket)
     {
-        // One read of the flags byte: TcpFlags are its wire bits, and URG, ECE and CWR are not the stack's.
+        // One read of the flags byte: TcpFlags are its wire bits, and URG, ECE and CWR are not the stack's. Bit tests
+        // below, not Enum.HasFlag, which boxes in the JIT's first-tier code.
         var flags = (TcpFlags)tcpPacket.Flags & (TcpFlags.Fin | TcpFlags.Syn | TcpFlags.Rst | TcpFlags.Psh | TcpFlags.Ack);
 
         // A SYN on a tracked tuple, checked after the RST (RFC 9293 3.10.7.4), so a SYN with RST is the RST's. A bare SYN
@@ -367,8 +368,8 @@ public sealed class LocalTcpStack : ITcpStack
         // established or closing connection or with ACK (an answer to an open we never made), draws a challenge ACK
         // (RFC 5961 4) and is dropped with its data: a peer that abandoned the old connection answers it with a RST,
         // which closes our stale entry and lets its SYN retransmission open a fresh one.
-        if (flags.HasFlag(TcpFlags.Syn) && !flags.HasFlag(TcpFlags.Rst)) {
-            if (conn.State == TcpConnectionState.SynReceived && !flags.HasFlag(TcpFlags.Ack))
+        if ((flags & TcpFlags.Syn) != 0 && (flags & TcpFlags.Rst) == 0) {
+            if (conn.State == TcpConnectionState.SynReceived && (flags & TcpFlags.Ack) == 0)
                 SendSynAck(conn);
             else
                 SendAckOnly(conn);
@@ -378,7 +379,7 @@ public sealed class LocalTcpStack : ITcpStack
         // SynReceived: the ACK must acknowledge our SYN-ACK (see IsValidHandshakeAck); the data path
         // below takes the segment from there. The right ack beyond the window gets a plain ACK (RFC 9293
         // 3.10.7.4); a wrong ack, a stale or forged segment, keeps the old tolerance: a SYN-ACK.
-        if (conn.State == TcpConnectionState.SynReceived && !flags.HasFlag(TcpFlags.Rst)) {
+        if (conn.State == TcpConnectionState.SynReceived && (flags & TcpFlags.Rst) == 0) {
             if (!conn.IsValidHandshakeAck(tcpPacket.SequenceNumber, tcpPacket.AcknowledgmentNumber, flags)) {
                 if (conn.AcknowledgesOurSyn(tcpPacket.AcknowledgmentNumber))
                     SendAckOnly(conn);

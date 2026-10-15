@@ -28,13 +28,6 @@ public sealed class LocalTcpStackOptions
     /// </summary>
     public int ReceiveWindowSize { get; init; } = 0xFFFF;
 
-    /// <summary>
-    /// Resume threshold (bytes) at which the reassembly pipe writer un-pauses. Must be in the
-    /// range 1..<see cref="ReceiveWindowSize"/>-1.
-    /// <para><c>null</c> (default) means <see cref="ReceiveWindowSize"/> / 2. Most callers should leave this null.</para>
-    /// </summary>
-    public int? PipeResumeWriterThreshold { get; init; }
-
     // ---- Send / Download buffering (app stream -> stack -> tun) ----
 
     /// <summary>
@@ -217,22 +210,18 @@ public sealed class LocalTcpStackOptions
     }
 
     /// <summary>
-    /// Resolved pipe resume threshold: the explicit value, or <see cref="ReceiveWindowSize"/> / 2.
-    /// </summary>
-    internal int ResolvedPipeResumeThreshold => PipeResumeWriterThreshold ?? ReceiveWindowSize / 2;
-
-    /// <summary>
     /// Builds the (immutable) <see cref="PipeOptions"/> for the network→app reassembly pipe.
     /// One instance is created per stack and shared by all of its connections.
     /// The pause threshold sits one <see cref="MaxMss"/> ABOVE <see cref="ReceiveWindowSize"/>: the
     /// stack hard-enforces the advertised window before writing (see TryHandleIncoming), so the
     /// writer never legitimately reaches the pause threshold and its fire-and-forget FlushAsync
     /// always completes synchronously (a discarded completed ValueTask is safe; a discarded PENDING
-    /// pipe ValueTask would violate the PipeWriter single-operation contract).
+    /// pipe ValueTask would violate the PipeWriter single-operation contract). Never paused, the writer
+    /// never resumes either: its resume threshold is the pause threshold, the highest the pipe takes.
     /// </summary>
     internal PipeOptions CreatePipeOptions() => new(
         pauseWriterThreshold: ReceiveWindowSize + MaxMss,
-        resumeWriterThreshold: ResolvedPipeResumeThreshold,
+        resumeWriterThreshold: ReceiveWindowSize + MaxMss,
         useSynchronizationContext: false);
 
     /// <summary>
@@ -246,11 +235,6 @@ public sealed class LocalTcpStackOptions
         if (ReceiveWindowSize is < 1 or > 0xFFFF)
             throw new ArgumentException(
                 $"{nameof(ReceiveWindowSize)} must be between 1 and 65535 (no window scaling); was {ReceiveWindowSize}.");
-
-        var resume = ResolvedPipeResumeThreshold;
-        if (resume < 1 || resume >= ReceiveWindowSize)
-            throw new ArgumentException(
-                $"{nameof(PipeResumeWriterThreshold)} ({resume}) must be between 1 and {nameof(ReceiveWindowSize)}-1 ({ReceiveWindowSize - 1}).");
 
         if (RetransmitBufferSize < MaxMss)
             throw new ArgumentException(

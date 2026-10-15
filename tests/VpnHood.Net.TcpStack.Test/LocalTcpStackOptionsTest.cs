@@ -191,8 +191,6 @@ public sealed class LocalTcpStackOptionsTest
             "window > 65535 (no scaling) must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 0 }),
             "zero window must be rejected");
-        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16384, PipeResumeWriterThreshold = 16384 }),
-            "resume threshold >= window must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { RetransmitBufferSize = 256, MaxMss = 1460 }),
             "a retransmit buffer smaller than MaxMss must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { IdleTimeout = TimeSpan.FromSeconds(30), IdleCheckInterval = TimeSpan.FromMinutes(1) }),
@@ -203,6 +201,15 @@ public sealed class LocalTcpStackOptionsTest
             "an RTO under 1 ms must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { IdleCheckInterval = TimeSpan.FromDays(60), IdleTimeout = TimeSpan.FromDays(90) }),
             "an idle check interval beyond a timer's range must be rejected");
+    }
+
+    /// <summary>The window's whole range is valid, down to a single byte.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public void Validation_AcceptsTheWholeWindowRange()
+    {
+        using var smallest = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 1 });
+        using var largest = new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 0xFFFF });
     }
 
     /// <summary>

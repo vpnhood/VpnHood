@@ -431,7 +431,7 @@ internal sealed class LocalTcpConnection(
     private (bool handled, bool needsAck)? HandleAck(uint seq, uint ack, ushort windowSize, TcpFlags flags, int payloadLength, long now)
     {
         var fin = (flags & TcpFlags.Fin) != 0;
-        bool acceptable, challenge;
+        bool acceptable, challenge, signalWindow;
         var retransmit = false;
         IpPacket? finRetransmit = null;
         var finExchangeComplete = false;
@@ -491,6 +491,9 @@ internal sealed class LocalTcpConnection(
                 }
             }
 
+            // The writer waits for room: an ACK that frees some or widens the window wakes it, one that brings neither
+            // (the peer's own data, the ACK of a probe) leaves it parked.
+            signalWindow = acceptable && (acked > 0 || scaledWindow > _peerWindow);
             if (acceptable)
                 _peerWindow = scaledWindow;
             peerWindow = _peerWindow;
@@ -508,7 +511,7 @@ internal sealed class LocalTcpConnection(
             FastRetransmit();
         if (finRetransmit != null)
             TrySendPacket(finRetransmit);
-        if (acceptable)
+        if (signalWindow)
             TrySignalWindow();
 
         if (resetUnread) {

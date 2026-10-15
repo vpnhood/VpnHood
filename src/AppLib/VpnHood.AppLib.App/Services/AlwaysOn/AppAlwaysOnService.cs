@@ -21,7 +21,8 @@ namespace VpnHood.AppLib.App.Services.AlwaysOn;
 // thought of - and so does a person's disconnect. A stop stands until a person connects or the service
 // restarts, and one by an error also until the plan changes. A revoke, another app taking the tunnel,
 // stands across a restart too (AppPersistState.IsVpnServiceRevoked), or two apps with always on would
-// take the tunnel from each other in turn.
+// take the tunnel from each other in turn. Its own connect gives way to anything that came after it chose
+// to connect, so it never undoes a person's connect or disconnect.
 internal sealed class AppAlwaysOnService : IDisposable
 {
     private readonly VpnHoodApp _app;
@@ -30,12 +31,14 @@ internal sealed class AppAlwaysOnService : IDisposable
     private readonly Lock _lock = new();
     private CancellationTokenSource _retryCts = new();
     private int _connectNumber; // the latest connect's, whichever began it
+    private bool _isConnecting; // the latest connect has not ended
+    private Plan? _connectPlan; // the plan the latest connect tries
     private DateTime? _sessionTime; // when the latest connect's session came up, until its end is sorted
     private int _retryCount;
     private AlwaysOnStatus _status = AlwaysOnStatus.On;
     private DateTime? _retryTime;
     private ApiError? _error;
-    private (Guid? VpnProfileId, string? TokenId, string? AccessCode, bool IsPremium)? _stoppedPlan;
+    private Plan? _stoppedPlan;
     private bool _disposed;
 
     public AppAlwaysOnService(VpnHoodApp app, AppAlwaysOnOptions options, AppPersistState persistState)
@@ -82,12 +85,22 @@ internal sealed class AppAlwaysOnService : IDisposable
         _ = Connect();
     }
 
-    // A connect begins, a person's or always on's own; the number is EndConnect's. How an older one ends is
-    // no longer sorted, and a person's ends whatever stopped always on, the revoke too.
-    public int BeginConnect(bool isAlwaysOn)
+    // A connect begins, a person's or always on's own, with the profile it was given or the current one; the
+    // number is EndConnect's. How an older one ends is no longer sorted, and a person's ends whatever stopped
+    // always on, the revoke too. Always on's own gives way (null) to what came after it chose to connect - a
+    // person's disconnect, the switch turned off - and takes over no connect and no session.
+    public int? BeginConnect(bool isAlwaysOn, Guid? vpnProfileId)
     {
         lock (_lock) {
+            if (isAlwaysOn && (!IsOn || _disposed || _status == AlwaysOnStatus.Stopped || _isConnecting ||
+                               _sessionTime != null)) {
+                VhLogger.Instance.LogInformation("Always on's connect gives way to what came after it.");
+                return null;
+            }
+
             _connectNumber++;
+            _isConnecting = true;
+            _connectPlan = IsSupported ? GetPlan(vpnProfileId) : null;
             _sessionTime = null;
             CancelRetry();
             _status = AlwaysOnStatus.On;
@@ -113,6 +126,7 @@ internal sealed class AppAlwaysOnService : IDisposable
             if (connectNumber != _connectNumber)
                 return;
 
+            _isConnecting = false;
             if (exception is null) {
                 _sessionTime = FastDateTime.UtcNow;
                 return;
@@ -141,11 +155,21 @@ internal sealed class AppAlwaysOnService : IDisposable
         }
     }
 
+    // The app's own disconnect - a person's, a dispose's, a failed ad's - has ended a session, with the VPN
+    // service's last word: another app may have revoked it just before, which the app had not seen yet, and the
+    // revoke stands all the same.
+    public void DisconnectEnded(ApiError? error)
+    {
+        lock (_lock)
+            NoteRevoke(error);
+    }
+
     // a person's disconnect, which stops always on until a person connects or the service restarts
     public void PersonDisconnecting()
     {
         lock (_lock) {
             _connectNumber++;
+            _isConnecting = false;
             _sessionTime = null;
             if (IsOn)
                 Stop(error: null, plan: null);
@@ -182,43 +206,44 @@ internal sealed class AppAlwaysOnService : IDisposable
         TryAfterPlanChange();
     }
 
-    // A stop by an error tries once more under another plan: a key or a code bought, typed or given.
     private void TryAfterPlanChange()
     {
         lock (_lock) {
-            if (_disposed || !IsOn || _status != AlwaysOnStatus.Stopped ||
-                _stoppedPlan is not { } stoppedPlan || GetPlan() == stoppedPlan)
+            if (!ResumeAfterPlanChange())
                 return;
-
-            _status = AlwaysOnStatus.On;
-            _error = null;
-            _stoppedPlan = null;
         }
 
-        if (!_app.IsIdle)
-            return;
-
         // off the caller's thread: a settings save may be under way on it
-        VhLogger.Instance.LogInformation("The plan has changed, so always on tries once more.");
         _ = Task.Run(Connect);
     }
 
-    // Under the lock. A revoke is kept across restarts, whether always on is on or not; with it on, a failure
-    // to reach a working server waits its pause, and anything else stops it.
+    // Under the lock. A stop by an error tries once more under another plan: a key or a code bought, typed or
+    // given, or another profile, whether it came after the stop or during the try that stopped.
+    private bool ResumeAfterPlanChange()
+    {
+        if (_disposed || !IsOn || _status != AlwaysOnStatus.Stopped ||
+            _stoppedPlan is not { } stoppedPlan || GetPlan() == stoppedPlan)
+            return false;
+
+        _status = AlwaysOnStatus.On;
+        _error = null;
+        _stoppedPlan = null;
+        VhLogger.Instance.LogInformation("The plan has changed, so always on tries once more.");
+        return true;
+    }
+
+    // Under the lock. With always on on, a failure to reach a working server waits its pause, and anything else
+    // stops it, under the plan the try had.
     private void Sort(ApiError error, bool sessionWasUp)
     {
-        if (!IsSupported || _disposed)
-            return;
-
-        var isRevoke = error.Is<VpnServiceRevokedException>();
-        if (isRevoke)
-            _persistState.IsVpnServiceRevoked = true;
-
-        if (!_app.UserSettings.AlwaysOn)
+        var isRevoke = NoteRevoke(error);
+        if (_disposed || !IsOn)
             return;
 
         if (!IsTriedAgain(error, sessionWasUp)) {
-            Stop(error, plan: isRevoke ? null : GetPlan());
+            Stop(error, plan: isRevoke ? null : _connectPlan);
+            if (ResumeAfterPlanChange())
+                _ = Task.Run(Connect);
             return;
         }
 
@@ -232,8 +257,19 @@ internal sealed class AppAlwaysOnService : IDisposable
         _ = RetryAfter(pause, _retryCts.Token);
     }
 
+    // Under the lock. Another app took the tunnel: kept across restarts whether always on is on or not, or two
+    // apps with always on would take the tunnel from each other in turn.
+    private bool NoteRevoke(ApiError? error)
+    {
+        if (!IsSupported || error?.Is<VpnServiceRevokedException>() != true)
+            return false;
+
+        _persistState.IsVpnServiceRevoked = true;
+        return true;
+    }
+
     // Under the lock. A null error is a person's disconnect.
-    private void Stop(ApiError? error, (Guid?, string?, string?, bool)? plan)
+    private void Stop(ApiError? error, Plan? plan)
     {
         CancelRetry();
         _status = AlwaysOnStatus.Stopped;
@@ -276,12 +312,11 @@ internal sealed class AppAlwaysOnService : IDisposable
                error.Is<VpnServiceTimeoutException>();
     }
 
-    // what a plan change is: another profile, key or code, or the profile's premium coming or going
-    private (Guid?, string?, string?, bool) GetPlan()
+    private Plan GetPlan(Guid? vpnProfileId = null)
     {
-        var profileInfo = _app.CurrentVpnProfileInfo;
+        var profileInfo = vpnProfileId is { } id ? _app.VpnProfileService.FindInfo(id) : _app.CurrentVpnProfileInfo;
         var accessCode = profileInfo != null ? _app.VpnProfileService.FindById(profileInfo.VpnProfileId)?.AccessCode : null;
-        return (profileInfo?.VpnProfileId, profileInfo?.TokenId, accessCode, profileInfo?.IsPremium == true);
+        return new Plan(profileInfo?.VpnProfileId, profileInfo?.TokenId, accessCode, profileInfo?.IsPremium == true);
     }
 
     private async Task RetryAfter(TimeSpan pause, CancellationToken cancellationToken)
@@ -293,8 +328,8 @@ internal sealed class AppAlwaysOnService : IDisposable
             return;
         }
 
-        // a session up or on its way is left alone; a person's connect would have cancelled this anyway
-        if (cancellationToken.IsCancellationRequested || !_app.IsIdle)
+        // a connect or a disconnect since cancelled it; BeginConnect makes it give way to one that comes after this
+        if (cancellationToken.IsCancellationRequested)
             return;
 
         await Connect().Vhc();
@@ -331,4 +366,7 @@ internal sealed class AppAlwaysOnService : IDisposable
             CancelRetry();
         }
     }
+
+    // what a plan change is: another profile, key or code, or the profile's premium coming or going
+    private sealed record Plan(Guid? VpnProfileId, string? TokenId, string? AccessCode, bool IsPremium);
 }

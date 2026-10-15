@@ -828,8 +828,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         var stopwatch = Stopwatch.StartNew(); // a failed connect's report tells how long it ran
         connectOptions ??= new ConnectOptions();
+
+        // always on's own connect gives way to what came after it chose to connect
+        if (_alwaysOnService.BeginConnect(connectOptions.IsAlwaysOn, connectOptions.VpnProfileId) is not
+            { } alwaysOnConnectNumber)
+            return;
+
         var connectNumber = Interlocked.Increment(ref _connectNumber);
-        var alwaysOnConnectNumber = _alwaysOnService.BeginConnect(connectOptions.IsAlwaysOn);
+        Exception? failure = null;
         try {
             VhLogger.Instance.LogInformation(
                 "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}, AlwaysOn: {AlwaysOn}",
@@ -839,13 +845,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // protect double call
             if (!IsIdle) {
                 VhLogger.Instance.LogInformation("Disconnecting due to user request to connect...");
-                await TryDisconnect().Vhc();
+                await TryDisconnect(connectNumber).Vhc();
             }
 
-            // Create a connect cancellation token
-            _connectCts = new CancellationTokenSource();
+            // Create a connect cancellation token. A disconnect still running, which the app shows as idle, ends
+            // first, or it would cancel this connect or stop its VPN service
+            using (await _disconnectLock.LockAsync()) {
+                _connectCts = new CancellationTokenSource();
+                _isConnecting = true; //must be after checking IsIdle
+            }
+
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
-            _isConnecting = true; //must be after checking IsIdle
             _userReviewRecommended = 0; // UI may call ClearLastError, so it my close immediately
             ClearLastError();
             _appPersistState.IsReconnectRequired = false; // this connect applies every pending change
@@ -861,12 +871,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             _appPersistState.LastError = ex.ToApiError();
             await TryDisconnect(connectNumber); // await, to prevent VpnService_StateChanged clear the LastError
-            _alwaysOnService.EndConnect(alwaysOnConnectNumber, ex);
+            failure = ex;
             throw;
         }
         finally {
-            if (connectNumber == _connectNumber)
+            // the latest connect's failure is sorted once the app is idle again, so that a connect it sets off,
+            // or one a plan change sets off meanwhile, finds the app free
+            if (connectNumber == _connectNumber) {
                 _isConnecting = false;
+                if (failure != null)
+                    _alwaysOnService.EndConnect(alwaysOnConnectNumber, failure);
+            }
+
             FireConnectionStateChanged();
         }
     }
@@ -1397,10 +1413,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // the app's own disconnect: a failed ad's, a new connect's, a dispose's
+    // the app's own disconnect: a failed ad's, a dispose's
     public Task TryDisconnect() => TryDisconnect(connectNumber: null);
 
-    // connectNumber: a failed connect's own, which leaves a newer connect alone
+    // connectNumber: a connect's own - a new one's before it starts, a failed one's after - which leaves a newer
+    // connect alone
     private async Task TryDisconnect(int? connectNumber)
     {
         try {
@@ -1425,7 +1442,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_isDisconnecting)
             return; // already disconnecting
 
-        // a newer connect began while the failed one waited here: it has disconnected what the failed one left
+        // a newer connect began while this connect's waited here: it disconnects what is left itself
         if (connectNumber != null && connectNumber != _connectNumber)
             return;
 
@@ -1464,6 +1481,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // stop VpnService if it is running
             await _vpnServiceManager.TryStop().Vhc();
+
+            // the service's last word, which a revoke just before may be, though the app had not seen it yet; a
+            // connect's own disconnect is left out, as a person's connect ends the revoke
+            if (connectNumber is null)
+                _alwaysOnService.DisconnectEnded(ConnectionInfo.Error);
         }
         finally {
             _isDisconnecting = false;

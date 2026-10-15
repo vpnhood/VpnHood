@@ -277,9 +277,11 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         }
     }
 
+    // a disconnect asked for with a reason - a revoke, say - carries it, as the client's own state changes do, or
+    // a reply to the app would publish the session's end without it
     public Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
     {
-        return UpdateConnectionInfo(client, null, cancellationToken);
+        return UpdateConnectionInfo(client, _disconnectException, cancellationToken);
     }
 
     public async Task UpdateConnectionInfo(VpnHoodClient client, Exception? ex, CancellationToken cancellationToken)
@@ -329,11 +331,15 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 
         try {
             _disconnectRequested = true;
-            _disconnectException = exception;
             if (exception != null)
                 VhLogger.Instance.LogError(exception, "VpnServiceHost is disconnecting due to an error...");
             else
                 VhLogger.Instance.LogDebug(exception, "VpnServiceHost is disconnecting...");
+
+            // a plain disconnect keeps the reason the session already ended for (a revoke, say) in the terminal
+            // state below: the app may ask for it before it has seen that end
+            exception ??= _disconnectException;
+            _disconnectException = exception;
 
             // a start still on its way - waiting for the tunnel, say - ends too, rather than connecting after
             _connectCts.TryCancel();

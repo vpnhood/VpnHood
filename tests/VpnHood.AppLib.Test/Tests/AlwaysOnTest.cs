@@ -163,14 +163,14 @@ public class AlwaysOnTest : TestAppBase
         var tunnelLock = new TestVpnTunnelLock();
 
         // another app takes the tunnel: always on stops
-        IDisposable otherHold;
-        await using (var app = CreateApp(storagePath, tunnelLock)) {
-            await app.WaitForState(AppConnectionState.Connected);
-            otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
-            await app.WaitForState(AppConnectionState.None);
-            await AssertEqualsWait(AlwaysOnStatus.Stopped, () => app.State.AlwaysOnState?.Status);
-            Assert.AreEqual(nameof(VpnServiceRevokedException), app.State.AlwaysOnState?.Error?.TypeName);
-        }
+        await using var app = CreateApp(storagePath, tunnelLock);
+        await app.WaitForState(AppConnectionState.Connected);
+        using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
+        await app.WaitForState(AppConnectionState.None);
+        await AssertEqualsWait(AlwaysOnStatus.Stopped, () => app.State.AlwaysOnState?.Status);
+        Assert.AreEqual(nameof(VpnServiceRevokedException), app.State.AlwaysOnState?.Error?.TypeName);
+        // ReSharper disable once DisposeOnUsingVariable
+        await app.DisposeAsync();
 
         // the restart leaves the tunnel to the other app
         await using var app2 = CreateApp(storagePath, tunnelLock);
@@ -182,7 +182,83 @@ public class AlwaysOnTest : TestAppBase
         await app2.Connect(vpnProfileId, cancellationToken: TestCt);
         await app2.WaitForState(AppConnectionState.Connected);
         Assert.AreEqual(AlwaysOnStatus.On, app2.State.AlwaysOnState?.Status);
-        otherHold.Dispose();
+    }
+
+    // The service stops right after another app took the tunnel, before the app has seen why its session ended.
+    [TestMethod]
+    public async Task A_revoke_the_app_had_not_seen_yet_stands_across_a_restart()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
+        var tunnelLock = new TestVpnTunnelLock();
+        var otherHolder = new RecordingVpnTunnelHolder();
+
+        await using var app = CreateApp(storagePath, tunnelLock);
+        await app.WaitForState(AppConnectionState.Connected);
+        using var otherHold = await tunnelLock.Take(otherHolder, TestCt);
+        // ReSharper disable once DisposeOnUsingVariable
+        await app.DisposeAsync();
+
+        // the restart leaves the tunnel to the other app
+        await using var app2 = CreateApp(storagePath, tunnelLock);
+        await AssertEqualsWait(AlwaysOnStatus.Stopped, () => app2.State.AlwaysOnState?.Status);
+        Assert.AreEqual(nameof(VpnServiceRevokedException), app2.State.AlwaysOnState?.Error?.TypeName);
+        await Task.Delay(Pause * 3, TestCt);
+        Assert.AreEqual(AppConnectionState.None, app2.State.ConnectionState);
+        Assert.IsFalse(otherHolder.Asked.IsCompleted, "The other app keeps the tunnel.");
+    }
+
+    // Always on chose to connect - a retry fell due, say - and something came before its connect began.
+    [TestMethod]
+    public async Task Always_ons_connect_gives_way_to_a_persons_disconnect_or_connect_that_came_after_it()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
+
+        // a person's disconnect: it stays disconnected
+        var device = CreateDevice();
+        await using var app = CreateApp(storagePath, device: device);
+        await app.WaitForState(AppConnectionState.Connected);
+        await app.Disconnect();
+        await app.Connect(uiContext: null, new ConnectOptions { IsAlwaysOn = true }, TestCt);
+        Assert.AreEqual(AppConnectionState.None, app.State.ConnectionState);
+        Assert.AreEqual(AlwaysOnStatus.Stopped, app.State.AlwaysOnState?.Status);
+
+        // a person's connect, slow to start: it goes on
+        device.StartServiceDelay = TimeSpan.FromSeconds(2);
+        var personsConnect = app.Connect(vpnProfileId, cancellationToken: TestCt);
+        await AssertEqualsWait(AppConnectionState.Initializing, () => app.State.ConnectionState);
+        await app.Connect(uiContext: null, new ConnectOptions { IsAlwaysOn = true }, TestCt);
+        await personsConnect;
+        Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
+    }
+
+    [TestMethod]
+    public async Task A_plan_change_during_a_try_that_stops_makes_it_try_once_more()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+        token.IsPublic = true; // a CONNECT-style profile: premium comes from a code alone
+        var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
+        var premium = new AppPremiumOptions { Features = [AppFeature.AlwaysOn], AllowImportAccessCode = true };
+
+        // the start's try, under a free plan, which the VPN service refuses, is slow to reach it, and a code
+        // comes meanwhile
+        var device = CreateDevice();
+        device.StartServiceDelay = TimeSpan.FromSeconds(2);
+        await using var app = CreateApp(storagePath, premium: premium, device: device);
+        await AssertEqualsWait(AppConnectionState.Initializing, () => app.State.ConnectionState);
+        var accessCode = TestAppHelper.BuildAccessCode();
+        accessManager.AccessCodes.Add(accessCode, TestHelper.CreateAccessToken(server).TokenId);
+        app.VpnProfileService.Update(vpnProfileId, new VpnProfileUpdateParams { AccessCode = accessCode });
+        device.StartServiceDelay = TimeSpan.Zero;
+
+        // the free try is refused, and always on tries once more under the code, and connects
+        await app.WaitForState(AppConnectionState.Connected, timeout: 15000);
+        Assert.AreEqual(AlwaysOnStatus.On, app.State.AlwaysOnState?.Status);
     }
 
     [TestMethod]

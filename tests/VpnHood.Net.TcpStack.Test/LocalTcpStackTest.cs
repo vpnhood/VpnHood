@@ -1518,6 +1518,31 @@ public sealed class LocalTcpStackTest
         await client.DisposeAsync();
     }
 
+    /// <summary>A read after EOF is EOF again: an app that closes before it sends is read twice in production (the
+    /// SNI extractor or the prefetch, then the next reader), and the second read threw.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task ReadAfterEof_ReturnsZeroAgain()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+        DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
+        var serverSeq = SynAckSequence(sent, sync, ClientPort);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var client = await acceptTask.WaitAsync(cts.Token);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, fin: true, seq: 1001, ackNum: serverSeq + 1));
+        var buffer = new byte[16];
+        Assert.AreEqual(0, await client.Stream.ReadAsync(buffer, cts.Token), "EOF");
+        Assert.AreEqual(0, await client.Stream.ReadAsync(buffer, cts.Token), "EOF again");
+        await client.DisposeAsync();
+    }
+
     private static async Task WaitForCondition(Func<bool> condition, CancellationToken ct, int timeoutMs = 1000)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

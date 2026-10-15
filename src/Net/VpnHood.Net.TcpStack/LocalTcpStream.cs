@@ -50,8 +50,11 @@ public sealed class LocalTcpStream : AsyncStream
             var reader = _connection.NetToAppReader;
             var readResult = await reader.ReadAsync(token).Vhc();
 
-            if (readResult.IsCanceled || readResult is { IsCompleted: true, Buffer.IsEmpty: true })
+            if (readResult.IsCanceled || readResult is { IsCompleted: true, Buffer.IsEmpty: true }) {
+                // ends the pipe's read, so a read after EOF is EOF again, not "reading is already in progress"
+                reader.AdvanceTo(readResult.Buffer.Start);
                 return 0;
+            }
 
             var bytesToCopy = (int)Math.Min(buffer.Length, readResult.Buffer.Length);
             readResult.Buffer.Slice(0, bytesToCopy).CopyTo(buffer.Span);

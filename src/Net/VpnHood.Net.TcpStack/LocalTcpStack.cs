@@ -84,7 +84,7 @@ public sealed class LocalTcpStack : ITcpStack
         set => Diagnostics.VerboseLogging = value;
     }
 
-    private readonly ConcurrentDictionary<IPEndPointPairValue, LocalTcpConnection> _connections = new();
+    private readonly ConcurrentDictionary<ConnectionKey, LocalTcpConnection> _connections = new();
     private readonly ConcurrentDictionary<IpEndPointValue, LocalTcpListener> _listeners = new();
     private readonly Lock _anyListenerLock = new();
     private LocalTcpListener? _anyListener;
@@ -178,28 +178,34 @@ public sealed class LocalTcpStack : ITcpStack
             return;
 
         var tcpPacket = ipPacket.ExtractTcp();
-        var endPointPair = new IPEndPointPairValue(
-            new IpEndPointValue(ipPacket.SourceAddress, tcpPacket.SourcePort),
-            new IpEndPointValue(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
+        // The table's key, read from the packet's bytes: a segment of a known connection costs no IPAddress; the SYN
+        // and the RST below build their endpoints.
+        var key = ConnectionKey.From(ipPacket, tcpPacket);
 
         // Handle SYN packets (new connection requests)
         if (tcpPacket is { Synchronize: true, Acknowledgment: false }) {
-            HandleSynPacket(endPointPair, tcpPacket);
+            HandleSynPacket(key, GetEndPointPair(ipPacket, tcpPacket), tcpPacket);
             return;
         }
 
         // Handle packets for existing connections
-        if (_connections.TryGetValue(endPointPair, out var existing)) {
+        if (_connections.TryGetValue(key, out var existing)) {
             HandleExistingConnection(existing, tcpPacket);
             return;
         }
 
         // Unknown connection - send RST if not already an RST
-        if (!tcpPacket.Reset)
+        if (!tcpPacket.Reset) {
+            var endPointPair = GetEndPointPair(ipPacket, tcpPacket);
             SendRst(endPointPair.Destination, endPointPair.Source, tcpPacket);
+        }
     }
 
-    private void HandleSynPacket(IPEndPointPairValue ipEndPointPair, TcpPacket tcpPacket)
+    private static IPEndPointPairValue GetEndPointPair(IpPacket ipPacket, TcpPacket tcpPacket) => new(
+        new IpEndPointValue(ipPacket.SourceAddress, tcpPacket.SourcePort),
+        new IpEndPointValue(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
+
+    private void HandleSynPacket(ConnectionKey key, IPEndPointPairValue ipEndPointPair, TcpPacket tcpPacket)
     {
         var listener = ResolveListener(ipEndPointPair.Destination);
         if (listener == null) {
@@ -209,7 +215,7 @@ public sealed class LocalTcpStack : ITcpStack
         }
 
         // SYN for a 4-tuple we already track.
-        if (_connections.TryGetValue(ipEndPointPair, out var existingConn)) {
+        if (_connections.TryGetValue(key, out var existingConn)) {
             if (existingConn.State == TcpConnectionState.SynReceived)
                 // SYN retransmit before our SYN-ACK was acknowledged: re-send SYN-ACK.
                 SendSynAck(existingConn);
@@ -250,16 +256,16 @@ public sealed class LocalTcpStack : ITcpStack
         var isnLocal = BinaryPrimitives.ReadUInt32LittleEndian(isnBytes);
         var peerMss = ParseMssOption(tcpPacket.Options.Span);
         var peerWsShift = ParseWindowScaleOption(tcpPacket.Options.Span);
-        var connection = new LocalTcpConnection(
-            ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss, listener, peerWsShift, _options, _pipeOptions, Diagnostics);
+        var connection = new LocalTcpConnection(key, ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss, listener,
+            peerWsShift, _options, _pipeOptions, Diagnostics);
         VhTypeTracker.Track(connection);
         connection.OnClosed += OnConnectionClosed;
 
         // The count lives in the diagnostics (never ConcurrentDictionary.Count, which locks every stripe) and is taken
         // before the table holds the connection, so whoever removes the entry always has a count to give back.
         var connectionCount = Diagnostics.AddConnections(1);
-        var entry = new KeyValuePair<IPEndPointPairValue, LocalTcpConnection>(ipEndPointPair, connection);
-        if (!_connections.TryAdd(ipEndPointPair, connection)) {
+        var entry = new KeyValuePair<ConnectionKey, LocalTcpConnection>(key, connection);
+        if (!_connections.TryAdd(key, connection)) {
             Diagnostics.AddConnections(-1);
             connection.Dispose();
             return;
@@ -411,7 +417,7 @@ public sealed class LocalTcpStack : ITcpStack
     private void OnConnectionClosed(LocalTcpConnection conn)
     {
         // by key and value: a late close of a connection already replaced on its tuple must not remove the successor
-        if (_connections.TryRemove(new KeyValuePair<IPEndPointPairValue, LocalTcpConnection>(conn.IpEndPointPair, conn)))
+        if (_connections.TryRemove(new KeyValuePair<ConnectionKey, LocalTcpConnection>(conn.Key, conn)))
             Diagnostics.AddConnections(-1);
     }
 

@@ -1488,6 +1488,36 @@ public sealed class LocalTcpStackTest
         Assert.IsTrue(rst.ExtractTcp().Reset);
     }
 
+    /// <summary>The connection table's key holds the IP version: an IPv6 segment whose addresses read as an IPv4
+    /// flow's numbers (::10.0.0.2 and 10.0.0.2) is not that flow's; it draws the RST of an unknown connection.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task ConnectionKey_IPv6WithTheNumbersOfAnIPv4Flow_IsAnotherFlow()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+        DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
+        var serverSeq = SynAckSequence(sent, sync, ClientPort);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var client = await acceptTask.WaitAsync(cts.Token);
+        lock (sync) sent.Clear();
+
+        // the IPv4 flow's next segment, from ::10.0.0.2 to ::10.0.0.1
+        tcpStack.ProcessIncoming(CreateTcpPacket(IPAddress.Parse("::10.0.0.2"), ClientPort, IPAddress.Parse("::10.0.0.1"),
+            ServerPort, ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: [1, 2, 3]));
+
+        var reply = Snapshot(sent, sync).Single();
+        Assert.AreEqual(IpVersion.IPv6, reply.Version);
+        Assert.IsTrue(reply.ExtractTcp().Reset, "an unknown connection's RST");
+        Assert.AreEqual(0L, tcpStack.PipeBufferedBytes, "the IPv4 connection took none of its bytes");
+        Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount, "and stays");
+        await client.DisposeAsync();
+    }
+
     private static async Task WaitForCondition(Func<bool> condition, CancellationToken ct, int timeoutMs = 1000)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

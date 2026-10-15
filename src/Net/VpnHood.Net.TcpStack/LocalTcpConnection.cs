@@ -15,6 +15,7 @@ using VpnHood.Net.Toolkit.Net;
 namespace VpnHood.Net.TcpStack;
 
 internal sealed class LocalTcpConnection(
+    ConnectionKey key,
     IPEndPointPairValue ipEndPointPair,
     uint isnLocal,
     uint isnRemote,
@@ -82,6 +83,7 @@ internal sealed class LocalTcpConnection(
     private int _dupAckCount;
     private bool _inRecovery; // a retransmission started loss recovery, which ends when SndUna reaches _recoverySeq
     private uint _recoverySeq; // SndNxt when the loss was detected (RFC 6582's recovery point)
+    public ConnectionKey Key => key;
     public IPEndPointPairValue IpEndPointPair => ipEndPointPair;
     public uint IsnLocal { get; } = isnLocal;
     public ushort Mss { get; } = ClampMss(peerMss, options);

@@ -90,7 +90,7 @@ adapter.SendPacketQueued()
   duplicate ACK; the peer retransmits it. No SACK.
 - **No TIME_WAIT.** A closed connection's 4-tuple is free at once; a SYN on a live tuple draws a challenge ACK.
   A FIN the peer retransmits because our last ACK was lost draws a RST: it had acknowledged our FIN and every
-  byte before it, so nothing is lost, where TIME_WAIT would hold the connection for 2 MSL (on iOS, one of 40 slots).
+  byte before it, so nothing is lost.
 - **A simplified state machine.** It covers what reliable local connections need, not every corner
   of RFC 9293.
 

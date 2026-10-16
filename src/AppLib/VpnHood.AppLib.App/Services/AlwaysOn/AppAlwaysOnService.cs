@@ -75,8 +75,10 @@ internal sealed class AppAlwaysOnService : IDisposable
             if (!IsOn || _disposed)
                 return;
 
+            // the settings, applied as the app was built, may have stopped it for the revoke already
             if (_persistState.IsVpnServiceRevoked) {
-                Stop(new VpnServiceRevokedException().ToApiError(), plan: null);
+                if (_status != AlwaysOnStatus.Stopped)
+                    Stop(new VpnServiceRevokedException().ToApiError(), plan: null);
                 return;
             }
         }

@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;
@@ -13,7 +12,6 @@ internal class ChannelManager : IDisposable
     private readonly HashSet<IChannel> _disposingChannels = [];
     private readonly HashSet<IProxyChannel> _proxyChannels = [];
     private readonly List<IPacketChannel> _packetChannels = [];
-    private Traffic _trafficUsage = new();
     private readonly EventHandler<IpPacket> _channelPacketReceived;
     private bool _disposed;
     private readonly Job _cleanupJob;
@@ -30,27 +28,6 @@ internal class ChannelManager : IDisposable
         MaxPacketChannelCount = maxPacketChannelCount;
         _channelPacketReceived = channelPacketReceived;
         _cleanupJob = new Job(Cleanup, nameof(ChannelManager));
-    }
-
-    public Traffic Traffic {
-        get {
-            lock (_channelListLock) {
-                var sent = _trafficUsage.Sent;
-                var received = _trafficUsage.Received;
-
-                sent += _proxyChannels.Sum(x => x.Traffic.Sent);
-                received += _proxyChannels.Sum(x => x.Traffic.Received);
-
-                sent += _packetChannels.Sum(x => x.Traffic.Sent);
-                received += _packetChannels.Sum(x => x.Traffic.Received);
-
-                // Include disposing channels to keep totals monotonic while channels are transitioning
-                sent += _disposingChannels.Sum(x => x.Traffic.Sent);
-                received += _disposingChannels.Sum(x => x.Traffic.Received);
-
-                return new Traffic { Sent = sent, Received = received };
-            }
-        }
     }
 
     public int MaxPacketChannelCount {
@@ -197,9 +174,6 @@ internal class ChannelManager : IDisposable
             // remove from both channel and _disposingChannels
             _disposingChannels.Remove(channel);
             channels.Remove(channel);
-
-            // update traffic usage
-            _trafficUsage += channel.Traffic;
 
             // log the removal of the channel
             VhLogger.Instance.LogDebug(eventId,

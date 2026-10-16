@@ -95,9 +95,6 @@ if ([string]::IsNullOrWhiteSpace($keystoreAlias)) {
 	$keystoreAlias = $keyAliases[0]
 }
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
-$appIconXml = Join-Path $projectDir "Resources/mipmap-anydpi-v26/ic_launcher.xml";
-$appIconXmlDoc = [xml](Get-Content $appIconXml);
-$appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 if ([string]::IsNullOrWhiteSpace($archs)) {
     $archs = "android-arm64;android-x64;android-arm;"
 }
@@ -168,10 +165,6 @@ try {
 	# ------------- aab
 	if ($aab)
 	{
-		# set app icon
-		$appIconXmlNode.SetAttribute("android:drawable", "@drawable/ic_launcher_background");
-		$appIconXmlDoc.save($appIconXml);
-
 		# update variables
 		$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
 		$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"

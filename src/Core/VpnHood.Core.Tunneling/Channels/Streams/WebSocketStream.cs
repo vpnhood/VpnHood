@@ -196,11 +196,10 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         return buffer;
     }
 
+    // records only: inside a read or write, a close could only be the sync one; DisposeAsync closes the source
     private void CloseByError(Exception ex)
     {
-        if (_exception != null) return;
-        _exception = ex;
-        Dispose();
+        _exception ??= ex;
     }
 
     private async Task<WebSocketHeader> ReadChunkHeaderAsync(CancellationToken cancellationToken)
@@ -318,7 +317,6 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             _exception = ex; // indicate that the stream can not be reused
             VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Could not close the stream gracefully. StreamId: {StreamId}", StreamId);
-            await SourceStream.DisposeAsync().Vhc();
             throw;
         }
     }
@@ -344,14 +342,10 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         }
     }
 
+    // it leaves the source to its owner: closing that synchronously waits for a QUIC stream's peer
     protected override void Dispose(bool disposing)
     {
         _disposed = true; // don't return if already disposed. DisposeAsync may call set this
-
-        // one that can still carry the next logical stream leaves its source to the owner, to reuse or close
-        if (disposing && !CanReuse)
-            SourceStream.Dispose();
-
         base.Dispose(disposing);
     }
 
@@ -362,6 +356,11 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         // just ignore exceptions during close stream as close stream already handles logging
         if (CanReuse)
             await VhUtils.TryInvokeAsync(null, CloseStreamAsync).Vhc();
+
+        // one that cannot carry the next logical stream, as its peer ended it or a read, a write or its end failed,
+        // closes its source, which ends what still waits on it; its owner's close of the transport finds it closed
+        if (!CanReuse && !IsDisposed)
+            await CloseSourceAsync().Vhc();
 
         await base.DisposeAsync().Vhc();
     }

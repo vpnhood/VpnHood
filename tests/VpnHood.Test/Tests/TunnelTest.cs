@@ -494,6 +494,83 @@ public class TunnelTest : TestBase
         Assert.IsFalse(transport.SyncClosed);
     }
 
+    // One that cannot carry the next logical stream, as its peer ended it or a read failed, closes its source, and
+    // asynchronously: the sync close waits for a QUIC stream's peer
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(true, false)]
+    [DataRow(false, true)]
+    [DataRow(true, true)]
+    public async Task WebSocket_stream_that_cannot_be_reused_closes_its_source_asynchronously(bool useBuffer,
+        bool readFails)
+    {
+        var source = new CloseRecordingStream { FailReads = readFails };
+        var stream = new WebSocketStream(source, "test", useBuffer: useBuffer, isServer: false);
+
+        if (readFails)
+            await Assert.ThrowsExactlyAsync<IOException>(() => stream.ReadAsync(new byte[10], TestCt).AsTask());
+        else
+            Assert.AreEqual(0, await stream.ReadAsync(new byte[10], TestCt));
+        Assert.IsFalse(stream.CanReuse);
+
+        await stream.DisposeAsync();
+        // ReSharper disable once MethodHasAsyncOverload
+        stream.Dispose(); // a sync one after it finds the source closed
+        Assert.IsTrue(source.AsyncClosed);
+        Assert.IsFalse(source.SyncClosed);
+    }
+
+    // its end with the peer fails, here on the read for the peer's end
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task WebSocket_stream_whose_end_fails_closes_its_source_asynchronously(bool useBuffer)
+    {
+        var source = new CloseRecordingStream { FailReads = true };
+        var stream = new WebSocketStream(source, "test", useBuffer: useBuffer, isServer: false);
+        Assert.IsTrue(stream.CanReuse);
+
+        await stream.DisposeAsync();
+        Assert.IsFalse(stream.CanReuse);
+        Assert.IsTrue(source.AsyncClosed);
+        Assert.IsFalse(source.SyncClosed);
+    }
+
+    // closing the source synchronously waits for a QUIC stream's peer; its owner closes it asynchronously
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task WebSocket_stream_that_cannot_be_reused_leaves_its_source_to_its_owner_on_a_sync_dispose(
+        bool useBuffer)
+    {
+        var source = new CloseRecordingStream();
+        var stream = new WebSocketStream(source, "test", useBuffer: useBuffer, isServer: false);
+        Assert.AreEqual(0, await stream.ReadAsync(new byte[10], TestCt));
+
+        // ReSharper disable once MethodHasAsyncOverload
+        stream.Dispose();
+        await stream.DisposeAsync(); // an async one after it leaves the source too
+        Assert.IsFalse(source.SyncClosed);
+        Assert.IsFalse(source.AsyncClosed);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task WebSocket_stream_that_cannot_be_reused_closes_its_source_once_on_two_async_disposes_at_once(
+        bool useBuffer)
+    {
+        var source = new CloseRecordingStream { HoldAsyncClose = true };
+        var stream = new WebSocketStream(source, "test", useBuffer: useBuffer, isServer: false);
+        Assert.AreEqual(0, await stream.ReadAsync(new byte[10], TestCt));
+
+        var first = stream.DisposeAsync().AsTask();
+        var second = stream.DisposeAsync().AsTask(); // while the first one's source close is held
+        source.ReleaseAsyncClose();
+        await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.AreEqual(1, source.AsyncCloseCount);
+    }
+
     [TestMethod]
     public async Task WebSocketHeader_build_Client()
     {

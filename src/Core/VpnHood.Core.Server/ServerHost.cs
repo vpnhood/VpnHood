@@ -668,7 +668,7 @@ public class ServerHost : IAsyncDisposable
             connection.PreventReuse();
 
         await Task.WhenAll(connections.Select(connection =>
-            VhUtils.TryInvokeAsync("Dispose a connection", connection.DisposeAsync))).Vhc();
+            connection.TryDisposeAsync().AsTask())).Vhc();
     }
 }
 

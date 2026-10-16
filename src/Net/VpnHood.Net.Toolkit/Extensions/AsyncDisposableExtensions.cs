@@ -16,7 +16,7 @@ public static class AsyncDisposableExtensions
             await disposable.DisposeAsync().Vhc();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogDebug(ex, "Failed to dispose asynchronously.");
+            VhLogger.Instance.LogDebug(ex, "Could not dispose asynchronously. Type: {Type}", disposable.GetType().Name);
         }
     }
 }

@@ -191,7 +191,7 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
     private static void CloseConnection(IStreamConnection connection)
     {
         connection.PreventReuse();
-        _ = VhUtils.TryInvokeAsync("Dispose a request's connection", connection.DisposeAsync);
+        _ = connection.TryDisposeAsync();
     }
 
     private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken)

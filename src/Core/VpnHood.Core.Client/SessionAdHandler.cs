@@ -76,7 +76,7 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
                 },
                 cancellationToken).Vhc();
 
-            _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
+            _ = requestResult.TryDisposeAsync();
             SetAdOk();
         }
         catch (Exception ex) {

@@ -536,7 +536,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             CreatedPacketChannelCount++;
         }
         catch {
-            _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
+            _ = requestResult.TryDisposeAsync();
             throw;
         }
     }
@@ -600,7 +600,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
             // client is disposed meanwhile
             if (_disposed) {
-                _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
+                _ = requestResult.TryDisposeAsync();
                 ObjectDisposedException.ThrowIf(_disposed, this);
             }
 
@@ -685,7 +685,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 cancellationToken)
             .Vhc();
 
-        _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
+        _ = requestResult.TryDisposeAsync();
     }
 
 
@@ -735,7 +735,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                         byteCts.Token)
                     .Vhc();
 
-                _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
+                _ = requestResult.TryDisposeAsync();
                 VhLogger.Instance.LogInformation("Session has been closed on the server successfully.");
             }
             catch (Exception ex) {
@@ -770,7 +770,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");
 
         // not waited for: its connections' closes may wait for their peers
-        _ = VhUtils.TryInvokeAsync("Dispose the request sender", _requestSender.DisposeAsync);
+        _ = _requestSender.TryDisposeAsync();
 
         // invoke disposed event
         State = ClientState.Disposed;

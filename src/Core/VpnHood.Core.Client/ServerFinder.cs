@@ -345,7 +345,7 @@ public class ServerFinder(
         }
         finally {
             // not waited for: its connections' closes may wait for their peers, and the search would wait with them
-            _ = VhUtils.TryInvokeAsync("Dispose the request sender", requestSender.DisposeAsync);
+            _ = requestSender.TryDisposeAsync();
         }
     }
 

@@ -8,7 +8,6 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Streams;
-using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
@@ -176,7 +175,7 @@ internal class ClientStreamHandler(
         }
         catch {
             // not waited for: the close may wait for the peer, and the app's connection would stay open meanwhile
-            _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
+            _ = requestResult.TryDisposeAsync();
             throw;
         }
     }

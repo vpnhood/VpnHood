@@ -131,7 +131,7 @@ internal class ClientSessionBuilder(
             };
 
             var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
-            _ = VhUtils.TryInvokeAsync("Dispose the request's connection", requestResult.DisposeAsync);
+            _ = requestResult.TryDisposeAsync();
             connectorService.AllowChannelReuse = config.AllowStreamReuse;
 
             var helloResponse = requestResult.Response;
@@ -393,7 +393,6 @@ internal class ClientSessionBuilder(
     // not waited for: its connections' closes may wait for their peers, and the connect's error would wait with them
     private static void CloseRequestSender(RequestSender? requestSender)
     {
-        if (requestSender != null)
-            _ = VhUtils.TryInvokeAsync("Dispose the request sender", requestSender.DisposeAsync);
+        _ = requestSender.TryDisposeAsync();
     }
 }

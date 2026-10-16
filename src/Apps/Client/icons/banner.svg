@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
- <title>Client TV banner</title>
+ <title>Client banner</title>
  <defs>
   <clipPath id="c1"><path d="M54,48L105,48A15,15 0,0 1,120 63L120,114A15,15 0,0 1,105 129L54,129A15,15 0,0 1,39 114L39,63A15,15 0,0 1,54 48z"/></clipPath>
   <linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="39" y1="110" x2="120" y2="48"><stop offset="0" stop-color="#16a4fd"/><stop offset="0.79" stop-color="#41faa4"/></linearGradient>

@@ -105,14 +105,15 @@
 
 	<!-- The app's icons: four SVGs in the folder the app names beside its identity (VhAppIconsDir),
 	     drawn at build time at every size a platform asks for (Microsoft.Maui.Resizetizer, a build-only
-	     dependency of VpnHood.AppLib.App.Android and .Ios). Their names are the resources the library
-	     asks for.
+	     dependency of VpnHood.AppLib.App.Android and .Ios). Each is named for its role in the app; Link
+	     gives what is drawn from it the name its platform and the library ask for.
 
-	       ic_launcher.svg              the icon's background, full bleed
-	       ic_launcher_foreground.svg   its logo at full size: Android draws it at 70%, inside what every
-	                                    launcher's mask shows; iOS, which shows the whole square, whole
-	       notification.svg             Android's white glyph, in notifications and the Quick Settings tile
-	       ic_banner.svg                Android TV's banner, 16:9
+	       icon_background.svg   the icon's background, full bleed
+	       icon_foreground.svg   its logo at full size: Android draws it at 70%, inside what every
+	                             launcher's mask shows; iOS, which shows the whole square, whole
+	       icon_monochrome.svg   the logo in one colour, which the system paints: Android's notifications
+	                             and Quick Settings tile
+	       banner.svg            the wide banner, 16:9: Android TV's
 
 	     An iOS extension takes none: the system shows its app's icon. -->
 	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppIconsDir)' != '' And '$(VhAppIsApp)' == 'true'">
@@ -120,12 +121,12 @@
 		<AppIcon Condition="'$(AppIcon)' == '' And '$(VhAppPlatform)' == 'ios'">ic_launcher</AppIcon>
 	</PropertyGroup>
 	<ItemGroup Condition="'$(_VhAppIconsDir)' != '' And '$(VhAppPlatform)' == 'android'">
-		<MauiIcon Include="$(_VhAppIconsDir)ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)ic_launcher_foreground.svg" ForegroundScale="0.7" />
-		<MauiImage Include="$(_VhAppIconsDir)notification.svg" BaseSize="24,24" />
-		<MauiImage Include="$(_VhAppIconsDir)ic_banner.svg" BaseSize="160,90" />
+		<MauiIcon Include="$(_VhAppIconsDir)icon_background.svg" Link="ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)icon_foreground.svg" ForegroundScale="0.7" />
+		<MauiImage Include="$(_VhAppIconsDir)icon_monochrome.svg" Link="notification.svg" BaseSize="24,24" />
+		<MauiImage Include="$(_VhAppIconsDir)banner.svg" Link="ic_banner.svg" BaseSize="160,90" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(_VhAppIconsDir)' != '' And '$(VhAppPlatform)' == 'ios'">
-		<MauiIcon Include="$(_VhAppIconsDir)ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)ic_launcher_foreground.svg" ForegroundScale="1" />
+		<MauiIcon Include="$(_VhAppIconsDir)icon_background.svg" Link="ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)icon_foreground.svg" ForegroundScale="1" />
 	</ItemGroup>
 
 	<!-- What the code reads: AppConstants.AppId and AdMobApplicationId, AppName, AppVersion, CompanyName,

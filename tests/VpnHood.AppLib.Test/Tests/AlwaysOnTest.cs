@@ -12,6 +12,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Test;
 using VpnHood.Test.AccessManagers;
@@ -208,6 +209,35 @@ public class AlwaysOnTest : TestAppBase
         await Task.Delay(Pause * 3, TestCt);
         Assert.AreEqual(AppConnectionState.None, app2.State.ConnectionState);
         Assert.IsFalse(otherHolder.Asked.IsCompleted, "The other app keeps the tunnel.");
+    }
+
+    // A person's connect ends a revoke; one that fails before the VPN service starts leaves the old revoke in the
+    // service's last word, and the disconnect that follows must not bring it back.
+    [TestMethod]
+    public async Task A_revoke_a_persons_connect_ended_stays_ended()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
+        var tunnelLock = new TestVpnTunnelLock();
+
+        // another app takes the tunnel: always on stops for the revoke
+        await using var app = CreateApp(storagePath, tunnelLock);
+        await app.WaitForState(AppConnectionState.Connected);
+        using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
+        await AssertEqualsWait(AlwaysOnStatus.Stopped, () => app.State.AlwaysOnState?.Status);
+        Assert.AreEqual(nameof(VpnServiceRevokedException), app.State.AlwaysOnState?.Error?.TypeName);
+
+        // a person's connect fails before the VPN service starts, and a disconnect follows
+        await Assert.ThrowsAsync<NotExistsException>(() => app.Connect(Guid.NewGuid(), cancellationToken: TestCt));
+        await app.Disconnect();
+        // ReSharper disable once DisposeOnUsingVariable
+        await app.DisposeAsync();
+
+        // the restart connects
+        await using var app2 = CreateApp(storagePath, tunnelLock);
+        await app2.WaitForState(AppConnectionState.Connected);
+        Assert.AreEqual(AlwaysOnStatus.On, app2.State.AlwaysOnState?.Status);
     }
 
     // Always on chose to connect - a retry fell due, say - and something came before its connect began.

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -111,8 +112,10 @@ internal sealed class AppAlwaysOnService : IDisposable
             if (!isAlwaysOn) {
                 _stoppedPlan = null;
                 _retryCount = 0;
-                if (IsSupported)
+                if (IsSupported) {
                     _persistState.IsVpnServiceRevoked = false;
+                    _persistState.VpnServiceRevokeClearedTime = DateTime.UtcNow; // the service's stamps lag behind it
+                }
             }
 
             return _connectNumber;
@@ -159,11 +162,16 @@ internal sealed class AppAlwaysOnService : IDisposable
 
     // The app's own disconnect - a person's, a dispose's, a failed ad's - has ended a session, with the VPN
     // service's last word: another app may have revoked it just before, which the app had not seen yet, and the
-    // revoke stands all the same.
-    public void DisconnectEnded(ApiError? error)
+    // revoke stands all the same. A word older than a person's last connect is not that: the connect ended its
+    // revoke, and one that never started the service left the word behind.
+    public void DisconnectEnded(ConnectionInfo lastWord)
     {
-        lock (_lock)
-            NoteRevoke(error);
+        lock (_lock) {
+            if (lastWord.CreatedTime < _persistState.VpnServiceRevokeClearedTime)
+                return;
+
+            NoteRevoke(lastWord.Error);
+        }
     }
 
     // a person's disconnect, which stops always on until a person connects or the service restarts

@@ -23,6 +23,7 @@ internal class AppPersistState(string filePath)
         public int SuccessfulConnectionsCount { get; set; }
         public bool IsReconnectRequired { get; set; }
         public bool IsVpnServiceRevoked { get; set; }
+        public DateTime? VpnServiceRevokeClearedTime { get; set; }
     }
 
     public int SuccessfulConnectionsCount {
@@ -101,6 +102,19 @@ internal class AppPersistState(string filePath)
                 return;
 
             Data.IsVpnServiceRevoked = value;
+            Save();
+        }
+    }
+
+    // When a person's connect last cleared it: a revoke the VPN service wrote before that is an old one, which a
+    // connect that never started the service leaves in the service's last word.
+    public DateTime? VpnServiceRevokeClearedTime {
+        get => Data.VpnServiceRevokeClearedTime;
+        set {
+            if (Data.VpnServiceRevokeClearedTime == value)
+                return;
+
+            Data.VpnServiceRevokeClearedTime = value;
             Save();
         }
     }

@@ -1490,7 +1490,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // the service's last word, which a revoke just before may be, though the app had not seen it yet; a
             // connect's own disconnect is left out, as a person's connect ends the revoke
             if (connectNumber is null)
-                _alwaysOnService.DisconnectEnded(ConnectionInfo.Error);
+                _alwaysOnService.DisconnectEnded(ConnectionInfo);
         }
         finally {
             _isDisconnecting = false;

@@ -35,6 +35,7 @@ public class ServerOptions
     public ServerConfig? Config { get; init; }
     public TimeSpan DeadSessionTimeout { get; init; } = TimeSpan.FromMinutes(5);
     public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromMinutes(1);
+    public TimeSpan ServerHostDisposeTimeout { get; init; } = TimeSpan.FromSeconds(10);
     public IpNetwork VirtualIpNetworkV4 { get; init; } = ServerTransportDefaults.VirtualIpNetworkV4;
     public IpNetwork VirtualIpNetworkV6 { get; init; } = ServerTransportDefaults.VirtualIpNetworkV6;
     public bool Http01ChallengeThrottling { get; init; } = true;

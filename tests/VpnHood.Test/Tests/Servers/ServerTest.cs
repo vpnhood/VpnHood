@@ -57,6 +57,34 @@ public class ServerTest : TestBase
         Assert.IsEmpty(netConfigurationProvider.IpAddresses);
     }
 
+    [TestMethod]
+    public async Task A_server_host_close_past_its_limit_leaves_the_rest_of_the_close_to_run()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
+        var netConfigurationProvider = new TestNetConfigurationProvider();
+        var quicServer = new QuicListenerCloseHoldingServer();
+        var server = new VpnHoodServer(accessManager, new ServerOptions {
+            SocketFactory = new TestSocketFactory(),
+            QuicServer = quicServer,
+            NetConfigurationProvider = netConfigurationProvider,
+            StoragePath = TestHelper.WorkingPath,
+            AutoDisposeAccessManager = false,
+            PublicIpDiscovery = false,
+            ServerHostDisposeTimeout = TimeSpan.FromSeconds(1)
+        });
+        await server.Start(TestCt);
+        Assert.HasCount(1, server.ServerHost.QuicEndPoints);
+        Assert.HasCount(1, netConfigurationProvider.IpAddresses);
+
+        // the QUIC listener's close never ends on its own
+        await server.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(1, quicServer.HeldCloseCount);
+        Assert.AreEqual(ServerState.Disposed, server.State);
+        Assert.IsEmpty(netConfigurationProvider.IpAddresses);
+        quicServer.ReleaseCloses();
+    }
+
 
     [TestMethod]
     public async Task Auto_sync_sessions_by_interval()

@@ -50,6 +50,7 @@ public class VpnHoodServer : IAsyncDisposable
     private ServerHostEndPointStatus[] _endPointStatuses = [];
     private bool _endPointStatusesSent;
     private readonly ConfiguringSocketFactory _socketFactory;
+    private readonly TimeSpan _serverHostDisposeTimeout;
 
     public ServerHost ServerHost { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version ?? new Version();
@@ -95,6 +96,7 @@ public class VpnHoodServer : IAsyncDisposable
             : null;
         _swapMemoryProvider = options.SwapMemoryProvider;
         _config = options.Config;
+        _serverHostDisposeTimeout = options.ServerHostDisposeTimeout;
         ServerHost = new ServerHost(SessionManager, options.DownloadsPath, options.QuicServer);
 
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
@@ -611,7 +613,10 @@ public class VpnHoodServer : IAsyncDisposable
         // wait for configuration
         await VhUtils.TryInvokeAsync("Finalize configureTask", () => _configureTask).Vhc();
         await VhUtils.TryInvokeAsync("Finalize sndStatusTask", () => _sendStatusTask).Vhc();
-        await ServerHost.DisposeAsync().Vhc(); // before disposing session manager to prevent recovering sessions
+
+        // before disposing session manager to prevent recovering sessions. Its connections' closes may wait for their
+        // QUIC peers, so past its limit the close goes on: the last sync and the IP removal fit a service stop's 30 s
+        await ServerHost.TryDisposeAsync(_serverHostDisposeTimeout).Vhc();
         await SessionManager.DisposeAsync().Vhc();
         _http01ChallengeService.Dispose();
         if (_netConfigurationService != null)

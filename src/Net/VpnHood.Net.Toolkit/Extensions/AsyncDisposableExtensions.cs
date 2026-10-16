@@ -19,4 +19,22 @@ public static class AsyncDisposableExtensions
             VhLogger.Instance.LogDebug(ex, "Could not dispose asynchronously. Type: {Type}", disposable.GetType().Name);
         }
     }
+
+    // past the timeout, the close goes on without its caller
+    public static async ValueTask TryDisposeAsync(this IAsyncDisposable? disposable, TimeSpan timeout)
+    {
+        if (disposable == null)
+            return;
+
+        try {
+            await disposable.DisposeAsync().AsTask().WaitAsync(timeout).Vhc();
+        }
+        catch (TimeoutException) {
+            VhLogger.Instance.LogWarning("Could not dispose within {Timeout}; going on without it. Type: {Type}",
+                timeout, disposable.GetType().Name);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(ex, "Could not dispose asynchronously. Type: {Type}", disposable.GetType().Name);
+        }
+    }
 }

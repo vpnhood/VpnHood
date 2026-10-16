@@ -35,7 +35,7 @@ namespace VpnHood.Core.Client;
 /// included: a reused stream skips the WebSocket upgrade's round trip and a stream open, which costs native
 /// memory on iOS and counts toward its QUIC connection's lifetime stream limit.
 /// </remarks>
-internal class RequestSender(ConnectorService connectorService) : IDisposable
+internal class RequestSender(ConnectorService connectorService) : IAsyncDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool _disposed;
@@ -238,11 +238,12 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
         };
     }
 
-    public void Dispose()
+    // async only, as its connector service's close is
+    public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, true)) return;
-        _cancellationTokenSource.TryCancel();
+        await _cancellationTokenSource.TryCancelAsync().Vhc();
         _cancellationTokenSource.Dispose();
-        ConnectorService.Dispose();
+        await ConnectorService.DisposeAsync().Vhc();
     }
 }

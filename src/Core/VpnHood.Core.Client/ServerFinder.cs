@@ -339,8 +339,14 @@ public class ServerFinder(
         if (hostStatus.Available is not null)
             return;
 
-        using var requestSender = CreateRequestSender(hostStatus.VpnEndPoint);
-        hostStatus.Available = await VerifyServerStatus(requestSender, queryTimeout, cancellationToken).Vhc();
+        var requestSender = CreateRequestSender(hostStatus.VpnEndPoint);
+        try {
+            hostStatus.Available = await VerifyServerStatus(requestSender, queryTimeout, cancellationToken).Vhc();
+        }
+        finally {
+            // not waited for: its connections' closes may wait for their peers, and the search would wait with them
+            _ = VhUtils.TryInvokeAsync("Dispose the request sender", requestSender.DisposeAsync);
+        }
     }
 
     private static async Task<bool> VerifyServerStatus(RequestSender requestSender, TimeSpan queryTimeout,

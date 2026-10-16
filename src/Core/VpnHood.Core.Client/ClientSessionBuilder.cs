@@ -358,11 +358,11 @@ internal class ClientSessionBuilder(
             return session;
         }
         catch (TimeoutException) {
-            requestSender?.Dispose();
+            CloseRequestSender(requestSender);
             throw new ConnectionTimeoutException("Could not connect to the server in the given time.");
         }
         catch (RedirectHostException ex) {
-            requestSender?.Dispose();
+            CloseRequestSender(requestSender);
             if (!allowRedirect) {
                 VhLogger.Instance.LogError(ex,
                     "The server replies with a redirect to another server again. We already redirected earlier. This is unexpected.");
@@ -385,8 +385,15 @@ internal class ClientSessionBuilder(
             return await Connect(redirectedEndPoint, false, cancellationToken).Vhc();
         }
         catch {
-            requestSender?.Dispose();
+            CloseRequestSender(requestSender);
             throw;
         }
+    }
+
+    // not waited for: its connections' closes may wait for their peers, and the connect's error would wait with them
+    private static void CloseRequestSender(RequestSender? requestSender)
+    {
+        if (requestSender != null)
+            _ = VhUtils.TryInvokeAsync("Dispose the request sender", requestSender.DisposeAsync);
     }
 }

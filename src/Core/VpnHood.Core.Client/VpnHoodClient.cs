@@ -290,11 +290,17 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await _session.DisposeAsync();
         }
 
-        // flush and dispose the proxy connector while we can still await; the sync Dispose
-        // below then skips it (connector dispose is idempotent)
+        // flush and dispose the proxy connector while we can still await
         await ProxyConnector.TryDisposeAsync();
 
-        Dispose();
+        // the session's disposed state may have disposed the client meanwhile
+        lock (_disposeLock) {
+            if (_disposed) return;
+            _disposed = true;
+        }
+
+        await _cancellationTokenSource.TryCancelAsync();
+        DisposeSyncMembers();
     }
 
     public void Dispose()
@@ -308,22 +314,26 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // shutdown
         VhLogger.Instance.LogInformation("Client is shutting down...");
         _cancellationTokenSource.TryCancel();
-        _cancellationTokenSource.Dispose();
 
         // close session
         _session?.Dispose();
-        _session?.StateChanged -= Session_StateChanged;
-
-        NetFilter.Dispose();
-
-        // dispose ConnectorService before ProxyConnector as it uses ProxyConnector
-        VhLogger.Instance.LogDebug("Disposing ConnectorService...");
 
         // dispose ProxyConnector before adapter get closed and it needs Adapter's SocketFactory.
         // this sync path cannot await; the flush runs in the background and only touches the
-        // endpoint db (no-op when DisposeAsync already disposed the connector)
+        // endpoint db. The session's connector service closes in the background too, so a proxy
+        // failure it records after the flush is not saved
         VhLogger.Instance.LogDebug("Disposing ProxyConnector...");
         _ = ProxyConnector.TryDisposeAsync();
+
+        DisposeSyncMembers();
+    }
+
+    // what both closes share, after the session's and the proxy connector's, which are each one's own
+    private void DisposeSyncMembers()
+    {
+        _cancellationTokenSource.Dispose();
+        _session?.StateChanged -= Session_StateChanged;
+        NetFilter.Dispose();
 
         // disposing adapter
         if (Config.AutoDisposeVpnAdapter) {

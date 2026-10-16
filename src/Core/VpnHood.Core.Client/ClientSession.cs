@@ -744,7 +744,19 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         }
 
         await _cancellationTokenSource.TryCancelAsync();
-        Dispose();
+
+        // a sync Dispose may have run meanwhile
+        lock (_disposeLock) {
+            if (_disposed) return;
+            _disposed = true;
+        }
+
+        DisposeSyncMembers();
+        VhLogger.Instance.LogDebug("Disposing ConnectorService...");
+        await _requestSender.DisposeAsync().Vhc();
+
+        // invoke disposed event
+        State = ClientState.Disposed;
     }
 
     public void Dispose()
@@ -754,6 +766,19 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             _disposed = true;
         }
 
+        DisposeSyncMembers();
+        VhLogger.Instance.LogDebug("Disposing ConnectorService...");
+
+        // not waited for: its connections' closes may wait for their peers
+        _ = VhUtils.TryInvokeAsync("Dispose the request sender", _requestSender.DisposeAsync);
+
+        // invoke disposed event
+        State = ClientState.Disposed;
+    }
+
+    // what both closes share; the request sender's close, async only, is each one's own, before the disposed state
+    private void DisposeSyncMembers()
+    {
         State = ClientState.Disconnecting;
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
@@ -792,14 +817,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         _proxyManager.Dispose();
 
-        VhLogger.Instance.LogDebug("Disposing ConnectorService...");
-        _requestSender.Dispose();
-
         _cleanupJob.Dispose();
         _clientUsageTracker?.Dispose();
         AdHandler.Dispose();
-
-        // invoke disposed event
-        State = ClientState.Disposed;
     }
 }

@@ -137,8 +137,7 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
         return source;
     }
 
-    // Both paths end in Stream's Dispose (DisposeAsync's base falls through to it), so the source is
-    // released once and once only, whichever way this was disposed.
+    // The flag releases the source once and once only, whichever way this was disposed.
     protected override void Dispose(bool disposing)
     {
         if (disposing && !_disposed) {
@@ -151,7 +150,8 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
     }
 
     // Stream's own DisposeAsync falls back to the synchronous Dispose, which blocks on a source
-    // that has real work to do (a FileStream's flush and handle release).
+    // that has real work to do (a FileStream's flush and handle release). So the source's async
+    // close, then Dispose(false), as Stream's pattern has it.
     public override async ValueTask DisposeAsync()
     {
         if (!_disposed) {
@@ -160,6 +160,7 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
                 await _source.DisposeAsync().Vhc();
         }
 
-        await base.DisposeAsync().Vhc();
+        Dispose(false);
+        GC.SuppressFinalize(this);
     }
 }

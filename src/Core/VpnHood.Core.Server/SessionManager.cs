@@ -617,10 +617,16 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             // Dispose should not throw any error
         }
 
-        Dispose();
+        DisposeSyncMembers();
     }
 
     public void Dispose()
+    {
+        DisposeSyncMembers();
+    }
+
+    // what both closes share: every member's close is sync
+    private void DisposeSyncMembers()
     {
         if (_disposed) return;
         _disposed = true;

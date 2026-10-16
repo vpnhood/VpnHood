@@ -35,9 +35,9 @@ namespace VpnHood.Core.Client.ConnectorServices;
 /// is used only as the ALPN token during the TLS handshake.
 /// </para>
 /// Owned by <see cref="RequestSender"/> — created from <see cref="ConnectorServiceOptions"/>,
-/// exposed via <see cref="RequestSender.ConnectorService"/>, and disposed by <see cref="RequestSender.Dispose"/>.
+/// exposed via <see cref="RequestSender.ConnectorService"/>, and disposed by <see cref="RequestSender.DisposeAsync"/>.
 /// </remarks>
-internal class ConnectorService : IDisposable
+internal class ConnectorService : IAsyncDisposable
 {
     private const bool UseBuffer = true;
     private readonly ConcurrentQueue<IdleConnectionItem> _idleConnectionItems = new();
@@ -392,31 +392,24 @@ internal class ConnectorService : IDisposable
         RetireConnections();
     }
 
-    private void Dispose(bool disposing)
+    // async only: the QUIC factory's close waits for its connections' closes
+    public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        if (disposing) {
-            // Stop the cleanup job
-            _cleanupJob.Dispose();
+        // Stop the cleanup job
+        _cleanupJob.Dispose();
 
-            // Dispose connection factories
-            _tcpConnectionFactory.Dispose();
-            if (_quicConnectionFactory != null) {
-                _quicConnectionFactory.PanicRecycled -= QuicConnectionFactory_PanicRecycled;
-                _quicConnectionFactory.DisposeAsync().VhBlock();
-            }
-
-            // the idle connections close now, the ones in use when they come back
-            RetireConnections();
+        // Dispose connection factories
+        _tcpConnectionFactory.Dispose();
+        if (_quicConnectionFactory != null) {
+            _quicConnectionFactory.PanicRecycled -= QuicConnectionFactory_PanicRecycled;
+            await _quicConnectionFactory.DisposeAsync().Vhc();
         }
-    }
 
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
+        // the idle connections close now, the ones in use when they come back
+        RetireConnections();
     }
 
     private class IdleConnectionItem

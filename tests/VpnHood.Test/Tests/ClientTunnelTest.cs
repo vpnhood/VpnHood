@@ -167,6 +167,29 @@ public class ClientTunnelTest : TestBase
         Assert.AreEqual(ClientState.Connected, clientServerDom.Client.State);
     }
 
+    // a sync dispose leaves the session's QUIC connections to close in the background: a close may wait for its peer
+    [TestMethod]
+    public async Task A_sync_client_dispose_does_not_wait_for_its_quic_connections_to_close()
+    {
+        if (!QuicListener.IsSupported || !QuicConnection.IsSupported)
+            Assert.Inconclusive("QUIC is not supported on this platform.");
+
+        var socketFactory = new QuicCloseHoldingSocketFactory();
+        var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Quic);
+        await using var clientServerDom =
+            await ClientServerDom.Create(TestHelper, clientOption, clientSocketFactory: socketFactory);
+        try {
+            await AssertValidUdp(clientServerDom);
+
+            socketFactory.HoldCloses = true;
+            await Task.Run(clientServerDom.Client.Dispose, TestCt).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+            await VhTestUtil.AssertEqualsWait(true, () => socketFactory.HeldCloseCount > 0, cancellationToken: TestCt);
+        }
+        finally {
+            socketFactory.ReleaseCloses();
+        }
+    }
+
     private async Task AssertInvalidTcpRequest(ClientServerDom clientServer)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Invalid Https request.");

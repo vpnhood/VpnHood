@@ -111,8 +111,8 @@
 	       icon_background.svg   the icon's background, full bleed
 	       icon_foreground.svg   its logo at full size: Android draws it at 70%, inside what every
 	                             launcher's mask shows; iOS, which shows the whole square, whole
-	       icon_monochrome.svg   the logo in one colour, which the system paints: Android's notifications
-	                             and Quick Settings tile
+	       icon_monochrome.svg   the logo in one colour, which the system paints: Android's notifications,
+	                             Quick Settings tile and themed icon (android/mipmap-anydpi-v33)
 	       banner.svg            the wide banner, 16:9: Android TV's
 
 	     An iOS extension takes none: the system shows its app's icon. -->
@@ -123,7 +123,9 @@
 	<ItemGroup Condition="'$(_VhAppIconsDir)' != '' And '$(VhAppPlatform)' == 'android'">
 		<MauiIcon Include="$(_VhAppIconsDir)icon_background.svg" Link="ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)icon_foreground.svg" ForegroundScale="0.7" />
 		<MauiImage Include="$(_VhAppIconsDir)icon_monochrome.svg" Link="notification.svg" BaseSize="24,24" />
+		<MauiImage Include="$(_VhAppIconsDir)icon_monochrome.svg" Link="ic_launcher_monochrome.svg" BaseSize="44,44" />
 		<MauiImage Include="$(_VhAppIconsDir)banner.svg" Link="ic_banner.svg" BaseSize="160,90" />
+		<AndroidResource Include="$(MSBuildThisFileDirectory)android\mipmap-anydpi-v33\ic_launcher.xml" Link="Resources\mipmap-anydpi-v33\ic_launcher.xml" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(_VhAppIconsDir)' != '' And '$(VhAppPlatform)' == 'ios'">
 		<MauiIcon Include="$(_VhAppIconsDir)icon_background.svg" Link="ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)icon_foreground.svg" ForegroundScale="1" />

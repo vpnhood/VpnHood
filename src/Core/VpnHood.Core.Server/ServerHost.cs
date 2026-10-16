@@ -23,7 +23,7 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;
 
-public class ServerHost : IDisposable, IAsyncDisposable
+public class ServerHost : IAsyncDisposable
 {
     private readonly HashSet<IStreamConnection> _connections = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -634,12 +634,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         return VhLogger.Instance.BeginScope(state.ToString());
     }
 
-    public void Dispose()
-    {
-        if (_disposed) return;
-        DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(15));
-    }
-
+    // async only: its connections' closes may wait for their QUIC peers
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;

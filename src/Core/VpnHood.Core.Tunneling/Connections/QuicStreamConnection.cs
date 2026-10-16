@@ -3,6 +3,7 @@ using System.Net;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Connections;
@@ -56,16 +57,10 @@ public sealed class QuicStreamConnection : IStreamConnection
         return $"{ConnectionId}:{ConnectionName}:{role}:quic";
     }
 
+    // not waited for: a QUIC stream's sync close waits for its peer, on a dead network until its connection gives up
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, true)) return;
-        Connected = false;
-        _stream.Dispose();
-        VhTypeTracker.Record("QuicStreamConnection.disposed");
-        Disposed?.Invoke(this, EventArgs.Empty);
-
-        VhLogger.Instance.LogTrace(GeneralEventId.Stream,
-            "QuicStreamConnection has been disposed. ConnectionId: {ConnectionId}", ConnectionId);
+        _ = VhUtils.TryInvokeAsync("Dispose a QUIC stream connection", DisposeAsync);
     }
 
     public async ValueTask DisposeAsync()

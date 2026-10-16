@@ -30,11 +30,12 @@
        turns AutomaticProvisioning off and passes the *app* profile via a global /p:CodesignProvision;
        that global would otherwise leak onto this .appex and fail codesign (its App ID is the
        ...networkextension one, not the app's). The parent Connect.Ios.Apple.csproj strips CodesignProvision
-       from this ProjectReference (UndefineProperties), so the .appex resolves ITS OWN profile here.
+       from this ProjectReference (UndefineProperties), so the .appex takes ITS OWN profile here, which
+       the publish names from its signing marker (ios_signing.json's ExtProvision).
        Only active for distribution builds (AutomaticProvisioning=false); dev/Xcode auto-signing is
        unaffected. -->
   <PropertyGroup Condition="'$(AutomaticProvisioning)' == 'false'">
-    <CodesignProvision>VpnHood Connect Extension AppStore</CodesignProvision>
+    <CodesignProvision>$(VhExtensionCodesignProvision)</CodesignProvision>
   </PropertyGroup>
 
   <ItemGroup>

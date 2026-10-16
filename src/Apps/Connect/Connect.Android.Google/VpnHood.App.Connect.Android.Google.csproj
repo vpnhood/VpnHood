@@ -52,12 +52,12 @@
 	     (a Debug build takes the engine's sample, ConnectAppOptions). The product's settings are
 	     embedded by the product project (ConnectAppConfigs). -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\access_key_ad.$(Configuration).txt"
+		<EmbeddedResource Include="$(VhUserDir)\$(VhAppPackageTitle)\access_key_ad.$(Configuration).txt"
 			LogicalName="access_key_default.txt"
-			Condition="Exists('$(VhUserDir)\VpnHoodConnect\access_key_ad.$(Configuration).txt')" />
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\access_key_ad.txt"
+			Condition="Exists('$(VhUserDir)\$(VhAppPackageTitle)\access_key_ad.$(Configuration).txt')" />
+		<EmbeddedResource Include="$(VhUserDir)\$(VhAppPackageTitle)\access_key_ad.txt"
 			LogicalName="access_key_default.txt"
-			Condition="!Exists('$(VhUserDir)\VpnHoodConnect\access_key_ad.$(Configuration).txt') And Exists('$(VhUserDir)\VpnHoodConnect\access_key_ad.txt')" />
+			Condition="!Exists('$(VhUserDir)\$(VhAppPackageTitle)\access_key_ad.$(Configuration).txt') And Exists('$(VhUserDir)\$(VhAppPackageTitle)\access_key_ad.txt')" />
 	</ItemGroup>
 
 	<ItemGroup>

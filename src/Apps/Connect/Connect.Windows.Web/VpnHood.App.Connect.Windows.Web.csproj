@@ -38,12 +38,12 @@
 	     (strict) publish is gated by Assert-DefaultAccessKey in pub/lib/AppPublishConfig.ps1. The
 	     product's settings are embedded by the product project (ConnectAppConfigs). -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\access_key_premium.$(Configuration).txt"
+		<EmbeddedResource Include="$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.$(Configuration).txt"
 			LogicalName="access_key_default.txt"
-			Condition="Exists('$(VhUserDir)\VpnHoodConnect\access_key_premium.$(Configuration).txt')" />
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\access_key_premium.txt"
+			Condition="Exists('$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.$(Configuration).txt')" />
+		<EmbeddedResource Include="$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.txt"
 			LogicalName="access_key_default.txt"
-			Condition="!Exists('$(VhUserDir)\VpnHoodConnect\access_key_premium.$(Configuration).txt') And Exists('$(VhUserDir)\VpnHoodConnect\access_key_premium.txt')" />
+			Condition="!Exists('$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.$(Configuration).txt') And Exists('$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.txt')" />
 	</ItemGroup>
 
 	<ItemGroup>

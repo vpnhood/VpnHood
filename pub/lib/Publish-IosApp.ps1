@@ -74,6 +74,7 @@ if (Test-Path $signingFile) {
 	$appProvision = "$($s.AppProvision)";
 	$extProvision = "$($s.ExtProvision)";
 }
+if ($signed -and (!$appProvision -or !$extProvision)) { Throw "$signingFile is Signed but lacks AppProvision or ExtProvision: the app and its extension each sign with their own App Store profile."; }
 
 $tfm = "net11.0-ios";
 $rid = "ios-arm64";
@@ -89,9 +90,8 @@ try {
 		# ArchiveOnBuild=true makes .NET-for-iOS produce an .xcarchive + .ipa. AutomaticProvisioning is
 		# turned OFF so the build uses the EXACT App Store profiles installed by Initialize-CiIosSigning.ps1
 		# (a hosted CI runner isn't signed into an Apple account, so Xcode auto-signing can't run).
-		# NOTE (verify on first real CI run): the Network Extension (.appex) needs its OWN App Store
-		# profile. It is a ProjectReference, so if it doesn't pick up $extProvision here, set
-		# CodesignProvision in Extension's csproj (or add a per-project override) — see docs/cicd/deployment.md.
+		# The Network Extension (.appex) signs with its own profile: the app's reference to it drops
+		# CodesignProvision, and the extension's csproj takes VhExtensionCodesignProvision instead.
 		# The bundle's two versions follow from Version (VpnHood.AppLib.App.targets): the whole, and its
 		# third number as the build number App Store Connect takes only rising.
 		dotnet publish $projectFile -c Release -f $tfm -r $rid `
@@ -103,6 +103,7 @@ try {
 			/p:AutomaticProvisioning=false `
 			/p:CodesignKey="$codesignKey" `
 			/p:CodesignProvision="$appProvision" `
+			/p:VhExtensionCodesignProvision="$extProvision" `
 			/p:OutputPath=$outputPath `
 			;
 		if ($LASTEXITCODE -gt 0) { Throw "The iOS build exited with error code: $LASTEXITCODE"; }

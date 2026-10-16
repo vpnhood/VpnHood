@@ -40,12 +40,15 @@ public class TestDevice(
     // the machine's one tunnel, where a test plays a desktop
     public IVpnTunnelLock? TunnelLock { get; init; }
 
+    // the VPN permission's ask, where a test plays the person: the answer may come late, past the start's cancel
+    public Func<CancellationToken, Task>? RequestVpnServiceHandler { get; init; }
+
     public IReadOnlyList<DeviceAppInfo> InstalledApps => throw new NotSupportedException();
 
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Test VpnService granted by TestDevice.");
-        return Task.CompletedTask;
+        return RequestVpnServiceHandler?.Invoke(cancellationToken) ?? Task.CompletedTask;
     }
 
     public Task StartVpnService(CancellationToken cancellationToken)

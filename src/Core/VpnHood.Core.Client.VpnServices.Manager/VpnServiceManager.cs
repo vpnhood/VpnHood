@@ -34,7 +34,7 @@ public class VpnServiceManager : IDisposable
     private ConnectionInfo _connectionInfo;
     private DateTime? _connectionInfoRefreshedTime;
     private readonly IMessageClient _messageClient;
-    private bool _isInitializing;
+    private readonly StartState _startState;
     private int _vpnServiceUnreachableCount;
     private CancellationTokenSource _updateConnectionInfoCts = new();
     private ConnectionInfo? _lastConnectionInfo;
@@ -55,6 +55,7 @@ public class VpnServiceManager : IDisposable
         _device = device;
         _messageClient = device.CreateMessageClient();
         _connectionInfo = TryReadConnectionInfo() ?? BuildConnectionInfo(ClientState.None);
+        _startState = new StartState(this);
 
         _updateConnectionInfoJob = new Job(UpdateConnectionInfoJob,
             eventWatcherInterval ?? TimeSpan.MaxValue, nameof(UpdateConnectionInfoJob));
@@ -110,26 +111,34 @@ public class VpnServiceManager : IDisposable
         return _connectionInfo;
     }
 
-    public bool IsStarted => _isInitializing || ConnectionInfo.IsStarted();
+    public bool IsStarted => _startState.IsInitializing || ConnectionInfo.IsStarted();
 
     /// <param name="uiContext">The caller's window, which asks the person for the VPN permission when
     /// the OS needs that (Android); null when it has none, and then a missing permission fails.</param>
     public async Task Start(IUiContext? uiContext, VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
+        // before the start: the stop waits for an older start's Disposed, which it writes only while it owns the state
+        if (IsStarted)
+            await TryStop().Vhc();
+
+        await InitializeVpnService(uiContext, serviceOptions, cancellationToken).Vhc();
+
+        // wait for connection or error
+        await WaitForConnection(cancellationToken).Vhc();
+    }
+
+    // The start owns the state until the service has written its own, or the start has failed
+    private async Task InitializeVpnService(IUiContext? uiContext, VpnServiceOptions serviceOptions,
+        CancellationToken cancellationToken)
+    {
         var clientOptions = serviceOptions.ClientOptions;
 
-        // wait for vpn service
+        using var startScope = _startState.Begin(cancellationToken);
         try {
-            if (IsStarted)
-                await TryStop().Vhc();
-
-            _isInitializing = true;
             _vpnServiceUnreachableCount = 0;
             await _updateConnectionInfoCts.TryCancelAsync().Vhc();
             _updateConnectionInfoCts.Dispose();
             _updateConnectionInfoCts = new CancellationTokenSource();
-
-            _connectionInfo = SetConnectionInfo(ClientState.Initializing);
 
             // save vpn config
             await _serviceOptionsFile.Write(serviceOptions, cancellationToken).Vhc();
@@ -149,18 +158,9 @@ public class VpnServiceManager : IDisposable
             await WaitForVpnService(cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            // It looks like the service is not running, set the state to disposed if it is still in initializing state
-            var connectionInfo = TryReadConnectionInfo();
-            if (connectionInfo?.ClientState == ClientState.Initializing)
-                SetConnectionInfo(ClientState.Disposed, ex);
+            startScope.Fail(ex);
             throw;
         }
-        finally {
-            _isInitializing = false;
-        }
-
-        // wait for connection or error
-        await WaitForConnection(cancellationToken).Vhc();
     }
 
     /// <summary>
@@ -285,7 +285,8 @@ public class VpnServiceManager : IDisposable
         using var scopeLock = await _connectionInfoLock.LockAsync(updateCts.Token).Vhc();
 
         // read from cache if not expired
-        if (_isInitializing || (!force && FastDateTime.UtcNow - _connectionInfoRefreshedTime < _connectionInfoTimeSpan))
+        if (_startState.IsInitializing ||
+            (!force && FastDateTime.UtcNow - _connectionInfoRefreshedTime < _connectionInfoTimeSpan))
             return _connectionInfo;
 
         // update from file to make sure there is no error
@@ -293,7 +294,7 @@ public class VpnServiceManager : IDisposable
         // Should send request if service is in initializing state, because SendRequest will set the state to disposed if failed
         _connectionInfo = TryReadConnectionInfo() ?? _connectionInfo;
         _connectionInfoRefreshedTime = FastDateTime.UtcNow;
-        if (_isInitializing || _connectionInfo.Error != null || !_connectionInfo.IsStarted()) {
+        if (_startState.IsInitializing || _connectionInfo.Error != null || !_connectionInfo.IsStarted()) {
             CheckForEvents();
             return _connectionInfo;
         }
@@ -307,7 +308,7 @@ public class VpnServiceManager : IDisposable
             // it is a dead request from previous session
             VhLogger.Instance.LogWarning(ex, "Previous UpdateConnection Info has been ignored due to the new service.");
         }
-        catch (Exception) when (_isInitializing) {
+        catch (Exception) when (_startState.IsInitializing) {
             throw; // initializing state, discard any log or setting new connection info
         }
         catch (VpnServiceNotReadyException ex) {
@@ -516,5 +517,56 @@ public class VpnServiceManager : IDisposable
         _updateConnectionInfoCts.TryCancel();
         _updateConnectionInfoCts.Dispose();
         _messageClient.Dispose();
+    }
+
+    // Which start owns the state while it initializes: the latest. Under the lock, an older start's end comes either
+    // before a newer start's Initializing, or after it and leaves the state alone
+    private sealed class StartState(VpnServiceManager manager)
+    {
+        private readonly Lock _lock = new();
+        private Scope? _current;
+
+        public bool IsInitializing {
+            get {
+                lock (_lock)
+                    return _current != null;
+            }
+        }
+
+        // a start cancelled while its stop ran takes nothing over
+        public Scope Begin(CancellationToken cancellationToken)
+        {
+            lock (_lock) {
+                cancellationToken.ThrowIfCancellationRequested();
+                var scope = new Scope(this);
+                manager.SetConnectionInfo(ClientState.Initializing);
+                _current = scope;
+                return scope;
+            }
+        }
+
+        private void End(Scope scope, Exception? error)
+        {
+            lock (_lock) {
+                if (!ReferenceEquals(_current, scope))
+                    return; // a newer start owns the state
+
+                // It looks like the service is not running, set the state to disposed if it is still in
+                // initializing state
+                if (error != null && manager.TryReadConnectionInfo()?.ClientState == ClientState.Initializing)
+                    manager.SetConnectionInfo(ClientState.Disposed, error);
+
+                _current = null;
+            }
+        }
+
+        // one start's hold on the state: it keeps the start's failure for its end
+        public sealed class Scope(StartState owner) : IDisposable
+        {
+            private Exception? _error;
+
+            public void Fail(Exception error) => _error = error;
+            public void Dispose() => owner.End(this, _error);
+        }
     }
 }

@@ -63,6 +63,9 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         }
     }
 
+    // when it began closing, 0 while open: its manager lets the oldest closes go first
+    internal long CloseTicks => Volatile.Read(ref _closeTicks);
+
     public void Start()
     {
         if (IsDisposed)

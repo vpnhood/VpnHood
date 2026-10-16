@@ -596,6 +596,34 @@ public class TunnelTest : TestBase
     }
 
     [TestMethod]
+    public async Task Closing_channels_beyond_twice_the_maximum_go_oldest_first()
+    {
+        // a peer closes the tunnel's channels one after another: three, then four more a second later, as the
+        // channels' clock reads to the second
+        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions()) { MaxPacketChannelCount = 2 };
+        var olderChannels = AddAndClose(3);
+        await Task.Delay(TimeSpan.FromSeconds(1.1), TestCt);
+        var newerChannels = AddAndClose(4);
+
+        // the next add leaves the four newer ones to their grace and disposes the three older ones
+        tunnel.AddChannel(new TestPacketChannel());
+        Assert.IsTrue(newerChannels.All(x => x.State == PacketChannelState.Disconnecting));
+        Assert.IsTrue(olderChannels.All(x => x.State == PacketChannelState.Disposed));
+        return;
+
+        TestPacketChannel[] AddAndClose(int count)
+        {
+            var channels = Enumerable.Range(0, count).Select(_ => new TestPacketChannel()).ToArray();
+            foreach (var channel in channels) {
+                tunnel.AddChannel(channel);
+                channel.Close();
+            }
+
+            return channels;
+        }
+    }
+
+    [TestMethod]
     public void Packet_channels_read_while_the_list_changes_are_a_copy()
     {
         using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());

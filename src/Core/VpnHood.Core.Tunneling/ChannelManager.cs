@@ -230,7 +230,28 @@ internal class ChannelManager : IDisposable
             foreach (var channel in disposedChannels.ToArray()) {
                 RemoveChannel(channel);
             }
+
+            RemoveExcessClosingPacketChannels();
         }
+    }
+
+    // A peer can close channels faster than their grace ends them, each one holding its connection meanwhile, so at most
+    // twice the maximum stay closing: the ones that began closing first go at once. With the live ones that began
+    // closing since the last cleanup, a session holds at most three times the maximum, each for 15 to 55 s: its grace,
+    // then its lifetime job's next run
+    private void RemoveExcessClosingPacketChannels()
+    {
+        var maxClosingCount = 2 * MaxPacketChannelCount;
+        if (_disposingChannels.Count <= maxClosingCount)
+            return;
+
+        var closingChannels = _disposingChannels.OfType<PacketChannel>().ToArray();
+        var excessChannels = closingChannels
+            .OrderBy(x => x.CloseTicks)
+            .Take(closingChannels.Length - maxClosingCount);
+
+        foreach (var channel in excessChannels)
+            RemoveChannelInternal(channel, dispose: true);
     }
 
     private void CleanupChannels<T>(ICollection<T> channels) where T : IChannel

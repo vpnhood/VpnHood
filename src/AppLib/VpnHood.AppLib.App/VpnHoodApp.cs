@@ -76,6 +76,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isDisconnecting;
     private bool _disposed;
     private AppConnectionState? _lastConnectionState;
+    private readonly Lock _connectionStateLock = new();
     private CancellationTokenSource _connectCts = new();
     private CancellationTokenSource _showAdCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
@@ -696,17 +697,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void FireConnectionStateChanged()
     {
-        // check changed state
-        var connectionState = ConnectionState;
-        var lastConnectionState = _lastConnectionState;
-        if (connectionState == lastConnectionState) return;
-        _lastConnectionState = connectionState;
+        // One caller at a time: a state read before a connect must not land after the connect's. A connect calls
+        // this before its session is up, so it waits for a reader that stalled, which then finds no session to end
+        lock (_connectionStateLock) {
+            // check changed state
+            var connectionState = ConnectionState;
+            var lastConnectionState = _lastConnectionState;
+            if (connectionState == lastConnectionState) return;
+            _lastConnectionState = connectionState;
 
-        // a session ended: always on sorts why, where nobody has - a connect's failure is its connect's, and a
-        // person's disconnect stops it already. The reason is the app's own or the service's, not LastError's,
-        // which a diagnose turns into "no error found"
-        if (connectionState == AppConnectionState.None && lastConnectionState is not null)
-            _alwaysOnService.SessionEnded(_appPersistState.LastError ?? ConnectionInfo.Error);
+            // a session ended: always on sorts why, where nobody has - a connect's failure is its connect's, and a
+            // person's disconnect stops it already. The reason is the app's own or the service's, not LastError's,
+            // which a diagnose turns into "no error found"
+            if (connectionState == AppConnectionState.None && lastConnectionState is not null)
+                _alwaysOnService.SessionEnded(_appPersistState.LastError ?? ConnectionInfo.Error);
+        }
 
         Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));
     }

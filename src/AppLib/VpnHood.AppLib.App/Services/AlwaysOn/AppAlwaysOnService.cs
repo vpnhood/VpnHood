@@ -16,13 +16,13 @@ namespace VpnHood.AppLib.App.Services.AlwaysOn;
 
 // Always on where the app keeps it itself (AlwaysOnSupport.App: a desktop's service, which starts at
 // boot). It connects at the app's start, before anyone signs in, and sorts why a session ended, whichever
-// connect began it: a failure to reach a working server is tried again after a pause that grows, and
-// anything else stops it - a refused key, a used-up quota, a plan that does not allow it, an error nobody
-// thought of - and so does a person's disconnect. A stop stands until a person connects or the service
-// restarts, and one by an error also until the plan changes. A revoke, another app taking the tunnel,
-// stands across a restart too (AppPersistState.IsVpnServiceRevoked), or two apps with always on would
-// take the tunnel from each other in turn. Its own connect gives way to anything that came after it chose
-// to connect, so it never undoes a person's connect or disconnect.
+// connect began it: a failure to reach a working server, or a VPN adapter that stopped on its own, is tried
+// again after a pause that grows, and anything else stops it - a refused key, a used-up quota, a plan that
+// does not allow it, an error nobody thought of - and so does a person's disconnect. A stop stands until a
+// person connects or the service restarts, and one by an error also until the plan changes. A revoke,
+// another app taking the tunnel, stands across a restart too (AppPersistState.IsVpnServiceRevoked), or two
+// apps with always on would take the tunnel from each other in turn. Its own connect gives way to anything
+// that came after it chose to connect, so it never undoes a person's connect or disconnect.
 internal sealed class AppAlwaysOnService : IDisposable
 {
     private readonly VpnHoodApp _app;
@@ -286,7 +286,9 @@ internal sealed class AppAlwaysOnService : IDisposable
     // reach; a timeout, a broken connection or handshake, or a connect its caller gave up on; the app's own VPN
     // service out of reach for a while; a session the server or the network ended, or one the server lost,
     // whose access error after the session was up is no refused key (a key it refuses fails the next connect,
-    // and an HTTP 401, UnauthorizedAccessException, is one); a server busy or down for maintenance.
+    // and an HTTP 401, UnauthorizedAccessException, is one); a server busy or down for maintenance. And the
+    // VPN adapter that stopped on its own - its interface disabled or gone, its I/O broken - whose next connect
+    // makes a new one.
     internal static bool IsTriedAgain(ApiError error, bool sessionWasUp)
     {
         if (error.Is<SessionException>() || error.Is<MaintenanceException>())
@@ -311,7 +313,8 @@ internal sealed class AppAlwaysOnService : IDisposable
                error.Is<TaskCanceledException>() ||
                error.Is<VpnServiceUnreachableException>() ||
                error.Is<VpnServiceNotReadyException>() ||
-               error.Is<VpnServiceTimeoutException>();
+               error.Is<VpnServiceTimeoutException>() ||
+               error.Is<VpnAdapterFailedException>();
     }
 
     private Plan GetPlan(Guid? vpnProfileId = null)

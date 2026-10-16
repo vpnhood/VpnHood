@@ -41,6 +41,9 @@ public static class ClientExceptionConverter
         if (apiError.Is<UnreachableServerLocationException>())
             exception = new UnreachableServerLocationException(apiError.Message);
 
+        if (apiError.Is<VpnAdapterFailedException>())
+            exception = new VpnAdapterFailedException(apiError.Message);
+
         if (exception != null)
             apiError.ExportData(exception.Data);
 

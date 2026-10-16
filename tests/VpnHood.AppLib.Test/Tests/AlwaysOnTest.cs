@@ -12,6 +12,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Test;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
@@ -371,6 +372,31 @@ public class AlwaysOnTest : TestAppBase
         Assert.AreEqual(nameof(VpnServiceException), app.State.AlwaysOnState?.Error?.TypeName);
     }
 
+    [TestMethod]
+    public async Task An_adapter_that_stopped_on_its_own_is_tried_again()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
+        var adapters = new List<BreakableVpnAdapter>();
+        var device = new TestDevice(TestAppHelper, _ => {
+            var adapter = new BreakableVpnAdapter();
+            adapters.Add(adapter);
+            return adapter;
+        }) { IsAlwaysOnSupported = true };
+
+        // the session's adapter breaks, as one whose interface is disabled or gone, and stops itself
+        await using var app = CreateApp(storagePath, device: device, retryPauses: [TimeSpan.FromSeconds(1)]);
+        await app.WaitForState(AppConnectionState.Connected);
+        adapters.Single().Break();
+
+        // tried again, and the next connect's new adapter connects
+        var retry = await WaitForRetry(app, previousRetryTime: null);
+        Assert.AreEqual(nameof(VpnAdapterFailedException), retry.Error?.TypeName);
+        await app.WaitForState(AppConnectionState.Connected, timeout: 10000);
+        Assert.HasCount(2, adapters);
+    }
+
     // What the cases above do not reach: the app's own VPN service out of reach, a broken connection or
     // handshake and a connect its caller gave up on are tried again, and so is an access error once the
     // session was up, from a server that lost it; at a connect it is a refused key, as an HTTP 401 is.
@@ -459,5 +485,34 @@ public class AlwaysOnTest : TestAppBase
         }
 
         throw new TimeoutException("Always on did not wait to try again.");
+    }
+
+    // A null adapter the test breaks: from then on each read fails, until the adapter stops itself on the
+    // errors and tells its owner (IVpnAdapter.Failed), as one whose interface went does.
+    private sealed class BreakableVpnAdapter() : NullVpnAdapter(autoDisposePackets: true, blocking: false)
+    {
+        private readonly ManualResetEventSlim _brokenEvent = new(false);
+
+        public void Break()
+        {
+            _brokenEvent.Set();
+        }
+
+        protected override void WaitForTunRead()
+        {
+            _brokenEvent.Wait();
+        }
+
+        protected override bool ReadPacket(byte[] buffer)
+        {
+            return _brokenEvent.IsSet ? throw new IOException("The test broke the adapter.") : false;
+        }
+
+        protected override void DisposeManaged()
+        {
+            _brokenEvent.Set(); // the reader's wait ends; its run is over by now
+            base.DisposeManaged();
+            _brokenEvent.Dispose();
+        }
     }
 }

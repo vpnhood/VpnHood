@@ -1,6 +1,7 @@
 using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -408,10 +409,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     }
 
     // The adapter stopped on its own and stays down. Without it, the device's traffic bypasses the
-    // tunnel, so the session ends with the error rather than staying connected in name.
+    // tunnel, so the session ends with the error rather than staying connected in name; an error of its
+    // own, which always on tries again, as the next connect makes a new adapter.
     private void VpnAdapter_Failed(object? sender, Exception ex)
     {
-        _ = DisposeAsync(new InvalidOperationException($"The VPN adapter has stopped. {ex.Message}", ex));
+        _ = DisposeAsync(new VpnAdapterFailedException($"The VPN adapter has stopped. {ex.Message}", ex));
     }
 
     private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)

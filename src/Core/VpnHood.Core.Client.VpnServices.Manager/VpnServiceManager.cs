@@ -30,11 +30,10 @@ public class VpnServiceManager : IDisposable
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
     private readonly IDevice _device;
     private readonly VpnServiceOptionsFile _serviceOptionsFile;
-    private readonly string _vpnStatusFilePath;
-    private ConnectionInfo _connectionInfo;
+    private readonly VpnServiceStatus _status;
     private DateTime? _connectionInfoRefreshedTime;
     private readonly IMessageClient _messageClient;
-    private readonly StartState _startState;
+    private readonly VpnServiceStartState _startState;
     private int _vpnServiceUnreachableCount;
     private CancellationTokenSource _updateConnectionInfoCts = new();
     private ConnectionInfo? _lastConnectionInfo;
@@ -51,11 +50,10 @@ public class VpnServiceManager : IDisposable
         VpnServiceFolders.MigrateServiceFiles(device.VpnServiceDataFolder, device.VpnServiceConfigFolder);
 #pragma warning restore CS0618 // Type or member is obsolete
         _serviceOptionsFile = new VpnServiceOptionsFile(device.VpnServiceConfigFolder);
-        _vpnStatusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         _device = device;
         _messageClient = device.CreateMessageClient();
-        _connectionInfo = TryReadConnectionInfo() ?? BuildConnectionInfo(ClientState.None);
-        _startState = new StartState(this);
+        _status = new VpnServiceStatus(device.VpnServiceConfigFolder);
+        _startState = new VpnServiceStartState(_status);
 
         _updateConnectionInfoJob = new Job(UpdateConnectionInfoJob,
             eventWatcherInterval ?? TimeSpan.MaxValue, nameof(UpdateConnectionInfoJob));
@@ -64,51 +62,8 @@ public class VpnServiceManager : IDisposable
     public ConnectionInfo ConnectionInfo {
         get {
             _ = TryRefreshConnectionInfo(false, CancellationToken.None);
-            return _connectionInfo;
+            return _status.ConnectionInfo;
         }
-    }
-
-    private static ConnectionInfo BuildConnectionInfo(ClientState clientState, Exception? ex = null)
-    {
-        return new ConnectionInfo {
-            ProxyConnectorStatus = null,
-            CreatedTime = null,
-            SessionInfo = null,
-            SessionStatus = null,
-            ClientState = clientState,
-            ClientStateChangedTime = null,
-            ClientStateProgress = null,
-            Error = ex?.ToApiError()
-        };
-    }
-
-    // The VPN service rewrites the status file at each state change. The read lets writers in: a reader that kept
-    // them out would fail the service's write and lose that state, and a stop would wait out its timeout for a
-    // Disposed that never came. A read that finds no file, or catches it half-written, is null: the next one gets it
-    private ConnectionInfo? TryReadConnectionInfo()
-    {
-        try {
-            using var stream = new FileStream(_vpnStatusFilePath, FileMode.Open, FileAccess.Read,
-                FileShare.ReadWrite | FileShare.Delete);
-            return JsonSerializer.Deserialize<ConnectionInfo>(stream);
-        }
-        catch {
-            return null;
-        }
-    }
-
-    private ConnectionInfo SetConnectionInfo(ClientState clientState, Exception? ex = null)
-    {
-        _connectionInfo = BuildConnectionInfo(clientState, ex: ex);
-        try {
-            File.WriteAllText(_vpnStatusFilePath, JsonSerializer.Serialize(_connectionInfo));
-        }
-        catch {
-            // it is ok if we can't write to the file
-            // It means the service is overwriting the file
-        }
-
-        return _connectionInfo;
     }
 
     public bool IsStarted => _startState.IsInitializing || ConnectionInfo.IsStarted();
@@ -195,16 +150,16 @@ public class VpnServiceManager : IDisposable
 
             // directly read file because UpdateConnection will set the state to disposed if it could not connect to the service
             // UpdateConnection will fail due to it cancellation 
-            var connectionInfo = TryReadConnectionInfo();
+            var connectionInfo = _status.TryRead();
 
             // wait for vpn service to start
             while (connectionInfo == null ||
                    connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
                 await Task.Delay(_startVpnServicePollInterval, localCts.Token).Vhc();
-                connectionInfo = TryReadConnectionInfo();
+                connectionInfo = _status.TryRead();
             }
 
-            _connectionInfo = connectionInfo;
+            _status.ConnectionInfo = connectionInfo;
             VhLogger.Instance.LogInformation(
                 "VpnService has started. ConnectionState: {ConnectionState}",
                 connectionInfo.ClientState);
@@ -264,7 +219,7 @@ public class VpnServiceManager : IDisposable
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not update connection info.");
-            return _connectionInfo;
+            return _status.ConnectionInfo;
         }
     }
 
@@ -273,11 +228,11 @@ public class VpnServiceManager : IDisposable
     private async Task<ConnectionInfo> RefreshConnectionInfo(bool force, CancellationToken cancellationToken)
     {
         if (_disposed)
-            return _connectionInfo;
+            return _status.ConnectionInfo;
 
         // if it is locked, we are already updating the connection info
         if (!force && _connectionInfoLock.IsLocked)
-            return _connectionInfo;
+            return _status.ConnectionInfo;
 
         // build a new token source to cancel the previous request
         using var updateCts =
@@ -287,16 +242,16 @@ public class VpnServiceManager : IDisposable
         // read from cache if not expired
         if (_startState.IsInitializing ||
             (!force && FastDateTime.UtcNow - _connectionInfoRefreshedTime < _connectionInfoTimeSpan))
-            return _connectionInfo;
+            return _status.ConnectionInfo;
 
         // update from file to make sure there is no error
         // VpnClient always update the file when ConnectionState changes
         // Should send request if service is in initializing state, because SendRequest will set the state to disposed if failed
-        _connectionInfo = TryReadConnectionInfo() ?? _connectionInfo;
+        _status.ConnectionInfo = _status.TryRead() ?? _status.ConnectionInfo;
         _connectionInfoRefreshedTime = FastDateTime.UtcNow;
-        if (_startState.IsInitializing || _connectionInfo.Error != null || !_connectionInfo.IsStarted()) {
+        if (_startState.IsInitializing || _status.ConnectionInfo.Error != null || !_status.ConnectionInfo.IsStarted()) {
             CheckForEvents();
-            return _connectionInfo;
+            return _status.ConnectionInfo;
         }
 
         // connect to the server and get the connection info
@@ -312,14 +267,14 @@ public class VpnServiceManager : IDisposable
             throw; // initializing state, discard any log or setting new connection info
         }
         catch (VpnServiceNotReadyException ex) {
-            if (_connectionInfo.ClientState != ClientState.Disposed) {
+            if (_status.ConnectionInfo.ClientState != ClientState.Disposed) {
                 VhLogger.Instance.LogDebug(ex, "Could not update connection info.");
-                _connectionInfo = SetConnectionInfo(ClientState.Disposed, _connectionInfo.Error?.ToException());
+                _status.Set(ClientState.Disposed, _status.ConnectionInfo.Error?.ToException());
             }
         }
         catch (VpnServiceUnreachableException) when (_stopLock.IsLocked) {
             // service is stopping, set the state to none
-            _connectionInfo = SetConnectionInfo(ClientState.None);
+            _status.Set(ClientState.None);
         }
         catch (VpnServiceUnreachableException ex) {
             VhLogger.Instance.LogError(ex, "VpnService is unreachable.");
@@ -329,7 +284,7 @@ public class VpnServiceManager : IDisposable
 
             // update connection info and set error
             if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold)
-                _connectionInfo = SetConnectionInfo(ClientState.Disposed, ex);
+                _status.Set(ClientState.Disposed, ex);
 
             // report it first time
             if (_vpnServiceUnreachableCount == 1)
@@ -342,7 +297,7 @@ public class VpnServiceManager : IDisposable
 
         CheckForEvents();
         _connectionInfoRefreshedTime = FastDateTime.UtcNow;
-        return _connectionInfo;
+        return _status.ConnectionInfo;
     }
 
 
@@ -356,8 +311,8 @@ public class VpnServiceManager : IDisposable
         var response = await SendRequestCore<T>(request, cancellationToken).Vhc();
 
         // update the last connection info
-        if (response.ConnectionInfo.CreatedTime >= _connectionInfo.CreatedTime) {
-            _connectionInfo = response.ConnectionInfo;
+        if (response.ConnectionInfo.CreatedTime >= _status.ConnectionInfo.CreatedTime) {
+            _status.ConnectionInfo = response.ConnectionInfo;
             _connectionInfoRefreshedTime = FastDateTime.UtcNow;
         }
 
@@ -378,7 +333,7 @@ public class VpnServiceManager : IDisposable
         using var scopeLock = await _sendRequestLock.LockAsync(cancellationToken).Vhc();
 
         // validate connection info
-        var connectionInfo = _connectionInfo;
+        var connectionInfo = _status.ConnectionInfo;
         if (connectionInfo.Error != null)
             throw new VpnServiceNotReadyException("VpnService is not ready.");
 
@@ -446,7 +401,7 @@ public class VpnServiceManager : IDisposable
 
     private void CheckForEvents()
     {
-        var connectionInfo = _connectionInfo;
+        var connectionInfo = _status.ConnectionInfo;
         
         // check if the state has changed
         if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState || 
@@ -517,56 +472,5 @@ public class VpnServiceManager : IDisposable
         _updateConnectionInfoCts.TryCancel();
         _updateConnectionInfoCts.Dispose();
         _messageClient.Dispose();
-    }
-
-    // Which start owns the state while it initializes: the latest. Under the lock, an older start's end comes either
-    // before a newer start's Initializing, or after it and leaves the state alone
-    private sealed class StartState(VpnServiceManager manager)
-    {
-        private readonly Lock _lock = new();
-        private Scope? _current;
-
-        public bool IsInitializing {
-            get {
-                lock (_lock)
-                    return _current != null;
-            }
-        }
-
-        // a start cancelled while its stop ran takes nothing over
-        public Scope Begin(CancellationToken cancellationToken)
-        {
-            lock (_lock) {
-                cancellationToken.ThrowIfCancellationRequested();
-                var scope = new Scope(this);
-                manager.SetConnectionInfo(ClientState.Initializing);
-                _current = scope;
-                return scope;
-            }
-        }
-
-        private void End(Scope scope, Exception? error)
-        {
-            lock (_lock) {
-                if (!ReferenceEquals(_current, scope))
-                    return; // a newer start owns the state
-
-                // It looks like the service is not running, set the state to disposed if it is still in
-                // initializing state
-                if (error != null && manager.TryReadConnectionInfo()?.ClientState == ClientState.Initializing)
-                    manager.SetConnectionInfo(ClientState.Disposed, error);
-
-                _current = null;
-            }
-        }
-
-        // one start's hold on the state: it keeps the start's failure for its end
-        public sealed class Scope(StartState owner) : IDisposable
-        {
-            private Exception? _error;
-
-            public void Fail(Exception error) => _error = error;
-            public void Dispose() => owner.End(this, _error);
-        }
     }
 }

@@ -51,10 +51,11 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         // and with no tracker the hello tells the access manager not to report its sessions either.
         options.TrackerFactories = [];
         options.AllowEndPointTracker = false;
-        // Not appConfigs' TermsOfUse: a purchase here is governed by Apple's standard EULA while
-        // no custom EULA is registered in App Store Connect. Delete this once one is.
+        // A purchase here is under Apple's standard EULA, which our terms (Links.TermsOfUse) name as an
+        // App Store copy's licence; without terms, the app links the EULA itself.
         options.Links = options.Links with {
-            TermsOfUse = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")
+            TermsOfUse = options.Links.TermsOfUse ??
+                         new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")
         };
         // Native in-app rating dialog (parity with Client.Android.Google's Google Play provider).
         // Like Android Client, AllowRecommendUserReviewByServer stays at its default (false).

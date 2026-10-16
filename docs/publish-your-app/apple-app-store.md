@@ -194,8 +194,8 @@ one blocks the submission until answered:
 7. **Privacy policy URL** — a working page on your own domain, under your own name.
 8. **Licence agreement** — App Information → *License Agreement*. Leave it alone and Apple's
    [standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) governs every
-   sale, which is the right answer until you have terms of your own that a lawyer has read. Whichever
-   you use, the app has to link to the same one — see below.
+   sale, which is the right answer until you have terms of your own that a lawyer has read. The terms
+   the app links have to be that agreement or name it — see below.
 
 **Pricing, App Privacy and the primary category** waste the most time, because none of them
 announces itself: the version simply refuses to enter review, and the only error — in the console
@@ -212,9 +212,11 @@ carried both links, so treat the two fields above as necessary and not sufficien
 
 Both addresses are settings, not code — `PrivacyPolicy` and `TermsOfUse` under `Links` in your app
 settings ([deployment](../cicd/deployment.md)). Leave one empty and the app simply shows no link for
-it, which for the Privacy Policy is a rejection. The App Store build is the one exception: it always
-links Apple's standard EULA whatever `TermsOfUse` says, because that is the agreement a buyer there
-actually accepts for as long as no custom EULA is registered in App Information above.
+it, which for the Privacy Policy is a rejection. The App Store build is the one exception: without
+`TermsOfUse` it links Apple's standard EULA, the agreement a buyer there accepts unless you register
+your own in App Information above. Your terms, once set, have to be that registered agreement or,
+while Apple's stays, name it as the licence of a copy from the App Store, as this project's own
+terms do.
 
 ---
 

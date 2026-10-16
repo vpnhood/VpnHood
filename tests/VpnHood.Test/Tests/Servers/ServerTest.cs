@@ -614,4 +614,37 @@ public class ServerTest : TestBase
         Assert.Contains(x => x is { Protocol: ChannelProtocol.Tcp, Error: null }, endPointStatuses,
             "A working TCP endpoint should still be configured.");
     }
+
+    [TestMethod]
+    public async Task A_disposed_session_makes_no_udp_channel()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(token);
+        var session = server.GetSession(client);
+
+        // a disposed session stays listed a while, so a UDP packet its client still sends reaches it
+        session.Dispose();
+        var transportMade = false;
+        Assert.ThrowsExactly<ObjectDisposedException>(() => session.UseUdpTransport(() => {
+            transportMade = true;
+            return new TestUdpTransport();
+        }));
+        Assert.IsFalse(transportMade);
+    }
+
+    [TestMethod]
+    public async Task A_udp_channel_the_tunnel_refuses_is_disposed()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(token);
+        var session = server.GetSession(client);
+
+        // the tunnel is gone, as when a UDP packet comes in while the session is disposed
+        session.Tunnel.Dispose();
+        var transport = new TestUdpTransport();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => session.UseUdpTransport(() => transport));
+        Assert.IsTrue(transport.IsDisposed);
+    }
 }

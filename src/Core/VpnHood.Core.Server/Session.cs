@@ -178,14 +178,20 @@ public class Session : IDisposable
 
     public IUdpTransport UseUdpTransport(Func<IUdpTransport> factory)
     {
-        // Note: creating UdpTransport is costly, this method may be called per packet
-        _udpChannel ??= new UdpChannel(factory(), new UdpChannelOptions {
-            Blocking = false,
-            AutoDisposePackets = true,
-            Lifespan = null,
-            ChannelId = Guid.NewGuid().ToString(),
-            TrafficMeter = TrafficMeter
-        });
+        // Note: creating UdpTransport is costly, this method may be called per packet. One the tunnel let go, closing or
+        // gone, is still returned, as a check here would cost every packet: a client never sends its UDP channel's
+        // close, and the session takes a new one once the client turns to TCP and back
+        if (_udpChannel == null) {
+            // none for a disposed session, which stays listed a while: nothing would add or dispose it
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+            _udpChannel = new UdpChannel(factory(), new UdpChannelOptions {
+                Blocking = false,
+                AutoDisposePackets = true,
+                Lifespan = null,
+                ChannelId = Guid.NewGuid().ToString(),
+                TrafficMeter = TrafficMeter
+            });
+        }
 
         UseUdpChannel = true;
         return _udpChannel.UdpTransport;
@@ -432,9 +438,9 @@ public class Session : IDisposable
                 if (_udpChannel is null)
                     throw new InvalidOperationException("UdpChannel is not created yet.");
 
-                // enable udp channel
+                // enable udp channel; one the tunnel refuses, as while the session is disposed, is disposed
                 Tunnel.RemoveChannels<IPacketChannel>();
-                Tunnel.AddChannel(_udpChannel);
+                Tunnel.AddChannel(_udpChannel, disposeIfFailed: true);
                 VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
                     "UdpChannel is enabled. SessionId: {SessionId}", SessionId);
             }
@@ -610,6 +616,7 @@ public class Session : IDisposable
         _proxyManager.Dispose();
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
         Tunnel.Dispose();
+        _udpChannel?.Dispose(); // one made but never added: the tunnel disposed one it had
         TrafficMeter.Dispose();
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();

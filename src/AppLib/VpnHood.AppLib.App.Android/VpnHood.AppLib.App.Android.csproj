@@ -14,4 +14,10 @@
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<!-- Draws the app's icons from its SVGs at build time (VpnHood.AppLib.App.targets): its targets reach
+		     every head that references this, and nothing of it ships in the app. -->
+		<PackageReference Include="Microsoft.Maui.Resizetizer" Version="10.0.110" />
+	</ItemGroup>
+
 </Project>

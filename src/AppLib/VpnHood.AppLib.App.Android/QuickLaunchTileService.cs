@@ -39,14 +39,14 @@ namespace VpnHood.AppLib.App.Android;
 #if !DEBUG
     Process = ProcessName,
 #endif
-    Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true,
+    Permission = Manifest.Permission.BindQuickSettingsTile, Icon = "@drawable/" + IconResourceName, Enabled = true,
     Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [IntentFilter([ActionQsTile])]
 public class QuickLaunchTileService : TileService
 {
     public const string ProcessName = ":vpnhood_tile";
-    private const string IconResourceName = "@mipmap/quick_launch_tile";
+    private const string IconResourceName = "notification"; // the app's white glyph, as its notifications show
     private readonly Handler _mainHandler = new(Looper.MainLooper!);
     private readonly VpnServiceManager _vpnServiceManager = new(AndroidDevice.Create(), eventWatcherInterval: null);
     private CancellationTokenSource? _listeningCts;

@@ -12,6 +12,8 @@
     <VhAppName>VpnHood! CLIENT</VhAppName>
     <VhAppPackageTitle>VpnHoodClient</VhAppPackageTitle>
     <VhAppCommandName>vhclient</VhAppCommandName>
+    <!-- the Android and iOS icons, as SVGs (VpnHood.AppLib.App.targets) -->
+    <VhAppIconsDir>$(MSBuildThisFileDirectory)icons</VhAppIconsDir>
   </PropertyGroup>
 
   <!-- After the values, as NuGet imports a package's props after Directory.Build.props: the same file

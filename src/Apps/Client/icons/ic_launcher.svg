@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="324" height="324" viewBox="0 0 324 324">
+ <title>Client icon: background</title>
+ <defs>
+  <linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="-0" y1="248" x2="324" y2="0"><stop offset="0" stop-color="#16a4fd"/><stop offset="0.79" stop-color="#41faa4"/></linearGradient>
+ </defs>
+ <path d="M0,0h324v324h-324z" fill="url(#g1)"/>
+ <path d="M110,0H324V324H240.5L110,0Z" fill="#ffffff"/>
+</svg>

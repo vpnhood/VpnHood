@@ -84,7 +84,7 @@ public sealed class AndroidVpnNotification : IDisposable
         // set the required small icon
         ArgumentNullException.ThrowIfNull(context.ApplicationInfo);
         ArgumentNullException.ThrowIfNull(context.Resources);
-        var iconId = context.Resources.GetIdentifier("notification", "mipmap", context.PackageName);
+        var iconId = context.Resources.GetIdentifier("notification", "drawable", context.PackageName);
         if (iconId == 0) iconId = context.ApplicationInfo.Icon;
         notificationBuilder.SetSmallIcon(iconId);
 

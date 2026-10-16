@@ -66,7 +66,7 @@ public class UpdateReadyReceiver : BroadcastReceiver
         var pendingIntent = PendingIntent.GetActivity(context, NotificationId, launchIntent,
             PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
 
-        var iconId = context.Resources?.GetIdentifier("notification", "mipmap", packageName) ?? 0;
+        var iconId = context.Resources?.GetIdentifier("notification", "drawable", packageName) ?? 0;
         if (iconId == 0)
             iconId = context.ApplicationInfo?.Icon ?? 0;
 

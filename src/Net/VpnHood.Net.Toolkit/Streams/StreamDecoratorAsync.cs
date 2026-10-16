@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Toolkit.Streams;
 
@@ -6,6 +7,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen)
     : AsyncStream, IDataStream where T : Stream
 {
     protected readonly T SourceStream = sourceStream;
+    private bool _isSourceClosed;
     protected bool IsDisposed { get; private set; }
 
     public override bool CanRead => SourceStream.CanRead;
@@ -52,35 +54,36 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen)
         return SourceStream.WriteAsync(buffer, cancellationToken);
     }
 
+    // the source closes once, by whichever close comes first, also when two run at once
+    protected ValueTask CloseSourceAsync()
+    {
+        return Interlocked.Exchange(ref _isSourceClosed, true)
+            ? ValueTask.CompletedTask
+            : SourceStream.DisposeAsync();
+    }
+
+    // The async close, then Dispose(false), as Stream's pattern has it: Dispose(true) is the sync close's, and would close
+    // the source again, synchronously, which waits for the peer on a QUIC stream
     public override async ValueTask DisposeAsync()
     {
         if (!leaveOpen)
-            await SourceStream.DisposeAsync();
+            await CloseSourceAsync().Vhc();
 
-        await base.DisposeAsync();
-
-        // the base class does not call Dispose(bool) so we need to do it manually
-        // ReSharper disable once MethodHasAsyncOverload
-        Dispose(true);
+        Dispose(false);
+        GC.SuppressFinalize(this);
     }
 
+    // the sync close's, through Stream's Close, as any stream's
     protected override void Dispose(bool disposing)
     {
         if (IsDisposed)
             return;
 
-        if (disposing) {
-            if (!leaveOpen)
-                SourceStream.Dispose();
-        }
+        if (disposing && !leaveOpen && !Interlocked.Exchange(ref _isSourceClosed, true))
+            SourceStream.Dispose();
 
         IsDisposed = true;
-    }
-
-    public sealed override void Close()
-    {
-        if (!leaveOpen)
-            SourceStream.Close();
+        base.Dispose(disposing);
     }
 
     // Sealed

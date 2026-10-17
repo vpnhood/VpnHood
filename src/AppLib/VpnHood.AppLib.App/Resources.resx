@@ -132,9 +132,6 @@
   <data name="MsgUnsupportedContent" xml:space="preserve">
     <value>Unsupported file type.</value>
   </data>
-  <data name="MsgCantShowAd" xml:space="preserve">
-    <value>This server requires a display Ad but could not display it.</value>
-  </data>
   <data name="UpdateReadyToInstall" xml:space="preserve">
     <value>The update is ready to install.</value>
   </data>

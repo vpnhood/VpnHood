@@ -278,6 +278,37 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task Client_releases_its_adapter_when_its_session_close_fails(bool async)
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // the session's UDP channel has a socket from this factory
+        var socketFactory = new UdpCloseFailingSocketFactory();
+        var vpnAdapter = new TestNullVpnAdapter();
+        var adapterDisposed = false;
+        vpnAdapter.Disposed += (_, _) => adapterDisposed = true;
+        await using var client = await TestHelper.CreateClient(
+            vpnAdapter: vpnAdapter,
+            clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp),
+            socketFactory: socketFactory);
+        Assert.IsGreaterThan(0, socketFactory.CreatedUdpClientCount);
+
+        // the session's close throws when it closes that socket; the sync close lets that surface
+        socketFactory.FailCloses = true;
+        if (async)
+            await client.DisposeAsync();
+        else
+            Assert.ThrowsExactly<IOException>(() => client.Dispose());
+
+        Assert.IsGreaterThan(0, socketFactory.FailedCloseCount);
+        Assert.IsTrue(adapterDisposed);
+        Assert.AreEqual(ClientState.Disposed, client.State);
+    }
+
+    [TestMethod]
     public async Task Client_must_dispose_after_server_stopped()
     {
         await using var server = await TestHelper.CreateServer();

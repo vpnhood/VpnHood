@@ -287,7 +287,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         if (_session != null) {
             await _cancellationTokenSource.TryCancelAsync();
-            await _session.DisposeAsync();
+
+            // a failed session close must not keep the adapter from its release below
+            await _session.TryDisposeAsync();
         }
 
         // flush and dispose the proxy connector while we can still await
@@ -315,17 +317,20 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogInformation("Client is shutting down...");
         _cancellationTokenSource.TryCancel();
 
-        // close session
-        _session?.Dispose();
+        // close session; the adapter's release follows even a failed one, whose error still surfaces
+        try {
+            _session?.Dispose();
+        }
+        finally {
+            // dispose ProxyConnector before adapter get closed and it needs Adapter's SocketFactory.
+            // this sync path cannot await; the flush runs in the background and only touches the
+            // endpoint db. The session's connector service closes in the background too, so a proxy
+            // failure it records after the flush is not saved
+            VhLogger.Instance.LogDebug("Disposing ProxyConnector...");
+            _ = ProxyConnector.TryDisposeAsync();
 
-        // dispose ProxyConnector before adapter get closed and it needs Adapter's SocketFactory.
-        // this sync path cannot await; the flush runs in the background and only touches the
-        // endpoint db. The session's connector service closes in the background too, so a proxy
-        // failure it records after the flush is not saved
-        VhLogger.Instance.LogDebug("Disposing ProxyConnector...");
-        _ = ProxyConnector.TryDisposeAsync();
-
-        DisposeSyncMembers();
+            DisposeSyncMembers();
+        }
     }
 
     // what both closes share, after the session's and the proxy connector's, which are each one's own

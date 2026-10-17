@@ -1,6 +1,6 @@
 ﻿using VpnHood.Net.Toolkit.Graphics;
 
-namespace VpnHood.Core.Client.VpnServices.Host;
+namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 public sealed class VpnServiceLocalization
 {

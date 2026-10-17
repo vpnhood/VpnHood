@@ -1,7 +1,7 @@
 ﻿using Android.Content;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Android.Utils;
-using VpnHood.Core.Client.VpnServices.Host;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 
 namespace VpnHood.Core.Client.Devices.Android;
 

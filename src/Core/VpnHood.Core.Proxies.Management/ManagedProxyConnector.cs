@@ -32,6 +32,8 @@ public class ManagedProxyConnector : IProxyConnector
     private readonly Job _flushJob;
     private ProxyAutoUpdateOptions _autoUpdateOptions;
     private bool _disposed;
+    private readonly Lock _disposeLock = new();
+    private Task? _disposeTask;
     private bool _verifyTls;
     private readonly DateTime _sessionCreatedTime = FastDateTime.UtcNow;
     private readonly ProxySessionStatus _sessionStatus = new();
@@ -528,16 +530,29 @@ public class ManagedProxyConnector : IProxyConnector
         }
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task DisposeAsyncCore()
     {
-        if (_disposed) return;
         _disposed = true;
-
         _autoUpdateJob?.Dispose();
         _flushJob.Dispose();
 
-        // persist pending statuses to the shared store (Flush already swallows its own errors)
-        await Flush().Vhc();
+        // persist pending statuses to the shared store; a failed flush must not keep the store open
+        try {
+            await Flush().Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not save the proxy endpoint statuses.");
+        }
+
         _store.Dispose();
+    }
+
+    // a second close waits for the first one's end, as its flush may still be under way
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+
+        return new ValueTask(_disposeTask);
     }
 }

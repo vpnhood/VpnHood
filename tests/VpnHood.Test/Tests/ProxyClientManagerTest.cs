@@ -6,6 +6,7 @@ using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.Net.Proxies.HttpProxyServers;
 using VpnHood.Net.Proxies.Socks5ProxyServers;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.Dom;
 using VpnHood.Test.Providers;
 
@@ -121,6 +122,57 @@ public class ManagedProxyConnectorTest : TestBase
 
         // All non-SOCKS5 servers should be marked as inactive
         Assert.IsTrue(mgr.GetEndPointInfos().All(status => !status.EndPoint.IsEnabled));
+    }
+
+    // a connector whose one proxy has a status its store has not saved yet: a connect through it succeeded
+    private async Task<(ManagedProxyConnector Connector, TestProxyEndPointStore Store)> CreateConnectorWithUnsavedStatus()
+    {
+        using var socks5ProxyServer = new Socks5ProxyServer(new Socks5ProxyServerOptions {
+            ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
+        });
+        socks5ProxyServer.Start();
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+
+        var store = new TestProxyEndPointStore(await CreateStore(new ProxyEndPoint {
+            Protocol = ProxyProtocol.Socks5,
+            Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
+            Port = socks5ProxyServer.ListenerEndPoint.Port
+        }));
+        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store);
+        using var tcpClient = await connector.ConnectAsync(new TestSocketFactory(),
+            (IPEndPoint)target.LocalEndpoint, null, TestCt);
+        return (connector, store);
+    }
+
+    [TestMethod]
+    public async Task A_second_close_waits_for_the_first_ones_flush()
+    {
+        var (connector, store) = await CreateConnectorWithUnsavedStatus();
+
+        // the first close's flush is held
+        store.HoldUpdates = true;
+        var firstClose = connector.DisposeAsync().AsTask();
+        await VhTestUtil.AssertEqualsWait(1, () => Volatile.Read(ref store.HeldUpdateCount),
+            "The first close should flush.", cancellationToken: TestCt);
+
+        var secondClose = connector.DisposeAsync().AsTask();
+        await Task.Delay(TimeSpan.FromMilliseconds(200), TestCt);
+        Assert.IsFalse(secondClose.IsCompleted);
+
+        store.ReleaseUpdates();
+        await Task.WhenAll(firstClose, secondClose).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsTrue(store.IsDisposed);
+    }
+
+    [TestMethod]
+    public async Task A_failed_flush_still_closes_the_store()
+    {
+        var (connector, store) = await CreateConnectorWithUnsavedStatus();
+
+        store.FailUpdates = true;
+        await connector.DisposeAsync();
+        Assert.IsTrue(store.IsDisposed);
     }
 
     [TestMethod]

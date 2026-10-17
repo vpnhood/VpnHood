@@ -7,6 +7,7 @@ namespace VpnHood.AppLib.Abstractions;
 public interface IAppStrings
 {
     string Manage { get; }
+    string Disconnect { get; }
     string MsgAccessKeyAdded { get; }
     string MsgAccessKeyUpdated { get; }
     string MsgCantReadAccessKey { get; }

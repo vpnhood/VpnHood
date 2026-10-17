@@ -1,10 +1,12 @@
-﻿using VpnHood.AppLib.Api;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Common;
 
@@ -20,6 +22,8 @@ public static class VhApp
     private static VpnHoodApi? _api;
     private static AppInfo? _info;
     private static AppState? _state;
+    private static IReadOnlyList<string> _availableCultures = [];
+    private static string? _sentCultureName;
 
     public static VpnHoodApi Api => _api ?? throw new InvalidOperationException(
         $"The UI has not been given the app's API. A head must call {nameof(VhApp)}.{nameof(Init)} before the UI starts.");
@@ -45,9 +49,39 @@ public static class VhApp
     // must first place has placed them by now - that moment is the head's, not a page's.
     public static async Task Configure(IReadOnlyList<string> availableCultures, CancellationToken cancellationToken)
     {
-        _info = await Api.App.Configure(new ConfigParams { AvailableCultures = [.. availableCultures] }, cancellationToken).Vhc();
+        _availableCultures = availableCultures;
+        _info = await Api.App.Configure(CreateConfigParams(), cancellationToken).Vhc();
         _state = _info.State;
+
+        // the words again when the language changes
+        if (!IsConfigured)
+            Strings.Current.PropertyChanged += (_, _) => _ = SendWords();
         IsConfigured = true;
+    }
+
+    // The app's own words - Android's VPN notification and messages - in the language this UI shows,
+    // which is the device's on a paired browser too: it takes it from the app's settings.
+    private static ConfigParams CreateConfigParams()
+    {
+        _sentCultureName = Strings.Current.CultureName;
+        return new ConfigParams {
+            AvailableCultures = [.. _availableCultures],
+            Strings = Strings.Current.Texts
+        };
+    }
+
+    // Once per language: configuring the app applies its settings again, which reconfigures a session.
+    private static async Task SendWords()
+    {
+        if (Strings.Current.CultureName == _sentCultureName)
+            return;
+
+        try {
+            await Api.App.Configure(CreateConfigParams(), CancellationToken.None).Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not give the app the words of the UI's language.");
+        }
     }
 
     private static AppInfo Info => _info ?? throw new InvalidOperationException(

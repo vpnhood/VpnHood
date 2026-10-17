@@ -85,6 +85,9 @@ public sealed partial class Strings : INotifyPropertyChanged
     // The language the words are in: what SetCultureAsync last took, English at first.
     public string CultureName => _cultureName;
 
+    // The words shown now, by key: what the app is given for its own text (VhApp).
+    public IReadOnlyDictionary<string, string> Texts => _texts ?? English;
+
     // Words laid over the store's: a language it does not ship, or lines said another way. The
     // last source added speaks first. Takes effect as soon as the words are reloaded, on a page
     // already showing.

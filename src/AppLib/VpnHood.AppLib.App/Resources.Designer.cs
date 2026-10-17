@@ -70,6 +70,15 @@ namespace VpnHood.AppLib.App {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Disconnect.
+        /// </summary>
+        internal static string Disconnect {
+            get {
+                return ResourceManager.GetString("Disconnect", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to {0} Access key has been added..
         /// </summary>
         internal static string MsgAccessKeyAdded {

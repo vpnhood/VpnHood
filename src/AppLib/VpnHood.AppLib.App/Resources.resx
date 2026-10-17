@@ -120,6 +120,9 @@
   <data name="Manage" xml:space="preserve">
     <value>Manage</value>
   </data>
+  <data name="Disconnect" xml:space="preserve">
+    <value>Disconnect</value>
+  </data>
   <data name="MsgAccessKeyAdded" xml:space="preserve">
     <value>{0} Access key has been added.</value>
   </data>

@@ -16,4 +16,7 @@ public class VpnServiceOptions
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ProxyOptions? ProxyOptions { get; set; }
+
+    // the words the service shows itself, its notification's buttons, in the app's language
+    public VpnServiceLocalization Localization { get; set; } = new();
 }

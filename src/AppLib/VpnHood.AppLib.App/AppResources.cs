@@ -32,6 +32,7 @@ public class AppResources
     internal class AppStrings(AppResources resources) : IAppStrings
     {
         public string Manage => resources.GetString("MANAGE") ?? Resources.Manage;
+        public string Disconnect => resources.GetString("DISCONNECT") ?? Resources.Disconnect;
         public string MsgAccessKeyAdded => resources.GetString("MSG_ACCESS_KEY_ADDED") ?? Resources.MsgAccessKeyAdded;
         public string MsgAccessKeyUpdated => resources.GetString("MSG_ACCESS_KEY_UPDATED") ?? Resources.MsgAccessKeyUpdated;
         public string MsgCantReadAccessKey => resources.GetString("MSG_CANT_READ_ACCESS_KEY") ?? Resources.MsgCantReadAccessKey;

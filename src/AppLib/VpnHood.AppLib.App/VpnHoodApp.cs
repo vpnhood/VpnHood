@@ -1069,7 +1069,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // (the split filter dbs travel through the folder manifests, not here)
             var serviceOptions = new VpnServiceOptions {
                 ClientOptions = clientOptions,
-                ProxyOptions = proxyOptions
+                ProxyOptions = proxyOptions,
+                Localization = new VpnServiceLocalization {
+                    Manage = Resources.Strings.Manage,
+                    Disconnect = Resources.Strings.Disconnect
+                }
             };
 
             VhLogger.Instance.LogDebug(

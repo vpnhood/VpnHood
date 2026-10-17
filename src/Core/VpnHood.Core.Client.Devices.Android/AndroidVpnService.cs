@@ -181,7 +181,10 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     {
         VhLogger.Instance.LogDebug("Create and show the notification for the VPN service.");
         try {
-            var notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), sessionName);
+            // the words of the app's last connect, which its options file keeps; English before any
+            var localization = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead()?.Localization ??
+                               new VpnServiceLocalization();
+            var notification = new AndroidVpnNotification(this, localization, sessionName);
             StartForeground(AndroidVpnNotification.NotificationId, notification.Build());
             _notification = notification;
             return notification;

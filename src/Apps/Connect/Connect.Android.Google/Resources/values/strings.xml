@@ -1,4 +1,5 @@
 <resources>
-	<string name="ads_activity_title">VpnHood Connect Advertisement</string>
+	<!-- Crashlytics refuses to start without a build id, which its Gradle plugin writes for a Java
+	     app; a .NET build has no such plugin, so the head states one. -->
 	<string name="com.crashlytics.android.build_id">1</string>
 </resources>

@@ -61,15 +61,6 @@ namespace VpnHood.AppLib.App {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to VpnHood!.
-        /// </summary>
-        internal static string AppName {
-            get {
-                return ResourceManager.GetString("AppName", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Manage.
         /// </summary>
         internal static string Manage {

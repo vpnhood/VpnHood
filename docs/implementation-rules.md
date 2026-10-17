@@ -33,19 +33,36 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     (`new X(...).Apply()`): a static method whose handlers capture what they need, as
     `AvaloniaWindowFit.Apply` does.
 12. `Dispose` and `DisposeAsync` are a class's last members; only its nested types follow them.
-13. A type with both closes: `Dispose` is the quick close. It never waits: it releases what is local
-    at once and starts its async closes without waiting for them, none of which may need what it
-    releases. `DisposeAsync` is the graceful close, with a limit on each of its waits on the network.
+13. A type with both closes: `Dispose` is the quick close, and may be ungraceful: it may abort a
+    connection, skip a goodbye or drop what is unsent. It never waits: it releases what is local at
+    once and starts its async closes without waiting for them, none of which may need what it
+    releases. A QUIC object's quick close is its async close, started without waiting: that close
+    waits only for its peer, nothing local is left to force, and nothing may count on it having
+    ended. `DisposeAsync` is the graceful close, with a limit on each of its waits on the network.
     Async code calls `DisposeAsync`; a sync `Dispose` is called only from a callback the system makes
-    synchronously, and from the quick close that callback starts.
+    synchronously, from the quick close that callback starts, and at termination once the graceful
+    close has missed its deadline (rule 15).
+14. A `Dispose` may come while `DisposeAsync` is still running. It releases each local resource
+    once, by that resource's own atomic guard rather than the shared disposed flag, takes no lock
+    that `DisposeAsync` holds across an await, and cancels what `DisposeAsync` waits for.
+    `DisposeAsync` expects, after each await, that `Dispose` may have released what it uses; a
+    second `DisposeAsync` waits for the first one's end.
+15. Termination: the entry point gives the whole close one deadline within the system's stop budget,
+    keeping time for the local cleanup. It awaits `DisposeAsync` up to that deadline, then calls
+    `Dispose`; a sync system callback, such as Android's `OnDestroy`, calls `Dispose` at once. A
+    close's steps that do I/O (a goodbye, a sync, a flush, a system command) each run in their own
+    catch that logs the failure, so a failed one never skips the next, and nothing crashes; an async
+    close may go through `TryDisposeAsync`, ours or not. A sync `Dispose` of our own types gets no
+    `TryDispose`, as it must not throw (CA1065): a release that must still follow it, such as the
+    TUN's, goes in a `finally`.
 
 ## Design
 
-14. The access-manager protocol needs to be compatible one way only: the access manager is updated
+16. The access-manager protocol needs to be compatible one way only: the access manager is updated
     first, so a new server may count on it, but the access manager keeps supporting old servers.
-15. The access manager is under heavy load: rather a cost on the server than more requests to it.
+17. The access manager is under heavy load: rather a cost on the server than more requests to it.
     After an outage, the waiting requests are merged, never queued up to bombard it.
-16. The service opens no UI and no links; the UI does, as on iOS.
-17. A Debug build's name must stand out.
-18. An updater runs apart from what it updates, as a standalone script: an app that fails to run
+18. The service opens no UI and no links; the UI does, as on iOS.
+19. A Debug build's name must stand out.
+20. An updater runs apart from what it updates, as a standalone script: an app that fails to run
     must still get the release that fixes it.

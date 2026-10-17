@@ -366,10 +366,14 @@ public class ServerFinder(
                     requestCts.Token)
                 .Vhc();
 
+            // closed in the background, as its request sender is
+            var errorCode = requestResult.Response.ErrorCode;
+            _ = requestResult.TryDisposeAsync();
+
             // this should be already handled by the connector and never happen
-            return requestResult.Response.ErrorCode is SessionErrorCode.Ok
+            return errorCode is SessionErrorCode.Ok
                 ? true
-                : throw new SessionException(requestResult.Response.ErrorCode);
+                : throw new SessionException(errorCode);
         }
         catch (UnauthorizedAccessException) {
             return true; // the server is available but not authorized

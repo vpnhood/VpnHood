@@ -62,7 +62,7 @@ page's decision is revisited for you, by Apple, without notice.
 - It is an **availability choice, not a legal shield**. Users with a foreign Apple ID, a sideload,
   or a shared access key can still run the app from those countries; your servers will still see
   their traffic. Nothing here changes what your service does — only where the store offers it.
-- It does not satisfy **sanctions law**. U.S. OFAC-embargoed regions (Iran, North Korea, Syria,
+- It does not satisfy **sanctions law**. U.S. OFAC-embargoed regions (Iran, North Korea,
   Cuba, Crimea) are a separate, harder obligation; Apple's store does not even operate in most of
   them, but do not treat storefront absence as compliance.
 - It does not protect the **listing content**. A store description promising to "bypass government

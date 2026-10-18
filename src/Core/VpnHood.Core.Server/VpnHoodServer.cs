@@ -616,7 +616,7 @@ public class VpnHoodServer : IAsyncDisposable
 
         // before disposing session manager to prevent recovering sessions. Its connections' closes may wait for their
         // QUIC peers, so past its limit the close goes on: the last sync and the IP removal fit a service stop's 30 s
-        await ServerHost.TryDisposeAsync(_serverHostDisposeTimeout).Vhc();
+        await ServerHost.TryDisposeAsync(_serverHostDisposeTimeout, LogLevel.Warning).Vhc();
         await SessionManager.DisposeAsync().Vhc();
         _http01ChallengeService.Dispose();
         if (_netConfigurationService != null)

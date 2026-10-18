@@ -289,7 +289,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await _cancellationTokenSource.TryCancelAsync();
 
             // a failed session close must not keep the adapter from its release below
-            await _session.TryDisposeAsync();
+            await _session.TryDisposeAsync(LogLevel.Warning);
         }
 
         // flush and dispose the proxy connector while we can still await

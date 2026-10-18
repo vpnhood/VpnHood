@@ -6,6 +6,7 @@ using Android.Net;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Devices.Android.Messaging;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
@@ -164,7 +165,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     // the connection state. Returns false when the system refused the promotion.
     private bool TryShowNotification(ConnectionInfo connectionInfo)
     {
-        var notification = _notification ?? TryStartForeground(connectionInfo.SessionName ?? "VPN");
+        var notification = _notification ?? TryStartForeground();
         if (notification == null)
             return false;
 
@@ -177,14 +178,17 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     // StartForeground can all throw) leaves nothing behind and the next start command retries.
     // Reports the failure instead of throwing: a throw from OnStartCommand leaves no returned mode
     // and Android would restart the service into a back-off crash loop.
-    private AndroidVpnNotification? TryStartForeground(string sessionName)
+    private AndroidVpnNotification? TryStartForeground()
     {
         VhLogger.Instance.LogDebug("Create and show the notification for the VPN service.");
         try {
-            // the words of the app's last connect, which its options file keeps; English before any
-            var localization = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead()?.Localization ??
-                               new VpnServiceLocalization();
-            var notification = new AndroidVpnNotification(this, localization, sessionName);
+            // The words and the session's name of the app's last connect, which its options file keeps,
+            // as the notification comes before the host reads them: English before any connect, and the
+            // app's name where the app names no session.
+            var serviceOptions = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead();
+            var notification = new AndroidVpnNotification(this,
+                serviceOptions?.Localization ?? new VpnServiceLocalization(),
+                serviceOptions?.ClientOptions.SessionName ?? AndroidUtils.GetAppName(this));
             StartForeground(AndroidVpnNotification.NotificationId, notification.Build());
             _notification = notification;
             return notification;

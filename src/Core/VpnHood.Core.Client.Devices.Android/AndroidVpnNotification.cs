@@ -7,7 +7,8 @@ namespace VpnHood.Core.Client.Devices.Android;
 
 public sealed class AndroidVpnNotification : IDisposable
 {
-    private readonly string? _sessionName;
+    private readonly string _sessionName;
+    private readonly VpnServiceLocalization _localization;
     private const string DisconnectAction = "disconnect";
     private const string ChannelGeneralId = "general";
     private const string ChannelGeneralName = "General";
@@ -19,9 +20,10 @@ public sealed class AndroidVpnNotification : IDisposable
     public AndroidVpnNotification(
         Context context,
         VpnServiceLocalization serviceLocalization,
-        string? sessionName)
+        string sessionName)
     {
         _sessionName = sessionName;
+        _localization = serviceLocalization;
         _notificationBuilder = _notificationBuilder = CreateNotificationBuilder(context, serviceLocalization);
         Update(ClientState.None);
     }
@@ -102,9 +104,7 @@ public sealed class AndroidVpnNotification : IDisposable
             // Set subtitle
             var sessionName = _sessionName;
             _notificationBuilder.SetContentTitle(sessionName);
-            _notificationBuilder.SetSubText(clientState == ClientState.Connected
-                ? $"{clientState}"
-                : $"{clientState}...");
+            _notificationBuilder.SetSubText(StateText(clientState));
 
             // progress
             if (clientState != ClientState.Connected)
@@ -127,6 +127,16 @@ public sealed class AndroidVpnNotification : IDisposable
             // set it at the end of method to make sure change is applied without any exception
             _lastClientState = clientState;
         }
+    }
+
+    // the person's words for the connection: the engine's steps on the way are all "connecting"
+    private string StateText(ClientState clientState)
+    {
+        return clientState switch {
+            ClientState.Connected or ClientState.Unstable => _localization.Connected,
+            ClientState.Disconnecting or ClientState.Disposed => $"{_localization.Disconnecting}…",
+            _ => $"{_localization.Connecting}…"
+        };
     }
 
     public void Dispose()

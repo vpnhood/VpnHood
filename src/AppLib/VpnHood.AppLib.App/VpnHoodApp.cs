@@ -1058,7 +1058,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     : Core.Common.Tokens.EndPointStrategy.Auto,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2,
-                SessionName = profileInfo.VpnProfileName,
+                // A profile is the person's own only where keys are added. A single-profile app's may
+                // come from another provider, so it names none: the system's VPN dialog, the tile and the
+                // notification show the app's name instead.
+                SessionName = Features.IsAddAccessKeySupported ? profileInfo.VpnProfileName : null,
                 CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 IsAlwaysOn = isAlwaysOn,
@@ -1072,7 +1075,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ProxyOptions = proxyOptions,
                 Localization = new VpnServiceLocalization {
                     Manage = Resources.Strings.Manage,
-                    Disconnect = Resources.Strings.Disconnect
+                    Disconnect = Resources.Strings.Disconnect,
+                    Connecting = Resources.Strings.Connecting,
+                    Connected = Resources.Strings.Connected,
+                    Disconnecting = Resources.Strings.Disconnecting
                 }
             };
 

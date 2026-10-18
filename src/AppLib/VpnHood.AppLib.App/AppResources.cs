@@ -33,6 +33,9 @@ public class AppResources
     {
         public string Manage => resources.GetString("MANAGE") ?? Resources.Manage;
         public string Disconnect => resources.GetString("DISCONNECT") ?? Resources.Disconnect;
+        public string Connecting => resources.GetString("CONNECTING") ?? Resources.Connecting;
+        public string Connected => resources.GetString("CONNECTED") ?? Resources.Connected;
+        public string Disconnecting => resources.GetString("DISCONNECTING") ?? Resources.Disconnecting;
         public string MsgAccessKeyAdded => resources.GetString("MSG_ACCESS_KEY_ADDED") ?? Resources.MsgAccessKeyAdded;
         public string MsgAccessKeyUpdated => resources.GetString("MSG_ACCESS_KEY_UPDATED") ?? Resources.MsgAccessKeyUpdated;
         public string MsgCantReadAccessKey => resources.GetString("MSG_CANT_READ_ACCESS_KEY") ?? Resources.MsgCantReadAccessKey;

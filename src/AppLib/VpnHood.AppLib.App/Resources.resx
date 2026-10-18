@@ -123,6 +123,15 @@
   <data name="Disconnect" xml:space="preserve">
     <value>Disconnect</value>
   </data>
+  <data name="Connecting" xml:space="preserve">
+    <value>Connecting</value>
+  </data>
+  <data name="Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Disconnecting" xml:space="preserve">
+    <value>Disconnecting</value>
+  </data>
   <data name="MsgAccessKeyAdded" xml:space="preserve">
     <value>{0} Access key has been added.</value>
   </data>

@@ -6,6 +6,9 @@ public sealed class VpnServiceLocalization
 {
     public string Disconnect { get; set; } = "Disconnect";
     public string Manage { get; set; } = "Manage";
+    public string Connecting { get; set; } = "Connecting";
+    public string Connected { get; set; } = "Connected";
+    public string Disconnecting { get; set; } = "Disconnecting";
     public string? WindowBackgroundColor { get; set; }
 
     public static VhColor? TryParseColorFromHex(string hex)

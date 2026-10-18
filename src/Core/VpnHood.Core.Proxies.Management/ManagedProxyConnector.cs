@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.Management.Abstractions;
@@ -11,7 +12,6 @@ using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Monitoring;
-using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -37,6 +37,9 @@ public class ManagedProxyConnector : IProxyConnector
     private bool _verifyTls;
     private readonly DateTime _sessionCreatedTime = FastDateTime.UtcNow;
     private readonly ProxySessionStatus _sessionStatus = new();
+    // the proxy that made each connection handed out, for a failure after its connect, as on TLS; weak, as most
+    // connections never fail
+    private readonly ConditionalWeakTable<TcpClient, HandedOutConnection> _handedOutConnections = new();
     private const int CheckServerMaxDegreeOfParallelism = 50;
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(10);
 
@@ -451,6 +454,9 @@ public class ManagedProxyConnector : IProxyConnector
                     _fastestEntry = entry;
 
                 RecordSuccess(entry, latency: latency, fastestLatency: _fastestEntry?.Status.Latency, checkMode: false);
+
+                // timed no later than the attempt callback, which may restart the caller's timeout
+                _handedOutConnections.AddOrUpdate(tcpClient, new HandedOutConnection(entry, Environment.TickCount64));
                 onAttempt?.Invoke();
 
                 // disable other duplicate IPs if needed
@@ -475,9 +481,7 @@ public class ManagedProxyConnector : IProxyConnector
                     "Failed to connect to {ProxyType} proxy server {ProxyServer}. Delay: {delay}",
                     entry.EndPoint.Protocol, VhLogger.FormatHostName(entry.EndPoint.Host), delay);
 
-                // let's not assume bad server if caller cancelled the operation
-                var isCallerCancelled = ex is OperationCanceledException && delay < _serverCheckTimeout;
-                if (!isCallerCancelled) {
+                if (!IsCallerCancellation(ex, delay)) {
                     RecordFailed(entry, ex, checkMode: false);
                     onAttempt?.Invoke();
                 }
@@ -517,17 +521,23 @@ public class ManagedProxyConnector : IProxyConnector
         }
     }
 
+    // let's not assume bad server if caller cancelled the operation: a cancellation within a server check's time
+    private bool IsCallerCancellation(Exception ex, TimeSpan elapsed) =>
+        ex is OperationCanceledException && elapsed < _serverCheckTimeout;
+
     public void RecordFailed(TcpClient tcpClient, Exception ex)
     {
-        // find the entry by matching proxy endpoint
-        var remoteEndPoint = tcpClient.TryGetRemoteEndPoint();
-        var entry = _proxyEndPointEntries.FirstOrDefault(x =>
-            x.IpEndPoint?.Equals(remoteEndPoint) == true);
+        // counted once, against the proxy that made the connection
+        if (!_handedOutConnections.TryGetValue(tcpClient, out var handedOut) ||
+            !_handedOutConnections.Remove(tcpClient))
+            return;
 
-        if (entry != null) {
-            entry.Status.SucceededCount--; // decrement succeeded count as the connection failed
-            RecordFailed(entry, ex, checkMode: false);
-        }
+        var elapsed = TimeSpan.FromMilliseconds(Environment.TickCount64 - handedOut.TickCount);
+        if (IsCallerCancellation(ex, elapsed))
+            return;
+
+        handedOut.Entry.Status.SucceededCount--; // decrement succeeded count as the connection failed
+        RecordFailed(handedOut.Entry, ex, checkMode: false);
     }
 
     private async Task DisposeAsyncCore()

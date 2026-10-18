@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -12,7 +11,6 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
     public ProxyEndPointInfo Info => endPointInfo;
     public ProxyEndPointStatus Status => endPointInfo.Status;
     public ProxyEndPoint EndPoint => endPointInfo.EndPoint;
-    public IPEndPoint? IpEndPoint { get; init; }
 
     /// <summary>Set when the status or enabled state changed since the last store flush.</summary>
     public bool IsDirty { get; set; }

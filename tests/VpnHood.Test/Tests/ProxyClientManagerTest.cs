@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using VpnHood.Core.Proxies.Management;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
@@ -173,6 +174,75 @@ public class ManagedProxyConnectorTest : TestBase
         store.FailUpdates = true;
         await connector.DisposeAsync();
         Assert.IsTrue(store.IsDisposed);
+    }
+
+    // a connection through the connector's one proxy, whose status says it worked last, so the connect checks no
+    // server first
+    private async Task<(ManagedProxyConnector Connector, TcpClient TcpClient)> ConnectThroughProxy(
+        TimeSpan? serverCheckTimeout = null)
+    {
+        using var socks5ProxyServer = new Socks5ProxyServer(new Socks5ProxyServerOptions {
+            ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
+        });
+        socks5ProxyServer.Start();
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+
+        var store = await CreateStore();
+        await store.Upsert([
+            new ProxyEndPointRecord {
+                EndPoint = new ProxyEndPoint {
+                    Protocol = ProxyProtocol.Socks5,
+                    Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
+                    Port = socks5ProxyServer.ListenerEndPoint.Port
+                },
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ]);
+        var connector = await ManagedProxyConnector.Create(new ProxyOptions(), store, serverCheckTimeout);
+        var tcpClient = await connector.ConnectAsync(new TestSocketFactory(),
+            (IPEndPoint)target.LocalEndpoint, null, TestCt);
+        return (connector, tcpClient);
+    }
+
+    [TestMethod]
+    public async Task A_failure_after_the_connect_counts_once_against_the_proxy_that_made_the_connection()
+    {
+        var connection = await ConnectThroughProxy();
+        await using var connector = connection.Connector;
+        using var tcpClient = connection.TcpClient;
+        var status = connector.GetEndPointInfos().Single().Status;
+        var succeededCount = status.SucceededCount;
+        var failedCount = status.FailedCount;
+
+        // as a TLS handshake's, reported twice
+        var error = new AuthenticationException("The TLS handshake failed.");
+        connector.RecordFailed(tcpClient, error);
+        connector.RecordFailed(tcpClient, error);
+
+        Assert.AreEqual(succeededCount - 1, status.SucceededCount);
+        Assert.AreEqual(failedCount + 1, status.FailedCount);
+        Assert.AreEqual(error.Message, status.ErrorMessage);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_cancellation_after_the_connect_counts_against_the_proxy_only_past_a_server_checks_time(
+        bool isPastCheckTime)
+    {
+        var serverCheckTimeout = isPastCheckTime ? TimeSpan.FromMilliseconds(200) : TimeSpan.FromSeconds(30);
+        var connection = await ConnectThroughProxy(serverCheckTimeout);
+        await using var connector = connection.Connector;
+        using var tcpClient = connection.TcpClient;
+        var status = connector.GetEndPointInfos().Single().Status;
+        var failedCount = status.FailedCount;
+
+        if (isPastCheckTime)
+            await Task.Delay(serverCheckTimeout * 2, TestCt);
+        connector.RecordFailed(tcpClient, new OperationCanceledException());
+
+        Assert.AreEqual(isPastCheckTime ? failedCount + 1 : failedCount, status.FailedCount);
     }
 
     [TestMethod]

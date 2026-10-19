@@ -63,7 +63,7 @@ internal class ApiController : IDisposable
     {
         var client = _vpnHoodService.Client;
         if (client != null)
-            await _vpnHoodService.UpdateConnectionInfo(client, cancellationToken: cancellationToken);
+            await _vpnHoodService.UpdateConnectionInfo(client, cancellationToken: cancellationToken).Vhc();
 
         return _vpnHoodService.Context.ConnectionInfo;
     }
@@ -180,7 +180,7 @@ internal class ApiController : IDisposable
         
         // Send rewarded ad result if it exists
         if (request.IsRewarded && !string.IsNullOrEmpty(request.AdResult.AdData))
-            await adHandler.SendRewardedAdData(request.AdResult.AdData, cancellationToken);
+            await adHandler.SendRewardedAdData(request.AdResult.AdData, cancellationToken).Vhc();
         else
             adHandler.SetAdOk();
     }

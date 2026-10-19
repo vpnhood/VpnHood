@@ -150,12 +150,12 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             }
 
             // cancel previous connection if exists
-            await _connectCts.TryCancelAsync();
+            await _connectCts.TryCancelAsync().Vhc();
             _connectCts.Dispose();
 
             // start connecting 
             _connectCts = new CancellationTokenSource();
-            await Connect(isAlwaysOn, _connectCts.Token);
+            await Connect(isAlwaysOn, _connectCts.Token).Vhc();
             return true;
         }
         catch (Exception ex) {
@@ -302,7 +302,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             Error = ex?.ToApiError() ?? client.LastException?.ToApiError()
         };
 
-        await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken);
+        await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken).Vhc();
     }
 
     public async Task UpdateConnectionInfo(ClientState clientState, string? sessionName, Exception? exception,
@@ -320,7 +320,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             SessionName = sessionName
         };
 
-        await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken);
+        await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken).Vhc();
     }
 
 
@@ -347,13 +347,13 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             // let dispose in the background
             var client = Client;
             if (client != null)
-                await client.DisposeAsync();
+                await client.DisposeAsync().Vhc();
 
             // always publish the terminal state: the app-side TryStop waits for it before reporting the
             // service stopped — the client releases its resources (filter dbs, adapter) only during
             // DisposeAsync, so leaving "Disconnecting" as the last published state lets the next connect
             // race that teardown. Also overwrites the last exception if one exists.
-            await UpdateConnectionInfo(ClientState.Disposed, null, exception, CancellationToken.None);
+            await UpdateConnectionInfo(ClientState.Disposed, null, exception, CancellationToken.None).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not disconnect the client.");

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -21,11 +22,11 @@ internal class VpnServiceContext(string configFolder)
     public async Task<bool> TryWriteConnectionInfo(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
         try {
-            using var scopeLock = await _writeLock.LockAsync(cancellationToken);
+            using var scopeLock = await _writeLock.LockAsync(cancellationToken).Vhc();
             ConnectionInfo = connectionInfo;
 
             var json = JsonSerializer.Serialize(connectionInfo);
-            await File.WriteAllTextAsync(StatusFilePath, json, cancellationToken);
+            await File.WriteAllTextAsync(StatusFilePath, json, cancellationToken).Vhc();
             return true;
         }
         catch (OperationCanceledException) {

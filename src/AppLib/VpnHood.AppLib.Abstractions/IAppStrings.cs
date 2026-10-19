@@ -8,9 +8,6 @@ public interface IAppStrings
 {
     string Manage { get; }
     string Disconnect { get; }
-    string Connecting { get; }
-    string Connected { get; }
-    string Disconnecting { get; }
     string MsgAccessKeyAdded { get; }
     string MsgAccessKeyUpdated { get; }
     string MsgCantReadAccessKey { get; }

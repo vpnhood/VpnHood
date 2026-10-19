@@ -129,14 +129,15 @@ public sealed class AndroidVpnNotification : IDisposable
         }
     }
 
-    // the person's words for the connection: the engine's steps on the way are all "connecting"
+    // The connection's state as the app's main page says it; a step on the way ends in "…". The
+    // notification comes up as the service starts, before any state: that is initializing.
     private string StateText(ClientState clientState)
     {
-        return clientState switch {
-            ClientState.Connected or ClientState.Unstable => _localization.Connected,
-            ClientState.Disconnecting or ClientState.Disposed => $"{_localization.Disconnecting}…",
-            _ => $"{_localization.Connecting}…"
-        };
+        var state = clientState == ClientState.None ? ClientState.Initializing : clientState;
+        var text = _localization.GetClientStateText(state);
+        return state is ClientState.Connected or ClientState.Unstable or ClientState.Disposed
+            ? text
+            : $"{text}…";
     }
 
     public void Dispose()

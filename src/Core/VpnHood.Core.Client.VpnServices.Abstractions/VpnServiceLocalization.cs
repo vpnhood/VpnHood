@@ -1,4 +1,5 @@
-﻿using VpnHood.Net.Toolkit.Graphics;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
@@ -6,10 +7,28 @@ public sealed class VpnServiceLocalization
 {
     public string Disconnect { get; set; } = "Disconnect";
     public string Manage { get; set; } = "Manage";
-    public string Connecting { get; set; } = "Connecting";
-    public string Connected { get; set; } = "Connected";
-    public string Disconnecting { get; set; } = "Disconnecting";
+
+    // The connection's states in the app's words, as its main page says them; a state without one is
+    // said in English.
+    public IReadOnlyDictionary<ClientState, string> ClientStates { get; set; } = new Dictionary<ClientState, string>();
     public string? WindowBackgroundColor { get; set; }
+
+    public string GetClientStateText(ClientState clientState)
+    {
+        return ClientStates.GetValueOrDefault(clientState) ?? clientState switch {
+            ClientState.Initializing => "Initializing",
+            ClientState.ValidatingProxies => "Validating proxies",
+            ClientState.FindingReachableServer => "Finding network",
+            ClientState.FindingBestServer => "Finding best server",
+            ClientState.Connecting => "Connecting",
+            ClientState.Connected => "Connected",
+            ClientState.Unstable => "Unstable",
+            ClientState.Waiting => "Waiting",
+            ClientState.WaitingForAd => "Loading Ad",
+            ClientState.Disconnecting => "Disconnecting",
+            _ => "Disconnected"
+        };
+    }
 
     public static VhColor? TryParseColorFromHex(string hex)
     {

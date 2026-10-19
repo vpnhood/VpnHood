@@ -1076,9 +1076,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Localization = new VpnServiceLocalization {
                     Manage = Resources.Strings.Manage,
                     Disconnect = Resources.Strings.Disconnect,
-                    Connecting = Resources.Strings.Connecting,
-                    Connected = Resources.Strings.Connected,
-                    Disconnecting = Resources.Strings.Disconnecting
+                    ClientStates = Resources.GetClientStateTexts()
                 }
             };
 

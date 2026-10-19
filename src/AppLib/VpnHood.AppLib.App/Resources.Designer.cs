@@ -79,33 +79,6 @@ namespace VpnHood.AppLib.App {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Connecting.
-        /// </summary>
-        internal static string Connecting {
-            get {
-                return ResourceManager.GetString("Connecting", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Connected.
-        /// </summary>
-        internal static string Connected {
-            get {
-                return ResourceManager.GetString("Connected", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Disconnecting.
-        /// </summary>
-        internal static string Disconnecting {
-            get {
-                return ResourceManager.GetString("Disconnecting", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to {0} Access key has been added..
         /// </summary>
         internal static string MsgAccessKeyAdded {

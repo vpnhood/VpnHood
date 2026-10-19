@@ -10,9 +10,9 @@
 	     head: ClientAppConfigs reads them from this assembly. Conditional so a fork without them still
 	     builds. Forward slashes: the iOS head builds this project on macOS. -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(VhUserDir)/$(VhAppPackageTitle)/appsettings.json"
+		<EmbeddedResource Include="$(VhAppSettingsFile)"
 			LogicalName="AppSettings.json"
-			Condition="Exists('$(VhUserDir)/$(VhAppPackageTitle)/appsettings.json')" />
+			Condition="Exists('$(VhAppSettingsFile)')" />
 		<EmbeddedResource Include="$(VhUserDir)/$(VhAppPackageTitle)/appsettings.$(Configuration).json"
 			LogicalName="AppSettings_Environment.json"
 			Condition="Exists('$(VhUserDir)/$(VhAppPackageTitle)/appsettings.$(Configuration).json')" />

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- The cold start's colour (Theme.VpnHood.Avalonia) where the app's build writes none of its own:
+       AppCompat's dark background, which the theme showed before it named one. The app's build gives
+       its theme's (VpnHood.AppLib.App.targets), which overrides this. -->
+  <color name="vh_launch_background">#303030</color>
+</resources>

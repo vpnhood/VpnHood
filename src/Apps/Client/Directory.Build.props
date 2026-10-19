@@ -14,6 +14,10 @@
     <VhAppCommandName>vhclient</VhAppCommandName>
     <!-- the Android and iOS icons, as SVGs (VpnHood.AppLib.App.targets) -->
     <VhAppIconsDir>$(MSBuildThisFileDirectory)icons</VhAppIconsDir>
+    <!-- the private settings, from the external ".user" folder: the product's project embeds them, and
+         the build reads the launch screen's theme from them (VpnHood.AppLib.App.targets). Forward
+         slashes: the iOS head builds on macOS. -->
+    <VhAppSettingsFile>$(VhUserDir)/$(VhAppPackageTitle)/appsettings.json</VhAppSettingsFile>
   </PropertyGroup>
 
   <!-- After the values, as NuGet imports a package's props after Directory.Build.props: the same file

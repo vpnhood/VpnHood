@@ -24,6 +24,8 @@
 		<None Update="buildTransitive\VpnHood.AppLib.App.targets" Pack="true" PackagePath="buildTransitive\VpnHood.AppLib.App.targets" />
 		<!-- the Android launcher icon the .targets adds -->
 		<None Update="buildTransitive\android\mipmap-anydpi-v33\ic_launcher.xml" Pack="true" PackagePath="buildTransitive\android\mipmap-anydpi-v33\ic_launcher.xml" />
+		<!-- the iOS launch screen the .targets writes in the theme's colour -->
+		<None Update="buildTransitive\ios\LaunchScreen.storyboard" Pack="true" PackagePath="buildTransitive\ios\LaunchScreen.storyboard" />
 	</ItemGroup>
 
 	<ItemGroup>

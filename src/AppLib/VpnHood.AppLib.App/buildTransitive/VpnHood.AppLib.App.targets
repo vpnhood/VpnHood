@@ -131,6 +131,122 @@
 		<MauiIcon Include="$(_VhAppIconsDir)icon_background.svg" Link="ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)icon_foreground.svg" ForegroundScale="1" />
 	</ItemGroup>
 
+	<!-- The app's launch colour: what iOS's launch screen and Android's cold start show before any of the
+	     app's code runs, so the UI comes up on the colour already there. The theme's, never the app's:
+	     the window background of the theme the app's settings name - UiTheme in the file the app states
+	     as VhAppSettingsFile beside its name, the appsettings.json its product embeds; "blue" where it
+	     names none, as the app reads it - from that theme's manifest in the UI's store
+	     (branding/<theme>/manifest.json in VhAssetsZip, VpnHood.AppUi.Assets.Classic): the colour the UI's
+	     host paints the chrome around it with (AppBranding). Without the file or the store (a code-only
+	     checkout) both screens keep their defaults: white on iOS, the library's on Android. -->
+	<UsingTask TaskName="VhReadLaunchColor" TaskFactory="RoslynCodeTaskFactory"
+	           AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<SettingsFile ParameterType="System.String" Required="true" />
+			<StoreZip ParameterType="System.String" Required="true" />
+			<Color ParameterType="System.String" Output="true" />
+			<Red ParameterType="System.String" Output="true" />
+			<Green ParameterType="System.String" Output="true" />
+			<Blue ParameterType="System.String" Output="true" />
+		</ParameterGroup>
+		<Task>
+			<Using Namespace="System.Globalization" />
+			<Using Namespace="System.IO.Compression" />
+			<Using Namespace="System.Text.RegularExpressions" />
+			<Code Type="Fragment" Language="cs"><![CDATA[
+var theme = "blue";
+var setting = Regex.Match(File.ReadAllText(SettingsFile.Replace('\\', '/')), "\"UiTheme\"\\s*:\\s*\"([^\"]+)\"");
+if (setting.Success)
+    theme = setting.Groups[1].Value;
+
+var entryName = "branding/" + theme + "/manifest.json";
+string manifest = null;
+using (var zip = ZipFile.OpenRead(StoreZip.Replace('\\', '/'))) {
+    var entry = zip.GetEntry(entryName);
+    if (entry != null)
+        using (var reader = new StreamReader(entry.Open()))
+            manifest = reader.ReadToEnd();
+}
+
+if (manifest == null) {
+    Log.LogError("The UI's store has no '" + theme + "' theme, which the app's settings name: no " + entryName + " in " + StoreZip + ".");
+    return false;
+}
+
+var match = Regex.Match(manifest, "\"windowBackground\"\\s*:\\s*\"#([0-9A-Fa-f]{6})\"");
+if (!match.Success) {
+    Log.LogError("The '" + theme + "' theme's manifest names no window background as #rrggbb: " + entryName + " in " + StoreZip + ".");
+    return false;
+}
+
+var hex = match.Groups[1].Value.ToLowerInvariant();
+Func<int, string> component = start =>
+    (Convert.ToInt32(hex.Substring(start, 2), 16) / 255.0).ToString("0.###", CultureInfo.InvariantCulture);
+Color = "#" + hex;
+Red = component(0);
+Green = component(2);
+Blue = component(4);
+]]></Code>
+		</Task>
+	</UsingTask>
+
+	<Target Name="VhReadLaunchColor"
+	        Condition="'$(VhAppIsApp)' == 'true' And ('$(VhAppPlatform)' == 'ios' Or '$(VhAppPlatform)' == 'android')">
+		<Warning Condition="'$(VhAppSettingsFile)' == ''"
+		         Text="The app states no settings file, so its launch screen is not in its theme's colour: state VhAppSettingsFile beside VhAppName, the appsettings.json its product embeds." />
+		<VhReadLaunchColor Condition="'$(VhAppSettingsFile)' != '' And Exists('$(VhAppSettingsFile)') And '$(VhAssetsZip)' != '' And Exists('$(VhAssetsZip)')"
+		                   SettingsFile="$(VhAppSettingsFile)" StoreZip="$(VhAssetsZip)">
+			<Output TaskParameter="Color" PropertyName="_VhLaunchColor" />
+			<Output TaskParameter="Red" PropertyName="_VhLaunchRed" />
+			<Output TaskParameter="Green" PropertyName="_VhLaunchGreen" />
+			<Output TaskParameter="Blue" PropertyName="_VhLaunchBlue" />
+		</VhReadLaunchColor>
+	</Target>
+
+	<!-- iOS: the launch screen every app's Info.plist names (UILaunchStoryboardName, LaunchScreen): one
+	     view in that colour, from ios/LaunchScreen.storyboard beside this file. A head with a
+	     LaunchScreen.storyboard of its own keeps it. -->
+	<Target Name="VhWriteLaunchScreen" BeforeTargets="BeforeBuild" DependsOnTargets="VhReadLaunchColor"
+	        Condition="'$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' == 'ios'">
+		<ItemGroup>
+			<_VhOwnLaunchScreen Include="@(InterfaceDefinition)" Condition="'%(Filename)%(Extension)' == 'LaunchScreen.storyboard'" />
+		</ItemGroup>
+		<PropertyGroup Condition="'@(_VhOwnLaunchScreen)' == ''">
+			<_VhLaunchRed Condition="'$(_VhLaunchRed)' == ''">1</_VhLaunchRed>
+			<_VhLaunchGreen Condition="'$(_VhLaunchGreen)' == ''">1</_VhLaunchGreen>
+			<_VhLaunchBlue Condition="'$(_VhLaunchBlue)' == ''">1</_VhLaunchBlue>
+			<_VhLaunchScreenFile>$(IntermediateOutputPath)LaunchScreen.storyboard</_VhLaunchScreenFile>
+			<_VhLaunchScreenText>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)ios/LaunchScreen.storyboard'))</_VhLaunchScreenText>
+			<_VhLaunchScreenText>$(_VhLaunchScreenText.Replace('VH_RED', '$(_VhLaunchRed)').Replace('VH_GREEN', '$(_VhLaunchGreen)').Replace('VH_BLUE', '$(_VhLaunchBlue)'))</_VhLaunchScreenText>
+		</PropertyGroup>
+		<WriteLinesToFile Condition="'$(_VhLaunchScreenFile)' != ''" File="$(_VhLaunchScreenFile)"
+		                  Lines="$([MSBuild]::Escape('$(_VhLaunchScreenText)'))" Overwrite="true" WriteOnlyWhenDifferent="true" />
+		<ItemGroup Condition="'$(_VhLaunchScreenFile)' != ''">
+			<InterfaceDefinition Include="$(_VhLaunchScreenFile)" Link="LaunchScreen.storyboard" />
+			<FileWrites Include="$(_VhLaunchScreenFile)" />
+		</ItemGroup>
+	</Target>
+
+	<!-- Android: the cold start - the activity's window background, which Android 12 and later also put
+	     behind the splash screen's icon - in that colour. Theme.VpnHood.Avalonia names
+	     @color/vh_launch_background, which this resource of the app's overrides over the library's. -->
+	<Target Name="VhWriteLaunchColor" BeforeTargets="BeforeBuild" DependsOnTargets="VhReadLaunchColor"
+	        Condition="'$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' == 'android'">
+		<PropertyGroup Condition="'$(_VhLaunchColor)' != ''">
+			<_VhLaunchColorFile>$(IntermediateOutputPath)vh_launch_background.xml</_VhLaunchColorFile>
+			<_VhLaunchColorXml>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt;
+  &lt;color name="vh_launch_background"&gt;$(_VhLaunchColor)&lt;/color&gt;
+&lt;/resources&gt;</_VhLaunchColorXml>
+		</PropertyGroup>
+		<WriteLinesToFile Condition="'$(_VhLaunchColorFile)' != ''" File="$(_VhLaunchColorFile)"
+		                  Lines="$([MSBuild]::Escape('$(_VhLaunchColorXml)'))" Overwrite="true" WriteOnlyWhenDifferent="true" />
+		<ItemGroup Condition="'$(_VhLaunchColorFile)' != ''">
+			<AndroidResource Include="$(_VhLaunchColorFile)" Link="Resources\values\vh_launch_background.xml" />
+			<FileWrites Include="$(_VhLaunchColorFile)" />
+		</ItemGroup>
+	</Target>
+
 	<!-- What the code reads: AppConstants.AppId and AdMobApplicationId, AppName, AppVersion, CompanyName,
 	     PackageTitle and IsDebugMode, and on iOS AppGroupId and ProviderBundleId. The product library - a project of
 	     the app that is neither a head nor the iOS extension - gets the same but the ids, which are each

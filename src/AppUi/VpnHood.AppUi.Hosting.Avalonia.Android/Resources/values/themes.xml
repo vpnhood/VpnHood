@@ -6,5 +6,8 @@
        nothing of AppCompat is asked for beyond it. A head names this theme on its activity
        (AndroidAvaloniaMainActivity), and what is set here is also the app's cold-start look, since
        the launcher wears it until the first frame is drawn. -->
-  <style name="Theme.VpnHood.Avalonia" parent="Theme.AppCompat.NoActionBar" />
+  <style name="Theme.VpnHood.Avalonia" parent="Theme.AppCompat.NoActionBar">
+    <!-- the cold start in the app's launch colour, its theme's (VpnHood.AppLib.App.targets) -->
+    <item name="android:windowBackground">@color/vh_launch_background</item>
+  </style>
 </resources>

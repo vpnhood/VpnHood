@@ -45,12 +45,7 @@ public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityE
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        // before base.OnCreate, so the handler is subscribed when the create event fires; the system bars
-        // take the UI's colour, its palette having been merged as the process's Application started it
-        MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions(),
-            Task.FromResult((AvaloniaApplication.Current as VpnHoodAvaloniaAppBase)?.ChromeColor));
-
-        // Also before base.OnCreate, which makes the view (the UI hands this activity its
+        // Before base.OnCreate, which makes the view (the UI hands this activity its
         // factory): the second half of the UI's start, whose first the Application ran
         // (AndroidAvaloniaApplication). The UI's store is, on Android, the zip's extraction out of
         // the package (ZipAssetProvider), made on the first run of a version - waited for here,
@@ -60,6 +55,11 @@ public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityE
         // completes at once.
         AvaloniaUiHosting.PrepareAsync<TUi>(VpnHoodApp.Instance.UiAssetProvider, CancellationToken.None)
             .GetAwaiter().GetResult();
+
+        // also before base.OnCreate, so the handler is subscribed when the create event fires; the system
+        // bars take the UI's chrome colour, which its theme's branding gave as the UI was prepared
+        MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions(),
+            Task.FromResult((AvaloniaApplication.Current as VpnHoodAvaloniaAppBase)?.ChromeColor));
 
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });

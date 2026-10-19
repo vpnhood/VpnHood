@@ -205,8 +205,13 @@ Blue = component(4);
 
 	<!-- iOS: the launch screen every app's Info.plist names (UILaunchStoryboardName, LaunchScreen): one
 	     view in that colour, from ios/LaunchScreen.storyboard beside this file. A head with a
-	     LaunchScreen.storyboard of its own keeps it. -->
-	<Target Name="VhWriteLaunchScreen" BeforeTargets="BeforeBuild" DependsOnTargets="VhReadLaunchColor"
+	     LaunchScreen.storyboard of its own keeps it. The iOS SDK compiles storyboards as it collects
+	     the bundle's resources, ahead of BeforeBuild, so the storyboard joins them there: through
+	     CollectBundleResourcesDependsOn, the SDK's hook for items it bundles. -->
+	<PropertyGroup>
+		<CollectBundleResourcesDependsOn>VhWriteLaunchScreen;$(CollectBundleResourcesDependsOn)</CollectBundleResourcesDependsOn>
+	</PropertyGroup>
+	<Target Name="VhWriteLaunchScreen" DependsOnTargets="VhReadLaunchColor"
 	        Condition="'$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' == 'ios'">
 		<ItemGroup>
 			<_VhOwnLaunchScreen Include="@(InterfaceDefinition)" Condition="'%(Filename)%(Extension)' == 'LaunchScreen.storyboard'" />

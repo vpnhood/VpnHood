@@ -22,7 +22,7 @@ internal sealed class IosMessageClient(IosDevice device) : IMessageClient
 
     public async Task<Memory<byte>> SendAsync(Memory<byte> request, CancellationToken cancellationToken)
     {
-        var providerSession = await GetProviderSessionAsync(cancellationToken);
+        var providerSession = await GetProviderSessionAsync(cancellationToken).Vhc();
 
         var responseDataTask = new TaskCompletionSource<NSData?>(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var cancellationRegistration = cancellationToken.Register(
@@ -77,7 +77,7 @@ internal sealed class IosMessageClient(IosDevice device) : IMessageClient
         // or return stale data (the false-"Connected"-at-launch bug). Fail fast so the manager
         // transitions to Disposed/None on the next poll.
         try {
-            var managersArray = await NETunnelProviderManager.LoadAllFromPreferencesAsync();
+            var managersArray = await NETunnelProviderManager.LoadAllFromPreferencesAsync().Vhc();
             var liveSessions = managersArray.ToArray<NETunnelProviderManager>()
                 .Select(m => m?.Connection as NETunnelProviderSession)
                 .Where(IsLive);

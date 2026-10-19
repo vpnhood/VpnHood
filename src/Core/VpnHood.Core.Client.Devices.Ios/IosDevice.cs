@@ -6,6 +6,7 @@ using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Quic.Ios;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Devices.Ios;
@@ -114,7 +115,7 @@ public class IosDevice : IDevice
             VpnServiceConfigFolder);
 
         // ---- Pre-stop: detect stale tunnel ----
-        _vpnManager = await LoadVpnManager();
+        _vpnManager = await LoadVpnManager().Vhc();
 
         NEVpnStatus initialStatus;
         try {
@@ -129,7 +130,7 @@ public class IosDevice : IDevice
             catch { /* ignore */ }
             // Wait up to 4s for it to actually disconnect
             for (var i = 0; i < 8; i++) {
-                await Task.Delay(500, cancellationToken);
+                await Task.Delay(500, cancellationToken).Vhc();
                 var s = _vpnManager.Connection.Status;
                 if (s is NEVpnStatus.Disconnected or NEVpnStatus.Invalid) 
                     break;
@@ -160,10 +161,10 @@ public class IosDevice : IDevice
         _vpnManager.Enabled = true;
 
         // ---- Save ----
-        await _vpnManager.SaveToPreferencesAsync();
+        await _vpnManager.SaveToPreferencesAsync().Vhc();
 
         // ---- Load ----
-        await _vpnManager.LoadFromPreferencesAsync();
+        await _vpnManager.LoadFromPreferencesAsync().Vhc();
 
         // ---- StartVpnTunnel (synchronous call into iOS) ----
         // On failure, re-assert+save+reload the config and retry once; a second failure propagates.
@@ -174,8 +175,8 @@ public class IosDevice : IDevice
             VhLogger.Instance.LogWarning(ex, "StartVpnTunnel failed. Re-saving config and retrying...");
 
             _vpnManager.Enabled = true;
-            await _vpnManager.SaveToPreferencesAsync();
-            await _vpnManager.LoadFromPreferencesAsync();
+            await _vpnManager.SaveToPreferencesAsync().Vhc();
+            await _vpnManager.LoadFromPreferencesAsync().Vhc();
 
             StartTunnel();
         }
@@ -187,7 +188,7 @@ public class IosDevice : IDevice
                 if (status is NEVpnStatus.Connected or NEVpnStatus.Connecting or NEVpnStatus.Reasserting) break;
             }
             catch { /* ignore */ }
-            await Task.Delay(200, cancellationToken);
+            await Task.Delay(200, cancellationToken).Vhc();
         }
     }
 
@@ -195,7 +196,7 @@ public class IosDevice : IDevice
     // one only the first time. A new manager saved at each launch is another entry in iOS Settings.
     private static async Task<NETunnelProviderManager> LoadVpnManager()
     {
-        var managers = (await NETunnelProviderManager.LoadAllFromPreferencesAsync())
+        var managers = (await NETunnelProviderManager.LoadAllFromPreferencesAsync().Vhc())
             .ToArray<NETunnelProviderManager>()
             .OfType<NETunnelProviderManager>()
             .ToArray();
@@ -205,7 +206,7 @@ public class IosDevice : IDevice
             new NETunnelProviderManager();
 
 #pragma warning disable CS0618 // Type or member is obsolete
-        await MigrateExtraVpnManagers(managers, vpnManager);
+        await MigrateExtraVpnManagers(managers, vpnManager).Vhc();
 #pragma warning restore CS0618 // Type or member is obsolete
         return vpnManager;
     }
@@ -217,7 +218,7 @@ public class IosDevice : IDevice
     {
         foreach (var manager in managers.Where(x => x != vpnManager)) {
             try {
-                await manager.RemoveFromPreferencesAsync();
+                await manager.RemoveFromPreferencesAsync().Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogWarning(ex, "Could not remove an extra VPN configuration.");

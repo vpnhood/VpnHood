@@ -5,6 +5,7 @@ using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.Ads.AdMob.Android;
 
@@ -86,7 +87,7 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAdProvider
 
             // if user reward not received in given time, throw exception
             try {
-                await userEarnedRewardListener.UserEarnedRewardTask.WaitAsync(AdEarnedTimeout, cancellationToken);
+                await userEarnedRewardListener.UserEarnedRewardTask.WaitAsync(AdEarnedTimeout, cancellationToken).Vhc();
             }
             catch (TimeoutException) {
                 throw new RewardNotEarnedException(

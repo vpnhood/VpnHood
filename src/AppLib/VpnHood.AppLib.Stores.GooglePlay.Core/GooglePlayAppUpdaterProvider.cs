@@ -5,6 +5,7 @@ using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Exceptions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;
@@ -26,7 +27,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
     {
         var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
         using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-        using var appUpdateInfo = await appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>();
+        using var appUpdateInfo = await appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>().Vhc();
 
         // Play answers "not available" also with no connection to Google: the service tells the two
         // apart by the connect
@@ -84,7 +85,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
         CancellationToken cancellationToken)
     {
         using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-        using var appUpdateInfo = await appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>();
+        using var appUpdateInfo = await appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>().Vhc();
         var updateAvailability = appUpdateInfo.UpdateAvailability();
         if (updateAvailability != availability) {
             VhLogger.Instance.LogDebug(

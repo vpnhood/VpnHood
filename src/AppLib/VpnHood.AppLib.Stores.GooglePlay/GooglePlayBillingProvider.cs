@@ -135,7 +135,7 @@ public class GooglePlayBillingProvider : IBillingProvider
 
         // Get products list from GooglePlay.
         try {
-            var products = await GetProducts(billingClient, productIds);
+            var products = await GetProducts(billingClient, productIds).Vhc();
 
             // One plan per (product, base plan) so every purchasable period surfaces. Which plans exist,
             // their order and labels are catalog decisions and must not be inferred here; the store only prices them.

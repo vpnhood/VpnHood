@@ -11,6 +11,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Net.Quic.Android;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.AndroidTun;
@@ -106,7 +107,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                     messageListener: _messageListener,
                     withLogger: AndroidDevice.IsVpnServiceProcess);
 
-                if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn))
+                if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn).Vhc())
                     StopSelf();
             }
             catch (Exception ex) {

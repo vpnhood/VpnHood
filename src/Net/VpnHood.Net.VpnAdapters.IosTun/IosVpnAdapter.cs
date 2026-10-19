@@ -3,6 +3,7 @@ using NetworkExtension;
 using System.Net;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -193,7 +194,7 @@ public class IosVpnAdapter(
         // about to install so the host extension can verify what actually reaches iOS ("connected but no
         // traffic" diagnosis).
         await IosTunDiagnostics.WriteRouteDumpAsync(remoteAddress, _mtu, networkSettings,
-            _ipv4Networks, _ipv4Routes, _ipv6Networks, _ipv6Routes, _dnsServers, cancellationToken);
+            _ipv4Networks, _ipv4Routes, _ipv6Networks, _ipv6Routes, _dnsServers, cancellationToken).Vhc();
 
         // CRITICAL: apply the network settings to iOS. Without this call the tunnel never
         // installs its routes, the OS-level tun is never brought up (no VPN status-bar
@@ -204,7 +205,7 @@ public class IosVpnAdapter(
         // overload: it throws NSErrorException when iOS reports a non-null NSError. iOS has no
         // native cancellation for this call, so WaitAsync only abandons the await on cancel.
         try {
-            await tunnelProvider.SetTunnelNetworkSettingsAsync(networkSettings).WaitAsync(cancellationToken);
+            await tunnelProvider.SetTunnelNetworkSettingsAsync(networkSettings).WaitAsync(cancellationToken).Vhc();
         }
         catch (NSErrorException ex) {
             completeStartTunnel(ex.Error);

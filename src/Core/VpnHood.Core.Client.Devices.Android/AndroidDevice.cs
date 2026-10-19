@@ -151,7 +151,7 @@ public class AndroidDevice : IDevice
             if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
                 throw new TimeoutException("Could not grant VPN permission in the given time.");
 
-            if (!await _grantPermissionTaskSource.Task)
+            if (!await _grantPermissionTaskSource.Task.Vhc())
                 throw new UserCanceledException("VPN permission has been rejected.");
         }
         finally {

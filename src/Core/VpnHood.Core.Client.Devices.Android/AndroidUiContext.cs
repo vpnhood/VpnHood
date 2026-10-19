@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.Devices.Android;
 
@@ -26,7 +27,7 @@ public class AndroidUiContext(IActivityEvent activityEvent) : IUiContext
                 await AndroidUtils.RunOnUiThread(activityEvent.Activity, () =>
                     !activityEvent.Activity.IsDestroyed &&
                     activityEvent.Activity.Window?.DecorView.RootView?.IsShown == true
-                );
+                ).Vhc();
         }
         catch {
             return false;

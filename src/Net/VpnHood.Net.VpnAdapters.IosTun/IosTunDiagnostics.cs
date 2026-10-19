@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.Logging;
 using NetworkExtension;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 
@@ -137,7 +138,7 @@ public static class IosTunDiagnostics
                 $"v6 routes-from-core({ipv6Routes.Count}): {string.Join(", ", ipv6Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
                 $"v6 INCLUDED-applied: {string.Join(", ", inc6)}\n" +
                 $"v6 EXCLUDED-applied: {string.Join(", ", exc6)}\n" +
-                $"dns({dnsServers.Count}): {string.Join(", ", dnsServers.Select(d => d.ToString()))}\n", cancellationToken);
+                $"dns({dnsServers.Count}): {string.Join(", ", dnsServers.Select(d => d.ToString()))}\n", cancellationToken).Vhc();
         }
         catch { /* best-effort */ }
     }

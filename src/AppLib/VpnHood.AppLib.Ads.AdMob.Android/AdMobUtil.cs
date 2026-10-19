@@ -26,7 +26,7 @@ public static class AdMobUtil
 
         var initializeListener = new MyOnInitializationCompleteListener();
         MobileAds.Initialize(activity, initializeListener);
-        await initializeListener.Task;
+        await initializeListener.Task.Vhc();
         IsInitialized = true;
     }
 

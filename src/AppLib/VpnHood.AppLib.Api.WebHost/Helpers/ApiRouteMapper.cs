@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.WebHost.Controllers;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
@@ -29,11 +30,11 @@ public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin, Func<Http
                 // Add CORS to all requests centrally
                 CorsMiddleware.AddCors(ctx, allowAnyOrigin);
                 DrainBody(ctx);
-                if (guard == null || !await guard(ctx))
-                    await handler(ctx);
+                if (guard == null || !await guard(ctx).Vhc())
+                    await handler(ctx).Vhc();
             }
             catch (Exception ex) {
-                await HandleException(ctx, ex);
+                await HandleException(ctx, ex).Vhc();
             }
         });
 
@@ -48,11 +49,11 @@ public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin, Func<Http
                 // Add CORS to all requests centrally
                 CorsMiddleware.AddCors(ctx, allowAnyOrigin);
                 DrainBody(ctx);
-                if (guard == null || !await guard(ctx))
-                    await handler(ctx);
+                if (guard == null || !await guard(ctx).Vhc())
+                    await handler(ctx).Vhc();
             }
             catch (Exception ex) {
-                await HandleException(ctx, ex);
+                await HandleException(ctx, ex).Vhc();
             }
         });
         server.Routes.PreAuthentication.Parameter.Add(HttpMethod.OPTIONS, path, Options);
@@ -86,7 +87,7 @@ public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin, Func<Http
         // Default to 500 for other exceptions
         var apiError = ex.ToApiError();
         apiError.Data.TryAdd("HttpStatusCode", statusCode.ToString());
-        await context.SendJson(apiError, (int)statusCode);
+        await context.SendJson(apiError, (int)statusCode).Vhc();
     }
 
     public ApiRouteMapper AddController(ControllerBase controller)

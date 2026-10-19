@@ -2,6 +2,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using VpnHood.Net.Toolkit.Extensions;
 using WatsonWebserver.Core;
 
 namespace VpnHood.AppLib.Api.WebHost.Helpers;
@@ -85,7 +86,7 @@ public static class HttpContextBaseExtensions
         public async Task SendNoContent()
         {
             ctx.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            await ctx.Response.Send();
+            await ctx.Response.Send().Vhc();
         }
 
         public Task SendNotFound()
@@ -98,21 +99,21 @@ public static class HttpContextBaseExtensions
         {
             ctx.Response.StatusCode = statusCode;
             ctx.Response.ContentType = "text/plain";
-            await ctx.Response.Send(text);
+            await ctx.Response.Send(text).Vhc();
         }
 
         public async Task SendJson(object? data, int statusCode = 200)
         {
             if (data is null) {
                 ctx.Response.StatusCode = (int)HttpStatusCode.NoContent;
-                await ctx.Response.Send();
+                await ctx.Response.Send().Vhc();
                 return;
             }
 
             var json = JsonSerializer.Serialize(data, JsonOptions);
             ctx.Response.StatusCode = statusCode;
             ctx.Response.ContentType = "application/json";
-            await ctx.Response.Send(json);
+            await ctx.Response.Send(json).Vhc();
         }
 
         public T ReadJson<T>()

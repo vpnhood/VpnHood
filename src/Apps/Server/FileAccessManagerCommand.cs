@@ -103,7 +103,7 @@ public class FileAccessManagerCommand(Func<FileAccessManager> getFileAccessManag
 
             Console.WriteLine("The following token has been generated: ");
             await PrintToken(accessToken.TokenId, cancellationToken).Vhc();
-            Console.WriteLine($"Store Token Count: {await fileAccessManager.AccessTokenService.GetTotalCount()}");
+            Console.WriteLine($"Store Token Count: {await fileAccessManager.AccessTokenService.GetTotalCount().Vhc()}");
         });
 
         return command;

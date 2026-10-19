@@ -133,7 +133,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         };
 
         try {
-            return await HttpGetAsync<string>("acme/http01_key_authorization", parameters, cancellationToken);
+            return await HttpGetAsync<string>("acme/http01_key_authorization", parameters, cancellationToken).Vhc();
         }
         catch (ApiException ex) when (ex.StatusCode == (int)HttpStatusCode.NotFound) {
             throw new KeyNotFoundException("The requested token was not found.", ex);

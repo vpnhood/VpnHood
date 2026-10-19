@@ -599,7 +599,7 @@ public class VpnHoodAppWebHost : IAppWebHost
 
         if (context.Request.Url.RawWithoutQuery.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)) {
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            await context.Response.Send();
+            await context.Response.Send().Vhc();
             return;
         }
 
@@ -616,7 +616,7 @@ public class VpnHoodAppWebHost : IAppWebHost
                 : null;
             if (asset == null) {
                 context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                await context.Response.Send();
+                await context.Response.Send().Vhc();
                 return;
             }
 
@@ -634,7 +634,7 @@ public class VpnHoodAppWebHost : IAppWebHost
 
         // the charset said here too: a page without its own meta would garble a non-ASCII app name
         context.Response.ContentType = "text/html; charset=utf-8";
-        await context.Response.Send(_indexHtml ?? await ReadIndexHtml(CancellationToken.None).Vhc());
+        await context.Response.Send(_indexHtml ?? await ReadIndexHtml(CancellationToken.None).Vhc()).Vhc();
     }
 
     private static async Task Send(HttpContextBase context, string name, Stream stream, bool isFingerprinted)

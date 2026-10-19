@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Server.Access;
 
@@ -49,7 +50,7 @@ public static class CertificateUtil
         try {
             // ReSharper disable once ShortLivedHttpClient
             using var client = new HttpClient(handler);
-            await client.GetAsync(url, cancellationToken);
+            await client.GetAsync(url, cancellationToken).Vhc();
         }
         catch (Exception) {
             // ignore

@@ -283,7 +283,7 @@ public class FileAccessManager : IAccessManager
         ret.ServerLocation = locationInfo?.ServerLocation;
 
         // Update usage such as LastUsedTime
-        await AccessTokenService.AddUsage(accessTokenData.AccessToken.TokenId, new Traffic(), cancellationToken);
+        await AccessTokenService.AddUsage(accessTokenData.AccessToken.TokenId, new Traffic(), cancellationToken).Vhc();
 
         // update accesskey
         if (ServerConfig.ReplyAccessKey)
@@ -381,7 +381,7 @@ public class FileAccessManager : IAccessManager
         var ret = new Dictionary<ulong, SessionResponse>();
         foreach (var sessionUsage in sessionUsages) {
             try {
-                var sessionResponse = await Session_AddUsage(sessionUsage, cancellationToken);
+                var sessionResponse = await Session_AddUsage(sessionUsage, cancellationToken).Vhc();
                 ret[sessionUsage.SessionId] = sessionResponse;
             }
             // a cancellation passes rather than becoming the session's AccessError
@@ -405,7 +405,7 @@ public class FileAccessManager : IAccessManager
             };
 
             try {
-                var sessionResponse = await Session_AddUsage(sessionUsage, cancellationToken);
+                var sessionResponse = await Session_AddUsage(sessionUsage, cancellationToken).Vhc();
                 ret[sessionUsage.SessionId] = sessionResponse;
             }
             // a cancellation passes rather than becoming the session's AccessError
@@ -446,7 +446,7 @@ public class FileAccessManager : IAccessManager
             };
 
         var traffic = sessionUsage.ToTraffic();
-        await AccessTokenService.AddUsage(tokenId, traffic, cancellationToken);
+        await AccessTokenService.AddUsage(tokenId, traffic, cancellationToken).Vhc();
 
         // a session's traffic is its use
         if (traffic.Total > 0)

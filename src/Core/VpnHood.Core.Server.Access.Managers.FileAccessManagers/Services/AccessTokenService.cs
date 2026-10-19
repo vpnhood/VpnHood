@@ -95,7 +95,7 @@ public class AccessTokenService
     public async Task<AccessTokenData> Get(string tokenId, CancellationToken cancellationToken)
     {
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
-        return await GetInternal(tokenId, cancellationToken);
+        return await GetInternal(tokenId, cancellationToken).Vhc();
     }
 
 
@@ -140,7 +140,7 @@ public class AccessTokenService
     {
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
 
-        var accessTokenData = await GetInternal(tokenId, cancellationToken);
+        var accessTokenData = await GetInternal(tokenId, cancellationToken).Vhc();
         accessTokenData.AccessToken.Name = tokenName;
 
         // not cancelled: a write cut off after the truncation would leave the usage empty

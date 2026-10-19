@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Server.Abstractions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 
 // ReSharper disable StringLiteralTypo
@@ -16,7 +17,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
     public async Task<SwapMemoryInfo> GetInfo()
     {
-        var swapFiles = await ListCurrentSwapFiles();
+        var swapFiles = await ListCurrentSwapFiles().Vhc();
         return new SwapMemoryInfo {
             TotalSize = swapFiles.Sum(x => x.Size),
             TotalUsed = swapFiles.Sum(x => x.Used),
@@ -36,9 +37,9 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
             // it may raise exception if the swap file is not active
             try {
-                var swapFiles = await ListCurrentSwapFiles();
+                var swapFiles = await ListCurrentSwapFiles().Vhc();
                 if (swapFiles.Any(x => x.FilePath == SwapFilePath))
-                    await ExecuteCommandAsync($"swapoff {SwapFilePath}");
+                    await ExecuteCommandAsync($"swapoff {SwapFilePath}").Vhc();
             }
             catch (Exception ex) {
                 logger.LogWarning(ex, "Failed to disable the current swap file.");
@@ -56,19 +57,19 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
         // Create a new swap file with the specified size
         logger.LogInformation("Creating a new swap file.");
-        await ExecuteCommandAsync($"fallocate -l {size} {SwapFilePath}");
+        await ExecuteCommandAsync($"fallocate -l {size} {SwapFilePath}").Vhc();
 
         // Set the correct permissions for the new swap file
         logger.LogInformation("Setting the correct permissions for the new swap file.");
-        await ExecuteCommandAsync($"chmod 600 /{SwapFilePath}");
+        await ExecuteCommandAsync($"chmod 600 /{SwapFilePath}").Vhc();
 
         // Format the file as swap space
         logger.LogInformation("Formatting the file as swap space.");
-        await ExecuteCommandAsync($"mkswap {SwapFilePath}");
+        await ExecuteCommandAsync($"mkswap {SwapFilePath}").Vhc();
 
         // Enable the swap file
         logger.LogInformation("Enabling the swap file.");
-        await ExecuteCommandAsync($"swapon {SwapFilePath}");
+        await ExecuteCommandAsync($"swapon {SwapFilePath}").Vhc();
 
         // Let ignore the following and activate the swap file everytime after reboot
         // Ensure the swap file is listed in /etc/fstab for persistence after reboot
@@ -102,7 +103,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
         var swapFiles = new List<SwapFile>();
 
         // ReSharper disable StringLiteralTypo
-        var output = await ExecuteCommandAsync("swapon --show --bytes");
+        var output = await ExecuteCommandAsync("swapon --show --bytes").Vhc();
         var lines = output.Split(['\n'], StringSplitOptions.RemoveEmptyEntries);
 
         // Skip the header row and parse the lines

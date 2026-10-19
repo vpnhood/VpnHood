@@ -169,7 +169,7 @@ public class ServerApp : IDisposable
         FileAccessManagerOptions? options, CancellationToken cancellationToken)
     {
         options ??= new FileAccessManagerOptions();
-        options.PublicEndPoints ??= await GetDefaultPublicEndPoints(options.TcpEndPointsValue, cancellationToken);
+        options.PublicEndPoints ??= await GetDefaultPublicEndPoints(options.TcpEndPointsValue, cancellationToken).Vhc();
 
         var accessManagerFolder = Path.Combine(storageFolderPath, "access");
         VhLogger.Instance.LogInformation("Using FileAccessManager. AccessFolder: {AccessManagerFolder}",
@@ -181,7 +181,7 @@ public class ServerApp : IDisposable
     private static async Task<IPEndPoint[]> GetDefaultPublicEndPoints(IEnumerable<IPEndPoint> tcpEndPoints,
         CancellationToken cancellationToken)
     {
-        var publicIps = await IPAddressUtil.GetPublicIpAddresses(cancellationToken);
+        var publicIps = await IPAddressUtil.GetPublicIpAddresses(cancellationToken).Vhc();
         var defaultPublicEps = new List<IPEndPoint>();
         var allListenerPorts = tcpEndPoints
             .Select(x => x.Port)
@@ -324,7 +324,7 @@ public class ServerApp : IDisposable
 
             try {
                 // check FileAccessManager; the access manager's first use, now that the log exists
-                if (FileAccessManager != null && await FileAccessManager.AccessTokenService.GetTotalCount() == 0)
+                if (FileAccessManager != null && await FileAccessManager.AccessTokenService.GetTotalCount().Vhc() == 0)
                     VhLogger.Instance.LogWarning(
                         "There is no token in the store! Use the following command to create one:\n {Command} gen -?",
                         CommandName);

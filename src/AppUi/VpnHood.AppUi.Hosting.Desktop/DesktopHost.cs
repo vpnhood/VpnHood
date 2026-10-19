@@ -15,6 +15,14 @@ namespace VpnHood.AppUi.Hosting.Desktop;
 // and the command a person types prints its help, as a terminal's command does.
 public static class DesktopHost
 {
+    // SIGTERM - how the service manager stops the daemon - cancels the running command, and the
+    // parser then waits this long for it to finish before it ends the process. Its default of
+    // 2 s is too short for the daemon, whose stop disconnects the tunnel first.
+    private static readonly TimeSpan ProcessTerminationTimeout = TimeSpan.FromSeconds(10);
+
+    // The daemon's graceful close in a signal's stop, which leaves its quick one the rest.
+    private static readonly TimeSpan SignalGracefulCloseTimeout = ProcessTerminationTimeout - TimeSpan.FromSeconds(2);
+
     // The whole run, on the calling thread, which is the host's main thread: the UI gets it (on
     // Windows it must be the STA thread Main was given), and it waits while the parser and every
     // command's work run off it (MainThreadQueue).
@@ -69,14 +77,20 @@ public static class DesktopHost
         rootCommand.Subcommands.Add(DaemonCommand.Create(platform));
         rootCommand.Subcommands.Add(DevCommand.Create(platform, initParams, mainThread));
 
-        // SIGTERM - how the service manager stops the daemon - cancels the running command, and the
-        // parser then waits this long for it to finish before it ends the process. Its default of
-        // 2 s is too short for the daemon, whose stop disconnects the tunnel first.
         var invocationConfiguration = new InvocationConfiguration {
-            ProcessTerminationTimeout = TimeSpan.FromSeconds(10)
+            ProcessTerminationTimeout = ProcessTerminationTimeout
         };
 
         var parseResult = rootCommand.Parse(args);
         return await parseResult.InvokeAsync(invocationConfiguration, CancellationToken.None).Vhc();
+    }
+
+    // The daemon's run where a signal stops it (IDesktopPlatform.HostDaemon): the parser cancels its
+    // token, and the app's graceful close gives way to its quick one before the parser ends the process.
+    public static async Task<int> HostDaemonStoppedBySignal(DaemonRun run, CancellationToken cancellationToken)
+    {
+        using var quickClose = new CancellationTokenSource();
+        using var registration = cancellationToken.Register(() => quickClose.CancelAfter(SignalGracefulCloseTimeout));
+        return await run(cancellationToken, quickClose.Token).Vhc();
     }
 }

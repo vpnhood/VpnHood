@@ -37,6 +37,6 @@ public sealed class WindowsDesktopPlatform : IDesktopPlatform
 
     public ILoggerProvider CreateSystemLogLoggerProvider() => new WinEventLogLoggerProvider(_paths.InstanceName);
 
-    public Task<int> HostDaemon(Func<CancellationToken, Task<int>> run, CancellationToken cancellationToken) =>
+    public Task<int> HostDaemon(DaemonRun run, CancellationToken cancellationToken) =>
         WindowsDaemonService.Host(_paths.InstanceName, run, cancellationToken);
 }

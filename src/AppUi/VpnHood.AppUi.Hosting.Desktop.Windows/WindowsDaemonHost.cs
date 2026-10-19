@@ -22,4 +22,10 @@ internal sealed class WindowsDaemonHost : IAppDaemonHost
     {
         return _windowsApp.DisposeAsync();
     }
+
+    // The stop whose time has run out: the app at once, which releases the adapter.
+    public void Dispose()
+    {
+        _windowsApp.Dispose();
+    }
 }

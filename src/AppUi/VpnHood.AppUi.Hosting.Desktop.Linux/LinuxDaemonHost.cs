@@ -21,4 +21,10 @@ internal sealed class LinuxDaemonHost : IAppDaemonHost
     {
         return _linuxApp.DisposeAsync();
     }
+
+    // The stop whose time has run out: the app at once, which releases the adapter.
+    public void Dispose()
+    {
+        _linuxApp.Dispose();
+    }
 }

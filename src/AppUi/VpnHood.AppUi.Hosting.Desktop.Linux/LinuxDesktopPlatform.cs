@@ -36,6 +36,6 @@ public sealed class LinuxDesktopPlatform : IDesktopPlatform
 
     public ILoggerProvider CreateSystemLogLoggerProvider() => new LinuxJournalSocketLoggerProvider(_paths.InstanceName);
 
-    public Task<int> HostDaemon(Func<CancellationToken, Task<int>> run, CancellationToken cancellationToken) =>
-        run(cancellationToken);
+    public Task<int> HostDaemon(DaemonRun run, CancellationToken cancellationToken) =>
+        DesktopHost.HostDaemonStoppedBySignal(run, cancellationToken);
 }

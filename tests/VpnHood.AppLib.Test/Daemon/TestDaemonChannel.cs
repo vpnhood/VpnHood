@@ -17,6 +17,9 @@ internal sealed class TestDaemonChannel : IDaemonChannel
     // The next accept fails, as one does on a system out of handles.
     public bool FailNextAccept { get; set; }
 
+    // Whether a service serves it now.
+    public bool IsListening => _listener != null;
+
     public Task<IDaemonChannelListener> Listen(CancellationToken cancellationToken)
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);

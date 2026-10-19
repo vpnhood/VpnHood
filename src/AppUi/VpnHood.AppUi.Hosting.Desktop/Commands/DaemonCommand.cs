@@ -25,12 +25,14 @@ internal static class DaemonCommand
             "Run the VPN service in the foreground. This is what the system's service manager starts.");
 
         command.SetAction((_, cancellationToken) =>
-            platform.HostDaemon(runCancellationToken => Run(platform, runCancellationToken), cancellationToken));
+            platform.HostDaemon((stopToken, quickCloseToken) => Run(platform, stopToken, quickCloseToken),
+                cancellationToken));
 
         return command;
     }
 
-    private static async Task<int> Run(IDesktopPlatform platform, CancellationToken cancellationToken)
+    private static async Task<int> Run(IDesktopPlatform platform, CancellationToken cancellationToken,
+        CancellationToken quickCloseToken)
     {
         // The platform's console from the first line: a terminal, or the journal. Under the service
         // control manager there is none, and its host has added the Event Log.
@@ -86,10 +88,32 @@ internal static class DaemonCommand
                 localWebHost.Restarted -= onRestarted;
             if (channel != null)
                 await channel.DisposeAsync().Vhc();
-            await daemonHost.DisposeAsync().Vhc();
+            await Close(daemonHost, quickCloseToken).Vhc();
         }
 
         return 0;
+    }
+
+    // The graceful close, which disconnects, until the stop's time for it runs out, then the quick one,
+    // which releases the adapter at once: past the stop's time, the manager ends the process with the
+    // adapter still up. A shutdown leaves no time at all. Logged rather than thrown: a failed close
+    // must not hide a start-up failure, and the quick one follows it.
+    private static async Task Close(IAppDaemonHost daemonHost, CancellationToken quickCloseToken)
+    {
+        if (!quickCloseToken.IsCancellationRequested) {
+            try {
+                await daemonHost.DisposeAsync().AsTask().WaitAsync(quickCloseToken).Vhc();
+                return;
+            }
+            catch (OperationCanceledException) when (quickCloseToken.IsCancellationRequested) {
+                VhLogger.Instance.LogWarning("The app has not closed in the time the stop gives it; closing it at once.");
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Could not close the app cleanly.");
+            }
+        }
+
+        daemonHost.Dispose();
     }
 
     private static void Publish(DaemonChannelServer? channel, IAppWebHost? localWebHost)

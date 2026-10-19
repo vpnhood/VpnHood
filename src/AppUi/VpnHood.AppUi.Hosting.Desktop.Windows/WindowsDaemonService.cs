@@ -3,28 +3,34 @@ using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App.Windows;
+using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 
 // The daemon's run as the service control manager hosts it. The manager stops a service with a call,
-// not a signal, so its Stop - and a shutdown - cancels the run here, and waits while the run
-// disconnects. With Fast Startup on, Windows' default, "Shut down" hibernates the service instead of
-// stopping it: no shutdown reaches it, and it wakes at the next start as from a sleep. A run that
-// ends by itself (a start that failed, say) stops the service with it. Started by hand from a console
-// instead, the run is simply run, and Ctrl+C cancels it.
+// not a signal, so its Stop - and a shutdown - cancels the run here, and waits while the run closes
+// the app: a stop's disconnects first, a shutdown's at once. With Fast Startup on, Windows' default,
+// "Shut down" hibernates the service instead of stopping it: no shutdown reaches it, and it wakes at
+// the next start as from a sleep. A run that ends by itself (a start that failed, say) stops the
+// service with it. Started by hand from a console instead, the run is run as a signal stops it, and
+// Ctrl+C cancels it.
 internal sealed class WindowsDaemonService : ServiceBase
 {
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(30);
 
+    // The app's graceful close in a stop, which leaves its quick one the rest of StopTimeout.
+    private static readonly TimeSpan GracefulCloseTimeout = StopTimeout - TimeSpan.FromSeconds(5);
+
     // A little over StopTimeout, so a stop that takes all of it is not called hung (services.msc,
     // net stop) a moment before it ends.
     private static readonly TimeSpan StopWaitHint = StopTimeout + TimeSpan.FromSeconds(5);
-    private readonly Func<CancellationToken, Task<int>> _run;
+    private readonly DaemonRun _run;
     private readonly CancellationTokenSource _cancellation = new();
+    private readonly CancellationTokenSource _quickClose = new();
     private Task<int>? _running;
 
-    private WindowsDaemonService(string serviceName, Func<CancellationToken, Task<int>> run)
+    private WindowsDaemonService(string serviceName, DaemonRun run)
     {
         ServiceName = serviceName;
         CanStop = true;
@@ -38,11 +44,10 @@ internal sealed class WindowsDaemonService : ServiceBase
     }
 
     // IDesktopPlatform.HostDaemon
-    public static Task<int> Host(string serviceName, Func<CancellationToken, Task<int>> run,
-        CancellationToken cancellationToken)
+    public static Task<int> Host(string serviceName, DaemonRun run, CancellationToken cancellationToken)
     {
         if (!IsStartedByServiceManager())
-            return run(cancellationToken);
+            return DesktopHost.HostDaemonStoppedBySignal(run, cancellationToken);
 
         // The service's warnings and errors go to the Application log under its name, from before
         // its run to after it. Run blocks until the manager has stopped the service; this is the
@@ -55,7 +60,7 @@ internal sealed class WindowsDaemonService : ServiceBase
 
     protected override void OnStart(string[] args)
     {
-        _running = Task.Run(() => _run(_cancellation.Token));
+        _running = Task.Run(() => _run(_cancellation.Token, _quickClose.Token));
         _running.ContinueWith(_ => {
             // ended by itself rather than by OnStop: the service goes with it
             if (!_cancellation.IsCancellationRequested)
@@ -65,16 +70,18 @@ internal sealed class WindowsDaemonService : ServiceBase
 
     // A stop is pending while the run disconnects, so it may ask for the time that takes. A shutdown is
     // not: there RequestAdditionalTime would throw (NotInPendingState) and crash the process before the
-    // run disconnects. So a shutdown disconnects in what Windows gives every service then,
-    // WaitToKillServiceTimeout (5 s by default), well short of StopTimeout.
+    // run disconnects. So a shutdown closes the app at once, with no disconnect, in what Windows gives
+    // every service then, WaitToKillServiceTimeout (5 s by default), well short of StopTimeout.
     protected override void OnStop()
     {
         RequestAdditionalTime((int)StopWaitHint.TotalMilliseconds);
+        _quickClose.CancelAfter(GracefulCloseTimeout);
         EndRun();
     }
 
     protected override void OnShutdown()
     {
+        Cancel(_quickClose);
         EndRun();
     }
 
@@ -84,17 +91,17 @@ internal sealed class WindowsDaemonService : ServiceBase
     private void EndRun()
     {
         var endedByItself = _running is { IsCompleted: true };
-        CancelRun();
+        Cancel(_cancellation);
         var exitCode = WaitRun();
         ExitCode = endedByItself ? exitCode : 0;
     }
 
-    // A callback on the run's token that throws is logged: out of OnStop or OnShutdown it would kill
+    // A callback on the run's tokens that throws is logged: out of OnStop or OnShutdown it would kill
     // the process before the stop is reported. Every callback has still run, so the run ends anyway.
-    private void CancelRun()
+    private static void Cancel(CancellationTokenSource cancellation)
     {
         try {
-            _cancellation.Cancel();
+            cancellation.Cancel();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Cancelling the service's run threw.");
@@ -120,8 +127,10 @@ internal sealed class WindowsDaemonService : ServiceBase
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
+        if (disposing) {
             _cancellation.Dispose();
+            _quickClose.Dispose();
+        }
 
         base.Dispose(disposing);
     }

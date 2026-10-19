@@ -40,9 +40,11 @@ public interface IDesktopPlatform
     // under the service's name on Windows, the journal under the instance's name on Linux.
     ILoggerProvider CreateSystemLogLoggerProvider();
 
-    // The daemon's run as the platform's service manager hosts it. Windows' stops it with a call
-    // rather than a signal (the service control manager, through ServiceBase), which then cancels the
-    // run; where a signal stops it (Linux), the run is simply run, and the parser turns the signal
-    // into the same cancellation.
-    Task<int> HostDaemon(Func<CancellationToken, Task<int>> run, CancellationToken cancellationToken);
+    // The daemon's run as the platform's service manager hosts it, with the time the stop leaves the
+    // app's graceful close (DaemonRun), so the adapter is released before the manager ends the process.
+    // Windows' stops it with a call rather than a signal (the service control manager, through
+    // ServiceBase), which then cancels the run, and a shutdown leaves the graceful close no time; where
+    // a signal stops it (Linux), DesktopHost.HostDaemonStoppedBySignal runs it, and the parser turns the
+    // signal into the same cancellation.
+    Task<int> HostDaemon(DaemonRun run, CancellationToken cancellationToken);
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.Toolkit.Extensions;
 
@@ -19,8 +20,7 @@ public static class AsyncDisposableExtensions
             await disposable.DisposeAsync().Vhc();
         }
         catch (Exception ex) {
-            VhLogger.Instance.Log(failureLevel, ex, "Could not dispose asynchronously. Type: {Type}",
-                disposable.GetType().Name);
+            VhInvoker.LogFailure(ex, $"dispose {disposable.GetType().Name} asynchronously", failureLevel);
         }
     }
 

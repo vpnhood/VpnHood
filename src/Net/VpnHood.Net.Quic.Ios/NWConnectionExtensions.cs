@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Network;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -7,7 +8,7 @@ namespace VpnHood.Net.Quic.Ios;
 /// Best-effort teardown helpers for a single QUIC-stream <see cref="NWConnection"/>. Network.framework
 /// objects can throw from their native trampolines when detached or cancelled mid-flight (e.g. after the
 /// stream has already failed/cancelled). During cleanup, we only want the call attempted, never to mask the
-/// original failure, so each helper swallows and logs via <see cref="VhInvoker.TryInvoke(System.Action)"/>.
+/// original failure, so each helper swallows and logs via <see cref="VhInvoker"/>.
 /// </summary>
 // ReSharper disable once InconsistentNaming
 internal static class NWConnectionExtensions
@@ -19,10 +20,11 @@ internal static class NWConnectionExtensions
         /// current handler.
         /// </summary>
         public void TrySetStateChangeHandler(Action<NWConnectionState, NWError>? handler)
-            => VhInvoker.TryInvoke(() => connection.SetStateChangeHandler(handler!));
+            => VhInvoker.TryInvoke("set the connection's state handler", LogLevel.Debug,
+                () => connection.SetStateChangeHandler(handler!));
 
         /// <summary>Best-effort <see cref="NWConnection.Cancel"/>.</summary>
         public void TryCancel()
-            => VhInvoker.TryInvoke(connection.Cancel);
+            => VhInvoker.TryInvoke("cancel the connection", LogLevel.Debug, connection.Cancel);
     }
 }

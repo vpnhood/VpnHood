@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.Desktop.Linux.Utils;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
@@ -65,7 +66,7 @@ public sealed class LinuxDaemonChannel(LinuxDesktopPaths paths) : IDaemonChannel
         public ValueTask DisposeAsync()
         {
             socket.Dispose();
-            VhInvoker.TryInvoke("remove the channel's socket", () => File.Delete(socketPath));
+            VhInvoker.TryInvoke("remove the channel's socket", LogLevel.Warning, () => File.Delete(socketPath));
             return ValueTask.CompletedTask;
         }
     }

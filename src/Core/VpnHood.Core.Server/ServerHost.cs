@@ -280,7 +280,7 @@ public class ServerHost : IAsyncDisposable
                 using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
                 using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, cancellationToken);
                 // ReSharper disable once AccessToDisposedClosure
-                await VhInvoker.TryInvokeAsync("Write unauthorized response.",
+                await VhInvoker.TryInvokeAsync("write the unauthorized response", LogLevel.Debug,
                     () => streamConnection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), closeCts.Token)).Vhc();
             }
 

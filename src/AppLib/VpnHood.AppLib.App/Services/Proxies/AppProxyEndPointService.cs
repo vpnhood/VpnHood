@@ -1,4 +1,5 @@
-﻿using VpnHood.AppLib.Abstractions.Device;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.AppLib.Api.Settings;
@@ -54,7 +55,7 @@ public class AppProxyEndPointService(
     {
         if (_hasCustomEndPointsCache is null ||
             FastDateTime.UtcNow - _hasCustomEndPointsCacheTime > HasCustomEndPointsCacheTimeout)
-            _ = VhInvoker.TryInvokeAsync("Refresh custom proxy endpoint existence",
+            _ = VhInvoker.TryInvokeAsync("refresh whether custom proxy endpoints exist", LogLevel.Warning,
                 RefreshHasCustomEndPoints);
 
         return _hasCustomEndPointsCache ?? false;
@@ -76,7 +77,7 @@ public class AppProxyEndPointService(
         if (deviceProxySettings?.ProxyUrl is null)
             return null;
 
-        return VhInvoker.TryInvoke("Parse device proxy url",
+        return VhInvoker.TryInvoke("parse the device's proxy URL", LogLevel.Debug,
             () => ProxyEndPointParser.FromUrl(deviceProxySettings.ProxyUrl));
     }
 

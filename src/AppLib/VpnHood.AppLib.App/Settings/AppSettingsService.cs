@@ -108,7 +108,7 @@ public class AppSettingsService
         VhLogger.Instance.LogDebug("Remote update successfully.");
 
         // download promotion image
-        await VhInvoker.TryInvokeAsync("Update Promote Image", () =>
+        await VhInvoker.TryInvokeAsync("update the promotion image", LogLevel.Debug, () =>
             UpdatePromoteImage(httpClient, RemoteSettings.PromotionImageUrl, cancellationToken)).Vhc();
     }
 

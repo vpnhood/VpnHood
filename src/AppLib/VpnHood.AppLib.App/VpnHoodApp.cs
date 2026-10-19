@@ -189,9 +189,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // adapter (applied at connect only), so a change just flags the running session for a reconnect.
         settingsService.SplitIpViaDeviceSettings.Changed += (_, _) => SetReconnectRequired();
         settingsService.SplitIpViaAppSettings.Changed += (_, _) =>
-            _ = VhInvoker.TryInvokeAsync("Reconfigure after split-ip change", () => ReconfigureVpnService(CancellationToken.None));
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a split-IP change", LogLevel.Warning,
+                () => ReconfigureVpnService(CancellationToken.None));
         settingsService.SplitDomainSettings.Changed += (_, _) =>
-            _ = VhInvoker.TryInvokeAsync("Reconfigure after split-domain change", () => ReconfigureVpnService(CancellationToken.None));
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a split-domain change", LogLevel.Warning,
+                () => ReconfigureVpnService(CancellationToken.None));
 
         var protocols = new List<ChannelProtocol> { ChannelProtocol.Tcp, ChannelProtocol.Udp };
         if (_device.IsQuicSupported)
@@ -379,7 +381,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         var folderPath = Path.Combine(TempFolderPath, "SPA");
         if (Directory.Exists(folderPath))
-            VhInvoker.TryInvoke("Delete the legacy page temp folder", () => Directory.Delete(folderPath, true));
+            VhInvoker.TryInvoke("delete the legacy page temp folder", LogLevel.Debug,
+                () => Directory.Delete(folderPath, true));
     }
 
     private void ApplySettings()
@@ -394,7 +397,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // Reconfigure, not awaited: a running session at once, and either way the saved options a start
             // without the app runs with (always-on, the quick-settings tile).
-            _ = VhInvoker.TryInvokeAsync("Reconfigure after settings change", () => ReconfigureVpnService(CancellationToken.None));
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a settings change", LogLevel.Warning,
+                () => ReconfigureVpnService(CancellationToken.None));
 
             if (ConnectionInfo.IsStarted()) {
                 // Settings that only apply at connect, judged on EFFECTIVE split values so flipping the
@@ -437,7 +441,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // apply the last known client country (reported by the server); fall back to the device region
             if (UserSettings.CountryCode != null)
-                VhInvoker.TryInvoke("Apply the client country",
+                VhInvoker.TryInvoke("apply the client's country", LogLevel.Warning,
                     () => AppRegionInfo.CurrentRegion = new RegionInfo(UserSettings.CountryCode));
 
             // the trackers follow the first-run terms and the usage-data switch
@@ -502,7 +506,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         var uiContext = AppUiContext.Context;
         if (IsIdle && uiContext != null)
-            _ = VhInvoker.TryInvokeAsync("PreloadAd", () => AdManager.PreloadAd(uiContext, CancellationToken.None));
+            _ = VhInvoker.TryInvokeAsync("preload an ad", LogLevel.Debug,
+                () => AdManager.PreloadAd(uiContext, CancellationToken.None));
 
         // a session that waits for an ad nobody could show yet - the tile's, always-on's, or one from before
         // this process restarted, the person opening the app to watch it - gets it now that a window can
@@ -599,7 +604,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol.ToAppDto() ??
                               UserSettings.ChannelProtocol,
             IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
-            SystemPrivateDns = VhInvoker.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()?.ToAppDto()),
+            SystemPrivateDns = VhInvoker.TryInvoke("read the system's private DNS", LogLevel.Debug,
+                () => Services.DeviceUiProvider.GetPrivateDns()?.ToAppDto()),
             StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
             IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
             PromotionExists = PromotionExists(),
@@ -1606,7 +1612,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         var accountService = Services.AccountService;
         if (updateParams.AccessCode != null && accountService?.AuthenticationService.UserId != null)
-            await VhInvoker.TryInvokeAsync("Handing the typed access code to the account",
+            await VhInvoker.TryInvokeAsync("hand the typed access code to the account", LogLevel.Warning,
                 () => accountService.Refresh(cancellationToken)).Vhc();
 
         return VpnProfileService.GetInfo(vpnProfileId);

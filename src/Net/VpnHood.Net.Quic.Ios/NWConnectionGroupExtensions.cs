@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Network;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -7,7 +8,7 @@ namespace VpnHood.Net.Quic.Ios;
 /// Best-effort teardown helpers for <see cref="NWConnectionGroup"/>. Network.framework objects can throw
 /// from their native trampolines when detached or cancelled mid-flight (e.g. after the group has already
 /// failed/cancelled). During cleanup, we only want the call attempted, never to mask the original failure,
-/// so each helper swallows and logs via <see cref="VhInvoker.TryInvoke(System.Action)"/>.
+/// so each helper swallows and logs via <see cref="VhInvoker"/>.
 /// </summary>
 // ReSharper disable once InconsistentNaming
 internal static class NWConnectionGroupExtensions
@@ -19,17 +20,19 @@ internal static class NWConnectionGroupExtensions
         /// current handler.
         /// </summary>
         public void TrySetStateChangedHandler(NWConnectionGroupStateChangedDelegate? handler)
-            => VhInvoker.TryInvoke(() => connectionGroup.SetStateChangedHandler(handler!));
+            => VhInvoker.TryInvoke("set the connection group's state handler", LogLevel.Debug,
+                () => connectionGroup.SetStateChangedHandler(handler!));
 
         /// <summary>
         /// Best-effort <see cref="NWConnectionGroup.SetNewConnectionHandler"/>. Pass <c>null</c> to detach the
         /// current handler.
         /// </summary>
         public void TrySetNewConnectionHandler(Action<NWConnection>? handler)
-            => VhInvoker.TryInvoke(() => connectionGroup.SetNewConnectionHandler(handler!));
+            => VhInvoker.TryInvoke("set the connection group's new-connection handler", LogLevel.Debug,
+                () => connectionGroup.SetNewConnectionHandler(handler!));
 
         /// <summary>Best-effort <see cref="NWConnectionGroup.Cancel"/>.</summary>
         public void TryCancel()
-            => VhInvoker.TryInvoke(connectionGroup.Cancel);
+            => VhInvoker.TryInvoke("cancel the connection group", LogLevel.Debug, connectionGroup.Cancel);
     }
 }

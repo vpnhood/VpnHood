@@ -81,7 +81,8 @@ public class ManagedProxyConnector : IProxyConnector
         var connector = new ManagedProxyConnector(proxyOptions, store, serverCheckTimeout);
 
         if (proxyOptions.ResetStates)
-            await VhInvoker.TryInvokeAsync("Reset proxy endpoint statuses", store.ResetStatuses).Vhc();
+            await VhInvoker.TryInvokeAsync("reset the proxy endpoints' statuses", LogLevel.Warning,
+                store.ResetStatuses).Vhc();
 
         // load the working set from the shared store; the store list is authoritative
         await connector.ReloadEntries().Vhc();
@@ -136,7 +137,8 @@ public class ManagedProxyConnector : IProxyConnector
 
         if (proxyOptions.ResetStates) {
             // discard in-memory statuses instead of flushing them back over the app's reset
-            await VhInvoker.TryInvokeAsync("Reset proxy endpoint statuses", _store.ResetStatuses).Vhc();
+            await VhInvoker.TryInvokeAsync("reset the proxy endpoints' statuses", LogLevel.Warning,
+                _store.ResetStatuses).Vhc();
         }
         else {
             await Flush().Vhc();

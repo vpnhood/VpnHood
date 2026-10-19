@@ -151,7 +151,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
             return;
 
         IsStarted = false;
-        VhInvoker.TryInvoke("Stop Http01 Listener", () => _tcpListener?.Stop());
+        VhInvoker.TryInvoke("stop the HTTP-01 listener", LogLevel.Warning, () => _tcpListener?.Stop());
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
         _disposed = true;

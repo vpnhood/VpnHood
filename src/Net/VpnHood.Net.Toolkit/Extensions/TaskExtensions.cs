@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
-using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.Toolkit.Extensions;
 
@@ -98,8 +98,8 @@ public static class TaskExtensions
                     cancellationTokenSource.Cancel();
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogError(ex,
-                    "Failed to cancel the CancellationTokenSource. This is not a critical error.");
+                // a callback that throws is a bug
+                VhInvoker.LogFailure(ex, "cancel a token source", LogLevel.Error);
             }
         }
 
@@ -110,8 +110,7 @@ public static class TaskExtensions
                     await cancellationTokenSource.CancelAsync().Vhc();
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogError(ex,
-                    "Failed to cancel the CancellationTokenSource. This is not a critical error.");
+                VhInvoker.LogFailure(ex, "cancel a token source", LogLevel.Error);
             }
         }
     }

@@ -1038,7 +1038,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         // run on the adapter's I/O thread, nor under the restart lock
         VhLogger.Instance.LogError(ex, "The VPN adapter is down and stays down.");
         var failed = Failed; // this run's subscribers, not a later one's
-        Task.Run(() => VhInvoker.TryInvoke("Failed", () => failed?.Invoke(this, ex)));
+        Task.Run(() => VhInvoker.TryInvoke("raise the adapter's Failed event", LogLevel.Error, () => failed?.Invoke(this, ex)));
     }
 
     // A restart on a task of its own. Its failure is logged and answered by Restart.
@@ -1087,15 +1087,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         // notify the subscribers that the adapter is disposed
         NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged -= NetworkChange_NetworkAvailabilityChanged;
-        try {
-            Disposed?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex) {
-            // a failed handler must not stop the release
-            VhLogger.Instance.LogError(ex, "A handler of the adapter's Disposed event failed. AdapterName: {AdapterName}",
-                AdapterName);
-        }
 
+        // a failed handler must not stop the release
+        VhInvoker.TryInvoke("raise the adapter's Disposed event", LogLevel.Error,
+            () => Disposed?.Invoke(this, EventArgs.Empty));
         Disposed = null;
 
         base.DisposeManaged();

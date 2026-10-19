@@ -490,8 +490,8 @@ public static class VhUtils
     }
 
     /// <summary>
-    /// Dispose every item, swallowing per-item failures so one throwing Dispose can not
-    /// leak the rest. Callers keep their own locks around the enumeration.
+    /// Disposes every item; ours never throw from Dispose. Callers keep their own locks around the
+    /// enumeration.
     /// </summary>
     public static void DisposeAll<T>(IEnumerable<T>? items) where T : IDisposable
     {
@@ -499,7 +499,7 @@ public static class VhUtils
             return;
 
         foreach (var item in items)
-            item.TryDispose();
+            item.Dispose();
     }
 
     public static Uri? TryParseUrl(string? stringUrl, UriKind uriKind = UriKind.Absolute)

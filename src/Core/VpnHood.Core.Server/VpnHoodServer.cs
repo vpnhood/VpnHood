@@ -645,8 +645,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         _configureAndSendStatusJob.Dispose();
 
         // wait for configuration
-        await VhInvoker.TryInvokeAsync("Finalize configureTask", () => _configureTask).Vhc();
-        await VhInvoker.TryInvokeAsync("Finalize sndStatusTask", () => _sendStatusTask).Vhc();
+        await VhInvoker.TryInvokeAsync("finish the configuration under way", LogLevel.Debug, () => _configureTask).Vhc();
+        await VhInvoker.TryInvokeAsync("finish the status upload under way", LogLevel.Debug, () => _sendStatusTask).Vhc();
 
         // before disposing session manager to prevent recovering sessions
         await serverHostDisposeTask.Vhc();

@@ -1,4 +1,5 @@
 using CoreFoundation;
+using Microsoft.Extensions.Logging;
 using Network;
 using VpnHood.Net.Toolkit.Streams;
 using VpnHood.Net.Toolkit.Utils;
@@ -234,7 +235,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
         if (Interlocked.Exchange(ref _aborted, true))
             return;
 
-        VhInvoker.TryInvoke(connection.Cancel);
+        VhInvoker.TryInvoke("cancel the stream's connection", LogLevel.Debug, connection.Cancel);
     }
 
     protected override void Dispose(bool disposing)
@@ -251,7 +252,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
             // load-bearing and run unconditionally.
             var cancelStart = IosQuicDiagnostics.BeginTiming();
             // ReSharper disable once AccessToDisposedClosure
-            VhInvoker.TryInvoke(connection.Cancel);
+            VhInvoker.TryInvoke("cancel the stream's connection", LogLevel.Debug, connection.Cancel);
             connection.Dispose();
             IosQuicDiagnostics.EndStreamTeardown(cancelStart);
 

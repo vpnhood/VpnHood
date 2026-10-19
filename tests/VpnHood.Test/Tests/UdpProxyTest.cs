@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
@@ -269,7 +270,7 @@ public class UdpProxyTest : TestBase
         }
 
         // wait for tasks to complete and not throw exceptions
-        await VhInvoker.TryInvokeAsync("", () => Task.WhenAll(tasks));
+        await VhInvoker.TryInvokeAsync("wait for the UDP echoes", LogLevel.Debug, () => Task.WhenAll(tasks));
 
         // Check succeeded Udp
         Assert.AreEqual(maxUdpCount, tasks.Count(x => x.IsCompletedSuccessfully));

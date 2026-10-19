@@ -206,7 +206,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
             VhLogger.Instance.LogInformation("Removing {AdapterName}, a tun a previous run left.", tun.Name);
             TryRemoveResolvconfDns(tun.Name);
-            VhInvoker.TryInvoke($"remove the leftover tun {tun.Name}", () =>
+            VhInvoker.TryInvoke($"remove the leftover tun {tun.Name}", LogLevel.Warning, () =>
                 ExecuteCommand($"ip link delete {tun.Name}"));
         }
     }
@@ -336,7 +336,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // now, and wakes that poll
         if (tunAdapterFd != InvalidFd) {
             VhLogger.Instance.LogDebug("Removing the {AdapterName} TUN adapter...", AdapterName);
-            VhInvoker.TryInvoke($"remove the {AdapterName} TUN adapter", () =>
+            VhInvoker.TryInvoke($"remove the {AdapterName} TUN adapter", LogLevel.Warning, () =>
                 ExecuteCommand($"ip link delete {AdapterName}"));
             LinuxAPI.close(tunAdapterFd);
         }
@@ -496,7 +496,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     {
         string? res = "";
         while (res != null)
-            res = VhInvoker.TryInvoke("Remove NAT rule", () => ExecuteCommand($"{iptables} {rule}"));
+            res = VhInvoker.TryInvoke("remove a NAT rule", LogLevel.Debug, () => ExecuteCommand($"{iptables} {rule}"));
     }
 
     protected override async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
@@ -586,7 +586,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     // without its service while the interface exists.
     private static void TryRemoveResolvconfDns(string adapterName)
     {
-        VhInvoker.TryInvoke($"remove the resolvconf DNS entry of {adapterName}", () =>
+        VhInvoker.TryInvoke($"remove the resolvconf DNS entry of {adapterName}", LogLevel.Debug, () =>
             ExecuteCommand(RemoveResolvconfDnsCommand(adapterName)));
     }
 

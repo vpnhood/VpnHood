@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using CoreFoundation;
+using Microsoft.Extensions.Logging;
 using Network;
 using ObjCRuntime;
 using VpnHood.Net.Quic.Abstractions;
@@ -125,7 +126,7 @@ public sealed class IosQuicClient(
             connectionGroup.Dispose();
             multiplexGroup.Dispose();
             endpoint.Dispose();
-            VhInvoker.TryInvoke(queue.Dispose);
+            VhInvoker.TryInvoke("dispose the dispatch queue", LogLevel.Debug, queue.Dispose);
             throw;
         }
     }

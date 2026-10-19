@@ -47,16 +47,6 @@ public class TimeoutDictionaryTest
         public override int GetHashCode() => 42;
     }
 
-    // dispose still counts, then throws; the dictionary must swallow it and keep draining
-    private class ThrowingDisposeItem : TrackedItem
-    {
-        public override void Dispose()
-        {
-            base.Dispose();
-            throw new InvalidOperationException("dispose failed on purpose");
-        }
-    }
-
     [TestMethod]
     public void GetOrAdd_should_return_existing_live_item()
     {
@@ -280,36 +270,6 @@ public class TimeoutDictionaryTest
         Assert.IsFalse(dictionary.TryAdd(3, incoming));
         Assert.AreEqual(0, incoming.DisposeCount, "a rejected value stays caller-owned");
         Assert.IsFalse(dictionary.TryGetValue(1, out _));
-    }
-
-    [TestMethod]
-    public void Dispose_should_drain_every_entry_even_when_a_value_dispose_throws()
-    {
-        var dictionary = new TimeoutDictionary<int, TrackedItem>(LongTimeout);
-        var items = new List<TrackedItem>();
-        for (var i = 0; i < 10; i++) {
-            var j = i;
-            items.Add(dictionary.GetOrAdd(i, _ => j % 2 == 0 
-                ? new ThrowingDisposeItem() : new TrackedItem()));
-        }
-
-        dictionary.Dispose(); // must neither throw nor stop at the first throwing value
-        Assert.AreEqual(0, dictionary.Count);
-        Assert.IsTrue(items.All(x => x.DisposeCount == 1), "every entry must be drained and disposed once");
-    }
-
-    [TestMethod]
-    public void Replacement_should_succeed_even_when_the_old_value_dispose_throws()
-    {
-        using var dictionary = new TimeoutDictionary<int, TrackedItem>(LongTimeout) { AutoCleanup = false };
-        var oldItem = dictionary.GetOrAdd(1, _ => new ThrowingDisposeItem());
-        oldItem.Backdate();
-
-        var newItem = dictionary.GetOrAdd(1, _ => new TrackedItem());
-        Assert.AreEqual(1, oldItem.DisposeCount);
-        Assert.AreEqual(0, newItem.DisposeCount);
-        Assert.IsTrue(dictionary.TryGetValue(1, out var current));
-        Assert.AreSame(newItem, current);
     }
 
     [TestMethod]

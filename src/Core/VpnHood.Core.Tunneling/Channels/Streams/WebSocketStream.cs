@@ -355,7 +355,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
         // just ignore exceptions during close stream as close stream already handles logging
         if (CanReuse)
-            await VhInvoker.TryInvokeAsync(null, CloseStreamAsync).Vhc();
+            await VhInvoker.TryInvokeAsync("close the WebSocket stream", LogLevel.Debug, CloseStreamAsync).Vhc();
 
         // one that cannot carry the next logical stream, as its peer ended it or a read, a write or its end failed,
         // closes its source, which ends what still waits on it; its owner's close of the transport finds it closed

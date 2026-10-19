@@ -62,7 +62,7 @@ public class QuickLaunchTileService : TileService
     public override void OnDestroy()
     {
         _listeningCts?.TryCancel();
-        _listeningCts?.TryDispose();
+        _listeningCts?.Dispose();
         _listeningCts = null;
         _vpnServiceManager.Dispose(); // does not stop the service
         _mainHandler.RemoveCallbacksAndMessages(null);
@@ -86,7 +86,7 @@ public class QuickLaunchTileService : TileService
     {
         base.OnStartListening();
         _listeningCts?.TryCancel();
-        _listeningCts?.TryDispose();
+        _listeningCts?.Dispose();
         _listeningCts = new CancellationTokenSource();
         _ = PollWhileListening(_listeningCts.Token);
     }

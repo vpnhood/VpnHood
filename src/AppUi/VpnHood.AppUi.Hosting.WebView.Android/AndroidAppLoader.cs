@@ -40,7 +40,7 @@ internal static class AndroidAppLoader
         // set window background color
         var backgroundColor = colors.WindowBackgroundColor?.ToAndroidColor();
         if (backgroundColor != null)
-            VhInvoker.TryInvoke("linearLayout.SetBackgroundColor", () =>
+            VhInvoker.TryInvoke("set the loader's background color", LogLevel.Debug, () =>
                 linearLayout.SetBackgroundColor(backgroundColor.Value));
 
         // Create the progress bar
@@ -54,7 +54,7 @@ internal static class AndroidAppLoader
         // set progressbar color
         var progressBarColor = colors.ProgressBarColor?.ToAndroidColor();
         if (progressBarColor != null)
-            VhInvoker.TryInvoke("progressBar.IndeterminateTintList", () =>
+            VhInvoker.TryInvoke("tint the loader's progress bar", LogLevel.Debug, () =>
                 progressBar.IndeterminateTintList = ColorStateList.ValueOf(progressBarColor.Value));
 
         linearLayout.AddView(progressBar);

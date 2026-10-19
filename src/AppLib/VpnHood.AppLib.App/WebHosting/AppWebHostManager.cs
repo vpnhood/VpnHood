@@ -1,4 +1,5 @@
-﻿using VpnHood.AppLib.App.Utils;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.App.Utils;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
@@ -84,11 +85,11 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
     public async Task StartAlwaysOn(CancellationToken cancellationToken)
     {
         if (Local?.IsAlwaysOn == true)
-            await VhInvoker.TryInvokeAsync("Open local listeners due always on",
+            await VhInvoker.TryInvokeAsync("open the local listeners for always-on", LogLevel.Warning,
                 () => Local.EnsureStarted(cancellationToken)).Vhc();
 
         if (Remote?.IsAlwaysOn == true)
-            await VhInvoker.TryInvokeAsync("Open remote access listeners due always on",
+            await VhInvoker.TryInvokeAsync("open the remote access listeners for always-on", LogLevel.Warning,
                 () => Remote.EnsureStarted(cancellationToken)).Vhc();
     }
 
@@ -113,7 +114,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
         }
 
         if (Remote?.IsAlwaysOn == true)
-            _ = VhInvoker.TryInvokeAsync("Open remote access listeners due always on",
+            _ = VhInvoker.TryInvokeAsync("open the remote access listeners for always-on", LogLevel.Warning,
                 () => Remote.EnsureStarted(CancellationToken.None));
     }
 

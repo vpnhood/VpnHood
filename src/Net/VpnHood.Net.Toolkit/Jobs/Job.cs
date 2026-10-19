@@ -154,7 +154,7 @@ public class Job : IDisposable
         }
         finally {
             LastExecutedTime = FastDateTime.UtcNow;
-            VhInvoker.TryInvoke(() => _jobSemaphore.Release()); // semaphore may be already disposed
+            VhInvoker.TryInvoke("release the job's semaphore", LogLevel.Debug, () => _jobSemaphore.Release()); // may be disposed
         }
     }
 

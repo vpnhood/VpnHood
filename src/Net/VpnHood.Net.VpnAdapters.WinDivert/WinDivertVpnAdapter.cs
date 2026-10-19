@@ -7,6 +7,7 @@ using SharpPcap.WinDivert;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Collections;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
@@ -64,13 +65,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
             AdapterClose();
 
             // SharpPcap's dispose closes the device again, which throws as the close does
-            try {
-                _device?.Dispose();
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogWarning(ex, "Could not dispose the WinDivert device.");
-            }
-
+            _device.TryDispose(LogLevel.Warning);
             _device = null;
         }
     }
@@ -133,15 +128,9 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override void AdapterClose()
     {
-        lock (_deviceLock) {
-            // SharpPcap throws when the handle's close fails; the adapter's removal goes on all the same
-            try {
-                _device?.Close();
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogWarning(ex, "Could not close the WinDivert device.");
-            }
-        }
+        // SharpPcap throws when the handle's close fails; the adapter's removal goes on all the same
+        lock (_deviceLock)
+            VhInvoker.TryInvoke("close the WinDivert device", LogLevel.Warning, () => _device?.Close());
     }
 
 

@@ -46,7 +46,7 @@ internal sealed class ServerLog : IDisposable
             var fileLogger = new FileLogger(Path.Combine(logFolderPath, "server.log"));
             // the file never rolls, so each start begins it anew, inside the privacy policy's 30 days; a
             // broken config is rare enough to lose the run before it
-            VhInvoker.TryInvoke("Open the fallback log file", () => {
+            VhInvoker.TryInvoke("open the fallback log file", Microsoft.Extensions.Logging.LogLevel.Warning, () => {
                 Directory.CreateDirectory(logFolderPath);
                 fileLogger.Open(deleteOld: true);
             });

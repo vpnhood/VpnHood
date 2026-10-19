@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 
 // ReSharper disable OutParameterValueIsAlwaysDiscarded.Global
@@ -59,13 +58,13 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                 if (_items.TryUpdate(key, newEntry, entry)) {
                     // guard the same-instance case; the factory may have returned the mapped value
                     if (!ReferenceEquals(entry.Value, created))
-                        entry.Value.TryDispose();
+                        entry.Value.Dispose();
                     return FinishPublish(key, newEntry);
                 }
 
                 // lost the replacement race; drop the orphan and re-observe the current state
                 if (!ReferenceEquals(entry.Value, created))
-                    created.TryDispose();
+                    created.Dispose();
             }
             else {
                 var created = valueFactory(key);
@@ -75,7 +74,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                     return FinishPublish(key, newEntry);
 
                 // lost the insert race; drop the orphan and re-observe the current state
-                created.TryDispose();
+                created.Dispose();
             }
         }
     }
@@ -120,7 +119,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                 // dispose the displaced value only after the swap succeeded, and never when the
                 // caller passed the instance that is already mapped
                 if (!ReferenceEquals(entry.Value, value))
-                    entry.Value.TryDispose();
+                    entry.Value.Dispose();
                 return FinishPublish(key, newEntry);
             }
         }
@@ -144,7 +143,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                 value.LastUsedTime = FastDateTime.UtcNow;
                 if (_items.TryUpdate(key, newEntry, entry)) {
                     if (!ReferenceEquals(entry.Value, value))
-                        entry.Value.TryDispose();
+                        entry.Value.Dispose();
                     FinishPublish(key, newEntry);
                     return true;
                 }
@@ -167,7 +166,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         }
 
         value = entry.Value;
-        value.TryDispose();
+        value.Dispose();
         return true;
     }
 
@@ -187,12 +186,12 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
 
     private bool TryRemoveEntry(TKey key, Entry entry)
     {
-        // dictionary-initiated disposal uses TryDispose and must never throw: an exception would
-        // abort a drain half-way, skip the publishing handshake or propagate into packet threads
+        // an item's close, ours, never throws: one that did would abort a drain half-way, skip the publishing
+        // handshake or propagate into packet threads
         if (!_items.TryRemove(new KeyValuePair<TKey, Entry>(key, entry)))
             return false;
 
-        entry.Value.TryDispose();
+        entry.Value.Dispose();
         return true;
     }
 

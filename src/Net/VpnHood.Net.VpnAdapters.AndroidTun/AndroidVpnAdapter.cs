@@ -9,6 +9,7 @@ using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.AndroidTun.AndroidNative;
 using OsConstants = Android.Systems.OsConstants;
@@ -112,14 +113,8 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         }
 
         // the close ends the VPN, which the dispose alone does not; a failed close still releases the Java peer
-        try {
-            VhLogger.Instance.LogDebug("Closing tun ParcelFileDescriptor...");
-            _parcelFileDescriptor.Close();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
-        }
-
+        VhLogger.Instance.LogDebug("Closing tun ParcelFileDescriptor...");
+        VhInvoker.TryInvoke("close the VPN's descriptor", LogLevel.Error, _parcelFileDescriptor.Close);
         _parcelFileDescriptor.Dispose();
         _parcelFileDescriptor = null;
     }

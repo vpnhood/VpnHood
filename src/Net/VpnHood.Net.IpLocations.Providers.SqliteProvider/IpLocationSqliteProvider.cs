@@ -5,7 +5,6 @@ using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
-using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.IpLocations.Providers.SqliteProvider;
@@ -159,11 +158,6 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
             return;
 
         // a caller's connection may still hold a transaction or a reader, whose close throws
-        try {
-            _connection.Value.Dispose();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not close the IP location database.");
-        }
+        _connection.Value.TryDispose(LogLevel.Warning);
     }
 }

@@ -69,8 +69,8 @@ public static class WindowInsetUtils
         if (color == null)
             return;
 
-        VhInvoker.TryInvoke("SetStatusBarColor", () => window.SetStatusBarColor(color.Value));
-        VhInvoker.TryInvoke("SetNavigationBarColor", () => window.SetNavigationBarColor(color.Value));
+        VhInvoker.TryInvoke("set the status bar's color", LogLevel.Debug, () => window.SetStatusBarColor(color.Value));
+        VhInvoker.TryInvoke("set the navigation bar's color", LogLevel.Debug, () => window.SetNavigationBarColor(color.Value));
     }
 
     private static void SetBarIconAppearance(Window window, bool lightStatusBars, bool lightNavBars)

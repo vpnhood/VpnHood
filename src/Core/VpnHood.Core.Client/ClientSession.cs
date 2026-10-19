@@ -272,12 +272,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
             // raised in place, as the client's release runs inside the Disposed one; a failed handler must not stop
             // the close, whose first step this may be
-            try {
-                StateChanged?.Invoke(this, EventArgs.Empty);
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "A handler of the session's state change failed. State: {State}", value);
-            }
+            VhInvoker.TryInvoke("raise the session's state change", LogLevel.Error,
+                () => StateChanged?.Invoke(this, EventArgs.Empty));
         }
     }
 
@@ -722,7 +718,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // stop adapter and events before sending bye request to free client from VPN as fast as possible and
         // Do not dispose VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
         // network change events can cause problems too. Always: one down for a restart would come back otherwise
-        VhInvoker.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
+        VhInvoker.TryInvoke("stop the VPN adapter", LogLevel.Warning, () => _vpnAdapter.Stop());
 
         // dispose async resources
 
@@ -796,7 +792,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // stop adapter and events before sending bye request
         // Do not dispose VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
         // network change events can cause problems too. Always: one down for a restart would come back otherwise
-        VhInvoker.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
+        VhInvoker.TryInvoke("stop the VPN adapter", LogLevel.Warning, () => _vpnAdapter.Stop());
 
         // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;

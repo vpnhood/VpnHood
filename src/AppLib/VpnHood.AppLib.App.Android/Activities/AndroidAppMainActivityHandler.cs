@@ -2,6 +2,7 @@
 using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.App.Android.Utils;
 using VpnHood.Core.Client.Devices.Android;
@@ -50,7 +51,7 @@ public class AndroidAppMainActivityHandler
         AppUiContext.Context = new AndroidUiContext(ActivityEvent);
 
         // initialize the window
-        VhInvoker.TryInvoke("ConfigureWindowInsets", () =>
+        VhInvoker.TryInvoke("configure the window insets", LogLevel.Warning, () =>
             WindowInsetUtils.Configure(ActivityEvent.Activity.Window, false, false, false, _chromeColor));
 
         // process intent

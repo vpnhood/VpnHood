@@ -2,6 +2,7 @@ using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
@@ -93,7 +94,7 @@ public sealed class WindowsDaemonChannel(WindowsDesktopPaths paths) : IDaemonCha
     // Only this run's name: a newer start may have recorded its own by now.
     private void Forget(string name)
     {
-        VhInvoker.TryInvoke("forget the channel's name", () => {
+        VhInvoker.TryInvoke("forget the channel's name", LogLevel.Warning, () => {
             using var key = Registry.LocalMachine.OpenSubKey(paths.RegistryKeyPath, writable: true);
             if (key?.GetValue(ChannelValueName) as string == name)
                 key.DeleteValue(ChannelValueName, throwOnMissingValue: false);

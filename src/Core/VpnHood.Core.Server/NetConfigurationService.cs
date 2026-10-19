@@ -10,6 +10,8 @@ namespace VpnHood.Core.Server;
 public class NetConfigurationService(INetConfigurationProvider netConfigurationProvider) : IDisposable
 {
     private readonly ConcurrentDictionary<IPAddress, string> _ipAddresses = [];
+    private readonly Lock _closeLock = new();
+    private bool _disposed;
 
     public async Task<string[]?> GetNetworkInterfaceNames()
     {
@@ -51,12 +53,24 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
                 ipAddress, interfaceName);
 
             await netConfigurationProvider.AddIpAddress(ipAddress, interfaceName).Vhc();
-            _ipAddresses.TryAdd(ipAddress, interfaceName);
+
+            // removed at once if a close came meanwhile: it removed only what it found
+            if (!TrackIpAddress(ipAddress, interfaceName))
+                RemoveIpAddress(ipAddress);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex,
                 "Could not add IP address to system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
+        }
+    }
+
+    // false once closed
+    private bool TrackIpAddress(IPAddress ipAddress, string interfaceName)
+    {
+        lock (_closeLock) {
+            _ipAddresses.TryAdd(ipAddress, interfaceName);
+            return !_disposed;
         }
     }
 
@@ -106,9 +120,13 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         }
     }
 
-    // sync only: the removals are local commands, which the server's quick close runs too
+    // sync only: the removals are local commands, which the server's quick close runs too. An add that ends after
+    // this removes its address itself
     public void Dispose()
     {
+        lock (_closeLock)
+            _disposed = true;
+
         foreach (var ipAddress in _ipAddresses.Keys.ToArray())
             RemoveIpAddress(ipAddress);
     }

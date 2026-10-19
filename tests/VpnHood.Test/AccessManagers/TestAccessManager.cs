@@ -7,6 +7,7 @@ using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Net.Toolkit.Collections;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.AccessManagers;
 
@@ -42,6 +43,8 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public string? AcmeHttp01KeyToken { get; set; }
     public string? AcmeHttp01KeyAuthorization { get; set; }
     public Exception? ServerConfigureException { get; set; }
+    public TestHold StatusUpdateHold { get; } = new();
+    public TestHold ConfigureHold { get; } = new();
 
     public void AddAdData(string adData)
     {
@@ -57,6 +60,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public override async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus,
         CancellationToken cancellationToken)
     {
+        await StatusUpdateHold.WaitIfHeld();
         var ret = await base.Server_UpdateStatus(serverStatus, cancellationToken);
         LastServerStatus = serverStatus;
         if (serverStatus.EndPointStatuses != null)
@@ -64,8 +68,10 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         return ret;
     }
 
-    public override Task<ServerConfig> Server_Configure(ServerInfo serverInfo, CancellationToken cancellationToken)
+    public override async Task<ServerConfig> Server_Configure(ServerInfo serverInfo,
+        CancellationToken cancellationToken)
     {
+        await ConfigureHold.WaitIfHeld();
         LastConfigureTime = DateTime.Now;
         LastServerInfo = serverInfo;
         LastServerStatus = serverInfo.Status;
@@ -73,7 +79,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         if (ServerConfigureException != null)
             throw ServerConfigureException;
 
-        return base.Server_Configure(serverInfo, cancellationToken);
+        return await base.Server_Configure(serverInfo, cancellationToken);
     }
 
     public override async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,

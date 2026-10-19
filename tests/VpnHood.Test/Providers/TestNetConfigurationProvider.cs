@@ -7,16 +7,17 @@ namespace VpnHood.Test.Providers;
 public class TestNetConfigurationProvider : INetConfigurationProvider
 {
     public ConcurrentDictionary<IPAddress, string> IpAddresses { get; } = new();
+    public TestHold AddHold { get; } = new();
 
     public Task<string[]> GetInterfaceNames()
     {
         return Task.FromResult(new[] { "eth0", "eth1" });
     }
 
-    public Task AddIpAddress(IPAddress ipAddress, string interfaceName)
+    public async Task AddIpAddress(IPAddress ipAddress, string interfaceName)
     {
+        await AddHold.WaitIfHeld();
         IpAddresses.TryAdd(ipAddress, interfaceName);
-        return Task.CompletedTask;
     }
 
     public void RemoveIpAddress(IPAddress ipAddress, string interfaceName)

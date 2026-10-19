@@ -121,6 +121,124 @@ public class ServerTest : TestBase
         await gracefulClose.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
     }
 
+    [TestMethod]
+    public async Task The_host_closes_beside_a_status_upload_under_way()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        var quicServer = new QuicListenerCloseHoldingServer();
+        var server = new VpnHoodServer(accessManager, new ServerOptions {
+            SocketFactory = new TestSocketFactory(),
+            QuicServer = quicServer,
+            StoragePath = TestHelper.WorkingPath,
+            AutoDisposeAccessManager = false,
+            PublicIpDiscovery = false,
+            ServerHostDisposeTimeout = Timeout.InfiniteTimeSpan
+        });
+        await server.Start(TestCt);
+
+        // a status upload under way, held at the access manager
+        accessManager.StatusUpdateHold.IsHeld = true;
+        var statusUpload = server.ConfigureAndSendStatus(TestCt).AsTask();
+        await VhTestUtil.AssertEqualsWait(1, () => accessManager.StatusUpdateHold.HeldCount,
+            "The status upload should be under way.", cancellationToken: TestCt);
+
+        var close = server.DisposeAsync().AsTask();
+        await VhTestUtil.AssertEqualsWait(1, () => Volatile.Read(ref quicServer.HeldCloseCount),
+            "The host's close should start beside the upload.", timeout: 3000, cancellationToken: TestCt);
+
+        accessManager.StatusUpdateHold.Release();
+        quicServer.ReleaseCloses();
+        await Task.WhenAll(statusUpload, close).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+    }
+
+    [TestMethod]
+    public async Task A_host_configuration_under_way_ends_before_the_hosts_close_and_none_starts_after()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        var quicServer = new QuicListenerCloseHoldingServer();
+        quicServer.ReleaseCloses();
+        quicServer.ListenHold.IsHeld = true;
+        await using var server = new VpnHoodServer(accessManager, new ServerOptions {
+            SocketFactory = new TestSocketFactory(),
+            QuicServer = quicServer,
+            StoragePath = TestHelper.WorkingPath,
+            AutoDisposeAccessManager = false,
+            PublicIpDiscovery = false
+        });
+        var configuration = new ServerHostConfiguration {
+            TcpEndPoints = [IPEndPoint.Parse("127.0.0.1:0")],
+            UdpEndPoints = [],
+            QuicEndPoints = [IPEndPoint.Parse("127.0.0.1:443")],
+            DnsServers = null,
+            Certificates = [accessManager.DefaultCert],
+            UdpChannelBufferSize = null
+        };
+
+        // a configuration under way, held in its listen
+        var configure = server.ServerHost.Configure(configuration);
+        await VhTestUtil.AssertEqualsWait(1, () => quicServer.ListenHold.HeldCount,
+            "The configuration should be listening.", cancellationToken: TestCt);
+
+        // the close lets it end, and closes the listener it added
+        var close = server.ServerHost.DisposeAsync().AsTask();
+        quicServer.ListenHold.Release();
+        await Task.WhenAll(configure, close).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(1, Volatile.Read(ref quicServer.HeldCloseCount));
+
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => server.ServerHost.Configure(configuration));
+    }
+
+    [TestMethod]
+    public async Task A_configuration_the_close_interrupts_applies_nothing_and_records_no_error()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
+        accessManager.ConfigureHold.IsHeld = true;
+        var netConfigurationProvider = new TestNetConfigurationProvider();
+        var server = new VpnHoodServer(accessManager, new ServerOptions {
+            SocketFactory = new TestSocketFactory(),
+            NetConfigurationProvider = netConfigurationProvider,
+            StoragePath = TestHelper.WorkingPath,
+            AutoDisposeAccessManager = false,
+            PublicIpDiscovery = false
+        });
+
+        // a configuration under way, held at the access manager, when the close begins
+        var start = server.Start(TestCt);
+        await VhTestUtil.AssertEqualsWait(1, () => accessManager.ConfigureHold.HeldCount,
+            "The configuration should be under way.", cancellationToken: TestCt);
+        var close = server.DisposeAsync().AsTask();
+
+        // held and released at once, the adds are counted but not stopped
+        netConfigurationProvider.AddHold.IsHeld = true;
+        netConfigurationProvider.AddHold.Release();
+        accessManager.ConfigureHold.Release();
+
+        // it adds no IP, and records no strike, which would keep the next start from configuring
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => start);
+        await close.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(0, netConfigurationProvider.AddHold.HeldCount);
+        Assert.IsFalse(File.Exists(Path.Combine(TestHelper.WorkingPath, ConfigErrorTracker.StrikeFileName)));
+    }
+
+    [TestMethod]
+    public async Task An_address_added_after_the_close_is_removed_at_once()
+    {
+        var netConfigurationProvider = new TestNetConfigurationProvider();
+        netConfigurationProvider.AddHold.IsHeld = true;
+        var netConfigurationService = new NetConfigurationService(netConfigurationProvider);
+
+        // an add under way, held at the provider, when the close runs
+        var add = netConfigurationService.AddIpAddress(IPAddress.Parse("10.10.0.1"), "eth0");
+        await VhTestUtil.AssertEqualsWait(1, () => netConfigurationProvider.AddHold.HeldCount,
+            "The add should be under way.", cancellationToken: TestCt);
+        netConfigurationService.Dispose();
+        netConfigurationProvider.AddHold.Release();
+
+        await add.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsEmpty(netConfigurationProvider.IpAddresses);
+    }
+
 
     [TestMethod]
     public async Task Auto_sync_sessions_by_interval()

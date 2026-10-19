@@ -4,16 +4,21 @@ using VpnHood.Net.Quic.Abstractions;
 namespace VpnHood.Test.Providers;
 
 // A QUIC server whose listeners take no connection and whose closes wait until released, as a server host's close
-// that waits for its QUIC peers
+// that waits for its QUIC peers. Its listens can be held too, as a configuration under way
 public class QuicListenerCloseHoldingServer : IQuicServer
 {
     private readonly TaskCompletionSource _closesReleased = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public int HeldCloseCount;
+    public TestHold ListenHold { get; } = new();
 
     public void ReleaseCloses() => _closesReleased.TrySetResult();
 
-    public ValueTask<IQuicListener> ListenAsync(QuicListenerOptions options, CancellationToken cancellationToken) =>
-        ValueTask.FromResult<IQuicListener>(new HoldingQuicListener(options.ListenEndPoint, this));
+    public async ValueTask<IQuicListener> ListenAsync(QuicListenerOptions options,
+        CancellationToken cancellationToken)
+    {
+        await ListenHold.WaitIfHeld();
+        return new HoldingQuicListener(options.ListenEndPoint, this);
+    }
 
     private sealed class HoldingQuicListener(IPEndPoint localEndPoint, QuicListenerCloseHoldingServer owner)
         : IQuicListener

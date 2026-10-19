@@ -232,6 +232,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             // get configuration from access server
             VhLogger.Instance.LogDebug("Sending config request to the Access Server...");
             var serverConfig = await ReadConfig(serverInfo, cancellationToken).Vhc();
+
+            // a close that began meanwhile takes no new configuration
+            ObjectDisposedException.ThrowIf(_disposed, this);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
@@ -325,6 +328,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         }
         // a stop's cancellation is not a configuration error: it passes, and the job swallows it
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
+        // nor is a refusal once the server's close has begun, which would keep the next start from configuring
+        catch (ObjectDisposedException) when (_disposed) {
             throw;
         }
         catch (Exception ex) {
@@ -581,6 +588,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
         }
+        // nor is a refusal once the server's close has begun, as of a reconfiguration this upload started
+        catch (ObjectDisposedException) when (_disposed) {
+            throw;
+        }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the server status.");
             _configErrorTracker.RecordError(ex);
@@ -622,6 +633,11 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         using var scope = VhLogger.Instance.BeginScope("Server");
         VhLogger.Instance.LogInformation("Server is shutting down...");
 
+        // the host's close starts beside a status upload under way, which does not touch it, and a configuration under
+        // way, which it lets end first. Its connections' closes may wait for their QUIC peers, so past its limit the
+        // close goes on: the last sync and the IP removal fit a service stop's 30 s
+        var serverHostDisposeTask = ServerHost.TryDisposeAsync(_serverHostDisposeTimeout, LogLevel.Warning).AsTask();
+
         // a status upload under way may finish, within the last sync's 7 s: cancelled, its usage would be dropped
         await Task.WhenAny(_sendStatusTask, Task.Delay(TimeSpan.FromSeconds(7))).Vhc();
 
@@ -632,9 +648,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         await VhUtils.TryInvokeAsync("Finalize configureTask", () => _configureTask).Vhc();
         await VhUtils.TryInvokeAsync("Finalize sndStatusTask", () => _sendStatusTask).Vhc();
 
-        // before disposing session manager to prevent recovering sessions. Its connections' closes may wait for their
-        // QUIC peers, so past its limit the close goes on: the last sync and the IP removal fit a service stop's 30 s
-        await ServerHost.TryDisposeAsync(_serverHostDisposeTimeout, LogLevel.Warning).Vhc();
+        // before disposing session manager to prevent recovering sessions
+        await serverHostDisposeTask.Vhc();
         await SessionManager.DisposeAsync().Vhc();
 
         // the rest is local, as in the quick close

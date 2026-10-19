@@ -75,8 +75,10 @@ public class ServerHost : IAsyncDisposable
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
-        // wait for last configure to finish
-        using var lockResult = await _configureLock.LockAsync(_cancellationTokenSource.Token).Vhc();
+        // wait for last configure to finish; a close that began meanwhile has closed the listeners, so this one is
+        // refused
+        using var lockResult = await _configureLock.LockAsync().Vhc();
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         // reconfigure
         DnsServers = configuration.DnsServers;
@@ -640,23 +642,27 @@ public class ServerHost : IAsyncDisposable
         if (_disposed) return;
         _disposed = true;
 
-        // cancel all running tasks
-        VhLogger.Instance.LogDebug("Stopping ServerHost...");
-        await _cancellationTokenSource.TryCancelAsync();
-        _cancellationTokenSource.Dispose();
+        // a configuration under way ends first, uncancelled, so the listeners it adds are closed below; one that
+        // comes after finds the close begun
+        using (await _configureLock.LockAsync().Vhc()) {
+            // cancel all running tasks
+            VhLogger.Instance.LogDebug("Stopping ServerHost...");
+            await _cancellationTokenSource.TryCancelAsync().Vhc();
+            _cancellationTokenSource.Dispose();
 
-        // Job
-        _cleanupConnectionsJob.Dispose();
+            // Job
+            _cleanupConnectionsJob.Dispose();
 
-        // UDPs
-        VhLogger.Instance.LogDebug("Disposing _udpListenerHost...");
-        _udpListenerHost.Dispose();
+            // UDPs
+            VhLogger.Instance.LogDebug("Disposing _udpListenerHost...");
+            _udpListenerHost.Dispose();
 
-        // QUIC + TCPs in parallel
-        VhLogger.Instance.LogDebug("Disposing QuicListeners and TcpListeners...");
-        await Task.WhenAll(
-            _quicListenerHost.DisposeAsync().AsTask(), 
-            _tcpListenerHost.DisposeAsync().AsTask()).Vhc();
+            // QUIC + TCPs in parallel
+            VhLogger.Instance.LogDebug("Disposing QuicListeners and TcpListeners...");
+            await Task.WhenAll(
+                _quicListenerHost.DisposeAsync().AsTask(),
+                _tcpListenerHost.DisposeAsync().AsTask()).Vhc();
+        }
 
         // dispose connections, their async closes all at once: a sync one may wait for the peer, as a QUIC stream's does
         VhLogger.Instance.LogDebug("Disposing Connections...");

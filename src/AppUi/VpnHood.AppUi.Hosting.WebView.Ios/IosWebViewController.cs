@@ -46,7 +46,7 @@ public class IosWebViewController : UIViewController
         try {
             // Edge-to-edge: the whole window, the status-bar and home-indicator safe areas included, in
             // the web UI's branded window background, so the system bars blend into the app, as on Android.
-            var backgroundColor = ToUiColor((await AppBranding.AppColors).WindowBackgroundColor) ?? UIColor.SystemBackground;
+            var backgroundColor = ToUiColor((await WebViewBranding.AppColors).WindowBackgroundColor) ?? UIColor.SystemBackground;
             View!.BackgroundColor = backgroundColor;
 
             // the app's own web host: the platform started the app in this process

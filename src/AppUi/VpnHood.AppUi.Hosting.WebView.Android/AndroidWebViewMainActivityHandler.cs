@@ -5,6 +5,7 @@ using VpnHood.AppLib.App;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppLib.App.Android.Utils;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
@@ -34,7 +35,7 @@ public class AndroidWebViewMainActivityHandler(
     // the web UI's branding, for the system bars and the ground behind them (WindowInsetUtils)
     private static async Task<VhColor?> WindowBackgroundColor()
     {
-        return (await AppBranding.AppColors).WindowBackgroundColor;
+        return (await WebViewBranding.AppColors).WindowBackgroundColor;
     }
 
     // The loading screen and the web view draw with the web UI's branding, so they are made once it
@@ -43,7 +44,7 @@ public class AndroidWebViewMainActivityHandler(
     private async Task CreateContentWhenReady()
     {
         try {
-            var colors = await AppBranding.AppColors;
+            var colors = await WebViewBranding.AppColors;
             if (ActivityEvent.Activity.IsDestroyed)
                 return; // gone while the look was read
 

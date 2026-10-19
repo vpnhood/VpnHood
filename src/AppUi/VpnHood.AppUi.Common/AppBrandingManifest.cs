@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Hosting.WebView.Branding;
+namespace VpnHood.AppUi.Common;
 
 // branding/<theme>/manifest.json, as the UI's build writes it into the store.
 internal sealed class AppBrandingManifest

@@ -1,29 +1,20 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.App;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.AppUi.Hosting.WebView.Branding;
+namespace VpnHood.AppUi.Common;
 
-// The colours the native chrome around the web UI draws with - the window's, the bars' - as the UI's
-// store carries them: branding/<theme>/manifest.json, written by the web UI's own build, since a page
-// cannot reach the chrome itself. So a rebranded store recolours it with no .NET change. The Avalonia
-// UI needs none of this: it paints its chrome from its own palette.
+// The colours the native chrome around the UI draws with - the window's, the bars' - as the theme
+// gives them in the UI's store: branding/<theme>/manifest.json. The theme's, not the app's, which only
+// names a theme (UiTheme); so a rebranded store recolours the chrome with no .NET change.
 //
 // A theme the store does not have is a build bug: ReadAsync throws, and LoadAsync, for a start, logs
 // it and answers the built-in look.
 public static class AppBranding
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
-    private static readonly Lazy<Task<AppBrandingColors>> InProcessColors = new(() =>
-        LoadAsync(VpnHoodApp.Instance.UiAssetProvider, VpnHoodApp.Instance.Features.UiTheme));
-
-    // The app's, where the web UI runs in its process (Android, iOS, MAUI): read once, for every view
-    // that draws with them.
-    public static Task<AppBrandingColors> AppColors => InProcessColors.Value;
 
     // For a start: the branding, or - no store, no such theme, a store that could not be read - an
     // error in the log and the built-in look, not a dead app. Never faulted, so whatever waits on it

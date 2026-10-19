@@ -1,6 +1,6 @@
 using VpnHood.Net.Toolkit.Graphics;
 
-namespace VpnHood.AppUi.Hosting.WebView.Branding;
+namespace VpnHood.AppUi.Common;
 
 // What a branding manifest names (AppBranding); a colour it does not name is null, and that part of
 // the chrome keeps the system's.

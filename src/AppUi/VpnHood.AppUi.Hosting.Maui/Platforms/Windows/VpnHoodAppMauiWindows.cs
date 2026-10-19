@@ -68,7 +68,7 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
     // to the window's thread
     private static async Task SetTitleBarColor(AppWindowTitleBar titleBar)
     {
-        if ((await AppBranding.AppColors).WindowBackgroundColor is not { } color)
+        if ((await WebViewBranding.AppColors).WindowBackgroundColor is not { } color)
             return;
 
         var bgColor = Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B);

@@ -6,6 +6,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppUi.Common\VpnHood.AppUi.Common.csproj" />
 	</ItemGroup>
 
 </Project>

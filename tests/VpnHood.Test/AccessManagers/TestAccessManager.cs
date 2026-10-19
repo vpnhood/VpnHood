@@ -45,6 +45,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public Exception? ServerConfigureException { get; set; }
     public TestHold StatusUpdateHold { get; } = new();
     public TestHold ConfigureHold { get; } = new();
+    public TestHold UsageHold { get; } = new();
 
     public void AddAdData(string adData)
     {
@@ -161,6 +162,8 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     protected override async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage,
         CancellationToken cancellationToken)
     {
+        await UsageHold.WaitIfHeld(cancellationToken);
+
         // update test provider
         var sessionResponse = await base.Session_AddUsage(sessionUsage, cancellationToken);
 

@@ -19,4 +19,14 @@ public class TestHold
         Interlocked.Increment(ref _heldCount);
         await _released.Task;
     }
+
+    // cancellable: a held call ends on its release or its cancellation, as a request on the network does
+    public async Task WaitIfHeld(CancellationToken cancellationToken)
+    {
+        if (!IsHeld)
+            return;
+
+        Interlocked.Increment(ref _heldCount);
+        await _released.Task.WaitAsync(cancellationToken);
+    }
 }

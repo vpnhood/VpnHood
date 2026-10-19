@@ -30,6 +30,12 @@ namespace VpnHood.Core.Server;
 public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHandler
 {
     private bool _disposed;
+    private bool _quickClosed;
+    private readonly AsyncLock _disposeLock = new();
+
+    // the quick close cancels the graceful one's last sync. It has no timer, so it needs no disposal, and a graceful
+    // close under way may still link to it
+    private readonly CancellationTokenSource _closeCancellationTokenSource = new();
     private readonly IAccessManager _accessManager;
     private readonly ISocketFactory _socketFactory;
     private readonly IVpnAdapter? _vpnAdapter;
@@ -600,36 +606,42 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
 
     public async ValueTask DisposeAsync()
     {
+        // a second close waits for the first one's end
+        using var lockResult = await _disposeLock.LockAsync().Vhc();
         if (_disposed) return;
+        _disposed = true;
 
         // stop the sessions first, so the last sync carries all their bytes; they stay open, with code Ok, so
         // they recover after a restart
         foreach (var session in Sessions.Values)
             DisposeSession(session);
 
-        // sync sessions
+        // the last sync, within its limit, which the quick close cuts short
         try {
-            CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromSeconds(7));
+            using var cancellationTokenSource =
+                CancellationTokenSource.CreateLinkedTokenSource(_closeCancellationTokenSource.Token);
+            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(7));
             await Sync(force: true, cancellationTokenSource.Token).Vhc();
+        }
+        catch (OperationCanceledException) when (_quickClosed) {
+            VhLogger.Instance.LogWarning("The quick close cut the last sync of the sessions short.");
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not sync sessions in disposing.");
             // Dispose should not throw any error
         }
 
-        DisposeSyncMembers();
+        // the rest is local, as in the quick close
+        Dispose();
     }
 
+    // the quick close: a last sync under way ends, and every member's close is sync
     public void Dispose()
     {
-        DisposeSyncMembers();
-    }
-
-    // what both closes share: every member's close is sync
-    private void DisposeSyncMembers()
-    {
-        if (_disposed) return;
+        if (Interlocked.Exchange(ref _quickClosed, true)) return;
         _disposed = true;
+
+        _closeCancellationTokenSource.TryCancel();
         _heartbeatJob.Dispose();
         _sessionLocalService.Dispose();
 

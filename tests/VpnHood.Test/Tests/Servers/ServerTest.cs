@@ -239,6 +239,53 @@ public class ServerTest : TestBase
         Assert.IsEmpty(netConfigurationProvider.IpAddresses);
     }
 
+    [TestMethod]
+    public async Task A_second_close_of_the_sessions_waits_for_the_first()
+    {
+        // traffic that stays unreported until the close, so its last sync has usage to send
+        var options = TestHelper.CreateFileAccessManagerOptions();
+        options.SessionOptions.SyncCacheSize = 1_000_000_000;
+        using var accessManager = TestHelper.CreateAccessManager(options);
+        await using var server = await TestHelper.CreateServer(accessManager);
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server));
+        await TestHelper.Test_Https();
+
+        // the first close's last sync, held at the access manager
+        accessManager.UsageHold.IsHeld = true;
+        var firstClose = server.SessionManager.DisposeAsync().AsTask();
+        await VhTestUtil.AssertEqualsWait(1, () => accessManager.UsageHold.HeldCount,
+            "The last sync should be under way.", cancellationToken: TestCt);
+
+        var secondClose = server.SessionManager.DisposeAsync().AsTask();
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestCt);
+        Assert.IsFalse(secondClose.IsCompleted, "The second close should wait for the first.");
+
+        accessManager.UsageHold.Release();
+        await Task.WhenAll(firstClose, secondClose).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+    }
+
+    [TestMethod]
+    public async Task A_quick_close_of_the_sessions_ends_their_last_sync_at_once()
+    {
+        // traffic that stays unreported until the close, so its last sync has usage to send
+        var options = TestHelper.CreateFileAccessManagerOptions();
+        options.SessionOptions.SyncCacheSize = 1_000_000_000;
+        using var accessManager = TestHelper.CreateAccessManager(options);
+        await using var server = await TestHelper.CreateServer(accessManager);
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server));
+        await TestHelper.Test_Https();
+
+        // the graceful close's last sync, held at the access manager, which lets it wait for 7 s
+        accessManager.UsageHold.IsHeld = true;
+        var close = server.SessionManager.DisposeAsync().AsTask();
+        await VhTestUtil.AssertEqualsWait(1, () => accessManager.UsageHold.HeldCount,
+            "The last sync should be under way.", cancellationToken: TestCt);
+
+        server.SessionManager.Dispose();
+        await close.WaitAsync(TimeSpan.FromSeconds(2), TestCt);
+        accessManager.UsageHold.Release();
+    }
+
 
     [TestMethod]
     public async Task Auto_sync_sessions_by_interval()

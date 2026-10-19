@@ -1,7 +1,7 @@
 namespace VpnHood.Test.Providers;
 
-// A stream that records which of its closes ran, and whose reads can fail. Empty, it reads as ended by its peer.
-// Its async close can be held, as a QUIC stream's waits for its peer
+// A stream that records which of its closes ran, and whose reads and async close can fail. Empty, it reads as ended
+// by its peer. Its async close can be held, as a QUIC stream's waits for its peer
 public class CloseRecordingStream : MemoryStream
 {
     private readonly TaskCompletionSource _asyncCloseRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -11,6 +11,7 @@ public class CloseRecordingStream : MemoryStream
     public int AsyncCloseCount => Volatile.Read(ref _asyncCloseCount);
     public bool FailReads { get; init; }
     public bool HoldAsyncClose { get; init; }
+    public bool FailAsyncClose { get; init; }
 
     public void ReleaseAsyncClose() => _asyncCloseRelease.TrySetResult();
 
@@ -31,6 +32,9 @@ public class CloseRecordingStream : MemoryStream
     public override ValueTask DisposeAsync()
     {
         Interlocked.Increment(ref _asyncCloseCount);
+        if (FailAsyncClose)
+            return ValueTask.FromException(new IOException("An async close failure for the test."));
+
         return HoldAsyncClose ? new ValueTask(_asyncCloseRelease.Task) : default;
     }
 }

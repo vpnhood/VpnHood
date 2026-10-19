@@ -66,7 +66,9 @@ public sealed class QuicStreamConnection : IStreamConnection
     {
         if (Interlocked.Exchange(ref _disposed, true)) return;
         Connected = false;
-        await Stream.DisposeAsync().Vhc();
+
+        // a failed close still reports the connection closed, as its QUIC connection counts its streams down on that
+        await Stream.TryDisposeAsync().Vhc();
         VhTypeTracker.Record("QuicStreamConnection.disposed");
         Disposed?.Invoke(this, EventArgs.Empty);
 

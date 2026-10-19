@@ -7,7 +7,7 @@ using Microsoft.UI.Windowing;
 using VpnHood.AppLib.App.Windows;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
-using VpnHood.AppUi.Hosting.WebView.Branding;
+using VpnHood.AppUi.Hosting.WebView;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppUi.Hosting.Maui;
@@ -64,11 +64,11 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         }
     }
 
-    // the title bar in the web UI's branded window background, once it is read; the wait comes back
-    // to the window's thread
+    // the title bar in the theme's window background, once it is read; the wait comes back to the
+    // window's thread
     private static async Task SetTitleBarColor(AppWindowTitleBar titleBar)
     {
-        if ((await WebViewBranding.AppColors).WindowBackgroundColor is not { } color)
+        if ((await WebViewTheme.Colors).WindowBackgroundColor is not { } color)
             return;
 
         var bgColor = Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B);

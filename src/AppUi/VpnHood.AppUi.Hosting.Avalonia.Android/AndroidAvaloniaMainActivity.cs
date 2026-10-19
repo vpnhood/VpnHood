@@ -57,7 +57,7 @@ public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityE
             .GetAwaiter().GetResult();
 
         // also before base.OnCreate, so the handler is subscribed when the create event fires; the system
-        // bars take the UI's chrome colour, which its theme's branding gave as the UI was prepared
+        // bars take the UI's chrome colour, which its theme's manifest gave as the UI was prepared
         MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions(),
             Task.FromResult((AvaloniaApplication.Current as VpnHoodAvaloniaAppBase)?.ChromeColor));
 

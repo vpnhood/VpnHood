@@ -14,8 +14,8 @@ internal class WebViewWindowParams
     public required string AppName { get; init; }
     public required bool IsTv { get; init; }
 
-    // the web UI's branding, for the window's ground and its title bar
-    public required AppBrandingColors Colors { get; init; }
+    // the theme's colours, for the window's ground and its title bar
+    public required ThemeColors Colors { get; init; }
 
     // the shape the window takes on its screen (DesktopWindowFit)
     public required DesktopWindowFitOptions WindowFit { get; init; }

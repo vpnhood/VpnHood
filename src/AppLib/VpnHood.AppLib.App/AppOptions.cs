@@ -78,7 +78,7 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
 
     // The look, as the UI's store carries it: "blue" or "violet" - the theme's own name, never a
     // product's, since what a product IS is the features above. It picks the palette the UI draws
-    // and branding/<theme>/ in the store for the OS chrome.
+    // and themes/<theme>/ in the store for the OS chrome.
     public string UiTheme { get; set; } = "blue";
     public bool IsAddAccessKeySupported { get; set; } = true;
 

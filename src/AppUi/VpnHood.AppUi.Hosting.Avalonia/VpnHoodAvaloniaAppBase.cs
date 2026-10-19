@@ -19,9 +19,9 @@ public abstract class VpnHoodAvaloniaAppBase : Application
     protected abstract Control CreateMainView();
 
     // The colour of the OS chrome around the UI - a desktop window's title bar, Android's system bars -
-    // the window background its theme's branding names, the colour the app's launch showed; null where
+    // the window background its theme's manifest names, the colour the app's launch showed; null where
     // the UI's store names none, and the chrome keeps the system's.
-    public VhColor? ChromeColor => AvaloniaUiHosting.BrandingColors.WindowBackgroundColor;
+    public VhColor? ChromeColor => AvaloniaUiHosting.ThemeColors.WindowBackgroundColor;
 
     // The shape a desktop window takes for this UI (DesktopWindowFit): its layout's, which only its
     // design knows, so the UI states it and a head names the UI alone.

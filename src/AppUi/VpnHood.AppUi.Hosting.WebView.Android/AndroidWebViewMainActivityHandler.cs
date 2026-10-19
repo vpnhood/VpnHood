@@ -7,7 +7,6 @@ using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppLib.App.Android.Utils;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Graphics;
@@ -32,19 +31,19 @@ public class AndroidWebViewMainActivityHandler(
         _ = CreateContentWhenReady();
     }
 
-    // the web UI's branding, for the system bars and the ground behind them (WindowInsetUtils)
+    // the theme's window background, for the system bars and the ground behind them (WindowInsetUtils)
     private static async Task<VhColor?> WindowBackgroundColor()
     {
-        return (await WebViewBranding.AppColors).WindowBackgroundColor;
+        return (await WebViewTheme.Colors).WindowBackgroundColor;
     }
 
-    // The loading screen and the web view draw with the web UI's branding, so they are made once it
-    // is read - nothing shows before, where a colour that changed under the user would be seen. The
+    // The loading screen and the web view draw with the theme's colours, so they are made once those
+    // are read - nothing shows before, where a colour that changed under the user would be seen. The
     // wait comes back to the main looper, where views are made.
     private async Task CreateContentWhenReady()
     {
         try {
-            var colors = await WebViewBranding.AppColors;
+            var colors = await WebViewTheme.Colors;
             if (ActivityEvent.Activity.IsDestroyed)
                 return; // gone while the look was read
 
@@ -55,7 +54,7 @@ public class AndroidWebViewMainActivityHandler(
         }
     }
 
-    private void CreateContent(AppBrandingColors colors)
+    private void CreateContent(ThemeColors colors)
     {
         // Experimental. Fixing: Window couldn't find content container view.
         // Some OEMs are subject to this issue, so postpone the content setup.

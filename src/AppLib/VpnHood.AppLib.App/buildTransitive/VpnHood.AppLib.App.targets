@@ -136,8 +136,8 @@
 	     the window background of the theme the app's settings name - UiTheme in the file the app states
 	     as VhAppSettingsFile beside its name, the appsettings.json its product embeds; "blue" where it
 	     names none, as the app reads it - from that theme's manifest in the UI's store
-	     (branding/<theme>/manifest.json in VhAssetsZip, VpnHood.AppUi.Assets.Classic): the colour the UI's
-	     host paints the chrome around it with (AppBranding). Without the file or the store (a code-only
+	     (themes/<theme>/manifest.json in VhAssetsZip, VpnHood.AppUi.Assets.Classic): the colour the UI's
+	     host paints the chrome around it with (ThemeColors). Without the file or the store (a code-only
 	     checkout) both screens keep their defaults: white on iOS, the library's on Android. -->
 	<UsingTask TaskName="VhReadLaunchColor" TaskFactory="RoslynCodeTaskFactory"
 	           AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
@@ -159,7 +159,7 @@ var setting = Regex.Match(File.ReadAllText(SettingsFile.Replace('\\', '/')), "\"
 if (setting.Success)
     theme = setting.Groups[1].Value;
 
-var entryName = "branding/" + theme + "/manifest.json";
+var entryName = "themes/" + theme + "/manifest.json";
 string manifest = null;
 using (var zip = ZipFile.OpenRead(StoreZip.Replace('\\', '/'))) {
     var entry = zip.GetEntry(entryName);

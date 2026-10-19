@@ -12,7 +12,7 @@ namespace VpnHood.AppUi.Hosting.WebView.Android;
 
 internal static class AndroidAppLoader
 {
-    public static void Init(Activity activity, AppBrandingColors colors)
+    public static void Init(Activity activity, ThemeColors colors)
     {
         try {
             activity.SetContentView(Create(activity, colors));
@@ -22,7 +22,7 @@ internal static class AndroidAppLoader
         }
     }
 
-    private static View Create(Activity activity, AppBrandingColors colors)
+    private static View Create(Activity activity, ThemeColors colors)
     {
         // Build the loading layout inline (no XML resource)
         var metrics = activity.Resources?.DisplayMetrics;

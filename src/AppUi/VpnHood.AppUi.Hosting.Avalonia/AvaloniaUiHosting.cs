@@ -36,11 +36,11 @@ public static class AvaloniaUiHosting
         return VhApp.Init(api, cancellationToken);
     }
 
-    // The colours of the OS chrome around the UI, its theme's (AppBranding), as PrepareAsync read them
+    // The colours of the OS chrome around the UI, its theme's (ThemeColors), as PrepareAsync read them
     // from the UI's store; the system's until then.
-    public static AppBrandingColors BrandingColors { get; private set; } = new();
+    public static ThemeColors ThemeColors { get; private set; } = new();
 
-    // The second half: the UI's content and its theme's branding, and its languages told to the app.
+    // The second half: the UI's content and its theme's colours, and its languages told to the app.
     public static async Task PrepareAsync<TUi>(IAssetProvider? uiAssetProvider, CancellationToken cancellationToken)
         where TUi : IAvaloniaUi
     {
@@ -48,7 +48,7 @@ public static class AvaloniaUiHosting
             "The head has named no AppOptions.UiZipAssets, and this UI reads its pictures and its words from them.");
 
         await TUi.PrepareContentAsync(assets, cancellationToken).ConfigureAwait(false);
-        BrandingColors = await AppBranding.LoadAsync(assets, VhApp.Features.UiTheme).ConfigureAwait(false);
+        ThemeColors = await ThemeColors.LoadAsync(assets, VhApp.Features.UiTheme).ConfigureAwait(false);
         await VhApp.Configure(TUi.AvailableCultures, cancellationToken).ConfigureAwait(false);
     }
 }

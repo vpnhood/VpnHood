@@ -220,7 +220,7 @@ arrive as **files placed by MSBuild targets**, and the head names each one in `A
 
 | File | Comes from | Named by | Holds |
 | --- | --- | --- | --- |
-| `assets/ui.zip` | `VpnHood.AppUi.Assets.Classic` | `AppOptions.UiZipAssets` | images, country flags, fonts, content documents, the words of every language, and the per-theme branding the OS chrome draws with |
+| `assets/ui.zip` | `VpnHood.AppUi.Assets.Classic` | `AppOptions.UiZipAssets` | images, country flags, fonts, content documents, the words of every language, and each theme's colours for the OS chrome and the launch screen |
 | `assets/web-root.zip` | `VpnHood.AppUi.Presentation.Classic.Avalonia.Browser` | `AppOptions.WebRootZipAsset` | the page the app's web host serves to a paired device |
 
 Each of those projects owns a targets file that places its file the way the platform reads files —

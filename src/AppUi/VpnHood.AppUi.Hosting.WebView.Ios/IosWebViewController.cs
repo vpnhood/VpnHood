@@ -3,7 +3,6 @@ using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Ios;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Graphics;
 
@@ -45,8 +44,8 @@ public class IosWebViewController : UIViewController
     {
         try {
             // Edge-to-edge: the whole window, the status-bar and home-indicator safe areas included, in
-            // the web UI's branded window background, so the system bars blend into the app, as on Android.
-            var backgroundColor = ToUiColor((await WebViewBranding.AppColors).WindowBackgroundColor) ?? UIColor.SystemBackground;
+            // the theme's window background, so the system bars blend into the app, as on Android.
+            var backgroundColor = ToUiColor((await WebViewTheme.Colors).WindowBackgroundColor) ?? UIColor.SystemBackground;
             View!.BackgroundColor = backgroundColor;
 
             // the app's own web host: the platform started the app in this process

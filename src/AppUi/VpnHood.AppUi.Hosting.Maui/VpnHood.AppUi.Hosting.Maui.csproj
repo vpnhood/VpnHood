@@ -21,7 +21,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- The web UI's branding (AppBranding): a page cannot colour the native chrome around it. -->
+		<!-- The theme's colours (WebViewTheme): a page cannot colour the native chrome around it. -->
 		<ProjectReference Include="..\VpnHood.AppUi.Hosting.WebView\VpnHood.AppUi.Hosting.WebView.csproj" />
 	</ItemGroup>
 

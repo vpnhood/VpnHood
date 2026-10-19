@@ -10,7 +10,7 @@ namespace VpnHood.AppLib.App.Android.Utils;
 
 // The activity's window as every UI on Android has it: edge to edge where the version allows, the
 // keyboard's inset kept clear, and the system bars and the ground behind them in the UI's own colour,
-// which its host hands in - the Avalonia UI's palette, or the web UI's branding - as it becomes known.
+// its theme's window background, which its host hands in as it becomes known.
 public static class WindowInsetUtils
 {
     public static void Configure(Window? window,

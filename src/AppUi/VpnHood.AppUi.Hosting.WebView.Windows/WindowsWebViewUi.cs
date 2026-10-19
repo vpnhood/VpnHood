@@ -28,7 +28,7 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
         // person is seen, one that appears a moment later is not. The calls do not come back to this
         // thread, which has no loop running yet.
         var info = uiParams.Api.App.GetInfo(cancellationToken).GetAwaiter().GetResult();
-        var colors = AppBranding.LoadAsync(uiParams.UiAssetProvider, info.Features.UiTheme).GetAwaiter().GetResult();
+        var colors = ThemeColors.LoadAsync(uiParams.UiAssetProvider, info.Features.UiTheme).GetAwaiter().GetResult();
 
         var window = new WebViewMainWindow(new WebViewWindowParams {
             Api = uiParams.Api,

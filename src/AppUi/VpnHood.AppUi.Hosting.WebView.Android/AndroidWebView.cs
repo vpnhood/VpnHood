@@ -20,7 +20,7 @@ public sealed class AndroidWebView : IWebView
 {
     private readonly IActivityEvent _activityEvent;
     private readonly AndroidWebViewMainActivityOptions _options;
-    private readonly AppBrandingColors _colors;
+    private readonly ThemeColors _colors;
     private NativeWebView? _webView;
     private bool _webViewShown;
     private string? _localToken;
@@ -32,7 +32,7 @@ public sealed class AndroidWebView : IWebView
     public event EventHandler? ContentProcessGone;
 
     public AndroidWebView(IActivityEvent activityEvent, AndroidWebViewMainActivityOptions options,
-        AppBrandingColors colors)
+        ThemeColors colors)
     {
         _activityEvent = activityEvent;
         _options = options;

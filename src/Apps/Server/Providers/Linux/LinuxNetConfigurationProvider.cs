@@ -79,13 +79,13 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
         return ExecuteCommandAsync(command);
     }
 
-    public Task RemoveIpAddress(IPAddress ipAddress, string interfaceName)
+    public void RemoveIpAddress(IPAddress ipAddress, string interfaceName)
     {
         ValidateInterfaceName(interfaceName);
 
         var subnet = ipAddress.IsV4() ? 32 : 128;
         var command = $"ip addr del {ipAddress}/{subnet} dev {interfaceName}";
-        return ExecuteCommandAsync(command);
+        OsUtils.ExecuteShellCommand(command);
     }
 
     public async Task<bool> IpAddressExists(IPAddress ipAddress)

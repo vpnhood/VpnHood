@@ -85,6 +85,42 @@ public class ServerTest : TestBase
         quicServer.ReleaseCloses();
     }
 
+    [TestMethod]
+    public async Task A_quick_close_ends_a_server_whose_graceful_close_is_held()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
+        var netConfigurationProvider = new TestNetConfigurationProvider();
+        var quicServer = new QuicListenerCloseHoldingServer();
+        var server = new VpnHoodServer(accessManager, new ServerOptions {
+            SocketFactory = new TestSocketFactory(),
+            QuicServer = quicServer,
+            NetConfigurationProvider = netConfigurationProvider,
+            StoragePath = TestHelper.WorkingPath,
+            AutoDisposeAccessManager = false,
+            PublicIpDiscovery = false,
+            ServerHostDisposeTimeout = Timeout.InfiniteTimeSpan
+        });
+        await server.Start(TestCt);
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server));
+        var session = server.SessionManager.GetSessionById(client.SessionId);
+        Assert.IsNotNull(session);
+
+        // the graceful close waits for the QUIC listener's close, which is held
+        var gracefulClose = server.DisposeAsync().AsTask();
+        await VhTestUtil.AssertEqualsWait(1, () => Volatile.Read(ref quicServer.HeldCloseCount),
+            "The graceful close should wait for the QUIC listener's close.", cancellationToken: TestCt);
+
+        await Task.Run(server.Dispose, TestCt).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.AreEqual(ServerState.Disposed, server.State);
+        Assert.IsTrue(session.IsDisposed);
+        Assert.IsEmpty(netConfigurationProvider.IpAddresses);
+
+        // released, the graceful close finds the rest closed
+        quicServer.ReleaseCloses();
+        await gracefulClose.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+    }
+
 
     [TestMethod]
     public async Task Auto_sync_sessions_by_interval()

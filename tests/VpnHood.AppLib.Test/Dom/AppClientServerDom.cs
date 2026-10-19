@@ -14,7 +14,7 @@ using VpnHood.Test.Device;
 
 namespace VpnHood.AppLib.Test.Dom;
 
-public class AppClientServerDom : IAsyncDisposable, IDisposable
+public class AppClientServerDom : IAsyncDisposable
 {
     public TestAppHelper TestAppHelper { get; }
     public TestAccessManager AccessManager { get; }
@@ -103,13 +103,6 @@ public class AppClientServerDom : IAsyncDisposable, IDisposable
             vpnProfileId: VpnProfile.VpnProfileId, 
             planId: planId, 
             cancellationToken: cancellationToken);
-    }
-
-    public void Dispose()
-    {
-        App.Dispose();
-        Server.Dispose();
-        AccessManager.Dispose();
     }
 
     public async ValueTask DisposeAsync()

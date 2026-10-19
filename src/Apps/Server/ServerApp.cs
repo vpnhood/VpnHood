@@ -36,6 +36,10 @@ public class ServerApp : IDisposable
     private const string EnvNameAppSettings = "VH_APPSETTINGS";
     private const string EnvNameLauncherName = "VH_LAUNCHER_NAME";
     private const string LinuxTunDevicePath = "/dev/net/tun";
+
+    // the server's graceful close, within the 30 s that the stop command and Docker give, keeping 5 s for its quick
+    // close and the adapter's release
+    private static readonly TimeSpan ServerDisposeTimeout = TimeSpan.FromSeconds(25);
     private readonly ITracker _tracker;
     private readonly Lazy<IAccessManager> _accessManager;
     private readonly CommandListener _commandListener;
@@ -405,15 +409,23 @@ public class ServerApp : IDisposable
         }
     }
 
-    // logged rather than thrown: a failed disposal must not hide a start-up failure, nor skip the adapter
+    // The graceful close up to its deadline, then the quick one for what it left, if it missed it or failed. Logged
+    // rather than thrown: a failed disposal must not hide a start-up failure, nor skip the adapter
     private static async Task DisposeServer(VpnHoodServer server)
     {
         try {
-            await server.DisposeAsync().Vhc();
+            await server.DisposeAsync().AsTask().WaitAsync(ServerDisposeTimeout).Vhc();
+            return;
+        }
+        catch (TimeoutException) {
+            VhLogger.Instance.LogWarning("The server has not stopped in {Timeout}; stopping it at once.",
+                ServerDisposeTimeout);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not stop the server cleanly.");
         }
+
+        server.Dispose();
     }
 
     private string LockFilePath => Path.Combine(InternalStoragePath, "server.lock");

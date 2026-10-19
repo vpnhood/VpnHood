@@ -19,10 +19,9 @@ public class TestNetConfigurationProvider : INetConfigurationProvider
         return Task.CompletedTask;
     }
 
-    public Task RemoveIpAddress(IPAddress ipAddress, string interfaceName)
+    public void RemoveIpAddress(IPAddress ipAddress, string interfaceName)
     {
         IpAddresses.TryRemove(ipAddress, out _);
-        return Task.CompletedTask;
     }
 
     public Task<bool> IpAddressExists(IPAddress ipAddress)

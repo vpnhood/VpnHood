@@ -27,12 +27,13 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;
 
-public class VpnHoodServer : IAsyncDisposable
+public class VpnHoodServer : IAsyncDisposable, IDisposable
 {
     private readonly bool _autoDisposeAccessManager;
     private readonly string _lastConfigFilePath;
     private readonly ConfigErrorTracker _configErrorTracker;
     private bool _disposed;
+    private bool _quickClosed;
     private Exception? _lastConfigException;
     private string? _lastConfigCode;
     private readonly bool _publicIpDiscovery;
@@ -51,6 +52,7 @@ public class VpnHoodServer : IAsyncDisposable
     private bool _endPointStatusesSent;
     private readonly ConfiguringSocketFactory _socketFactory;
     private readonly TimeSpan _serverHostDisposeTimeout;
+    private readonly AsyncLock _disposeLock = new();
 
     public ServerHost ServerHost { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version ?? new Version();
@@ -585,15 +587,28 @@ public class VpnHoodServer : IAsyncDisposable
         }
     }
 
+    // The quick close: it waits for nothing, so the sessions' usage since their last sync is lost, and the host's
+    // close goes on alone. It may come while the graceful close runs, so it takes none of its locks, and each part
+    // guards its own close; the job's cancels the status upload and configuration that close may wait for
     public void Dispose()
     {
-        DisposeAsync()
-            .Vhc()
-            .GetAwaiter()
-            .GetResult();
-    }
+        if (Interlocked.Exchange(ref _quickClosed, true)) return;
+        _disposed = true;
 
-    private readonly AsyncLock _disposeLock = new();
+        using var scope = VhLogger.Instance.BeginScope("Server");
+        VhLogger.Instance.LogInformation("Server is shutting down at once...");
+
+        _configureAndSendStatusJob.Dispose();
+        _ = ServerHost.TryDisposeAsync(LogLevel.Warning);
+        SessionManager.Dispose();
+        _http01ChallengeService.Dispose();
+        _netConfigurationService?.Dispose();
+        if (_autoDisposeAccessManager)
+            AccessManager.Dispose();
+
+        State = ServerState.Disposed;
+        VhLogger.Instance.LogInformation("Bye Bye!");
+    }
 
     public async ValueTask DisposeAsync()
     {
@@ -619,8 +634,7 @@ public class VpnHoodServer : IAsyncDisposable
         await ServerHost.TryDisposeAsync(_serverHostDisposeTimeout, LogLevel.Warning).Vhc();
         await SessionManager.DisposeAsync().Vhc();
         _http01ChallengeService.Dispose();
-        if (_netConfigurationService != null)
-            await _netConfigurationService.DisposeAsync().Vhc();
+        _netConfigurationService?.Dispose();
 
         if (_autoDisposeAccessManager)
             AccessManager.Dispose();

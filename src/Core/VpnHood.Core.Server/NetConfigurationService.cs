@@ -7,7 +7,7 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Server;
 
-public class NetConfigurationService(INetConfigurationProvider netConfigurationProvider) : IAsyncDisposable
+public class NetConfigurationService(INetConfigurationProvider netConfigurationProvider) : IDisposable
 {
     private readonly ConcurrentDictionary<IPAddress, string> _ipAddresses = [];
 
@@ -40,7 +40,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
                 if (oldInterfaceName == interfaceName)
                     return;
 
-                await RemoveIpAddress(ipAddress);
+                RemoveIpAddress(ipAddress);
             }
 
             // add new ip address if it does not exist in the system
@@ -60,23 +60,21 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         }
     }
 
-    private async Task RemoveIpAddress(IPAddress ipAddress)
+    private void RemoveIpAddress(IPAddress ipAddress)
     {
-        if (!_ipAddresses.TryGetValue(ipAddress, out var interfaceName)) {
-            VhLogger.Instance.LogWarning("IP address has not been added by NetConfigurationService. IP: {IP}",
-                ipAddress);
+        // taken out first, as both of the server's closes may run at once; put back if it stays on the system
+        if (!_ipAddresses.TryRemove(ipAddress, out var interfaceName))
             return;
-        }
 
         try {
             VhLogger.Instance.LogInformation(
                 "Removing IP address from system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
 
-            await netConfigurationProvider.RemoveIpAddress(ipAddress, interfaceName).Vhc();
-            _ipAddresses.TryRemove(ipAddress, out _);
+            netConfigurationProvider.RemoveIpAddress(ipAddress, interfaceName);
         }
         catch (Exception ex) {
+            _ipAddresses.TryAdd(ipAddress, interfaceName);
             VhLogger.Instance.LogError(ex,
                 "Could not remove IP address from system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
@@ -108,9 +106,10 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         }
     }
 
-    public async ValueTask DisposeAsync()
+    // sync only: the removals are local commands, which the server's quick close runs too
+    public void Dispose()
     {
-        foreach (var ipAddress in _ipAddresses.ToArray())
-            await RemoveIpAddress(ipAddress.Key);
+        foreach (var ipAddress in _ipAddresses.Keys.ToArray())
+            RemoveIpAddress(ipAddress);
     }
 }

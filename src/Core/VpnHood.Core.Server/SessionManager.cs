@@ -641,7 +641,6 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         if (Interlocked.Exchange(ref _quickClosed, true)) return;
         _disposed = true;
 
-        _closeCancellationTokenSource.TryCancel();
         _heartbeatJob.Dispose();
         _sessionLocalService.Dispose();
 
@@ -653,5 +652,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         VhLogger.Instance.LogDebug("Disposing all sessions...");
         foreach (var session in Sessions.Values)
             session.Dispose();
+
+        // last: a graceful close it cuts short may end inside this call, and its caller takes the above as done
+        _closeCancellationTokenSource.TryCancel();
     }
 }

@@ -309,6 +309,36 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_second_close_of_the_client_waits_for_the_first_to_release_it()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // the first close is held in its release, as the adapter tells of its dispose. The client has no session, as
+        // when a disconnect comes during connect: a session's own close would hold the second close anyway
+        var vpnAdapter = new TestNullVpnAdapter();
+        using var adapterRelease = new ManualResetEventSlim();
+        var adapterDisposing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        vpnAdapter.Disposed += (_, _) => {
+            adapterDisposing.TrySetResult();
+            adapterRelease.Wait(TimeSpan.FromSeconds(10));
+        };
+        await using var client = await TestHelper.CreateClient(
+            vpnAdapter: vpnAdapter, clientOptions: TestHelper.CreateClientOptions(token), autoConnect: false);
+
+        var firstClose = Task.Run(() => client.DisposeAsync().AsTask(), TestCt);
+        await adapterDisposing.Task.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+
+        var secondClose = client.DisposeAsync().AsTask();
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestCt);
+        Assert.IsFalse(secondClose.IsCompleted, "The second close should wait for the first's release.");
+
+        adapterRelease.Set();
+        await Task.WhenAll(firstClose, secondClose).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(ClientState.Disposed, client.State);
+    }
+
+    [TestMethod]
     public async Task Client_must_dispose_after_server_stopped()
     {
         await using var server = await TestHelper.CreateServer();

@@ -61,6 +61,7 @@ public class Session : IDisposable
     private long _responseRequestTimestamp; // when the request whose reply is Response went out
     private int _tcpConnectWaitCount;
     private int _netScanErrorCount;
+    private bool _disposing;
     private readonly Lock _stateLock = new();
 
     public Tunnel Tunnel { get; }
@@ -610,7 +611,8 @@ public class Session : IDisposable
 
     public void Dispose()
     {
-        if (IsDisposed) return;
+        // its own guard: a cleanup's close and the manager's may come at once; IsDisposed is set only at the end
+        if (Interlocked.Exchange(ref _disposing, true)) return;
 
         _proxyManager.PacketReceived -= Proxy_PacketsReceived;
         _proxyManager.Dispose();

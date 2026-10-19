@@ -283,25 +283,29 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _isDisposing = true;
+
+        // a second close waits for the first one's end - a disconnect during connect, say, where the failed connect
+        // closes too; the adapter's Disposed handler, raised in that release, only starts one. No early return after
+        // it: the steps below join what a quick close left running
+        using var lockResult = await _disposeLock.LockAsync().Vhc();
+
         VhLogger.Instance.LogInformation("Client is shutting down asynchronously...");
+        await _cancellationTokenSource.TryCancelAsync().Vhc();
 
-        if (_session != null) {
-            await _cancellationTokenSource.TryCancelAsync().Vhc();
-
-            // a failed session close must not keep the adapter from its release below
+        // a failed session close must not keep the adapter from its release below
+        if (_session != null)
             await _session.TryDisposeAsync(LogLevel.Warning).Vhc();
-        }
 
         // flush and dispose the proxy connector while we can still await
         await ProxyConnector.TryDisposeAsync().Vhc();
 
-        // the session's disposed state may have disposed the client meanwhile
+        // the session's disposed state may have disposed the client meanwhile. Nothing is awaited after the claim: a
+        // quick close that finds it leaves the release to this close
         lock (_disposeLock) {
             if (_disposed) return;
             _disposed = true;
         }
 
-        await _cancellationTokenSource.TryCancelAsync().Vhc();
         DisposeSyncMembers();
     }
 

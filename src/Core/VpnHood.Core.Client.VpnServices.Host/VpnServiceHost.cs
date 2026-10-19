@@ -102,8 +102,9 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 
         // if client is not disposed, we can show notification
         if (client.State is not ClientState.Disposed) {
-            // show notification
-            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo);
+            // the info as the client has it now: the write above may wait for its lock, and until it is
+            // done the context's info is the one before
+            _vpnServiceHandler.ShowNotification(CreateConnectionInfo(client, _disconnectException));
             return;
         }
 
@@ -290,7 +291,13 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         if (client.ProxyConnector != null)
             await client.ProxyConnector.Flush().Vhc();
 
-        var connectionInfo = new ConnectionInfo {
+        await Context.TryWriteConnectionInfo(CreateConnectionInfo(client, ex), cancellationToken).Vhc();
+    }
+
+    // the connection's info as the client has it now
+    private static ConnectionInfo CreateConnectionInfo(VpnHoodClient client, Exception? ex)
+    {
+        return new ConnectionInfo {
             CreatedTime = FastDateTime.UtcNow,
             ProxyConnectorStatus = client.ProxyConnector?.Status,
             SessionName = client.Config.SessionName,
@@ -301,8 +308,6 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             ClientStateChangedTime = client.StateChangedTime,
             Error = ex?.ToApiError() ?? client.LastException?.ToApiError()
         };
-
-        await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken).Vhc();
     }
 
     public async Task UpdateConnectionInfo(ClientState clientState, string? sessionName, Exception? exception,

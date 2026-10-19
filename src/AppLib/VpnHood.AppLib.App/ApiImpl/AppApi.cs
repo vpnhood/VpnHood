@@ -188,7 +188,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
         await app.CopyLogToStream(ms).Vhc();
         ms.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(ms);
-        return await reader.ReadToEndAsync(cancellationToken);
+        return await reader.ReadToEndAsync(cancellationToken).Vhc();
     }
 
     public async Task<byte[]> PromotionImage(CancellationToken cancellationToken)
@@ -197,7 +197,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
             !File.Exists(app.SettingsService.PromotionImageFilePath))
             throw new NotExistsException();
 
-        return await File.ReadAllBytesAsync(app.SettingsService.PromotionImageFilePath, cancellationToken);
+        return await File.ReadAllBytesAsync(app.SettingsService.PromotionImageFilePath, cancellationToken).Vhc();
     }
 
     public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)

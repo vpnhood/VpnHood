@@ -427,7 +427,7 @@ public class VpnServiceManager : IDisposable
 
         IsReconfiguring = true;
         try {
-            await SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken);
+            await SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken).Vhc();
             Reconfigured?.Invoke(this, reconfigureParams);
         }
         finally {

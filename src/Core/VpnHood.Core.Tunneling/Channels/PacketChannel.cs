@@ -91,7 +91,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
     private async Task StartTask()
     {
         try {
-            await StartReadTask();
+            await StartReadTask().Vhc();
             VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
                 "PacketChannel read task completed. ChannelId: {ChannelId}, Type: {Type}",
                 ChannelId, VhLogger.FormatType(this));

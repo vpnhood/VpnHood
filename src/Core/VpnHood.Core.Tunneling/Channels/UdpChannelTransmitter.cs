@@ -102,7 +102,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         try {
             // encryption is not thread-safe; serialize send
             await _sendSemaphore.WaitAsync().Vhc();
-            await SendCoreAsync(sessionId, ipEndPoint, payload, cryptor);
+            await SendCoreAsync(sessionId, ipEndPoint, payload, cryptor).Vhc();
         }
         catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
             VhLogger.Instance.LogError(GeneralEventId.Essential, ex,

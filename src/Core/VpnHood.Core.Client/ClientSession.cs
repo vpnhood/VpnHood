@@ -205,7 +205,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // wait for ad before adapter
         var retryAd = false; 
         if (Config.AdRequirement != AdRequirement.None)
-            retryAd = await AdHandler.TryWaitForAd(cancellationToken) != null;
+            retryAd = await AdHandler.TryWaitForAd(cancellationToken).Vhc() != null;
 
         // manage datagram channels
         await manageChannelsTask.Vhc();
@@ -215,11 +215,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         ThrowIfClosing();
 
         // start adapter
-        await _vpnAdapter.Start(Config.AdapterOptions, cancellationToken);
+        await _vpnAdapter.Start(Config.AdapterOptions, cancellationToken).Vhc();
 
         // retry ad after adapter started
         if (retryAd) {
-            var ex = await AdHandler.TryWaitForAd(cancellationToken);
+            var ex = await AdHandler.TryWaitForAd(cancellationToken).Vhc();
             if (ex != null && Config.AdRequirement is not AdRequirement.Flexible)
                 throw ex;
         }
@@ -467,7 +467,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private async ValueTask ManagePacketChannels(bool waitForLock, CancellationToken cancellationToken)
     {
         using var lockResult = await _packetChannelLock.LockAsync(
-            waitForLock ? Timeout.InfiniteTimeSpan : TimeSpan.Zero, cancellationToken);
+            waitForLock ? Timeout.InfiniteTimeSpan : TimeSpan.Zero, cancellationToken).Vhc();
         if (!lockResult.Succeeded)
             return;
 
@@ -622,7 +622,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             // close session if server has ended the session
             if (ex.SessionResponse.ErrorCode != SessionErrorCode.GeneralError &&
                 ex.SessionResponse.ErrorCode != SessionErrorCode.RewardedAdRejected) {
-                await DisposeAsync(ex);
+                await DisposeAsync(ex).Vhc();
             }
 
             throw;
@@ -636,7 +636,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
             // dispose by session timeout and must before pause because SessionTimeout is bigger than ReconnectTimeout
             if (now - _lastConnectionErrorTime.Value > Config.Transport.SessionTimeout)
-                await DisposeAsync(ex);
+                await DisposeAsync(ex).Vhc();
 
             // pause after retry limit
             else if (now - _lastConnectionErrorTime.Value > Config.Transport.UnstableTimeout) {
@@ -703,7 +703,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        using var lockScope = await _disposeLock.LockAsync();
+        using var lockScope = await _disposeLock.LockAsync().Vhc();
         if (_disposed)
             return;
 
@@ -743,7 +743,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             }
         }
 
-        await _cancellationTokenSource.TryCancelAsync();
+        await _cancellationTokenSource.TryCancelAsync().Vhc();
 
         // a sync Dispose may have run meanwhile
         lock (_disposeLock) {

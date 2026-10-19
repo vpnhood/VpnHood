@@ -224,7 +224,7 @@ public class AppAdManager(
     private async Task<bool> IsAdBlockerByCheckDnsRequest(Exception ex, CancellationToken cancellationToken)
     {
         // make sure we have the latest state
-        await vpnServiceManager.RefreshState(cancellationToken);
+        await vpnServiceManager.RefreshState(cancellationToken).Vhc();
         var connectionInfo = vpnServiceManager.ConnectionInfo;
 
         // ignore ad blocker if secure DNS (DoT/DoQ) is not detected or if the adapter is not started yet.

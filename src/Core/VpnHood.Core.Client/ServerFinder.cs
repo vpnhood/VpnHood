@@ -68,7 +68,7 @@ public class ServerFinder(
         var tasks = serverTokens.Select(async serverToken => {
             try {
                 var endpoints = await EndPointResolver.ResolveHostEndPoints(
-                    serverToken, endPointStrategy, cancellationToken);
+                    serverToken, endPointStrategy, cancellationToken).Vhc();
 
                 return endpoints.Select(ep => new VpnEndPoint(
                     ep, serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase));
@@ -80,7 +80,7 @@ public class ServerFinder(
         });
 
         // wait for all tasks to complete
-        var resolved = await Task.WhenAll(tasks);
+        var resolved = await Task.WhenAll(tasks).Vhc();
 
         // flatten the results into a single enumerable
         var results = resolved.SelectMany(x => x)
@@ -114,7 +114,7 @@ public class ServerFinder(
             serverQueryTimeout, ServerLocation);
 
         // create server finder items from ServerToken.HostEndPoints using SelectMany
-        var vpnEndPoints = await ResolveVpnEndPoints(serverTokens, IncludeIpV6, cancellationToken);
+        var vpnEndPoints = await ResolveVpnEndPoints(serverTokens, IncludeIpV6, cancellationToken).Vhc();
 
         // create array of host statuses and shuffle them
         // We should not let client always try the same server first to avoid overloading specific servers
@@ -125,7 +125,7 @@ public class ServerFinder(
 
         // find the best server
         _hostEndPointStatuses =
-            await VerifyHostsStatus(hostStatuses, byOrder: false, cancellationToken: cancellationToken);
+            await VerifyHostsStatus(hostStatuses, byOrder: false, cancellationToken: cancellationToken).Vhc();
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.VpnEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
@@ -157,7 +157,7 @@ public class ServerFinder(
         if (!serverTokens.Any())
             throw new Exception("There is no server endpoint. Please check server configuration.");
 
-        var vpnEndPoints = await ResolveVpnEndPoints(serverTokens, IncludeIpV6, cancellationToken);
+        var vpnEndPoints = await ResolveVpnEndPoints(serverTokens, IncludeIpV6, cancellationToken).Vhc();
 
         // create host statuses and merge the previous availability statuses
         var hostStatuses = vpnEndPoints.Select(x => new HostStatus { VpnEndPoint = x }).ToArray();
@@ -167,7 +167,7 @@ public class ServerFinder(
 
         // find the best server by order
         var endpointStatuses =
-            await VerifyHostsStatus(hostStatuses, byOrder: true, cancellationToken: cancellationToken);
+            await VerifyHostsStatus(hostStatuses, byOrder: true, cancellationToken: cancellationToken).Vhc();
         var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.VpnEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -235,7 +235,7 @@ public class ServerFinder(
                 "Starting endpoint check for the first endpoint... EndPoint: {EndPoint}",
                 VhLogger.Format(firstHostStatus.VpnEndPoint.TcpEndPoint));
 
-            await VerifyHostStatus(firstHostStatus, serverQueryTimeout, cancellationToken);
+            await VerifyHostStatus(firstHostStatus, serverQueryTimeout, cancellationToken).Vhc();
             if (firstHostStatus.Available == true)
                 return [firstHostStatus];
 
@@ -245,7 +245,7 @@ public class ServerFinder(
                 _progressMonitor.IncrementCompleted();
 
             // proceed with parallel verification
-            return await VerifyHostStatusParallel(hostStatuses, byOrder, _progressMonitor, cancellationToken);
+            return await VerifyHostStatusParallel(hostStatuses, byOrder, _progressMonitor, cancellationToken).Vhc();
         }
         finally {
             VhLogger.Instance.LogInformation(GeneralEventId.Request,
@@ -279,7 +279,7 @@ public class ServerFinder(
 
             // Create all verification tasks
             var verificationTasks = hostStatuses.Select(async hostStatus => {
-                await semaphore.WaitAsync(parallelCts.Token);
+                await semaphore.WaitAsync(parallelCts.Token).Vhc();
                 try {
                     await VerifyHostStatus(hostStatus, serverQueryTimeout, parallelCts.Token).Vhc();
 
@@ -315,7 +315,7 @@ public class ServerFinder(
 
             // Wait for all tasks to complete or until a server is found
             try {
-                await Task.WhenAll(verificationTasks);
+                await Task.WhenAll(verificationTasks).Vhc();
             }
             catch (OperationCanceledException) when (searchingCts.IsCancellationRequested) {
                 // A server has been found, this is expected

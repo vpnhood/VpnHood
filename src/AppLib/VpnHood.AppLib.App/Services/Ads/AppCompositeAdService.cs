@@ -124,7 +124,7 @@ internal class AppCompositeAdService
                         await _tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildLoadAdFailed(
                                 adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode,
                                 isPreload: isPreload),
-                            cancellationToken);
+                            cancellationToken).Vhc();
 
                     providerExceptions.Add((adProviderItem.Name, ex));
                     VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",

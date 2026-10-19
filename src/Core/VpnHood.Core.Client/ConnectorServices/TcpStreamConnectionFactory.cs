@@ -80,7 +80,7 @@ internal class TcpStreamConnectionFactory(
             return tcpConnection;
         }
         catch {
-            await sslStream.TryDisposeAsync();
+            await sslStream.TryDisposeAsync().Vhc();
             throw;
         }
     }

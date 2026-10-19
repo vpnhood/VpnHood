@@ -151,7 +151,7 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
         try {
             // send the request
             await connection.Stream.WriteAsync(request, cancellationToken).Vhc();
-            await connection.Stream.FlushAsync(cancellationToken);
+            await connection.Stream.FlushAsync(cancellationToken).Vhc();
 
             // parse the HTTP request
             if (connection.RequireHttpResponse) {

@@ -9,7 +9,7 @@ internal static class AppAdUtils
 {
     public static async Task<bool> IsActiveUi(IUiContext uiContext, bool immediately = true)
     {
-        if (await uiContext.IsActive())
+        if (await uiContext.IsActive().Vhc())
             return true;
 
         // throw exception if the UI is not available
@@ -17,13 +17,13 @@ internal static class AppAdUtils
             return false;
 
         // throw exception if the UI is destroyed, there is no point in waiting for it
-        if (await uiContext.IsDestroyed())
+        if (await uiContext.IsDestroyed().Vhc())
             return false;
 
         // wait for the UI to be active
         for (var i = 0; i < 10; i++) {
             await Task.Delay(200).Vhc();
-            if (await uiContext.IsActive())
+            if (await uiContext.IsActive().Vhc())
                 return true;
         }
 
@@ -32,7 +32,7 @@ internal static class AppAdUtils
 
     public static async Task VerifyActiveUi(IUiContext uiContext, bool immediately = true)
     {
-        if (!await IsActiveUi(uiContext, immediately))
+        if (!await IsActiveUi(uiContext, immediately).Vhc())
             throw new ShowAdNoUiException();
     }
 }

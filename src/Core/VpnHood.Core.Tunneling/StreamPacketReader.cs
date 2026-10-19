@@ -2,6 +2,7 @@ using System.Buffers;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Streams;
 using VpnHood.Core.Common.Configuration;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -15,7 +16,7 @@ public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
     {
         // read minimum packet header and return null if we reach the end of the stream
         try {
-            await _stream.ReadExactlyAsync(_minHeader, cancellationToken);
+            await _stream.ReadExactlyAsync(_minHeader, cancellationToken).Vhc();
         }
         catch (EndOfStreamException) {
             // if we reach the end of the stream, return null
@@ -37,7 +38,7 @@ public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
             _minHeader.CopyTo(memoryOwner.Memory);
 
             // read the rest of the packet
-            await _stream.ReadExactlyAsync(memoryOwner.Memory[_minHeader.Length..packetLength], cancellationToken);
+            await _stream.ReadExactlyAsync(memoryOwner.Memory[_minHeader.Length..packetLength], cancellationToken).Vhc();
 
             // build the packet
             var ipPacket = PacketBuilder.Attach(memoryOwner);

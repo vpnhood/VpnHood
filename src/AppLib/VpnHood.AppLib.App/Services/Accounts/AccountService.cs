@@ -106,7 +106,7 @@ public class AccountService
         // Update cache from server and update local cache. If the server is
         // unreachable, a stale account is still better than none for display.
         try {
-            await Refresh(cancellationToken);
+            await Refresh(cancellationToken).Vhc();
         }
         catch (Exception ex) when (_account != null) {
             // A rejected session is not an outage. The authentication provider has already dropped

@@ -39,7 +39,7 @@ public class BillingService(
     public async Task<StoreInfo> GetStoreInfo(CancellationToken cancellationToken)
     {
         try {
-            var subscriptionPlans = await GetSubscriptionPlans(cancellationToken);
+            var subscriptionPlans = await GetSubscriptionPlans(cancellationToken).Vhc();
             return new StoreInfo {
                 SubscriptionPlans = subscriptionPlans,
                 StoreError = null

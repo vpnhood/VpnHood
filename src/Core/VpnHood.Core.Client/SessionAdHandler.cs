@@ -20,7 +20,7 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
     public async Task<Exception?> TryWaitForAd(CancellationToken cancellationToken)
     {
         try {
-            await WaitForAd(cancellationToken);
+            await WaitForAd(cancellationToken).Vhc();
             return null;
         }
         catch (Exception ex) {
@@ -44,7 +44,7 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
             _waitForAdCts = new TaskCompletionSource();
             session.PassthroughState.PassthroughForAd = true;
             IsWaitingForChanged?.Invoke(this, EventArgs.Empty);
-            await _waitForAdCts.Task.WaitAsync(cancellationToken);
+            await _waitForAdCts.Task.WaitAsync(cancellationToken).Vhc();
         }
         finally {
             session.PassthroughState.PassthroughForAd = false;

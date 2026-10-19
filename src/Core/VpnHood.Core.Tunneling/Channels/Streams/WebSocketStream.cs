@@ -172,7 +172,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         var fullBuffer = memoryOwner.Memory[..bufferLength];
         buffer.CopyTo(fullBuffer[ChunkHeaderLength..]);
         // await required to prevent releasing of the memory owner
-        await WriteInternalPreserverAsync(fullBuffer, cancellationToken);
+        await WriteInternalPreserverAsync(fullBuffer, cancellationToken).Vhc();
     }
 
     private Span<byte> BuildHeader(Span<byte> header, int payloadLength, ReadOnlySpan<byte> maskKey)
@@ -209,7 +209,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             while (true) {
                 // get chunk header
                 var webSocketHeader =
-                    await WebSocketUtils.ReadWebSocketHeader(SourceStream, _readChunkHeaderBuffer, cancellationToken);
+                    await WebSocketUtils.ReadWebSocketHeader(SourceStream, _readChunkHeaderBuffer, cancellationToken).Vhc();
 
                 // skip close connection payload
                 if (webSocketHeader.IsCloseConnection) {

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling.Connections;
 
@@ -42,8 +43,8 @@ public class StreamConnectionDecorator(IStreamConnection streamConnection, Strea
         Disposed = true;
 
         if (stream != null) 
-            await stream.DisposeAsync();
+            await stream.DisposeAsync().Vhc();
 
-        await InnerStreamConnection.DisposeAsync();
+        await InnerStreamConnection.DisposeAsync().Vhc();
     }
 }

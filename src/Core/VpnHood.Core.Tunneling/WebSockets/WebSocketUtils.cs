@@ -2,6 +2,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling.WebSockets;
 
@@ -105,7 +106,7 @@ public static class WebSocketUtils
             throw new ArgumentException("Buffer must be at least 14 bytes.", nameof(buffer));
 
         // Always read first 2 bytes
-        await stream.ReadExactlyAsync(buffer[..2], cancellationToken);
+        await stream.ReadExactlyAsync(buffer[..2], cancellationToken).Vhc();
 
         var firstByte = buffer.Span[0];
         var secondByte = buffer.Span[1];
@@ -125,7 +126,7 @@ public static class WebSocketUtils
                 break;
 
             case 126:
-                await stream.ReadExactlyAsync(buffer.Slice(2, 2), cancellationToken);
+                await stream.ReadExactlyAsync(buffer.Slice(2, 2), cancellationToken).Vhc();
                 span = buffer.Span;
                 payloadLength = (span[2] << 8) | span[3];
                 headerLength += 2;
@@ -133,7 +134,7 @@ public static class WebSocketUtils
 
             // 127
             default:
-                await stream.ReadExactlyAsync(buffer.Slice(2, 8), cancellationToken);
+                await stream.ReadExactlyAsync(buffer.Slice(2, 8), cancellationToken).Vhc();
                 span = buffer.Span;
                 payloadLength = ((long)span[2] << 56) |
                                 ((long)span[3] << 48) |
@@ -150,7 +151,7 @@ public static class WebSocketUtils
         var maskKey = Memory<byte>.Empty;
         if (isMasked) {
             maskKey = buffer.Slice(headerLength, 4);
-            await stream.ReadExactlyAsync(maskKey, cancellationToken);
+            await stream.ReadExactlyAsync(maskKey, cancellationToken).Vhc();
             // ReSharper disable once RedundantAssignment
             headerLength += 4;
         }

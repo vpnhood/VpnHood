@@ -357,7 +357,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         MigrateLegacyTempFolder();
 #pragma warning restore CS0618 // Type or member is obsolete
 
-        await Services.TrackerService.TrackFirstLaunch();
+        await Services.TrackerService.TrackFirstLaunch().Vhc();
 
         await _webHostManager.StartAlwaysOn(CancellationToken.None).Vhc();
 
@@ -818,7 +818,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         CancellationToken cancellationToken = default)
     {
         try {
-            await Connect(uiContext, connectOptions, cancellationToken);
+            await Connect(uiContext, connectOptions, cancellationToken).Vhc();
             return true;
         }
         catch {
@@ -855,7 +855,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // Create a connect cancellation token. A disconnect still running, which the app shows as idle, ends
             // first, or it would cancel this connect or stop its VPN service
-            using (await _disconnectLock.LockAsync()) {
+            using (await _disconnectLock.LockAsync().Vhc()) {
                 _connectCts = new CancellationTokenSource();
                 _isConnecting = true; //must be after checking IsIdle
             }
@@ -864,7 +864,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _userReviewRecommended = 0; // UI may call ClearLastError, so it my close immediately
             ClearLastError();
             _appPersistState.IsReconnectRequired = false; // this connect applies every pending change
-            await ConnectInternal1(uiContext, connectOptions, linkedCts.Token);
+            await ConnectInternal1(uiContext, connectOptions, linkedCts.Token).Vhc();
             _alwaysOnService.EndConnect(alwaysOnConnectNumber, exception: null);
         }
         catch (Exception ex) {
@@ -875,7 +875,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 throw;
 
             _appPersistState.LastError = ex.ToApiError();
-            await TryDisconnect(connectNumber); // await, to prevent VpnService_StateChanged clear the LastError
+            await TryDisconnect(connectNumber).Vhc(); // await, to prevent VpnService_StateChanged clear the LastError
             failure = ex;
             throw;
         }
@@ -1287,7 +1287,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task RequestFeatures(IUiContext? uiContext, CancellationToken cancellationToken)
     {
-        if (uiContext == null || !await uiContext.IsActive())
+        if (uiContext == null || !await uiContext.IsActive().Vhc())
             return;
 
         // QuickLaunch
@@ -1392,7 +1392,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private async Task TryShowAd()
     {
         // lock session
-        using var scopeLock = await _showAdLock.LockAsync(timeout: TimeSpan.Zero);
+        using var scopeLock = await _showAdLock.LockAsync(timeout: TimeSpan.Zero).Vhc();
         if (!scopeLock.Succeeded || AdManager.IsShowing)
             return; // already showing ad
 
@@ -1408,7 +1408,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var useFallback = connectionInfo.SessionStatus?.IsAdapterStarted is true;
             await AdManager.ShowAd(AppUiContext.Context,
                 connectionInfo.SessionInfo.SessionId, connectionInfo.SessionInfo.AdRequirement,
-                useFallback: useFallback, _showAdCts.Token);
+                useFallback: useFallback, _showAdCts.Token).Vhc();
         }
         catch (ShowAdNoUiException) when (!_isConnecting) {
             // No connect of this process is waiting for the ad: the session is the quick-settings tile's,
@@ -1451,7 +1451,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AsyncLock _disconnectLock = new();
     private async Task DisconnectCore(int? connectNumber)
     {
-        using var scopeLock = await _disconnectLock.LockAsync();
+        using var scopeLock = await _disconnectLock.LockAsync().Vhc();
         if (_isDisconnecting)
             return; // already disconnecting
 
@@ -1513,40 +1513,40 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // write app log
         try {
             if (File.Exists(_logService.LogFilePath)) {
-                await write.WriteLineAsync("-----------------------");
-                await write.WriteLineAsync(LogAppHeader);
-                await write.WriteLineAsync("-----------------------");
-                await write.FlushAsync();
+                await write.WriteLineAsync("-----------------------").Vhc();
+                await write.WriteLineAsync(LogAppHeader).Vhc();
+                await write.WriteLineAsync("-----------------------").Vhc();
+                await write.FlushAsync().Vhc();
 
                 await using var appLogStream = new FileStream(_logService.LogFilePath,
                     FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                await appLogStream.CopyToAsync(destination);
-                await destination.FlushAsync();
+                await appLogStream.CopyToAsync(destination).Vhc();
+                await destination.FlushAsync().Vhc();
             }
         }
         catch (Exception ex) {
-            await write.WriteLineAsync($"Error: Could not read application log. {ex.Message}");
-            await write.FlushAsync();
+            await write.WriteLineAsync($"Error: Could not read application log. {ex.Message}").Vhc();
+            await write.FlushAsync().Vhc();
         }
 
         // write vpn service log
         try {
             if (File.Exists(_vpnServiceManager.LogFilePath)) {
-                await write.WriteLineAsync("");
-                await write.WriteLineAsync("-----------------------");
-                await write.WriteLineAsync(LogVpnServiceHeader);
-                await write.WriteLineAsync("-----------------------");
-                await write.FlushAsync();
+                await write.WriteLineAsync("").Vhc();
+                await write.WriteLineAsync("-----------------------").Vhc();
+                await write.WriteLineAsync(LogVpnServiceHeader).Vhc();
+                await write.WriteLineAsync("-----------------------").Vhc();
+                await write.FlushAsync().Vhc();
 
                 await using var serviceLogStream = new FileStream(_vpnServiceManager.LogFilePath,
                     FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                await serviceLogStream.CopyToAsync(destination);
-                await destination.FlushAsync();
+                await serviceLogStream.CopyToAsync(destination).Vhc();
+                await destination.FlushAsync().Vhc();
             }
         }
         catch (Exception ex) {
-            await write.WriteLineAsync($"Error: Could not read vpn service log. {ex.Message}");
-            await write.FlushAsync();
+            await write.WriteLineAsync($"Error: Could not read vpn service log. {ex.Message}").Vhc();
+            await write.FlushAsync().Vhc();
         }
     }
 
@@ -1570,7 +1570,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // store error may surface from one.
         var storeInfo = premium != null && purchaseUrl == null &&
                         Services.AccountService?.BillingService != null
-            ? await Services.AccountService.BillingService.GetStoreInfo(cancellationToken)
+            ? await Services.AccountService.BillingService.GetStoreInfo(cancellationToken).Vhc()
             : StoreInfo.Empty;
 
         var purchaseOptions = new AppPurchaseOptions {
@@ -1607,7 +1607,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var accountService = Services.AccountService;
         if (updateParams.AccessCode != null && accountService?.AuthenticationService.UserId != null)
             await VhUtils.TryInvokeAsync("Handing the typed access code to the account",
-                () => accountService.Refresh(cancellationToken));
+                () => accountService.Refresh(cancellationToken)).Vhc();
 
         return VpnProfileService.GetInfo(vpnProfileId);
     }

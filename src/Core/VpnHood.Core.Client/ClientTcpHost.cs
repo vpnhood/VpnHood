@@ -74,7 +74,7 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Stream, ex, "Could not process a tcp stream request.");
-            await connection.DisposeAsync();
+            await connection.DisposeAsync().Vhc();
         }
     }
 

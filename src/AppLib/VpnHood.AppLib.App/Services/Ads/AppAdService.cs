@@ -131,7 +131,7 @@ public class AppAdService(
                 isPreload: appCompositeAdService.IsPreload), cancellationToken).Vhc();
 
             // convert it to ShowAdNoUiException
-            if (ex is not ShowAdNoUiException && !await AppAdUtils.IsActiveUi(uiContext)) {
+            if (ex is not ShowAdNoUiException && !await AppAdUtils.IsActiveUi(uiContext).Vhc()) {
                 var noUiException = new ShowAdNoUiException();
                 await tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildShowAdFailed(
                     errorMessage: noUiException.Message, countryCode: countryCode,

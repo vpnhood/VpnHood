@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.App.VpnProfiles;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -90,7 +91,7 @@ public class AppSettingsService
         try {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
-            await UpdateRemoteSettings(url, linkedCts.Token);
+            await UpdateRemoteSettings(url, linkedCts.Token).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(ex, "Failed to update remote settings.");
@@ -101,14 +102,14 @@ public class AppSettingsService
     {
         VhLogger.Instance.LogDebug("Fetching remote options...");
         var httpClient = new HttpClient();
-        var json = await httpClient.GetStringAsync(url, cancellationToken);
+        var json = await httpClient.GetStringAsync(url, cancellationToken).Vhc();
         RemoteSettings = JsonUtils.Deserialize<RemoteSettings>(json);
-        await File.WriteAllTextAsync(RemoteSettingsFilePath, json, Encoding.UTF8, cancellationToken);
+        await File.WriteAllTextAsync(RemoteSettingsFilePath, json, Encoding.UTF8, cancellationToken).Vhc();
         VhLogger.Instance.LogDebug("Remote update successfully.");
 
         // download promotion image
         await VhUtils.TryInvokeAsync("Update Promote Image", () =>
-            UpdatePromoteImage(httpClient, RemoteSettings.PromotionImageUrl, cancellationToken));
+            UpdatePromoteImage(httpClient, RemoteSettings.PromotionImageUrl, cancellationToken)).Vhc();
     }
 
     private async Task UpdatePromoteImage(HttpClient httpClient, Uri? url, CancellationToken cancellationToken)
@@ -123,9 +124,9 @@ public class AppSettingsService
         // download new promotion image
         Directory.CreateDirectory(PromotionFolderPath);
         VhLogger.Instance.LogDebug("Downloading promotion image from {0}", url);
-        var imageBytes = await httpClient.GetByteArrayAsync(url, cancellationToken);
+        var imageBytes = await httpClient.GetByteArrayAsync(url, cancellationToken).Vhc();
         var fileName = BuildPromoteImageFilePath(url);
-        await File.WriteAllBytesAsync(fileName, imageBytes, cancellationToken);
+        await File.WriteAllBytesAsync(fileName, imageBytes, cancellationToken).Vhc();
         VhLogger.Instance.LogDebug("Promotion image saved to {0}", fileName);
     }
 }

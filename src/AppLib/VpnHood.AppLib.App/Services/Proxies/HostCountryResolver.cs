@@ -15,9 +15,9 @@ public class HostCountryResolver(
         var tasks = hosts
             .Distinct()
             .Select(async host => {
-                await gate.WaitAsync(cancellationToken);
+                await gate.WaitAsync(cancellationToken).Vhc();
                 try {
-                    return await ResolveHostCountry(host, cancellationToken);
+                    return await ResolveHostCountry(host, cancellationToken).Vhc();
                 }
                 finally {
                     gate.Release();

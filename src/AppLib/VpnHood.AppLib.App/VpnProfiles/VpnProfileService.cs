@@ -378,7 +378,7 @@ public class VpnProfileService
         // wait for any of the tasks to complete successfully
         while (tasks.Count > 0) {
             var finishedTask = await Task.WhenAny(tasks).Vhc();
-            if (await finishedTask)
+            if (await finishedTask.Vhc())
                 return true;
 
             tasks.Remove(finishedTask);

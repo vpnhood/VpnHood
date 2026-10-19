@@ -219,7 +219,7 @@ public class AppProxyEndPointService(
         // fetch endpoints from url and merge
         // ReSharper disable once ShortLivedHttpClient
         using var httpClient = new HttpClient();
-        var content = await httpClient.GetStringAsync(ProxySettings.AutoUpdateOptions.Url, cancellationToken);
+        var content = await httpClient.GetStringAsync(ProxySettings.AutoUpdateOptions.Url, cancellationToken).Vhc();
         await Import(content).Vhc();
     }
 
@@ -244,7 +244,7 @@ public class AppProxyEndPointService(
         // ReSharper disable once UseCollectionExpression
         proxyEndPointInfos = proxyEndPointInfos.Where(x => x.CountryCode is null).ToArray();
         var hostCountries = await _hostCountryResolver
-            .GetHostCountries(proxyEndPointInfos.Select(x => x.EndPoint.Host), cancellationToken);
+            .GetHostCountries(proxyEndPointInfos.Select(x => x.EndPoint.Host), cancellationToken).Vhc();
 
         foreach (var proxyEndPointInfo in proxyEndPointInfos) {
             var countryCode = hostCountries.GetValueOrDefault(proxyEndPointInfo.EndPoint.Host);

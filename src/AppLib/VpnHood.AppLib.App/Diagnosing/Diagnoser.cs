@@ -48,7 +48,7 @@ public class Diagnoser
 
         // ping server
         VhLogger.Instance.LogInformation("Checking the endpoints via ping...");
-        if (!await IPAddressUtil.IsIpv6Supported() && ipEndPoints.Any(x => x.IsV6())) {
+        if (!await IPAddressUtil.IsIpv6Supported().Vhc() && ipEndPoints.Any(x => x.IsV6())) {
             VhLogger.Instance.LogInformation("IpV6 is not supported. Excluding IpV6 addresses");
             ipEndPoints = ipEndPoints.Where(x => !x.Address.IsV6()).ToArray();
         }

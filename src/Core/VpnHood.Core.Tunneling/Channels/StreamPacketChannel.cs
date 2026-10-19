@@ -32,13 +32,13 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
 
             // flush current buffer if this packet does not fit
             if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
-                await WriteBuffer(buffer[..bufferIndex], cancellationToken);
+                await WriteBuffer(buffer[..bufferIndex], cancellationToken).Vhc();
                 bufferIndex = 0;
             }
 
             // Write the packet directly if it does not fit in the buffer or there is only one packet
             if (packetBytes.Length > buffer.Length || ipPackets.Count == 1) {
-                await WriteBuffer(packetBytes, cancellationToken);
+                await WriteBuffer(packetBytes, cancellationToken).Vhc();
                 continue;
             }
 
@@ -48,7 +48,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
 
         // send remaining buffer
         if (bufferIndex > 0)
-            await WriteBuffer(buffer[..bufferIndex], cancellationToken);
+            await WriteBuffer(buffer[..bufferIndex], cancellationToken).Vhc();
     }
 
     // the send limit is not waited on here: a throttled tunnel paces its packets before they reach a channel

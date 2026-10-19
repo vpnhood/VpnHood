@@ -214,7 +214,7 @@ public class SplitCountryService(
                 if (entry is null)
                     continue; // unknown country code → nothing to add
 
-                await using var stream = await entry.OpenAsync(cancellationToken);
+                await using var stream = await entry.OpenAsync(cancellationToken).Vhc();
                 foreach (var (start, end) in IpRangeOrderedList.DeserializeRaw(stream))
                     inserter.Insert(action, start, end);
             }

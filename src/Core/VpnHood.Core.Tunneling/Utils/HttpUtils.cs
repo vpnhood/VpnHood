@@ -47,9 +47,9 @@ public static class HttpUtils
     public static async Task<HttpResponseMessage> ReadResponse(Stream stream, CancellationToken cancellationToken,
         int maxLength = MaxHeaderSize)
     {
-        using var headerStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
+        using var headerStream = await ReadHeadersAsync(stream, cancellationToken, maxLength).Vhc();
         using var reader = new StreamReader(headerStream, Encoding.UTF8);
-        var firstLine = await reader.ReadLineAsync(cancellationToken) ?? string.Empty; // it may return null
+        var firstLine = await reader.ReadLineAsync(cancellationToken).Vhc() ?? string.Empty; // it may return null
 
         // Check if the first line starts with "HTTP/" (basic HTTP format validation).
         if (!firstLine.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase))
@@ -66,7 +66,7 @@ public static class HttpUtils
     public static async Task<Dictionary<string, string>?> ParseHeadersAsync(Stream stream,
         CancellationToken cancellationToken, int maxLength = MaxHeaderSize) //128 KB 
     {
-        using var memStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
+        using var memStream = await ReadHeadersAsync(stream, cancellationToken, maxLength).Vhc();
         if (memStream.Length == 0)
             return null; // connection has been closed gracefully
 
@@ -76,7 +76,7 @@ public static class HttpUtils
         // Read the header lines until an empty line is encountered
         while (true) {
             // ReSharper disable once MethodHasAsyncOverload
-            var line = await reader.ReadLineAsync(cancellationToken);
+            var line = await reader.ReadLineAsync(cancellationToken).Vhc();
             if (string.IsNullOrEmpty(line))
                 break;
 
@@ -95,7 +95,7 @@ public static class HttpUtils
         // ignore start padding
         var paddingStart = headers.GetValueOrDefault("X-StartPadding");
         if (int.TryParse(paddingStart, out var paddingLength) && paddingLength > 0) 
-            await stream.CopyToAsync(Stream.Null, paddingLength, cancellationToken);
+            await stream.CopyToAsync(Stream.Null, paddingLength, cancellationToken).Vhc();
 
         return headers;
     }

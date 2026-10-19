@@ -208,7 +208,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public async Task Connect(CancellationToken cancellationToken = default)
     {
         try {
-            await Connect2(cancellationToken);
+            await Connect2(cancellationToken).Vhc();
         }
         catch (Exception ex) {
             // What closed the session, when an error did, says more than how the start found out - often a
@@ -217,7 +217,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (sessionException == null && !_isDisposing)
                 LastException = ex;
 
-            await DisposeAsync();
+            await DisposeAsync().Vhc();
             if (sessionException != null && sessionException != ex)
                 ExceptionDispatchInfo.Throw(sessionException);
 
@@ -258,7 +258,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         _session = await sessionBuilder.Build(_cancellationTokenSource.Token, cancellationToken).Vhc();
         _session.StateChanged += Session_StateChanged;
-        await _session.Start(cancellationToken);
+        await _session.Start(cancellationToken).Vhc();
 
         State = ClientState.Connected;
     }
@@ -286,14 +286,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogInformation("Client is shutting down asynchronously...");
 
         if (_session != null) {
-            await _cancellationTokenSource.TryCancelAsync();
+            await _cancellationTokenSource.TryCancelAsync().Vhc();
 
             // a failed session close must not keep the adapter from its release below
-            await _session.TryDisposeAsync(LogLevel.Warning);
+            await _session.TryDisposeAsync(LogLevel.Warning).Vhc();
         }
 
         // flush and dispose the proxy connector while we can still await
-        await ProxyConnector.TryDisposeAsync();
+        await ProxyConnector.TryDisposeAsync().Vhc();
 
         // the session's disposed state may have disposed the client meanwhile
         lock (_disposeLock) {
@@ -301,7 +301,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _disposed = true;
         }
 
-        await _cancellationTokenSource.TryCancelAsync();
+        await _cancellationTokenSource.TryCancelAsync().Vhc();
         DisposeSyncMembers();
     }
 

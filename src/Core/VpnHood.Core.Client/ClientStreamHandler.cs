@@ -119,7 +119,7 @@ internal class ClientStreamHandler(
                 proxyManager.AddChannel(channel, disposeOnFail: true);
             }
             catch {
-                await hostConnection.DisposeAsync();
+                await hostConnection.DisposeAsync().Vhc();
                 throw;
             }
         }
@@ -153,7 +153,7 @@ internal class ClientStreamHandler(
         // handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
         // wait just 100ms, because is some case such as FTPS with explicit encryption, client waits for server data
         // before sending the TLS hello, so there is no initial data to prefetch
-        var initContents = await ReadInitContents(streamConnection.Stream, TimeSpan.FromMilliseconds(100), cancellationToken);
+        var initContents = await ReadInitContents(streamConnection.Stream, TimeSpan.FromMilliseconds(100), cancellationToken).Vhc();
 
         // they leave with the request, outside the proxy channel, so the speed limit is paid for them here
         if (initContents.Length > 0)
@@ -191,7 +191,7 @@ internal class ClientStreamHandler(
             // wait just 100ms, because is some case such as FTPS with explicit encryption, client waits for server data
             // before sending the TLS hello, so there is no initial data to prefetch
             var memory = new Memory<byte>(new byte[TransportDefaults.PrefetchStreamBufferSize]);
-            var read = await stream.ReadAsync(memory, linkedCts.Token);
+            var read = await stream.ReadAsync(memory, linkedCts.Token).Vhc();
             var initContents = memory[..read];
             return initContents;
         }

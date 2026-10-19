@@ -2,6 +2,7 @@
 using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Api;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.App.ApiImpl;
 
@@ -34,7 +35,7 @@ internal sealed class VpnProfilesApi(VpnHoodApp app) : IVpnProfilesApi
     public async Task Delete(Guid vpnProfileId, CancellationToken cancellationToken)
     {
         if (!app.IsIdle && vpnProfileId == app.CurrentVpnProfileInfo?.VpnProfileId)
-            await app.Disconnect();
+            await app.Disconnect().Vhc();
 
         app.VpnProfileService.Delete(vpnProfileId);
     }

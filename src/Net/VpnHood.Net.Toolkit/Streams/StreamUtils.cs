@@ -69,7 +69,7 @@ public static class StreamUtils
     {
         // read length
         var lengthBuffer = new byte[4].AsMemory();
-        await stream.ReadExactlyAsync(lengthBuffer, cancellationToken);
+        await stream.ReadExactlyAsync(lengthBuffer, cancellationToken).Vhc();
 
         // check unauthorized exception
         if (lengthBuffer.Span.SequenceEqual("HTTP"u8))

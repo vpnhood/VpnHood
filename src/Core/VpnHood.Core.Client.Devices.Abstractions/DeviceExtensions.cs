@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Devices.Abstractions;
@@ -27,7 +28,7 @@ public static class DeviceExtensions
         {
             bool result;
             try {
-                await Task.Delay(delay, cancellationToken);
+                await Task.Delay(delay, cancellationToken).Vhc();
             }
             finally {
                 result = device.TryBindProcessToVpn(value);

@@ -18,7 +18,7 @@ public static class StreamExtensions
             var totalRead = 0;
 
             while (totalRead < maxByteCount) {
-                var bytesRead = await stream.ReadAsync(buffer, totalRead, maxByteCount - totalRead, cancellationToken);
+                var bytesRead = await stream.ReadAsync(buffer, totalRead, maxByteCount - totalRead, cancellationToken).Vhc();
                 if (bytesRead == 0) break; // EOF
                 totalRead += bytesRead;
             }

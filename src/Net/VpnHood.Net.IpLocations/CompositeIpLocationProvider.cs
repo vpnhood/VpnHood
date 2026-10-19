@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.IpLocations;
 
@@ -20,7 +21,7 @@ public class CompositeIpLocationProvider(
                 if (providerTimeout.HasValue)
                     linkedToken.CancelAfter(providerTimeout.Value);
 
-                return await provider.GetLocation(ipAddress, linkedToken.Token);
+                return await provider.GetLocation(ipAddress, linkedToken.Token).Vhc();
             }
             catch (NotSupportedException) {
                 // no log

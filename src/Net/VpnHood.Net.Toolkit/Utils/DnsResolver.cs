@@ -11,7 +11,7 @@ public static class DnsResolver
         TimeSpan timeout, CancellationToken cancellationToken)
     {
         using var udpClientTemp = new UdpClient();
-        return await GetHostEntry(host, dnsEndPoint, udpClientTemp, timeout, cancellationToken);
+        return await GetHostEntry(host, dnsEndPoint, udpClientTemp, timeout, cancellationToken).Vhc();
     }
 
     public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,

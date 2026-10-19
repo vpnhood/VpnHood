@@ -1,3 +1,5 @@
+using VpnHood.Net.Toolkit.Extensions;
+
 namespace VpnHood.Net.Toolkit.Utils;
 
 public static class FileUtils
@@ -31,11 +33,11 @@ public static class FileUtils
         var startTime = DateTime.UtcNow;
         while (true) {
             try {
-                await File.WriteAllTextAsync(filePath, content, cancellationToken);
+                await File.WriteAllTextAsync(filePath, content, cancellationToken).Vhc();
                 return;
             }
             catch (IOException) when (DateTime.UtcNow - startTime < timeout) {
-                await Task.Delay(100, cancellationToken);
+                await Task.Delay(100, cancellationToken).Vhc();
             }
         }
     }
@@ -49,11 +51,11 @@ public static class FileUtils
             try {
                 await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 using var reader = new StreamReader(stream);
-                var content = await reader.ReadToEndAsync(cancellationToken);
+                var content = await reader.ReadToEndAsync(cancellationToken).Vhc();
                 return content;
             }
             catch (IOException) when (DateTime.UtcNow - startTime < timeout) {
-                await Task.Delay(100, cancellationToken);
+                await Task.Delay(100, cancellationToken).Vhc();
             }
         }
     }

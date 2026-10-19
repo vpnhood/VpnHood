@@ -33,7 +33,7 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
     public static async Task<IpLocationSqliteProvider> Open(string dbPath, string? userAgent = null)
     {
         var provider = new IpLocationSqliteProvider(dbPath, userAgent);
-        await provider._connection.Value.OpenAsync();
+        await provider._connection.Value.OpenAsync().Vhc();
         return provider;
     }
 
@@ -44,7 +44,7 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
 
         var provider = new IpLocationSqliteProvider(connection, disposeConnection: !leaveOpen, userAgent);
         if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync();
+            await connection.OpenAsync().Vhc();
 
         return provider;
     }
@@ -59,7 +59,7 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         cmd.CommandText = "SELECT CountryCode FROM IpLocations WHERE @ipBytes BETWEEN StartIp AND EndIp LIMIT 1";
         cmd.Parameters.AddWithValue("@ipBytes", ipBytes);
 
-        var countryCode = (string?)await cmd.ExecuteScalarAsync(cancellationToken);
+        var countryCode = (string?)await cmd.ExecuteScalarAsync(cancellationToken).Vhc();
         if (countryCode == null)
             throw new KeyNotFoundException($"Could not find location for given ip. IpAddress: {ipAddress}.");
 
@@ -80,7 +80,7 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
             ?? await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, _userAgent, cancellationToken).Vhc()
             ?? throw new Exception("Could not find any public ip address.");
 
-        return await GetLocation(ipAddress, cancellationToken);
+        return await GetLocation(ipAddress, cancellationToken).Vhc();
     }
 
     public async Task<IpRangeOrderedList> GetIpRanges(string countryCode, CancellationToken cancellationToken)
@@ -93,8 +93,8 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
             "SELECT StartIp, EndIp FROM IpLocations WHERE CountryCode = @countryCode COLLATE NOCASE ORDER BY StartIp";
         cmd.Parameters.AddWithValue("@countryCode", countryCode);
 
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken)) {
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).Vhc();
+        while (await reader.ReadAsync(cancellationToken).Vhc()) {
             var startIpBytes = (byte[])reader[0];
             var endIpBytes = (byte[])reader[1];
             ranges.Add(new IpRange(FromBytes(startIpBytes), FromBytes(endIpBytes)));
@@ -109,8 +109,8 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         await using var cmd = _connection.Value.CreateCommand();
         cmd.CommandText = "SELECT DISTINCT CountryCode FROM IpLocations ORDER BY CountryCode";
 
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken)) {
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).Vhc();
+        while (await reader.ReadAsync(cancellationToken).Vhc()) {
             var countryCode = (string)reader[0];
             countryCodes.Add(countryCode.ToUpperInvariant());
         }
@@ -143,7 +143,7 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
     public async ValueTask DisposeAsync()
     {
         if (_connection.IsValueCreated && _disposeConnection)
-            await _connection.Value.DisposeAsync();
+            await _connection.Value.DisposeAsync().Vhc();
     }
 
     public void Dispose()

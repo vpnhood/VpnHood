@@ -32,7 +32,7 @@ public class LocalIpRangeLocationProvider(
 
     public async Task<string[]> GetCountryCodes(CancellationToken cancellationToken)
     {
-        using var _ = await _lock.LockAsync(cancellationToken);
+        using var _ = await _lock.LockAsync(cancellationToken).Vhc();
         if (_countryCodes != null)
             return _countryCodes;
 
@@ -47,7 +47,7 @@ public class LocalIpRangeLocationProvider(
 
     public async Task<IpRangeOrderedList> GetIpRanges(string countryCode, CancellationToken cancellationToken)
     {
-        using var _ = await _lock.LockAsync(cancellationToken);
+        using var _ = await _lock.LockAsync(cancellationToken).Vhc();
         var ipRanges = await GetIpRangesInternal(countryCode, cancellationToken).Vhc();
         _countryIpRanges.TryAdd(countryCode, ipRanges);
         return ipRanges;
@@ -63,7 +63,7 @@ public class LocalIpRangeLocationProvider(
             var zipArchive = await GetZipArchive(cancellationToken).Vhc();
             var entry = zipArchive.GetEntry($"{countryCode.ToLower()}.ips")
                         ?? throw new NotExistsException();
-            await using var stream = await entry.OpenAsync(cancellationToken);
+            await using var stream = await entry.OpenAsync(cancellationToken).Vhc();
             return IpRangeOrderedList.Deserialize(stream);
         }
         catch (Exception ex) {
@@ -79,7 +79,7 @@ public class LocalIpRangeLocationProvider(
             ?? await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6, userAgent, cancellationToken).Vhc()
             ?? throw new Exception("Could not find any public ip address.");
 
-        var ipLocation = await GetLocation(ipAddress, cancellationToken);
+        var ipLocation = await GetLocation(ipAddress, cancellationToken).Vhc();
         _lasCurrentCountryCode = ipLocation.CountryCode;
         return ipLocation;
     }
@@ -94,7 +94,7 @@ public class LocalIpRangeLocationProvider(
         }
 
         // iterate through all countries
-        var countryCodes = await GetCountryCodes(cancellationToken);
+        var countryCodes = await GetCountryCodes(cancellationToken).Vhc();
         foreach (var countryCode in countryCodes) {
             var ipRanges = await GetIpRanges(countryCode, cancellationToken).Vhc();
             if (ipRanges.Any(x => x.IsInRange(ipAddress)))

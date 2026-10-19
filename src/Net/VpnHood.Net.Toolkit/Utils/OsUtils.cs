@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Net.Toolkit.Utils;
@@ -93,10 +94,10 @@ public static class OsUtils
         // both streams at once, as in Execute
         var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
         var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await errorTask;
-        var output = await outputTask;
+        var error = await errorTask.Vhc();
+        var output = await outputTask.Vhc();
 
-        await WaitForExitAsync(process, cancellationToken);
+        await WaitForExitAsync(process, cancellationToken).Vhc();
         if (process.ExitCode != 0) {
             error += $". Command: {commandLine}.";
             throw new ExternalException(error, process.ExitCode);
@@ -115,6 +116,6 @@ public static class OsUtils
         process.EnableRaisingEvents = true;
 
         // Wait for process exit or cancellation
-        await tcs.Task.WaitAsync(cancellationToken);
+        await tcs.Task.WaitAsync(cancellationToken).Vhc();
     }
 }

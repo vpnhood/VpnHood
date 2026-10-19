@@ -24,9 +24,9 @@ public static class Ip2LocationDbParser
         using var httpClient = new HttpClient();
         // ReSharper disable once StringLiteralTypo
         var url = $"https://www.ip2location.com/download/?token={apiKey}&file=DB1LITECSVIPV6";
-        await using var ipLocationZipNetStream = await httpClient.GetStreamAsync(url, cancellationToken);
+        await using var ipLocationZipNetStream = await httpClient.GetStreamAsync(url, cancellationToken).Vhc();
         using var ipLocationZipStream = new MemoryStream();
-        await ipLocationZipNetStream.CopyToAsync(ipLocationZipStream, cancellationToken);
+        await ipLocationZipNetStream.CopyToAsync(ipLocationZipStream, cancellationToken).Vhc();
         ipLocationZipStream.Position = 0;
 
         // build new ipLocation filePath
@@ -35,11 +35,11 @@ public static class Ip2LocationDbParser
         var ipLocationEntry = ipLocationZipArchive.GetEntry(entryName) ??
                               throw new Exception($"{entryName} not found in the zip file!");
 
-        await using var crvStream = await ipLocationEntry.OpenAsync(cancellationToken);
+        await using var crvStream = await ipLocationEntry.OpenAsync(cancellationToken).Vhc();
         if (forIpRange)
-            await BuildLocalIpRangeLocationDb(crvStream, filePath, cancellationToken);
+            await BuildLocalIpRangeLocationDb(crvStream, filePath, cancellationToken).Vhc();
         else
-            await BuildLocalIpLocationDb(crvStream, filePath, cancellationToken);
+            await BuildLocalIpLocationDb(crvStream, filePath, cancellationToken).Vhc();
     }
 
     public static async Task BuildLocalIpRangeLocationDb(Stream crvStream, string outputZipFile,
@@ -54,17 +54,17 @@ public static class Ip2LocationDbParser
         foreach (var countryIpRange in countryIpRanges.OrderBy(x => x.Key)) {
             var ipRanges = new IpRangeOrderedList(countryIpRange.Value);
             var entry = newArchive.CreateEntry($"{countryIpRange.Key}.ips", CompressionLevel.NoCompression);
-            await using var entryStream = await entry.OpenAsync(cancellationToken);
+            await using var entryStream = await entry.OpenAsync(cancellationToken).Vhc();
             ipRanges.Serialize(entryStream);
         }
 
         // add checksum file
         var checksumEntry = newArchive.CreateEntry("_checksum.txt", CompressionLevel.NoCompression);
-        await using var checksumStream = await checksumEntry.OpenAsync(cancellationToken);
+        await using var checksumStream = await checksumEntry.OpenAsync(cancellationToken).Vhc();
         var checksum = ComputeChecksum(countryIpRanges);
         await using var writer = new StreamWriter(checksumStream, Encoding.ASCII, leaveOpen: true);
-        await writer.WriteAsync(checksum.AsMemory(), cancellationToken);
-        await writer.FlushAsync(cancellationToken);
+        await writer.WriteAsync(checksum.AsMemory(), cancellationToken).Vhc();
+        await writer.FlushAsync(cancellationToken).Vhc();
     }
 
     public static async Task BuildLocalIpLocationDb(Stream crvStream, string outputFile,

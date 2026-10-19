@@ -278,7 +278,7 @@ public abstract class PacketTransportBase : IPacketTransport
     {
         try {
             var ipPackets = new List<IpPacket>(_singleMode ? 1 : _queueCapacity);
-            while (await _sendChannel.Reader.WaitToReadAsync() && !IsDisposed && !IsDisposing) {
+            while (await _sendChannel.Reader.WaitToReadAsync().Vhc() && !IsDisposed && !IsDisposing) {
                 // marked before the queue is emptied, so IsSending never reads false in between
                 _isSending = true;
                 ipPackets.Clear();
@@ -290,7 +290,7 @@ public abstract class PacketTransportBase : IPacketTransport
                 // send packets; a failed send is handled there, so a fault here is one whose cleanup failed too
                 var task = SendPacketsInternalAsync(ipPackets);
                 if (!task.IsCompletedSuccessfully)
-                    await task;
+                    await task.Vhc();
             }
         }
         catch (Exception ex) {

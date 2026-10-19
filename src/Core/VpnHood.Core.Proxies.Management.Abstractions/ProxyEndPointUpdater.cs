@@ -1,3 +1,5 @@
+using VpnHood.Net.Toolkit.Extensions;
+
 namespace VpnHood.Core.Proxies.Management.Abstractions;
 
 public static class ProxyEndPointUpdater
@@ -89,7 +91,7 @@ public static class ProxyEndPointUpdater
         Uri url,
         CancellationToken cancellationToken = default)
     {
-        var content = await httpClient.GetStringAsync(url, cancellationToken);
+        var content = await httpClient.GetStringAsync(url, cancellationToken).Vhc();
         var proxyEndPoints = ProxyEndPointParser
             .ExtractFromContent(content)
             .Select(ProxyEndPointParser.FromUrl)

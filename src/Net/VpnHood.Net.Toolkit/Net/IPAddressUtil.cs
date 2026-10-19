@@ -131,7 +131,7 @@ public static class IPAddressUtil
             // create linked cancellation token of max 5 seconds
             using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             linkedToken.CancelAfter(TimeSpan.FromSeconds(5));
-            return await GetPublicIpAddressByCloudflare(addressFamily, userAgent, linkedToken.Token);
+            return await GetPublicIpAddressByCloudflare(addressFamily, userAgent, linkedToken.Token).Vhc();
         }
         catch {
             /* continue next service */
@@ -140,7 +140,7 @@ public static class IPAddressUtil
         try {
             using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             linkedToken.CancelAfter(TimeSpan.FromSeconds(5));
-            return await GetPublicIpAddressByIpify(addressFamily, userAgent, linkedToken.Token);
+            return await GetPublicIpAddressByIpify(addressFamily, userAgent, linkedToken.Token).Vhc();
         }
         catch {
             /* ignore */

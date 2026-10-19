@@ -228,7 +228,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // SetSessionName
             if (!string.IsNullOrEmpty(options.SessionName))
-                await SetSessionName(options.SessionName, cancellationToken);
+                await SetSessionName(options.SessionName, cancellationToken).Vhc();
 
             // Set adapter IPv4 address
             if (adapterIpNetworkV4 != null) {
@@ -314,7 +314,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // add app filter
             if (IsAppFilterSupported)
-                await SetAppFilters(options.IncludeApps, options.ExcludeApps, cancellationToken);
+                await SetAppFilters(options.IncludeApps, options.ExcludeApps, cancellationToken).Vhc();
 
             // open the adapter; not after a stop, as the routes
             cancellationToken.ThrowIfCancellationRequested();
@@ -405,13 +405,13 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         // make sure current app is in the allowed list
         if (includeApps != null) {
             includeApps = includeApps.Concat([appPackageId]).Distinct();
-            await SetAllowedApps(includeApps, cancellationToken);
+            await SetAllowedApps(includeApps, cancellationToken).Vhc();
         }
 
         // make sure current app is not in the disallowed list
         if (excludeApps != null) {
             excludeApps = excludeApps.Where(x => x != appPackageId).Distinct();
-            await SetDisallowedApps(excludeApps, cancellationToken);
+            await SetDisallowedApps(excludeApps, cancellationToken).Vhc();
         }
     }
 

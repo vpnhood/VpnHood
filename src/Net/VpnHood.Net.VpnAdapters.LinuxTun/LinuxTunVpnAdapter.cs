@@ -622,7 +622,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
         try {
             // --- Try systemd-resolved ---
-            await SetDnsServersByResolvectl(dnsServers, cancellationToken);
+            await SetDnsServersByResolvectl(dnsServers, cancellationToken).Vhc();
         }
         // a cancelled start, whatever ended resolvectl: no fallback, which runs uncancelled
         catch (Exception) when (cancellationToken.IsCancellationRequested) {
@@ -632,7 +632,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             // --- Fallback: use resolvconf ---
             VhLogger.Instance.LogWarning(ex, "Failed to set DNS using resolvectl. Trying fallback to resolvconf...");
             try {
-                await SetDnsServersByResolvconf(dnsServers);
+                await SetDnsServersByResolvconf(dnsServers).Vhc();
             }
             // Fail-closed: a VPN up without its DNS servers sends the device's DNS around it. A NetworkManager
             // box without systemd-resolved (Arch's default) gets here, as its resolvconf is systemd-resolved's

@@ -36,7 +36,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
                 .Vhc() ??
             throw new Exception("Could not find any public ip address.");
 
-        var ipLocation = await GetLocation(ipAddress, cancellationToken);
+        var ipLocation = await GetLocation(ipAddress, cancellationToken).Vhc();
         return ipLocation;
     }
 

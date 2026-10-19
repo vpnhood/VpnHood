@@ -284,7 +284,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             ? $"interface ipv4 add route {ipNetwork} \"{AdapterName}\""
             : $"interface ipv6 add route {ipNetwork} \"{AdapterName}\"";
 
-        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken).Vhc();
     }
 
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)

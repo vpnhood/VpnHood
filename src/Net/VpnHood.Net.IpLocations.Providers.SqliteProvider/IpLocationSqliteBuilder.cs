@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using Microsoft.Data.Sqlite;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.IpLocations.Providers.SqliteProvider;
@@ -23,7 +24,7 @@ public static class IpLocationSqliteBuilder
         }.ToString();
 
         await using var connection = new SqliteConnection(connectionString);
-        await Build(sourceStream, connection);
+        await Build(sourceStream, connection).Vhc();
     }
 
     public static async Task Build(Stream sourceStream, SqliteConnection connection)
@@ -32,20 +33,20 @@ public static class IpLocationSqliteBuilder
         ArgumentNullException.ThrowIfNull(connection);
 
         if (connection.State != ConnectionState.Open)
-            await connection.OpenAsync();
+            await connection.OpenAsync().Vhc();
 
         // read checksum from archive and skip rebuild when already up to date
         sourceStream.Position = 0;
         await using var archive = new ZipArchive(sourceStream, ZipArchiveMode.Read, leaveOpen: true);
-        var newChecksum = await ReadChecksum(archive);
-        var oldChecksum = await GetChecksum(connection);
+        var newChecksum = await ReadChecksum(archive).Vhc();
+        var oldChecksum = await GetChecksum(connection).Vhc();
         if (oldChecksum == newChecksum)
             return;
 
         // reset schema
         await using (var cleanup = connection.CreateCommand()) {
             cleanup.CommandText = "DROP TABLE IF EXISTS IpLocations; DROP TABLE IF EXISTS Metadata;";
-            await cleanup.ExecuteNonQueryAsync();
+            await cleanup.ExecuteNonQueryAsync().Vhc();
         }
 
         // create schema and indexes
@@ -65,10 +66,10 @@ public static class IpLocationSqliteBuilder
                 CREATE INDEX idx_CountryCode ON IpLocations(CountryCode);
                 CREATE INDEX idx_StartIp ON IpLocations(StartIp);
             ";
-            await cmd.ExecuteNonQueryAsync();
+            await cmd.ExecuteNonQueryAsync().Vhc();
         }
 
-        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync()) {
+        await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync().Vhc()) {
             await using var cmd = connection.CreateCommand();
             cmd.Transaction = transaction;
             cmd.CommandText =
@@ -81,14 +82,14 @@ public static class IpLocationSqliteBuilder
             // stream each country file to keep memory low
             foreach (var entry in archive.Entries.Where(e => Path.GetExtension(e.Name) == ".ips")) {
                 var countryCode = Path.GetFileNameWithoutExtension(entry.Name);
-                await using var entryStream = await entry.OpenAsync();
+                await using var entryStream = await entry.OpenAsync().Vhc();
                 var ipRanges = IpRangeOrderedList.Deserialize(entryStream);
 
                 foreach (var ipRange in ipRanges) {
                     countryCodeParam.Value = countryCode;
                     startIpParam.Value = ToBytes(ipRange.FirstIpAddress);
                     endIpParam.Value = ToBytes(ipRange.LastIpAddress);
-                    await cmd.ExecuteNonQueryAsync();
+                    await cmd.ExecuteNonQueryAsync().Vhc();
                 }
             }
 
@@ -98,15 +99,15 @@ public static class IpLocationSqliteBuilder
             metaCmd.CommandText = "INSERT OR REPLACE INTO Metadata (Key, Value) VALUES (@key, @value)";
             metaCmd.Parameters.AddWithValue("@key", "Checksum");
             metaCmd.Parameters.AddWithValue("@value", newChecksum);
-            await metaCmd.ExecuteNonQueryAsync();
+            await metaCmd.ExecuteNonQueryAsync().Vhc();
 
-            await transaction.CommitAsync();
+            await transaction.CommitAsync().Vhc();
         }
 
         // compact database
         await using (var vacuumCmd = connection.CreateCommand()) {
             vacuumCmd.CommandText = "VACUUM";
-            await vacuumCmd.ExecuteNonQueryAsync();
+            await vacuumCmd.ExecuteNonQueryAsync().Vhc();
         }
     }
 
@@ -114,22 +115,22 @@ public static class IpLocationSqliteBuilder
     {
         await using var tableCmd = connection.CreateCommand();
         tableCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='Metadata'";
-        var hasTable = (string?)await tableCmd.ExecuteScalarAsync();
+        var hasTable = (string?)await tableCmd.ExecuteScalarAsync().Vhc();
         if (hasTable == null)
             return null;
 
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = "SELECT Value FROM Metadata WHERE Key = 'Checksum' LIMIT 1";
-        return (string?)await cmd.ExecuteScalarAsync();
+        return (string?)await cmd.ExecuteScalarAsync().Vhc();
     }
 
     private static async Task<string> ReadChecksum(ZipArchive archive)
     {
         var checksumEntry = archive.GetEntry("_checksum.txt") ??
                             throw new FileNotFoundException("checksum.txt not found in archive");
-        await using var stream = await checksumEntry.OpenAsync();
+        await using var stream = await checksumEntry.OpenAsync().Vhc();
         using var reader = new StreamReader(stream, Encoding.ASCII, leaveOpen: true);
-        var content = await reader.ReadToEndAsync();
+        var content = await reader.ReadToEndAsync().Vhc();
         return content.Trim();
     }
 

@@ -215,7 +215,7 @@ public class ManagedProxyConnector : IProxyConnector
             // GetOrderedEntries then checks the merged endpoints on that connect anyway.
             var socketFactory = _lastSocketFactory;
             if (socketFactory != null)
-                await CheckServers(socketFactory, cancellationToken);
+                await CheckServers(socketFactory, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to update proxy list from {Url}", _autoUpdateOptions.Url);
@@ -408,7 +408,7 @@ public class ManagedProxyConnector : IProxyConnector
     {
         // lock till get an ordered list with at least one succeeded server
         // if there is a failed server on top, all connection must wait till re-check is done
-        using var scopeLock = await _connectLock.LockAsync(cancellationToken);
+        using var scopeLock = await _connectLock.LockAsync(cancellationToken).Vhc();
         Interlocked.Increment(ref _queuePosition);
 
         var endPointEntries = GetOrderedEntriesQuery().ToArray();
@@ -416,7 +416,7 @@ public class ManagedProxyConnector : IProxyConnector
             return endPointEntries;
 
         // push the failed ones to the end and try again
-        await CheckServers(socketFactory, endPointEntries, 1, cancellationToken);
+        await CheckServers(socketFactory, endPointEntries, 1, cancellationToken).Vhc();
         return [.. GetOrderedEntriesQuery()];
     }
 
@@ -426,7 +426,7 @@ public class ManagedProxyConnector : IProxyConnector
         _lastSocketFactory = socketFactory;
 
         // get ordered endpoints
-        var entries = await GetOrderedEntries(socketFactory, cancellationToken);
+        var entries = await GetOrderedEntries(socketFactory, cancellationToken).Vhc();
 
         // try to connect to a proxy server
         foreach (var entry in entries) {

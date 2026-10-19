@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.IpLocations;
 
@@ -14,7 +15,7 @@ public class CompositeCurrentIpLocationProvider(
             try {
                 using var providerTimeoutCts = new CancellationTokenSource(providerTimeout ?? TimeSpan.FromSeconds(5));
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, providerTimeoutCts.Token);
-                return await provider.GetCurrentLocation(linkedToken.Token);
+                return await provider.GetCurrentLocation(linkedToken.Token).Vhc();
             }
             catch (NotSupportedException) {
                 // no log

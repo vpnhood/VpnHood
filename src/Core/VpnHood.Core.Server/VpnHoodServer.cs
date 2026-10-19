@@ -589,14 +589,17 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
     // The quick close: it waits for nothing, so the sessions' usage since their last sync is lost, and the host's
     // close goes on alone. It may come while the graceful close runs, so it takes none of its locks, and each part
-    // guards its own close; the job's cancels the status upload and configuration that close may wait for
+    // guards its own close; the job's cancels the status upload and configuration that close may wait for. The
+    // graceful close ends with it, for what is local
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _quickClosed, true)) return;
-        _disposed = true;
 
+        // a graceful close that came first has logged the start
         using var scope = VhLogger.Instance.BeginScope("Server");
-        VhLogger.Instance.LogInformation("Server is shutting down at once...");
+        if (!_disposed)
+            VhLogger.Instance.LogInformation("Server is shutting down at once...");
+        _disposed = true;
 
         _configureAndSendStatusJob.Dispose();
         _ = ServerHost.TryDisposeAsync(LogLevel.Warning);
@@ -633,13 +636,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         // QUIC peers, so past its limit the close goes on: the last sync and the IP removal fit a service stop's 30 s
         await ServerHost.TryDisposeAsync(_serverHostDisposeTimeout, LogLevel.Warning).Vhc();
         await SessionManager.DisposeAsync().Vhc();
-        _http01ChallengeService.Dispose();
-        _netConfigurationService?.Dispose();
 
-        if (_autoDisposeAccessManager)
-            AccessManager.Dispose();
-
-        State = ServerState.Disposed;
-        VhLogger.Instance.LogInformation("Bye Bye!");
+        // the rest is local, as in the quick close
+        Dispose();
     }
 }

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<!-- Build-time checks of this repo's own code, given to every project by Directory.Build.props
+	     and switched on per folder by .editorconfig; never packed. -->
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<Description>VpnHood's analyzers for awaits: .Vhc() in library and background code, a fixed ConfigureAwait in UI code</Description>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
+	</ItemGroup>
+
+</Project>

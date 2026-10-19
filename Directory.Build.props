@@ -69,4 +69,12 @@
     <None Include="$(MSBuildThisFileDirectory)VpnHood.png" Link="Resources\VpnHood.png" Pack="true" PackagePath="" Visible="false" />
   </ItemGroup>
 
+  <!-- The repo's own analyzers (VH0001: every await says where it continues; VH0002: no .Vhc() in UI
+       code), run by every project; .editorconfig says where each warns. Only an analyzer: nothing of
+       it is referenced or packed. -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'VpnHood.Net.Toolkit.Analyzers'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Net\VpnHood.Net.Toolkit.Analyzers\VpnHood.Net.Toolkit.Analyzers.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
 </Project>

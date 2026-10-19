@@ -45,6 +45,8 @@ The design and code rules agreed while building are in
 - Use `.Vhc()` instead of `.ConfigureAwait(false)` if it is available, but do not add it to the project if
   it is not available.
 - For UI code such as Android UI, always use `.ConfigureAwait(false)` when it is required.
+- The build warns on an await that says neither in library and background code (VH0001), and on `.Vhc()`
+  in code that runs on a UI thread (VH0002): `src/Net/VpnHood.Net.Toolkit.Analyzers`, by folder in `.editorconfig`.
 
 ## Documentation
 

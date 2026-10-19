@@ -217,6 +217,7 @@
     <Project Path="src/Net/VpnHood.Net.PacketTransports/VpnHood.Net.PacketTransports.csproj" />
     <Project Path="src/Net/VpnHood.Net.Packets/VpnHood.Net.Packets.csproj" />
     <Project Path="src/Net/VpnHood.Net.Toolkit/VpnHood.Net.Toolkit.csproj" />
+    <Project Path="src/Net/VpnHood.Net.Toolkit.Analyzers/VpnHood.Net.Toolkit.Analyzers.csproj" />
   </Folder>
   <Folder Name="/src/Net/IpLocations/">
     <Project Path="src/Net/VpnHood.Net.IpLocations.Providers.SqliteProvider/VpnHood.Net.IpLocations.Providers.SqliteProvider.csproj" />

@@ -119,7 +119,7 @@ internal class DownloadService(string? downloadsPath)
         }
 
         streamConnection.PreventReuse();
-        await streamConnection.DisposeAsync();
+        await streamConnection.DisposeAsync().Vhc();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Download completed for random data. SizeMB: {SizeMb}, RemoteEp: {RemoteEp}",
@@ -150,7 +150,7 @@ internal class DownloadService(string? downloadsPath)
 
         // Log download completion
         streamConnection.PreventReuse();
-        await streamConnection.DisposeAsync();
+        await streamConnection.DisposeAsync().Vhc();
 
         // Log download completion
         VhLogger.Instance.LogInformation(GeneralEventId.Request,

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using VpnHood.AppUi.Hosting.Desktop.Linux.Utils;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
+using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 
@@ -31,7 +32,7 @@ public class LinuxInstanceController(IAppDesktopPaths paths) : IAppInstanceContr
     // The one call whose ANSWER is wanted rather than its output: --quiet prints nothing and says
     // everything in the exit code. No sudo - reading a unit's state needs no privilege.
     public async Task<bool> IsRunning(CancellationToken cancellationToken) =>
-        await Run(["systemctl", "is-active", "--quiet", paths.InstanceName], cancellationToken, elevate: false) == 0;
+        await Run(["systemctl", "is-active", "--quiet", paths.InstanceName], cancellationToken, elevate: false).Vhc() == 0;
 
     // systemctl alone, as whoever runs this, and polkit asks: the desktop session's agent puts its
     // password box up for the window, which has no terminal for sudo, and systemctl prompts in a
@@ -39,7 +40,7 @@ public class LinuxInstanceController(IAppDesktopPaths paths) : IAppInstanceContr
     // type instead. The unit is the package installer's, so there is never one to register.
     public async Task Start(bool mayRegister, CancellationToken cancellationToken)
     {
-        if (await Run(["systemctl", "start", paths.InstanceName], cancellationToken, elevate: false) == 0)
+        if (await Run(["systemctl", "start", paths.InstanceName], cancellationToken, elevate: false).Vhc() == 0)
             return;
 
         throw new InvalidOperationException(LinuxUser.IsRoot
@@ -98,7 +99,7 @@ public class LinuxInstanceController(IAppDesktopPaths paths) : IAppInstanceContr
 
         // journalctl -f ends with the caller's Ctrl+C, which reaches the child as its own SIGINT;
         // the wait simply returns when it does.
-        await process.WaitForExitAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken).Vhc();
         return process.ExitCode;
     }
 }

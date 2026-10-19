@@ -376,7 +376,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             Parameters = new Dictionary<string, object?> {
                 { "session_count", Sessions.Count(x => !x.Value.IsDisposed) }
             }
-        }, cancellationToken);
+        }, cancellationToken).Vhc();
     }
 
     private Session[] GetIdleSessions()

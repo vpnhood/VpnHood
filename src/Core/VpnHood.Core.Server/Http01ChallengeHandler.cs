@@ -54,7 +54,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
             // prevent duplicate request from each ip if too many requests come in
             using var lockAsyncResult = ThrottleRequests
                 ? await AsyncLock.LockAsync(
-                    IPAddressUtil.GetDosKey(client.Client.GetRemoteEndPoint().Address), TimeSpan.Zero, linkedCt.Token)
+                    IPAddressUtil.GetDosKey(client.Client.GetRemoteEndPoint().Address), TimeSpan.Zero, linkedCt.Token).Vhc()
                 : null;
             if (lockAsyncResult is { Succeeded: false })
                 throw new HttpRequestException("Too many requests from the same IP address.", null, HttpStatusCode.TooManyRequests);
@@ -115,7 +115,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
 
         // Get key authorization
         VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "HTTP Challenge. Request: {request}", request);
-        var keyAuthorization = await GetKeyAuthorization(token, cancellationToken);
+        var keyAuthorization = await GetKeyAuthorization(token, cancellationToken).Vhc();
 
         // Send response
         await stream.WriteAsync(HttpResponseBuilder.Http01(keyAuthorization), cancellationToken).Vhc();
@@ -125,7 +125,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
 
     private async Task<string> GetKeyAuthorization(string token, CancellationToken cancellationToken)
     {
-        var keyAuthorization = await keyAuthorizationFunc(token, cancellationToken);
+        var keyAuthorization = await keyAuthorizationFunc(token, cancellationToken).Vhc();
         if (string.IsNullOrEmpty(keyAuthorization))
             throw new KeyNotFoundException();
         

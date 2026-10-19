@@ -1,6 +1,6 @@
 # VpnHood! MANAGER - Privacy Policy
 
-**PLEASE NOTE:** This privacy policy applies just to "VpnHood! MANAGER". To see the privacy policy of the  "VpnHood! CLIENT" & "VpnHood! SERVER", visit the following page: https://www.vpnhood.com/privacy-policy  
+**PLEASE NOTE:** This privacy policy applies just to "VpnHood! MANAGER". To see the privacy policies of our other products, visit the following page: https://www.vpnhood.com/legal/  
 
 This page informs website visitors regarding our policies on the collection, use, and disclosure of Personal Information. If anyone decides to use our service, the VpnHood website, and the VpnHood! MANAGER.  
 

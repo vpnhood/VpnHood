@@ -7,7 +7,7 @@ These Terms of Use ("Terms") are an agreement between you and **OmegaHood LLC** 
 (together, the "Service"). By downloading, purchasing, or using the Service, you agree to these
 Terms. If you do not agree, do not use the Service.
 
-Our [Privacy Policy](https://www.vpnhood.com/vpnhood-connect-privacy-policy/) explains how the
+Our [Privacy Policy](https://www.vpnhood.com/legal/vpnhood-connect/privacy-policy/) explains how the
 Service handles data. A store or platform through which you obtain the App or a subscription may
 also impose terms that apply to your download, purchase, and use. Its rules control if they conflict
 with these Terms on billing, cancellation, or refunds that it handles.
@@ -129,7 +129,7 @@ be extended as that subscription renews.
 Deleting the App or your VpnHood account **does not cancel an Apple or Google subscription**. Cancel
 it in the store where you purchased it. Deleting your VpnHood account cancels recurring website
 billing at the end of the paid period, as described in the
-[Privacy Policy](https://www.vpnhood.com/vpnhood-connect-privacy-policy/#delete-your-account).
+[Privacy Policy](https://www.vpnhood.com/legal/vpnhood-connect/privacy-policy/#delete-your-account).
 
 ## Accounts
 

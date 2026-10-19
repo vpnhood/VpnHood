@@ -69,11 +69,11 @@ internal static class Program
             // drawer - have nothing to show, which is a look at a build no one ships
             Links = new AppLinks {
                 PrivacyPolicy = new Uri(isConnect
-                    ? "https://www.vpnhood.com/vpnhood-connect-privacy-policy"
-                    : "https://www.vpnhood.com/vpnhood-client-privacy-policy"),
+                    ? "https://www.vpnhood.com/legal/vpnhood-connect/privacy-policy/"
+                    : "https://www.vpnhood.com/legal/vpnhood-client/privacy-policy/"),
                 TermsOfUse = new Uri(isConnect
-                    ? "https://www.vpnhood.com/legal/vpnhood-connect-terms-of-use"
-                    : "https://www.vpnhood.com/legal/vpnhood-client-terms-of-use"),
+                    ? "https://www.vpnhood.com/legal/vpnhood-connect/terms-of-use/"
+                    : "https://www.vpnhood.com/legal/vpnhood-client/terms-of-use/"),
                 Website = new Uri("https://www.vpnhood.com/"),
                 WhatsNew = new Uri("https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md"),
                 Feedback = new Uri("https://docs.google.com/forms/d/e/1FAIpQLSd5AQesTSbDo23_4CkNiKmSPtPBaZIuFjAFnjqLo6XGKG5gyg/viewform?usp=sf_link"),

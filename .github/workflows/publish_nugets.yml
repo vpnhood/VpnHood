@@ -61,11 +61,12 @@ jobs:
           dotnet-version: "11.0"
           dotnet-quality: preview
       # The packable set spans net*-android and net*-ios TFMs; install those workloads (for the SDK
-      # resolved here, i.e. 11 preview) so `dotnet pack` can build them. net*-windows / WPF build
+      # resolved here, i.e. 11 preview) so `dotnet pack` can build them, and MAUI's for Android and
+      # Windows, the TFMs of the MAUI host (VpnHood.AppUi.Hosting.Maui). net*-windows / WPF build
       # natively on Windows.
-      - name: Install .NET workloads (android, ios)
+      - name: Install .NET workloads (android, ios, maui)
         shell: pwsh
-        run: dotnet workload install android ios
+        run: dotnet workload install android ios maui-android maui-windows
       # nuget.org Trusted Publishing: the job's OIDC token buys a key valid for one hour, so it is
       # requested right before the publish. The policy (created by trudyhood, package owner vpnhood)
       # names this repo and this file's NAME - renaming the file breaks publishing until it is updated.

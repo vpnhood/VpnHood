@@ -35,7 +35,14 @@ public sealed class FileLogger(string filePath) : ILogger
     public void Close()
     {
         lock (_lock) {
-            _writer?.Dispose();
+            // the close flushes what is buffered, which a full disk fails; the file is closed all the same
+            try {
+                _writer?.Dispose();
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"Error: Could not close the log. {ex.Message}");
+            }
+
             _writer = null;
         }
     }

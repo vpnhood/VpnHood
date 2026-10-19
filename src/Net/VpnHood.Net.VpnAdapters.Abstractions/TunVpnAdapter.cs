@@ -1087,7 +1087,15 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         // notify the subscribers that the adapter is disposed
         NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged -= NetworkChange_NetworkAvailabilityChanged;
-        Disposed?.Invoke(this, EventArgs.Empty);
+        try {
+            Disposed?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex) {
+            // a failed handler must not stop the release
+            VhLogger.Instance.LogError(ex, "A handler of the adapter's Disposed event failed. AdapterName: {AdapterName}",
+                AdapterName);
+        }
+
         Disposed = null;
 
         base.DisposeManaged();

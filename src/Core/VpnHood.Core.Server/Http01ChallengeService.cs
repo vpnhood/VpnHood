@@ -11,36 +11,45 @@ public class Http01ChallengeService(Http01KeyAuthorizationFunc keyAuthorizationF
 {
     public bool ThrottleRequests => throttleRequests;
     private readonly List<Http01ChallengeHandler> _services = [];
+    private readonly Lock _servicesLock = new(); // a configuration's start may meet the server's quick close
     private bool _disposed;
 
     public int Start(IEnumerable<IPAddress> ipAddresses)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        Stop();
+        lock (_servicesLock) {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            StopServices();
 
-        foreach (var ipAddress in ipAddresses) {
-            var service = new Http01ChallengeHandler(ipAddress, keyAuthorizationFunc) {
-                ThrottleRequests = throttleRequests
-            };
+            foreach (var ipAddress in ipAddresses) {
+                var service = new Http01ChallengeHandler(ipAddress, keyAuthorizationFunc) {
+                    ThrottleRequests = throttleRequests
+                };
 
-            try {
-                service.Start();
-                _services.Add(service);
+                try {
+                    service.Start();
+                    _services.Add(service);
+                }
+                catch (Exception ex) {
+                    VhLogger.Instance.LogError(ex, "Could not start HTTP-01 Challenge Listener on {EndPoint}",
+                        ipAddress);
+                    service.Dispose();
+                }
             }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Could not start HTTP-01 Challenge Listener on {EndPoint}", ipAddress);
-                service.Dispose();
-            }
+
+            return _services.Count;
         }
-
-        return _services.Count;
     }
 
     public void Stop()
     {
-        if (_disposed)
-            return;
+        lock (_servicesLock) {
+            if (!_disposed)
+                StopServices();
+        }
+    }
 
+    private void StopServices()
+    {
         foreach (var service in _services)
             service.Dispose();
 
@@ -49,10 +58,12 @@ public class Http01ChallengeService(Http01KeyAuthorizationFunc keyAuthorizationF
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
+        lock (_servicesLock) {
+            if (_disposed)
+                return;
 
-        Stop();
-        _disposed = true;
+            _disposed = true;
+            StopServices();
+        }
     }
 }

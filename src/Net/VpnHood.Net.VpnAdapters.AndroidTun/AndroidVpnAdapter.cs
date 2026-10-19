@@ -111,17 +111,17 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
             _pollFdWrites = null;
         }
 
+        // the close ends the VPN, which the dispose alone does not; a failed close still releases the Java peer
         try {
             VhLogger.Instance.LogDebug("Closing tun ParcelFileDescriptor...");
-            _parcelFileDescriptor.Close(); //required to close the vpn. dispose is not enough
-            _parcelFileDescriptor.Dispose();
+            _parcelFileDescriptor.Close();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
         }
-        finally {
-            _parcelFileDescriptor = null;
-        }
+
+        _parcelFileDescriptor.Dispose();
+        _parcelFileDescriptor = null;
     }
 
     public override bool ProtectSocket(Socket socket)

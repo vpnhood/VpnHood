@@ -62,7 +62,15 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     {
         lock (_deviceLock) {
             AdapterClose();
-            _device?.Dispose();
+
+            // SharpPcap's dispose closes the device again, which throws as the close does
+            try {
+                _device?.Dispose();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "Could not dispose the WinDivert device.");
+            }
+
             _device = null;
         }
     }
@@ -125,8 +133,15 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override void AdapterClose()
     {
-        lock (_deviceLock)
-            _device?.Close();
+        lock (_deviceLock) {
+            // SharpPcap throws when the handle's close fails; the adapter's removal goes on all the same
+            try {
+                _device?.Close();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "Could not close the WinDivert device.");
+            }
+        }
     }
 
 

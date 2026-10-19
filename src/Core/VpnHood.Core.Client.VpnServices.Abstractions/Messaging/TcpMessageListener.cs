@@ -166,7 +166,7 @@ public sealed class TcpMessageListener : IMessageListener
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
         _tcpListener.Stop();
         VhUtils.TryDeleteFile(_apiFilePath);

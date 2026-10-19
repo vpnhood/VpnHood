@@ -363,7 +363,7 @@ internal sealed class AppAlwaysOnService : IDisposable
     // under the lock
     private void CancelRetry()
     {
-        _retryCts.Cancel();
+        _retryCts.TryCancel();
         _retryCts.Dispose();
         _retryCts = new CancellationTokenSource();
     }

@@ -25,10 +25,6 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
     // set, a batch holding a packet from this UDP source port fails to send
     public volatile int FailSendPort;
 
-    // set, the disposal hooks throw
-    public volatile bool FailPreDispose;
-    public volatile bool FailDisposeManaged;
-
     public int PreDisposeCount => Volatile.Read(ref _preDisposeCount);
     public int DisposeUnmanagedCount => Volatile.Read(ref _disposeUnmanagedCount);
     public bool IsTransportDisposed => IsDisposed;
@@ -87,16 +83,12 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
     {
         Interlocked.Increment(ref _preDisposeCount);
         base.PreDispose();
-        if (FailPreDispose)
-            throw new InvalidOperationException("Test: the hook failed.");
     }
 
     protected override void DisposeManaged()
     {
         _release.TrySetResult();
         base.DisposeManaged();
-        if (FailDisposeManaged)
-            throw new InvalidOperationException("Test: the managed cleanup failed.");
     }
 
     protected override void DisposeUnmanaged()

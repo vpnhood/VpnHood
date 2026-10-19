@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Common;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
@@ -208,7 +209,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
         if (_cancellation.IsCancellationRequested)
             return;
 
-        _cancellation.Cancel();
+        _cancellation.TryCancel();
         Strings.Current.PropertyChanged -= Strings_PropertyChanged;
         _trayIcon.Dispose();
         _cancellation.Dispose();

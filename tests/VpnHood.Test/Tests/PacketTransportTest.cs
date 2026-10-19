@@ -4,6 +4,7 @@ using System.Net;
 using System.Threading.Channels;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
+using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
@@ -516,22 +517,12 @@ public class PacketTransportTest : TestBase
     }
 
     [TestMethod]
-    public void Dispose_whose_hooks_throw_still_disposes()
+    public void A_failed_Disposed_handler_does_not_break_the_adapters_close()
     {
-        var transport = new TestHeldPacketTransport(queueCapacity: 1) {
-            FailPreDispose = true,
-            FailDisposeManaged = true
-        };
+        var vpnAdapter = new TestNullVpnAdapter();
+        vpnAdapter.Disposed += (_, _) => throw new InvalidOperationException("Test: the handler failed.");
 
-        // the failure surfaces, and the transport is disposed all the same, its unmanaged part too
-        Assert.ThrowsExactly<InvalidOperationException>(transport.Dispose);
-        Assert.IsTrue(transport.IsTransportDisposed);
-        Assert.AreEqual(1, transport.DisposeUnmanagedCount);
-
-        var memory = BuildPacketMemory(1);
-        var ipPacket = PacketBuilder.Attach(memory);
-        Assert.ThrowsExactly<ObjectDisposedException>(() => transport.SendPacketQueued(ipPacket));
-        Assert.IsTrue(memory.IsDisposed);
-        GC.KeepAlive(ipPacket);
+        // the handler's failure is logged, not thrown out of the close
+        vpnAdapter.Dispose();
     }
 }

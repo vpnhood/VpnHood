@@ -337,9 +337,9 @@ public class ProxyChannel : IProxyChannel
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
-        _throttleCancellationTokenSource.Cancel();
+        _throttleCancellationTokenSource.TryCancel();
         _throttleCancellationTokenSource.Dispose();
         _checkAliveJob.Dispose();
         _started = false;

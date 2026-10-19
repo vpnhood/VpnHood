@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Devices.Windows.WinNative;
 using VpnHood.Core.Common.Exceptions;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.App.Windows;
 
@@ -15,6 +17,7 @@ internal sealed class ServiceInstanceLock : IDisposable
 
     private readonly AdministratorsNamespace _namespace;
     private readonly Semaphore _semaphore;
+    private bool _disposed;
 
     private ServiceInstanceLock(AdministratorsNamespace administratorsNamespace, Semaphore semaphore)
     {
@@ -54,7 +57,18 @@ internal sealed class ServiceInstanceLock : IDisposable
 
     public void Dispose()
     {
-        _semaphore.Release();
+        // the app's quick close may come while its graceful one ends with this
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
+        // a full count throws, as after a release by another process; the handles go all the same
+        try {
+            _semaphore.Release();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not release the service's instance lock.");
+        }
+
         _semaphore.Dispose();
         _namespace.Dispose();
     }

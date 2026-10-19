@@ -269,7 +269,15 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 return;
 
             _state = value;
-            StateChanged?.Invoke(this, EventArgs.Empty);
+
+            // raised in place, as the client's release runs inside the Disposed one; a failed handler must not stop
+            // the close, whose first step this may be
+            try {
+                StateChanged?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "A handler of the session's state change failed. State: {State}", value);
+            }
         }
     }
 

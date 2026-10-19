@@ -61,10 +61,17 @@ internal sealed class ServerLog : IDisposable
         }
     }
 
-    // the last lines are written out, whichever log took them
+    // the last lines are written out, whichever log took them. NLog rethrows a target's failure when the config
+    // asks it to, and the log cannot report its own close, so the terminal does
     public void Dispose()
     {
-        LogManager.Shutdown();
+        try {
+            LogManager.Shutdown();
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"Error: Could not shut the log down. {ex.Message}");
+        }
+
         _fallbackFileLogger?.Close();
     }
 }

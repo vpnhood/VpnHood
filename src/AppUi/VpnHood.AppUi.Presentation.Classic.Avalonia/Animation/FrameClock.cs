@@ -66,7 +66,9 @@ internal static class FrameClock
         public void Start()
         {
             _frames = OnFrame(Tick);
-            _cancellation = cancellationToken.Register(Finish);
+
+            // on the UI thread, which alone touches the ticks: a CancelAsync runs its callbacks on the pool
+            _cancellation = cancellationToken.Register(Finish, useSynchronizationContext: true);
             if (_completion.Task.IsCompleted)
                 _frames.Dispose();
         }

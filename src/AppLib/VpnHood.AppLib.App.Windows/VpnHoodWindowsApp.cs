@@ -14,10 +14,11 @@ namespace VpnHood.AppLib.App.Windows;
 public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
 {
     private static IDisposable? _singleInstanceLock;
+    private readonly VpnHoodApp _app;
 
     private VpnHoodWindowsApp(AppOptions appOptions)
     {
-        VpnHoodApp.Init(new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode), appOptions);
+        _app = VpnHoodApp.Init(new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode), appOptions);
     }
 
     // lockFolderPath: where a run as the person keeps its single-instance lock, a folder of their own
@@ -58,18 +59,15 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.
     public async ValueTask DisposeAsync()
     {
-        if (VpnHoodApp.IsInit)
-            await VpnHoodApp.Instance.DisposeAsync().Vhc();
-
+        await _app.DisposeAsync().Vhc();
         Dispose();
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            if (VpnHoodApp.IsInit)
-                VpnHoodApp.Instance.Dispose();
-
+            // the app made here, not VpnHoodApp.Instance, which the app's own close may clear between two reads
+            _app.Dispose();
             _singleInstanceLock?.Dispose();
             _singleInstanceLock = null;
         }

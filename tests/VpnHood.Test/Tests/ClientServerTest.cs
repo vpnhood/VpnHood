@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -335,6 +336,21 @@ public class ClientServerTest : TestBase
 
         adapterRelease.Set();
         await Task.WhenAll(firstClose, secondClose).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(ClientState.Disposed, client.State);
+    }
+
+    [TestMethod]
+    public async Task A_failed_session_state_handler_does_not_break_the_sessions_close()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
+        var session = (ClientSession)client.RequiredSession;
+        session.StateChanged += (_, _) => throw new InvalidOperationException("Test: the handler failed.");
+
+        // the quick close: the session's close raises its state as its first step, where the failure is logged
+        client.Dispose();
+        Assert.AreEqual(ClientState.Disposed, session.State);
         Assert.AreEqual(ClientState.Disposed, client.State);
     }
 

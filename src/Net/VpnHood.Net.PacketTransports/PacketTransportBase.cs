@@ -399,15 +399,11 @@ public abstract class PacketTransportBase : IPacketTransport
             return;
 
         // the queue is closed first: a sender waiting for room is refused at once, before any cleanup that may
-        // wait for it, and no packet gets in meanwhile; a throwing hook still leaves the transport disposed
+        // wait for it, and no packet gets in meanwhile
         _sendChannel.Writer.TryComplete();
-        try {
-            PreDispose();
-        }
-        finally {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+        PreDispose();
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 
     protected void Dispose(bool disposing)
@@ -415,16 +411,13 @@ public abstract class PacketTransportBase : IPacketTransport
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        // unmanaged resources, native handles among them, go even when the managed cleanup throws
-        try {
-            if (disposing)
-                DisposeManaged();
-        }
-        finally {
-            DisposeUnmanaged();
-        }
+        if (disposing)
+            DisposeManaged();
+
+        DisposeUnmanaged();
     }
 
+    // the hooks catch their own failures: a throw would skip the rest of the close, native handles among it
     protected virtual void PreDispose()
     {
     }

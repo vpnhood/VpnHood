@@ -101,7 +101,7 @@ internal sealed class LinuxVpnTunnelHold : IDisposable
             return;
 
         _isEnded = true;
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
         _listener.Dispose();
         VhUtils.TryInvoke("remove the tunnel's socket", () => File.Delete(_socketPath));
 

@@ -198,7 +198,7 @@ internal class ApiController : IDisposable
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
         _messageListener.Dispose();
     }

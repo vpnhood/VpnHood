@@ -16,10 +16,11 @@ namespace VpnHood.AppLib.App.Linux;
 public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 {
     private static FileStream? _singleInstanceLock;
+    private readonly VpnHoodApp _app;
 
     private VpnHoodLinuxApp(AppOptions appOptions)
     {
-        VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath), appOptions);
+        _app = VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath), appOptions);
     }
 
     // lockFolderPath: where the single-instance lock lives (InstanceLockFile), which the host names -
@@ -64,18 +65,15 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.
     public async ValueTask DisposeAsync()
     {
-        if (VpnHoodApp.IsInit)
-            await VpnHoodApp.Instance.DisposeAsync().Vhc();
-
+        await _app.DisposeAsync().Vhc();
         Dispose();
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            if (VpnHoodApp.IsInit)
-                VpnHoodApp.Instance.Dispose();
-
+            // the app made here, not VpnHoodApp.Instance, which the app's own close may clear between two reads
+            _app.Dispose();
             _singleInstanceLock?.Dispose();
             _singleInstanceLock = null;
         }

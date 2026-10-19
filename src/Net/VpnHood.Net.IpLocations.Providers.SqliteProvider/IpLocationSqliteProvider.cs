@@ -3,7 +3,9 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.IpLocations.Providers.SqliteProvider;
@@ -13,6 +15,7 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
     private readonly Lazy<SqliteConnection> _connection;
     private readonly bool _disposeConnection;
     private readonly string? _userAgent;
+    private bool _disposed;
 
     private IpLocationSqliteProvider(string dbPath, string? userAgent)
     {
@@ -140,15 +143,27 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return ipAddress.IsIPv4MappedToIPv6 ? ipAddress.MapToIPv4() : ipAddress;
     }
 
+    // one close of the connection, which is not thread-safe, whichever close comes first
     public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         if (_connection.IsValueCreated && _disposeConnection)
             await _connection.Value.DisposeAsync().Vhc();
     }
 
     public void Dispose()
     {
-        if (_connection.IsValueCreated && _disposeConnection)
+        if (Interlocked.Exchange(ref _disposed, true) || !_connection.IsValueCreated || !_disposeConnection)
+            return;
+
+        // a caller's connection may still hold a transaction or a reader, whose close throws
+        try {
             _connection.Value.Dispose();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not close the IP location database.");
+        }
     }
 }

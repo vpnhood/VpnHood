@@ -122,25 +122,5 @@ namespace VpnHood.AppLib.App {
                 return ResourceManager.GetString("UpdateReadyToInstall", resourceCulture);
             }
         }
-
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] BadgeConnectedIcon {
-            get {
-                object obj = ResourceManager.GetObject("BadgeConnectedIcon", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] BadgeConnectingIcon {
-            get {
-                object obj = ResourceManager.GetObject("BadgeConnectingIcon", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
     }
 }

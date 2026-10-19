@@ -1,5 +1,4 @@
 using System.IO;
-using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.WebView.Branding;
 using VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
@@ -38,7 +37,6 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
             IsTv = info.Features.IsTv,
             Colors = colors,
             WindowFit = windowFit,
-            Resources = new AppResources(),
             WebViewDataPath = Path.Combine(uiParams.UiDataPath, "WebView2")
         });
 

@@ -1,5 +1,4 @@
 using VpnHood.AppLib.Api;
-using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.WebView.Branding;
 
@@ -20,9 +19,6 @@ internal class WebViewWindowParams
 
     // the shape the window takes on its screen (DesktopWindowFit)
     public required DesktopWindowFitOptions WindowFit { get; init; }
-
-    // the library's own badge icons
-    public required AppResources Resources { get; init; }
 
     // the web view's profile, in the person's own folder
     public required string WebViewDataPath { get; init; }

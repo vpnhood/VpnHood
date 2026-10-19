@@ -14,6 +14,11 @@
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
 	</ItemGroup>
 
+	<!-- the taskbar badge's pictures, read by their file names (WebViewMainWindow) -->
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\*.ico" LogicalName="%(Filename)%(Extension)" />
+	</ItemGroup>
+
 	<!-- WebView2's core without its WPF and Windows Forms controls, here and in every app that takes
 	     this package (buildTransitive/). Its whole path in the package: a default None item keeps its
 	     folder, and a folder alone as PackagePath would nest it twice. -->

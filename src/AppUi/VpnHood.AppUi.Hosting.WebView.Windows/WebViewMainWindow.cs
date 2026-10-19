@@ -45,7 +45,6 @@ internal sealed class WebViewMainWindow
     public WebViewMainWindow(WebViewWindowParams windowParams)
     {
         _params = windowParams;
-        var resources = windowParams.Resources;
         var backgroundColor = windowParams.Colors.WindowBackgroundColor;
 
         // The TV's viewport, or the phone's shape where the screen has room for it, from the frame
@@ -56,8 +55,8 @@ internal sealed class WebViewMainWindow
             WindowsShell.SetTitleBarColor(_window.Window.Handle, backgroundColor.Value);
 
         _taskbarOverlay = new TaskbarOverlay(_window.Window.Handle);
-        _connectedIcon = LoadIcon(resources.Icons.BadgeConnectedIconData);
-        _connectingIcon = LoadIcon(resources.Icons.BadgeConnectingIconData);
+        _connectedIcon = LoadIcon("BadgeConnected.ico");
+        _connectingIcon = LoadIcon("BadgeConnecting.ico");
 
         // The SPA through the shared WebViewHost (the launch URL, reload on failure), at the address
         // the host hands the window: the service's, or in dev the app's own in this process.
@@ -171,8 +170,13 @@ internal sealed class WebViewMainWindow
         };
     }
 
-    private static IntPtr LoadIcon(ReadOnlyMemory<byte>? iconData)
+    // the badge's pictures, this library's own (Resources\*.ico, embedded by name)
+    private static IntPtr LoadIcon(string name)
     {
-        return iconData is { } data ? WinIcon.LoadIconFromBytes(data.Span) : IntPtr.Zero;
+        using var stream = typeof(WebViewMainWindow).Assembly.GetManifestResourceStream(name)
+            ?? throw new InvalidOperationException($"The badge icon is not embedded. Name: {name}");
+        using var memoryStream = new MemoryStream();
+        stream.CopyTo(memoryStream);
+        return WinIcon.LoadIconFromBytes(memoryStream.ToArray());
     }
 }

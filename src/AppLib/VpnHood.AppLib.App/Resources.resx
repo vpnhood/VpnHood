@@ -138,10 +138,4 @@
   <data name="UpdateReadyToInstall" xml:space="preserve">
     <value>The update is ready to install.</value>
   </data>
-  <data name="BadgeConnectedIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Icons\BadgeConnected.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="BadgeConnectingIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\Icons\BadgeConnecting.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
 </root>

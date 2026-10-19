@@ -9,7 +9,6 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Styles;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
@@ -40,8 +39,8 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
     // Avalonia can take them (AppAssets.PrepareAsync).
     public static async Task PrepareContentAsync(IAssetProvider assets, CancellationToken cancellationToken)
     {
-        await Strings.InitAsync(assets, cancellationToken).Vhc();
-        await AppAssets.PrepareAsync(assets, cancellationToken).Vhc();
+        await Strings.InitAsync(assets, cancellationToken).ConfigureAwait(false);
+        await AppAssets.PrepareAsync(assets, cancellationToken).ConfigureAwait(false);
     }
 
     public override void Initialize()

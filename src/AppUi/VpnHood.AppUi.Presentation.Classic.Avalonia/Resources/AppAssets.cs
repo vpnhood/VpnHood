@@ -4,7 +4,6 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using VpnHood.AppUi.Common;
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Streams;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
@@ -33,11 +32,11 @@ public static class AppAssets
     public static async Task PrepareAsync(IAssetProvider assets, CancellationToken cancellationToken)
     {
         _assets = assets;
-        var names = await AssetIndex.ReadAsync(assets, AppFonts.IndexPath, cancellationToken).Vhc();
+        var names = await AssetIndex.ReadAsync(assets, AppFonts.IndexPath, cancellationToken).ConfigureAwait(false);
         var files = new List<byte[]>();
         foreach (var name in names) {
-            await using var stream = await assets.OpenReadAsync($"{AppFonts.FolderName}/{name}", cancellationToken).Vhc();
-            var memoryStream = await stream.ToMemoryStreamAsync(cancellationToken).Vhc();
+            await using var stream = await assets.OpenReadAsync($"{AppFonts.FolderName}/{name}", cancellationToken).ConfigureAwait(false);
+            var memoryStream = await stream.ToMemoryStreamAsync(cancellationToken).ConfigureAwait(false);
             files.Add(memoryStream.ToArray());
         }
 
@@ -66,13 +65,13 @@ public static class AppAssets
 
     private static async Task<Bitmap?> LoadBitmap(string assetPath)
     {
-        var stream = await Assets.TryOpenReadAsync(assetPath, CancellationToken.None).Vhc();
+        var stream = await Assets.TryOpenReadAsync(assetPath, CancellationToken.None).ConfigureAwait(false);
         if (stream == null)
             return null;
 
         // the decoder reads a picture's header and then its body, so it must be able to rewind: a
         // file does it where it lies, and only one fetched over HTTP is bought into memory
-        await using var seekable = await stream.ToMemoryStreamIfNotSeekableAsync(CancellationToken.None).Vhc();
+        await using var seekable = await stream.ToMemoryStreamIfNotSeekableAsync(CancellationToken.None).ConfigureAwait(false);
         return new Bitmap(seekable);
     }
 

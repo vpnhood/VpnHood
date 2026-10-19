@@ -1,7 +1,6 @@
 ﻿using VpnHood.AppLib.Api;
 using VpnHood.AppUi.Common;
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;
 
@@ -26,8 +25,8 @@ public static class AvaloniaUiHosting
         CancellationToken cancellationToken)
         where TUi : IAvaloniaUi
     {
-        await InitAsync(api, cancellationToken).Vhc();
-        await PrepareAsync<TUi>(uiAssetProvider, cancellationToken).Vhc();
+        await InitAsync(api, cancellationToken).ConfigureAwait(false);
+        await PrepareAsync<TUi>(uiAssetProvider, cancellationToken).ConfigureAwait(false);
     }
 
     // The first half: the app's API, in process the app's own controllers, from a browser page the
@@ -44,7 +43,7 @@ public static class AvaloniaUiHosting
         var assets = uiAssetProvider ?? throw new InvalidOperationException(
             "The head has named no AppOptions.UiZipAssets, and this UI reads its pictures and its words from them.");
 
-        await TUi.PrepareContentAsync(assets, cancellationToken).Vhc();
-        await VhApp.Configure(TUi.AvailableCultures, cancellationToken).Vhc();
+        await TUi.PrepareContentAsync(assets, cancellationToken).ConfigureAwait(false);
+        await VhApp.Configure(TUi.AvailableCultures, cancellationToken).ConfigureAwait(false);
     }
 }

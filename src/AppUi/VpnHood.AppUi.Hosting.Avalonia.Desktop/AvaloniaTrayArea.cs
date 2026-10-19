@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Tmds.DBus.Protocol;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
@@ -51,7 +50,7 @@ internal sealed class AvaloniaTrayArea : IDisposable
             return IsShown;
 
         try {
-            await _watcher.WaitForOwnerAsync(cancellationToken).Vhc();
+            await _watcher.WaitForOwnerAsync(cancellationToken).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {

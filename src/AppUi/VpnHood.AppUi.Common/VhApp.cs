@@ -5,7 +5,6 @@ using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Common;
@@ -39,7 +38,7 @@ public static class VhApp
     public static async Task Init(VpnHoodApi api, CancellationToken cancellationToken)
     {
         _api = api;
-        _info = await Api.App.GetInfo(cancellationToken).Vhc();
+        _info = await Api.App.GetInfo(cancellationToken).ConfigureAwait(false);
         _state = _info.State;
     }
 
@@ -50,7 +49,7 @@ public static class VhApp
     public static async Task Configure(IReadOnlyList<string> availableCultures, CancellationToken cancellationToken)
     {
         _availableCultures = availableCultures;
-        _info = await Api.App.Configure(CreateConfigParams(), cancellationToken).Vhc();
+        _info = await Api.App.Configure(CreateConfigParams(), cancellationToken).ConfigureAwait(false);
         _state = _info.State;
 
         // the words again when the language changes
@@ -77,7 +76,7 @@ public static class VhApp
             return;
 
         try {
-            await Api.App.Configure(CreateConfigParams(), CancellationToken.None).Vhc();
+            await Api.App.Configure(CreateConfigParams(), CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not give the app the words of the UI's language.");

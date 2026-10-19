@@ -1,6 +1,5 @@
 using System.Text.Json;
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Common;
 
@@ -12,7 +11,7 @@ public static class AssetIndex
 {
     public static async Task<IReadOnlyList<string>> ReadAsync(IAssetProvider assets, string indexPath, CancellationToken cancellationToken)
     {
-        await using var stream = await assets.OpenReadAsync(indexPath, cancellationToken).Vhc();
-        return await JsonSerializer.DeserializeAsync(stream, AssetJsonContext.Default.StringArray, cancellationToken).Vhc() ?? [];
+        await using var stream = await assets.OpenReadAsync(indexPath, cancellationToken).ConfigureAwait(false);
+        return await JsonSerializer.DeserializeAsync(stream, AssetJsonContext.Default.StringArray, cancellationToken).ConfigureAwait(false) ?? [];
     }
 }

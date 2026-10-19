@@ -11,7 +11,6 @@ using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.App.Android;
@@ -99,7 +98,7 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
                 RequestPostNotificationId);
             var res = await _requestPostNotificationsCompletionTask.Task
                 .WaitAsync(cancellationToken)
-                .Vhc();
+                .ConfigureAwait(false);
 
             return res == Permission.Granted;
         }

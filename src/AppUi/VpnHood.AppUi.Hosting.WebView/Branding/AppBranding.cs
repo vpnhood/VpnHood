@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Logging;
 
@@ -35,7 +34,7 @@ public static class AppBranding
             return new AppBrandingColors();
 
         try {
-            return await ReadAsync(assets, theme, CancellationToken.None).Vhc();
+            return await ReadAsync(assets, theme, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not read the app's branding from the UI's store.");
@@ -47,7 +46,7 @@ public static class AppBranding
         CancellationToken cancellationToken)
     {
         var folder = $"branding/{theme}";
-        var manifest = await TryReadManifest(assets, folder, cancellationToken).Vhc()
+        var manifest = await TryReadManifest(assets, folder, cancellationToken).ConfigureAwait(false)
                        ?? throw new InvalidOperationException(
                            $"The UI's store has no '{theme}' branding: there is no '{folder}/manifest.json' in it.");
 
@@ -66,11 +65,11 @@ public static class AppBranding
     private static async Task<AppBrandingManifest?> TryReadManifest(IAssetProvider assets, string folder,
         CancellationToken cancellationToken)
     {
-        await using var stream = await assets.TryOpenReadAsync($"{folder}/manifest.json", cancellationToken).Vhc();
+        await using var stream = await assets.TryOpenReadAsync($"{folder}/manifest.json", cancellationToken).ConfigureAwait(false);
         if (stream is null)
             return null;
 
-        return await JsonSerializer.DeserializeAsync<AppBrandingManifest>(stream, JsonOptions, cancellationToken).Vhc()
+        return await JsonSerializer.DeserializeAsync<AppBrandingManifest>(stream, JsonOptions, cancellationToken).ConfigureAwait(false)
                ?? throw new InvalidOperationException($"The branding manifest '{folder}/manifest.json' is empty.");
     }
 

@@ -3,7 +3,6 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App.Windows;
 using VpnHood.AppLib.App.Windows.WinNative;
 using VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
@@ -144,7 +143,7 @@ internal sealed class WebViewMainWindow
         AppConnectionState? shown = null;
         while (!cancellationToken.IsCancellationRequested) {
             try {
-                var state = await _params.Api.App.GetState(cancellationToken).Vhc();
+                var state = await _params.Api.App.GetState(cancellationToken).ConfigureAwait(false);
                 if (state.ConnectionState != shown) {
                     shown = state.ConnectionState;
                     _window.Window.Post(() => _taskbarOverlay.SetIcon(BadgeOf(state.ConnectionState)));

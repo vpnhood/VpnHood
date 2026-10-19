@@ -59,13 +59,13 @@ public static class WindowInsetUtils
     // knows - so the colour appears rather than changes. The waits come back to the main looper.
     private static async Task ReapplyInsetsWhenReady(View contentRoot, Task<VhColor?> backgroundColor)
     {
-        await backgroundColor;
+        await backgroundColor.ConfigureAwait(true);
         contentRoot.RequestApplyInsets();
     }
 
     private static async Task SetBarColorsWhenReady(Window window, Task<VhColor?> backgroundColor)
     {
-        var color = (await backgroundColor)?.ToAndroidColor();
+        var color = (await backgroundColor.ConfigureAwait(true))?.ToAndroidColor();
         if (color == null)
             return;
 

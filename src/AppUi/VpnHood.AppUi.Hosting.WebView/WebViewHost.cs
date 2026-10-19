@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
-using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.WebView;
@@ -44,7 +43,7 @@ public sealed class WebViewHost : IDisposable
     {
         Task.Run(async () => {
             try {
-                _launchUrl = await _pageHost.EnsureStarted(CancellationToken.None).Vhc();
+                _launchUrl = await _pageHost.EnsureStarted(CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to start the SPA web server.");
@@ -139,7 +138,7 @@ public sealed class WebViewHost : IDisposable
         Task.Run(async () => {
             try {
                 // one real connect check, and a rebind when the listener really is gone
-                _launchUrl = await _pageHost.EnsureStarted(CancellationToken.None).Vhc();
+                _launchUrl = await _pageHost.EnsureStarted(CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to check the SPA web server after a failed load.");

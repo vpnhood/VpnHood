@@ -104,7 +104,7 @@ public class QuickLaunchTileService : TileService
         try {
             while (!cancellationToken.IsCancellationRequested) {
                 RefreshTile();
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).Vhc();
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
             }
         }
         catch (System.OperationCanceledException) {
@@ -179,7 +179,7 @@ public class QuickLaunchTileService : TileService
             if (_vpnServiceManager.IsStarted) {
                 _overrideClientState = ClientState.Disconnecting;
                 RefreshTile();
-                await _vpnServiceManager.TryStop().Vhc();
+                await _vpnServiceManager.TryStop().ConfigureAwait(false);
                 return;
             }
 
@@ -187,7 +187,7 @@ public class QuickLaunchTileService : TileService
             // Starting a foreground service from a tile tap is within the FGS exemptions
             _overrideClientState = ClientState.Initializing;
             RefreshTile();
-            await StartFromLastConfig().Vhc();
+            await StartFromLastConfig().ConfigureAwait(false);
         }
         catch (Exception ex) {
             AndroidUtils.ShowToast(ex.Message);
@@ -212,7 +212,7 @@ public class QuickLaunchTileService : TileService
         _vpnServiceManager.StateChanged += stateChanged;
         try {
             // the tap has no window of its own; the app's, when one is open, can still ask for the VPN permission
-            await _vpnServiceManager.StartFromLastConfig(AppUiContext.Context, adWaitCts.Token).Vhc();
+            await _vpnServiceManager.StartFromLastConfig(AppUiContext.Context, adWaitCts.Token).ConfigureAwait(false);
         }
         catch (System.OperationCanceledException) when (adWaitCts.IsCancellationRequested) {
             _mainHandler.Post(LaunchMainApp);

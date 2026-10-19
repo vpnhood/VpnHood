@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Text.Json;
 using VpnHood.AppLib.Api.App;
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Common;
 
@@ -59,10 +58,10 @@ public sealed partial class Strings : INotifyPropertyChanged
 
         // English is the one language that must be there - every other falls back to it - so it is
         // asked for rather than looked up, and a store without it says so by name.
-        await using (var english = await assets.OpenReadAsync(FilePathOf(EnglishName), cancellationToken).Vhc())
-            _english = await JsonSerializer.DeserializeAsync(english, AssetJsonContext.Default.DictionaryStringString, cancellationToken).Vhc()
+        await using (var english = await assets.OpenReadAsync(FilePathOf(EnglishName), cancellationToken).ConfigureAwait(false))
+            _english = await JsonSerializer.DeserializeAsync(english, AssetJsonContext.Default.DictionaryStringString, cancellationToken).ConfigureAwait(false)
                        ?? throw new InvalidOperationException($"{FilePathOf(EnglishName)} holds no words.");
-        _shippedCultures = await AssetIndex.ReadAsync(assets, IndexPath, cancellationToken).Vhc();
+        _shippedCultures = await AssetIndex.ReadAsync(assets, IndexPath, cancellationToken).ConfigureAwait(false);
         Current._texts = _english;
     }
 
@@ -95,7 +94,7 @@ public sealed partial class Strings : INotifyPropertyChanged
     {
         lock (Sources)
             Sources.Insert(0, source);
-        await Current.Reload(CultureInfo.GetCultureInfo(Current._cultureName), cancellationToken).Vhc();
+        await Current.Reload(CultureInfo.GetCultureInfo(Current._cultureName), cancellationToken).ConfigureAwait(false);
     }
 
     // The language to show - the app's answer, the person's choice or the device's. A culture we
@@ -107,14 +106,14 @@ public sealed partial class Strings : INotifyPropertyChanged
             return false;
 
         _cultureName = culture.Name;
-        await Reload(culture, cancellationToken).Vhc();
+        await Reload(culture, cancellationToken).ConfigureAwait(false);
         return true;
     }
 
     private async Task Reload(CultureInfo culture, CancellationToken cancellationToken)
     {
-        var texts = await Load(culture.Name, cancellationToken).Vhc()
-                    ?? await Load(culture.TwoLetterISOLanguageName, cancellationToken).Vhc();
+        var texts = await Load(culture.Name, cancellationToken).ConfigureAwait(false)
+                    ?? await Load(culture.TwoLetterISOLanguageName, cancellationToken).ConfigureAwait(false);
         _texts = texts ?? English;
         // the direction of the words shown, not of the culture asked for: a language we have no
         // file for is shown in English, which runs left to right
@@ -186,7 +185,7 @@ public sealed partial class Strings : INotifyPropertyChanged
     // language only a source has is that source over English. Null when nobody has it.
     private static async Task<IReadOnlyDictionary<string, string>?> Load(string cultureName, CancellationToken cancellationToken)
     {
-        var texts = await LoadFile(cultureName, cancellationToken).Vhc();
+        var texts = await LoadFile(cultureName, cancellationToken).ConfigureAwait(false);
 
         IStringSource[] sources;
         lock (Sources)
@@ -214,9 +213,9 @@ public sealed partial class Strings : INotifyPropertyChanged
 
     private static async Task<IReadOnlyDictionary<string, string>?> LoadFile(string cultureName, CancellationToken cancellationToken)
     {
-        await using var stream = await Assets.TryOpenReadAsync(FilePathOf(cultureName), cancellationToken).Vhc();
+        await using var stream = await Assets.TryOpenReadAsync(FilePathOf(cultureName), cancellationToken).ConfigureAwait(false);
         return stream == null
             ? null
-            : await JsonSerializer.DeserializeAsync(stream, AssetJsonContext.Default.DictionaryStringString, cancellationToken).Vhc();
+            : await JsonSerializer.DeserializeAsync(stream, AssetJsonContext.Default.DictionaryStringString, cancellationToken).ConfigureAwait(false);
     }
 }

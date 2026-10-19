@@ -1,5 +1,4 @@
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Common;
 
@@ -25,7 +24,7 @@ public static class ContentDocuments
     {
         var culture = VhApp.State.CurrentUiCultureInfo.Code;
         foreach (var language in new[] { culture, culture.Split('-')[0], SourceLanguage }) {
-            var text = await ReadAsync(assets, $"content/{language}/{name}.md", cancellationToken).Vhc();
+            var text = await ReadAsync(assets, $"content/{language}/{name}.md", cancellationToken).ConfigureAwait(false);
             if (text != null)
                 return FillPlaceholders(text);
         }
@@ -37,12 +36,12 @@ public static class ContentDocuments
     private static async Task<string?> ReadAsync(IAssetProvider assets, string assetPath,
         CancellationToken cancellationToken)
     {
-        await using var stream = await assets.TryOpenReadAsync(assetPath, cancellationToken).Vhc();
+        await using var stream = await assets.TryOpenReadAsync(assetPath, cancellationToken).ConfigureAwait(false);
         if (stream == null)
             return null;
 
         using var reader = new StreamReader(stream);
-        return await reader.ReadToEndAsync(cancellationToken).Vhc();
+        return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static string FillPlaceholders(string text)

@@ -52,9 +52,9 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     `Dispose`; a sync system callback, such as Android's `OnDestroy`, calls `Dispose` at once. A
     close's steps that do I/O (a goodbye, a sync, a flush, a system command) each run in their own
     catch that logs the failure, so a failed one never skips the next, and nothing crashes; an async
-    close may go through `TryDisposeAsync`, ours or not. A sync `Dispose` of our own types gets no
-    `TryDispose`, as it must not throw (CA1065): a release that must still follow it, such as the
-    TUN's, goes in a `finally`.
+    close may go through `TryDisposeAsync`, ours or not. A close handles its own failures where they
+    arise, so a sync `Dispose` of our own types must not throw (CA1065), and its caller wraps it in
+    neither a `TryDispose` nor a `finally`.
 
 ## Design
 

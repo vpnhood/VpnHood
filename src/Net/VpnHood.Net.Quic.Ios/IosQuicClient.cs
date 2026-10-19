@@ -125,7 +125,7 @@ public sealed class IosQuicClient(
             connectionGroup.Dispose();
             multiplexGroup.Dispose();
             endpoint.Dispose();
-            VhUtils.TryInvoke(queue.Dispose);
+            VhInvoker.TryInvoke(queue.Dispose);
             throw;
         }
     }

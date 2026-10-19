@@ -65,7 +65,7 @@ public class ZipAssetProvider(IAsset zip, string extractFolderPath) : IAssetProv
 
                 // The other one got there first: its copy is this copy, since the name is the bytes.
                 if (IsExtracted(folderPath))
-                    VhUtils.TryInvoke("Delete the extra assets copy", () => Directory.Delete(tempPath, true));
+                    VhInvoker.TryInvoke("Delete the extra assets copy", () => Directory.Delete(tempPath, true));
                 else
                     Directory.Move(tempPath, folderPath);
             }
@@ -97,7 +97,7 @@ public class ZipAssetProvider(IAsset zip, string extractFolderPath) : IAssetProv
                 continue;
 
             // one that is being written by someone else right now simply refuses, and goes next time
-            VhUtils.TryInvoke("Delete an old assets copy", () => Directory.Delete(path, true));
+            VhInvoker.TryInvoke("Delete an old assets copy", () => Directory.Delete(path, true));
         }
     }
 }

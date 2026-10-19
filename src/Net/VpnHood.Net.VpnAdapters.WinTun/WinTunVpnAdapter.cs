@@ -361,7 +361,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     {
         // WinNAT keeps a NAT after its process, so one a killed run left goes first; a failure here
         // shows in New-NetNat's own
-        VhUtils.TryInvoke("remove the NAT a previous run left", RemoveNat);
+        VhInvoker.TryInvoke("remove the NAT a previous run left", RemoveNat);
 
         // Never cut off by a stop once begun, only by its own time limit: a NAT the command made after
         // the start's cleanup looked would stay.

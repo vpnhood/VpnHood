@@ -84,11 +84,11 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
     public async Task StartAlwaysOn(CancellationToken cancellationToken)
     {
         if (Local?.IsAlwaysOn == true)
-            await VhUtils.TryInvokeAsync("Open local listeners due always on",
+            await VhInvoker.TryInvokeAsync("Open local listeners due always on",
                 () => Local.EnsureStarted(cancellationToken)).Vhc();
 
         if (Remote?.IsAlwaysOn == true)
-            await VhUtils.TryInvokeAsync("Open remote access listeners due always on",
+            await VhInvoker.TryInvokeAsync("Open remote access listeners due always on",
                 () => Remote.EnsureStarted(cancellationToken)).Vhc();
     }
 
@@ -113,7 +113,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
         }
 
         if (Remote?.IsAlwaysOn == true)
-            _ = VhUtils.TryInvokeAsync("Open remote access listeners due always on",
+            _ = VhInvoker.TryInvokeAsync("Open remote access listeners due always on",
                 () => Remote.EnsureStarted(CancellationToken.None));
     }
 

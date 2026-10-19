@@ -54,7 +54,7 @@ public class AppProxyEndPointService(
     {
         if (_hasCustomEndPointsCache is null ||
             FastDateTime.UtcNow - _hasCustomEndPointsCacheTime > HasCustomEndPointsCacheTimeout)
-            _ = VhUtils.TryInvokeAsync("Refresh custom proxy endpoint existence",
+            _ = VhInvoker.TryInvokeAsync("Refresh custom proxy endpoint existence",
                 RefreshHasCustomEndPoints);
 
         return _hasCustomEndPointsCache ?? false;
@@ -76,7 +76,7 @@ public class AppProxyEndPointService(
         if (deviceProxySettings?.ProxyUrl is null)
             return null;
 
-        return VhUtils.TryInvoke("Parse device proxy url",
+        return VhInvoker.TryInvoke("Parse device proxy url",
             () => ProxyEndPointParser.FromUrl(deviceProxySettings.ProxyUrl));
     }
 

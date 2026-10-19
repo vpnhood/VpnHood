@@ -722,7 +722,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // stop adapter and events before sending bye request to free client from VPN as fast as possible and
         // Do not dispose VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
         // network change events can cause problems too. Always: one down for a restart would come back otherwise
-        VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
+        VhInvoker.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
 
         // dispose async resources
 
@@ -796,7 +796,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // stop adapter and events before sending bye request
         // Do not dispose VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
         // network change events can cause problems too. Always: one down for a restart would come back otherwise
-        VhUtils.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
+        VhInvoker.TryInvoke("Stop the VpnAdapter", () => _vpnAdapter.Stop());
 
         // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;

@@ -1038,7 +1038,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         // run on the adapter's I/O thread, nor under the restart lock
         VhLogger.Instance.LogError(ex, "The VPN adapter is down and stays down.");
         var failed = Failed; // this run's subscribers, not a later one's
-        Task.Run(() => VhUtils.TryInvoke("Failed", () => failed?.Invoke(this, ex)));
+        Task.Run(() => VhInvoker.TryInvoke("Failed", () => failed?.Invoke(this, ex)));
     }
 
     // A restart on a task of its own. Its failure is logged and answered by Restart.

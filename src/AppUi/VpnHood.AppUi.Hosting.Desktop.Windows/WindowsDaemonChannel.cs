@@ -93,7 +93,7 @@ public sealed class WindowsDaemonChannel(WindowsDesktopPaths paths) : IDaemonCha
     // Only this run's name: a newer start may have recorded its own by now.
     private void Forget(string name)
     {
-        VhUtils.TryInvoke("forget the channel's name", () => {
+        VhInvoker.TryInvoke("forget the channel's name", () => {
             using var key = Registry.LocalMachine.OpenSubKey(paths.RegistryKeyPath, writable: true);
             if (key?.GetValue(ChannelValueName) as string == name)
                 key.DeleteValue(ChannelValueName, throwOnMissingValue: false);

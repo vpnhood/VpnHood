@@ -269,7 +269,7 @@ public class UdpProxyTest : TestBase
         }
 
         // wait for tasks to complete and not throw exceptions
-        await VhUtils.TryInvokeAsync("", () => Task.WhenAll(tasks));
+        await VhInvoker.TryInvokeAsync("", () => Task.WhenAll(tasks));
 
         // Check succeeded Udp
         Assert.AreEqual(maxUdpCount, tasks.Count(x => x.IsCompletedSuccessfully));

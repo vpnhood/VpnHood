@@ -147,7 +147,7 @@ internal sealed class IosQuicConnection(
         connectionGroup.Dispose();
         multiplexGroup.Dispose();
         endpoint.Dispose();
-        VhUtils.TryInvoke(queue.Dispose);
+        VhInvoker.TryInvoke(queue.Dispose);
         IosQuicDiagnostics.OnConnectionClosed(_diagnosticId);
         return ValueTask.CompletedTask;
     }

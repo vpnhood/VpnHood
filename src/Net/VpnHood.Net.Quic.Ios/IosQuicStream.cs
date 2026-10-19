@@ -234,7 +234,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
         if (Interlocked.Exchange(ref _aborted, true))
             return;
 
-        VhUtils.TryInvoke(connection.Cancel);
+        VhInvoker.TryInvoke(connection.Cancel);
     }
 
     protected override void Dispose(bool disposing)
@@ -251,7 +251,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
             // load-bearing and run unconditionally.
             var cancelStart = IosQuicDiagnostics.BeginTiming();
             // ReSharper disable once AccessToDisposedClosure
-            VhUtils.TryInvoke(connection.Cancel);
+            VhInvoker.TryInvoke(connection.Cancel);
             connection.Dispose();
             IosQuicDiagnostics.EndStreamTeardown(cancelStart);
 

@@ -50,7 +50,7 @@ public class AndroidAppMainActivityHandler
         AppUiContext.Context = new AndroidUiContext(ActivityEvent);
 
         // initialize the window
-        VhUtils.TryInvoke("ConfigureWindowInsets", () =>
+        VhInvoker.TryInvoke("ConfigureWindowInsets", () =>
             WindowInsetUtils.Configure(ActivityEvent.Activity.Window, false, false, false, _chromeColor));
 
         // process intent

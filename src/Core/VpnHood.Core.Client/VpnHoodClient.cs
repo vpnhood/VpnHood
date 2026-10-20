@@ -265,6 +265,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private void Session_StateChanged(object? sender, EventArgs e)
     {
+        // the client's state is final once its release has run: a session whose build ended after the close does not
+        // move it
+        if (_disposed)
+            return;
+
         if (_session is null)
             throw new InvalidOperationException("How a null session session can fire an event!");
 

@@ -35,6 +35,7 @@ public class ServerHost : IAsyncDisposable
     private readonly UdpListenerHost _udpListenerHost;
     private readonly Job _cleanupConnectionsJob;
     private readonly AsyncLock _configureLock = new();
+    private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
 
     public const int MaxProtocolVersion = 14;
@@ -637,11 +638,13 @@ public class ServerHost : IAsyncDisposable
         return VhLogger.Instance.BeginScope(state.ToString());
     }
 
-    // async only: its connections' closes may wait for their QUIC peers
+    // async only: its connections' closes may wait for their QUIC peers. Both of the server's closes call it, so a
+    // second close waits for the first one's end
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
-        _disposed = true;
+        using var lockResult = await _disposeLock.LockAsync().Vhc();
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         // a configuration under way ends first, uncancelled, so the listeners it adds are closed below; one that
         // comes after finds the close begun

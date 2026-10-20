@@ -124,6 +124,34 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_graceful_close_after_a_quick_close_waits_for_the_hosts_close()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        var quicServer = new QuicListenerCloseHoldingServer();
+        var server = new VpnHoodServer(accessManager, new ServerOptions {
+            SocketFactory = new TestSocketFactory(),
+            QuicServer = quicServer,
+            StoragePath = TestHelper.WorkingPath,
+            AutoDisposeAccessManager = false,
+            PublicIpDiscovery = false,
+            ServerHostDisposeTimeout = Timeout.InfiniteTimeSpan
+        });
+        await server.Start(TestCt);
+
+        // the quick close leaves the host's close running, held at the QUIC listener
+        server.Dispose();
+        await VhTestUtil.AssertEqualsWait(1, () => Volatile.Read(ref quicServer.HeldCloseCount),
+            "The quick close should start the host's close.", cancellationToken: TestCt);
+
+        var gracefulClose = server.DisposeAsync().AsTask();
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestCt);
+        Assert.IsFalse(gracefulClose.IsCompleted, "The graceful close should wait for the host's close.");
+
+        quicServer.ReleaseCloses();
+        await gracefulClose.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+    }
+
+    [TestMethod]
     public async Task The_host_closes_beside_a_status_upload_under_way()
     {
         using var accessManager = TestHelper.CreateAccessManager();

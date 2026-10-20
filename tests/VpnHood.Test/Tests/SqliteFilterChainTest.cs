@@ -127,6 +127,43 @@ public class SqliteFilterChainTest : TestBase
     }
 
     [TestMethod]
+    public async Task SqliteIpFilterChain_reconfigure_after_close_takes_no_new_gates()
+    {
+        var folder = CreateDbFolder("ip-closed");
+        var oldDbPath = await BuildIpDb(folder, "ip-closed.1.db", "1.0.0.1");
+        SplitDbManifest.Write(folder, [oldDbPath]);
+        var chain = new SqliteIpFilterChain(next: null, folder);
+
+        // a reconfigure whose swap comes after the close, as one under way when the client closes
+        chain.Dispose();
+        var newDbPath = await BuildIpDb(folder, "ip-closed.2.db", "2.0.0.2");
+        SplitDbManifest.Write(folder, [newDbPath]);
+        chain.Reconfigure();
+
+        Assert.AreEqual(FilterAction.Default, chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")),
+            "a closed chain must take no new gates");
+        File.Delete(newDbPath); // nor leave the new db open
+    }
+
+    [TestMethod]
+    public async Task SqliteDomainFilterChain_reconfigure_after_close_takes_no_new_gates()
+    {
+        var folder = CreateDbFolder("domain-closed");
+        var oldDbPath = await BuildDomainDb(folder, "domain-closed.1.db", "old.com");
+        SplitDbManifest.Write(folder, [oldDbPath]);
+        var chain = new SqliteDomainFilterChain(next: null, folder);
+
+        // a reconfigure whose swap comes after the close, as one under way when the client closes
+        chain.Dispose();
+        var newDbPath = await BuildDomainDb(folder, "domain-closed.2.db", "new.com");
+        SplitDbManifest.Write(folder, [newDbPath]);
+        chain.Reconfigure();
+
+        Assert.AreEqual(FilterAction.Default, chain.Process("new.com"), "a closed chain must take no new gates");
+        File.Delete(newDbPath); // nor leave the new db open
+    }
+
+    [TestMethod]
     public async Task Manifest_publishes_the_db_set_and_sweeps_superseded_files()
     {
         var folder = CreateDbFolder("manifest");

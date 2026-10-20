@@ -22,6 +22,7 @@ public sealed class SqliteDomainFilterChain : IDomainFilter
     private readonly Lock _reconfigureLock = new();
     private IDomainFilter? _gates;
     private string[] _dbPaths;
+    private bool _disposed; // set with the close's swap, under the write lock
 
     public event EventHandler? Changed;
 
@@ -87,7 +88,13 @@ public sealed class SqliteDomainFilterChain : IDomainFilter
                 // build first (a failure keeps the current gates published), swap, then dispose the
                 // drained old gates OUTSIDE the write lock so lookups on the new gates resume at once
                 var newGates = BuildGates(dbPaths);
-                Swap(newGates)?.Dispose();
+                if (!TrySwap(newGates, close: false, out var oldGates)) {
+                    // the chain closed meanwhile: the new gates close with it, and nothing else follows
+                    newGates?.Dispose();
+                    return;
+                }
+
+                oldGates?.Dispose();
 
                 // delete exactly the files this stage just closed — this process held them open, so
                 // nobody else could; files it never opened are the naming-scheme owner's business
@@ -108,20 +115,30 @@ public sealed class SqliteDomainFilterChain : IDomainFilter
     // Process (and gets Default); the lock's wait handles are reclaimed by their finalizers
     public void Dispose()
     {
-        Swap(null)?.Dispose();
+        if (!TrySwap(null, close: true, out var gates))
+            return;
+
+        gates?.Dispose();
         if (_autoDisposeNextFilter)
             _next?.Dispose();
     }
 
     // Only the pointer swap excludes lookups; the write lock waits for every in-flight lookup to
-    // leave the old gates, so the caller can dispose them with nobody inside
-    private IDomainFilter? Swap(IDomainFilter? gates)
+    // leave the old gates, so the caller can dispose them with nobody inside. A closed chain takes no
+    // new gates: a reconfigure under way would leave them open after the close
+    private bool TrySwap(IDomainFilter? gates, bool close, out IDomainFilter? oldGates)
     {
         _swapLock.EnterWriteLock();
         try {
-            var oldGates = _gates;
+            if (_disposed) {
+                oldGates = null;
+                return false;
+            }
+
+            _disposed = close;
+            oldGates = _gates;
             _gates = gates;
-            return oldGates;
+            return true;
         }
         finally {
             _swapLock.ExitWriteLock();

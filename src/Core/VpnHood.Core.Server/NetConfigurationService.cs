@@ -16,7 +16,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
     public async Task<string[]?> GetNetworkInterfaceNames()
     {
         try {
-            return await netConfigurationProvider.GetInterfaceNames();
+            return await netConfigurationProvider.GetInterfaceNames().Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not find the default network interface name.");
@@ -34,7 +34,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         try {
             // find default interface name
             if (interfaceName == "*" || string.IsNullOrEmpty(interfaceName))
-                interfaceName = (await netConfigurationProvider.GetInterfaceNames()).FirstOrDefault() ??
+                interfaceName = (await netConfigurationProvider.GetInterfaceNames().Vhc()).FirstOrDefault() ??
                                 throw new Exception("Could not find the default network interface name.");
 
             // remove already added ip address if it belongs to different interface
@@ -98,7 +98,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
     public async Task<string?> GetTcpCongestionControl()
     {
         try {
-            return await netConfigurationProvider.GetTcpCongestionControl();
+            return await netConfigurationProvider.GetTcpCongestionControl().Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not read TCP congestion control.");
@@ -109,11 +109,11 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
     public async Task SetTcpCongestionControl(string value)
     {
         try {
-            var tcpCongestionControl = await GetTcpCongestionControl();
+            var tcpCongestionControl = await GetTcpCongestionControl().Vhc();
             if (value == tcpCongestionControl || value == "*" || tcpCongestionControl == null)
                 return;
 
-            await netConfigurationProvider.SetTcpCongestionControl(value);
+            await netConfigurationProvider.SetTcpCongestionControl(value).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not set TCP congestion control.");

@@ -166,7 +166,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         // recover previous sessions
         try {
             VhLogger.Instance.LogInformation("Recovering the old sessions...");
-            await SessionManager.RecoverSessions(cancellationToken);
+            await SessionManager.RecoverSessions(cancellationToken).Vhc();
             VhLogger.Instance.LogInformation("The old sessions have been recovered. SessionCount: {SessionCount}",
                 SessionManager.Sessions.Count);
         }
@@ -180,7 +180,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         // ReSharper disable once DisposeOnUsingVariable
         scope?.Dispose();
         _configureAndSendStatusJob.Start(); // before its own run, so a run that throws still leaves it running
-        await _configureAndSendStatusJob.RunNow(cancellationToken);
+        await _configureAndSendStatusJob.RunNow(cancellationToken).Vhc();
     }
 
     private async Task Configure(CancellationToken cancellationToken)
@@ -211,7 +211,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 Version = ServerVersion,
                 PrivateIpAddresses = [.. privateIpAddresses],
                 PublicIpAddresses = [.. publicIpAddresses],
-                Status = await GetStatus(),
+                Status = await GetStatus().Vhc(),
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,
                 OsVersion = Environment.OSVersion.ToString(),
@@ -223,7 +223,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 FreeQuicPortV6 = freeQuicPortV6,
                 IsRestarted = _isRestarted,
                 NetworkInterfaceNames = _netConfigurationService != null
-                    ? await _netConfigurationService.GetNetworkInterfaceNames()
+                    ? await _netConfigurationService.GetNetworkInterfaceNames().Vhc()
                     : null
             };
 
@@ -276,11 +276,11 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             }
 
             _tcpCongestionControl = _netConfigurationService != null
-                ? await _netConfigurationService.GetTcpCongestionControl()
+                ? await _netConfigurationService.GetTcpCongestionControl().Vhc()
                 : null;
 
             if (_swapMemoryProvider != null) {
-                await ConfigureSwapMemory(serverConfig.SwapMemorySizeMb);
+                await ConfigureSwapMemory(serverConfig.SwapMemorySizeMb).Vhc();
             }
 
             // Reconfigure server host
@@ -353,7 +353,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             return null;
 
         try {
-            return await _swapMemoryProvider.GetInfo();
+            return await _swapMemoryProvider.GetInfo().Vhc();
         }
         catch {
             return null;
@@ -366,7 +366,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             throw new InvalidOperationException("SwapMemoryProvider is not available.");
 
         try {
-            var info = await _swapMemoryProvider.GetInfo();
+            var info = await _swapMemoryProvider.GetInfo().Vhc();
             var size = sizeMb * VhUtils.Megabytes ?? 0;
             var otherSize = info.TotalSize - info.AppSize;
             var newAppSize = Math.Max(0, size - otherSize);
@@ -381,7 +381,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 return;
             }
 
-            await _swapMemoryProvider.SetAppSwapMemorySize(newAppSize);
+            await _swapMemoryProvider.SetAppSwapMemorySize(newAppSize).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not configure swap file.");
@@ -537,7 +537,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
     public async Task<ServerStatus> GetStatus()
     {
-        var swapMemoryInfo = await TryGetSwapMemoryInfo();
+        var swapMemoryInfo = await TryGetSwapMemoryInfo().Vhc();
         var systemInfo = _systemInfoProvider.GetSystemInfo();
         var serverStatus = new ServerStatus {
             SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
@@ -564,7 +564,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private async Task SendStatusToAccessManager(bool allowConfigure, CancellationToken cancellationToken)
     {
         try {
-            var status = await GetStatus();
+            var status = await GetStatus().Vhc();
             VhLogger.Instance.LogDebug("Sending status to Access... ConfigCode: {ConfigCode}", status.ConfigCode);
             var res = await SessionManager.SendStatus(status, cancellationToken).Vhc();
 

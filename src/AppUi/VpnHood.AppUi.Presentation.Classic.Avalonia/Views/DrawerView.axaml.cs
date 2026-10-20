@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Interactivity;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
@@ -51,6 +52,15 @@ public partial class DrawerView : UserControl
         SocialsRow.IsVisible = LinkedInItem.IsVisible || InstagramItem.IsVisible || XItem.IsVisible;
         PoweredByItem.IsVisible = features.ShowPoweredBy;
         Foot.IsVisible = SocialsRow.IsVisible || PoweredByItem.IsVisible;
+    }
+
+    // The drawer reaches under the system bars as the pages do (MainView.ApplySystemBars): the header's
+    // colour fills the status bar, the drawer's own the navigation bar, and what it holds keeps clear
+    // of both. The heights in logical pixels.
+    public void ApplySystemBars(Thickness systemBars)
+    {
+        HeaderContent.Margin = new Thickness(0, systemBars.Top, 0, 0);
+        LayoutRoot.Margin = new Thickness(0, 0, 0, systemBars.Bottom);
     }
 
     // the website as people write it: its host, without "www."

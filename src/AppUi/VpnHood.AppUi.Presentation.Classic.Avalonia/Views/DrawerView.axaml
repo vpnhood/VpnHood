@@ -6,12 +6,12 @@
        doors - Go premium, the account, Settings, Diagnose, Check for update - the outbound links,
        and at the foot the social links and the engine's credit. -->
   <Border Classes="drawer">
-    <DockPanel>
+    <DockPanel x:Name="LayoutRoot">
       <Border DockPanel.Dock="Top" Classes="drawer-header">
         <!-- A Grid and not a horizontal StackPanel: a stack offers its children all the width they
              ask for, so a long product name ran under the drawer's edge and was cut. The star
              column bounds the name, which then wraps. -->
-        <Grid ColumnDefinitions="Auto,*">
+        <Grid x:Name="HeaderContent" ColumnDefinitions="Auto,*">
           <Image x:Name="Logo" Width="50" Height="50" />
           <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
             <TextBlock x:Name="AppNameText" Classes="h4" FontSize="16" FlowDirection="LeftToRight" TextWrapping="Wrap" />

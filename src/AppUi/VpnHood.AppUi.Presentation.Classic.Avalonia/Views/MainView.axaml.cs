@@ -221,9 +221,10 @@ public partial class MainView : UserControl
 
     // The window goes under the system bars - Android's status and navigation bars, the iPhone's notch and
     // home indicator - and the platform no longer pads for them, so everything here keeps clear of them
-    // but the page and the scrims, which reach beneath: the page is padded inside instead (also in
-    // Show), so a background it sets on itself - the home's gradient - runs to the screen's edges, and
-    // beneath a page with none this view's own shows. The heights come in device pixels.
+    // but the page, the drawer and the scrims, which reach beneath: the page is padded inside instead
+    // (also in Show), so a background it sets on itself - the home's gradient - runs to the screen's
+    // edges, and beneath a page with none this view's own shows; the drawer does the same for itself
+    // (also in OpenDrawer). The heights come in device pixels.
     private void ApplySystemBars()
     {
         var scaling = _topLevel?.RenderScaling ?? 1;
@@ -231,10 +232,13 @@ public partial class MainView : UserControl
         var beneath = new Thickness(0, -_systemBars.Top, 0, -_systemBars.Bottom);
         Padding = _systemBars;
         Host.Margin = beneath;
+        DrawerContent.Margin = beneath;
         DrawerScrim.Margin = beneath;
         DialogScrim.Margin = beneath;
         if (Host.Content is TemplatedControl page)
             page.Padding = _systemBars;
+        if (DrawerContent.Content is DrawerView drawer)
+            drawer.ApplySystemBars(_systemBars);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -563,6 +567,7 @@ public partial class MainView : UserControl
         _isDrawerOpen = true;
         _focusBeforeOverlay = _topLevel?.FocusManager.GetFocusedElement();
         var drawer = new DrawerView(this);
+        drawer.ApplySystemBars(_systemBars);
         DrawerContent.Content = drawer;
         DrawerLayer.IsVisible = true;
         Host.IsEnabled = false;

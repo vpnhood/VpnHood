@@ -22,7 +22,7 @@ internal static class AndroidWebViewUpdaterPage
         ShowExceptionPage(activity,
             message: "WebView initialization failed. Please update your Android System WebView and Chrome Browser.",
             buttonText: "Update Android System WebView",
-            buttonUrl: "https://github.com/vpnhood/VpnHood/wiki/Update-Android-System-WebView-for-VpnHood-Android-App",
+            buttonUrl: "https://play.google.com/store/apps/details?id=com.google.android.webview",
             ex);
     }
 

@@ -10,13 +10,6 @@ namespace VpnHood.Core.Client.Abstractions;
 
 public class ClientOptions
 {
-    public static ClientOptions Default => field ??= new ClientOptions {
-        ClientId = string.Empty,
-        UseTcpProxy = true,
-        AccessKey = SampleAccessKey,
-        AdapterName = "VpnHoodEngine"
-    };
-
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] IncludeIpRangesByDevice { get; set; } = [.. IpNetwork.All.ToIpRanges()];
 

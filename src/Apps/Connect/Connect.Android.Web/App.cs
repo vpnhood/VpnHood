@@ -21,7 +21,6 @@ namespace VpnHood.App.Connect.Android.Web;
     NetworkSecurityConfig = AndroidAppConstants.NetworkSecurityConfig,
     SupportsRtl = AndroidAppConstants.SupportsRtl,
     AllowBackup = AndroidAppConstants.AllowBackup)]
-[MetaData("CHANNEL", Value = "GitHub")]
 // The Avalonia UI's Application: it starts the app from the params below, then the UI, which
 // MainActivity shows.
 public class App(IntPtr javaReference, JniHandleOwnership transfer)

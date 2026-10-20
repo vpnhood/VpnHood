@@ -155,8 +155,8 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                 _ = _vpnServiceHost.TryConnect(true);
             }
             catch (Exception ex) {
-                CompleteStartTunnel(new NSError(new NSString("VpnHood"), 1,
-                    NSDictionary.FromObjectAndKey((NSString)($"VpnHood init failed: {ex.Message}"), NSError.LocalizedDescriptionKey)));
+                CompleteStartTunnel(new NSError(new NSString(NSBundle.MainBundle.BundleIdentifier ?? nameof(IosVpnService)), 1,
+                    NSDictionary.FromObjectAndKey((NSString)($"The VPN could not start: {ex.Message}"), NSError.LocalizedDescriptionKey)));
             }
         });
     }

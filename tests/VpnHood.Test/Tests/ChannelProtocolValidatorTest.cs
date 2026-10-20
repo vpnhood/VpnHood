@@ -15,12 +15,12 @@ public class ChannelProtocolValidatorTest : TestBase
         var olderServer = new HelloResponse {
             ErrorCode = SessionErrorCode.Ok,
             UdpPort = 1000,
-            ProtocolVersion = UdpChannelTransmitter.MinProtocolVersion - 1
+            ProtocolVersion = UdpDatagram.MinProtocolVersion - 1
         };
         var newServer = new HelloResponse {
             ErrorCode = SessionErrorCode.Ok,
             UdpPort = 1000,
-            ProtocolVersion = UdpChannelTransmitter.MinProtocolVersion
+            ProtocolVersion = UdpDatagram.MinProtocolVersion
         };
 
         Assert.DoesNotContain(ChannelProtocol.Udp,

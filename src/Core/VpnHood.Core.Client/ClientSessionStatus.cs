@@ -40,7 +40,8 @@ internal class ClientSessionStatus(
         streamHandler.Stat.TcpTunnelledCount + domainFilteringService.QuicStat.IncludeCount;
     public int StreamPassthruCount =>
         streamHandler.Stat.TcpPassthruCount + domainFilteringService.QuicStat.ExcludeCount;
-    public int ActivePacketChannelCount => tunnel.PacketChannelCount;
+    // UDP counts as one while it carries the packets, as it did when it was a channel
+    public int ActivePacketChannelCount => tunnel.PacketChannelCount + (session.IsUdpOpen ? 1 : 0);
     public bool IsDropQuic => packetHandler.DropQuic; // This is current, don't use session property
     public bool IsTcpProxy => packetHandler.UseTcpProxyIpV4; // This is current, don't use session property
     public bool CanChangeTcpProxy => // the switch acts on IPv4: IPv6 may go by the proxy anyway

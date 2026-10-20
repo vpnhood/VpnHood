@@ -33,6 +33,9 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public UserReview? UserReview { get; set; }
     public bool? AllowAnonymousTracker { get; private set; } // as the last session's hello said
 
+    // the protocol a new session gets in place of its hello's, as an older client's session would have
+    public int? SessionProtocolVersion { get; set; }
+
     [Obsolete("Use RedirectServerTokens")]
     public IPEndPoint? RedirectHostEndPoint { get; set; }
 
@@ -100,6 +103,8 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         var ret = await base.Session_Create(sessionRequestEx, cancellationToken);
         // update by test provider
         UpdateSessionResponse(ret);
+        if (SessionProtocolVersion is { } sessionProtocolVersion)
+            ret.ProtocolVersion = sessionProtocolVersion;
 
         // update test provider
         UserReview = sessionRequestEx.UserReview;

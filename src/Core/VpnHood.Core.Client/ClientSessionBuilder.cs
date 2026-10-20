@@ -171,7 +171,7 @@ internal class ClientSessionBuilder(
             var sessionId = helloResponse.SessionId;
             var sessionKey = helloResponse.SessionKey;
 
-            var hostUdpEndPoint = helloResponse is { UdpPort: > 0, ProtocolVersion: >= UdpChannelTransmitter.MinProtocolVersion }
+            var hostUdpEndPoint = helloResponse is { UdpPort: > 0, ProtocolVersion: >= UdpDatagram.MinProtocolVersion }
                 ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, helloResponse.UdpPort.Value)
                 : null;
 

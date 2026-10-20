@@ -1,18 +1,22 @@
 using VpnHood.Net.Toolkit.Net;
 using System.Net;
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server.Listeners;
 
-internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
+// the server's UDP listeners: each hands its datagrams to their sessions
+internal class UdpListenerHost(SessionManager sessionManager) : IUdpDatagramHandler, IDisposable
 {
+    private readonly EventReporter _invalidSessionReporter = new("Invalid UDP session.", GeneralEventId.UdpSign);
     private readonly List<UdpChannelTransmitter> _transmitters = [];
     private bool _disposed;
 
@@ -50,7 +54,7 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
                 VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}",
                     VhLogger.Format(ipEndPoint));
 
-                var transmitter = ServerUdpChannelTransmitter.Create(ipEndPoint, sessionManager);
+                var transmitter = CreateListener(ipEndPoint);
                 _transmitters.Add(transmitter);
                 endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Udp, EndPoint = ipEndPoint });
             }
@@ -73,6 +77,27 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
         return Task.FromResult(ret);
     }
 
+    // the datagram's session takes it; a datagram with no session, a closed one or one below the UDP protocol is only
+    // counted
+    public void OnDatagramReceived(UdpChannelTransmitter listener, Memory<byte> datagram, IPEndPoint remoteEndPoint)
+    {
+        var session = sessionManager.GetSessionById(UdpDatagram.ReadSessionId(datagram.Span));
+        if (session?.ReceiveUdp(listener, datagram, remoteEndPoint) != true)
+            _invalidSessionReporter.Raise();
+    }
+
+    private UdpChannelTransmitter CreateListener(IPEndPoint ipEndPoint)
+    {
+        var udpClient = new UdpClient(ipEndPoint);
+        try {
+            return new UdpChannelTransmitter(udpClient, this);
+        }
+        catch {
+            udpClient.Dispose();
+            throw;
+        }
+    }
+
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))
@@ -81,5 +106,6 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
         foreach (var transmitter in _transmitters)
             transmitter.Dispose();
         _transmitters.Clear();
+        _invalidSessionReporter.Dispose();
     }
 }

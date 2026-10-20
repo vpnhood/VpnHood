@@ -31,7 +31,6 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
     public DateTime LastActivityTime => PacketStat.LastActivityTime;
     public Traffic Traffic => new(PacketStat.SentBytes, PacketStat.ReceivedBytes);
     protected abstract Task StartReadTask();
-    public abstract int OverheadLength { get; }
 
     protected PacketChannel(PacketChannelOptions options)
         : base(new PacketTransportOptions {

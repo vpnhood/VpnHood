@@ -48,13 +48,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly AsyncLock _packetChannelLock = new();
     private readonly DomainFilteringService _domainFilteringService;
 
+    // the session's UDP when the server offers it, which its tunnel owns
+    private readonly ClientUdpPacketChannel? _udpChannel;
+
     private DateTime? _autoWaitTime;
-    private ClientUdpChannelTransmitter? _udpTransmitter;
-    // the seq a new socket's transport counts on from: random for the session's first, then past the last socket's.
-    // Below 2⁶³, so the count never wraps under the server's freshness mark, which takes only a higher seq as new
-    private ulong _nextUdpSendSequenceNumber =
-        BinaryPrimitives.ReadUInt64LittleEndian(RandomNumberGenerator.GetBytes(8)) >> 1;
-    private volatile bool _isUdpTransmitterStale;
     // the current network's: a change cancels it, so a packet channel still being added on the old network gives
     // up the channel lock at once rather than at its connect timeout
     private CancellationTokenSource _networkCts = new();
@@ -77,6 +74,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public ISessionAdHandler AdHandler { get; }
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
+    // UDP is on and its socket open, so it carries the session's packets
+    internal bool IsUdpOpen => _tunnel.UseUdp && _udpChannel is { IsSocketOpen: true };
     internal bool IsAdapterStarted => _vpnAdapter.IsStarted;
     internal PassthroughState PassthroughState { get; } = new();
 
@@ -110,10 +109,19 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             MaxSpeedBurst = new Traffic(sent: TransportDefaults.MaxSpeedBurst, received: TransportDefaults.MaxSpeedBurst)
         };
 
+        // its UDP: the count starts at random, below 2⁶³, so it never wraps under the server's freshness mark
+        _udpChannel = Config.HostUdpEndPoint is { } hostUdpEndPoint
+            ? new ClientUdpPacketChannel(_socketFactory, hostUdpEndPoint, Config.Transport.UdpChannelBufferSize,
+                Config.SessionId, Config.SessionKey.Span,
+                firstSendSequenceNumber: BinaryPrimitives.ReadUInt64LittleEndian(RandomNumberGenerator.GetBytes(8)) >> 1,
+                _trafficMeter)
+            : null;
+
         // Tunnel; a send limit paces its packets
         var tunnelOptions = new TunnelOptions {
-            MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
-            Mtu = config.Mtu
+            MaxPacketChannelCount = Config.MaxPacketChannelCount,
+            Mtu = config.Mtu,
+            UdpChannel = _udpChannel
         };
         _tunnel = _trafficMeter.MaxSpeed.Sent > 0
             ? new ThrottledTunnel(tunnelOptions, _trafficMeter)
@@ -252,6 +260,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             if (_tunnel.PacketChannelCount >= _tunnel.MaxPacketChannelCount)
                 return false;
 
+            // UDP needs no channel, only its socket open
+            if (_channelProtocol == ChannelProtocol.Udp && _udpChannel is { IsSocketOpen: true })
+                return false;
+
             // RETRY-FLOOD FIX (device-measured 2026-06-10): this is checked per outgoing packet, so when
             // channel creation kept failing ("Unexpected response" on the WebSocket upgrade) the client
             // hammered the server with ~5 TLS handshakes/sec — 464 handshakes/323 requests in one minute —
@@ -354,11 +366,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // DropUdp is useful only if we use tcp proxy
         var dropUdp = _dropUdp && useTcpProxyIpV4;
 
-        // ChannelProtocol
+        // ChannelProtocol: UDP takes every packet at once, and a turn to TCP stops it before its first TCP channel
         _channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, Info);
+        _tunnel.UseUdp = _channelProtocol == ChannelProtocol.Udp;
         if (_channelProtocol != _oldChannelProtocol) {
             VhLogger.Instance.LogInformation("VpnProtocol is changed to {VpnProtocol}.", _channelProtocol);
-            _tunnel.MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;
             _oldChannelProtocol = _channelProtocol;
             _requestSender.ConnectorService.UseQuic = _channelProtocol == ChannelProtocol.Quic && Config.HostQuicEndPoint != null;
             _requestSender.ConnectorService.QuicEndPoint = Config.HostQuicEndPoint;
@@ -405,7 +417,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         try {
             VhLogger.Instance.LogInformation("The network changed. Replacing the tunnel's connections...");
-            _isUdpTransmitterStale = true; // before the channels go, so the next UDP channel sees it
+            _udpChannel?.CloseSocket();
             Interlocked.Exchange(ref _networkCts, new CancellationTokenSource()).TryCancel();
             _requestSender.ConnectorService.DropConnections();
             _tunnel.RemoveChannels<IPacketChannel>();
@@ -487,9 +499,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             if (!ShouldManagePacketChannels)
                 return;
 
-            // make sure only one UdpChannel exists for PacketChannels if UseUdpChannel is on
-            if (_channelProtocol == ChannelProtocol.Udp)
-                AddUdpChannel();
+            if (_channelProtocol == ChannelProtocol.Udp) {
+                var udpChannel = _udpChannel ?? throw new InvalidOperationException("The server serves no UDP.");
+                udpChannel.OpenSocket();
+            }
             else {
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, networkCts.Token);
                 await AddTcpPacketChannel(linkedCts.Token).Vhc();
@@ -519,11 +532,18 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             ChannelId = requestId, // use request id as channel id for simplicity
             SessionId = Config.SessionId,
             SessionKey = Config.SessionKey,
-            ActiveChannelIds = _tunnel.GetPacketChannels().Select(c => c.ChannelId).ToArray()
+            ActiveChannelIds = _tunnel.GetPacketChannels().Select(c => c.ChannelId).ToArray(),
+            UdpSendSequenceNumber = _udpChannel?.NextSendSequenceNumber
         };
 
         var requestResult = await SendRequest<SessionResponse>(request, cancellationToken).Vhc();
         try {
+            // the session turned to UDP while this channel was connecting: it is no longer wanted
+            if (_channelProtocol == ChannelProtocol.Udp) {
+                _ = requestResult.TryDisposeAsync();
+                return;
+            }
+
             // find timespan
             var lifespan = VhUtils.IsInfinite(Config.MaxPacketChannelLifespan)
                 ? (TimeSpan?)null
@@ -549,59 +569,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             _ = requestResult.TryDisposeAsync();
             throw;
         }
-    }
-
-    private void AddUdpChannel()
-    {
-        if (Config.SessionKey.IsEmpty) throw new Exception("Server UdpKey has not been set.");
-        if (Config.HostUdpEndPoint == null) throw new Exception("Server does not serve any UDP endpoint.");
-
-        // a socket from the old networks is dead; it goes here, under the packet channel lock, as no channel
-        // may be made on it meanwhile
-        if (_isUdpTransmitterStale) {
-            _isUdpTransmitterStale = false;
-            DisposeStaleUdpTransmitter();
-        }
-
-        // create channelTransmitter if not created
-        _udpTransmitter ??= new ClientUdpChannelTransmitter(
-            socketFactory: _socketFactory,
-            sessionId: Config.SessionId,
-            sessionKey: Config.SessionKey.Span,
-            remoteEndPoint: Config.HostUdpEndPoint,
-            bufferSize: Config.Transport.UdpChannelBufferSize,
-            firstSendSequenceNumber: _nextUdpSendSequenceNumber);
-
-        // create udp channel
-        var udpChannel = new UdpChannel(_udpTransmitter.UdpTransport, new UdpChannelOptions {
-            AutoDisposePackets = true,
-            LeaveUdpTransportOpen = true,
-            Blocking = false,
-            ChannelId = Guid.NewGuid().ToString(),
-            Lifespan = null,
-            TrafficMeter = _trafficMeter
-        });
-
-        // add to tunnel
-        try {
-            _tunnel.AddChannel(udpChannel);
-        }
-        catch {
-            udpChannel.Dispose();
-            throw;
-        }
-    }
-
-    // the next socket counts on past this one's count, read once it is disposed, plus a gap for the one send its lock
-    // may still have let through
-    private void DisposeStaleUdpTransmitter()
-    {
-        if (_udpTransmitter is null)
-            return;
-
-        _udpTransmitter.Dispose();
-        _nextUdpSendSequenceNumber = _udpTransmitter.UdpTransport.NextSendSequenceNumber + (1UL << 32);
-        _udpTransmitter = null;
     }
 
     internal Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
@@ -829,12 +796,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         VhLogger.Instance.LogDebug("Disposing ClientHost...");
         _clientTcpHost.Dispose();
 
+        // the tunnel's UDP channel, and its socket, go with it
         VhLogger.Instance.LogDebug("Disposing Tunnel...");
         _tunnel.Dispose();
         _trafficMeter.Dispose();
-
-        VhLogger.Instance.LogDebug("Disposing UdpTransmitter...");
-        _udpTransmitter?.Dispose();
 
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         _proxyManager.Dispose();

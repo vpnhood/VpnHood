@@ -12,7 +12,7 @@ internal static class ChannelProtocolValidator
     public static ChannelProtocol[] GetChannelProtocols(HelloResponse helloResponse, bool isQuicSupported)
     {
         var channelProtocols = new List<ChannelProtocol> { ChannelProtocol.Tcp };
-        if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= UdpChannelTransmitter.MinProtocolVersion })
+        if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= UdpDatagram.MinProtocolVersion })
             channelProtocols.Add(ChannelProtocol.Udp);
         if (helloResponse is { QuicPort: > 0 } && isQuicSupported)
             channelProtocols.Add(ChannelProtocol.Quic);

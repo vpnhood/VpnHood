@@ -23,6 +23,7 @@ using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -305,11 +306,12 @@ public class TestHelper : IDisposable
         return proxyPool;
     }
 
-    public TunnelOptions CreateTunnelOptions()
+    public TunnelOptions CreateTunnelOptions(IPacketChannel? udpChannel = null)
     {
         var tunnelOptions = new TunnelOptions {
             MaxPacketChannelCount = TransportDefaults.MaxPacketChannelCount,
-            Mtu = TransportDefaults.MtuClient
+            Mtu = TransportDefaults.MtuClient,
+            UdpChannel = udpChannel
         };
         return tunnelOptions;
     }

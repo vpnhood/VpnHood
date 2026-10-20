@@ -136,10 +136,13 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             ? JsonUtils.Deserialize<SessionExtraData>(sessionResponseEx.ExtraData)
             : new SessionExtraData();
 
-        // make sure that not to give same IP to multiple sessions
-        var virtualIps = isRecovery
-            ? _sessionLocalService.Get(sessionResponseEx.SessionId).VirtualIps
-            : _virtualIpManager.Allocate();
+        // A recovered session takes its virtual IPs and its protocol from its local record: no IP goes to two sessions,
+        // and its UDP does not count on the access manager to keep the protocol
+        var localData = isRecovery ? _sessionLocalService.Get(sessionResponseEx.SessionId) : null;
+        if (localData != null)
+            sessionResponseEx.ProtocolVersion = localData.ProtocolVersion;
+
+        var virtualIps = localData?.VirtualIps ?? _virtualIpManager.Allocate();
 
         // create the session
         var session = new Session(

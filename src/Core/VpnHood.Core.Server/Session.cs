@@ -64,7 +64,9 @@ public class Session : IDisposable
     private readonly Lock _stateLock = new();
 
     public Tunnel Tunnel { get; }
-    internal SessionUdpState UdpState { get; }
+
+    // its UDP, which its tunnel owns; none below the UDP protocol, as such a client was offered no UDP port
+    internal ServerUdpPacketChannel? UdpChannel { get; }
 
     // the session's limit and traffic count, which its tunnel, channels and streams share
     public TrafficMeter TrafficMeter { get; }
@@ -78,8 +80,7 @@ public class Session : IDisposable
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int NetScanErrorCount => _netScanErrorCount;
-    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (UseUdpChannel ? 0 : Tunnel.PacketChannelCount);
-    public bool UseUdpChannel => UdpState.IsChannelOpen;
+    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + Tunnel.PacketChannelCount;
 
 
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
@@ -149,17 +150,21 @@ public class Session : IDisposable
                 received: (long)(TransportDefaults.MaxSpeedBurst * ReceiveSpeedGrace))
         };
 
+        UdpChannel = ProtocolVersion >= UdpDatagram.MinProtocolVersion
+            ? new ServerUdpPacketChannel(SessionId, SessionKey, TrafficMeter)
+            : null;
+
         // Tunnel; a send limit paces its packets
         var tunnelOptions = new TunnelOptions {
             MaxPacketChannelCount = options.MaxPacketChannelCountValue,
-            Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu)
+            Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu),
+            UdpChannel = UdpChannel
         };
         Tunnel = TrafficMeter.MaxSpeed.Sent > 0
             ? new ThrottledTunnel(tunnelOptions, TrafficMeter)
             : new Tunnel(tunnelOptions);
 
         Tunnel.PacketReceived += Tunnel_PacketReceived;
-        UdpState = new SessionUdpState(SessionId, SessionKey, ProtocolVersion, Tunnel, TrafficMeter);
 
         // ReSharper disable once MergeIntoPattern
         if (options.NetScanLimit != null && options.NetScanTimeout != null)
@@ -406,7 +411,33 @@ public class Session : IDisposable
             }
         }
 
-        UdpState.AddTcpChannel(channel);
+        // the client is on TCP: its earlier datagrams can no longer turn UDP back on, and UDP goes off once the channel
+        // is in, so the session always has something to send on
+        if (request.UdpSendSequenceNumber is { } udpSendSequenceNumber)
+            UdpChannel?.ExpireBefore(udpSendSequenceNumber);
+
+        Tunnel.AddChannel(channel, disposeIfFailed: true);
+        Tunnel.UseUdp = false;
+    }
+
+    // A datagram of the session's: authenticated before it changes anything, and the newest one turns UDP on. False for
+    // a session below the UDP protocol, or one closed meanwhile, which stays listed a while with its keys gone
+    internal bool ReceiveUdp(UdpChannelTransmitter listener, Memory<byte> datagram, IPEndPoint remoteEndPoint)
+    {
+        if (UdpChannel is null)
+            return false;
+
+        try {
+            // UDP goes on before the newest datagram's packets go up, so their replies take it
+            if (UdpChannel.Receive(listener, datagram, remoteEndPoint) && !Tunnel.UseUdp)
+                Tunnel.UseUdp = true;
+
+            UdpChannel.Deliver(datagram);
+            return true;
+        }
+        catch (ObjectDisposedException) {
+            return false;
+        }
     }
 
     internal Task ProcessUdpPacketRequest(UdpPacketRequest request, IStreamConnection streamConnection,
@@ -565,9 +596,6 @@ public class Session : IDisposable
     {
         // its own guard: a cleanup's close and the manager's may come at once; IsDisposed is set only at the end
         if (Interlocked.Exchange(ref _disposing, true)) return;
-
-        // first, so a datagram meanwhile makes nothing; the tunnel disposes the UDP channel it has
-        UdpState.Dispose();
 
         _proxyManager.PacketReceived -= Proxy_PacketsReceived;
         _proxyManager.Dispose();

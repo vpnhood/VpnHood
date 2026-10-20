@@ -846,55 +846,61 @@ public class ServerTest : TestBase
             "A working TCP endpoint should still be configured.");
     }
 
+    // a closed session stays listed a while, so a UDP datagram its client still sends reaches it: its keys are gone, and
+    // the datagram changes nothing
     [TestMethod]
-    public async Task A_disposed_session_makes_no_udp_channel()
+    public async Task A_closed_session_takes_no_udp_datagram()
     {
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
         var session = server.GetSession(client);
-        using var transmitter =
-            ServerUdpChannelTransmitter.Create(new IPEndPoint(IPAddress.Loopback, 0), server.SessionManager);
+        using var listener = new TestUdpListener();
 
-        // a disposed session stays listed a while, so a UDP datagram its client still sends reaches it
         session.Dispose();
-        Assert.IsNull(session.UdpState.GetTransport(transmitter));
-        session.UdpState.OpenChannel();
-        Assert.IsFalse(session.UseUdpChannel);
+        Assert.IsFalse(session.ReceiveUdp(listener.Transmitter, UdpTestUtil.CreateForgedDatagram(session.SessionId),
+            listener.LocalEndPoint));
+        Assert.IsFalse(session.Tunnel.UseUdp);
     }
 
+    // a session below the UDP protocol has no UDP: its client was offered none, and its datagrams make nothing
     [TestMethod]
-    public async Task A_udp_channel_the_tunnel_refuses_leaves_the_session_off_udp()
+    public async Task An_older_protocol_session_has_no_udp()
     {
-        await using var server = await TestHelper.CreateServer();
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.SessionProtocolVersion = UdpDatagram.MinProtocolVersion - 1;
+        await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
         var session = server.GetSession(client);
-        using var transmitter =
-            ServerUdpChannelTransmitter.Create(new IPEndPoint(IPAddress.Loopback, 0), server.SessionManager);
-        Assert.IsNotNull(session.UdpState.GetTransport(transmitter));
+        using var listener = new TestUdpListener();
 
-        // the tunnel is gone, as when a UDP datagram comes in while the session is disposed
-        session.Tunnel.Dispose();
-        Assert.ThrowsExactly<ObjectDisposedException>(() => session.UdpState.OpenChannel());
-        Assert.IsFalse(session.UseUdpChannel);
+        Assert.IsNull(session.UdpChannel);
+        Assert.IsNull(client.RequiredSession.Config.HostUdpEndPoint);
+        Assert.IsFalse(session.ReceiveUdp(listener.Transmitter, UdpTestUtil.CreateForgedDatagram(session.SessionId),
+            listener.LocalEndPoint));
     }
 
-    // a session below the UDP protocol was offered no UDP port, so its datagrams make nothing
+    // a recovered session takes its protocol from the server's own record of it, not from the access manager, which
+    // here kept the hello's
     [TestMethod]
-    public async Task An_older_protocol_session_gets_no_udp_transport()
+    public async Task A_recovered_session_keeps_its_protocol()
     {
-        await using var server = await TestHelper.CreateServer();
-        using var transmitter =
-            ServerUdpChannelTransmitter.Create(new IPEndPoint(IPAddress.Loopback, 0), server.SessionManager);
-        using var tunnel = new Tunnel(new TunnelOptions {
-            MaxPacketChannelCount = 1,
-            Mtu = TransportDefaults.MtuServer
-        });
-        using var trafficMeter = new TrafficMeter();
-        using var udpState = new SessionUdpState(sessionId: 1, VhUtils.GenerateKey(),
-            protocolVersion: UdpChannelTransmitter.MinProtocolVersion - 1, tunnel, trafficMeter);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        accessManager1.SessionProtocolVersion = UdpDatagram.MinProtocolVersion - 1;
+        await using var server1 = await TestHelper.CreateServer(accessManager1);
+        var token = TestHelper.CreateAccessToken(server1);
+        await using var client = await TestHelper.CreateClient(token);
+        Assert.IsNull(server1.GetSession(client).UdpChannel);
 
-        Assert.IsNull(udpState.GetTransport(transmitter));
+        await server1.DisposeAsync();
+        accessManager1.Dispose();
+        using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions, accessManager1.StoragePath);
+        await using var server2 = await TestHelper.CreateServer(accessManager2);
+        await TestHelper.Test_Https();
+
+        Assert.IsNull(server2.GetSession(client).UdpChannel);
+        await client.DisposeAsync(); // before server2
     }
 }

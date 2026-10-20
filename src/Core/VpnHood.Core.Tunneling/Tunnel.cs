@@ -1,5 +1,4 @@
 using VpnHood.Net.Packets;
-using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.PacketTransports;
 using VpnHood.Core.Tunneling.Channels;
@@ -7,11 +6,14 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling;
 
-// A session's tunnel: it passes each packet straight on to one of its channels. A session with a send limit
-// uses a ThrottledTunnel, which paces the packets first; the limit and the traffic count are the session's
+// A session's tunnel: it passes each packet straight on, to its UDP channel while UDP is on and otherwise to one of
+// its stream channels, and hands up what either receives. A session with a send limit uses a ThrottledTunnel, which
+// paces the packets first; the limit and the traffic count are the session's
 public class Tunnel : PacketTransportBase
 {
     private readonly ChannelManager _channelManager;
+    private readonly IPacketChannel? _udpChannel;
+    private volatile bool _useUdp;
 
     public int PacketChannelCount => _channelManager.PacketChannelCount;
     public int StreamProxyChannelCount => _channelManager.ProxyChannelCount;
@@ -26,6 +28,18 @@ public class Tunnel : PacketTransportBase
 
     public int Mtu { get; set; }
 
+    // UDP on sends every packet on the UDP channel; the stream channels stay, and take the packets again once it is
+    // off. Only a tunnel with a UDP channel can turn it on
+    public bool UseUdp {
+        get => _useUdp;
+        set {
+            if (value && _udpChannel is null)
+                throw new InvalidOperationException("The tunnel has no UDP channel.");
+
+            _useUdp = value;
+        }
+    }
+
     public Tunnel(TunnelOptions options)
         : base(new PacketTransportOptions {
             AutoDisposePackets = false, // a packet handed on is no longer the tunnel's
@@ -34,6 +48,11 @@ public class Tunnel : PacketTransportBase
     {
         Mtu = options.Mtu;
         _channelManager = new ChannelManager(options.MaxPacketChannelCount, Channel_OnPacketReceived);
+        _udpChannel = options.UdpChannel;
+        if (_udpChannel != null) {
+            _udpChannel.PacketReceived += Channel_OnPacketReceived;
+            _udpChannel.Start();
+        }
     }
 
     public void AddChannel(IChannel channel, bool disposeIfFailed = false)
@@ -91,40 +110,27 @@ public class Tunnel : PacketTransportBase
 
     private IPacketChannel FindChannelForPacket(IpPacket ipPacket)
     {
-        // remove channel if it is not connected
-        var channel = FindChannelForPacketInternal(ipPacket);
+        if (_useUdp && _udpChannel is { } udpChannel)
+            return udpChannel;
+
+        // a channel that is not connected is cleaned up, and the packet takes another
+        var channel = _channelManager.GetPacketChannel(ipPacket);
         while (channel.State != PacketChannelState.Connected) {
             _channelManager.CleanupChannels();
-            channel = FindChannelForPacketInternal(ipPacket);
+            channel = _channelManager.GetPacketChannel(ipPacket);
         }
 
         return channel;
     }
 
-    private IPacketChannel FindChannelForPacketInternal(IpPacket ipPacket)
-    {
-        // find channel by protocol
-        var channelCount = _channelManager.PacketChannelCount;
-        var channelIndex = channelCount switch {
-            0 => throw new Exception("No available PacketChannel to send packets."),
-            1 => 0,
-            _ => ipPacket.Protocol switch {
-                // select channel by tcp source port
-                IpProtocol.Tcp => ipPacket.ExtractTcp().SourcePort % channelCount,
-
-                // select channel by udp source port
-                IpProtocol.Udp => ipPacket.ExtractUdp().SourcePort % channelCount,
-
-                // select the first channel for other protocols
-                _ => 0
-            }
-        };
-
-        return _channelManager.GetPacketChannel(channelIndex);
-    }
-
     protected override void DisposeManaged()
     {
+        // the UDP channel first: a datagram meanwhile goes up to no one
+        if (_udpChannel != null) {
+            _udpChannel.PacketReceived -= Channel_OnPacketReceived;
+            _udpChannel.Dispose();
+        }
+
         _channelManager.Dispose();
         base.DisposeManaged();
     }

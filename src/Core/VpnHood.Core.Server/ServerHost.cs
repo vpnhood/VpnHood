@@ -497,7 +497,7 @@ public class ServerHost : IAsyncDisposable
             SessionId = sessionResponseEx.SessionId,
             SessionKey = sessionResponseEx.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
-            UdpPort = protocolVersion >= UdpChannelTransmitter.MinProtocolVersion ? udpPort : null,
+            UdpPort = protocolVersion >= UdpDatagram.MinProtocolVersion ? udpPort : null,
             QuicPort = quicPort,
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),

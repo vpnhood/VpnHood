@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Core.Tunneling.Channels;
 
 namespace VpnHood.Core.Tunneling;
@@ -73,6 +75,8 @@ internal class ChannelManager : IDisposable
         }
     }
 
+    // A PacketChannel, not any IPacketChannel: a connection, which the manager closes and cleans up. A tunnel's UDP
+    // channel lasts as long as its session and stays beside the manager, so it is refused here
     public void AddChannel(IChannel channel)
     {
         lock (_channelListLock) {
@@ -248,14 +252,21 @@ internal class ChannelManager : IDisposable
         return Task.CompletedTask;
     }
 
-    public IPacketChannel GetPacketChannel(int channelIndex)
+    // the packet's channel, picked by its source port so a flow keeps to one channel; the count and the pick share
+    // one lock
+    public IPacketChannel GetPacketChannel(IpPacket ipPacket)
     {
         lock (_channelListLock) {
-            if (channelIndex >= _packetChannels.Count)
-                channelIndex = _packetChannels.Count - 1;
-
-            if (channelIndex < 0)
-                throw new ArgumentOutOfRangeException(nameof(channelIndex), "Channel index is out of range.");
+            var channelCount = _packetChannels.Count;
+            var channelIndex = channelCount switch {
+                0 => throw new Exception("No available PacketChannel to send packets."),
+                1 => 0,
+                _ => ipPacket.Protocol switch {
+                    IpProtocol.Tcp => ipPacket.ExtractTcp().SourcePort % channelCount,
+                    IpProtocol.Udp => ipPacket.ExtractUdp().SourcePort % channelCount,
+                    _ => 0
+                }
+            };
 
             return _packetChannels[channelIndex];
         }

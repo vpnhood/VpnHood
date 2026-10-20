@@ -17,7 +17,6 @@ public class TestPacketChannel(TimeSpan? lifespan = null) : PacketChannel(new Pa
 
     public int SentPackets => Volatile.Read(ref _sentPackets);
     public long SentBytes => Interlocked.Read(ref _sentBytes);
-    public override int OverheadLength => 0;
 
     // a packet arriving from the other side
     public void Receive(IpPacket ipPacket)

@@ -2,11 +2,12 @@ using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Client;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Dom;
 using VpnHood.Test.Extensions;
-using VpnHood.Test.Providers;
+using VpnHood.Test.Packets;
 
 namespace VpnHood.Test.Tests.Servers;
 
@@ -34,7 +35,7 @@ public class ServerUdpChannelTest : TestBase
         await Task.Delay(500, TestCt);
 
         // "the tunnel keeps working" alone would pass on a torn-down session too, once the client rebuilt its channel
-        Assert.IsFalse(dom.ServerSession.UseUdpChannel);
+        Assert.IsFalse(dom.ServerSession.Tunnel.UseUdp);
         Assert.AreEqual(tcpChannelCount, dom.ServerSession.TcpChannelCount);
         await UdpTestUtil.AssertNothingReceived(forger, TestCt);
         await TestHelper.Test_UdpEcho();
@@ -42,7 +43,7 @@ public class ServerUdpChannelTest : TestBase
             "The client must still use its first TCP packet channel.");
     }
 
-    // the forged datagram made the session's transport; the client's first UDP datagram is its newest, and opens UDP
+    // a forged datagram changes nothing; the client's first UDP datagram is its newest, and turns UDP on
     [TestMethod]
     public async Task Udp_works_after_a_forged_datagram()
     {
@@ -55,18 +56,18 @@ public class ServerUdpChannelTest : TestBase
         using var forger = new UdpClient(hostUdpEndPoint.AddressFamily);
         await forger.SendAsync(UdpTestUtil.CreateForgedDatagram(dom.ServerSession.SessionId), hostUdpEndPoint, TestCt);
         await Task.Delay(500, TestCt);
-        Assert.IsFalse(dom.ServerSession.UseUdpChannel);
+        Assert.IsFalse(dom.ServerSession.Tunnel.UseUdp);
 
-        // a packet sent while the client is still swapping its channels is dropped: wait for the UDP one first
+        // a packet sent while the client is still opening its UDP socket is dropped: wait for the socket first
         dom.Client.ChannelProtocol = ChannelProtocol.Udp;
         await VhTestUtil.AssertEqualsWait(true,
             () => dom.Client.RequiredSession.Status.ActivePacketChannelCount > 0, cancellationToken: TestCt);
         await TestHelper.Test_UdpEcho();
-        Assert.IsTrue(dom.ServerSession.UseUdpChannel);
+        Assert.IsTrue(dom.ServerSession.Tunnel.UseUdp);
     }
 
-    // the listener dies and comes back on the same endpoint: the client's next datagram moves the session's transport
-    // to the new one
+    // the listener dies and comes back on the same endpoint: the client's next datagram moves the session's route to
+    // the new one
     [TestMethod]
     public async Task Udp_session_follows_a_recreated_listener()
     {
@@ -82,19 +83,18 @@ public class ServerUdpChannelTest : TestBase
         var hostUdpEndPoint = client.RequiredSession.Config.HostUdpEndPoint;
         Assert.IsNotNull(hostUdpEndPoint, "The server must listen on UDP.");
         var serverSession = server.SessionManager.GetSessionById(client.SessionId);
-        Assert.IsNotNull(serverSession);
-        var transport = serverSession.UdpState.Transport;
-        Assert.IsNotNull(transport);
-        var oldListener = transport.ChannelTransmitter;
+        var udpChannel = serverSession?.UdpChannel;
+        Assert.IsNotNull(udpChannel);
+        var oldListener = udpChannel.Route?.Transmitter;
+        Assert.IsNotNull(oldListener);
 
         // a reconfigure with the same endpoint keeps its listener: take it away, then bring it back
         await ReconfigureUdpEndPoints(accessManager, [], TestCt);
         await ReconfigureUdpEndPoints(accessManager, [hostUdpEndPoint], TestCt);
 
         await TestHelper.Test_UdpEcho();
-        Assert.AreSame(transport, serverSession.UdpState.Transport);
-        Assert.AreNotSame(oldListener, transport.ChannelTransmitter);
-        Assert.IsTrue(serverSession.UseUdpChannel);
+        Assert.AreNotSame(oldListener, udpChannel.Route?.Transmitter);
+        Assert.IsTrue(serverSession?.Tunnel.UseUdp);
     }
 
     // the client turned to TCP: a copy of one of its older UDP datagrams must not take the session back to UDP
@@ -104,22 +104,22 @@ public class ServerUdpChannelTest : TestBase
         await using var dom = await ClientServerDom.Create(TestHelper,
             TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Udp));
         await TestHelper.Test_UdpEcho();
-        Assert.IsTrue(dom.ServerSession.UseUdpChannel);
+        Assert.IsTrue(dom.ServerSession.Tunnel.UseUdp);
         var hostUdpEndPoint = dom.Client.RequiredSession.Config.HostUdpEndPoint;
         Assert.IsNotNull(hostUdpEndPoint, "The server must listen on UDP.");
 
         dom.Client.ChannelProtocol = ChannelProtocol.Tcp;
-        await VhTestUtil.AssertEqualsWait(false, () => dom.ServerSession.UseUdpChannel, cancellationToken: TestCt);
+        await VhTestUtil.AssertEqualsWait(false, () => dom.ServerSession.Tunnel.UseUdp, cancellationToken: TestCt);
         await TestHelper.Test_UdpEcho();
         var tcpChannelCount = dom.ServerSession.TcpChannelCount;
 
         // genuine, from another socket, with seq 0: never above a seq the client has sent
-        using var replayer = new TestClientUdpChannelTransmitter(hostUdpEndPoint, dom.ServerSession.SessionId,
+        using var replayer = UdpTestUtil.CreateClientChannel(hostUdpEndPoint, dom.ServerSession.SessionId,
             dom.ServerSession.SessionKey, firstSendSequenceNumber: 0);
-        await replayer.UdpTransport.SendAsync(new byte[20]);
+        replayer.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
         await Task.Delay(500, TestCt);
 
-        Assert.IsFalse(dom.ServerSession.UseUdpChannel);
+        Assert.IsFalse(dom.ServerSession.Tunnel.UseUdp);
         Assert.AreEqual(tcpChannelCount, dom.ServerSession.TcpChannelCount);
         await TestHelper.Test_UdpEcho();
     }

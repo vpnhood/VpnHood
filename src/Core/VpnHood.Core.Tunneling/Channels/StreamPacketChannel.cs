@@ -14,7 +14,6 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
     private readonly IStreamConnection _streamConnection = options.StreamConnection;
 
     public DateTime RequestTime { get; } = options.RequestTime;
-    public override int OverheadLength => 0;
 
     protected override async ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {

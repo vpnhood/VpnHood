@@ -59,7 +59,7 @@ public partial class AccountView : UserControl, IPage
         var isPremiumByAccount = VhApp.IsPremiumByAccount;
         var hasCode = profile?.HasAccessCode == true;
 
-        Sheet.Classes.Set("grad-sheet", isPremiumUser);
+        Classes.Set("grad-sheet", isPremiumUser);
         PremiumImage.IsVisible = isPremiumUser;
 
         UserCard.IsVisible = account != null;

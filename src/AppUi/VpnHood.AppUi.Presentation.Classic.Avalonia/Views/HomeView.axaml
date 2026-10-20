@@ -5,7 +5,8 @@
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.HomeView"
-             x:DataType="vm:MainViewModel">
+             x:DataType="vm:MainViewModel"
+             Background="{StaticResource HomeBgBrush}">
   <!-- The web UI's home (pages/index.vue): the header - the drawer's door off the TV, the app name,
        the build - the badges and the premium mark or the countdown, the hero - the speeds, the
        circle, the Connect pill - and the rows: the server or location, the countries split, the
@@ -35,11 +36,12 @@
     </ContainerQuery>
   </UserControl.Styles>
 
-  <Panel Background="{StaticResource HomeBgBrush}">
-    <!-- #homeContainer: the web UI's body-bg over the home's gradient. Its premium art on the
-         sides is not drawn: a phone's corners on a solid fill, it broke a wide page; a premium
-         session shows in the circle's gold instead. -->
-    <Panel>
+  <Panel>
+    <!-- #homeContainer: the web UI's body-bg over the home's gradient, which is the page's own
+         background, so it runs under the system bars (MainView); the body-bg reaches under them
+         too (the code-behind). Its premium art on the sides is not drawn: a phone's corners on a
+         solid fill, it broke a wide page; a premium session shows in the circle's gold instead. -->
+    <Panel x:Name="BodyBg">
       <Panel.Background>
         <ImageBrush ui:AppImage.Source="images/body-bg.png" Stretch="UniformToFill" AlignmentY="Top" />
       </Panel.Background>

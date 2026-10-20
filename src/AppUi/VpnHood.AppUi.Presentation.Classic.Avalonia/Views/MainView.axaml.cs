@@ -2,6 +2,7 @@
 using Avalonia;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -44,6 +45,7 @@ public partial class MainView : UserControl
     private DateTime _snackbarUntil;
     private TopLevel? _topLevel;
     private IInputElement? _focusBeforeOverlay;
+    private Thickness _systemBars;
 
     public MainViewModel ViewModel { get; } = new();
 
@@ -176,6 +178,8 @@ public partial class MainView : UserControl
             leaving.IsHitTestVisible = false;
         if (page is Control arriving)
             arriving.IsHitTestVisible = true;
+        if (page is TemplatedControl templated)
+            templated.Padding = _systemBars;
 
         Host.IsTransitionReversed = back;
         Host.Content = page;
@@ -216,12 +220,21 @@ public partial class MainView : UserControl
     }
 
     // The window goes under the system bars - Android's status and navigation bars, the iPhone's notch and
-    // home indicator - and the platform no longer pads for them, so the pages, the drawer and the dialogs
-    // keep clear of them here, the background showing beneath. The heights come in device pixels.
+    // home indicator - and the platform no longer pads for them, so everything here keeps clear of them
+    // but the page and the scrims, which reach beneath: the page is padded inside instead (also in
+    // Show), so a background it sets on itself - the home's gradient - runs to the screen's edges, and
+    // beneath a page with none this view's own shows. The heights come in device pixels.
     private void ApplySystemBars()
     {
         var scaling = _topLevel?.RenderScaling ?? 1;
-        Padding = new Thickness(0, ViewModel.SystemBarsTopHeight / scaling, 0, ViewModel.SystemBarsBottomHeight / scaling);
+        _systemBars = new Thickness(0, ViewModel.SystemBarsTopHeight / scaling, 0, ViewModel.SystemBarsBottomHeight / scaling);
+        var beneath = new Thickness(0, -_systemBars.Top, 0, -_systemBars.Bottom);
+        Padding = _systemBars;
+        Host.Margin = beneath;
+        DrawerScrim.Margin = beneath;
+        DialogScrim.Margin = beneath;
+        if (Host.Content is TemplatedControl page)
+            page.Padding = _systemBars;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

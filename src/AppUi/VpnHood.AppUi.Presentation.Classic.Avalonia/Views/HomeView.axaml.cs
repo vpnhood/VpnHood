@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using VpnHood.AppUi.Common;
@@ -31,6 +32,15 @@ public partial class HomeView : UserControl, IPage
                 UpdateCountdownColor();
         };
         UpdateCountdownColor();
+    }
+
+    // The body-bg is the page's background as much as the gradient is, so it reaches under the system
+    // bars as well, by the padding the host gives the page for them (MainView.ApplySystemBars).
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == PaddingProperty)
+            BodyBg.Margin = new Thickness(-Padding.Left, -Padding.Top, -Padding.Right, -Padding.Bottom);
     }
 
     // the countdown's colour steps down as the time does (CountDown.getCountdownColor)

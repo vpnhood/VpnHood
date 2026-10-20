@@ -47,7 +47,7 @@
 
     <!-- the dialogs: a scrim, and the one on top of the stack, centred -->
     <Panel x:Name="DialogLayer" IsVisible="False">
-      <Border Background="{StaticResource ScrimBrush}" />
+      <Border x:Name="DialogScrim" Background="{StaticResource ScrimBrush}" />
       <ContentControl x:Name="DialogContent" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16" />
     </Panel>
 

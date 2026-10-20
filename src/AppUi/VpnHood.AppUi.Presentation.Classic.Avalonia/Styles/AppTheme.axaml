@@ -1388,8 +1388,9 @@
     <Setter Property="Foreground" Value="{StaticResource BtnOnUpdateSnackbarBrush}" />
   </Style>
 
-  <!-- the feature pages (FeaturePageLayout.vue): the gradient sheet, the image, the numbered steps -->
-  <Style Selector="Border.grad-sheet">
+  <!-- the feature pages (FeaturePageLayout.vue): the gradient sheet, the image, the numbered steps.
+       The sheet is the page itself, so it runs under the system bars (MainView). -->
+  <Style Selector=":is(UserControl).grad-sheet">
     <Setter Property="Background" Value="{StaticResource PrimaryBgGradBrush}" />
   </Style>
   <Style Selector="TextBlock.step-number">

@@ -2,6 +2,7 @@
 
 * Feature: In the EEA, the UK and Switzerland, the app asks in Google's own form before its ads use your data, and Settings > Privacy > Ad privacy choices changes your answer; with a no you still see ads, but not personalised ones #android #connect #store
 * Feature: In the EEA, the UK and Switzerland, usage data stays off until you agree: the first-run page asks once, with a box you tick yourself, on Google Play and after this update too #android #windows #linux
+* Fix: On Android, the page's own colours run under the status and navigation bars, where a band of another colour showed: dark navy on CLIENT's home, a lighter one at the bottom of the premium pages #android
 * Fix: On Linux each log line appears in the journal once, and whole #linux
 * Fix: With "Share anonymous usage data" off, the app no longer reports each start, nor the VPN each connection and its usage, and turning it off while connected stops the VPN's reports at once #android
 * Fix: Where the app asks you to accept its terms at first run, it sends no usage data before you accept them #android #windows #linux

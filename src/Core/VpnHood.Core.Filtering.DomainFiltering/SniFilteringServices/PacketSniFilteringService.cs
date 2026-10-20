@@ -133,6 +133,9 @@ public abstract class PacketSniFilteringService(
     private PacketSniFilterResult HandleGiveUp(
         IpEndPointValue flowKey, FlowInfo? flowInfo, long nowTicks)
     {
+        // Collect all previous buffered first: the state below is the same flow's, and takes a new list
+        var packets = flowInfo?.BufferedPackets;
+
         // Mark flow as decided (None = pass through)
         var state = flowInfo ?? new FlowInfo();
         state.Decision = FilterAction.Default;
@@ -142,7 +145,7 @@ public abstract class PacketSniFilteringService(
         _flowCacheService.Set(flowKey, state);
 
         // Release all buffered packets with None action
-        return new PacketSniFilterResult(FilterAction.Default, null, flowInfo?.BufferedPackets, false);
+        return new PacketSniFilterResult(FilterAction.Default, null, packets, false);
     }
 
     public void Dispose()

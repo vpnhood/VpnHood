@@ -73,6 +73,10 @@ jobs:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      # The look's package (VpnHood.AppUi.Assets.Classic) is a submodule whose targets every head
+      # imports; fastlane/, the other submodule, stays out.
+      - name: Check out the asset submodule
+        run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
       - uses: actions/setup-dotnet@v6
         with: { global-json-file: code/global.json }
       - uses: actions/setup-java@v6

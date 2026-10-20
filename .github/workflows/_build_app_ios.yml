@@ -46,6 +46,10 @@ jobs:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      # The look's package (VpnHood.AppUi.Assets.Classic) is a submodule whose targets every head
+      # imports; fastlane/, the other submodule, stays out.
+      - name: Check out the asset submodule
+        run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
       # net11.0-ios needs the .NET 11 preview SDK. Track the preview channel (matches publish_nugets.yml)
       # rather than pinning an exact build, so each new preview (currently RC2,
       # 11.0.100-rc.2.26504.105, iOS workload 27.0.12212-net11-rc.2) is picked up automatically.

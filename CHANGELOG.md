@@ -55,7 +55,7 @@
 * Fix: On Linux, the installer installs MsQuic, for the QUIC channel; it looked for MsQuic's installer under the server's name and never found it. Microsoft's package feed, which MsQuic comes from, is removed again unless it was there before #linux
 * Fix: On Linux, the app's installed files belong to root; they kept the user id of the machine that built them, so an account with that id could replace what the VPN service runs as root #linux
 * Fix: On Linux, the install command in the Linux guide works: sudo bash <(…) cannot run the script it is given, so the guide says sudo su -c "bash <(…)", and the installer prints that command when it is run without root #linux
-* Fix: Pairing never offers a mobile broadband address, and it now starts in a Windows virtual machine under Hyper-V, where it found no address
+* Fix: Pairing never offers a mobile broadband address, and it now starts where it found no address: in a Windows virtual machine under Hyper-V, and on a PC that shares its network card with its virtual machines (a Hyper-V external switch)
 * Fix: The language setting no longer invites translations to a folder that moved
 * Update: On a plan with a speed limit, the first megabytes after a pause go at full speed, so pages load quickly, and only steady heavy use is held to the limit
 * Fix: A big upload over a slow connection no longer holds up the device's other traffic, such as browsing

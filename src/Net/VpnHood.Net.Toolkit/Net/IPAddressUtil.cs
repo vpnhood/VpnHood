@@ -241,7 +241,8 @@ public static class IPAddressUtil
     // Hypervisor and container adapters no other device can reach. Matched by name and description
     // because the OS reports most of them as plain Ethernet; a VPN's tunnel needs no marker, being
     // known by its type (IsVirtualAdapter). "Hyper-V Virtual" is the host's side alone: a guest's own
-    // card is a "Microsoft Hyper-V Network Adapter", and its LAN.
+    // card is a "Microsoft Hyper-V Network Adapter", and its LAN. One with a gateway is reachable all
+    // the same (IsHostOnlyAdapter).
     public static IReadOnlyList<string> VirtualAdapterMarkers { get; } =
         ["Hyper-V Virtual", "vEthernet", "VirtualBox", "VMware", "Docker", "WSL"];
 
@@ -249,13 +250,13 @@ public static class IPAddressUtil
     // first. Which network that device is on cannot be known from here, so this is ranking, not
     // proof: the address on the default route (the network with the internet is the one others
     // share), then Wi-Fi and Ethernet, then the rest. Adapters matching excludeAdapterMarkers
-    // (VirtualAdapterMarkers when null), VPN tunnels, mobile broadband and the loopback interface
-    // are left out entirely (IsLanInterface): a PC holds Hyper-V, VirtualBox or Docker addresses
-    // nobody can dial, WSL puts 10.255.255.254 on its loopback, and while a VPN is connected its
-    // adapter holds the default route on Windows — which is why the probe's answer counts only when
-    // the enumeration also lists it. Loopback addresses go one by one too, as Android may not type
-    // its interfaces. "Not Down" rather than "Up": an OS that hides operstate reports Unknown. A
-    // phone or TV ends up with one entry; a PC with a few.
+    // (VirtualAdapterMarkers when null) with no gateway, VPN tunnels, mobile broadband and the
+    // loopback interface are left out entirely (IsLanInterface): a PC holds Hyper-V, VirtualBox or
+    // Docker addresses nobody can dial, WSL puts 10.255.255.254 on its loopback, and while a VPN is
+    // connected its adapter holds the default route on Windows — which is why the probe's answer
+    // counts only when the enumeration also lists it. Loopback addresses go one by one too, as
+    // Android may not type its interfaces. "Not Down" rather than "Up": an OS that hides operstate
+    // reports Unknown. A phone or TV ends up with one entry; a PC with a few.
     public static async Task<IReadOnlyList<IPAddress>> GetLanAddresses(AddressFamily addressFamily,
         IEnumerable<string>? excludeAdapterMarkers = null)
     {
@@ -304,9 +305,19 @@ public static class IPAddressUtil
                IsLinuxTunDevice(networkInterface.Name) ||
                networkInterface.Name.StartsWith("tun", StringComparison.OrdinalIgnoreCase) ||
                networkInterface.Name.StartsWith("utun", StringComparison.OrdinalIgnoreCase) ||
-               markers.Any(marker =>
+               IsHostOnlyAdapter(networkInterface, markers);
+    }
+
+    // A hypervisor's or container's adapter (the markers) that only the host and its guests reach. A
+    // Hyper-V external switch moves the PC's own LAN address onto its "vEthernet (<switch>)" adapter,
+    // the router as its gateway; the others - internal switches, WSL, Docker, VirtualBox, VMware -
+    // route for their guests and have no gateway of their own.
+    private static bool IsHostOnlyAdapter(NetworkInterface networkInterface, IReadOnlyList<string> markers)
+    {
+        return markers.Any(marker =>
                    networkInterface.Name.Contains(marker, StringComparison.OrdinalIgnoreCase) ||
-                   networkInterface.Description.Contains(marker, StringComparison.OrdinalIgnoreCase));
+                   networkInterface.Description.Contains(marker, StringComparison.OrdinalIgnoreCase)) &&
+               networkInterface.GetIPProperties().GatewayAddresses.Count == 0;
     }
 
     // Every tun and tap device has tun_flags, whatever its name. Linux alone: Android's sandbox may

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.NetworkInformation;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Test.Providers;
@@ -49,6 +50,21 @@ public class LanInterfaceTest
         Assert.IsFalse(IsLanInterface(name, type, description));
     }
 
+    // A Hyper-V external switch moves the PC's LAN address onto its own adapter, the router as its gateway
+    [TestMethod]
+    public void ExternalSwitchAdapterIsKept()
+    {
+        Assert.IsTrue(IsLanInterface("vEthernet (External)", NetworkInterfaceType.Ethernet,
+            "Hyper-V Virtual Ethernet Adapter #2", [IPAddress.Parse("192.168.1.1")]));
+    }
+
+    [TestMethod]
+    public void TunnelWithGatewayIsLeftOut()
+    {
+        Assert.IsFalse(IsLanInterface("Local Area Connection", WindowsProprietaryVirtualType,
+            "TAP-Windows Adapter V9", [IPAddress.Parse("10.8.0.1")]));
+    }
+
     [TestMethod]
     public void DownInterfaceIsLeftOut()
     {
@@ -69,9 +85,10 @@ public class LanInterfaceTest
         Assert.IsTrue(IsLanInterface("wlp2s0", NetworkInterfaceType.Wireless80211, "wlp2s0"));
     }
 
-    private static bool IsLanInterface(string name, NetworkInterfaceType type, string description)
+    private static bool IsLanInterface(string name, NetworkInterfaceType type, string description,
+        IReadOnlyList<IPAddress>? gateways = null)
     {
-        return IPAddressUtil.IsLanInterface(new TestNetworkInterface(name, type, description),
+        return IPAddressUtil.IsLanInterface(new TestNetworkInterface(name, type, description, gateways: gateways),
             IPAddressUtil.VirtualAdapterMarkers);
     }
 }

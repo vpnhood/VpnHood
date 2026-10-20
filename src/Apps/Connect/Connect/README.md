@@ -37,4 +37,5 @@ template: its own of this project, and its heads. Nothing beneath `src/Apps/` ma
 The look lives in the UI's store (`VpnHood.AppUi.Assets.Classic`, `ui.zip`), placed beside each head by
 that package's targets. The page the web host serves to a paired device is the Classic Avalonia UI's
 browser build (`src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser`), placed the same way as
-`assets/web-root.zip`. Neither passes through this project.
+`assets/web-root.zip` by the UI's own package (`VpnHood.AppUi.Presentation.Classic.Avalonia`).
+Neither passes through this project.

@@ -133,7 +133,7 @@ jobs:
           name: browser-page
           if-no-files-found: error
           retention-days: 1
-          path: ${{ env.PAGE_DIR }}/bin/avalonia-browser.zip
+          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip
 
   # --- Per-platform builds: each is a small standalone reusable module (single source of truth). ---
   build-linux:

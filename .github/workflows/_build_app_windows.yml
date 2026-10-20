@@ -107,7 +107,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: browser-page
-          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/bin
+          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive
       - name: Build Windows binary (dotnet publish)
         shell: pwsh
         run: |

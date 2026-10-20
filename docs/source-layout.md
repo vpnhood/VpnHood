@@ -221,13 +221,13 @@ arrive as **files placed by MSBuild targets**, and the head names each one in `A
 | File | Comes from | Named by | Holds |
 | --- | --- | --- | --- |
 | `assets/ui.zip` | `VpnHood.AppUi.Assets.Classic` | `AppOptions.UiZipAssets` | images, country flags, fonts, content documents, the words of every language, and each theme's colours for the OS chrome and the launch screen |
-| `assets/web-root.zip` | `VpnHood.AppUi.Presentation.Classic.Avalonia.Browser` | `AppOptions.WebRootZipAsset` | the page the app's web host serves to a paired device |
+| `assets/web-root.zip` | `VpnHood.AppUi.Presentation.Classic.Avalonia` | `AppOptions.WebRootZipAsset` | the page the app's web host serves to a paired device |
 
-Each of those projects owns a targets file that places its file the way the platform reads files —
-`AndroidAsset` on Android, `BundleResource` on Apple, copy-to-output elsewhere — and in this repo a
-head imports both directly. The store's is `buildTransitive/*.targets`, which a `PackageReference`
-brings at any depth; the page's is `build/*.targets`, which reaches no package consumer, since the
-page's project is not packed.
+Each of those packages owns a `buildTransitive/*.targets` that places its file the way the platform
+reads files — `AndroidAsset` on Android, `BundleResource` on Apple, copy-to-output elsewhere — which a
+`PackageReference` brings at any depth; in this repo a head imports both directly. The page ships in
+the UI's own package rather than one of its own, since the page is that UI's code and calls the app's
+API; the store is the head's own choice.
 
 ## The browser page, end to end
 
@@ -238,9 +238,12 @@ to WebAssembly - the same UI the head itself runs in process, drawn by a browser
 VpnHood.AppUi.Presentation.Classic.Avalonia/          the UI itself: pages, controls, themes
 VpnHood.AppUi.Hosting.Avalonia.Browser/               mounts ANY Avalonia UI as a page: AvaloniaBrowserHost.RunAsync<TUi>
 VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/  names which UI: a global.json, a csproj, a three-line Main
-        │  _publish.ps1
+        │  _publish.ps1, under the .NET 10 SDK
         ▼
-     bin/avalonia-browser.zip  ──build/*.targets──▶  <head>/assets/web-root.zip
+VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip   in the UI's own package
+        │  buildTransitive/*.targets
+        ▼
+     <head>/assets/web-root.zip
 ```
 
 The host library is an Avalonia host like `Avalonia.Desktop`, `Avalonia.Android` and

@@ -1,9 +1,10 @@
 # Publishes the Classic Avalonia UI's browser page and zips it as the page every head's web host
-# serves: build/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser.targets places bin/avalonia-browser.zip
-# beside each head as assets/web-root.zip, when it exists. In CI the publish_app workflow runs this
-# once (build-browser) and hands the zip to every head build as an artifact. Runs under the .NET 10
-# SDK named by global.json in this folder, with its wasm-tools workload: SkiaSharp's WebAssembly
-# libraries are built for its Emscripten, which the .NET 11 preview's cannot link.
+# serves, into the UI's own package: VpnHood.AppUi.Presentation.Classic.Avalonia's
+# buildTransitive/web-root.zip, which its targets place beside each head as assets/web-root.zip. In CI
+# the publish_app workflow runs this once (build-browser) and hands the zip to every head build as an
+# artifact, and publish_nugets runs it before the pack. Runs under the .NET 10 SDK named by global.json
+# in this folder, with its wasm-tools workload: SkiaSharp's WebAssembly libraries are built for its
+# Emscripten, which the .NET 11 preview's cannot link.
 $ErrorActionPreference = "Stop"
 Push-Location $PSScriptRoot
 try {
@@ -18,7 +19,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "The browser publish failed." }
 
     $wwwroot = (Resolve-Path "bin/Release/net10.0-browser/publish/wwwroot").Path
-    $zipPath = Join-Path $PSScriptRoot "bin/avalonia-browser.zip"
+    $zipPath = Join-Path $PSScriptRoot "../VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip"
     if (Test-Path $zipPath) { Remove-Item $zipPath }
 
     # The loader asks for the plain names, so the .br and .gz twins the SDK writes beside every file
@@ -39,7 +40,7 @@ try {
     }
 
     $raw = ($files | Measure-Object -Property Length -Sum).Sum
-    Write-Host ("avalonia-browser.zip: {0:N1} MB zipped, {1:N1} MB extracted, {2} files" -f ((Get-Item $zipPath).Length / 1MB), ($raw / 1MB), $files.Count)
+    Write-Host ("web-root.zip: {0:N1} MB zipped, {1:N1} MB extracted, {2} files" -f ((Get-Item $zipPath).Length / 1MB), ($raw / 1MB), $files.Count)
 }
 finally {
     Pop-Location

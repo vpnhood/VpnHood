@@ -8,7 +8,7 @@ zip placed beside it by MSBuild, read through one interface.
 | Placed at | Built by | Named in `AppOptions` as | Holds |
 | --- | --- | --- | --- |
 | `assets/ui.zip` | `VpnHood.AppUi.Assets.Classic` | `UiZipAssets` | images, country flags, fonts, content documents, the words of every language, each theme's colours for the OS chrome and the launch screen |
-| `assets/web-root.zip` | `VpnHood.AppUi.Presentation.Classic.Avalonia.Browser` | `WebRootZipAsset` | the page the app's web host serves to a paired device |
+| `assets/web-root.zip` | `VpnHood.AppUi.Presentation.Classic.Avalonia.Browser`, into the UI's own package `VpnHood.AppUi.Presentation.Classic.Avalonia` | `WebRootZipAsset` | the page the app's web host serves to a paired device |
 | `iplocations/IpLocations.zip` | `VpnHood.Net.IpLocations.Assets.Ip2LocationLite` | `IpLocationZipAsset` | the IP-to-country ranges |
 
 One zip rather than loose files, because packaging is one item per platform: one `AndroidAsset`,
@@ -72,7 +72,7 @@ rather than requiring — a language falling back to another, a picture that may
 ```mermaid
 graph LR
     W["the look, a submodule:<br/>src/AppUi/VpnHood.AppUi.Assets.Classic"] --> UZ["ui.zip"]
-    CA["Classic.Avalonia<br/>compiled to WebAssembly"] --> BZ["avalonia-browser.zip"]
+    CA["Classic.Avalonia<br/>compiled to WebAssembly"] --> BZ["web-root.zip"]
     IP["Ip2Location package"] --> IZ["IpLocations.zip"]
 
     UZ --> P
@@ -121,12 +121,15 @@ What follows from that:
   `TrimMode=full` is affordable; the reflection JSON path stays on for the few places shared code
   needs it.
 - **The assets are fetched, not bundled.** They already exist on the server that sent the page.
+- **Shipped in the UI's own package**, not an asset package of its own: the page is that UI's code
+  and calls the app's API, so every app that uses the UI has it, at the UI's version. The look, by
+  contrast, is the head's choice.
 - **Built with the .NET 10 SDK**, pinned by a `global.json` in the page project's folder, with the
   `wasm-tools` workload.
 - **Cache headers follow the bundle's own fingerprints.** `dotnet.native.<hash>.wasm` is immutable;
   `index.html`, `main.js` and `dotnet.js` are no-cache.
 
-The bundle is 7.3 MB zipped, 20.1 MB extracted, 64 files.
+The bundle is 7.4 MB zipped, 20.3 MB extracted, 70 files.
 
 ## Adding a set of files
 

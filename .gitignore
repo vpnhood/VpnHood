@@ -365,3 +365,5 @@ MigrationBackup/
 # Swift Package Manager derived data (VpnHoodStoreKit facade builds)
 .build/
 
+# The Classic Avalonia UI's browser page, which its _publish.ps1 writes into the UI's package
+/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip

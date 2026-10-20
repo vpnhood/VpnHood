@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<Description>VpnHood's own Avalonia UI: the web UI's pages, page for page, in one responsive layout - the views, the controls and the two products' themes</Description>
+		<Description>VpnHood's own Avalonia UI: the web UI's pages, page for page, in one responsive layout - the views, the controls and the two products' themes - and the same UI compiled to WebAssembly, the page the app's web host serves to a paired phone</Description>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>
 
@@ -31,4 +31,21 @@
 		<ProjectReference Include="..\VpnHood.AppUi.Assets.Classic\VpnHood.AppUi.Assets.Classic.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
 		<!-- The pairing page starts and stops the LAN listener the phone dials into. -->
 	</ItemGroup>
+
+	<!-- This UI as a browser page - the page the app's web host serves to a paired phone - ships in this
+	     package: it is this UI's own code compiled to WebAssembly and calls the app's API, so it comes
+	     with the UI and at its version, where the look above is the head's choice. buildTransitive/
+	     holds web-root.zip, which VpnHood.AppUi.Presentation.Classic.Avalonia.Browser's _publish.ps1
+	     writes there and git ignores, and the targets that place it beside the app at any reference depth. -->
+	<ItemGroup>
+		<!-- The file name in PackagePath: a folder alone would add the default item's buildTransitive\ again. -->
+		<None Update="buildTransitive\**" Pack="true" PackagePath="buildTransitive\%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<!-- Pack is the only build that must have the page: without it, the package is a UI whose web host
+	     has nothing to serve. -->
+	<Target Name="VhRequireWebRootZip" BeforeTargets="GenerateNuspec">
+		<Error Condition="!Exists('$(MSBuildProjectDirectory)\buildTransitive\web-root.zip')"
+		       Text="There is no buildTransitive\web-root.zip to pack. Run src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/_publish.ps1 first (the .NET 10 SDK with the wasm-tools workload)." />
+	</Target>
 </Project>

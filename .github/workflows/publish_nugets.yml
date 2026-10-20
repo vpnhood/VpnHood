@@ -67,6 +67,16 @@ jobs:
       - name: Install .NET workloads (android, ios, maui)
         shell: pwsh
         run: dotnet workload install android ios maui-android maui-windows
+      # The page the classic UI's package carries (VpnHood.AppUi.Presentation.Classic.Avalonia's
+      # buildTransitive/web-root.zip), published first: that pack fails without it. Under the .NET 10
+      # SDK the page's own global.json names, with its wasm-tools workload - the .NET 11 preview's
+      # Emscripten cannot link SkiaSharp's WebAssembly libraries.
+      - name: Publish the browser page
+        shell: pwsh
+        run: |
+          Set-Location src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser
+          dotnet workload install wasm-tools
+          ./_publish.ps1
       # nuget.org Trusted Publishing: the job's OIDC token buys a key valid for one hour, so it is
       # requested right before the publish. The policy (created by trudyhood, package owner vpnhood)
       # names this repo and this file's NAME - renaming the file breaks publishing until it is updated.

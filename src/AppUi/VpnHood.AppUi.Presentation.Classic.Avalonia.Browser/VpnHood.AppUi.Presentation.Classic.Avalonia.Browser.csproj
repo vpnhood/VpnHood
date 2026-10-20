@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
 	<PropertyGroup>
-		<IsPackable>false</IsPackable>	<!-- published and zipped by _publish.ps1, placed beside each head by build/*.targets -->
+		<IsPackable>false</IsPackable>	<!-- published and zipped by _publish.ps1 into the UI's own package, whose targets place it beside each head -->
 		<Description>The Classic Avalonia UI as a browser page: what the app's web server hands a paired device. The host does the work (VpnHood.AppUi.Hosting.Avalonia.Browser); this names the UI.</Description>
 		<TargetFramework>net10.0-browser</TargetFramework>
 		<OutputType>Exe</OutputType>

@@ -45,6 +45,7 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageIcon>VpnHood.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
   </PropertyGroup>
@@ -67,6 +68,17 @@
   <!-- Pack the shared package icon (path is relative to this file, so it is depth-independent). -->
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)VpnHood.png" Link="Resources\VpnHood.png" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+  <!-- The README nuget.org and Visual Studio show: the project's own README.md where it has one, else
+       the shared README.Packages.md beside this file, packed as README.md. Included here rather than
+       updated on the SDK's own item, which comes after this file and which a project may turn off
+       (VpnHood.AppUi.Assets.Classic); hidden, since the SDK already lists a project's own. -->
+  <ItemGroup>
+    <None Include="$(MSBuildProjectDirectory)\README.md" Pack="true" PackagePath="" Visible="false"
+          Condition="Exists('$(MSBuildProjectDirectory)\README.md')" />
+    <None Include="$(MSBuildThisFileDirectory)README.Packages.md" Pack="true" PackagePath="README.md" Visible="false"
+          Condition="!Exists('$(MSBuildProjectDirectory)\README.md')" />
   </ItemGroup>
 
   <!-- The repo's own analyzers (VH0001: every await says where it continues; VH0002: no .Vhc() in UI

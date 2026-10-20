@@ -44,6 +44,6 @@ internal static class UdpTestUtil
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(500));
         await Assert.ThrowsAsync<OperationCanceledException>(async () => await udpClient.ReceiveAsync(timeoutCts.Token),
-            "Nothing may reach the forger.");
+            "Nothing more may arrive.");
     }
 }

@@ -209,8 +209,8 @@ public class TunnelTest : TestBase
         await VhTestUtil.AssertEqualsWait(1, () => clientReceivedPackets.Count, cancellationToken: TestCt);
     }
 
-    // A copy of a datagram the client sent before, sent again from another address, still authenticates: it must not
-    // move the server's route, which only the newest datagram does
+    // An older datagram of the session's, from another address, as a reordered one of the client's comes: it goes up,
+    // but must not move the server's route, which only the newest datagram does
     [TestMethod]
     public async Task UdpChannel_older_datagram_from_another_address_changes_nothing()
     {
@@ -236,7 +236,7 @@ public class TunnelTest : TestBase
         var route = serverChannel.Route;
         Assert.IsNotNull(route);
 
-        // the session's datagram with an older seq, as a copy carries, from another socket
+        // the session's datagram with an older seq, never sent before, from another socket
         using var replayChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
             firstSendSequenceNumber: 500);
         replayChannel.SendPacketQueued(CreateRandomPacket());
@@ -246,6 +246,48 @@ public class TunnelTest : TestBase
         Assert.AreSame(route, serverChannel.Route);
         serverChannel.SendPacketQueued(CreateRandomPacket());
         await VhTestUtil.AssertEqualsWait(1, () => clientReceivedPackets.Count, cancellationToken: TestCt);
+    }
+
+    // A copy of a datagram goes up once, on either side: the test relays between the two, so it holds each side's
+    // datagram and the client's address
+    [TestMethod]
+    public async Task UdpChannel_copy_goes_up_once()
+    {
+        const ulong sessionId = 1UL;
+        var sessionKey = VhUtils.GenerateKey();
+
+        using var listener = new TestUdpListener();
+        var serverChannel = listener.AddSession(sessionId, sessionKey);
+        var serverReceivedPackets = new List<IpPacket>();
+        serverChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            serverReceivedPackets.Add(ipPacket);
+        };
+
+        using var relay = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        using var clientChannel = UdpTestUtil.CreateClientChannel(relay.Client.GetLocalEndPoint(), sessionId,
+            sessionKey);
+        var clientReceivedPackets = new List<IpPacket>();
+        clientChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            clientReceivedPackets.Add(ipPacket);
+        };
+
+        // the client's datagram, twice: the server's route is the relay
+        clientChannel.SendPacketQueued(CreateRandomPacket());
+        var clientDatagram = await relay.ReceiveAsync(TestCt);
+        await relay.SendAsync(clientDatagram.Buffer, listener.LocalEndPoint, TestCt);
+        await relay.SendAsync(clientDatagram.Buffer, listener.LocalEndPoint, TestCt);
+        await VhTestUtil.AssertEqualsWait(1, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+
+        // the server's datagram, twice, to the client's socket
+        serverChannel.SendPacketQueued(CreateRandomPacket());
+        var serverDatagram = (await relay.ReceiveAsync(TestCt)).Buffer;
+        await relay.SendAsync(serverDatagram, clientDatagram.RemoteEndPoint, TestCt);
+        await relay.SendAsync(serverDatagram, clientDatagram.RemoteEndPoint, TestCt);
+        await VhTestUtil.AssertEqualsWait(1, () => clientReceivedPackets.Count, cancellationToken: TestCt);
+        await Task.Delay(300, TestCt);
+
+        Assert.HasCount(1, serverReceivedPackets);
+        Assert.HasCount(1, clientReceivedPackets);
     }
 
     // A TCP packet channel request carries the seq of the client's next UDP datagram: one it sent before, arriving late,

@@ -60,10 +60,13 @@ internal sealed class ClientUdpPacketChannel(
             await Task.Delay(1, cancellationToken).Vhc();
     }
 
+    // a copy of one received before goes no further
     public void OnDatagramReceived(UdpChannelTransmitter transmitter, Memory<byte> datagram, IPEndPoint remoteEndPoint)
     {
-        lock (_receiveLock)
-            Open(datagram.Span);
+        lock (_receiveLock) {
+            if (Open(datagram.Span) is null)
+                return;
+        }
 
         HandUp(datagram[UdpDatagram.HeaderLength..]);
     }

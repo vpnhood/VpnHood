@@ -23,20 +23,25 @@ internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey,
 
     public UdpRoute? Route => _route;
 
-    // Opens the datagram in place: true for the newest yet, which moves the route, with its seq. A forgery throws
-    // before anything changes; a copy of an older datagram moves nothing. Its packets go up with Deliver, once the
-    // session has acted on the result
-    public bool Receive(UdpChannelTransmitter listener, Memory<byte> datagram, IPEndPoint remoteEndPoint,
+    // Opens the datagram in place and says how fresh it is: the newest yet moves the route, and gives its seq for the
+    // session's switch. A forgery throws before anything changes. Its packets go up with Deliver, unless it was seen,
+    // once the session has acted on the result
+    public DatagramFreshness Receive(UdpChannelTransmitter listener, Memory<byte> datagram, IPEndPoint remoteEndPoint,
         out ulong sequenceNumber)
     {
         lock (_receiveLock) {
-            sequenceNumber = Open(datagram.Span);
-            if (sequenceNumber <= _newestSequenceNumber)
-                return false;
+            if (Open(datagram.Span) is not { } seq) {
+                sequenceNumber = 0;
+                return DatagramFreshness.Seen;
+            }
 
-            _newestSequenceNumber = sequenceNumber;
+            sequenceNumber = seq;
+            if (seq <= _newestSequenceNumber)
+                return DatagramFreshness.Older;
+
+            _newestSequenceNumber = seq;
             FollowDatagram(listener, remoteEndPoint);
-            return true;
+            return DatagramFreshness.Newest;
         }
     }
 

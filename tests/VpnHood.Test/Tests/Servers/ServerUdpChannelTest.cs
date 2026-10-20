@@ -124,10 +124,11 @@ public class ServerUdpChannelTest : TestBase
         await TestHelper.Test_UdpEcho();
     }
 
-    // A datagram of the client's that never reached the server, sent again once the client is on TCP: newer than any
-    // the server has seen, but older than the client's TCP request, so it must not take the session back to UDP
+    // A datagram of the client's that never reached the server, sent twice once the client is on TCP: newer than any
+    // the server has seen, but older than the client's TCP request, so it must not take the session back to UDP; and
+    // a copy goes no further, so the echo server answers its packet once
     [TestMethod]
-    public async Task A_lost_udp_datagram_keeps_a_tcp_session_on_tcp()
+    public async Task A_lost_udp_datagram_goes_up_once_and_keeps_a_tcp_session_on_tcp()
     {
         using var accessManager = TestHelper.CreateAccessManager();
         accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
@@ -143,15 +144,16 @@ public class ServerUdpChannelTest : TestBase
         var serverSession = server.SessionManager.GetSessionById(client.SessionId);
         Assert.IsNotNull(serverSession);
 
-        // the server's listener goes and a socket of the test's takes its endpoint, catching the client's next datagram
+        // the server's listener goes and a socket of the test's takes its endpoint, catching the client's next datagram:
+        // the one carrying the test's packet to the echo server
         await ReconfigureUdpEndPoints(accessManager, [], TestCt);
-        UdpReceiveResult lostDatagram;
+        using var udpClient = new UdpClient(AddressFamily.InterNetwork);
+        byte[] lostDatagram;
         using (var catcher = new UdpClient(hostUdpEndPoint)) {
-            using var udpClient = new UdpClient(AddressFamily.InterNetwork);
             await udpClient.SendAsync(new byte[100], TestHelper.WebServer.MockEps.UdpV4EndPoint1, TestCt);
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
             timeoutCts.CancelAfter(TestConstants.DefaultUdpTimeout);
-            lostDatagram = await catcher.ReceiveAsync(timeoutCts.Token);
+            lostDatagram = (await catcher.ReceiveAsync(timeoutCts.Token)).Buffer;
         }
 
         // the client turns to TCP before the listener is back, so the server sees none of its datagrams in between
@@ -160,9 +162,16 @@ public class ServerUdpChannelTest : TestBase
         await ReconfigureUdpEndPoints(accessManager, [hostUdpEndPoint], TestCt);
 
         using var replayer = new UdpClient(hostUdpEndPoint.AddressFamily);
-        await replayer.SendAsync(lostDatagram.Buffer, hostUdpEndPoint, TestCt);
-        await Task.Delay(500, TestCt);
+        await replayer.SendAsync(lostDatagram, hostUdpEndPoint, TestCt);
+        await replayer.SendAsync(lostDatagram, hostUdpEndPoint, TestCt);
 
+        // one echo, back on TCP
+        using (var echoCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt)) {
+            echoCts.CancelAfter(TestConstants.DefaultUdpTimeout);
+            await udpClient.ReceiveAsync(echoCts.Token);
+        }
+
+        await UdpTestUtil.AssertNothingReceived(udpClient, TestCt);
         Assert.IsFalse(serverSession.Tunnel.UseUdp);
         await TestHelper.Test_UdpEcho();
     }

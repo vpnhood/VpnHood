@@ -25,6 +25,7 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
     private readonly TrafficMeter? _trafficMeter;
     private ulong _nextSendSequenceNumber;
     private byte[]? _sendBuffer;
+    private ReplayWindow? _replayWindow; // made with the first datagram, so a session on TCP holds none
 
     public ulong SessionId { get; }
 
@@ -99,11 +100,15 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
         _trafficMeter?.OnSent(payloadLength);
     }
 
-    // Opens a datagram in place and returns its seq; a forgery throws AuthenticationTagMismatchException before anything
-    // reads it. Not thread-safe, as the key's context is not: its callers serialize it
-    protected ulong Open(Span<byte> datagram)
+    // Opens a datagram in place and returns its seq, or null for a copy of one opened before, or one older than the
+    // replay window, whose packets must not go up again. A forgery throws AuthenticationTagMismatchException before
+    // anything reads it, and leaves the window as it was. Not thread-safe, as the key's context and the window are
+    // not: its callers serialize it
+    protected ulong? Open(Span<byte> datagram)
     {
-        return UdpDatagram.Open(_receiveCryptor, SessionId, isServerSent: !_isServer, datagram);
+        var sequenceNumber = UdpDatagram.Open(_receiveCryptor, SessionId, isServerSent: !_isServer, datagram);
+        _replayWindow ??= new ReplayWindow();
+        return _replayWindow.TryAdd(sequenceNumber) ? sequenceNumber : null;
     }
 
     // The opened payload's packets go up to the tunnel, keeping the received array, which is theirs. UDP has no

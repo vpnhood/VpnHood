@@ -421,16 +421,21 @@ public class Session : IDisposable
         TurnUdpOff();
     }
 
-    // A datagram of the session's: authenticated before it changes anything, and the newest one turns UDP on. False for
-    // a session below the UDP protocol, or one closed meanwhile, which stays listed a while with its keys gone
+    // A datagram of the session's: authenticated before it changes anything; a copy goes no further, and the newest
+    // one turns UDP on. False for a session below the UDP protocol, or one closed meanwhile, which stays listed a while
+    // with its keys gone
     internal bool ReceiveUdp(UdpChannelTransmitter listener, Memory<byte> datagram, IPEndPoint remoteEndPoint)
     {
         if (UdpChannel is not { } udpChannel)
             return false;
 
         try {
+            var freshness = udpChannel.Receive(listener, datagram, remoteEndPoint, out var sequenceNumber);
+            if (freshness == DatagramFreshness.Seen)
+                return true;
+
             // UDP goes on before the newest datagram's packets go up, so their replies take it
-            if (udpChannel.Receive(listener, datagram, remoteEndPoint, out var sequenceNumber) && !Tunnel.UseUdp)
+            if (freshness == DatagramFreshness.Newest && !Tunnel.UseUdp)
                 TurnUdpOn(udpChannel, sequenceNumber, listener);
 
             udpChannel.Deliver(datagram);

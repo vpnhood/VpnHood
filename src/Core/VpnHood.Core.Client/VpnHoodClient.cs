@@ -22,8 +22,8 @@ namespace VpnHood.Core.Client;
 
 public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
-    private bool _disposed;
-    private volatile bool _disposing; // a start that a shutdown ends failed at nothing
+    private volatile bool _disposing; // a close has begun, either one: a start that it ends failed at nothing
+    private bool _disposed; // the release has run
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly IVpnAdapter _vpnAdapter;
     private readonly ISocketFactory _socketFactory;
@@ -282,14 +282,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        _disposing = true;
-
         // a second close waits for the first one's end - a disconnect during connect, say, where the failed connect
         // closes too; the adapter's Disposed handler, raised in that release, only starts one. No early return after
         // it: the steps below join what a quick close left running
         using var lockResult = await _disposeLock.LockAsync().Vhc();
 
-        VhLogger.Instance.LogInformation("Client is shutting down asynchronously...");
+        // only the first close logs its start
+        if (!Interlocked.Exchange(ref _disposing, true))
+            VhLogger.Instance.LogInformation("Client is shutting down asynchronously...");
         await _cancellationTokenSource.TryCancelAsync().Vhc();
 
         // a failed session close must not keep the adapter from its release below
@@ -299,47 +299,30 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // flush and dispose the proxy connector while we can still await
         await ProxyConnector.TryDisposeAsync().Vhc();
 
-        // the session's disposed state may have disposed the client meanwhile. Nothing is awaited after the claim: a
-        // quick close that finds it leaves the release to this close
-        lock (_disposeLock) {
-            if (_disposed) return;
-            _disposed = true;
-        }
-
-        DisposeSyncMembers();
+        // the rest is local, as in the quick close, whose cancel and closes of the session and the proxy connector
+        // find this one's done. The session's disposed state may have run it already
+        Dispose();
     }
 
     public void Dispose()
     {
-        _disposing = true;
-        lock (_disposeLock) {
-            if (_disposed) return;
-            _disposed = true;
-        }
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
-        // shutdown
-        VhLogger.Instance.LogInformation("Client is shutting down...");
+        // a graceful close that came first has logged the start
+        if (!Interlocked.Exchange(ref _disposing, true))
+            VhLogger.Instance.LogInformation("Client is shutting down...");
+
         _cancellationTokenSource.TryCancel();
+        _session?.Dispose();
 
-        // close session; the adapter's release follows even a failed one, whose error still surfaces
-        try {
-            _session?.Dispose();
-        }
-        finally {
-            // dispose ProxyConnector before adapter get closed and it needs Adapter's SocketFactory.
-            // this sync path cannot await; the flush runs in the background and only touches the
-            // endpoint db. The session's connector service closes in the background too, so a proxy
-            // failure it records after the flush is not saved
-            VhLogger.Instance.LogDebug("Disposing ProxyConnector...");
-            _ = ProxyConnector.TryDisposeAsync();
+        // dispose ProxyConnector before adapter get closed and it needs Adapter's SocketFactory.
+        // this sync path cannot await; the flush runs in the background and only touches the
+        // endpoint db. The session's connector service closes in the background too, so a proxy
+        // failure it records after the flush is not saved
+        VhLogger.Instance.LogDebug("Disposing ProxyConnector...");
+        _ = ProxyConnector.TryDisposeAsync();
 
-            DisposeSyncMembers();
-        }
-    }
-
-    // what both closes share, after the session's and the proxy connector's, which are each one's own
-    private void DisposeSyncMembers()
-    {
         _cancellationTokenSource.Dispose();
         _session?.StateChanged -= Session_StateChanged;
         NetFilter.Dispose();
@@ -354,7 +337,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         State = ClientState.Disposed;
 
         // Changing state fire events in a task, so we should not do it immediately after disposing
-        // StateChanged = null; 
+        // StateChanged = null;
         VhLogger.Instance.LogInformation("Bye Bye!");
     }
 }

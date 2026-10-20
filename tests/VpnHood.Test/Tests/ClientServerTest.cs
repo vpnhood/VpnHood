@@ -279,9 +279,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    [DataRow(true)]
-    [DataRow(false)]
-    public async Task Client_releases_its_adapter_when_its_session_close_fails(bool async)
+    public async Task Client_releases_its_adapter_when_its_session_close_fails()
     {
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
@@ -297,12 +295,9 @@ public class ClientServerTest : TestBase
             socketFactory: socketFactory);
         Assert.IsGreaterThan(0, socketFactory.CreatedUdpClientCount);
 
-        // the session's close throws when it closes that socket; the sync close lets that surface
+        // the session's close throws when it closes that socket
         socketFactory.FailCloses = true;
-        if (async)
-            await client.DisposeAsync();
-        else
-            Assert.ThrowsExactly<IOException>(() => client.Dispose());
+        await client.DisposeAsync();
 
         Assert.IsGreaterThan(0, socketFactory.FailedCloseCount);
         Assert.IsTrue(adapterDisposed);

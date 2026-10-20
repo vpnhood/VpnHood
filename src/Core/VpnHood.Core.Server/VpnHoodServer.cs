@@ -32,8 +32,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private readonly bool _autoDisposeAccessManager;
     private readonly string _lastConfigFilePath;
     private readonly ConfigErrorTracker _configErrorTracker;
-    private bool _disposing;
-    private bool _disposed;
+    private bool _disposing; // a close has begun, either one: no new work
+    private bool _disposed; // the release has run
     private Exception? _lastConfigException;
     private string? _lastConfigCode;
     private readonly bool _publicIpDiscovery;
@@ -604,13 +604,13 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     // graceful close ends with it, for what is local
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, true)) return;
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         // a graceful close that came first has logged the start
         using var scope = VhLogger.Instance.BeginScope("Server");
-        if (!_disposing)
+        if (!Interlocked.Exchange(ref _disposing, true))
             VhLogger.Instance.LogInformation("Server is shutting down at once...");
-        _disposing = true;
 
         _configureAndSendStatusJob.Dispose();
         _ = ServerHost.TryDisposeAsync(LogLevel.Warning);
@@ -626,31 +626,38 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // a second close waits for the first one's end. No early return after it: after a quick close, the steps below
+        // only wait for what is already ending
         using var lockResult = await _disposeLock.LockAsync().Vhc();
-        if (_disposing) return;
-        _disposing = true;
 
-        using var scope = VhLogger.Instance.BeginScope("Server");
-        VhLogger.Instance.LogInformation("Server is shutting down...");
+        // its log scope ends before the quick close, which opens its own
+        using (VhLogger.Instance.BeginScope("Server")) {
+            // only the first close logs its start
+            if (!Interlocked.Exchange(ref _disposing, true))
+                VhLogger.Instance.LogInformation("Server is shutting down...");
 
-        // the host's close starts beside a status upload under way, which does not touch it, and a configuration under
-        // way, which it lets end first. Its connections' closes may wait for their QUIC peers, so past its limit the
-        // close goes on: the last sync and the IP removal fit a service stop's 30 s
-        var serverHostDisposeTask = ServerHost.TryDisposeAsync(_serverHostDisposeTimeout, LogLevel.Warning).AsTask();
+            // the host's close starts beside a status upload under way, which does not touch it, and a configuration
+            // under way, which it lets end first. Its connections' closes may wait for their QUIC peers, so past its
+            // limit the close goes on: the last sync and the IP removal fit a service stop's 30 s
+            var serverHostDisposeTask =
+                ServerHost.TryDisposeAsync(_serverHostDisposeTimeout, LogLevel.Warning).AsTask();
 
-        // a status upload under way may finish, within the last sync's 7 s: cancelled, its usage would be dropped
-        await Task.WhenAny(_sendStatusTask, Task.Delay(TimeSpan.FromSeconds(7))).Vhc();
+            // a status upload under way may finish, within the last sync's 7 s: cancelled, its usage would be dropped
+            await Task.WhenAny(_sendStatusTask, Task.Delay(TimeSpan.FromSeconds(7))).Vhc();
 
-        // dispose update job
-        _configureAndSendStatusJob.Dispose();
+            // dispose update job
+            _configureAndSendStatusJob.Dispose();
 
-        // wait for configuration
-        await VhInvoker.TryInvokeAsync("finish the configuration under way", LogLevel.Debug, () => _configureTask).Vhc();
-        await VhInvoker.TryInvokeAsync("finish the status upload under way", LogLevel.Debug, () => _sendStatusTask).Vhc();
+            // wait for configuration
+            await VhInvoker.TryInvokeAsync("finish the configuration under way", LogLevel.Debug,
+                () => _configureTask).Vhc();
+            await VhInvoker.TryInvokeAsync("finish the status upload under way", LogLevel.Debug,
+                () => _sendStatusTask).Vhc();
 
-        // before disposing session manager to prevent recovering sessions
-        await serverHostDisposeTask.Vhc();
-        await SessionManager.DisposeAsync().Vhc();
+            // before disposing session manager to prevent recovering sessions
+            await serverHostDisposeTask.Vhc();
+            await SessionManager.DisposeAsync().Vhc();
+        }
 
         // the rest is local, as in the quick close
         Dispose();

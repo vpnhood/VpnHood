@@ -340,6 +340,36 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_close_of_the_client_waits_for_the_release_its_sessions_own_close_started()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // the session closes on its own, as when the server ends it, and its disposed state starts the client's quick
+        // close, held here in its release as the adapter tells of its dispose
+        var vpnAdapter = new TestNullVpnAdapter();
+        using var adapterRelease = new ManualResetEventSlim();
+        var adapterDisposing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        vpnAdapter.Disposed += (_, _) => {
+            adapterDisposing.TrySetResult();
+            adapterRelease.Wait(TimeSpan.FromSeconds(10));
+        };
+        await using var client = await TestHelper.CreateClient(vpnAdapter: vpnAdapter, token: token);
+        var session = (ClientSession)client.RequiredSession;
+
+        var sessionClose = Task.Run(() => session.DisposeAsync().AsTask(), TestCt);
+        await adapterDisposing.Task.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+
+        var clientClose = client.DisposeAsync().AsTask();
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestCt);
+        Assert.IsFalse(clientClose.IsCompleted, "The client's close should wait for the release its session started.");
+
+        adapterRelease.Set();
+        await Task.WhenAll(sessionClose, clientClose).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(ClientState.Disposed, client.State);
+    }
+
+    [TestMethod]
     public async Task A_failed_session_state_handler_does_not_break_the_sessions_close()
     {
         await using var server = await TestHelper.CreateServer();

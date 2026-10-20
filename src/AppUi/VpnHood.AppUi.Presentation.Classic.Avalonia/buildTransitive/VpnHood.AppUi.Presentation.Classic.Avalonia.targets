@@ -1,6 +1,6 @@
 <Project>
 	<!-- The page every head's web host serves - to the app's own web view and to a paired phone
-	     alike: the Avalonia UI's browser build, as _publish.ps1 in this folder zips it. Placed the way
+	     alike: the Avalonia UI's browser build, as Classic.Avalonia.Browser's _publish.ps1 zips it. Placed the way
 	     each platform reads files, so a head reads it at the asset path "assets/web-root.zip" through
 	     its platform's IAssetProvider and hands it to the app (AppOptions.WebRootZipAsset), which
 	     extracts it once. That path is the whole contract between this file and the head.
@@ -15,7 +15,7 @@
 	     so (VhWarnMissingWebRoot below): the first request for the page then says which file is
 	     missing, rather than a head discovering at startup that it has half a UI. -->
 	<PropertyGroup>
-		<VhWebRootZip>$(MSBuildThisFileDirectory)..\bin\avalonia-browser.zip</VhWebRootZip>
+		<VhWebRootZip>$(MSBuildThisFileDirectory)..\..\VpnHood.AppUi.Presentation.Classic.Avalonia.Browser\bin\avalonia-browser.zip</VhWebRootZip>
 		<VhWebRootIsApp Condition="'$(OutputType)' == 'Exe' Or '$(OutputType)' == 'WinExe' Or '$(AndroidApplication)' == 'true'">true</VhWebRootIsApp>
 		<VhWebRootIsAndroidApp Condition="'$(VhWebRootIsApp)' == 'true'">$(TargetFramework.Contains('-android'))</VhWebRootIsAndroidApp>
 		<VhWebRootIsAppleApp Condition="'$(VhWebRootIsApp)' == 'true' And ($(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-tvos')) Or $(TargetFramework.Contains('-maccatalyst')))">true</VhWebRootIsAppleApp>

@@ -23,7 +23,7 @@ namespace VpnHood.Core.Client;
 public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
     private bool _disposed;
-    private volatile bool _isDisposing; // a start that a shutdown ends failed at nothing
+    private volatile bool _disposing; // a start that a shutdown ends failed at nothing
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly IVpnAdapter _vpnAdapter;
     private readonly ISocketFactory _socketFactory;
@@ -214,7 +214,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // What closed the session, when an error did, says more than how the start found out - often a
             // disposed session. A shutdown asked for meanwhile, a disconnect say, leaves no error to show.
             var sessionException = _session?.LastException;
-            if (sessionException == null && !_isDisposing)
+            if (sessionException == null && !_disposing)
                 LastException = ex;
 
             await DisposeAsync().Vhc();
@@ -282,7 +282,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        _isDisposing = true;
+        _disposing = true;
 
         // a second close waits for the first one's end - a disconnect during connect, say, where the failed connect
         // closes too; the adapter's Disposed handler, raised in that release, only starts one. No early return after
@@ -311,7 +311,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        _isDisposing = true;
+        _disposing = true;
         lock (_disposeLock) {
             if (_disposed) return;
             _disposed = true;

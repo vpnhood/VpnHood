@@ -29,8 +29,8 @@ namespace VpnHood.Core.Server;
 
 public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHandler
 {
+    private bool _disposing;
     private bool _disposed;
-    private bool _quickClosed;
     private readonly AsyncLock _disposeLock = new();
 
     // the quick close cancels the graceful one's last sync. It has no timer, so it needs no disposal, and a graceful
@@ -608,8 +608,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     {
         // a second close waits for the first one's end
         using var lockResult = await _disposeLock.LockAsync().Vhc();
-        if (_disposed) return;
-        _disposed = true;
+        if (_disposing) return;
+        _disposing = true;
 
         // stop the sessions first, so the last sync carries all their bytes; they stay open, with code Ok, so
         // they recover after a restart
@@ -623,7 +623,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(7));
             await Sync(force: true, cancellationTokenSource.Token).Vhc();
         }
-        catch (OperationCanceledException) when (_quickClosed) {
+        catch (OperationCanceledException) when (_disposed) {
             VhLogger.Instance.LogWarning("The quick close cut the last sync of the sessions short.");
         }
         catch (Exception ex) {
@@ -638,8 +638,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     // the quick close: a last sync under way ends, and every member's close is sync
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _quickClosed, true)) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, true)) return;
+        _disposing = true;
 
         _heartbeatJob.Dispose();
         _sessionLocalService.Dispose();

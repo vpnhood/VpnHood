@@ -32,8 +32,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private readonly bool _autoDisposeAccessManager;
     private readonly string _lastConfigFilePath;
     private readonly ConfigErrorTracker _configErrorTracker;
+    private bool _disposing;
     private bool _disposed;
-    private bool _quickClosed;
     private Exception? _lastConfigException;
     private string? _lastConfigCode;
     private readonly bool _publicIpDiscovery;
@@ -113,7 +113,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
     public async ValueTask ConfigureAndSendStatus(CancellationToken cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(_disposing, this);
         using var scope = VhLogger.Instance.BeginScope("Server");
 
         switch (State) {
@@ -134,7 +134,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     public async Task Start(CancellationToken cancellationToken)
     {
         using var scope = VhLogger.Instance.BeginScope("Server");
-        if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodServer));
+        if (_disposing) throw new ObjectDisposedException(nameof(VpnHoodServer));
         if (State != ServerState.NotStarted)
             throw new Exception("Server has already started!");
 
@@ -234,7 +234,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             var serverConfig = await ReadConfig(serverInfo, cancellationToken).Vhc();
 
             // a close that began meanwhile takes no new configuration
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            ObjectDisposedException.ThrowIf(_disposing, this);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
@@ -331,7 +331,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             throw;
         }
         // nor is a refusal once the server's close has begun, which would keep the next start from configuring
-        catch (ObjectDisposedException) when (_disposed) {
+        catch (ObjectDisposedException) when (_disposing) {
             throw;
         }
         catch (Exception ex) {
@@ -570,7 +570,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
             // reconfigure, but not while shutting down, which lets an upload under way finish. The reporter's send
             // lock is released by now: Configure sends a status of its own
-            if (allowConfigure && !_disposed && res.ConfigCode != _lastConfigCode) {
+            if (allowConfigure && !_disposing && res.ConfigCode != _lastConfigCode) {
                 VhLogger.Instance.LogInformation("Reconfiguration was requested.");
                 await Configure(cancellationToken).Vhc();
             }
@@ -589,7 +589,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             throw;
         }
         // nor is a refusal once the server's close has begun, as of a reconfiguration this upload started
-        catch (ObjectDisposedException) when (_disposed) {
+        catch (ObjectDisposedException) when (_disposing) {
             throw;
         }
         catch (Exception ex) {
@@ -604,13 +604,13 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     // graceful close ends with it, for what is local
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _quickClosed, true)) return;
+        if (Interlocked.Exchange(ref _disposed, true)) return;
 
         // a graceful close that came first has logged the start
         using var scope = VhLogger.Instance.BeginScope("Server");
-        if (!_disposed)
+        if (!_disposing)
             VhLogger.Instance.LogInformation("Server is shutting down at once...");
-        _disposed = true;
+        _disposing = true;
 
         _configureAndSendStatusJob.Dispose();
         _ = ServerHost.TryDisposeAsync(LogLevel.Warning);
@@ -627,8 +627,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     public async ValueTask DisposeAsync()
     {
         using var lockResult = await _disposeLock.LockAsync().Vhc();
-        if (_disposed) return;
-        _disposed = true;
+        if (_disposing) return;
+        _disposing = true;
 
         using var scope = VhLogger.Instance.BeginScope("Server");
         VhLogger.Instance.LogInformation("Server is shutting down...");

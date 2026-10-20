@@ -21,6 +21,7 @@ $runtime = "$os-$cpu";
 # Get project information, as MSBuild evaluates it (Get-ProjectProperty): a client head takes both
 # names from the app's identity, which its csproj does not spell out.
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
+Assert-PackageTitle $projectFile $publishDirName;
 $assemblyName = Get-ProjectProperty $projectFile "AssemblyName";
 $productName = Get-ProjectProperty $projectFile "Product";
 $companyName = Get-ProjectProperty $projectFile "Company";

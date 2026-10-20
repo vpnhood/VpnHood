@@ -51,6 +51,7 @@ $doPackage = $stage -in @("all", "package");
 
 # --- Shared values (computed in every stage so each process is self-contained) ---
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
+Assert-PackageTitle $projectFile $appFolder;
 # Both from the app's identity, so as MSBuild evaluates them (Get-ProjectProperty).
 $productName = Get-ProjectProperty $projectFile "Product";
 $assemblyName = Get-ProjectProperty $projectFile "AssemblyName";

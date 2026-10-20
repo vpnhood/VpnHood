@@ -117,3 +117,19 @@ function Assert-DefaultAccessKey {
         Throw "Connect's default access key file is present but EMPTY: '$file'. An empty file embeds an empty resource, which the app treats as no default server at all. In CI this means the ACCESS_KEY_$($keyKind.ToUpperInvariant()) secret is set to an empty value.";
     }
 }
+
+# The app asks for its update feeds by its build's package title (VhAppPackageTitle, from the app's
+# identity, src/Apps/<Product>/Directory.Build.props), while the publish names every file after the
+# app's folder. Two names for one thing: should they part, nothing fails, and the app hears of no
+# update. A head with no package title (the server) has only the folder.
+function Assert-PackageTitle {
+    param(
+        [Parameter(Mandatory = $true)][string]$projectFile,
+        [Parameter(Mandatory = $true)][string]$appFolder
+    )
+
+    $packageTitle = Get-ProjectProperty $projectFile "VhAppPackageTitle";
+    if ($packageTitle -and $packageTitle -cne $appFolder) {
+        Throw "The app's package title is '$packageTitle' (VhAppPackageTitle of $projectFile), but its files are published as '$appFolder': the app would ask for updates under a name no release has. Make the two agree.";
+    }
+}

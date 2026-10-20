@@ -31,6 +31,7 @@ $appConfig = Get-AppPublishConfig $appFolder;
 $packageId = Get-ProjectProperty $projectFile "ApplicationId";
 if ([string]::IsNullOrWhiteSpace($packageId)) { Throw "The head has no ApplicationId: $projectFile."; }
 $packageFileTitle = $appFolder;
+Assert-PackageTitle $projectFile $appFolder;
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
 # Strict: in strict mode the app's shared appsettings must exist (no silent Exists() short-circuit).
 Assert-AppSettings $appFolder;

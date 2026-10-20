@@ -18,21 +18,23 @@ internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey,
     // two listeners may bring the session's datagrams at once
     private readonly Lock _receiveLock = new();
     private ulong _newestSequenceNumber;
+    private ulong _expiredBeforeSequenceNumber;
     private volatile UdpRoute? _route;
 
     public UdpRoute? Route => _route;
 
-    // Opens the datagram in place: true for the newest yet, which moves the route. A forgery throws before anything
-    // changes; a copy of an older datagram moves nothing. Its packets go up with Deliver, once the session has acted on
-    // the result
-    public bool Receive(UdpChannelTransmitter listener, Memory<byte> datagram, IPEndPoint remoteEndPoint)
+    // Opens the datagram in place: true for the newest yet, which moves the route, with its seq. A forgery throws
+    // before anything changes; a copy of an older datagram moves nothing. Its packets go up with Deliver, once the
+    // session has acted on the result
+    public bool Receive(UdpChannelTransmitter listener, Memory<byte> datagram, IPEndPoint remoteEndPoint,
+        out ulong sequenceNumber)
     {
         lock (_receiveLock) {
-            var seq = Open(datagram.Span);
-            if (seq <= _newestSequenceNumber)
+            sequenceNumber = Open(datagram.Span);
+            if (sequenceNumber <= _newestSequenceNumber)
                 return false;
 
-            _newestSequenceNumber = seq;
+            _newestSequenceNumber = sequenceNumber;
             FollowDatagram(listener, remoteEndPoint);
             return true;
         }
@@ -51,8 +53,17 @@ internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey,
         if (sequenceNumber == 0)
             return;
 
-        lock (_receiveLock)
+        lock (_receiveLock) {
+            _expiredBeforeSequenceNumber = Math.Max(_expiredBeforeSequenceNumber, sequenceNumber);
             _newestSequenceNumber = Math.Max(_newestSequenceNumber, sequenceNumber - 1);
+        }
+    }
+
+    // whether a TCP request has expired the datagram since it was opened as the newest
+    public bool IsExpired(ulong sequenceNumber)
+    {
+        lock (_receiveLock)
+            return sequenceNumber < _expiredBeforeSequenceNumber;
     }
 
     protected override UdpRoute? GetRoute() => _route;

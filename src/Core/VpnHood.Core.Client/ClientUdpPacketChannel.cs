@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Net;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
 
@@ -20,6 +22,9 @@ internal sealed class ClientUdpPacketChannel(
     : UdpPacketChannel(sessionId, sessionKey, isServer: false, firstSendSequenceNumber, trafficMeter),
         IUdpDatagramHandler
 {
+    // a send stuck this long is not waited for
+    private static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(1);
+
     // an old socket's read loop may still hand a datagram over while the new one's does
     private readonly Lock _receiveLock = new();
 
@@ -44,6 +49,15 @@ internal sealed class ClientUdpPacketChannel(
     {
         lock (_socketLock)
             _route?.Transmitter.Dispose();
+    }
+
+    // The datagrams already queued go out first, for a TCP request: one sealed after the request took the next seq
+    // would be newer than the request, and could turn the server back to UDP. The queue drains within a millisecond
+    public async Task FlushAsync(CancellationToken cancellationToken)
+    {
+        var startTime = Stopwatch.GetTimestamp();
+        while (IsSending && Stopwatch.GetElapsedTime(startTime) < FlushTimeout)
+            await Task.Delay(1, cancellationToken).Vhc();
     }
 
     public void OnDatagramReceived(UdpChannelTransmitter transmitter, Memory<byte> datagram, IPEndPoint remoteEndPoint)

@@ -256,12 +256,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     private bool ShouldManagePacketChannels {
         get {
-            // already at capacity
-            if (_tunnel.PacketChannelCount >= _tunnel.MaxPacketChannelCount)
-                return false;
-
-            // UDP needs no channel, only its socket open
-            if (_channelProtocol == ChannelProtocol.Udp && _udpChannel is { IsSocketOpen: true })
+            // already at capacity: UDP's is its socket, open; TCP's its channels, up to the maximum. Asked per packet,
+            // so a UDP session skips the count, which takes a lock
+            var isAtCapacity = _channelProtocol == ChannelProtocol.Udp
+                ? _udpChannel is { IsSocketOpen: true }
+                : _tunnel.PacketChannelCount >= _tunnel.MaxPacketChannelCount;
+            if (isAtCapacity)
                 return false;
 
             // RETRY-FLOOD FIX (device-measured 2026-06-10): this is checked per outgoing packet, so when
@@ -525,6 +525,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     private async Task AddTcpPacketChannel(CancellationToken cancellationToken)
     {
+        // the datagrams queued before the turn to TCP go out first, so the request's UDP seq is above them all
+        if (_udpChannel != null)
+            await _udpChannel.FlushAsync(cancellationToken).Vhc();
+
         // Create and send the Request Message
         var requestId = UniqueIdFactory.Create();
         var request = new TcpPacketChannelRequest {

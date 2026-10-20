@@ -41,7 +41,7 @@ internal sealed class TestUdpListener : IUdpDatagramHandler, IDisposable
         if (!_channels.TryGetValue(UdpDatagram.ReadSessionId(datagram.Span), out var channel))
             return;
 
-        channel.Receive(transmitter, datagram, remoteEndPoint);
+        channel.Receive(transmitter, datagram, remoteEndPoint, out _);
         channel.Deliver(datagram);
     }
 

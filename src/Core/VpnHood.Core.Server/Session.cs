@@ -38,6 +38,7 @@ public class Session : IDisposable
     private readonly NetFilter _netFilter;
     private readonly ProxyManager _proxyManager;
     private readonly Lock _verifyRequestLock = new();
+    private readonly Lock _udpSwitchLock = new(); // the newest datagram turns UDP on, a TCP request off, one at a time
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
     private readonly TransferBufferSize _streamProxyBufferSize;
@@ -417,26 +418,53 @@ public class Session : IDisposable
             UdpChannel?.ExpireBefore(udpSendSequenceNumber);
 
         Tunnel.AddChannel(channel, disposeIfFailed: true);
-        Tunnel.UseUdp = false;
+        TurnUdpOff();
     }
 
     // A datagram of the session's: authenticated before it changes anything, and the newest one turns UDP on. False for
     // a session below the UDP protocol, or one closed meanwhile, which stays listed a while with its keys gone
     internal bool ReceiveUdp(UdpChannelTransmitter listener, Memory<byte> datagram, IPEndPoint remoteEndPoint)
     {
-        if (UdpChannel is null)
+        if (UdpChannel is not { } udpChannel)
             return false;
 
         try {
             // UDP goes on before the newest datagram's packets go up, so their replies take it
-            if (UdpChannel.Receive(listener, datagram, remoteEndPoint) && !Tunnel.UseUdp)
-                Tunnel.UseUdp = true;
+            if (udpChannel.Receive(listener, datagram, remoteEndPoint, out var sequenceNumber) && !Tunnel.UseUdp)
+                TurnUdpOn(udpChannel, sequenceNumber, listener);
 
-            UdpChannel.Deliver(datagram);
+            udpChannel.Deliver(datagram);
             return true;
         }
         catch (ObjectDisposedException) {
             return false;
+        }
+    }
+
+    // A TCP request may expire the datagram and turn UDP off between its opening and this: under the switch's lock, a
+    // datagram expired by then leaves UDP off, where UDP would otherwise stay on for a client on TCP
+    private void TurnUdpOn(ServerUdpPacketChannel udpChannel, ulong sequenceNumber, UdpChannelTransmitter listener)
+    {
+        lock (_udpSwitchLock) {
+            if (Tunnel.UseUdp || udpChannel.IsExpired(sequenceNumber))
+                return;
+
+            Tunnel.UseUdp = true;
+            VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
+                "UdpChannel is enabled. SessionId: {SessionId}, LocalEndPoint: {LocalEndPoint}",
+                VhLogger.FormatSessionId(SessionId), VhLogger.Format(listener.LocalEndPoint));
+        }
+    }
+
+    private void TurnUdpOff()
+    {
+        lock (_udpSwitchLock) {
+            if (!Tunnel.UseUdp)
+                return;
+
+            Tunnel.UseUdp = false;
+            VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
+                "UdpChannel is disabled. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
         }
     }
 

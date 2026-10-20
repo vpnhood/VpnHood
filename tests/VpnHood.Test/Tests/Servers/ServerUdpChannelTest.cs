@@ -124,6 +124,49 @@ public class ServerUdpChannelTest : TestBase
         await TestHelper.Test_UdpEcho();
     }
 
+    // A datagram of the client's that never reached the server, sent again once the client is on TCP: newer than any
+    // the server has seen, but older than the client's TCP request, so it must not take the session back to UDP
+    [TestMethod]
+    public async Task A_lost_udp_datagram_keeps_a_tcp_session_on_tcp()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(
+            clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp),
+            vpnAdapter: TestHelper.CreateTestVpnAdapter());
+        await TestHelper.Test_UdpEcho();
+
+        var hostUdpEndPoint = client.RequiredSession.Config.HostUdpEndPoint;
+        Assert.IsNotNull(hostUdpEndPoint, "The server must listen on UDP.");
+        var serverSession = server.SessionManager.GetSessionById(client.SessionId);
+        Assert.IsNotNull(serverSession);
+
+        // the server's listener goes and a socket of the test's takes its endpoint, catching the client's next datagram
+        await ReconfigureUdpEndPoints(accessManager, [], TestCt);
+        UdpReceiveResult lostDatagram;
+        using (var catcher = new UdpClient(hostUdpEndPoint)) {
+            using var udpClient = new UdpClient(AddressFamily.InterNetwork);
+            await udpClient.SendAsync(new byte[100], TestHelper.WebServer.MockEps.UdpV4EndPoint1, TestCt);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+            timeoutCts.CancelAfter(TestConstants.DefaultUdpTimeout);
+            lostDatagram = await catcher.ReceiveAsync(timeoutCts.Token);
+        }
+
+        // the client turns to TCP before the listener is back, so the server sees none of its datagrams in between
+        client.ChannelProtocol = ChannelProtocol.Tcp;
+        await VhTestUtil.AssertEqualsWait(false, () => serverSession.Tunnel.UseUdp, cancellationToken: TestCt);
+        await ReconfigureUdpEndPoints(accessManager, [hostUdpEndPoint], TestCt);
+
+        using var replayer = new UdpClient(hostUdpEndPoint.AddressFamily);
+        await replayer.SendAsync(lostDatagram.Buffer, hostUdpEndPoint, TestCt);
+        await Task.Delay(500, TestCt);
+
+        Assert.IsFalse(serverSession.Tunnel.UseUdp);
+        await TestHelper.Test_UdpEcho();
+    }
+
     private static async Task ReconfigureUdpEndPoints(TestAccessManager accessManager, IPEndPoint[] udpEndPoints,
         CancellationToken cancellationToken)
     {

@@ -33,7 +33,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="9.0.863" />
-		<PackageReference Include="VpnHood.Net.Proxies" Version="8.1.852" />
+		<PackageReference Include="VpnHood.Net.Proxies" Version="9.0.857" />
 	</ItemGroup>
 
 	<ItemGroup>

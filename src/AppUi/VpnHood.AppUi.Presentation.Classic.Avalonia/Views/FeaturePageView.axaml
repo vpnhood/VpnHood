@@ -4,21 +4,17 @@
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.FeaturePageView"
              Classes="grad-sheet">
-  <!-- The web UI's FeaturePageLayout: on the gradient sheet, a back button (not on a TV, nor on a
-       page that opened on its own and ends with OK), the
+  <!-- The web UI's FeaturePageLayout: on the gradient sheet, a header that stays as the page
+       scrolls - a back button (not on a TV, nor on a page that opened on its own and ends with OK),
+       and the title once the big one has scrolled away - then the
        title with its coloured word, the description, the feature's picture, and a card - the
        numbered steps to turn the feature on with the button that opens the device's own settings,
        or the switch of a setting the app keeps itself (always on, on a desktop), or the Go premium
        pitch when the feature is sold and this session has not bought it; two pages fill the card
        with their own text (cloak mode, the private DNS error). -->
-  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-    <DockPanel Classes="page">
-      <Grid DockPanel.Dock="Top" Margin="0,8,0,4" MinHeight="43">
-        <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" VerticalAlignment="Top" Click="OnBackClick"
-          AutomationProperties.Name="{Binding Back, Source={x:Static res:Strings.Current}}">
-          <TextBlock Classes="mdi" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
-        </Button>
-      </Grid>
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Padding="0,8,0,4" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel MaxWidth="720" Spacing="10" HorizontalAlignment="Stretch">
         <TextBlock x:Name="TitleText" Classes="h3" TextAlignment="Center" />
         <TextBlock x:Name="DescriptionText" Classes="body-medium" TextAlignment="Center" TextWrapping="Wrap" IsVisible="False" />
@@ -88,6 +84,6 @@
           </Button>
         </StackPanel>
       </StackPanel>
-    </DockPanel>
-  </ScrollViewer>
+    </ScrollViewer>
+  </DockPanel>
 </UserControl>

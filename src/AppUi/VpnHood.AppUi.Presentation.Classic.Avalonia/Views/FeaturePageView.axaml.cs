@@ -20,8 +20,7 @@ public partial class FeaturePageView : UserControl, IPage
         _switchAction = options.SwitchAction;
         InitializeComponent();
 
-        BackButton.IsVisible = !VhApp.IsTvUi;
-        RichText.Apply(TitleText, options.Title);
+        Header.SetLargeTitle(TitleText, options.Title);
         DescriptionText.Text = options.Description;
         DescriptionText.IsVisible = options.Description != null;
         AppImage.SetSource(FeatureImage, AppAssets.ImagePath(options.Image));
@@ -32,8 +31,7 @@ public partial class FeaturePageView : UserControl, IPage
             case FeaturePageKind.CloakMode:
                 CloakCard.IsVisible = true;
                 OkButton.IsVisible = options.IsPrompt;
-                if (options.IsPrompt)
-                    BackButton.IsVisible = false;
+                Header.IsBackVisible = !options.IsPrompt;
                 RichText.Apply(CloakText1, Strings.Current.CloakModeDesc1);
                 break;
 
@@ -89,7 +87,7 @@ public partial class FeaturePageView : UserControl, IPage
         else if (PremiumButton.IsVisible && PremiumCard.IsVisible) PremiumButton.LandFocus();
         else if (TurnOffButton.IsVisible && PrivateDnsCard.IsVisible) TurnOffButton.LandFocus();
         else if (SkipButton.IsVisible) SkipButton.LandFocus();
-        else if (BackButton.IsVisible) BackButton.LandFocus();
+        else Header.FocusBack();
     }
 
     private async void OnActionClick(object? sender, RoutedEventArgs e)

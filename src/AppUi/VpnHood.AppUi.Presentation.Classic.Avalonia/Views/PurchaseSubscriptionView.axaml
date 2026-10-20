@@ -38,14 +38,10 @@
     </ContainerQuery>
   </UserControl.Styles>
 
-  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-    <DockPanel Classes="page">
-      <Grid x:Name="HeaderRow" DockPanel.Dock="Top" Margin="0,8,0,4" MinHeight="43">
-        <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" Click="OnBackClick"
-          AutomationProperties.Name="{Binding Back, Source={x:Static res:Strings.Current}}">
-          <TextBlock Classes="mdi" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
-        </Button>
-      </Grid>
+  <!-- the header, with no title of its own, keeps the back button in reach as the page scrolls -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Padding="0,8,0,4" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <!-- Grid.Row and Grid.Column come from the styles above, which the container query
            rewrites for a narrow page; a local value here would beat the query. The two
            options-panes share a cell: the catalog shows one or the other. -->
@@ -125,6 +121,6 @@
         </StackPanel>
       </Grid>
       <!-- ReSharper restore Xaml.MissingGridIndex -->
-    </DockPanel>
-  </ScrollViewer>
+    </ScrollViewer>
+  </DockPanel>
 </UserControl>

@@ -1,18 +1,27 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:res="using:VpnHood.AppUi.Common"
-             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.PageHeader">
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.PageHeader"
+             Padding="0,8,0,20">
   <!-- The web UI's AppBar: a round back button at the start (not on a TV, whose remote has its
        own Back), the page's title over the middle, and the page's icon at the end when it has one
-       (a v-card's append-icon). -->
-  <Grid Margin="0,8,0,20" Height="43">
+       (a v-card's append-icon). A picture page, whose own picture or big title comes up close
+       under it, sets a smaller bottom padding. -->
+  <Grid Height="43">
     <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" Click="OnBackClick"
             AutomationProperties.Name="{Binding Back, Source={x:Static res:Strings.Current}}">
       <TextBlock Classes="mdi" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
     </Button>
-    <!-- as wide as the header allows, clear of the back button on both sides so it stays centred -->
+    <!-- as wide as the header allows, clear of the back button on both sides so it stays centred;
+         the fade is for the compact title of a page with a large one (SetLargeTitle) -->
     <TextBlock x:Name="TitleBlock" Classes="body-large" HorizontalAlignment="Center" VerticalAlignment="Center"
-               Margin="52,0" TextTrimming="CharacterEllipsis" />
+               Margin="52,0" TextTrimming="CharacterEllipsis">
+      <TextBlock.Transitions>
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+        </Transitions>
+      </TextBlock.Transitions>
+    </TextBlock>
     <TextBlock x:Name="IconBlock" Classes="mdi" HorizontalAlignment="Right" IsVisible="False" />
   </Grid>
 </UserControl>

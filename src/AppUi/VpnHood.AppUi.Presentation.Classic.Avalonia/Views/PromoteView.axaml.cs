@@ -29,8 +29,7 @@ public partial class PromoteView : UserControl, IPage
         InitializeComponent();
 
         var s = Strings.Current;
-        BackButton.IsVisible = !VhApp.IsTvUi;
-        RichText.Apply(TitleText, isPremiumLocation ? s.SelectedLocationIsPremium : s.SelectedLocationIsFree);
+        Header.SetLargeTitle(TitleText, isPremiumLocation ? s.SelectedLocationIsPremium : s.SelectedLocationIsFree);
 
         // the location's options, read again so the page is driven by current server data
         var info = VhApp.FindVpnProfileInfo(vpnProfileId);
@@ -84,7 +83,7 @@ public partial class PromoteView : UserControl, IPage
         if (FreeRow.IsVisible) FreeRow.LandFocus();
         else if (FreeAdRow.IsVisible) FreeAdRow.LandFocus();
         else if (PremiumRows.Children.FirstOrDefault() is PromoteRow row) row.LandFocus();
-        else if (BackButton.IsVisible) BackButton.LandFocus();
+        else Header.FocusBack();
     }
 
     // The connect itself, never the asking: this page IS the asking, so going back through
@@ -112,10 +111,5 @@ public partial class PromoteView : UserControl, IPage
         catch (Exception ex) {
             await this.ReportError(ex);
         }
-    }
-
-    private void OnBackClick(object? sender, RoutedEventArgs e)
-    {
-        _host.GoBack();
     }
 }

@@ -1,6 +1,8 @@
 ﻿using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -31,6 +33,30 @@ public partial class PageHeader : UserControl
     public string Icon {
         get => GetValue(IconProperty);
         set => SetValue(IconProperty, value);
+    }
+
+    // none on a page that ends with its own way out (a prompt's OK), nor ever on a TV
+    public bool IsBackVisible {
+        get => BackButton.IsVisible;
+        set => BackButton.IsVisible = value && !VhApp.IsTvUi;
+    }
+
+    // A picture page opens what it scrolls with a big title of its own, coloured words and all
+    // (RichText). Both titles get the words, and the header shows its smaller one only once the
+    // big one has scrolled out of sight under it, as the common apps' compact title bars do;
+    // screen readers keep to the big one.
+    public void SetLargeTitle(TextBlock largeTitle, string markup)
+    {
+        RichText.Apply(largeTitle, markup);
+        RichText.Apply(TitleBlock, markup);
+        TitleBlock.Opacity = 0;
+        AutomationProperties.SetAccessibilityView(TitleBlock, AccessibilityView.Raw);
+
+        var scroller = largeTitle.FindLogicalAncestorOfType<ScrollViewer>()
+                       ?? throw new InvalidOperationException("A large title must be inside the page's scroller.");
+        // out of sight: its bottom edge above the scroller's top
+        scroller.ScrollChanged += (_, _) =>
+            TitleBlock.Opacity = largeTitle.TranslatePoint(new Point(0, largeTitle.Bounds.Height), scroller) is { Y: <= 0 } ? 1 : 0;
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)

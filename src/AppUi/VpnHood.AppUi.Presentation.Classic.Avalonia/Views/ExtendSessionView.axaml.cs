@@ -1,5 +1,4 @@
 ﻿using Avalonia.Controls;
-using Avalonia.Interactivity;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
@@ -17,8 +16,7 @@ public partial class ExtendSessionView : UserControl, IPage
         InitializeComponent();
 
         var s = Strings.Current;
-        BackButton.IsVisible = !VhApp.IsTvUi;
-        RichText.Apply(TitleText, s.ExtendPremiumSession);
+        Header.SetLargeTitle(TitleText, s.ExtendPremiumSession);
 
         var state = VhApp.State;
         var options = state.VpnProfile?.SelectedLocationInfo?.Options;
@@ -35,7 +33,7 @@ public partial class ExtendSessionView : UserControl, IPage
     public void FocusDefault()
     {
         if (Rows.Children.FirstOrDefault() is PromoteRow row) row.LandFocus();
-        else if (BackButton.IsVisible) BackButton.LandFocus();
+        else Header.FocusBack();
     }
 
     // the ad, then the word that the session grew, back on the home
@@ -45,10 +43,5 @@ public partial class ExtendSessionView : UserControl, IPage
             await VhApp.Api.App.ExtendByRewardedAd(CancellationToken.None);
         _host.ShowSnackbar(Strings.Current.ExtendByRewardedAdConfirmMsg, SnackbarKind.Active);
         _host.GoHome();
-    }
-
-    private void OnBackClick(object? sender, RoutedEventArgs e)
-    {
-        _host.GoBack();
     }
 }

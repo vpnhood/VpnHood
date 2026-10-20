@@ -33,9 +33,8 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         _host = host;
         _vpnProfileId = vpnProfileId;
         InitializeComponent();
-        BackButton.IsVisible = !VhApp.IsTvUi;
-        // on a TV the row holds nothing and would only push the centred page down
-        HeaderRow.IsVisible = BackButton.IsVisible;
+        // on a TV the header holds nothing and would only push the centred page down
+        Header.IsVisible = !VhApp.IsTvUi;
         TermsLink.IsVisible = VhApp.Features.Links.TermsOfUse != null;
         PrivacyLink.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
         LinksDot.IsVisible = TermsLink.IsVisible && PrivacyLink.IsVisible;
@@ -53,7 +52,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         else if (WebButton.IsVisible) WebButton.LandFocus();
         else if (CodeButton.IsVisible) CodeButton.LandFocus();
         else if (RestoreButton.IsVisible) RestoreButton.LandFocus();
-        else if (BackButton.IsVisible) BackButton.LandFocus();
+        else Header.FocusBack();
     }
 
     // A remote's Left and Right slide the carousel wherever they move no focus - the documents'
@@ -411,10 +410,5 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         catch (Exception ex) {
             await this.ReportError(ex);
         }
-    }
-
-    private void OnBackClick(object? sender, RoutedEventArgs e)
-    {
-        _host.GoBack();
     }
 }

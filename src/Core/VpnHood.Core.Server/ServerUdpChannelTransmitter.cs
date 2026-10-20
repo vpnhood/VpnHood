@@ -9,16 +9,12 @@ public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager ses
 {
     protected override SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId)
     {
-        var session = sessionManager.GetSessionById(sessionId);
-        if (session is null)
-            return null;
+        return sessionManager.GetSessionById(sessionId)?.UdpState.GetTransport(this);
+    }
 
-        // Currently only one UDP transport per session is supported on the server side.
-        // so if we change the channelTransmitter of the old one. We do not create a new one because its creates a cryptographic overhead.
-        var udpTransport = (SessionUdpTransport)session.UseUdpTransport(() =>
-            new SessionUdpTransport(this, sessionId, session.SessionKey, null, true));
-        udpTransport.ChannelTransmitter = this;
-        return udpTransport;
+    protected override void OpenSessionUdpChannel(ulong sessionId)
+    {
+        sessionManager.GetSessionById(sessionId)?.UdpState.OpenChannel();
     }
 
     public static ServerUdpChannelTransmitter Create(IPEndPoint ipEndPoint, SessionManager sessionManager)

@@ -12,6 +12,7 @@ public class UdpChannel : PacketChannel
     private readonly Memory<byte> _buffer = new byte[TransportDefaults.MaxPacketSize];
     private readonly TaskCompletionSource<bool> _readingTask = new();
     private readonly bool _leaveUdpTransportOpen;
+    private readonly Action<Memory<byte>> _dataReceived;
 
     public IUdpTransport UdpTransport { get; }
     public override int OverheadLength => UdpTransport.OverheadLength;
@@ -19,7 +20,8 @@ public class UdpChannel : PacketChannel
     public UdpChannel(IUdpTransport udpTransport, UdpChannelOptions options) : base(options)
     {
         UdpTransport = udpTransport;
-        UdpTransport.DataReceived = OnDataReceived;
+        _dataReceived = OnDataReceived;
+        UdpTransport.DataReceived = _dataReceived;
         _leaveUdpTransportOpen = options.LeaveUdpTransportOpen;
     }
 
@@ -123,8 +125,12 @@ public class UdpChannel : PacketChannel
 
     protected override void DisposeManaged()
     {
+        // a transport left open hands this channel nothing more: its owner reads a transport with no handler as one
+        // with no channel
         if (!_leaveUdpTransportOpen)
             UdpTransport.Dispose();
+        else if (UdpTransport.DataReceived == _dataReceived)
+            UdpTransport.DataReceived = null;
 
         // finalize reading task
         _readingTask.TrySetResult(true);

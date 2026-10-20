@@ -26,56 +26,43 @@ public class TunnelTest : TestBase
         : UdpChannelTransmitter(udpClient)
     {
         private readonly Dictionary<ulong, SessionUdpTransport> _transports = new();
+        private readonly Dictionary<ulong, SessionUdpTransport> _foreignTransports = new();
 
         public SessionUdpTransport AddSession(ulong sessionId, byte[] sessionKey)
         {
-            var transport = new SessionUdpTransport(this, sessionId, sessionKey, null, true);
+            var transport = new SessionUdpTransport(this, sessionId, sessionKey, null, true,
+                firstSendSequenceNumber: UdpTestUtil.GetRandomSequenceNumber());
             _transports[sessionId] = transport;
             return transport;
         }
 
+        // another transmitter's transport, as a server's other listeners reach it: never decrypted here, and its
+        // owner disposes it
+        public void AddForeignTransport(ulong sessionId, SessionUdpTransport transport)
+        {
+            _foreignTransports[sessionId] = transport;
+        }
+
         protected override SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId)
         {
-            return _transports.GetValueOrDefault(sessionId);
+            return _transports.GetValueOrDefault(sessionId) ?? _foreignTransports.GetValueOrDefault(sessionId);
         }
 
         public override void Dispose()
         {
+            base.Dispose();
             foreach (var transport in _transports.Values)
                 transport.Dispose();
 
             _transports.Clear();
-            base.Dispose();
         }
     }
 
-    private class ClientUdpChannelTransmitterTest : UdpChannelTransmitter
+    private static (UdpChannel Channel, TestClientUdpChannelTransmitter Transmitter) CreateClientUdpChannel(
+        IPEndPoint serverEndPoint, ulong sessionId, byte[] sessionKey, ulong? firstSendSequenceNumber = null)
     {
-        public SessionUdpTransport UdpTransport { get; }
-
-        public ClientUdpChannelTransmitterTest(IPEndPoint remoteEndPoint, ulong sessionId, byte[] sessionKey)
-            : base(new UdpClient(0, remoteEndPoint.AddressFamily))
-        {
-            UdpTransport = new SessionUdpTransport(this, sessionId, sessionKey, remoteEndPoint, false);
-        }
-
-        protected override SessionUdpTransport SessionIdToUdpTransport(ulong sessionId)
-        {
-            _ = sessionId;
-            return UdpTransport;
-        }
-
-        public override void Dispose()
-        {
-            UdpTransport.Dispose();
-            base.Dispose();
-        }
-    }
-
-    private static (UdpChannel Channel, ClientUdpChannelTransmitterTest Transmitter) CreateClientUdpChannel(
-        IPEndPoint serverEndPoint, ulong sessionId, byte[] sessionKey)
-    {
-        var transmitter = new ClientUdpChannelTransmitterTest(serverEndPoint, sessionId, sessionKey);
+        var transmitter = new TestClientUdpChannelTransmitter(serverEndPoint, sessionId, sessionKey,
+            firstSendSequenceNumber ?? UdpTestUtil.GetRandomSequenceNumber());
         var channel = new UdpChannel(transmitter.UdpTransport, new UdpChannelOptions {
             AutoDisposePackets = true,
             Blocking = false,
@@ -205,6 +192,237 @@ public class TunnelTest : TestBase
             cancellationToken: TestCt);
         Assert.IsTrue(serverTransmitter.Connected,
             "One session's disposed cryptor must not dispose the shared transmitter.");
+    }
+
+    // A forged datagram, the session's id with a random tag, must change nothing on the server: its downstream still
+    // goes to the client
+    [TestMethod]
+    public async Task UdpChannel_forged_datagram_changes_nothing()
+    {
+        const ulong sessionId = 1UL;
+        var sessionKey = VhUtils.GenerateKey();
+
+        var (serverUdpChannel, serverTransmitter) = CreateServerUdpChannel(sessionId, sessionKey);
+        using var serverTransmitterDisposable = serverTransmitter;
+        using var serverUdpChannelDisposable = serverUdpChannel;
+        var serverTransport = (SessionUdpTransport)serverUdpChannel.UdpTransport;
+        var serverReceivedPackets = new List<IpPacket>();
+        serverUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            serverReceivedPackets.Add(ipPacket);
+        };
+        serverUdpChannel.Start();
+
+        var (clientUdpChannel, clientTransmitter) =
+            CreateClientUdpChannel(serverTransmitter.LocalEndPoint, sessionId: sessionId, sessionKey: sessionKey);
+        using var clientTransmitterDisposable = clientTransmitter;
+        using var clientUdpChannelDisposable = clientUdpChannel;
+        var clientReceivedPackets = new List<IpPacket>();
+        clientUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            clientReceivedPackets.Add(ipPacket);
+        };
+        clientUdpChannel.Start();
+
+        // a genuine datagram sets the server's endpoint
+        clientUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await VhTestUtil.AssertEqualsWait(1, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+        var clientEndPoint = serverTransport.RemoteEndPoint;
+        Assert.IsNotNull(clientEndPoint);
+
+        // the forged datagram, given time to reach the read loop
+        using var forger = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        await forger.SendAsync(UdpTestUtil.CreateForgedDatagram(sessionId), serverTransmitter.LocalEndPoint, TestCt);
+        await Task.Delay(300, TestCt);
+
+        // the server's next packet, with no client datagram in between to put the endpoint back
+        serverUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await VhTestUtil.AssertEqualsWait(1, () => clientReceivedPackets.Count, cancellationToken: TestCt);
+        Assert.AreEqual(clientEndPoint, serverTransport.RemoteEndPoint);
+        await UdpTestUtil.AssertNothingReceived(forger, TestCt);
+    }
+
+    // A server's listeners all reach a session's transport. A forged datagram on one other than the transport's must
+    // neither move the session there nor change its endpoint
+    [TestMethod]
+    public async Task UdpChannel_forged_datagram_on_another_listener_changes_nothing()
+    {
+        const ulong sessionId = 1UL;
+        var sessionKey = VhUtils.GenerateKey();
+
+        var (serverUdpChannel, serverTransmitter) = CreateServerUdpChannel(sessionId, sessionKey);
+        using var serverTransmitterDisposable = serverTransmitter;
+        using var serverUdpChannelDisposable = serverUdpChannel;
+        var serverTransport = (SessionUdpTransport)serverUdpChannel.UdpTransport;
+        var serverReceivedPackets = new List<IpPacket>();
+        serverUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            serverReceivedPackets.Add(ipPacket);
+        };
+        serverUdpChannel.Start();
+
+        using var otherTransmitter =
+            new ServerUdpChannelTransmitterTest(new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)));
+        otherTransmitter.AddForeignTransport(sessionId, serverTransport);
+
+        var (clientUdpChannel, clientTransmitter) =
+            CreateClientUdpChannel(serverTransmitter.LocalEndPoint, sessionId: sessionId, sessionKey: sessionKey);
+        using var clientTransmitterDisposable = clientTransmitter;
+        using var clientUdpChannelDisposable = clientUdpChannel;
+        var clientReceivedPackets = new List<IpPacket>();
+        clientUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            clientReceivedPackets.Add(ipPacket);
+        };
+        clientUdpChannel.Start();
+
+        // a genuine datagram sets the server's endpoint
+        clientUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await VhTestUtil.AssertEqualsWait(1, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+        var clientEndPoint = serverTransport.RemoteEndPoint;
+        Assert.IsNotNull(clientEndPoint);
+
+        // the forged datagram on the other listener, given time to reach its read loop
+        using var forger = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        await forger.SendAsync(UdpTestUtil.CreateForgedDatagram(sessionId), otherTransmitter.LocalEndPoint, TestCt);
+        await Task.Delay(300, TestCt);
+
+        Assert.AreSame(serverTransmitter, serverTransport.ChannelTransmitter);
+        Assert.AreEqual(clientEndPoint, serverTransport.RemoteEndPoint);
+        serverUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await VhTestUtil.AssertEqualsWait(1, () => clientReceivedPackets.Count, cancellationToken: TestCt);
+        await UdpTestUtil.AssertNothingReceived(forger, TestCt);
+    }
+
+    // The client's NAT gives it a new port: its datagrams from there move the server's endpoint, as the write now
+    // comes after the decrypt
+    [TestMethod]
+    public async Task UdpChannel_follows_nat_rebinding()
+    {
+        const ulong sessionId = 1UL;
+        var sessionKey = VhUtils.GenerateKey();
+
+        var (serverUdpChannel, serverTransmitter) = CreateServerUdpChannel(sessionId, sessionKey);
+        using var serverTransmitterDisposable = serverTransmitter;
+        using var serverUdpChannelDisposable = serverUdpChannel;
+        var serverTransport = (SessionUdpTransport)serverUdpChannel.UdpTransport;
+        var serverReceivedPackets = new List<IpPacket>();
+        serverUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            serverReceivedPackets.Add(ipPacket);
+        };
+        serverUdpChannel.Start();
+
+        var (clientUdpChannel, clientTransmitter) =
+            CreateClientUdpChannel(serverTransmitter.LocalEndPoint, sessionId: sessionId, sessionKey: sessionKey);
+        using var clientTransmitterDisposable = clientTransmitter;
+        using var clientUdpChannelDisposable = clientUdpChannel;
+        clientUdpChannel.Start();
+        clientUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await VhTestUtil.AssertEqualsWait(1, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+        Assert.AreEqual(clientTransmitter.LocalEndPoint.Port, serverTransport.RemoteEndPoint?.Port);
+
+        // the same session from a new socket, its count past the first one's
+        var (newClientUdpChannel, newClientTransmitter) = CreateClientUdpChannel(serverTransmitter.LocalEndPoint,
+            sessionId: sessionId, sessionKey: sessionKey,
+            firstSendSequenceNumber: clientTransmitter.UdpTransport.NextSendSequenceNumber + (1UL << 32));
+        using var newClientTransmitterDisposable = newClientTransmitter;
+        using var newClientUdpChannelDisposable = newClientUdpChannel;
+        var newClientReceivedPackets = new List<IpPacket>();
+        newClientUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            newClientReceivedPackets.Add(ipPacket);
+        };
+        newClientUdpChannel.Start();
+        newClientUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await VhTestUtil.AssertEqualsWait(2, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+        Assert.AreEqual(newClientTransmitter.LocalEndPoint.Port, serverTransport.RemoteEndPoint?.Port);
+
+        serverUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await VhTestUtil.AssertEqualsWait(1, () => newClientReceivedPackets.Count, cancellationToken: TestCt);
+    }
+
+    // A copy of a datagram the client sent before, sent again from another address, still authenticates: it must not
+    // move the server's endpoint, which only the newest datagram does
+    [TestMethod]
+    public async Task UdpChannel_older_datagram_from_another_address_changes_nothing()
+    {
+        const ulong sessionId = 1UL;
+        var sessionKey = VhUtils.GenerateKey();
+
+        var (serverUdpChannel, serverTransmitter) = CreateServerUdpChannel(sessionId, sessionKey);
+        using var serverTransmitterDisposable = serverTransmitter;
+        using var serverUdpChannelDisposable = serverUdpChannel;
+        var serverTransport = (SessionUdpTransport)serverUdpChannel.UdpTransport;
+        var serverReceivedPackets = new List<IpPacket>();
+        serverUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            serverReceivedPackets.Add(ipPacket);
+        };
+        serverUdpChannel.Start();
+
+        var (clientUdpChannel, clientTransmitter) = CreateClientUdpChannel(serverTransmitter.LocalEndPoint,
+            sessionId: sessionId, sessionKey: sessionKey, firstSendSequenceNumber: 1000);
+        using var clientTransmitterDisposable = clientTransmitter;
+        using var clientUdpChannelDisposable = clientUdpChannel;
+        var clientReceivedPackets = new List<IpPacket>();
+        clientUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            clientReceivedPackets.Add(ipPacket);
+        };
+        clientUdpChannel.Start();
+        clientUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await VhTestUtil.AssertEqualsWait(1, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+        var clientEndPoint = serverTransport.RemoteEndPoint;
+        Assert.IsNotNull(clientEndPoint);
+
+        // the session's datagram with an older seq, as a copy carries, from another socket
+        var (replayChannel, replayTransmitter) = CreateClientUdpChannel(serverTransmitter.LocalEndPoint,
+            sessionId: sessionId, sessionKey: sessionKey, firstSendSequenceNumber: 500);
+        using var replayTransmitterDisposable = replayTransmitter;
+        using var replayChannelDisposable = replayChannel;
+        replayChannel.Start();
+        replayChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+
+        // delivered, as a genuine datagram reordered on its way would be, but the endpoint stays
+        await VhTestUtil.AssertEqualsWait(2, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+        Assert.AreEqual(clientEndPoint, serverTransport.RemoteEndPoint);
+        serverUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await VhTestUtil.AssertEqualsWait(1, () => clientReceivedPackets.Count, cancellationToken: TestCt);
+    }
+
+    // A datagram the server sent, sent back to it, must not pass as the client's: the server-reply bit in the nonce
+    // fails its tag, where its higher seq would otherwise move the endpoint
+    [TestMethod]
+    public async Task UdpChannel_bounced_server_datagram_changes_nothing()
+    {
+        const ulong sessionId = 1UL;
+        var sessionKey = VhUtils.GenerateKey();
+
+        var (serverUdpChannel, serverTransmitter) = CreateServerUdpChannel(sessionId, sessionKey);
+        using var serverTransmitterDisposable = serverTransmitter;
+        using var serverUdpChannelDisposable = serverUdpChannel;
+        var serverTransport = (SessionUdpTransport)serverUdpChannel.UdpTransport;
+        var serverReceivedPackets = new List<IpPacket>();
+        serverUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            serverReceivedPackets.Add(ipPacket);
+        };
+        serverUdpChannel.Start();
+
+        // the client's side is a raw socket, so the server's datagram is caught as sent: a genuine client datagram,
+        // with the lowest seq, goes through it first
+        using var clientSocket = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        using (var sealer = new TestClientUdpChannelTransmitter(clientSocket.Client.GetLocalEndPoint(), sessionId,
+                   sessionKey, firstSendSequenceNumber: 1))
+            await sealer.UdpTransport.SendAsync(NetPacketBuilder.RandomPacket(true));
+
+        var clientDatagram = (await clientSocket.ReceiveAsync(TestCt)).Buffer;
+        await clientSocket.SendAsync(clientDatagram, serverTransmitter.LocalEndPoint, TestCt);
+        await VhTestUtil.AssertEqualsWait(1, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+        Assert.AreEqual(clientSocket.Client.GetLocalEndPoint(), serverTransport.RemoteEndPoint);
+
+        // the server's datagram, caught, then sent back to it from another socket
+        serverUdpChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        var serverDatagram = (await clientSocket.ReceiveAsync(TestCt)).Buffer;
+        using var bouncer = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        await bouncer.SendAsync(serverDatagram, serverTransmitter.LocalEndPoint, TestCt);
+        await Task.Delay(300, TestCt);
+
+        Assert.AreEqual(clientSocket.Client.GetLocalEndPoint(), serverTransport.RemoteEndPoint);
+        Assert.HasCount(1, serverReceivedPackets);
+        await UdpTestUtil.AssertNothingReceived(bouncer, TestCt);
     }
 
     [TestMethod]

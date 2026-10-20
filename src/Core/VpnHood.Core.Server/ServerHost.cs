@@ -15,6 +15,7 @@ using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Streams;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
@@ -36,7 +37,7 @@ public class ServerHost : IAsyncDisposable
     private readonly AsyncLock _configureLock = new();
     private bool _disposed;
 
-    public const int MaxProtocolVersion = 13;
+    public const int MaxProtocolVersion = 14;
     public const int MinProtocolVersion = 8;
     public int MinClientProtocolVersion { get; set; } = 8;
     public bool IsIpV6Supported { get; set; }
@@ -496,7 +497,7 @@ public class ServerHost : IAsyncDisposable
             SessionId = sessionResponseEx.SessionId,
             SessionKey = sessionResponseEx.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
-            UdpPort = protocolVersion > 10 ? udpPort : null,
+            UdpPort = protocolVersion >= UdpChannelTransmitter.MinProtocolVersion ? udpPort : null,
             QuicPort = quicPort,
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),

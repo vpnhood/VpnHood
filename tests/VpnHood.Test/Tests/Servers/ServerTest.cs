@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Configuration;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server;
@@ -10,6 +11,7 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
@@ -851,29 +853,48 @@ public class ServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
         var session = server.GetSession(client);
+        using var transmitter =
+            ServerUdpChannelTransmitter.Create(new IPEndPoint(IPAddress.Loopback, 0), server.SessionManager);
 
-        // a disposed session stays listed a while, so a UDP packet its client still sends reaches it
+        // a disposed session stays listed a while, so a UDP datagram its client still sends reaches it
         session.Dispose();
-        var transportMade = false;
-        Assert.ThrowsExactly<ObjectDisposedException>(() => session.UseUdpTransport(() => {
-            transportMade = true;
-            return new TestUdpTransport();
-        }));
-        Assert.IsFalse(transportMade);
+        Assert.IsNull(session.UdpState.GetTransport(transmitter));
+        session.UdpState.OpenChannel();
+        Assert.IsFalse(session.UseUdpChannel);
     }
 
     [TestMethod]
-    public async Task A_udp_channel_the_tunnel_refuses_is_disposed()
+    public async Task A_udp_channel_the_tunnel_refuses_leaves_the_session_off_udp()
     {
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
         var session = server.GetSession(client);
+        using var transmitter =
+            ServerUdpChannelTransmitter.Create(new IPEndPoint(IPAddress.Loopback, 0), server.SessionManager);
+        Assert.IsNotNull(session.UdpState.GetTransport(transmitter));
 
-        // the tunnel is gone, as when a UDP packet comes in while the session is disposed
+        // the tunnel is gone, as when a UDP datagram comes in while the session is disposed
         session.Tunnel.Dispose();
-        var transport = new TestUdpTransport();
-        Assert.ThrowsExactly<ObjectDisposedException>(() => session.UseUdpTransport(() => transport));
-        Assert.IsTrue(transport.IsDisposed);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => session.UdpState.OpenChannel());
+        Assert.IsFalse(session.UseUdpChannel);
+    }
+
+    // a session below the UDP protocol was offered no UDP port, so its datagrams make nothing
+    [TestMethod]
+    public async Task An_older_protocol_session_gets_no_udp_transport()
+    {
+        await using var server = await TestHelper.CreateServer();
+        using var transmitter =
+            ServerUdpChannelTransmitter.Create(new IPEndPoint(IPAddress.Loopback, 0), server.SessionManager);
+        using var tunnel = new Tunnel(new TunnelOptions {
+            MaxPacketChannelCount = 1,
+            Mtu = TransportDefaults.MtuServer
+        });
+        using var trafficMeter = new TrafficMeter();
+        using var udpState = new SessionUdpState(sessionId: 1, VhUtils.GenerateKey(),
+            protocolVersion: UdpChannelTransmitter.MinProtocolVersion - 1, tunnel, trafficMeter);
+
+        Assert.IsNull(udpState.GetTransport(transmitter));
     }
 }

@@ -19,6 +19,7 @@ using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
@@ -170,7 +171,7 @@ internal class ClientSessionBuilder(
             var sessionId = helloResponse.SessionId;
             var sessionKey = helloResponse.SessionKey;
 
-            var hostUdpEndPoint = helloResponse is { UdpPort: > 0, ProtocolVersion: >= 11 }
+            var hostUdpEndPoint = helloResponse is { UdpPort: > 0, ProtocolVersion: >= UdpChannelTransmitter.MinProtocolVersion }
                 ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, helloResponse.UdpPort.Value)
                 : null;
 

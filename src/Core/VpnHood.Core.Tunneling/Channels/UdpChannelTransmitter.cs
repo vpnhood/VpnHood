@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
@@ -18,6 +19,10 @@ public abstract class UdpChannelTransmitter : IDisposable
     // Packet format: version(1) | sessionId(8) | seq(8) | tag(16) | ciphertext
     // AAD: sessionId | seq
 
+    // the first protocol of this scheme, with the server-reply bit and the freshness mark: a session below it has no
+    // UDP, from either side
+    public const int MinProtocolVersion = 14;
+
     private const int VersionOffset = 0;
     private const int VersionLength = 1;
     private const int SessionIdOffset = VersionOffset + VersionLength;
@@ -29,16 +34,17 @@ public abstract class UdpChannelTransmitter : IDisposable
 
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
     private readonly EventReporter _invalidSessionReporter = new("Invalid UDP session.", GeneralEventId.UdpSign);
+    private readonly EventReporter _datagramErrorReporter = new("Could not process a UDP datagram.", GeneralEventId.Udp);
     private readonly Memory<byte> _sendBuffer = new byte[TransportDefaults.MaxPacketSize];
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
-    private static ulong _sendSequenceNumber;
     // volatile: the catch filters tell our own teardown from a dead socket by this flag, and Connected is
     // read by the listener host; both run on threads other than the one calling Dispose
     private volatile bool _disposed;
     private bool _isSendBufferSizeCustomized;
     private bool _isReceivedBufferSizeCustomized;
 
+    // the session's transport, which the server makes on the session's first datagram; called for every datagram
     protected abstract SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId);
 
     public int MaxPacketSize { get; set; } = TransportDefaults.MaxPacketSize;
@@ -50,15 +56,13 @@ public abstract class UdpChannelTransmitter : IDisposable
     {
         _udpClient = udpClient;
         LocalEndPoint = udpClient.Client.GetLocalEndPoint();
-
-        // Initialize send sequence number. one per application lifetime is sufficient.
-        if (_sendSequenceNumber == 0) {
-            Span<byte> seqBytes = stackalloc byte[8];
-            RandomNumberGenerator.Fill(seqBytes);
-            _sendSequenceNumber = BinaryPrimitives.ReadUInt64LittleEndian(seqBytes);
-        }
-
         Task.Run(ReadLoopAsync);
+    }
+
+    // the newest datagram of a transport with no channel: the server's session takes UDP
+    protected virtual void OpenSessionUdpChannel(ulong sessionId)
+    {
+        _ = sessionId;
     }
 
     public TransferBufferSize? BufferSize {
@@ -86,15 +90,29 @@ public abstract class UdpChannelTransmitter : IDisposable
         }
     }
 
-    private static void BuildNonce(Span<byte> nonce, ulong sessionId, ulong seq)
+    // nonce = seq[8] + sessionSalt[4]. The salt's top bit, the top of the nonce's last byte, is set for a datagram the
+    // server sent: one side's datagram never decrypts as the other's, and the two never share a nonce under the
+    // session's one key
+    private static void BuildNonce(Span<byte> nonce, ulong sessionId, ulong seq, bool isServerSent)
     {
-        // nonce = seq[8] + sessionSalt[4]
         BinaryPrimitives.WriteUInt64LittleEndian(nonce[..8], seq);
         var sessionSalt = (uint)(sessionId ^ (sessionId >> 32));
+        sessionSalt = isServerSent ? sessionSalt | 0x8000_0000 : sessionSalt & 0x7FFF_FFFF;
         BinaryPrimitives.WriteUInt32LittleEndian(nonce.Slice(8, 4), sessionSalt);
     }
 
-    internal async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, ICryptor cryptor)
+    // throws AuthenticationTagMismatchException for a datagram the cryptor's key did not seal in that direction;
+    // inlined, as it runs for every datagram
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void DecryptDatagram(ICryptor cryptor, ReadOnlySpan<byte> datagram, ulong sessionId, ulong seq,
+        bool isServerSent, Span<byte> nonce, Span<byte> plainText)
+    {
+        BuildNonce(nonce, sessionId, seq, isServerSent);
+        cryptor.Decrypt(nonce, datagram[HeaderLength..], datagram.Slice(TagOffset, TagLength), plainText,
+            datagram.Slice(SessionIdOffset, SessionIdLength + SeqLength));
+    }
+
+    internal async Task SendAsync(SessionUdpTransport transport, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload)
     {
         if (payload.Length + HeaderLength > MaxPacketSize)
             throw new ArgumentOutOfRangeException(nameof(payload));
@@ -102,7 +120,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         try {
             // encryption is not thread-safe; serialize send
             await _sendSemaphore.WaitAsync().Vhc();
-            await SendCoreAsync(sessionId, ipEndPoint, payload, cryptor).Vhc();
+            await SendCoreAsync(transport, ipEndPoint, payload).Vhc();
         }
         catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
             VhLogger.Instance.LogError(GeneralEventId.Essential, ex,
@@ -125,10 +143,12 @@ public abstract class UdpChannelTransmitter : IDisposable
         }
     }
 
-    private async Task SendCoreAsync(ulong sessionId, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload,
-        ICryptor cryptor)
+    private async Task SendCoreAsync(SessionUdpTransport transport, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload)
     {
-        var currentSeq = _sendSequenceNumber++;
+        // the transport's own count, under the send lock: a server transport's sends never overlap, and all of a
+        // client's come through its one transmitter
+        var currentSeq = transport.TakeSendSequenceNumber();
+        var sessionId = transport.SessionId;
         var bufferSpan = _sendBuffer.Span;
 
         // sessionId[8]
@@ -151,9 +171,9 @@ public abstract class UdpChannelTransmitter : IDisposable
         var associatedData = bufferSpan.Slice(SessionIdOffset, SessionIdLength + SeqLength);
 
         Span<byte> nonce = stackalloc byte[12];
-        BuildNonce(nonce, sessionId, currentSeq);
+        BuildNonce(nonce, sessionId, currentSeq, isServerSent: transport.IsServer);
 
-        cryptor.Encrypt(nonce, payload.Span, ciphertext, tag, associatedData);
+        transport.SendCryptor.Encrypt(nonce, payload.Span, ciphertext, tag, associatedData);
 
         var totalLength = HeaderLength + payload.Length;
         var sent = await _udpClient.SendAsync(_sendBuffer[..totalLength], ipEndPoint)
@@ -179,34 +199,25 @@ public abstract class UdpChannelTransmitter : IDisposable
                 var span = data.AsSpan();
                 var sessionId = BinaryPrimitives.ReadUInt64LittleEndian(span.Slice(SessionIdOffset, SessionIdLength));
                 var seq = BinaryPrimitives.ReadUInt64LittleEndian(span.Slice(SeqOffset, SeqLength));
-
-                // Find transport
-                var transport = SessionIdToUdpTransport(sessionId);
-                if (transport is null) {
-                    _invalidSessionReporter.Raise();
-                    continue;
-                }
-
-                // update remote endpoint for server, because client may use different port due to NAT
-                if (transport.IsServer)
-                    transport.RemoteEndPoint = result.RemoteEndPoint;
-
-                // Extract fields
-                _ = span[VersionOffset];
-                var tag = span.Slice(TagOffset, TagLength);
-                var ciphertext = span[HeaderLength..];
-                var associatedData = span.Slice(SessionIdOffset, SessionIdLength + SeqLength);
-                BuildNonce(nonce, sessionId, seq);
-
-                // Decrypt
-                var length = ciphertext.Length;
+                var length = data.Length - HeaderLength;
                 if (length > plainTextBuffer.Length)
                     throw new InvalidOperationException(
                         $"Receive buffer too small. length={length}, buffer={plainTextBuffer.Length}");
 
                 // Decrypt in a shared buffer to reduce memory allocation
                 var plainTextSpan = plainTextBuffer.AsSpan(0, length);
-                transport.ReceiveCryptor.Decrypt(nonce, ciphertext, tag, plainTextSpan, associatedData);
+
+                var transport = SessionIdToUdpTransport(sessionId);
+                if (transport is null) {
+                    _invalidSessionReporter.Raise();
+                    continue;
+                }
+
+                // nothing changes before the datagram authenticates, and then only for the newest one. A transport
+                // whose channel went takes one again on its newest datagram
+                if (transport.Receive(this, span, seq, nonce, plainTextSpan, result.RemoteEndPoint) &&
+                    transport.DataReceived is null)
+                    OpenSessionUdpChannel(sessionId);
 
                 // Copy to the already allocated result.Buffer to reduce memory copy
                 var plainTextMemory = result.Buffer.AsMemory(0, length);
@@ -221,8 +232,16 @@ public abstract class UdpChannelTransmitter : IDisposable
                 Dispose();
                 break;
             }
-            catch (Exception) {
+            catch (AuthenticationTagMismatchException) {
                 _udpSignReporter.Raise();
+            }
+            catch (Exception ex) {
+                // the first of each report period with its exception, the others only counted: a flood must not flood
+                // the log
+                if (_datagramErrorReporter.Raise())
+                    VhLogger.Instance.LogWarning(GeneralEventId.Udp, ex, "UdpChannelTransmitter: Could not process a datagram.");
+                else
+                    VhLogger.Instance.LogDebug(GeneralEventId.Udp, ex, "UdpChannelTransmitter: Could not process a datagram.");
             }
         }
     }
@@ -240,6 +259,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         _udpClient.Dispose();
         _sendSemaphore.Dispose();
         _invalidSessionReporter.Dispose();
+        _datagramErrorReporter.Dispose();
         _udpSignReporter.Dispose();
     }
 }

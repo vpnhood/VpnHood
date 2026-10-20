@@ -26,16 +26,25 @@ public class EventReporter : IDisposable
         _reportJob = new Job(ReportJob, period ?? JobOptions.DefaultInterval, nameof(EventReporter));
     }
 
-    public void Raise()
+    // true for the first event since the last report, so a caller can log that one's details beside the counts
+    public bool Raise()
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
-        lock (_lockObject)
-            TotalEventCount++;
-
+        var isFirstSinceReport = CountEvent();
         if (VhLogger.MinLogLevel <= LogLevel.Debug)
             ReportInternal();
+
+        return isFirstSinceReport;
+    }
+
+    private bool CountEvent()
+    {
+        lock (_lockObject) {
+            TotalEventCount++;
+            return TotalEventCount - LastReportEventCount == 1;
+        }
     }
 
     private ValueTask ReportJob(CancellationToken cancellationToken)

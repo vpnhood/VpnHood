@@ -2,6 +2,7 @@
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Messaging;
 
 namespace VpnHood.Core.Client;
@@ -11,7 +12,7 @@ internal static class ChannelProtocolValidator
     public static ChannelProtocol[] GetChannelProtocols(HelloResponse helloResponse, bool isQuicSupported)
     {
         var channelProtocols = new List<ChannelProtocol> { ChannelProtocol.Tcp };
-        if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= 11 })
+        if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= UdpChannelTransmitter.MinProtocolVersion })
             channelProtocols.Add(ChannelProtocol.Udp);
         if (helloResponse is { QuicPort: > 0 } && isQuicSupported)
             channelProtocols.Add(ChannelProtocol.Quic);

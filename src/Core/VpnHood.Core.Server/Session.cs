@@ -43,7 +43,6 @@ public class Session : IDisposable
     private readonly TransferBufferSize _streamProxyBufferSize;
     private readonly TransferBufferSize? _tcpKernelBufferSize;
     private readonly TrackingOptions _trackingOptions;
-    private UdpChannel? _udpChannel;
 
     private readonly EventReporter _netScanExceptionReporter = new(
         "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
@@ -65,6 +64,7 @@ public class Session : IDisposable
     private readonly Lock _stateLock = new();
 
     public Tunnel Tunnel { get; }
+    internal SessionUdpState UdpState { get; }
 
     // the session's limit and traffic count, which its tunnel, channels and streams share
     public TrafficMeter TrafficMeter { get; }
@@ -78,7 +78,8 @@ public class Session : IDisposable
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int NetScanErrorCount => _netScanErrorCount;
-    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (_udpChannel != null ? 0 : Tunnel.PacketChannelCount);
+    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (UseUdpChannel ? 0 : Tunnel.PacketChannelCount);
+    public bool UseUdpChannel => UdpState.IsChannelOpen;
 
 
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
@@ -158,6 +159,7 @@ public class Session : IDisposable
             : new Tunnel(tunnelOptions);
 
         Tunnel.PacketReceived += Tunnel_PacketReceived;
+        UdpState = new SessionUdpState(SessionId, SessionKey, ProtocolVersion, Tunnel, TrafficMeter);
 
         // ReSharper disable once MergeIntoPattern
         if (options.NetScanLimit != null && options.NetScanTimeout != null)
@@ -175,27 +177,6 @@ public class Session : IDisposable
                 Received = traffic.Sent
             };
         }
-    }
-
-    public IUdpTransport UseUdpTransport(Func<IUdpTransport> factory)
-    {
-        // Note: creating UdpTransport is costly, this method may be called per packet. One the tunnel let go, closing or
-        // gone, is still returned, as a check here would cost every packet: a client never sends its UDP channel's
-        // close, and the session takes a new one once the client turns to TCP and back
-        if (_udpChannel == null) {
-            // none for a disposed session, which stays listed a while: nothing would add or dispose it
-            ObjectDisposedException.ThrowIf(IsDisposed, this);
-            _udpChannel = new UdpChannel(factory(), new UdpChannelOptions {
-                Blocking = false,
-                AutoDisposePackets = true,
-                Lifespan = null,
-                ChannelId = Guid.NewGuid().ToString(),
-                TrafficMeter = TrafficMeter
-            });
-        }
-
-        UseUdpChannel = true;
-        return _udpChannel.UdpTransport;
     }
 
     public Traffic TakeUnreportedTraffic()
@@ -425,36 +406,7 @@ public class Session : IDisposable
             }
         }
 
-        Tunnel.AddChannel(channel, disposeIfFailed: true);
-        UseUdpChannel = false;
-    }
-
-    public bool UseUdpChannel {
-        get => _udpChannel != null && field;
-        set {
-            if (value == field)
-                return;
-
-            if (value) {
-                if (_udpChannel is null)
-                    throw new InvalidOperationException("UdpChannel is not created yet.");
-
-                // enable udp channel; one the tunnel refuses, as while the session is disposed, is disposed
-                Tunnel.RemoveChannels<IPacketChannel>();
-                Tunnel.AddChannel(_udpChannel, disposeIfFailed: true);
-                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
-                    "UdpChannel is enabled. SessionId: {SessionId}", SessionId);
-            }
-            else {
-                // disable udp channel
-                Tunnel.RemoveChannels<UdpChannel>();
-                _udpChannel = null; // remove will dispose the channel, set to null to avoid reuse
-                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
-                    "UdpChannel is disabled. SessionId: {SessionId}", SessionId);
-            }
-
-            field = value;
-        }
+        UdpState.AddTcpChannel(channel);
     }
 
     internal Task ProcessUdpPacketRequest(UdpPacketRequest request, IStreamConnection streamConnection,
@@ -614,11 +566,13 @@ public class Session : IDisposable
         // its own guard: a cleanup's close and the manager's may come at once; IsDisposed is set only at the end
         if (Interlocked.Exchange(ref _disposing, true)) return;
 
+        // first, so a datagram meanwhile makes nothing; the tunnel disposes the UDP channel it has
+        UdpState.Dispose();
+
         _proxyManager.PacketReceived -= Proxy_PacketsReceived;
         _proxyManager.Dispose();
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
         Tunnel.Dispose();
-        _udpChannel?.Dispose(); // one made but never added: the tunnel disposed one it had
         TrafficMeter.Dispose();
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();

@@ -11,7 +11,9 @@ public class VpnHoodClientConfig
     // 10: Support RedirectHostServerTokens (7.5.770)
     // 11: New UDP AesGcm encryption 
     // 12: fix server WebSocketNoHandshake 2026/02
-    public static int MaxProtocolVersion => 12;
+    // 13: server QUIC 2026/05; no client sent it
+    // 14: UDP with the server-reply bit and the freshness mark; older peers get no UDP 2026/10
+    public static int MaxProtocolVersion => 14;
     public static int MinProtocolVersion => 8;
     public required Version Version { get; init; }
     public required bool AutoDisposeVpnAdapter { get; init; }

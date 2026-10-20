@@ -1,4 +1,6 @@
+using System.Buffers.Binary;
 using System.Runtime.ExceptionServices;
+using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
@@ -48,6 +50,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     private DateTime? _autoWaitTime;
     private ClientUdpChannelTransmitter? _udpTransmitter;
+    // the seq a new socket's transport counts on from: random for the session's first, then past the last socket's.
+    // Below 2⁶³, so the count never wraps under the server's freshness mark, which takes only a higher seq as new
+    private ulong _nextUdpSendSequenceNumber =
+        BinaryPrimitives.ReadUInt64LittleEndian(RandomNumberGenerator.GetBytes(8)) >> 1;
     private volatile bool _isUdpTransmitterStale;
     // the current network's: a change cancels it, so a packet channel still being added on the old network gives
     // up the channel lock at once rather than at its connect timeout
@@ -554,8 +560,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // may be made on it meanwhile
         if (_isUdpTransmitterStale) {
             _isUdpTransmitterStale = false;
-            _udpTransmitter?.Dispose();
-            _udpTransmitter = null;
+            DisposeStaleUdpTransmitter();
         }
 
         // create channelTransmitter if not created
@@ -564,7 +569,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             sessionId: Config.SessionId,
             sessionKey: Config.SessionKey.Span,
             remoteEndPoint: Config.HostUdpEndPoint,
-            bufferSize: Config.Transport.UdpChannelBufferSize);
+            bufferSize: Config.Transport.UdpChannelBufferSize,
+            firstSendSequenceNumber: _nextUdpSendSequenceNumber);
 
         // create udp channel
         var udpChannel = new UdpChannel(_udpTransmitter.UdpTransport, new UdpChannelOptions {
@@ -584,6 +590,18 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             udpChannel.Dispose();
             throw;
         }
+    }
+
+    // the next socket counts on past this one's count, read once it is disposed, plus a gap for the one send its lock
+    // may still have let through
+    private void DisposeStaleUdpTransmitter()
+    {
+        if (_udpTransmitter is null)
+            return;
+
+        _udpTransmitter.Dispose();
+        _nextUdpSendSequenceNumber = _udpTransmitter.UdpTransport.NextSendSequenceNumber + (1UL << 32);
+        _udpTransmitter = null;
     }
 
     internal Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,

@@ -51,12 +51,9 @@ internal class FlowCacheService : IDisposable
             if (nowTicks - kvp.Value.LastSeenTicks <= flowTimeoutTicks)
                 continue;
 
-            if (!_flowCache.TryRemove(kvp.Key, out var flowInfo))
-                continue;
-
-            // Dispose buffered packets
-            foreach (var packet in flowInfo.BufferedPackets)
-                packet.Dispose();
+            // only the packet thread touches a flow's packets: one still in flight may add to them, or take them out
+            // to send. Those of a removed flow go back to the pool by their finalizers
+            _flowCache.TryRemove(kvp.Key, out _);
         }
 
         return ValueTask.CompletedTask;
@@ -70,12 +67,7 @@ internal class FlowCacheService : IDisposable
         _disposed = true;
         _cleanupJob.Dispose();
 
-        // Dispose all buffered packets
-        foreach (var kvp in _flowCache) {
-            foreach (var packet in kvp.Value.BufferedPackets)
-                packet.Dispose();
-        }
-
+        // the flows' packets go back by their finalizers, as the cleanup's do
         _flowCache.Clear();
         GC.SuppressFinalize(this);
     }

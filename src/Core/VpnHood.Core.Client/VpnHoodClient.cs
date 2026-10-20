@@ -330,6 +330,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         _cancellationTokenSource.Dispose();
         _session?.StateChanged -= Session_StateChanged;
+        _domainFilteringService.Dispose();
         NetFilter.Dispose();
 
         // disposing adapter

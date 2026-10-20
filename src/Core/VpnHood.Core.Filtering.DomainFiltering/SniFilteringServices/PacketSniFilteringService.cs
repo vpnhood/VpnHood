@@ -150,10 +150,9 @@ public abstract class PacketSniFilteringService(
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        _disposed = true;
         _flowCacheService.Dispose();
         GC.SuppressFinalize(this);
     }

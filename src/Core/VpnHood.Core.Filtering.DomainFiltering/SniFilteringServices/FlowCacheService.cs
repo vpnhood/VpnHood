@@ -61,10 +61,9 @@ internal class FlowCacheService : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        _disposed = true;
         _cleanupJob.Dispose();
 
         // the flows' packets go back by their finalizers, as the cleanup's do

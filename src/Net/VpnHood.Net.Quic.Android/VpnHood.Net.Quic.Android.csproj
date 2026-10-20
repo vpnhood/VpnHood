@@ -14,7 +14,7 @@
 		<!-- All native QUIC complexity (libmsquic.so per ABI + the Microsoft.Quic P/Invoke bindings) lives
 		     in this self-contained package. The fork's GitHub Actions publish a new build on every
 		     push, so the version is pinned and moves after a test. -->
-		<PackageReference Include="VpnHood.Net.Quic.MsQuic.AndroidNative" Version="8.0.13" />
+		<PackageReference Include="VpnHood.Net.Quic.MsQuic.AndroidNative" Version="9.0.15" />
 	</ItemGroup>
 
 	<ItemGroup>

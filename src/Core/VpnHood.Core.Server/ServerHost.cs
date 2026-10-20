@@ -88,7 +88,7 @@ public class ServerHost : IAsyncDisposable
 
         var tcpStatuses = await _tcpListenerHost.Configure(configuration.TcpEndPoints, Certificates).Vhc();
         var quicStatuses = await _quicListenerHost.Configure(configuration.QuicEndPoints, Certificates).Vhc();
-        var udpStatuses = await _udpListenerHost.Configure(configuration.UdpEndPoints, configuration.UdpChannelBufferSize);
+        var udpStatuses = await _udpListenerHost.Configure(configuration.UdpEndPoints, configuration.UdpChannelBufferSize).Vhc();
 
         return [.. tcpStatuses, .. quicStatuses, .. udpStatuses];
     }
@@ -104,7 +104,7 @@ public class ServerHost : IAsyncDisposable
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
                 "Connection has been closed. ConnectionId: {ConnectionId}", streamConnection.ConnectionId);
             streamConnection.PreventReuse();
-            await streamConnection.DisposeAsync();
+            await streamConnection.DisposeAsync().Vhc();
             return -1;
         }
 
@@ -270,7 +270,7 @@ public class ServerHost : IAsyncDisposable
         }
         catch (RequestHandledException) {
             // no need to do anything, just return and let the connection be closed by caller
-            await streamConnection.DisposeAsync();
+            await streamConnection.DisposeAsync().Vhc();
         }
         catch (Exception ex) {
             if (streamConnection is { Connected: true, RequireHttpResponse: true } &&
@@ -287,7 +287,7 @@ public class ServerHost : IAsyncDisposable
             }
 
             streamConnection.PreventReuse();
-            await streamConnection.DisposeAsync();
+            await streamConnection.DisposeAsync().Vhc();
             ex.Data["ConnectionId"] = streamConnection.ConnectionId;
             ex.Data["ClientIp"] = VhLogger.Format(clientIp);
             throw;
@@ -570,7 +570,7 @@ public class ServerHost : IAsyncDisposable
         // write unauthorized response
         await streamConnection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).Vhc();
         streamConnection.PreventReuse();
-        await streamConnection.DisposeAsync();
+        await streamConnection.DisposeAsync().Vhc();
     }
 
     private async Task ProcessBye(IStreamConnection streamConnection, CancellationToken cancellationToken)
@@ -583,10 +583,10 @@ public class ServerHost : IAsyncDisposable
         var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
 
         // Dispose client stream
-        await streamConnection.DisposeAsync(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken);
+        await streamConnection.DisposeAsync(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken).Vhc();
 
         // must be last
-        await _sessionManager.CloseSession(session.SessionId, cancellationToken);
+        await _sessionManager.CloseSession(session.SessionId, cancellationToken).Vhc();
     }
 
     private async Task ProcessUdpPacketRequest(IStreamConnection streamConnection, CancellationToken cancellationToken)

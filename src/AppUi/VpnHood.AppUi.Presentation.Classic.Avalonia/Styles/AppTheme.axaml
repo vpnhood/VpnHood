@@ -138,10 +138,12 @@
     <Setter Property="Margin" Value="48,27" />
   </Style>
   <!-- The page's scroller reaches over that inset to the window's sides and bottom, so its bar runs
-       down the window's edge, and gives the inset back to what it scrolls. -->
+       down the window's edge, and gives the inset back to what it scrolls. What scrolls up under
+       the header fades out there rather than being cut along a line. -->
   <Style Selector=":is(Panel).page > ScrollViewer">
     <Setter Property="Margin" Value="-16,0,-16,-16" />
     <Setter Property="Padding" Value="16,0,16,16" />
+    <Setter Property="controls:ScrollEdgeFade.IsEnabled" Value="True" />
   </Style>
   <Style Selector=":is(UserControl).tv :is(Panel).page > ScrollViewer">
     <Setter Property="Margin" Value="-48,0,-48,-27" />

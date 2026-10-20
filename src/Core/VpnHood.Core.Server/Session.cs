@@ -401,7 +401,6 @@ public class Session : IDisposable
         // channel, or keep older ones until it catches up. Left so, as rare
         if (request.ActiveChannelIds != null) {
             var inactiveChannels = Tunnel.GetPacketChannels()
-                .OfType<StreamPacketChannel>()
                 .Where(x => x.RequestTime < request.RequestTime && !request.ActiveChannelIds.Contains(x.ChannelId));
 
             foreach (var inactiveChannel in inactiveChannels) {

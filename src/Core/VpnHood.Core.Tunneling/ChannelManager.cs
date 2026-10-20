@@ -13,13 +13,13 @@ internal class ChannelManager : IDisposable
     private readonly Lock _channelListLock = new();
     private readonly HashSet<IChannel> _disposingChannels = [];
     private readonly HashSet<IProxyChannel> _proxyChannels = [];
-    private readonly List<IPacketChannel> _packetChannels = [];
+    private readonly List<IStreamPacketChannel> _packetChannels = [];
     private readonly EventHandler<IpPacket> _channelPacketReceived;
     private bool _disposed;
     private readonly Job _cleanupJob;
 
     // a copy taken under the lock, as adds and cleanups change the list under its readers
-    public IReadOnlyList<IPacketChannel> GetPacketChannels()
+    public IReadOnlyList<IStreamPacketChannel> GetPacketChannels()
     {
         lock (_channelListLock)
             return _packetChannels.ToArray();
@@ -68,20 +68,20 @@ internal class ChannelManager : IDisposable
     {
         lock (_channelListLock) {
             return channel switch {
-                PacketChannel packetChannel => _packetChannels.Contains(packetChannel),
+                IStreamPacketChannel packetChannel => _packetChannels.Contains(packetChannel),
                 IProxyChannel proxyChannel => _proxyChannels.Contains(proxyChannel),
                 _ => throw new ArgumentOutOfRangeException(nameof(channel))
             };
         }
     }
 
-    // A PacketChannel, not any IPacketChannel: a connection, which the manager closes and cleans up. A tunnel's UDP
-    // channel lasts as long as its session and stays beside the manager, so it is refused here
+    // An IStreamPacketChannel, not any IPacketChannel: a connection, which the manager closes and cleans up. A
+    // tunnel's UDP channel lasts as long as its session and stays beside the manager, so it is refused here
     public void AddChannel(IChannel channel)
     {
         lock (_channelListLock) {
             switch (channel) {
-                case PacketChannel packetChannel:
+                case IStreamPacketChannel packetChannel:
                     AddPacketChannel(packetChannel);
                     break;
 
@@ -94,7 +94,7 @@ internal class ChannelManager : IDisposable
         }
     }
 
-    private void AddPacketChannel(IPacketChannel channel)
+    private void AddPacketChannel(IStreamPacketChannel channel)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(Tunnel));
@@ -157,7 +157,7 @@ internal class ChannelManager : IDisposable
     private void RemoveChannelInternal(IChannel channel, bool dispose)
     {
         switch (channel) {
-            case PacketChannel packetChannel:
+            case IStreamPacketChannel packetChannel:
                 packetChannel.PacketReceived -= _channelPacketReceived;
                 RemoveChannel(_packetChannels, packetChannel, GeneralEventId.PacketChannel, dispose);
                 break;
@@ -223,9 +223,9 @@ internal class ChannelManager : IDisposable
         if (_disposingChannels.Count <= maxClosingCount)
             return;
 
-        var closingChannels = _disposingChannels.OfType<PacketChannel>().ToArray();
+        var closingChannels = _disposingChannels.OfType<IStreamPacketChannel>().ToArray();
         var excessChannels = closingChannels
-            .OrderBy(x => x.CloseTicks)
+            .OrderBy(x => x.CloseTime)
             .Take(closingChannels.Length - maxClosingCount);
 
         foreach (var channel in excessChannels)
@@ -254,7 +254,7 @@ internal class ChannelManager : IDisposable
 
     // the packet's channel, picked by its source port so a flow keeps to one channel; the count and the pick share
     // one lock
-    public IPacketChannel GetPacketChannel(IpPacket ipPacket)
+    public IStreamPacketChannel GetPacketChannel(IpPacket ipPacket)
     {
         lock (_channelListLock) {
             var channelCount = _packetChannels.Count;

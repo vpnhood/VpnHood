@@ -1,15 +1,20 @@
+using System.IO.Pipelines;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Net.Packets;
 
 namespace VpnHood.Test.Providers;
 
-// A packet channel with no connection behind it: it counts the packets and bytes sent through it and disposes
-// the packets
-public class TestPacketChannel(TimeSpan? lifespan = null) : PacketChannel(new PacketChannelOptions {
+// A stream packet channel whose stream carries nothing: it counts the packets and bytes sent through it and
+// disposes the packets
+public class TestPacketChannel(TimeSpan? lifespan = null) : StreamPacketChannel(new StreamPacketChannelOptions {
     AutoDisposePackets = true,
     Blocking = false,
     Lifespan = lifespan,
-    ChannelId = Guid.NewGuid().ToString()
+    ChannelId = Guid.NewGuid().ToString(),
+    RequestTime = DateTime.UtcNow,
+
+    // nothing is written to the pipe, so the channel's reads wait until it is disposed
+    StreamConnection = new TestStreamConnection(new Pipe().Reader.AsStream())
 })
 {
     private int _sentPackets;
@@ -24,12 +29,7 @@ public class TestPacketChannel(TimeSpan? lifespan = null) : PacketChannel(new Pa
         OnPacketReceived(ipPacket);
     }
 
-    // nothing to read: it waits until the channel is disposed
-    protected override Task StartReadTask()
-    {
-        return Task.Delay(Timeout.Infinite, CancellationToken);
-    }
-
+    // counted, not written to the stream
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets)

@@ -718,9 +718,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         await Connect(request);
     }
 
-    // VpnHoodApp.connect: the connect itself, with nobody asked anything, and the profile's choice
-    // written and saved. The promote page calls THIS and not ConnectWith, exactly as the web UI's
-    // promote page calls vhApp.connect: the person standing on that page has just answered the
+    // The connect itself, with nobody asked anything, and the profile's choice written. The promote
+    // page calls THIS and not ConnectWith: the person standing on that page has just answered the
     // question, so asking it again would put the same page in front of them for ever.
     public async Task Connect(ConnectRequest request)
     {
@@ -733,14 +732,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 ? api.App.Diagnose(request.VpnProfileId, request.ServerLocation, request.PlanId, CancellationToken.None)
                 : api.App.Connect(request.VpnProfileId, request.ServerLocation, request.PlanId, CancellationToken.None);
 
-            // the profile's choice, as the web UI writes it right after asking for the connect
+            // the profile's choice, while the connect runs. No settings save: the app's connect makes the
+            // profile the one it is set to, and a save would send the settings to a VPN service still making
+            // its connection
             await api.VpnProfiles.Update(request.VpnProfileId, new VpnProfileUpdateParams {
                 IsPremiumLocationSelected = new Patch<bool>(request.IsPremium),
                 SelectedLocation = new Patch<string?>(request.ServerLocation)
             }, CancellationToken.None);
-            var settings = VhApp.UserSettings;
-            settings.VpnProfileId = request.VpnProfileId;
-            await VhApp.SaveUserSettings(settings, CancellationToken.None);
 
             await connect;
         }

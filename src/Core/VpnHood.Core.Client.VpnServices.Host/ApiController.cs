@@ -137,29 +137,10 @@ internal class ApiController : IDisposable
         return Task.CompletedTask;
     }
 
-    private async Task Reconfigure(ApiReconfigureRequest request, CancellationToken cancellationToken)
+    private Task Reconfigure(ApiReconfigureRequest request, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-
-        // capture once: every touch below lands on the same client even if it is replaced mid-request
-        var client = VpnHoodClient;
-        client.UseTcpProxy = request.Params.UseTcpProxy;
-        client.DropUdp = request.Params.DropUdp;
-        client.DropQuic = request.Params.DropQuic;
-        client.ChannelProtocol = request.Params.ChannelProtocol;
-        client.UnroutedIpMode = request.Params.UnroutedIpMode;
-        client.UnsupportedIpV6Mode = request.Params.UnsupportedIpV6Mode;
-
-        // the usage-data switch, at once: the session's tracker was made with the one at the connect
-        if (client.Tracker != null)
-            client.Tracker.IsEnabled = request.Params.AllowAnonymousTracker;
-
-        // live-swap the split filter gates to the current folder manifests (rewritten by the app before
-        // this request); no-op when the db paths did not change
-        client.NetFilter.Reconfigure();
-
-        if (client.ProxyConnector != null)
-            await client.ProxyConnector.UpdateOptions(request.Params.ProxyOptions).Vhc();
+        return _vpnHoodService.Reconfigure(request.Params);
     }
 
     private Task SetWaitForAd(ApiSetWaitForAdRequest request, CancellationToken cancellationToken)

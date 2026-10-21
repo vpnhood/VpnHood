@@ -13,6 +13,7 @@ namespace VpnHood.Core.Tunneling.Connections;
 public sealed class TcpStreamConnection : IStreamConnection
 {
     private readonly TcpClient _tcpClient;
+    private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
 
     public TcpStreamConnection(TcpClient tcpClient,
@@ -69,7 +70,8 @@ public sealed class TcpStreamConnection : IStreamConnection
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, true)) return;
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         Stream.Dispose();
         _tcpClient.Dispose();
@@ -82,14 +84,13 @@ public sealed class TcpStreamConnection : IStreamConnection
 
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, true)) return;
+        // a second close waits for the first one's end. One after a quick close returns: that close leaves nothing
+        // running. A quick close that comes meanwhile closes the socket, which ends the stream's close below
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (_disposed)
+            return;
 
         await Stream.DisposeAsync().Vhc();
-        _tcpClient.Dispose();
-        VhTypeTracker.Record($"TcpStreamConnection.{ConnectionName}.disposed");
-
-        VhLogger.Instance.LogTrace(GeneralEventId.Stream, 
-            "Connection has been disposed asynchronously. ConnectionId: {ConnectionId}",
-            ConnectionId);
+        Dispose();
     }
 }

@@ -1,11 +1,13 @@
 ﻿using System.Net;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Connections;
 
 public class StreamConnectionDecorator(IStreamConnection streamConnection, Stream? stream = null) 
     : IStreamConnection
 {
+    private readonly AsyncLock _disposeLock = new();
     protected bool Disposed;
     protected IStreamConnection InnerStreamConnection => streamConnection;
 
@@ -30,8 +32,8 @@ public class StreamConnectionDecorator(IStreamConnection streamConnection, Strea
 
     public virtual void Dispose()
     {
-        if (Disposed) return;
-        Disposed = true;
+        if (Interlocked.Exchange(ref Disposed, true))
+            return;
 
         stream?.Dispose();
         InnerStreamConnection.Dispose();
@@ -39,12 +41,13 @@ public class StreamConnectionDecorator(IStreamConnection streamConnection, Strea
 
     public virtual async ValueTask DisposeAsync()
     {
-        if (Disposed) return;
-        Disposed = true;
-
-        if (stream != null) 
+        // a second close waits for the first one's end. No early return after it: the inner connection's async
+        // close, which a quick close may have started without waiting, ends before this one does
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (stream != null)
             await stream.DisposeAsync().Vhc();
 
         await InnerStreamConnection.DisposeAsync().Vhc();
+        Dispose();
     }
 }

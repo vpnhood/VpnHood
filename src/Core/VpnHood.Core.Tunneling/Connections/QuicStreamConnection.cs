@@ -3,6 +3,7 @@ using System.Net;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Connections;
@@ -10,6 +11,7 @@ namespace VpnHood.Core.Tunneling.Connections;
 public sealed class QuicStreamConnection : IStreamConnection
 {
     private readonly Stream _stream;
+    private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
     public event EventHandler? Disposed;
     public string ConnectionName { get; }
@@ -64,7 +66,11 @@ public sealed class QuicStreamConnection : IStreamConnection
 
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, true)) return;
+        // a second close waits for the first one's end
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         Connected = false;
 
         // a failed close still reports the connection closed, as its QUIC connection counts its streams down on that

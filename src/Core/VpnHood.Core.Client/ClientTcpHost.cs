@@ -5,6 +5,7 @@ using VpnHood.Net.TcpStack;
 using VpnHood.Net.TcpStack.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Utils;
@@ -95,9 +96,8 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
-        _disposed = true;
 
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
@@ -109,6 +109,7 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
 
     private sealed class LocalStreamConnection(ITcpClient tcpClient) : IStreamConnection
     {
+        private readonly AsyncLock _disposeLock = new();
         private bool _disposed;
 
         public string ConnectionId { get; set; } = UniqueIdFactory.Create();
@@ -127,16 +128,22 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            if (Interlocked.Exchange(ref _disposed, true))
+                return;
+
             tcpClient.Dispose();
         }
 
         public async ValueTask DisposeAsync()
         {
-            if (_disposed) return;
-            _disposed = true;
+            // a second close waits for the first one's end. One after a quick close returns: that close leaves
+            // nothing running
+            using var scopeLock = await _disposeLock.LockAsync().Vhc();
+            if (_disposed)
+                return;
+
             await tcpClient.DisposeAsync().Vhc();
+            Dispose();
         }
     }
 

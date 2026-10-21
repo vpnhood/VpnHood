@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels.Streams;
 
 namespace VpnHood.Core.Tunneling.Connections;
@@ -17,6 +18,7 @@ public class ReusableStreamConnection : IStreamConnection
     private readonly IStreamConnection _transport;
     private readonly ChunkStream _stream;
     private readonly ReuseConnectionCallback? _reuseCallback;
+    private readonly AsyncLock _disposeLock = new();
     private volatile bool _reusePrevented;
     private bool _disposed;
 
@@ -103,15 +105,19 @@ public class ReusableStreamConnection : IStreamConnection
         VhTypeTracker.Record("ReusableStreamConnection.disposed");
     }
 
+    // not waited for: the release ends the logical stream with the peer
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, true)) return;
-        _ = Release();
+        _ = this.TryDisposeAsync();
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, true)) return;
+        // a second close waits for the first one's end
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         await Release().Vhc();
     }
 }

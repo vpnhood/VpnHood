@@ -346,8 +346,9 @@ public class SessionUsageTest : TestBase
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
-        // a short sync interval, and a cache its bytes never fill; a report now
-        var syncInterval = TimeSpan.FromSeconds(2);
+        // a short sync interval, yet longer than a loaded machine's stalls, and a cache its bytes never fill; a
+        // report now
+        var syncInterval = TimeSpan.FromSeconds(10);
         server.SessionManager.SessionOptions.SyncInterval = syncInterval;
         server.SessionManager.SessionOptions.SyncCacheSize = 1_000_000;
         AddTraffic(session, sent: 1, received: 1);

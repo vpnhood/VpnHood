@@ -220,8 +220,12 @@ internal class ConnectorService : IAsyncDisposable
     // same reason; the tunnel talks to ONE server, and waiters usually pick up a pooled connection freed
     // meanwhile, so a small cap is safe. Static: the budget being protected (process footprint) is
     // process-wide, and a reconnect can briefly overlap two ConnectorService instances.
-    private static readonly SemaphoreSlim ConnectGate =
-        new(OperatingSystem.IsIOS() && !OperatingSystem.IsMacCatalyst() ? 3 : 8);
+    private static readonly Lazy<SemaphoreSlim> ConnectGateLazy = new(() => new SemaphoreSlim(ConnectGateCapacity));
+    private static SemaphoreSlim ConnectGate => ConnectGateLazy.Value;
+
+    // read once, at the process's first connect: tests widen it before, as their parallel clients share the process
+    internal static int ConnectGateCapacity { get; set; } =
+        OperatingSystem.IsIOS() && !OperatingSystem.IsMacCatalyst() ? 3 : 8;
 
     // While the process footprint is critical, hold fresh establishment entirely (aligned with the QUIC
     // ingest gate and the TCP-stack admission gate at 42 MB): in the jammed-tunnel state native handshake

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -380,7 +381,7 @@ public class VpnAdapterRecoveryTest : TestBase
         await Assert.ThrowsExactlyAsync<IOException>(() => adapter.Restart(TestCt));
         await client.WaitForState(ClientState.Disposed);
         var ex = client.LastException;
-        Assert.IsInstanceOfType<InvalidOperationException>(ex);
+        Assert.IsInstanceOfType<VpnAdapterFailedException>(ex);
         Assert.IsInstanceOfType<IOException>(ex.InnerException);
         StringAssert.Contains(ex.Message, "adapter");
     }

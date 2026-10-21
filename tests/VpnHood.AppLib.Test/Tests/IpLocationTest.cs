@@ -64,11 +64,15 @@ public class IpLocationTest : TestAppBase
         var projectFolder = Path.Combine(solutionFolder, "VpnHood.Net.IpLocations.Assets.Ip2LocationLite");
         var ipLocationFile = Path.Combine(projectFolder, "Resources", "IpLocations.zip");
         VhLogger.Instance.LogInformation("ipLocationFile: {ipLocationFile}", ipLocationFile);
+        // the project and its token sit beside the main checkout only, not beside a worktree or CI's
         if (!Directory.Exists(projectFolder))
-            throw new DirectoryNotFoundException("Ip2Location Project was not found.");
+            Assert.Inconclusive($"The Ip2Location project is not beside this checkout: {projectFolder}");
 
         // find token (stored as its own secret file under .user/vendors, see pub/lib secret layout)
         var userSecretFile = Path.Combine(vhFolder, ".user", "vendors", "ip2location", "ip2location_token.txt");
+        if (!File.Exists(userSecretFile))
+            Assert.Inconclusive($"The Ip2Location token is not beside this checkout: {userSecretFile}");
+
         var ip2LocationToken = (await File.ReadAllTextAsync(userSecretFile)).Trim();
         ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);
 

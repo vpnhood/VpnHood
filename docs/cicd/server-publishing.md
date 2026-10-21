@@ -19,7 +19,7 @@ the same reason: a workflow running in the target repo can create a release ther
 | Code + version | this monorepo (`pub/PubVersion.json`, written only by `bump.yml`) |
 | Workflow + release | `vpnhood/VpnHood.App.Server` (`main` only — there is no `develop`, because there is no code there) |
 | Token | automatic `github.token` of the server repo |
-| Release notes | `CHANGELOG.Server.md` in this monorepo — hand-maintained, CI only reads it |
+| Release notes | `CHANGELOG.Server.md` in this monorepo — hand-maintained, CI only reads it; the note ends with the monorepo commit it was built from, the tag pins the server repo's own |
 | Store legs | none (no fastlane, no app store) |
 
 The workflow checks this monorepo out into `code/` at the requested ref, builds, and creates the
@@ -27,19 +27,25 @@ release in itself.
 
 ## What a release ships
 
-- **Linux** (`linux-x64`, `linux-arm64`, `linux-any`): `.tar.gz`, install `.sh`, update `.json`, plus
-  the msquic variant script.
+- **Linux** (`linux-x64`, `linux-arm64`): `.tar.gz`, install `.sh`, update `.json`; from `linux-any`,
+  the install script that picks the architecture (`VpnHoodServer-linux.sh`) and the MsQuic installer
+  (`VpnHoodServer-linux-msquic.sh`).
 - **Windows** (`win-x64`): `.zip`, install `.ps1`, update `.json`. The server package is a
   self-contained `dotnet publish` + zip with no installer, so it **cross-builds on `ubuntu-latest`**
   alongside Linux — one build job, no Windows runner.
 - **Docker**: a multi-arch (`linux/amd64` + `linux/arm64`) image pushed to Docker Hub as
   `vpnhood/vpnhoodserver:<tag>`, plus `:latest` on a stable release; the two compose helper files
-  (`VpnHoodServer.docker.yml`, `VpnHoodServer.docker.sh`) are attached to the GitHub release.
+  (`VpnHoodServer.docker.yml`, `VpnHoodServer.docker.sh`) are attached to the GitHub release. The
+  compose file names the image that release pushed: `:latest` for a stable one, its own tag for a
+  prerelease, whose install script thus installs the prerelease; a fork's `DOCKER_IMAGE` in place of
+  ours.
 
-Docker is built with `docker/build-push-action` (multi-arch natively — no QEMU juggling) and gated on
-both the `DOCKERHUB_*` secrets and the `push_docker` input; absent secrets **skip with a warning** and
-the release still ships the Linux/Windows assets, the same fork-friendly rule as every store leg.
-`src/Apps/Server/pub/publish_docker.ps1 -generateOnly` emits the compose files in CI without
+Docker is built with `docker/build-push-action`, both architectures in one run (QEMU runs the arm64
+image's install step), and gated on both the `DOCKERHUB_*` secrets and the `push_docker` input;
+absent secrets **skip with a warning** and the release still ships the Linux/Windows assets, the
+same fork-friendly rule as every store leg. The image is a native install of the build job's Linux
+packages: `src/Apps/Server/pub/publish_docker.ps1 -generateOnly 1` writes the compose files and
+stages the image's build context (the packages and the scripts the `Dockerfile` runs) without
 building an image.
 
 All three products create their GitHub release through the **one shared**
@@ -52,7 +58,7 @@ standalone server release script was deleted.
 ```text
 pub/Server/PublishByGithub.ps1
   1. gh workflow run bump.yml  --repo vpnhood/VpnHood
-       (prerelease?, then_publish=false, then_publish_nugets=false)  → waits for it to finish
+       (prerelease?, then_publish_nugets=false)  → waits for it to finish
   2. gh workflow run server_publish.yml --repo vpnhood/VpnHood.App.Server --ref main
        -f ref=develop -f publish_release=true -f push_docker=<true|false>
 ```

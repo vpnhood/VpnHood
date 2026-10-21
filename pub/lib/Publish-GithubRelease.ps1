@@ -1,7 +1,7 @@
 param(
-	# The three things that differ between a client and a connect release are passed IN, so this
-	# script stays generic (no client/connect knowledge baked in). The caller that supplies them is
-	# .github/workflows/publish_app.yml (per-product values resolved there).
+	# What differs between the products' releases is passed IN, so this script stays generic (no
+	# product knowledge baked in). The callers that supply it are .github/workflows/publish_app.yml
+	# (per-app values resolved there) and the server repo's server_publish.yml.
 	# Bin/module folder name + .user app-config key, e.g. "VpnHoodClient" / "VpnHoodConnect".
 	[Parameter(Mandatory = $true)] [string]$packageDirName,
 	# GitHub repo to release to (owner/name), already resolved by the caller (Resolve-PublishRepoSlug).
@@ -41,8 +41,8 @@ $packageFileTitle = $packageDirName;
 # mirror into here, unlike the per-platform publishers that write pub/bin/<tag> and pub/bin/latest.
 $packageDir = "$releaseRootDir/$packageDirName";
 
-# Read the CHANGELOG for the release note. The version header is already stamped by the bump (bump.yml
-# via pub/Invoke-VersionBump.ps1); this workflow only reads the changelog — it never rewrites or commits it.
+# Read the CHANGELOG for the release note: its first section, the hand-kept `# Latest`. This script only
+# reads the changelog — it never rewrites or commits it, and neither does the bump.
 $changeLog = Get-Content "$solutionDir/$changelogFileName" -Raw;
 
 # create release note (drop the other product's lines)

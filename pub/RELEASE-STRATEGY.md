@@ -291,7 +291,7 @@ and `-changelogFileName CHANGELOG.Server.md`), so one release creator serves eve
   Linux packages and the Windows-x64 zip (the server has no Windows-only packaging step, so Windows
   cross-builds on Linux); a second job pushes the multi-arch image (skip-with-warning if the
   `DOCKERHUB_*` secrets are absent).
-- **Trigger.** `pub/Server/PublishByGithub.ps1` bumps this monorepo (publish/nuget OFF), waits, then
+- **Trigger.** `pub/Server/PublishByGithub.ps1` bumps this monorepo (its NuGet publish off), waits, then
   dispatches `server_publish.yml`. `pub/Server/Publish.ps1` is now build-only for local smoke tests
   (no bump, no distribute, no push) — distribution is CI-only, matching Client/Connect.
 

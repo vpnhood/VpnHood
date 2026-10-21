@@ -59,6 +59,13 @@ public class FileAccessManager : IAccessManager
         // get or create server secret
         ServerConfig.ServerSecret ??= LoadServerSecret();
 
+        // UDP is on unless the settings set its endpoints: on TCP's addresses, since a UDP socket on any address answers
+        // from the machine's main one, not always the one an app reached; on the port this server keeps (port 0)
+        ServerConfig.UdpEndPoints ??= ServerConfig.TcpEndPointsValue
+            .Select(x => new IPEndPoint(x.Address, 0))
+            .Distinct()
+            .ToArray();
+
         // get server token
         _serverToken = GetAndUpdateServerToken();
     }
@@ -182,12 +189,12 @@ public class FileAccessManager : IAccessManager
         ServerInfo = serverInfo;
         ServerStatus = serverInfo.Status;
 
-        // update UdpEndPoints if they are not configured 
+        // port 0 takes the UDP port this server keeps, so a firewall rule made for it holds across restarts
         var udpEndPoints = ServerConfig.UdpEndPointsValue.ToArray();
-        foreach (var udpEndPoint in udpEndPoints.Where(x => x.Port == 0)) {
-            udpEndPoint.Port = udpEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-                ? serverInfo.FreeUdpPortV6
-                : serverInfo.FreeUdpPortV4;
+        if (udpEndPoints.Any(x => x.Port == 0)) {
+            var udpPort = GetUdpPort(serverInfo);
+            foreach (var udpEndPoint in udpEndPoints.Where(x => x.Port == 0))
+                udpEndPoint.Port = udpPort;
         }
         ServerConfig.UdpEndPoints = udpEndPoints.Where(x => x.Port != 0).ToArray();
 
@@ -201,6 +208,23 @@ public class FileAccessManager : IAccessManager
         ServerConfig.QuicEndPoints = quicEndPoints.Where(x => x.Port != 0).ToArray();
 
         return Task.FromResult<ServerConfig>(ServerConfig);
+    }
+
+    // a free port the server found at its first start, one for both IP versions; 0 when it found none
+    private int GetUdpPort(ServerInfo serverInfo)
+    {
+        var udpPortFile = Path.Combine(StoragePath, "udp_port");
+        if (!int.TryParse(TryToReadFile(udpPortFile), out var udpPort) || udpPort is <= 0 or > ushort.MaxValue) {
+            udpPort = serverInfo.FreeUdpPortV4 != 0 ? serverInfo.FreeUdpPortV4 : serverInfo.FreeUdpPortV6;
+            if (udpPort == 0)
+                return 0;
+
+            File.WriteAllText(udpPortFile, udpPort.ToString());
+        }
+
+        VhLogger.Instance.LogInformation("UDP port: {UdpPort}, kept in {UdpPortFile}. Open it for UDP in the firewall.",
+            udpPort, udpPortFile);
+        return udpPort;
     }
 
     public virtual Task<string> Acme_GetHttp01KeyAuthorization(string token, CancellationToken cancellationToken)

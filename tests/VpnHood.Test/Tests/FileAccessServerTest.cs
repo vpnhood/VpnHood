@@ -2,6 +2,8 @@
 using System.Text.Json.Nodes;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Server.Access;
+using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Net.Toolkit.Utils;
@@ -239,6 +241,80 @@ public class FileAccessManagerTest : TestBase
         Assert.IsFalse(File.Exists(Path.Combine(sessionsFolderPath, $"{oldSession.SessionId}.session")));
         Assert.IsFalse(File.Exists(Path.Combine(sessionsFolderPath, $"{endedSession.SessionId}.session")));
         Assert.IsTrue(File.Exists(Path.Combine(sessionsFolderPath, $"{recentSession.SessionId}.session")));
+    }
+
+    [TestMethod]
+    public async Task Udp_is_on_by_default_where_tcp_listens_on_a_port_kept_across_restarts()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+
+        // settings with no UdpEndPoints: TCP's addresses, on the free port of the first start
+        var options = CreateOptionsWithDefaultUdp();
+        options.TcpEndPoints = null; // every address
+        options.PublicEndPoints = [IPEndPoint.Parse("127.0.0.1:443")];
+        using var accessManager1 = TestHelper.CreateAccessManager(options, storagePath);
+        var serverConfig = await accessManager1.Server_Configure(CreateServerInfo(freeUdpPort: 20001), TestCt);
+        Assert.AreEqual("0.0.0.0:20001,[::]:20001", FormatUdpEndPoints(serverConfig));
+        Assert.AreEqual("20001", File.ReadAllText(Path.Combine(storagePath, "udp_port")));
+
+        // a restart keeps the port, whatever port is free then; one TCP address, one UDP address
+        options = CreateOptionsWithDefaultUdp();
+        using var accessManager2 = TestHelper.CreateAccessManager(options, storagePath);
+        serverConfig = await accessManager2.Server_Configure(CreateServerInfo(freeUdpPort: 30001), TestCt);
+        Assert.AreEqual("127.0.0.1:20001", FormatUdpEndPoints(serverConfig));
+    }
+
+    private FileAccessManagerOptions CreateOptionsWithDefaultUdp()
+    {
+        var options = TestHelper.CreateFileAccessManagerOptions();
+        options.UdpEndPoints = null;
+        return options;
+    }
+
+    private static string FormatUdpEndPoints(ServerConfig serverConfig)
+    {
+        return string.Join(",", serverConfig.UdpEndPointsValue.Select(x => x.ToString()));
+    }
+
+    [TestMethod]
+    public async Task Udp_endpoints_of_the_settings_win_over_the_kept_port()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        using var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        await accessManager1.Server_Configure(CreateServerInfo(freeUdpPort: 20001), TestCt);
+
+        // a port of their own
+        var options = TestHelper.CreateFileAccessManagerOptions();
+        options.UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 5000)];
+        using var accessManager2 = TestHelper.CreateAccessManager(options, storagePath);
+        var serverConfig = await accessManager2.Server_Configure(CreateServerInfo(freeUdpPort: 30001), TestCt);
+        Assert.AreEqual(5000, serverConfig.UdpEndPointsValue.Single().Port);
+
+        // port 0: the kept one
+        using var accessManager3 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        serverConfig = await accessManager3.Server_Configure(CreateServerInfo(freeUdpPort: 30001), TestCt);
+        Assert.AreEqual(20001, serverConfig.UdpEndPointsValue.Single().Port);
+
+        // none: no UDP
+        options = TestHelper.CreateFileAccessManagerOptions();
+        options.UdpEndPoints = [];
+        using var accessManager4 = TestHelper.CreateAccessManager(options, storagePath);
+        serverConfig = await accessManager4.Server_Configure(CreateServerInfo(freeUdpPort: 30001), TestCt);
+        Assert.IsEmpty(serverConfig.UdpEndPointsValue);
+    }
+
+    // the IPv6 port differs, to show that both IP versions take the IPv4 one
+    private static ServerInfo CreateServerInfo(int freeUdpPort)
+    {
+        return new ServerInfo {
+            Version = new Version(1, 0),
+            EnvironmentVersion = Environment.Version,
+            PrivateIpAddresses = [],
+            PublicIpAddresses = [],
+            Status = new ServerStatus(),
+            FreeUdpPortV4 = freeUdpPort,
+            FreeUdpPortV6 = freeUdpPort + 1
+        };
     }
 
     // a session's times as its file would hold them had it been made then

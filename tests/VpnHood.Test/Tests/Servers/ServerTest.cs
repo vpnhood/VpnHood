@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
@@ -909,6 +910,23 @@ public class ServerTest : TestBase
             UdpTestUtil.GetRandomSequenceNumber(), []);
         Assert.IsTrue(session.ReceiveUdp(listener.Transmitter, datagram, listener.LocalEndPoint));
         Assert.IsTrue(session.Tunnel.UseUdp);
+    }
+
+    // a UDP listener that cannot bind fails alone: the server starts, and its client connects over TCP and is offered
+    // no UDP
+    [TestMethod]
+    public async Task Udp_listener_that_cannot_bind_leaves_the_server_on_tcp()
+    {
+        using var portHolder = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.UdpEndPoints = [portHolder.Client.GetLocalEndPoint()];
+        using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(token);
+
+        Assert.IsNull(client.RequiredSession.Config.HostUdpEndPoint);
+        await TestHelper.Test_Https();
     }
 
     // Compatibility (2026-10): a session below the legacy UDP's protocol has no UDP, as before protocol 14: its client

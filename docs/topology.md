@@ -131,10 +131,10 @@ one implementation of an interface, not a dependency.
 
 ## What this means in practice
 
-**Firewalls.** A server needs inbound only on its own `TcpEndPoints` (443 by default,
-from clients) and outbound 443 to the manager. The manager needs **no** route into your
-network and no inbound rule on your server. A server behind NAT with no port forwarding
-still reports in fine — it just cannot receive clients.
+**Firewalls.** A server needs inbound only on its own endpoints, from clients (TCP 443 by
+default, and its UDP and QUIC ports), and outbound 443 to the manager. The manager needs
+**no** route into your network and no inbound rule on your server. A server behind NAT
+with no port forwarding still reports in fine — it just cannot receive clients.
 
 **Blast radius.** The manager holds tokens and usage records. It never sees, proxies, or
 can request user traffic — that path is client → server → internet and the manager is

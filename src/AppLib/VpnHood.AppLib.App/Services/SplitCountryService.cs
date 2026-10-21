@@ -174,13 +174,13 @@ public class SplitCountryService(
         var assetFile = ipLocationZipAsset
             ?? throw new InvalidOperationException("The ip-location asset is not provided.");
 
-        using var zip = await OpenIpLocationZip(assetFile, cancellationToken).Vhc();
+        await using var zip = await OpenIpLocationZip(assetFile, cancellationToken).Vhc();
         var entry = zip.GetEntry(IpLocationChecksumEntryName)
             ?? throw new InvalidOperationException(
                 $"The ip-location asset names no build: it has no {IpLocationChecksumEntryName}.");
 
-        using var reader = new StreamReader(entry.Open());
-        _ipLocationAssetHash = reader.ReadToEnd().Trim();
+        using var reader = new StreamReader(await entry.OpenAsync(cancellationToken).Vhc());
+        _ipLocationAssetHash = (await reader.ReadToEndAsync(cancellationToken).Vhc()).Trim();
         return _ipLocationAssetHash;
     }
 

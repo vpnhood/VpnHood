@@ -58,8 +58,8 @@ public class ZipAssetProvider(IAsset zip, string extractFolderPath) : IAssetProv
                 // A folder of this copy's own, so two extractions running at once - a second instance,
                 // a second process - write to different places and neither sees the other's half-copy.
                 var tempPath = Path.Combine(extractFolderPath, $"{version}.{Guid.NewGuid():N}.tmp");
-                using (var archive = new ZipArchive(seekable, ZipArchiveMode.Read, leaveOpen: true))
-                    archive.ExtractToDirectory(tempPath, overwriteFiles: true);
+                await using (var archive = new ZipArchive(seekable, ZipArchiveMode.Read, leaveOpen: true))
+                    await archive.ExtractToDirectoryAsync(tempPath, overwriteFiles: true, cancellationToken).Vhc();
 
                 // last, so a folder that has it is a folder that was finished
                 await File.WriteAllTextAsync(Path.Combine(tempPath, MarkerFileName), version, cancellationToken).Vhc();

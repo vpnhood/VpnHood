@@ -276,7 +276,7 @@ public class ServerApp : IDisposable
         var deadline = DateTime.UtcNow + timeout;
         while (true) {
             try {
-                File.OpenWrite(LockFilePath).Dispose();
+                await File.OpenWrite(LockFilePath).DisposeAsync().Vhc();
                 return true;
             }
             catch (IOException) when (DateTime.UtcNow < deadline) {

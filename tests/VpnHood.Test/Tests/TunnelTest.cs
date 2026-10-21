@@ -537,9 +537,7 @@ public class TunnelTest : TestBase
     }
 
     [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
-    public async Task Disposal_hands_a_cleanly_ended_connection_to_its_owner(bool disposeAsync)
+    public async Task Disposal_hands_a_cleanly_ended_connection_to_its_owner()
     {
         using var tcpClient = new TcpClient();
         var serverTransport = await Accept(tcpClient);
@@ -562,15 +560,9 @@ public class TunnelTest : TestBase
         await serverConnection.Stream.ReadExactlyAsync(buffer, TestCt);
         Assert.AreEqual(1, buffer[0]);
 
-        // the logical stream ends once both ends have released it, which Dispose leaves to run
-        if (disposeAsync) {
-            await Task.WhenAll(serverConnection.DisposeAsync().AsTask(), clientConnection.DisposeAsync().AsTask())
-                .WaitAsync(TimeSpan.FromSeconds(5), TestCt);
-        }
-        else {
-            serverConnection.Dispose();
-            clientConnection.Dispose();
-        }
+        // the logical stream ends once both ends have released it
+        await Task.WhenAll(serverConnection.DisposeAsync().AsTask(), clientConnection.DisposeAsync().AsTask())
+            .WaitAsync(TimeSpan.FromSeconds(5), TestCt);
 
         // the transport carries the next one, closed at the end of the test
         using var serverNext = await serverReused.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
@@ -642,16 +634,38 @@ public class TunnelTest : TestBase
     }
 
     [TestMethod]
-    public async Task Reusable_connection_closes_its_transport_through_its_async_dispose()
+    public void Reusable_connections_quick_close_closes_its_transport_at_once()
     {
         var transport = new CloseRecordingConnection();
+        var reused = false;
         var connection = new ReusableStreamConnection(transport,
-            new WebSocketStream(transport.Stream, "test", useBuffer: false, isServer: false), reuseCallback: null);
+            new WebSocketStream(transport.Stream, "test", useBuffer: false, isServer: false), _ => reused = true);
 
         connection.Dispose();
 
-        await transport.AsyncClosed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
-        Assert.IsFalse(transport.SyncClosed);
+        // through the transport's quick close: no end of the logical stream with the peer, and no reuse
+        Assert.IsTrue(transport.SyncClosed);
+        Assert.IsFalse(transport.AsyncClosed.Task.IsCompleted);
+        Assert.IsFalse(reused);
+    }
+
+    [TestMethod]
+    public async Task Reusable_connections_quick_close_during_its_release_closes_its_transport()
+    {
+        using var tcpClient = new TcpClient();
+        await using var serverTransport = await Accept(tcpClient);
+        var clientTransport = new TcpStreamConnection(tcpClient, connectionName: "test", isServer: false);
+        var reused = false;
+        var clientConnection = new ReusableStreamConnection(clientTransport,
+            new WebSocketStream(clientTransport.Stream, "client", useBuffer: false, isServer: false), _ => reused = true);
+
+        // the release waits for the peer to end the logical stream too, which it does not do here
+        var release = clientConnection.DisposeAsync().AsTask();
+        clientConnection.Dispose();
+
+        await release.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsFalse(clientTransport.Connected);
+        Assert.IsFalse(reused);
     }
 
     // One that cannot carry the next logical stream, as its peer ended it or a read failed, closes its source, and

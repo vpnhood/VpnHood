@@ -12,7 +12,8 @@ public delegate void ReuseConnectionCallback(ReusableStreamConnection reusableSt
 
 // Carries one logical stream of the many its transport carries in turn. Its release ends that stream with the peer
 // and, if it ends cleanly, hands the transport, under its next logical stream, to the reuse callback, which keeps or
-// closes it. PreventReuse, an unclean end or no callback closes the transport instead
+// closes it. PreventReuse, an unclean end or no callback closes the transport instead. Its quick close closes the
+// transport at once, with no end of the logical stream and no reuse
 public class ReusableStreamConnection : IStreamConnection
 {
     private readonly IStreamConnection _transport;
@@ -21,6 +22,7 @@ public class ReusableStreamConnection : IStreamConnection
     private readonly AsyncLock _disposeLock = new();
     private volatile bool _reusePrevented;
     private bool _disposed;
+    private bool _transportTaken; // closed by the quick close or handed on by the release, whichever came first
 
     public ReusableStreamConnection(IStreamConnection transport, ChunkStream stream,
         ReuseConnectionCallback? reuseCallback)
@@ -57,21 +59,27 @@ public class ReusableStreamConnection : IStreamConnection
 
     public void PreventReuse() => _reusePrevented = true;
 
-    // from here on the transport is this release's alone: a Dispose meanwhile neither closes nor hands it on
+    // the transport is this release's to close or hand on, unless a quick close takes it first
     private async Task Release()
     {
-        // up to the hand-off, any failure is logged and closes: nothing awaits a Dispose's release, and a Dispose
-        // after this one would find nothing left to do
+        // up to the hand-off, any failure is logged and closes
         try {
             if (_reusePrevented || _reuseCallback == null) {
                 await CloseAsync().Vhc();
                 return;
             }
 
-            // ends the logical stream with the peer; it throws when the stream did not end cleanly
+            // ends the logical stream with the peer; it throws when the stream did not end cleanly, or when a quick
+            // close has closed the transport meanwhile
             var nextStream = await _stream.CreateReuse().Vhc();
             if (_reusePrevented) {
                 await CloseAsync().Vhc(); // prevented while the stream was ending
+                return;
+            }
+
+            // a quick close that came meanwhile has closed the transport
+            if (Interlocked.Exchange(ref _transportTaken, true)) {
+                nextStream.Dispose();
                 return;
             }
 
@@ -97,23 +105,29 @@ public class ReusableStreamConnection : IStreamConnection
         }
     }
 
-    // The transport's async close: its sync one may wait for the peer, as a QUIC stream's does. It ends the logical
-    // stream with it; the stream's own close would first end that with the peer
+    // The transport's graceful close, which ends the logical stream with it; the stream's own close would first end
+    // that with the peer. A quick close that comes meanwhile cuts it short
     private async Task CloseAsync()
     {
         await _transport.DisposeAsync().Vhc();
         VhTypeTracker.Record("ReusableStreamConnection.disposed");
     }
 
-    // not waited for: the release ends the logical stream with the peer
+    // a release that has handed the transport on keeps it
     public void Dispose()
     {
-        _ = this.TryDisposeAsync();
+        _disposed = true;
+        if (Interlocked.Exchange(ref _transportTaken, true))
+            return;
+
+        _transport.Dispose();
+        VhTypeTracker.Record("ReusableStreamConnection.disposed");
     }
 
     public async ValueTask DisposeAsync()
     {
-        // a second close waits for the first one's end
+        // a second close waits for the first one's end. One after a quick close returns: that close has closed the
+        // transport
         using var scopeLock = await _disposeLock.LockAsync().Vhc();
         if (Interlocked.Exchange(ref _disposed, true))
             return;

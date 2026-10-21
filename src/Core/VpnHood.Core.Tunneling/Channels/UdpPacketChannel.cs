@@ -113,7 +113,8 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
 
     // The opened payload's packets go up to the tunnel, keeping the received array, which is theirs. UDP has no
     // backpressure, so a packet past the receive limit is dropped, never waited on: on a server, one read loop serves
-    // every session. Only a server limits what it receives
+    // every session. Only a server limits what it receives. A broken packet throws, losing the rest of its datagram:
+    // left so, as a forged datagram costs the read loop as much
     protected void HandUp(Memory<byte> payload)
     {
         var offset = 0;

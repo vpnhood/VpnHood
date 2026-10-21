@@ -12,6 +12,10 @@ public static class UdpDatagram
     // server below it, and a server seals a session below it the legacy way
     public const int MinProtocolVersion = 14;
 
+    // Compatibility (2026-10): the first protocol of the legacy way; a session below it has no UDP, as before protocol
+    // 14, since its client speaks an older one. Drop with the legacy way, once MinClientProtocolVersion is 14
+    public const int MinLegacyProtocolVersion = 11;
+
     private const int SessionIdOffset = 1;
     private const int SeqOffset = SessionIdOffset + 8;
     private const int TagOffset = SeqOffset + 8;

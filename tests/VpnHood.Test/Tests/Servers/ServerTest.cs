@@ -911,6 +911,25 @@ public class ServerTest : TestBase
         Assert.IsTrue(session.Tunnel.UseUdp);
     }
 
+    // Compatibility (2026-10): a session below the legacy UDP's protocol has no UDP, as before protocol 14: its client
+    // speaks an older one, so even a datagram sealed the legacy way makes nothing
+    [TestMethod]
+    public async Task A_session_below_the_legacy_protocol_has_no_udp()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.SessionProtocolVersion = UdpDatagram.MinLegacyProtocolVersion - 1;
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(token);
+        var session = server.GetSession(client);
+        using var listener = new TestUdpListener();
+
+        Assert.IsNull(session.UdpChannel);
+        var datagram = UdpTestUtil.SealLegacyDatagram(session.SessionId, session.SessionKey,
+            UdpTestUtil.GetRandomSequenceNumber(), []);
+        Assert.IsFalse(session.ReceiveUdp(listener.Transmitter, datagram, listener.LocalEndPoint));
+    }
+
     // a recovered session takes its protocol from the server's own record of it, not from the access manager, which
     // here kept the hello's
     [TestMethod]

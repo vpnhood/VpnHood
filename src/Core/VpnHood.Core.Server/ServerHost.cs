@@ -498,7 +498,8 @@ public class ServerHost : IAsyncDisposable
             SessionId = sessionResponseEx.SessionId,
             SessionKey = sessionResponseEx.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
-            UdpPort = udpPort,
+            // Compatibility (2026-10): a client below the legacy UDP's protocol gets none; drop with the legacy UDP
+            UdpPort = protocolVersion >= UdpDatagram.MinLegacyProtocolVersion ? udpPort : null,
             QuicPort = quicPort,
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),

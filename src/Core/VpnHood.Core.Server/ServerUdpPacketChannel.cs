@@ -9,8 +9,10 @@ namespace VpnHood.Core.Server;
 // has authenticated, so a forged datagram, or a copy of an older one, moves nothing. Its window and mark live in
 // memory: a session recovered after a restart takes each datagram from before it once more, an accepted limit, as
 // the client's next datagram is newer than any and takes the route back
-internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey, TrafficMeter trafficMeter)
-    : UdpPacketChannel(sessionId, sessionKey, isServer: true, firstSendSequenceNumber: GetClock(), trafficMeter)
+internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey, TrafficMeter trafficMeter,
+    bool isLegacy)
+    : UdpPacketChannel(sessionId, sessionKey, isServer: true, firstSendSequenceNumber: GetClock(), trafficMeter,
+        isLegacy)
 {
     // the clock a session's count starts from, which only grows: the wall clock at the start, in 100 ns since the
     // Unix epoch, plus a stopwatch

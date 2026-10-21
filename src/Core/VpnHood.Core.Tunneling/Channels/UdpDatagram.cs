@@ -8,8 +8,8 @@ namespace VpnHood.Core.Tunneling.Channels;
 // in the associated data, so it must go in there before it may mean anything
 public static class UdpDatagram
 {
-    // the first protocol of this scheme, with the server-reply bit and the freshness mark: a session below it has no
-    // UDP, from either side
+    // the first protocol of this scheme, with the server-reply bit and the freshness mark: a client takes no UDP from a
+    // server below it, and a server seals a session below it the legacy way
     public const int MinProtocolVersion = 14;
 
     private const int SessionIdOffset = 1;
@@ -25,15 +25,15 @@ public static class UdpDatagram
     }
 
     // seals in place the payload that follows the header, and returns the datagram's length
-    internal static int Seal(ICryptor cryptor, ulong sessionId, ulong seq, bool isServerSent, Span<byte> buffer,
-        int payloadLength)
+    internal static int Seal(ICryptor cryptor, ulong sessionId, ulong seq, bool isServerSent, bool isLegacy,
+        Span<byte> buffer, int payloadLength)
     {
         buffer[0] = 0;
         BinaryPrimitives.WriteUInt64LittleEndian(buffer.Slice(SessionIdOffset, 8), sessionId);
         BinaryPrimitives.WriteUInt64LittleEndian(buffer.Slice(SeqOffset, 8), seq);
 
         Span<byte> nonce = stackalloc byte[12];
-        BuildNonce(nonce, sessionId, seq, isServerSent);
+        BuildNonce(nonce, sessionId, seq, isServerSent, isLegacy);
         var payload = buffer.Slice(HeaderLength, payloadLength);
         cryptor.Encrypt(nonce, payload, payload, buffer.Slice(TagOffset, TagLength),
             buffer.Slice(SessionIdOffset, AssociatedDataLength));
@@ -43,11 +43,12 @@ public static class UdpDatagram
 
     // opens in place the payload that follows the header, and returns the datagram's seq. One the key did not seal in
     // that direction throws AuthenticationTagMismatchException, so nothing ever reads a forgery
-    internal static ulong Open(ICryptor cryptor, ulong sessionId, bool isServerSent, Span<byte> datagram)
+    internal static ulong Open(ICryptor cryptor, ulong sessionId, bool isServerSent, bool isLegacy,
+        Span<byte> datagram)
     {
         var seq = BinaryPrimitives.ReadUInt64LittleEndian(datagram.Slice(SeqOffset, 8));
         Span<byte> nonce = stackalloc byte[12];
-        BuildNonce(nonce, sessionId, seq, isServerSent);
+        BuildNonce(nonce, sessionId, seq, isServerSent, isLegacy);
         var payload = datagram[HeaderLength..];
         cryptor.Decrypt(nonce, payload, datagram.Slice(TagOffset, TagLength), payload,
             datagram.Slice(SessionIdOffset, AssociatedDataLength));
@@ -57,12 +58,15 @@ public static class UdpDatagram
 
     // nonce = seq(8) | salt(4) from the session id. The salt's top bit, the top of the nonce's last byte, is set for a
     // datagram the server sent: one side's datagram never opens as the other's, and the two never share a nonce under
-    // the session's one key
-    private static void BuildNonce(Span<byte> nonce, ulong sessionId, ulong seq, bool isServerSent)
+    // the session's one key.
+    // Compatibility (2026-10): a legacy session's, below protocol 14, keeps the salt as it is, so the two sides share
+    // nonces; drop once MinClientProtocolVersion is 14 and the sessions from before it have ended
+    private static void BuildNonce(Span<byte> nonce, ulong sessionId, ulong seq, bool isServerSent, bool isLegacy)
     {
         BinaryPrimitives.WriteUInt64LittleEndian(nonce[..8], seq);
         var salt = (uint)(sessionId ^ (sessionId >> 32));
-        salt = isServerSent ? salt | 0x8000_0000 : salt & 0x7FFF_FFFF;
+        if (!isLegacy)
+            salt = isServerSent ? salt | 0x8000_0000 : salt & 0x7FFF_FFFF;
         BinaryPrimitives.WriteUInt32LittleEndian(nonce.Slice(8, 4), salt);
     }
 }

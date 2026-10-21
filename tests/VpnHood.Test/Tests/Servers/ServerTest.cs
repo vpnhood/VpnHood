@@ -891,9 +891,10 @@ public class ServerTest : TestBase
         Assert.IsFalse(session.Tunnel.UseUdp);
     }
 
-    // a session below the UDP protocol has no UDP: its client was offered none, and its datagrams make nothing
+    // Compatibility (2026-10): a session below protocol 14 has the legacy UDP, which an old client's datagram turns on;
+    // a client of protocol 14 takes no UDP from it
     [TestMethod]
-    public async Task An_older_protocol_session_has_no_udp()
+    public async Task An_older_protocol_session_has_legacy_udp()
     {
         using var accessManager = TestHelper.CreateAccessManager();
         accessManager.SessionProtocolVersion = UdpDatagram.MinProtocolVersion - 1;
@@ -903,10 +904,11 @@ public class ServerTest : TestBase
         var session = server.GetSession(client);
         using var listener = new TestUdpListener();
 
-        Assert.IsNull(session.UdpChannel);
         Assert.IsNull(client.RequiredSession.Config.HostUdpEndPoint);
-        Assert.IsFalse(session.ReceiveUdp(listener.Transmitter, UdpTestUtil.CreateForgedDatagram(session.SessionId),
-            listener.LocalEndPoint));
+        var datagram = UdpTestUtil.SealLegacyDatagram(session.SessionId, session.SessionKey,
+            UdpTestUtil.GetRandomSequenceNumber(), []);
+        Assert.IsTrue(session.ReceiveUdp(listener.Transmitter, datagram, listener.LocalEndPoint));
+        Assert.IsTrue(session.Tunnel.UseUdp);
     }
 
     // a recovered session takes its protocol from the server's own record of it, not from the access manager, which
@@ -920,7 +922,7 @@ public class ServerTest : TestBase
         await using var server1 = await TestHelper.CreateServer(accessManager1);
         var token = TestHelper.CreateAccessToken(server1);
         await using var client = await TestHelper.CreateClient(token);
-        Assert.IsNull(server1.GetSession(client).UdpChannel);
+        Assert.AreEqual(UdpDatagram.MinProtocolVersion - 1, server1.GetSession(client).ProtocolVersion);
 
         await server1.DisposeAsync();
         accessManager1.Dispose();
@@ -928,7 +930,7 @@ public class ServerTest : TestBase
         await using var server2 = await TestHelper.CreateServer(accessManager2);
         await TestHelper.Test_Https();
 
-        Assert.IsNull(server2.GetSession(client).UdpChannel);
+        Assert.AreEqual(UdpDatagram.MinProtocolVersion - 1, server2.GetSession(client).ProtocolVersion);
         await client.DisposeAsync(); // before server2
     }
 }

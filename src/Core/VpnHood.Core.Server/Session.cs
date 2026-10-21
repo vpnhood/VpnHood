@@ -151,11 +151,10 @@ public class Session : IDisposable
                 received: (long)(TransportDefaults.MaxSpeedBurst * ReceiveSpeedGrace))
         };
 
-        // Compatibility (2026-10): a session below protocol 14 gets no UDP; drop once MinClientProtocolVersion is 14
-        // and the sessions from before it have ended, as a recovered session keeps its protocol
-        UdpChannel = ProtocolVersion >= UdpDatagram.MinProtocolVersion
-            ? new ServerUdpPacketChannel(SessionId, SessionKey, TrafficMeter)
-            : null;
+        // Compatibility (2026-10): a session below protocol 14 gets the legacy UDP; drop once MinClientProtocolVersion is
+        // 14 and the sessions from before it have ended, as a recovered session keeps its protocol
+        UdpChannel = new ServerUdpPacketChannel(SessionId, SessionKey, TrafficMeter,
+            isLegacy: ProtocolVersion < UdpDatagram.MinProtocolVersion);
 
         // Tunnel; a send limit paces its packets
         var tunnelOptions = new TunnelOptions {

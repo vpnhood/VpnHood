@@ -22,9 +22,9 @@ internal sealed class TestUdpListener : IUdpDatagramHandler, IDisposable
         Transmitter = new UdpChannelTransmitter(new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)), this);
     }
 
-    public ServerUdpPacketChannel AddSession(ulong sessionId, byte[] sessionKey)
+    public ServerUdpPacketChannel AddSession(ulong sessionId, byte[] sessionKey, bool isLegacy = false)
     {
-        var channel = new ServerUdpPacketChannel(sessionId, sessionKey, new TrafficMeter());
+        var channel = new ServerUdpPacketChannel(sessionId, sessionKey, new TrafficMeter(), isLegacy);
         _channels[sessionId] = channel;
         _ownChannels.Add(channel);
         return channel;

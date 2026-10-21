@@ -372,6 +372,35 @@ public class TunnelTest : TestBase
         await UdpTestUtil.AssertNothingReceived(bouncer, TestCt);
     }
 
+    // Compatibility (2026-10): a legacy session, below protocol 14, opens an old client's datagrams, and the old client
+    // opens its replies. Both ids, as protocol 14's salt differs in the client's direction when the salt's top bit is
+    // set, and in the server's when it is clear
+    [TestMethod]
+    [DataRow(1UL)]
+    [DataRow(0x8000_0000UL)]
+    public async Task UdpChannel_legacy_session_speaks_the_old_protocol(ulong sessionId)
+    {
+        var sessionKey = VhUtils.GenerateKey();
+        using var listener = new TestUdpListener();
+        var serverChannel = listener.AddSession(sessionId, sessionKey, isLegacy: true);
+        var serverReceivedPackets = new List<IpPacket>();
+        serverChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            serverReceivedPackets.Add(ipPacket);
+        };
+
+        // the old client is a raw socket
+        using var oldClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var packet = CreateRandomPacket();
+        var packetBytes = packet.Buffer.ToArray();
+        await oldClient.SendAsync(UdpTestUtil.SealLegacyDatagram(sessionId, sessionKey,
+            UdpTestUtil.GetRandomSequenceNumber(), packetBytes), listener.LocalEndPoint, TestCt);
+        await VhTestUtil.AssertEqualsWait(1, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+
+        serverChannel.SendPacketQueued(packet);
+        var serverDatagram = (await oldClient.ReceiveAsync(TestCt)).Buffer;
+        CollectionAssert.AreEqual(packetBytes, UdpTestUtil.OpenLegacyDatagram(sessionKey, serverDatagram));
+    }
+
     // the tunnels send on their UDP channels while UDP is on, and hand up what those receive
     [TestMethod]
     public async Task UdpChannel_via_Tunnel()

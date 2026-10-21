@@ -42,6 +42,39 @@ internal static class UdpTestUtil
         return datagram;
     }
 
+    // Compatibility (2026-10): an old client's datagram, below protocol 14, sealed as it seals one: the salt as it is,
+    // in either direction
+    public static byte[] SealLegacyDatagram(ulong sessionId, byte[] sessionKey, ulong seq, ReadOnlySpan<byte> payload)
+    {
+        var datagram = new byte[UdpDatagram.HeaderLength + payload.Length];
+        BinaryPrimitives.WriteUInt64LittleEndian(datagram.AsSpan(1, 8), sessionId);
+        BinaryPrimitives.WriteUInt64LittleEndian(datagram.AsSpan(9, 8), seq);
+        using var aesGcm = new AesGcm(sessionKey, UdpDatagram.TagLength);
+        aesGcm.Encrypt(BuildLegacyNonce(sessionId, seq), payload, datagram.AsSpan(UdpDatagram.HeaderLength),
+            datagram.AsSpan(17, UdpDatagram.TagLength), datagram.AsSpan(1, 16));
+        return datagram;
+    }
+
+    // the payload of a datagram the server sealed for an old client, opened as that client opens it
+    public static byte[] OpenLegacyDatagram(byte[] sessionKey, byte[] datagram)
+    {
+        var sessionId = UdpDatagram.ReadSessionId(datagram);
+        var seq = BinaryPrimitives.ReadUInt64LittleEndian(datagram.AsSpan(9, 8));
+        var payload = new byte[datagram.Length - UdpDatagram.HeaderLength];
+        using var aesGcm = new AesGcm(sessionKey, UdpDatagram.TagLength);
+        aesGcm.Decrypt(BuildLegacyNonce(sessionId, seq), datagram.AsSpan(UdpDatagram.HeaderLength),
+            datagram.AsSpan(17, UdpDatagram.TagLength), payload, datagram.AsSpan(1, 16));
+        return payload;
+    }
+
+    private static byte[] BuildLegacyNonce(ulong sessionId, ulong seq)
+    {
+        var nonce = new byte[12];
+        BinaryPrimitives.WriteUInt64LittleEndian(nonce.AsSpan(0, 8), seq);
+        BinaryPrimitives.WriteUInt32LittleEndian(nonce.AsSpan(8, 4), (uint)(sessionId ^ (sessionId >> 32)));
+        return nonce;
+    }
+
     public static async Task AssertNothingReceived(UdpClient udpClient, CancellationToken cancellationToken)
     {
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

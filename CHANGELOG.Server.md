@@ -1,5 +1,6 @@
 # Latest
 
+* Update: UDP has a new protocol; VpnHoodServer offers it to clients that have it, and older clients keep the old one for now.
 * Improve: VpnHoodServer stops with one line and exit code 1 when its settings cannot be read - appsettings.json, naming the file and where its JSON breaks, or VH_APPSETTINGS - rather than crashing with a stack trace and dumping core at each restart.
 
 # v9.0.856

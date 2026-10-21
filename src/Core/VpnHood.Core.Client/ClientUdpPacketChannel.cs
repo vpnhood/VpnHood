@@ -18,7 +18,7 @@ internal sealed class ClientUdpPacketChannel(
     ReadOnlySpan<byte> sessionKey,
     ulong firstSendSequenceNumber,
     TrafficMeter trafficMeter)
-    : UdpPacketChannel(sessionId, sessionKey, isServer: false, firstSendSequenceNumber, trafficMeter),
+    : UdpPacketChannel(sessionId, sessionKey, isServer: false, firstSendSequenceNumber, trafficMeter, isLegacy: false),
         IUdpDatagramHandler
 {
     // an old socket's read loop may still hand a datagram over while the new one's does

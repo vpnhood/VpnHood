@@ -20,6 +20,8 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
     private const int MaxPayloadLength = TransportDefaults.MaxPacketSize - TransportDefaults.MtuOverhead;
 
     private readonly bool _isServer;
+    // Compatibility (2026-10): a server's session below protocol 14 seals the legacy way; drop with UdpDatagram's
+    private readonly bool _isLegacy;
     private readonly AesGcmCryptor _sendCryptor;
     private readonly AesGcmCryptor _receiveCryptor;
     private readonly TrafficMeter? _trafficMeter;
@@ -41,7 +43,7 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
     public void Start() { }
 
     protected UdpPacketChannel(ulong sessionId, ReadOnlySpan<byte> key, bool isServer, ulong firstSendSequenceNumber,
-        TrafficMeter? trafficMeter)
+        TrafficMeter? trafficMeter, bool isLegacy)
         : base(new PacketTransportOptions {
             AutoDisposePackets = true,
             Blocking = false
@@ -49,6 +51,7 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
     {
         SessionId = sessionId;
         _isServer = isServer;
+        _isLegacy = isLegacy;
         _sendCryptor = new AesGcmCryptor(key, UdpDatagram.TagLength);
         _receiveCryptor = new AesGcmCryptor(key, UdpDatagram.TagLength);
         _nextSendSequenceNumber = firstSendSequenceNumber;
@@ -94,7 +97,7 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
     private async ValueTask SendDatagramAsync(UdpRoute route, byte[] buffer, int payloadLength)
     {
         var length = UdpDatagram.Seal(_sendCryptor, SessionId, _nextSendSequenceNumber, isServerSent: _isServer,
-            buffer, payloadLength);
+            _isLegacy, buffer, payloadLength);
         Volatile.Write(ref _nextSendSequenceNumber, _nextSendSequenceNumber + 1);
 
         await route.Transmitter.SendAsync(buffer.AsMemory(0, length), route.EndPoint).Vhc();
@@ -107,7 +110,8 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
     // not: its callers serialize it
     protected ulong? Open(Span<byte> datagram)
     {
-        var sequenceNumber = UdpDatagram.Open(_receiveCryptor, SessionId, isServerSent: !_isServer, datagram);
+        var sequenceNumber = UdpDatagram.Open(_receiveCryptor, SessionId, isServerSent: !_isServer, _isLegacy,
+            datagram);
         _replayWindow ??= new ReplayWindow();
         return _replayWindow.TryAdd(sequenceNumber) ? sequenceNumber : null;
     }

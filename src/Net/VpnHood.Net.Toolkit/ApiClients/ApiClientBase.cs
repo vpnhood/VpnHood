@@ -182,6 +182,12 @@ public class ApiClientBase : ApiClientCommon
 
             return ret;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            // the caller's own cancellation is no failure; a timeout, which it did not ask for, logs as one below
+            Logger.LogDebug(LoggerEventId, "API Called. Method: {Method}, Uri: {RequestUri}, Cancelled.",
+                request.Method, request.RequestUri);
+            throw;
+        }
         catch (ApiException ex) {
             Logger.LogError(LoggerEventId, ex,
                 "API Called. Method: {Method}, Uri: {RequestUri} => StatusCode: {StatusCode}.", request.Method,

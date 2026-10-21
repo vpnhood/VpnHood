@@ -6,7 +6,9 @@ using VpnHood.Core.Tunneling.Channels;
 namespace VpnHood.Core.Server;
 
 // The server's side of a session's UDP. It sends through the listener, and to the address, of the newest datagram it
-// has authenticated, so a forged datagram, or a copy of an older one, moves nothing
+// has authenticated, so a forged datagram, or a copy of an older one, moves nothing. Its window and mark live in
+// memory: a session recovered after a restart takes each datagram from before it once more, an accepted limit, as
+// the client's next datagram is newer than any and takes the route back
 internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey, TrafficMeter trafficMeter)
     : UdpPacketChannel(sessionId, sessionKey, isServer: true, firstSendSequenceNumber: GetClock(), trafficMeter)
 {

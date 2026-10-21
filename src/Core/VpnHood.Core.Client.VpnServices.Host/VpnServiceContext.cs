@@ -18,11 +18,25 @@ internal class VpnServiceContext(string configFolder)
     public ConnectionInfo ConnectionInfo { get; private set; } = ConnectionInfo.Default;
 
     private readonly AsyncLock _writeLock = new();
+    private int _sessionId; // the current session's: an older one's words go unwritten
+    private int _endedSessionId; // the last session whose first Disposed, its last word, is written
 
-    public async Task<bool> TryWriteConnectionInfo(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
+    public int SessionId => _sessionId;
+    public int BeginSession() => Interlocked.Increment(ref _sessionId);
+
+    // A session's words while it is the current one, up to its first Disposed: the app's stop takes that for the end
+    // before it starts the next session
+    public async Task<bool> TryWriteConnectionInfo(int sessionId, ConnectionInfo connectionInfo,
+        CancellationToken cancellationToken)
     {
         try {
             using var scopeLock = await _writeLock.LockAsync(cancellationToken).Vhc();
+            if (sessionId != _sessionId || sessionId == _endedSessionId)
+                return false;
+
+            if (connectionInfo.ClientState is ClientState.Disposed)
+                _endedSessionId = sessionId;
+
             ConnectionInfo = connectionInfo;
 
             var json = JsonSerializer.Serialize(connectionInfo);

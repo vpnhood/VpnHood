@@ -84,8 +84,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         VhLogger.Instance.LogInformation("VpnServiceHost has been initiated...");
 
         // Write an initial ConnectionInfo so that the app side can discover the service state.
-        _ = UpdateConnectionInfo(ClientState.Initializing, sessionName: null, exception: null,
-            CancellationToken.None);
+        _ = Context.TryWriteConnectionInfo(Context.BeginSession(),
+            CreateConnectionInfo(ClientState.Initializing, sessionName: null, exception: null), CancellationToken.None);
     }
 
     private void VpnHoodClient_StateChanged(object? sender, EventArgs e)
@@ -154,9 +154,10 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             await _connectCts.TryCancelAsync().Vhc();
             _connectCts.Dispose();
 
-            // start connecting 
+            // start connecting: a new session, which an older one's words can no longer overwrite
+            var sessionId = Context.BeginSession();
             _connectCts = new CancellationTokenSource();
-            await Connect(isAlwaysOn, _connectCts.Token).Vhc();
+            await Connect(isAlwaysOn, sessionId, _connectCts.Token).Vhc();
             return true;
         }
         catch (Exception ex) {
@@ -167,7 +168,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         }
     }
 
-    private async Task Connect(bool isAlwaysOn, CancellationToken cancellationToken)
+    private async Task Connect(bool isAlwaysOn, int sessionId, CancellationToken cancellationToken)
     {
         if (Client is not null)
             throw new InvalidOperationException("Client is already initialized.");
@@ -186,8 +187,9 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
                 Process.GetCurrentProcess().Id);
 
             // create a connection info for notification
-            await UpdateConnectionInfo(ClientState.Initializing, sessionName: clientOptions.SessionName,
-                exception: null, cancellationToken: cancellationToken).Vhc();
+            await Context.TryWriteConnectionInfo(sessionId,
+                CreateConnectionInfo(ClientState.Initializing, clientOptions.SessionName, exception: null),
+                cancellationToken).Vhc();
 
             // show notification as soon as possible
             _vpnServiceHandler.ShowNotification(Context.ConnectionInfo);
@@ -263,7 +265,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         catch (Exception ex) when (Client is null) {
             // no client, so no adapter is up: the tunnel goes back
             ReleaseTunnel();
-            await UpdateConnectionInfo(ClientState.Disposed, null, ex, _connectCts.Token).Vhc();
+            await Context.TryWriteConnectionInfo(sessionId,
+                CreateConnectionInfo(ClientState.Disposed, sessionName: null, ex), _connectCts.Token).Vhc();
             _vpnServiceHandler.StopNotification();
             _vpnServiceHandler.StopSelf();
         }
@@ -291,7 +294,13 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         if (client.ProxyConnector != null)
             await client.ProxyConnector.Flush().Vhc();
 
-        await Context.TryWriteConnectionInfo(CreateConnectionInfo(client, ex), cancellationToken).Vhc();
+        // nothing from a client that is no longer the current one. The session before the client check: one begun in
+        // between has detached this client already
+        var sessionId = Context.SessionId;
+        if (client != Client)
+            return;
+
+        await Context.TryWriteConnectionInfo(sessionId, CreateConnectionInfo(client, ex), cancellationToken).Vhc();
     }
 
     // the connection's info as the client has it now
@@ -310,10 +319,11 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         };
     }
 
-    public async Task UpdateConnectionInfo(ClientState clientState, string? sessionName, Exception? exception,
-        CancellationToken cancellationToken)
+    // the host's own word, with no client to tell it
+    private static ConnectionInfo CreateConnectionInfo(ClientState clientState, string? sessionName,
+        Exception? exception)
     {
-        var connectionInfo = new ConnectionInfo {
+        return new ConnectionInfo {
             CreatedTime = FastDateTime.UtcNow,
             ProxyConnectorStatus = null,
             SessionInfo = null,
@@ -324,8 +334,6 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             Error = exception?.ToApiError(),
             SessionName = sessionName
         };
-
-        await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken).Vhc();
     }
 
 
@@ -349,16 +357,18 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             // a start still on its way - waiting for the tunnel, say - ends too, rather than connecting after
             _connectCts.TryCancel();
 
+            // the session this disconnect ends, so its end cannot land on a newer one
+            var sessionId = Context.SessionId;
+
             // let dispose in the background
             var client = Client;
             if (client != null)
                 await client.DisposeAsync().Vhc();
 
-            // always publish the terminal state: the app-side TryStop waits for it before reporting the
-            // service stopped — the client releases its resources (filter dbs, adapter) only during
-            // DisposeAsync, so leaving "Disconnecting" as the last published state lets the next connect
-            // race that teardown. Also overwrites the last exception if one exists.
-            await UpdateConnectionInfo(ClientState.Disposed, null, exception, CancellationToken.None).Vhc();
+            // the terminal state, unless the client has published its own first: the first Disposed is the
+            // session's last word, which the app-side TryStop waits for before reporting the service stopped
+            await Context.TryWriteConnectionInfo(sessionId,
+                CreateConnectionInfo(ClientState.Disposed, sessionName: null, exception), CancellationToken.None).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not disconnect the client.");

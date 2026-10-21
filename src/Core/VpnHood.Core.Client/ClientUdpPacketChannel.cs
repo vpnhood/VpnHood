@@ -1,16 +1,15 @@
-using System.Diagnostics;
 using System.Net;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Core.Tunneling.DatagramMessaging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
 
 namespace VpnHood.Core.Client;
 
 // The client's side of its session's UDP. It sends to the server's UDP endpoint through a socket of its own, which its
-// session opens when it turns to UDP and again once a network change or a failure has closed it. Its route never
-// follows a datagram, as the server's does: a copy sent from elsewhere moves nothing
+// session opens when it turns to UDP and again once a network change or a failure has closed it, and closes for each
+// TCP request. Its route never follows a datagram, as the server's does: a copy sent from elsewhere moves nothing
 internal sealed class ClientUdpPacketChannel(
     ISocketFactory socketFactory,
     IPEndPoint serverEndPoint,
@@ -22,9 +21,6 @@ internal sealed class ClientUdpPacketChannel(
     : UdpPacketChannel(sessionId, sessionKey, isServer: false, firstSendSequenceNumber, trafficMeter),
         IUdpDatagramHandler
 {
-    // a send stuck this long is not waited for
-    private static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(1);
-
     // an old socket's read loop may still hand a datagram over while the new one's does
     private readonly Lock _receiveLock = new();
 
@@ -34,30 +30,28 @@ internal sealed class ClientUdpPacketChannel(
 
     public bool IsSocketOpen => _route is { Transmitter.Connected: true };
 
-    // a new socket, unless one is open
+    // A new socket, unless one is open. It announces itself with a datagram the server drops unread: the server takes
+    // its address, and turns to UDP, before the session has anything to send
     public void OpenSocket()
     {
         lock (_socketLock) {
             ObjectDisposedException.ThrowIf(IsDisposing, this);
-            if (!IsSocketOpen)
-                _route = new UdpRoute(CreateTransmitter(), serverEndPoint);
+            if (IsSocketOpen)
+                return;
+
+            _route = new UdpRoute(CreateTransmitter(), serverEndPoint);
         }
+
+        SendPacketQueued(PacketMessageHandler.CreateEmptyMessage());
     }
 
-    // a network change: the session opens a new one, from the new network
+    // A network change: the session opens a new one, from the new network. A TCP request: nothing goes out after it,
+    // as a batch the send loop starts later finds the socket closed and seals nothing, and one under way fails on it.
+    // So each datagram that went out is below the seq the request reads next, and cannot turn the server back to UDP
     public void CloseSocket()
     {
         lock (_socketLock)
             _route?.Transmitter.Dispose();
-    }
-
-    // The datagrams already queued go out first, for a TCP request: one sealed after the request took the next seq
-    // would be newer than the request, and could turn the server back to UDP. The queue drains within a millisecond
-    public async Task FlushAsync(CancellationToken cancellationToken)
-    {
-        var startTime = Stopwatch.GetTimestamp();
-        while (IsSending && Stopwatch.GetElapsedTime(startTime) < FlushTimeout)
-            await Task.Delay(1, cancellationToken).Vhc();
     }
 
     // a copy of one received before goes no further

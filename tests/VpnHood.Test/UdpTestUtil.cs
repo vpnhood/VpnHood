@@ -18,7 +18,8 @@ internal static class UdpTestUtil
         return BinaryPrimitives.ReadUInt64LittleEndian(RandomNumberGenerator.GetBytes(8)) >> 1;
     }
 
-    // a client's side of a session, its socket open as a session opens it, its count from the given seq
+    // A client's side of a session, its socket open as a session opens it, its count from the given seq. The socket's
+    // announcement takes that seq, in a datagram of its own, gone before this returns: a test's packets go in the next
     public static ClientUdpPacketChannel CreateClientChannel(IPEndPoint serverEndPoint, ulong sessionId,
         byte[] sessionKey, ulong? firstSendSequenceNumber = null)
     {
@@ -26,6 +27,8 @@ internal static class UdpTestUtil
             bufferSize: null, sessionId, sessionKey, firstSendSequenceNumber ?? GetRandomSequenceNumber(),
             new TrafficMeter());
         channel.OpenSocket();
+        Assert.IsTrue(SpinWait.SpinUntil(() => !channel.IsSending, TimeSpan.FromSeconds(5)),
+            "The socket's announcement must go out.");
         return channel;
     }
 

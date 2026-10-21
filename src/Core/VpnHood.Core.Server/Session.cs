@@ -417,7 +417,7 @@ public class Session : IDisposable
             UdpChannel?.ExpireBefore(udpSendSequenceNumber);
 
         Tunnel.AddChannel(channel, disposeIfFailed: true);
-        TurnUdpOff();
+        TurnUdpOff(request.UdpSendSequenceNumber);
     }
 
     // A datagram of the session's: authenticated before it changes anything; a copy goes no further, and the newest
@@ -460,16 +460,28 @@ public class Session : IDisposable
         }
     }
 
-    private void TurnUdpOff()
+    // A TCP request turns UDP off, unless its client went back to UDP after it. A datagram that comes as UDP goes off
+    // may find UDP still on and turn nothing on, so the check runs again once it is off
+    private void TurnUdpOff(ulong? udpSendSequenceNumber)
     {
         lock (_udpSwitchLock) {
-            if (!Tunnel.UseUdp)
+            if (!Tunnel.UseUdp || IsBackOnUdp(udpSendSequenceNumber))
                 return;
 
             Tunnel.UseUdp = false;
+            if (IsBackOnUdp(udpSendSequenceNumber)) {
+                Tunnel.UseUdp = true;
+                return;
+            }
+
             VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
                 "UdpChannel is disabled. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
         }
+    }
+
+    private bool IsBackOnUdp(ulong? udpSendSequenceNumber)
+    {
+        return udpSendSequenceNumber is { } sequenceNumber && UdpChannel?.HasReceivedFrom(sequenceNumber) == true;
     }
 
     internal Task ProcessUdpPacketRequest(UdpPacketRequest request, IStreamConnection streamConnection,

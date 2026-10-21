@@ -266,6 +266,7 @@ public class TunnelTest : TestBase
         using var relay = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         using var clientChannel = UdpTestUtil.CreateClientChannel(relay.Client.GetLocalEndPoint(), sessionId,
             sessionKey);
+        await relay.ReceiveAsync(TestCt); // the socket's announcement, which carries no packet
         var clientReceivedPackets = new List<IpPacket>();
         clientChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
@@ -312,10 +313,11 @@ public class TunnelTest : TestBase
         var route = serverChannel.Route;
         Assert.IsNotNull(route);
 
-        // the request's seq is past a datagram the client sent and the server has not seen yet
+        // the request's seq is past a datagram the client sent and the server has not seen yet: 1999, after the late
+        // socket's announcement
         serverChannel.ExpireBefore(2000);
         using var lateChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
-            firstSendSequenceNumber: 1999);
+            firstSendSequenceNumber: 1998);
         lateChannel.SendPacketQueued(CreateRandomPacket());
         await VhTestUtil.AssertEqualsWait(2, () => serverReceivedPackets.Count, cancellationToken: TestCt);
         Assert.AreSame(route, serverChannel.Route);
@@ -348,6 +350,7 @@ public class TunnelTest : TestBase
         using var clientSocket = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         using var sealer = UdpTestUtil.CreateClientChannel(clientSocket.Client.GetLocalEndPoint(), sessionId,
             sessionKey, firstSendSequenceNumber: 1);
+        await clientSocket.ReceiveAsync(TestCt); // the sealer's announcement, which carries no packet
         sealer.SendPacketQueued(CreateRandomPacket());
         var clientDatagram = (await clientSocket.ReceiveAsync(TestCt)).Buffer;
         await clientSocket.SendAsync(clientDatagram, listener.LocalEndPoint, TestCt);

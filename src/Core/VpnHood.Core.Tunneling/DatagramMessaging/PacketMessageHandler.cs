@@ -27,6 +27,12 @@ public static class PacketMessageHandler
         return ipPacket;
     }
 
+    // a packet message with no message, which a UDP receiver drops unread: for a datagram that only has to arrive
+    public static IpPacket CreateEmptyMessage()
+    {
+        return PacketBuilder.BuildUdp(NoneEndPoint, NoneEndPoint, []);
+    }
+
     public static bool IsPacketMessage(IpPacket ipPacket)
     {
         return ipPacket.Protocol == IpProtocol.Udp && (

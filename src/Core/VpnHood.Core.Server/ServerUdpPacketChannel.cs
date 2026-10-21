@@ -71,6 +71,14 @@ internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey,
             return sequenceNumber < _expiredBeforeSequenceNumber;
     }
 
+    // Whether the client has sent at or above a TCP request's seq, so it went back to UDP after the request: a datagram
+    // of it came, or a later request's seq says so, as ExpireBefore marks only those below its own
+    public bool HasReceivedFrom(ulong sequenceNumber)
+    {
+        lock (_receiveLock)
+            return _newestSequenceNumber >= sequenceNumber;
+    }
+
     protected override UdpRoute? GetRoute() => _route;
 
     // a new route only when the newest datagram comes from somewhere else, so none is made per datagram

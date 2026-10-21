@@ -292,8 +292,7 @@ internal class ConnectorService : IAsyncDisposable
             if (!IsExpired(queueItem))
                 return queueItem.StreamConnection;
 
-            queueItem.StreamConnection.PreventReuse();
-            queueItem.StreamConnection.Dispose();
+            Close(queueItem.StreamConnection);
         }
 
         return null;
@@ -307,8 +306,7 @@ internal class ConnectorService : IAsyncDisposable
                 "A connection is closed rather than kept, as reuse is off, the connector is disposed, or the " +
                 "connection is retired or past its lifespan. ConnectionId: {ConnectionId}", connection.ConnectionId);
 
-            connection.PreventReuse();
-            connection.Dispose();
+            Close(connection);
             return;
         }
 
@@ -332,14 +330,20 @@ internal class ConnectorService : IAsyncDisposable
                !item.StreamConnection.Connected;
     }
 
+    // The quick close: with reuse prevented, the graceful one would do no more, as a connection here has no
+    // stream in progress to end with its peer
+    private static void Close(ReusableStreamConnection connection)
+    {
+        connection.PreventReuse();
+        connection.Dispose();
+    }
+
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         // Kill all expired client streams
         while (_idleConnectionItems.TryPeek(out var queueItem) && IsExpired(queueItem)) {
-            if (_idleConnectionItems.TryDequeue(out queueItem)) {
-                queueItem.StreamConnection.PreventReuse();
-                queueItem.StreamConnection.Dispose();
-            }
+            if (_idleConnectionItems.TryDequeue(out queueItem))
+                Close(queueItem.StreamConnection);
         }
 
         return ValueTask.CompletedTask;
@@ -349,10 +353,8 @@ internal class ConnectorService : IAsyncDisposable
     private void RetireConnections()
     {
         Interlocked.Increment(ref _generation);
-        while (_idleConnectionItems.TryDequeue(out var queueItem)) {
-            queueItem.StreamConnection.PreventReuse();
-            queueItem.StreamConnection.Dispose();
-        }
+        while (_idleConnectionItems.TryDequeue(out var queueItem))
+            Close(queueItem.StreamConnection);
     }
 
     // The host moved to other networks: every connection is from the old ones, so none goes back to the

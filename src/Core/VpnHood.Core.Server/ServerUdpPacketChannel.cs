@@ -84,7 +84,8 @@ internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey,
 
     protected override UdpRoute? GetRoute() => _route;
 
-    // a new route only when the newest datagram comes from somewhere else, so none is made per datagram
+    // A new route only when the newest datagram comes from somewhere else, so none is made per datagram. A copy that
+    // overtakes its original is the newest and wins the route once, until the client's next datagram, as in WireGuard
     private void FollowDatagram(UdpChannelTransmitter listener, IPEndPoint remoteEndPoint)
     {
         var route = _route;
@@ -93,7 +94,9 @@ internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey,
     }
 
     // in nanoseconds: a session recovered after a restart keeps its key, and its new channel counts on above every
-    // seq the old one sent, as long as that sent less than one datagram a nanosecond and the clock did not go back
+    // seq the old one sent, as long as that sent less than one datagram a nanosecond and the clock did not go back. A
+    // server restarted with its clock behind leaves such a session without UDP downstream until its user reconnects:
+    // accepted, as a server's clock must be right when it starts
     private static ulong GetClock()
     {
         return (ulong)(ClockStartTicks + Stopwatch.GetElapsedTime(ClockStartTimestamp).Ticks) * 100;

@@ -1638,8 +1638,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         UiHasChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    private readonly AsyncLock _disposeLock = new();
     public async ValueTask DisposeAsync()
     {
+        // a second close waits for the first one's end. One after a quick close returns: that close leaves
+        // nothing running
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
         if (_disposed)
             return;
 
@@ -1654,10 +1658,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     protected override void Dispose(bool disposing)
     {
-        if (_disposed)
+        // the daemon's stop deadline may run it while the graceful close ends with it
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        _disposed = true;
         _alwaysOnService.Dispose();
         SettingsService.BeforeSave -= SettingsBeforeSave;
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;

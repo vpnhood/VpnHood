@@ -386,12 +386,19 @@ public class VpnServiceManager : IDisposable
         stopTimeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
         try {
             while (ConnectionInfo.ClientState is not (ClientState.None or ClientState.Disposed)) {
+                // the manager's close, which the app's quick close may run while its graceful one waits here,
+                // ends the wait: nothing refreshes the state after it
+                ObjectDisposedException.ThrowIf(_disposed, this);
                 await RefreshConnectionInfo(true, stopTimeoutCts.Token).Vhc();
                 await Task.Delay(200, stopTimeoutCts.Token).Vhc();
             }
 
             VhLogger.Instance.LogDebug("VpnService has been stopped.");
             return true;
+        }
+        catch (Exception ex) when (_disposed) {
+            VhLogger.Instance.LogDebug(ex, "Stopped waiting for the VpnService: its manager has closed.");
+            return false;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not stop the VpnService.");
@@ -464,8 +471,8 @@ public class VpnServiceManager : IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         // do not stop the service, lets service keep running until user explicitly stop it
         _updateConnectionInfoJob.Dispose();

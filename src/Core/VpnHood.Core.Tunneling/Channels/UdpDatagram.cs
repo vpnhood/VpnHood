@@ -4,7 +4,8 @@ using VpnHood.Core.Tunneling.Cryptography;
 namespace VpnHood.Core.Tunneling.Channels;
 
 // A session's UDP datagram: version(1) | sessionId(8) | seq(8) | tag(16) | ciphertext, sealed with AES-GCM under the
-// session's key, with sessionId|seq as its associated data. The version byte is written as 0 and not read
+// session's key, with sessionId|seq as its associated data. The version byte is written as 0 and not read: it is not
+// in the associated data, so it must go in there before it may mean anything
 public static class UdpDatagram
 {
     // the first protocol of this scheme, with the server-reply bit and the freshness mark: a session below it has no

@@ -55,7 +55,8 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
         _trafficMeter = trafficMeter;
     }
 
-    // where its datagrams go now; with none, or with a closed socket, they are lost, as on any UDP path
+    // where its datagrams go now; with none, or with a closed socket, they are lost, as on any UDP path, yet count as
+    // sent in its stats: left so, as nothing reads them
     protected abstract UdpRoute? GetRoute();
 
     // the packets go in as few datagrams as they fit, each sealed in place in the one buffer the loop reuses

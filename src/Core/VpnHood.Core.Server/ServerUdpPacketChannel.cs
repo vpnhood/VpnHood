@@ -19,6 +19,7 @@ internal sealed class ServerUdpPacketChannel(ulong sessionId, byte[] sessionKey,
 
     // two listeners may bring the session's datagrams at once
     private readonly Lock _receiveLock = new();
+    // 0 before the first: a first seq of exactly 0 (1 in 2⁶³) is taken as older, and the next datagram heals it
     private ulong _newestSequenceNumber;
     private ulong _expiredBeforeSequenceNumber;
     private volatile UdpRoute? _route;

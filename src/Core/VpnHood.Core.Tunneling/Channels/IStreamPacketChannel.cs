@@ -1,7 +1,8 @@
 namespace VpnHood.Core.Tunneling.Channels;
 
 // A packet channel that is a connection, the kind a tunnel's channel manager takes: a session has several, picked by
-// flow, and each closes with a grace, in which what is on its way still arrives
+// flow, and each closes with a grace, in which what is on its way still arrives. One of a developer's own must speak
+// the close message and the grace its peer expects; a new transport goes through IStreamConnection instead
 public interface IStreamPacketChannel : IPacketChannel
 {
     // the time of the request that made it, by the client's clock

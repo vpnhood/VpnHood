@@ -35,7 +35,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan FifteenMinutes = TimeSpan.FromSeconds(899);
 
     private readonly DispatcherTimer _timer;
-    private bool _isReloading;
+    private Task _stateRead = Task.CompletedTask;
     private bool _isStateReadFailing;
     private bool _disposed;
     private DateTime _noticeUntil;
@@ -164,21 +164,38 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public MainViewModel()
     {
-        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => _ = Reload());
+        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => Tick());
         _timer.Start();
         Refresh();
     }
 
-    // The state, read again from the app and shown: the clock's beat, and every action's last step.
-    // One read at a time - over HTTP a read can outlast the beat - and a read that fails is logged
-    // and tried again at the next beat, as the web UI's reloadState is. A warning once per outage,
-    // the beat's repeats as debug: a service that is down would be one a second in the system log.
+    // The clock's beat: one read at a time, as over HTTP a read can outlast the beat.
+    private void Tick()
+    {
+        if (_stateRead.IsCompleted)
+            _stateRead = ReadState();
+    }
+
+    // An action's last step: the state after the action. A read the clock began before the action
+    // ended answers with the state before it, so it is waited out and the state read once more - a
+    // page that decides on the state, as the premium code's congratulation does, must see the action.
     public async Task Reload()
     {
-        if (_disposed || _isReloading)
+        while (!_stateRead.IsCompleted)
+            await _stateRead;
+
+        _stateRead = ReadState();
+        await _stateRead;
+    }
+
+    // The state, read again from the app and shown. A read that fails is logged and tried again at the
+    // next beat: a warning once per outage, the beat's repeats as debug - a service that is down would
+    // be one a second in the system log.
+    private async Task ReadState()
+    {
+        if (_disposed)
             return;
 
-        _isReloading = true;
         try {
             await VhApp.ReloadState(CancellationToken.None);
             _isStateReadFailing = false;
@@ -189,9 +206,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             VhLogger.Instance.Log(_isStateReadFailing ? LogLevel.Debug : LogLevel.Warning, ex,
                 "Could not read the app's state.");
             _isStateReadFailing = true;
-        }
-        finally {
-            _isReloading = false;
         }
     }
 

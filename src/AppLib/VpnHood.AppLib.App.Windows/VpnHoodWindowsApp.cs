@@ -15,6 +15,7 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
 {
     private static IDisposable? _singleInstanceLock;
     private readonly VpnHoodApp _app;
+    private bool _disposed;
 
     private VpnHoodWindowsApp(AppOptions appOptions)
     {
@@ -65,6 +66,10 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
 
     protected override void Dispose(bool disposing)
     {
+        // the daemon's stop deadline may run it while the graceful close ends with it
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         if (disposing) {
             // the app made here, not VpnHoodApp.Instance, which the app's own close may clear between two reads
             _app.Dispose();

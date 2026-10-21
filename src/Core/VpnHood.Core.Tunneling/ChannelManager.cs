@@ -285,15 +285,13 @@ internal class ChannelManager : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        // first, so an add waiting on the lock below, or one a channel's own disposal makes, is refused rather than
+        // joining a manager that lets its channels go
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         // remove all channels and dispose them
         lock (_channelListLock) {
-            // first, so an add waiting on the lock, or one a channel's own disposal makes, is refused rather than
-            // joining a manager that lets its channels go
-            _disposed = true;
-
             // dispose proxy channels
             foreach (var channel in _proxyChannels.ToArray())
                 RemoveChannelInternal(channel, dispose: true);

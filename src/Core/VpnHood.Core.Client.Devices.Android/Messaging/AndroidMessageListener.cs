@@ -115,9 +115,8 @@ public sealed class AndroidMessageListener : IMessageListener
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
-        _disposed = true;
 
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();

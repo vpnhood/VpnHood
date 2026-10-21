@@ -147,13 +147,12 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         IsStarted = false;
         VhInvoker.TryInvoke("stop the HTTP-01 listener", LogLevel.Warning, () => _tcpListener?.Stop());
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
-        _disposed = true;
     }
 }

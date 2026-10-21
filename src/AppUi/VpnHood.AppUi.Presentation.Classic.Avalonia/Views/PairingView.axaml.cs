@@ -101,8 +101,9 @@ public partial class PairingView : UserControl, IPage, IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         _timer.Stop();
 
         // a developer's always-on listener is nobody's to stop

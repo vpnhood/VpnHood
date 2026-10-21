@@ -27,8 +27,8 @@ public sealed class AsyncLock
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            if (Interlocked.Exchange(ref _disposed, true))
+                return;
 
             if (Succeeded)
                 semaphoreSlimEx.Release();

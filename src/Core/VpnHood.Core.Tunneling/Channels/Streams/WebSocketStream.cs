@@ -25,6 +25,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private readonly Memory<byte> _writeChunkHeaderBuffer = new byte[ChunkHeaderLength];
     private Task? _closeStreamTask;
     private readonly Lock _closeStreamLock = new();
+    private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
     public override bool CanReuse => !_isConnectionClosed && _exception == null;
     public int PreserveWriteBufferLength => ChunkHeaderLength;
@@ -351,6 +352,11 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
     public override async ValueTask DisposeAsync()
     {
+        // a second close waits for the first one's end, as its close of the logical stream writes to the source
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (IsDisposed)
+            return;
+
         _disposed = true;
 
         // just ignore exceptions during close stream as close stream already handles logging

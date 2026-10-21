@@ -76,6 +76,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public int CreatedPacketChannelCount { get; private set; }
     // UDP is on and its socket open, so it carries the session's packets
     internal bool IsUdpOpen => _tunnel.UseUdp && _udpChannel is { IsSocketOpen: true };
+    internal ClientUdpPacketChannel? UdpChannel => _udpChannel;
     internal bool IsAdapterStarted => _vpnAdapter.IsStarted;
     internal PassthroughState PassthroughState { get; } = new();
 
@@ -525,9 +526,9 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     private async Task AddTcpPacketChannel(CancellationToken cancellationToken)
     {
-        // the datagrams queued before the turn to TCP go out first, so the request's UDP seq is above them all
-        if (_udpChannel != null)
-            await _udpChannel.FlushAsync(cancellationToken).Vhc();
+        // nothing goes out on UDP after this, not even a packet that took UDP as the session turned to TCP: every
+        // datagram sent is below the request's UDP seq, so none can turn the server back to UDP
+        _udpChannel?.CloseSocket();
 
         // Create and send the Request Message
         var requestId = UniqueIdFactory.Create();
@@ -739,10 +740,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         await _cancellationTokenSource.TryCancelAsync().Vhc();
 
         // a sync Dispose may have run meanwhile
-        lock (_disposeLock) {
-            if (_disposed) return;
-            _disposed = true;
-        }
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         DisposeSyncMembers();
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");
@@ -754,10 +753,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        lock (_disposeLock) {
-            if (_disposed) return;
-            _disposed = true;
-        }
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         DisposeSyncMembers();
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");

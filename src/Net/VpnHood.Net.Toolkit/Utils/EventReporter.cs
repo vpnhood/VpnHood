@@ -83,11 +83,10 @@ public class EventReporter : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         ReportInternal();
         _reportJob.Dispose();
-        _disposed = true;
     }
 }

@@ -155,9 +155,8 @@ public sealed class WebViewHost : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
-        _disposed = true;
 
         _view.PageLoaded -= OnPageLoaded;
         _view.LoadFailed -= OnLoadFailed;

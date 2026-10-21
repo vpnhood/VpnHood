@@ -140,11 +140,8 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
     // The flag releases the source once and once only, whichever way this was disposed.
     protected override void Dispose(bool disposing)
     {
-        if (disposing && !_disposed) {
-            _disposed = true;
-            if (!leaveOpen)
-                _source.Dispose();
-        }
+        if (disposing && !Interlocked.Exchange(ref _disposed, true) && !leaveOpen)
+            _source.Dispose();
 
         base.Dispose(disposing);
     }
@@ -154,11 +151,8 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
     // close, then Dispose(false), as Stream's pattern has it.
     public override async ValueTask DisposeAsync()
     {
-        if (!_disposed) {
-            _disposed = true;
-            if (!leaveOpen)
-                await _source.DisposeAsync().Vhc();
-        }
+        if (!Interlocked.Exchange(ref _disposed, true) && !leaveOpen)
+            await _source.DisposeAsync().Vhc();
 
         Dispose(false);
         GC.SuppressFinalize(this);

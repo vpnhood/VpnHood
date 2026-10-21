@@ -316,8 +316,8 @@ public class HttpStream : ChunkStream
     public override async ValueTask DisposeAsync()
     {
         using var lockResult = await _disposeLock.LockAsync().Vhc();
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         // close stream
         if (!_hasError && !_isConnectionClosed) {

@@ -123,9 +123,8 @@ public sealed class SqliteDomainFilter : IDomainFilter
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
-        _disposed = true;
 
         lock (_readerLock) {
             _sharedReader.Dispose();

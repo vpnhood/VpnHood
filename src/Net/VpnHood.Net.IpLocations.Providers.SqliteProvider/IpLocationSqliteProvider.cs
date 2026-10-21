@@ -142,14 +142,11 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return ipAddress.IsIPv4MappedToIPv6 ? ipAddress.MapToIPv4() : ipAddress;
     }
 
-    // one close of the connection, which is not thread-safe, whichever close comes first
-    public async ValueTask DisposeAsync()
+    // the connection's one close, which is not thread-safe, is the quick one: it is local, with nothing to wait for
+    public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, true))
-            return;
-
-        if (_connection.IsValueCreated && _disposeConnection)
-            await _connection.Value.DisposeAsync().Vhc();
+        Dispose();
+        return ValueTask.CompletedTask;
     }
 
     public void Dispose()

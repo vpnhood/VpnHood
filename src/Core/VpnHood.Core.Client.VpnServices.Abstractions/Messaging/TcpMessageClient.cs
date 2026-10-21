@@ -139,9 +139,8 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
-        _disposed = true;
 
         DisposeConnection();
     }

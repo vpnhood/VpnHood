@@ -428,8 +428,8 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         foreach (var externalProvider in _authenticationExternalProviders)
             externalProvider.Dispose();

@@ -137,9 +137,8 @@ public sealed class SqliteIpFilter : IIpFilter
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
-        _disposed = true;
 
         lock (_readerLock) {
             _sharedReader.Dispose();

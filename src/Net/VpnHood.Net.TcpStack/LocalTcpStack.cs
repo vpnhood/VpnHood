@@ -689,11 +689,9 @@ public sealed class LocalTcpStack : ITcpStack
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
-
         // the flag first, the listeners' drain after the timers: Listen's re-check after its add rests on this order
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         _maintenanceTimer.Dispose();
         _idleTimer.Dispose();

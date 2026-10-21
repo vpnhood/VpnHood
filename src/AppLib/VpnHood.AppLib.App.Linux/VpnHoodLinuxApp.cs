@@ -17,6 +17,7 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 {
     private static FileStream? _singleInstanceLock;
     private readonly VpnHoodApp _app;
+    private bool _disposed;
 
     private VpnHoodLinuxApp(AppOptions appOptions)
     {
@@ -71,6 +72,10 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 
     protected override void Dispose(bool disposing)
     {
+        // the daemon's stop deadline may run it while the graceful close ends with it
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         if (disposing) {
             // the app made here, not VpnHoodApp.Instance, which the app's own close may clear between two reads
             _app.Dispose();

@@ -542,8 +542,9 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         StopPeriodicRefresh();
     }
 }

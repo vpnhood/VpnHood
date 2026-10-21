@@ -131,7 +131,8 @@ public sealed class UdpChannelTransmitter : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        // before the socket's close: the receive loop takes a failure after it as the close's own
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Essential,
@@ -139,7 +140,6 @@ public sealed class UdpChannelTransmitter : IDisposable
             VhLogger.Format(LocalEndPoint));
 
         // a socket that fails to close is logged, so its owner's close goes on
-        _disposed = true;
         VhInvoker.TryInvoke("close the UDP socket", LogLevel.Warning, _udpClient.Dispose);
         _udpSignReporter.Dispose();
         _receiveErrorReporter.Dispose();

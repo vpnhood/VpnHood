@@ -518,9 +518,8 @@ public class ServerApp : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
-        _disposed = true;
 
         // the signal registrations stay to the process's end, so a late signal is still held
         _serverLog?.Dispose();

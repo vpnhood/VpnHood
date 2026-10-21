@@ -11,7 +11,8 @@ namespace VpnHood.Core.Client.Devices.Windows;
 public class WindowsVpnService : IVpnServiceHandler, IDisposable
 {
     private readonly VpnServiceHost _vpnServiceHost;
-    public bool IsDisposed { get; private set; }
+    private bool _disposed;
+    public bool IsDisposed => _disposed;
 
     public WindowsVpnService(
         string configFolder)
@@ -81,8 +82,8 @@ public class WindowsVpnService : IVpnServiceHandler, IDisposable
 
     public void Dispose()
     {
-        if (IsDisposed) return;
-        IsDisposed = true;
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
 
         _vpnServiceHost.Dispose();
     }

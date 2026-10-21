@@ -125,10 +125,9 @@ public class TrafficMeter : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        _disposed = true;
         _sent.Dispose();
         _received.Dispose();
     }

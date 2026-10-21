@@ -51,10 +51,9 @@ internal class ClientUsageTracker : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         _reportJob.Dispose();
-        _disposed = true;
     }
 }

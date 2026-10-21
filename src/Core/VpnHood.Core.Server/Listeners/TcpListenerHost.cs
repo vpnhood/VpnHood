@@ -24,6 +24,7 @@ internal class TcpListenerHost(
 {
     private readonly List<TcpListenerEntry> _listeners = [];
     private IReadOnlyList<CertificateHostName> _certificates = [];
+    private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
 
     public IReadOnlyList<IPEndPoint> EndPoints =>
@@ -199,6 +200,8 @@ internal class TcpListenerHost(
 
     public async ValueTask DisposeAsync()
     {
+        // a second close waits for the first one's end
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 

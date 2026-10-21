@@ -45,6 +45,7 @@ internal class ConnectorService : IAsyncDisposable
     private readonly QuicStreamConnectionFactory? _quicConnectionFactory; // null when the socket factory has no QUIC support
     private TimeSpan _idleConnectionTimeout;
     private readonly Job _cleanupJob;
+    private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
     private bool _useWebSocket;
     private int _generation; // RetireConnections moves it on: a connection made before it is not reused
@@ -395,6 +396,8 @@ internal class ConnectorService : IAsyncDisposable
     // async only: the QUIC factory's close waits for its connections' closes
     public async ValueTask DisposeAsync()
     {
+        // a second close waits for the first one's end
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 

@@ -38,6 +38,7 @@ namespace VpnHood.Core.Client;
 internal class RequestSender(ConnectorService connectorService) : IAsyncDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
 
     public ConnectorService ConnectorService { get; } = connectorService;
@@ -241,7 +242,11 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
     // async only, as its connector service's close is
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, true)) return;
+        // a second close waits for the first one's end
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         await _cancellationTokenSource.TryCancelAsync().Vhc();
         _cancellationTokenSource.Dispose();
         await ConnectorService.DisposeAsync().Vhc();

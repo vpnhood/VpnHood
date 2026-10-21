@@ -7,6 +7,7 @@ using VpnHood.Core.Server.Access;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
 
@@ -21,6 +22,7 @@ internal class QuicListenerHost(
 {
     private readonly List<QuicListenerEntry> _listeners = [];
     private IReadOnlyList<CertificateHostName> _certificates = [];
+    private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
 
     // only report listeners that are still running; a listener whose task has finished
@@ -190,6 +192,8 @@ internal class QuicListenerHost(
 
     public async ValueTask DisposeAsync()
     {
+        // a second close waits for the first one's end
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 

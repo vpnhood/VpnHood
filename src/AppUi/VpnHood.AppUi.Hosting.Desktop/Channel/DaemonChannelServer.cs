@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Channel;
 
@@ -17,6 +18,7 @@ internal sealed class DaemonChannelServer : IAsyncDisposable
     private readonly IDaemonChannelListener _listener;
     private readonly string _refusal;
     private readonly Lock _lock = new();
+    private readonly AsyncLock _disposeLock = new();
     private readonly List<Connected> _connected = [];
     private readonly HashSet<string> _refusedCallers = [];
     private readonly CancellationTokenSource _cancellation = new();
@@ -177,6 +179,8 @@ internal sealed class DaemonChannelServer : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // a second close waits for the first one's end
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
         lock (_lock) {
             if (_disposed)
                 return;

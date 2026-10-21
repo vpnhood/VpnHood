@@ -32,8 +32,7 @@ public class ManagedProxyConnector : IProxyConnector
     private readonly Job _flushJob;
     private ProxyAutoUpdateOptions _autoUpdateOptions;
     private bool _disposed;
-    private readonly Lock _disposeLock = new();
-    private Task? _disposeTask;
+    private readonly AsyncLock _disposeLock = new();
     private bool _verifyTls;
     private readonly DateTime _sessionCreatedTime = FastDateTime.UtcNow;
     private readonly ProxySessionStatus _sessionStatus = new();
@@ -542,9 +541,13 @@ public class ManagedProxyConnector : IProxyConnector
         RecordFailed(handedOut.Entry, ex, checkMode: false);
     }
 
-    private async Task DisposeAsyncCore()
+    public async ValueTask DisposeAsync()
     {
-        _disposed = true;
+        // a second close waits for the first one's end, as its flush may still be under way
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         _autoUpdateJob?.Dispose();
         _flushJob.Dispose();
 
@@ -557,14 +560,5 @@ public class ManagedProxyConnector : IProxyConnector
         }
 
         _store.Dispose();
-    }
-
-    // a second close waits for the first one's end, as its flush may still be under way
-    public ValueTask DisposeAsync()
-    {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
-
-        return new ValueTask(_disposeTask);
     }
 }

@@ -7,6 +7,7 @@ using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 
@@ -31,6 +32,8 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     private readonly IDesktopUi _ui;
     private readonly CancellationTokenSource _cancellation = new();
     private readonly Task _serving;
+    private readonly AsyncLock _disposeLock = new();
+    private bool _disposed;
 
     private DesktopUiInstance(string pipeName, IDesktopUi ui)
     {
@@ -161,6 +164,11 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // a second close waits for the first one's end
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
         await _cancellation.CancelAsync().Vhc();
         await _serving.Vhc();
         _cancellation.Dispose();

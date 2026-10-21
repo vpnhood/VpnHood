@@ -31,4 +31,15 @@ public class DesktopUiInstanceTest
         await using var next = DesktopUiInstance.TryClaim(paths, ui);
         Assert.IsNotNull(next);
     }
+
+    [TestMethod]
+    public async Task A_second_close_after_the_first_does_nothing()
+    {
+        var paths = new TestDesktopPaths("VpnHoodTest-" + Guid.CreateVersion7().ToString("N"));
+        var instance = DesktopUiInstance.TryClaim(paths, new TestDesktopUi());
+        Assert.IsNotNull(instance);
+
+        await instance.DisposeAsync();
+        await instance.DisposeAsync();
+    }
 }

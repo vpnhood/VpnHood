@@ -332,8 +332,8 @@ Points that are easy to get wrong:
 8. **The tray is where the desktop shows one.** Avalonia's tray registers with whoever owns
    `org.kde.StatusNotifierWatcher` on the session bus: KDE, and GNOME with Ubuntu's AppIndicator
    extension; plain GNOME has none. Where there is one, closing the window only hides it — the
-   tray's Open or a second launch brings it back, its Exit ends the window's process — and where
-   there is none, closing ends it. The service runs on either way. The installer's
+   tray's Open or a second launch brings it back, its Exit & Disconnect disconnects and ends the
+   window's process — and where there is none, closing ends it. The service runs on either way. The installer's
    `/etc/xdg/autostart/<name>.desktop` runs `ui --tray` at every sign-in: an administrator's waits
    up to 30 s for the desktop's tray and shows the icon with the window closed, and ends after that
    wait on a desktop without one; a standard user's ends at once.

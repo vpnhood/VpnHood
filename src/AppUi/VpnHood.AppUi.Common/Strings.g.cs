@@ -2140,8 +2140,8 @@ public sealed partial class Strings
     /// <summary>The server rejected this code on {date}. It is kept and will work again if its issuer restores it.</summary>
     public string CodeRefusedRejectedNotice(object date) => Get("CODE_REFUSED_REJECTED_NOTICE", ("date", date));
 
-    /// <summary>Exit</summary>
-    public string Exit => Get("EXIT");
+    /// <summary>Exit &amp; Disconnect</summary>
+    public string ExitAndDisconnect => Get("EXIT_AND_DISCONNECT");
 
     /// <summary>Manage</summary>
     public string Manage => Get("MANAGE");

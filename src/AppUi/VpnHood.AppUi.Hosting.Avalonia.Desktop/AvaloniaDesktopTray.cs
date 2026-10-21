@@ -19,8 +19,8 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 // shows; its pictures the app's own icon with the connection's badge (AvaloniaTrayBadge). On the UI
 // thread throughout.
 //
-// What it cannot do itself it asks of the window's host: bring the window forward, and end - Exit
-// while connected disconnects first ("Disconnect and exit"). The service runs on.
+// What it cannot do itself it asks of the window's host: bring the window forward, and end - "Exit &
+// Disconnect", which disconnects first while connected. The service runs on.
 internal sealed class AvaloniaDesktopTray : IDisposable
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
@@ -120,7 +120,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
         _openItem.Header = Strings.Current.Open;
         _connectItem.Header = Strings.Current.Connect;
         _disconnectItem.Header = Strings.Current.Disconnect;
-        _exitItem.Header = Strings.Current.Exit;
+        _exitItem.Header = Strings.Current.ExitAndDisconnect;
         if (_state != null)
             Update(_state);
     }

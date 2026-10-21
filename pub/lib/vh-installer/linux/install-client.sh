@@ -578,7 +578,6 @@ if [ "$withDesktop" == "y" ]; then
 	echo "  Open the window from the application menu, or run: $launcher ui";
 fi
 echo "  From a terminal:";
-echo "    $launcher profile add <access-key>";
 echo "    $launcher connect";
 echo "    $launcher status";
 echo "    $launcher --help";

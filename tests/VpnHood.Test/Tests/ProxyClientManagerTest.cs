@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Authentication;
+using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Proxies.Management;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
@@ -10,6 +12,8 @@ using VpnHood.Net.Proxies.Socks5ProxyServers;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.Dom;
 using VpnHood.Test.Providers;
+using WatsonWebserver.Core;
+using WatsonWebserver.Lite;
 
 namespace VpnHood.Test.Tests;
 
@@ -355,5 +359,51 @@ public class ManagedProxyConnectorTest : TestBase
         Assert.IsFalse(File.Exists(ClientStoreDbPath));
         var status = connector.Status;
         Assert.IsTrue(status.SessionStatus.SucceededCount >= 1);
+    }
+
+    // The list's auto-update downloads at once when it starts, and again only for a new url or interval: the
+    // options an app sends again unchanged, at every settings save, download nothing.
+    [TestMethod]
+    public async Task Auto_update_downloads_again_only_for_a_new_url_or_interval()
+    {
+        // a list server on a free port, counting each path's downloads
+        var downloads = new ConcurrentDictionary<string, int>();
+        var portFinder = new TcpListener(IPAddress.Loopback, 0);
+        portFinder.Start();
+        var port = ((IPEndPoint)portFinder.LocalEndpoint).Port;
+        portFinder.Stop();
+        var webServer = new WebserverLite(new WebserverSettings(IPAddress.Loopback.ToString(), port), async ctx => {
+            downloads.AddOrUpdate(ctx.Request.Url.RawWithoutQuery, 1, (_, count) => count + 1);
+            await ctx.Response.Send("socks5://127.0.0.1:1080");
+        });
+        _ = webServer.StartAsync(TestCt);
+        try {
+            await using var connector =
+                await ManagedProxyConnector.Create(CreateAutoUpdateOptions(port, "/a"), await CreateStore());
+            await AssertEqualsWait(1, () => downloads.GetValueOrDefault("/a"), "the first download");
+
+            // the same options again: no download
+            await connector.UpdateOptions(CreateAutoUpdateOptions(port, "/a"));
+            await Task.Delay(TimeSpan.FromSeconds(4), TestCt);
+            Assert.AreEqual(1, downloads.GetValueOrDefault("/a"), "no download for the same options");
+
+            // a new url: a download at once
+            await connector.UpdateOptions(CreateAutoUpdateOptions(port, "/b"));
+            await AssertEqualsWait(1, () => downloads.GetValueOrDefault("/b"), "a download for the new url");
+        }
+        finally {
+            webServer.TryStop();
+        }
+    }
+
+    // nine seconds: under the slow job runner's ten, so the fast one's two-second beat starts the job
+    private static ProxyOptions CreateAutoUpdateOptions(int port, string path)
+    {
+        return new ProxyOptions {
+            AutoUpdateOptions = new ProxyAutoUpdateOptions {
+                Url = new Uri($"http://127.0.0.1:{port}{path}"),
+                Interval = TimeSpan.FromSeconds(9)
+            }
+        };
     }
 }

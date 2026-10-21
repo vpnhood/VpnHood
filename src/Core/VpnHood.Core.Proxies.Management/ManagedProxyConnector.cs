@@ -87,8 +87,7 @@ public class ManagedProxyConnector : IProxyConnector
         await connector.ReloadEntries().Vhc();
 
         // Start auto-update if configured
-        if (connector._autoUpdateOptions.Interval > TimeSpan.Zero && connector._autoUpdateOptions.Url != null)
-            connector.StartAutoUpdate(connector._autoUpdateOptions.Interval.Value);
+        connector.RestartAutoUpdate();
 
         return connector;
     }
@@ -145,10 +144,13 @@ public class ManagedProxyConnector : IProxyConnector
 
         await ReloadEntries().Vhc();
 
-        // start new job if needed
+        // the job again, with its download at once, only for a new url or interval: an app sends the options
+        // at every settings save
+        var oldAutoUpdateOptions = _autoUpdateOptions;
         _autoUpdateOptions = proxyOptions.AutoUpdateOptions;
-        if (_autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null)
-            StartAutoUpdate(_autoUpdateOptions.Interval.Value);
+        if (_autoUpdateOptions.Url != oldAutoUpdateOptions.Url ||
+            _autoUpdateOptions.Interval != oldAutoUpdateOptions.Interval)
+            RestartAutoUpdate();
     }
 
     private ValueTask FlushJob(CancellationToken cancellationToken)
@@ -168,10 +170,14 @@ public class ManagedProxyConnector : IProxyConnector
             entry.IsDirty = false;
     }
 
-    private void StartAutoUpdate(TimeSpan interval)
+    // The old job stops, and a new one starts where the options ask for one
+    private void RestartAutoUpdate()
     {
-        if (_autoUpdateJob?.Interval != interval)
-            _autoUpdateJob?.Dispose();
+        _autoUpdateJob?.Dispose();
+        _autoUpdateJob = null;
+        if (_autoUpdateOptions.Interval is not { } interval || interval <= TimeSpan.Zero ||
+            _autoUpdateOptions.Url == null)
+            return;
 
         // Create and start the job
         _autoUpdateJob = new Job(

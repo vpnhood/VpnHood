@@ -35,7 +35,7 @@ The installer must run as root and will say so rather than half-install. It:
 - writes and starts `VpnHoodClient.service`, enabled at boot unless you answer no
 - writes `VpnHoodClientUpdater.service`, which keeps the app up to date unless you answer no; a
   question of its own, apart from the one about the boot
-- on a machine with a graphical target, adds **VpnHood! CLIENT** to the application menu and
+- on a machine with a display manager, or WSLg, adds **VpnHood! CLIENT** to the application menu and
   installs the libraries the window needs (`libx11-6`, `libice6`, `libsm6`, `libfontconfig1`,
   `xdg-utils`); without `apt`, it names any of them it cannot find, for you to install
 - installs MsQuic, for the QUIC channel, from Microsoft's package feed, which it removes again
@@ -50,8 +50,8 @@ Flags worth knowing:
 | `-q` | No questions. An update keeps the install's choices; a new install starts at boot and updates itself. |
 | `-noautostart` | Do not start the service at boot. |
 | `-noautoupdate` | Do not update the app by itself. |
-| `-nodesktop` | Service and commands only: no menu entry, no GUI libraries. Use this on a server. |
-| `-desktop` | Force the menu entry on, where the graphical target was not detected. |
+| `-nodesktop` | Service and commands only: no menu entry, no GUI libraries, even where a display manager is found. |
+| `-desktop` | The menu entry and the libraries where no display manager is found. |
 | `-help` | List the options. |
 
 An option from an earlier release, such as `-autostart`, is still taken.
@@ -99,14 +99,15 @@ vhclient status
 
 | Command | What it does |
 | --- | --- |
-| `vhclient` | Opens the window. Starts the service first if it is not running. |
+| `vhclient` | Prints the help. |
+| `vhclient ui` | Opens the window. Starts the service first if it is not running. |
 | `vhclient connect [--profile P] [--location L] [--no-wait]` | Connects, and waits until it has an answer: exit 0 means connected, not merely requested. |
 | `vhclient disconnect` | Drops the tunnel. The service keeps running. |
 | `vhclient status [--json] [--watch]` | What the app is doing. |
 | `vhclient locations [--profile P] [--json]` | The server locations a profile offers. |
 | `vhclient always-on [on\|off]` | Connects when the service starts, before anyone signs in, and again after a failure to reach a server, waiting longer each time; a refused key, a used-up quota or a disconnect stops it until the next connect. Bare, it says which; `status` says what it is doing. |
 | `vhclient profile list [--json]` *(CLIENT only)* | Profiles on this device; `*` marks the one connect uses. |
-| `vhclient profile add <key-or-file>` *(CLIENT only)* | Adds a profile from an access key. |
+| `vhclient profile add <access-key>` *(CLIENT only)* | Adds a profile from an access key, or from the path of a file holding one. |
 | `vhclient profile remove <profile>` *(CLIENT only)* | Removes one. |
 | `vhclient profile set-default <profile>` *(CLIENT only)* | Chooses the profile `connect` uses when given none. |
 | `vhclient service start\|stop\|restart` | Drives the systemd unit. Asks for your password. |
@@ -184,10 +185,11 @@ without privilege.
 
 ## A headless machine
 
-Install with `-nodesktop`, then drive it from the shell or from a unit of your own:
+With no display manager the installer adds no window: the service and the commands only (`-nodesktop`
+forces that anywhere). Drive it from the shell or from a unit of your own:
 
 ```bash
-sudo su -c "bash <(wget -qO- https://.../VpnHoodClient-linux.sh) -q -nodesktop"
+sudo su -c "bash <(wget -qO- https://.../VpnHoodClient-linux.sh) -q"
 sudo vhclient profile add /root/access-key.txt
 vhclient connect --location US/Virginia
 vhclient status

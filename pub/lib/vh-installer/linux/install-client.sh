@@ -152,12 +152,13 @@ if grep -qF "/${assemblyName}Updater.service" /proc/self/cgroup 2>/dev/null; the
 	insideUpdaterUnit="y";
 fi
 
-# Is there a desktop on this machine? Only a graphical default target gets the window, its icon
-# and its libraries; a server install stops at the service and the commands. Asked before the
-# prompts so the answer can be shown rather than demanded.
+# Is there a desktop on this machine? Only one with a display manager, or WSLg, which shows Linux
+# windows on Windows with none, gets the window, its icon and its libraries; a server install stops
+# at the service and the commands. Not the default target, which a server reports as
+# graphical.target too (Ubuntu Server, the cloud images). Asked before the prompts so the answer can
+# be shown rather than demanded.
 if [ "$withDesktop" == "" ]; then
-	defaultTarget=$(systemctl get-default 2>/dev/null);
-	if [ "$defaultTarget" == "graphical.target" ]; then
+	if systemctl is-enabled --quiet display-manager.service 2>/dev/null || [ -d /mnt/wslg ]; then
 		withDesktop="y";
 	else
 		withDesktop="n";

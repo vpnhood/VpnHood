@@ -425,7 +425,6 @@ public abstract class PacketTransportBase : IPacketTransport
     protected virtual void DisposeManaged()
     {
         PacketReceived = null;
-        _sendChannel.Writer.TryComplete(); // complete the writer to stop sending packets
     }
 
     protected virtual void DisposeUnmanaged()

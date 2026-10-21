@@ -125,6 +125,13 @@ public partial class HomeView : UserControl, IPage
         _host.Navigate(new ExtendSessionView(_host));
     }
 
+    // The premium mark opens the account page signed in or not: signed out, it is where a premium
+    // code is changed or removed.
+    private void OnYouArePremiumClick(object? sender, RoutedEventArgs e)
+    {
+        _host.Navigate(new AccountView(_host));
+    }
+
     // The account: signed in, its page; signed out, the sign-in - the dialog wherever the email form
     // is offered, else the store's own.
     private async void OnAccountClick(object? sender, RoutedEventArgs e)

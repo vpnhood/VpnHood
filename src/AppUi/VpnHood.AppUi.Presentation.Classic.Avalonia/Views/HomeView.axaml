@@ -87,7 +87,7 @@
             </StackPanel>
           </Border>
           <!-- You are premium -->
-          <Button Classes="pill status-on-btn" IsVisible="{Binding ShowYouArePremium}" Click="OnAccountClick">
+          <Button Classes="pill status-on-btn" IsVisible="{Binding ShowYouArePremium}" Click="OnYouArePremiumClick">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Classes="mdi" FontSize="18" Foreground="{StaticResource EnablePremiumBrush}" Text="{x:Static res:Mdi.Crown}" />
               <TextBlock Classes="body-small" Foreground="{StaticResource EnablePremiumBrush}" Text="{Binding YouArePremium, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />

@@ -28,6 +28,7 @@ public class ProxyChannel : IProxyChannel
     private volatile bool _isClosing;
     private readonly Job _checkAliveJob;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly AsyncLock _disposeLock = new();
 
     // ends a pump's wait on the speed limit once the channel closes; the pumps' own token would also cancel a
     // pending TLS read, which leaves the stream unusable and its connection never reused
@@ -147,8 +148,9 @@ public class ProxyChannel : IProxyChannel
                 ChannelId, IsDisposed);
         }
         finally {
+            // its end: the graceful close, not waited for
             VhTypeTracker.Record("ProxyChannel.StartInternal.completed");
-            Dispose();
+            _ = this.TryDisposeAsync();
         }
     }
 
@@ -323,7 +325,7 @@ public class ProxyChannel : IProxyChannel
         VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel,
             "Disposing a ProxyChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
 
-        Dispose();
+        _ = this.TryDisposeAsync();
         return default;
     }
 
@@ -332,10 +334,11 @@ public class ProxyChannel : IProxyChannel
         return ChannelId;
     }
 
-    public void Dispose()
+    // the channel's own part of either close, once
+    private bool TryStop()
     {
         if (Interlocked.Exchange(ref _disposed, true))
-            return;
+            return false;
 
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
@@ -343,10 +346,29 @@ public class ProxyChannel : IProxyChannel
         _throttleCancellationTokenSource.Dispose();
         _checkAliveJob.Dispose();
         _started = false;
-
-        // their async closes, not awaited: a sync one may wait for the peer, as a QUIC stream's does
-        _ = _hostStreamConnection.TryDisposeAsync();
-        _ = _tunnelStreamConnection.TryDisposeAsync();
         VhTypeTracker.Record("ProxyChannel.disposed");
+        return true;
+    }
+
+    // the quick close: its connections close at once too, with no reuse. One during a graceful close cuts that close's
+    // wait for them short
+    public void Dispose()
+    {
+        TryStop();
+        _hostStreamConnection.Dispose();
+        _tunnelStreamConnection.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // a second close waits for the first one's end. One after a quick close returns: that close has closed the
+        // connections
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (!TryStop())
+            return;
+
+        await Task.WhenAll(
+            _hostStreamConnection.TryDisposeAsync().AsTask(),
+            _tunnelStreamConnection.TryDisposeAsync().AsTask()).Vhc();
     }
 }

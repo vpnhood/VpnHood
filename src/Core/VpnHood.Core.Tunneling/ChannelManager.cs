@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
@@ -186,9 +187,9 @@ internal class ChannelManager : IDisposable
                 VhLogger.FormatType(channel), channel.ChannelId, channels.Count, channel.State);
         }
 
-        // clean up channel
+        // its graceful close, not waited for: a reusable connection goes back to its pool
         if (dispose)
-            channel.Dispose();
+            _ = channel.TryDisposeAsync();
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
@@ -292,13 +293,16 @@ internal class ChannelManager : IDisposable
 
         // remove all channels and dispose them
         lock (_channelListLock) {
-            // dispose proxy channels
-            foreach (var channel in _proxyChannels.ToArray())
-                RemoveChannelInternal(channel, dispose: true);
+            // their quick closes: the tunnel ends with them
+            foreach (var channel in _proxyChannels.ToArray()) {
+                RemoveChannelInternal(channel, dispose: false);
+                channel.Dispose();
+            }
 
-            // dispose packet channels
-            foreach (var channel in _packetChannels.ToArray())
-                RemoveChannelInternal(channel, dispose: true);
+            foreach (var channel in _packetChannels.ToArray()) {
+                RemoveChannelInternal(channel, dispose: false);
+                channel.Dispose();
+            }
 
             // dispose all disposing channels
             foreach (var channel in _disposingChannels) {

@@ -142,6 +142,7 @@ public class ProxyManager : PassthroughPacketTransport
             channel.Start();
         }
         catch {
+            // in practice an add fails only at the manager's end, which gives its channels the quick close too
             if (disposeOnFail)
                 channel.Dispose();
             throw;

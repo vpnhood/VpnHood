@@ -148,4 +148,11 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
         _receiveCryptor.Dispose();
         base.DisposeManaged();
     }
+
+    // nothing to wait for: it has no connection to hand back
+    public ValueTask DisposeAsync()
+    {
+        Dispose();
+        return ValueTask.CompletedTask;
+    }
 }

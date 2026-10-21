@@ -7,11 +7,14 @@ using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.Core.Common.Configuration;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.DatagramMessaging;
+using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.WebSockets;
 using VpnHood.Test.Packets;
 using VpnHood.Test.Providers;
@@ -600,10 +603,12 @@ public class TunnelTest : TestBase
         }
     }
 
-    // An owner closes its connection through the async dispose: the sync one may wait for the peer, as a QUIC
-    // stream's does, and a channel is disposed under the tunnel's lock and on its packet path
+    // A channel's graceful close, its normal end, closes its connection gracefully, so a reusable one goes back to its
+    // pool; its quick close closes it at once
     [TestMethod]
-    public async Task Packet_channel_closes_its_connection_through_its_async_dispose()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Packet_channel_closes_its_connection_with_the_same_close(bool graceful)
     {
         var connection = new CloseRecordingConnection();
         var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
@@ -615,25 +620,80 @@ public class TunnelTest : TestBase
             Lifespan = null
         });
 
-        channel.Dispose();
+        if (graceful)
+            await channel.DisposeAsync();
+        else
+            channel.Dispose();
 
-        await connection.AsyncClosed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
-        Assert.IsFalse(connection.SyncClosed);
+        Assert.AreEqual(graceful, connection.AsyncClosed.Task.IsCompleted);
+        Assert.AreEqual(!graceful, connection.SyncClosed);
     }
 
     [TestMethod]
-    public async Task Proxy_channel_closes_its_connections_through_their_async_dispose()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Proxy_channel_closes_its_connections_with_the_same_close(bool graceful)
     {
         var hostConnection = new CloseRecordingConnection();
         var tunnelConnection = new CloseRecordingConnection();
         var channel = new ProxyChannel("test", hostConnection, tunnelConnection, new TransferBufferSize(4096, 4096));
 
-        channel.Dispose();
+        if (graceful)
+            await channel.DisposeAsync();
+        else
+            channel.Dispose();
 
-        await Task.WhenAll(hostConnection.AsyncClosed.Task, tunnelConnection.AsyncClosed.Task)
-            .WaitAsync(TimeSpan.FromSeconds(5), TestCt);
-        Assert.IsFalse(hostConnection.SyncClosed);
-        Assert.IsFalse(tunnelConnection.SyncClosed);
+        Assert.AreEqual(graceful, hostConnection.AsyncClosed.Task.IsCompleted);
+        Assert.AreEqual(graceful, tunnelConnection.AsyncClosed.Task.IsCompleted);
+        Assert.AreEqual(!graceful, hostConnection.SyncClosed);
+        Assert.AreEqual(!graceful, tunnelConnection.SyncClosed);
+    }
+
+    // In practice a join fails only at its owner's end: the channel gets the quick close that end gives the others
+    [TestMethod]
+    public void A_join_after_the_tunnels_end_closes_the_channels_connection_at_once()
+    {
+        var connection = new CloseRecordingConnection();
+        var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
+            StreamConnection = connection,
+            ChannelId = "test",
+            RequestTime = DateTime.UtcNow,
+            AutoDisposePackets = true,
+            Blocking = false,
+            Lifespan = null
+        });
+        var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        tunnel.Dispose();
+
+        Assert.ThrowsExactly<ObjectDisposedException>(() => tunnel.AddChannel(channel, disposeIfFailed: true));
+        Assert.IsTrue(connection.SyncClosed);
+        Assert.IsFalse(connection.AsyncClosed.Task.IsCompleted);
+    }
+
+    [TestMethod]
+    public void A_join_after_the_proxy_managers_end_closes_the_channels_connections_at_once()
+    {
+        var hostConnection = new CloseRecordingConnection();
+        var tunnelConnection = new CloseRecordingConnection();
+        var channel = new ProxyChannel("test", hostConnection, tunnelConnection, new TransferBufferSize(4096, 4096));
+        var proxyManager = new ProxyManager(new BindingSocketFactory(new TestSocketFactory()), new ProxyManagerOptions {
+            IsPingSupported = false,
+            PacketProxyCallbacks = null,
+            UdpTimeout = TransportDefaults.UdpTimeout,
+            IcmpTimeout = TransportDefaults.IcmpTimeout,
+            MaxUdpClientCount = TransportDefaults.MaxUdpClientCount,
+            MaxPingClientCount = TransportDefaults.MaxPingClientCount,
+            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
+            UdpBufferSize = null,
+            LogScope = null
+        });
+        proxyManager.Dispose();
+
+        Assert.ThrowsExactly<ObjectDisposedException>(() => proxyManager.AddChannel(channel, disposeOnFail: true));
+        Assert.IsTrue(hostConnection.SyncClosed);
+        Assert.IsTrue(tunnelConnection.SyncClosed);
+        Assert.IsFalse(hostConnection.AsyncClosed.Task.IsCompleted);
+        Assert.IsFalse(tunnelConnection.AsyncClosed.Task.IsCompleted);
     }
 
     [TestMethod]

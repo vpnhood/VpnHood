@@ -61,6 +61,7 @@ public class Tunnel : PacketTransportBase
             _channelManager.AddChannel(channel);
         }
         catch when (disposeIfFailed) {
+            // in practice a join fails only at the tunnel's end, which gives its channels the quick close too
             channel.Dispose();
             throw;
         }

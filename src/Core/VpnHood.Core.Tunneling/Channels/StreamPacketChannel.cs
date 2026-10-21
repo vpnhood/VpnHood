@@ -27,6 +27,7 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
     private bool _started;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Job _checkLifetimeJob;
+    private readonly AsyncLock _disposeLock = new();
 
     protected override string Name { get; }
 
@@ -109,7 +110,8 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
                 ChannelId, VhLogger.FormatType(this));
         }
         finally {
-            Dispose();
+            // its end, by its peer or a failed read: the graceful close, not waited for
+            _ = this.TryDisposeAsync();
         }
     }
 
@@ -132,10 +134,11 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
             SendClose();
         }
 
-        // a closing channel goes after its grace, in which the packets already on their way arrive
+        // a closing channel goes after its grace, in which the packets already on their way arrive, with its graceful
+        // close, not waited for
         var closeTicks = Volatile.Read(ref _closeTicks);
         if (closeTicks != 0 && FastDateTime.UtcNow.Ticks - closeTicks > TransportDefaults.TcpGracefulTimeout.Ticks)
-            Dispose();
+            _ = this.TryDisposeAsync();
 
         return default;
     }
@@ -282,13 +285,28 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
     protected override void DisposeManaged()
     {
         _cancellationTokenSource.TryCancel();
-
-        // the connection's async close, not awaited: its sync one may wait for the peer, as a QUIC stream's does,
-        // and a channel is disposed under the tunnel's lock and on its packet path
-        _ = _streamConnection.TryDisposeAsync();
-
         _checkLifetimeJob.Dispose();
         _cancellationTokenSource.Dispose();
         base.DisposeManaged();
+    }
+
+    // the quick close: its connection closes at once too, with no reuse. One during a graceful close cuts that close's
+    // wait for the connection short
+    public override void Dispose()
+    {
+        base.Dispose();
+        _streamConnection.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // a second close waits for the first one's end
+        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        if (IsDisposed || IsDisposing)
+            return;
+
+        // the channel stops first, so nothing more is written to its connection, whose graceful close follows
+        base.Dispose();
+        await _streamConnection.TryDisposeAsync().Vhc();
     }
 }

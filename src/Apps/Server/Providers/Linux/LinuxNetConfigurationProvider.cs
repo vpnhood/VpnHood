@@ -27,6 +27,14 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
         if (await GetTcpCongestionControl().Vhc() == value)
             return;
 
+        // a container's kernel settings are its host's: its /proc/sys is read-only, and it has no modprobe
+        if (IsProcSysReadOnly()) {
+            logger.LogInformation(
+                "TcpCongestionControl is left to the host, as /proc/sys is read-only here (a container). Wanted: {value}",
+                value);
+            return;
+        }
+
         logger.LogInformation("Updating TcpCongestionControl to {value}...", value);
 
         // a module only for one the kernel lacks: reno is built in and has none
@@ -41,6 +49,17 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
         await ExecuteCommandAsync("sysctl -w net.core.default_qdisc=fq").Vhc();
         await ExecuteCommandAsync($"sysctl -w net.ipv4.tcp_congestion_control={value}").Vhc();
         // ReSharper restore StringLiteralTypo
+    }
+
+    // by the mount table, whose last /proc/sys mount is the one in effect; a mountinfo line holds the id, the
+    // parent's, major:minor, the root, the mount point and its options, then more
+    private static bool IsProcSysReadOnly()
+    {
+        return File.ReadLines("/proc/self/mountinfo")
+            .Select(line => line.Split(' '))
+            .Where(fields => fields.Length > 5 && fields[4] == "/proc/sys")
+            .Select(fields => fields[5].Split(',').Contains("ro"))
+            .LastOrDefault();
     }
 
     private static async Task<bool> IsTcpCongestionControlAvailable(string value)

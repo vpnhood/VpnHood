@@ -2,6 +2,7 @@ services:
   # One container and no updater beside it: the image updates itself (vhsupervisor.sh), as it must
   # where a service takes a single container and gives no docker.sock.
   vpnhoodserver:
+    # publish_docker.ps1 names the release's image here: a prerelease's own tag, a fork's own image
     image: vpnhood/vpnhoodserver
     container_name: VpnHoodServer
     network_mode: "host"

@@ -122,20 +122,38 @@ chmod 644 "$composeTempFile";
 mv -f "$composeTempFile" "$composeFile" || exit 1;
 
 
-# Write AppSettingss
+# The storage, root's alone, as a native install's: the settings carry the management secret, and the
+# server keeps its certificates and tokens beside them. Made before the container is, as Docker would
+# make the mount's folder open to all.
+storagePath="$destinationPath/storage";
+if ! mkdir -p "$storagePath" || ! chmod 700 "$storagePath"; then
+	echo "Could not make $storagePath";
+	exit 1;
+fi
+
+# A value as a JSON string: backslashes and quotes escaped, control characters dropped.
+function json_string() {
+	printf '"%s"' "$(printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr -d '[:cntrl:]')";
+}
+
+# Write AppSettings, through a new file that only root reads
 if [ "$httpBaseUrl" != "" ]; then
 	echo "creating the appsettings...";
 
 	appSettings="{
   \"HttpAccessManager\": {
-    \"BaseUrl\": \"$httpBaseUrl\",
-    \"Authorization\": \"$httpAuthorization\"
+    \"BaseUrl\": $(json_string "$httpBaseUrl"),
+    \"Authorization\": $(json_string "$httpAuthorization")
   },
-  \"ManagementSecret\": \"$managementSecret\"
+  \"ManagementSecret\": $(json_string "$managementSecret")
 }
 ";
-	mkdir -p $destinationPath/storage;
-	echo "$appSettings" > "$destinationPath/storage/appsettings.json";
+	if ! echo "$appSettings" > "$storagePath/appsettings.json.new" ||
+		! chmod 600 "$storagePath/appsettings.json.new" ||
+		! mv -f "$storagePath/appsettings.json.new" "$storagePath/appsettings.json"; then
+		echo "Could not write $storagePath/appsettings.json";
+		exit 1;
+	fi
 fi
 
 # Docker up, from the latest image. --remove-orphans removes what the compose file no longer names:

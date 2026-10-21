@@ -6,12 +6,14 @@
 # install runs with -container, as vhupdate runs it here later: no units (no systemd here), the
 # server's libraries brought current, and no storage folder - the server or a mount makes it. A
 # build cache imported from an earlier build would keep that step's libraries old: CI imports none.
+# MsQuic must go in: an image without it would serve no QUIC, and nothing would say so. The install
+# script's own MsQuic step finds no release yet, and warns.
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
 ARG TARGETARCH
 RUN --mount=type=bind,target=/context \
 	apt-get update \
 	&& apt-get install -y --no-install-recommends wget \
-	&& (bash /context/install-msquic.sh || true) \
+	&& bash /context/install-msquic.sh \
 	&& bash /context/${TARGETARCH}/install.sh -q -container -destination /app -packageFile /context/${TARGETARCH}/package.tar.gz \
 	&& install -m 755 /context/vhsupervisor.sh /app/vhsupervisor \
 	&& rm -rf /var/lib/apt/lists/*

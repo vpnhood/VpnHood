@@ -2,6 +2,10 @@
 
 * Update: UDP has a new protocol; VpnHoodServer offers it to clients that have it, and older clients keep the old one for now.
 * Improve: VpnHoodServer stops with one line and exit code 1 when its settings cannot be read - appsettings.json, naming the file and where its JSON breaks, or VH_APPSETTINGS - rather than crashing with a stack trace and dumping core at each restart.
+* Fix: VpnHoodServer finishes a stop within 30 seconds, so a slow stop is no longer killed by systemd or Docker before it removes the server's network adapter and NAT rules.
+* Fix: The Docker install script makes the server's storage folder, with its settings, certificates and tokens, readable by root alone, as a native install does; it was open to every account on the host. A quote or a backslash in a value given to it no longer breaks the settings file.
+* Fix: A prerelease's Docker install script installs that prerelease's image; it used to install the latest stable one.
+* Improve: In Docker, VpnHoodServer leaves the TCP congestion control to the host and says so, rather than warning at each start that it could not set it.
 
 # v9.0.856
 

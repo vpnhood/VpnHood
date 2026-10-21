@@ -53,13 +53,22 @@ $linuxScript = (Get-Content -Path "$template_installerFile" -Raw).Replace('$comp
 $linuxScript = $linuxScript -replace "`r`n", "`n";
 $linuxScript | Out-File -FilePath "$module_installerFile" -Encoding ASCII -Force -NoNewline;
 
-# copy compose file
-Copy-Item -path "$template_yamlFile" -Destination "$module_yamlFile" -Force;
+# The image: in CI the workflow's (DOCKER_IMAGE, a fork's own), locally ours
+$serverDockerImage = if ($env:DOCKER_IMAGE) { $env:DOCKER_IMAGE } else { "vpnhood/vpnhoodserver" };
+
+# The compose file names the image this release pushes: a prerelease its own tag, as only a stable
+# release is :latest
+$composeImage = if ($isLatest) { $serverDockerImage } else { "${serverDockerImage}:$versionTag" };
+$composeTemplate = Get-Content -Path "$template_yamlFile" -Raw;
+$composeText = $composeTemplate.Replace("`r`n", "`n").Replace("image: vpnhood/vpnhoodserver`n", "image: $composeImage`n");
+if ($composeText -notmatch "(?m)^\s+image: $([regex]::Escape($composeImage))$") {
+	Throw "The compose template ($template_yamlFile) names no 'image: vpnhood/vpnhoodserver' line to set.";
+}
+[IO.File]::WriteAllText($module_yamlFile, $composeText);
 
 # The image's build context, not the source (see the Dockerfile): the release's Linux packages and
 # install scripts, one folder per Docker architecture, beside the two scripts the Dockerfile runs.
 # The packages come first: pub/Server/Publish.ps1 locally, the workflow's build job in CI.
-$serverDockerImage = "vpnhood/vpnhoodserver";
 $contextDir = "$packagesRootDir/$packageServerDirName/docker-context";
 Remove-Item -Path $contextDir -Recurse -Force -ErrorAction Ignore;
 foreach ($arch in @("amd64", "arm64")) {

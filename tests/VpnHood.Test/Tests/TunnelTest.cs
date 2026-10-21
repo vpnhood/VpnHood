@@ -1,10 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
-using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Common.Configuration;
@@ -46,7 +44,7 @@ public class TunnelTest : TestBase
             serverChannel.SendPacketQueued(ipPacket.Clone());
         };
 
-        using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey);
+        await using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey);
         var clientReceivedPackets = new List<IpPacket>();
         clientChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
@@ -82,12 +80,12 @@ public class TunnelTest : TestBase
         closingChannel.Dispose();
 
         // a late datagram for that session meets the disposed keys inside the shared read loop
-        using var closingClientChannel =
+        await using var closingClientChannel =
             UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, closingSessionId, sessionKey);
         closingClientChannel.SendPacketQueued(CreateRandomPacket());
 
         // the other session must keep flowing over the very same listener
-        using var livingClientChannel =
+        await using var livingClientChannel =
             UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, livingSessionId, sessionKey);
         livingClientChannel.SendPacketQueued(CreateRandomPacket());
 
@@ -111,7 +109,7 @@ public class TunnelTest : TestBase
             serverReceivedPackets.Add(ipPacket);
         };
 
-        using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey);
+        await using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey);
         var clientReceivedPackets = new List<IpPacket>();
         clientChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
@@ -153,7 +151,7 @@ public class TunnelTest : TestBase
         using var otherListener = new TestUdpListener();
         otherListener.AddForeignSession(serverChannel);
 
-        using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey);
+        await using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey);
         var clientReceivedPackets = new List<IpPacket>();
         clientChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
@@ -191,7 +189,7 @@ public class TunnelTest : TestBase
             serverReceivedPackets.Add(ipPacket);
         };
 
-        using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey);
+        await using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey);
         var clientReceivedPackets = new List<IpPacket>();
         clientChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
@@ -227,7 +225,7 @@ public class TunnelTest : TestBase
             serverReceivedPackets.Add(ipPacket);
         };
 
-        using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
+        await using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
             firstSendSequenceNumber: 1000);
         var clientReceivedPackets = new List<IpPacket>();
         clientChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
@@ -240,7 +238,7 @@ public class TunnelTest : TestBase
         Assert.IsNotNull(route);
 
         // the session's datagram with an older seq, never sent before, from another socket
-        using var replayChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
+        await using var replayChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
             firstSendSequenceNumber: 500);
         replayChannel.SendPacketQueued(CreateRandomPacket());
 
@@ -267,7 +265,7 @@ public class TunnelTest : TestBase
         };
 
         using var relay = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        using var clientChannel = UdpTestUtil.CreateClientChannel(relay.Client.GetLocalEndPoint(), sessionId,
+        await using var clientChannel = UdpTestUtil.CreateClientChannel(relay.Client.GetLocalEndPoint(), sessionId,
             sessionKey);
         await relay.ReceiveAsync(TestCt); // the socket's announcement, which carries no packet
         var clientReceivedPackets = new List<IpPacket>();
@@ -309,7 +307,7 @@ public class TunnelTest : TestBase
             serverReceivedPackets.Add(ipPacket);
         };
 
-        using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
+        await using var clientChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
             firstSendSequenceNumber: 1000);
         clientChannel.SendPacketQueued(CreateRandomPacket());
         await VhTestUtil.AssertEqualsWait(1, () => serverReceivedPackets.Count, cancellationToken: TestCt);
@@ -319,14 +317,14 @@ public class TunnelTest : TestBase
         // the request's seq is past a datagram the client sent and the server has not seen yet: 1999, after the late
         // socket's announcement
         serverChannel.ExpireBefore(2000);
-        using var lateChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
+        await using var lateChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
             firstSendSequenceNumber: 1998);
         lateChannel.SendPacketQueued(CreateRandomPacket());
         await VhTestUtil.AssertEqualsWait(2, () => serverReceivedPackets.Count, cancellationToken: TestCt);
         Assert.AreSame(route, serverChannel.Route);
 
         // the client's datagram with the request's seq, as when it turns back to UDP
-        using var nextChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
+        await using var nextChannel = UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey,
             firstSendSequenceNumber: 2000);
         nextChannel.SendPacketQueued(CreateRandomPacket());
         await VhTestUtil.AssertEqualsWait(3, () => serverReceivedPackets.Count, cancellationToken: TestCt);
@@ -351,7 +349,7 @@ public class TunnelTest : TestBase
         // the client's side is a raw socket, so the server's datagram is caught as sent: a genuine client datagram,
         // with the lowest seq, goes through it first
         using var clientSocket = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        using var sealer = UdpTestUtil.CreateClientChannel(clientSocket.Client.GetLocalEndPoint(), sessionId,
+        await using var sealer = UdpTestUtil.CreateClientChannel(clientSocket.Client.GetLocalEndPoint(), sessionId,
             sessionKey, firstSendSequenceNumber: 1);
         await clientSocket.ReceiveAsync(TestCt); // the sealer's announcement, which carries no packet
         sealer.SendPacketQueued(CreateRandomPacket());
@@ -410,9 +408,8 @@ public class TunnelTest : TestBase
         var sessionKey = VhUtils.GenerateKey();
 
         using var listener = new TestUdpListener();
-        using var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions(listener.AddSession(sessionId, sessionKey))) {
-            UseUdp = true
-        };
+        using var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions(listener.AddSession(sessionId, sessionKey)));
+        serverTunnel.UseUdp = true;
         var serverReceivedPackets = new List<IpPacket>();
         serverTunnel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             serverReceivedPackets.Add(ipPacket);
@@ -421,9 +418,8 @@ public class TunnelTest : TestBase
         };
 
         using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions(
-            UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey))) {
-            UseUdp = true
-        };
+            UdpTestUtil.CreateClientChannel(listener.LocalEndPoint, sessionId, sessionKey)));
+        clientTunnel.UseUdp = true;
         var clientReceivedPackets = new List<IpPacket>();
         clientTunnel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
@@ -441,6 +437,7 @@ public class TunnelTest : TestBase
     public void Udp_needs_a_udp_channel()
     {
         using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        // ReSharper disable once AccessToDisposedClosure
         Assert.ThrowsExactly<InvalidOperationException>(() => tunnel.UseUdp = true);
         Assert.IsFalse(tunnel.UseUdp);
     }
@@ -454,6 +451,7 @@ public class TunnelTest : TestBase
         var udpChannel = listener.AddSession(1UL, VhUtils.GenerateKey());
         using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions(udpChannel));
 
+        // ReSharper disable once AccessToDisposedClosure
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => tunnel.AddChannel(udpChannel));
         Assert.AreEqual(0, tunnel.PacketChannelCount);
     }
@@ -561,6 +559,7 @@ public class TunnelTest : TestBase
             new ReusableStreamConnection(tcpConnection, webSocketStream, reused => reused.Dispose()));
 
         connection.PreventReuse();
+        // ReSharper disable once MethodHasAsyncOverload
         connection.Dispose();
 
         // the socket closes at once: the client, which sends nothing more, reads to its end, where a release would
@@ -600,8 +599,8 @@ public class TunnelTest : TestBase
             .WaitAsync(TimeSpan.FromSeconds(5), TestCt);
 
         // the transport carries the next one, closed at the end of the test
-        using var serverNext = await serverReused.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
-        using var clientNext = await clientReused.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        await using var serverNext = await serverReused.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        await using var clientNext = await clientReused.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
         serverNext.PreventReuse();
         clientNext.PreventReuse();
         await clientNext.Stream.WriteAsync(new byte[] { 2 }, TestCt);
@@ -649,10 +648,13 @@ public class TunnelTest : TestBase
             Lifespan = null
         });
 
-        if (graceful)
+        if (graceful) {
             await channel.DisposeAsync();
-        else
+        }
+        else {
+            // ReSharper disable once MethodHasAsyncOverload
             channel.Dispose();
+        }
 
         Assert.AreEqual(graceful, connection.AsyncClosed.Task.IsCompleted);
         Assert.AreEqual(!graceful, connection.SyncClosed);
@@ -667,10 +669,13 @@ public class TunnelTest : TestBase
         var tunnelConnection = new CloseRecordingConnection();
         var channel = new ProxyChannel("test", hostConnection, tunnelConnection, new TransferBufferSize(4096, 4096));
 
-        if (graceful)
+        if (graceful) {
             await channel.DisposeAsync();
-        else
+        }
+        else {
+            // ReSharper disable once MethodHasAsyncOverload
             channel.Dispose();
+        }
 
         Assert.AreEqual(graceful, hostConnection.AsyncClosed.Task.IsCompleted);
         Assert.AreEqual(graceful, tunnelConnection.AsyncClosed.Task.IsCompleted);
@@ -753,6 +758,7 @@ public class TunnelTest : TestBase
 
         // the release waits for the peer to end the logical stream too, which it does not do here
         var release = clientConnection.DisposeAsync().AsTask();
+        // ReSharper disable once MethodHasAsyncOverload
         clientConnection.Dispose();
 
         await release.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
@@ -922,7 +928,8 @@ public class TunnelTest : TestBase
     {
         // a server's tunnel with all its channels, its last ones disposed but still listed, as a channel whose peer
         // ended it is until the next cleanup
-        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions()) { MaxPacketChannelCount = maxChannelCount };
+        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        tunnel.MaxPacketChannelCount = maxChannelCount;
         var channels = Enumerable.Range(0, maxChannelCount).Select(_ => new TestPacketChannel()).ToArray();
         foreach (var channel in channels)
             tunnel.AddChannel(channel);
@@ -943,7 +950,8 @@ public class TunnelTest : TestBase
     {
         // a peer closes the tunnel's channels one after another: three, then four more a second later, as the
         // channels' clock reads to the second
-        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions()) { MaxPacketChannelCount = 2 };
+        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        tunnel.MaxPacketChannelCount = 2;
         var olderChannels = AddAndClose(3);
         await Task.Delay(TimeSpan.FromSeconds(1.1), TestCt);
         var newerChannels = AddAndClose(4);

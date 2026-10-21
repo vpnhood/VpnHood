@@ -18,9 +18,9 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
 5. Migration code is marked `[Obsolete("Migration (YYYY-MM): drop a few months after it ships, with
    <what goes with it>")]`, so each call is marked too, by its `#pragma warning disable CS0618`. A
    migration method's name says so (`MigrateInstallId`) unless its class's does (`AppStorageMigration`).
-   Compatibility code, what stays only so older callers keep working - an old option, an old name -
-   carries a dated remark: `Compatibility (YYYY-MM): <who still calls it>; drop <when>`, so it can be
-   found and removed.
+   Compatibility code, what stays only so older callers keep working - an old option, an old name, an
+   old protocol - carries a dated remark, never a `todo:`, which would list it among the todos:
+   `Compatibility (YYYY-MM): <who still calls it>; drop <when>`, so it can be found and removed.
 6. What only one head needs stays in that head, as a tiny helper, not as wiring across AppLib.
 7. Native and OS helpers take names as parameters, never brand constants; a default is brand-neutral,
    and our products override it (`VhAppCommandName`).

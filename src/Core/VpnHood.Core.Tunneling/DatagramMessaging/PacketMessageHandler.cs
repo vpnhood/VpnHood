@@ -36,7 +36,9 @@ public static class PacketMessageHandler
     public static bool IsPacketMessage(IpPacket ipPacket)
     {
         return ipPacket.Protocol == IpProtocol.Udp && (
-            IPAddress.None.SpanEquals(ipPacket.DestinationAddressSpan) || // todo: deprecated in 7.2.728
+            // Compatibility (2025-07): a client before 7.2.728 sends its packet messages to 255.255.255.255; drop
+            // once MinClientProtocolVersion is 10, as such a client speaks 9 at most
+            IPAddress.None.SpanEquals(ipPacket.DestinationAddressSpan) ||
             IPAddress.Any.SpanEquals(ipPacket.DestinationAddressSpan));
     }
 

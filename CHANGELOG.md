@@ -1,5 +1,7 @@
 # Latest
 
+* Feature: Always On comes to Windows and Linux: switch it on in Settings, or with the `always-on on` command on a computer with no desktop, and the VPN connects as the computer starts, before anyone signs in. While the server is out of reach it tries again, waiting longer each time. It stops when you disconnect, when another VPN app takes over, or when the server refuses the connection, and the app says why. On VpnHood! CONNECT it needs premium #windows #linux
+* Update: On Windows and Linux, one VPN app made with VpnHood is connected at a time: connecting another - VpnHood! CLIENT and VpnHood! CONNECT, say - disconnects the first, which says another VPN app took over and stays off, even with Always On, until you connect it again #windows #linux
 * Feature: In the EEA, the UK and Switzerland, the app asks in Google's own form before its ads use your data, and Settings > Privacy > Ad privacy choices changes your answer; with a no you still see ads, but not personalised ones #android #connect #store
 * Feature: In the EEA, the UK and Switzerland, usage data stays off until you agree: the first-run page asks once, with a box you tick yourself, on Google Play and after this update too #android #windows #linux
 * Improve: On the picture pages - a feature's page, Go Premium and the premium offers - the back button stays at the top as you scroll, and the page's title appears there once its large title has scrolled away; on every page, what scrolls up to the top fades out softly instead of being cut along a line #android #ios #windows #linux

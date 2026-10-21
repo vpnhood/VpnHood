@@ -6,6 +6,7 @@
 * Fix: The Docker install script makes the server's storage folder, with its settings, certificates and tokens, readable by root alone, as a native install does; it was open to every account on the host. A quote or a backslash in a value given to it no longer breaks the settings file.
 * Fix: A prerelease's Docker install script installs that prerelease's image; it used to install the latest stable one.
 * Improve: In Docker, VpnHoodServer leaves the TCP congestion control to the host and says so, rather than warning at each start that it could not set it.
+* Improve: A self-hosted VpnHoodServer no longer warns at each start that its local settings overwrote its remote configuration; the settings file it ships held only defaults there.
 
 # v9.0.856
 

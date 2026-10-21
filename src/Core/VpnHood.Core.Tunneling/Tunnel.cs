@@ -29,7 +29,8 @@ public class Tunnel : PacketTransportBase
     public int Mtu { get; set; }
 
     // UDP on sends every packet on the UDP channel; the stream channels stay, and take the packets again once it is
-    // off. Only a tunnel with a UDP channel can turn it on
+    // off. Only a tunnel with a UDP channel can turn it on. A server's stream channel whose close was lost stays until
+    // the session ends, as the server has no timeout for an established one: left so
     public bool UseUdp {
         get => _useUdp;
         set {

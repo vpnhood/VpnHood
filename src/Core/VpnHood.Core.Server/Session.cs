@@ -151,6 +151,8 @@ public class Session : IDisposable
                 received: (long)(TransportDefaults.MaxSpeedBurst * ReceiveSpeedGrace))
         };
 
+        // Compatibility (2026-10): a session below protocol 14 gets no UDP; drop once MinClientProtocolVersion is 14
+        // and the sessions from before it have ended, as a recovered session keeps its protocol
         UdpChannel = ProtocolVersion >= UdpDatagram.MinProtocolVersion
             ? new ServerUdpPacketChannel(SessionId, SessionKey, TrafficMeter)
             : null;

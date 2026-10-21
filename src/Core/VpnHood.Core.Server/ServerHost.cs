@@ -498,6 +498,7 @@ public class ServerHost : IAsyncDisposable
             SessionId = sessionResponseEx.SessionId,
             SessionKey = sessionResponseEx.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
+            // Compatibility (2026-10): a client below protocol 14 gets no UDP; drop once MinClientProtocolVersion is 14
             UdpPort = protocolVersion >= UdpDatagram.MinProtocolVersion ? udpPort : null,
             QuicPort = quicPort,
             GaMeasurementId = sessionResponseEx.GaMeasurementId,

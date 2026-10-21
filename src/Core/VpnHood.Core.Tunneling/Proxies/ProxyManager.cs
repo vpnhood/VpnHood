@@ -133,12 +133,12 @@ public class ProxyManager : PassthroughPacketTransport
     public void AddChannel(ProxyChannel channel, bool disposeOnFail)
     {
         try {
-            ObjectDisposedException.ThrowIf(IsDisposed, this);
-            if (IsDisposed)
-                throw new ObjectDisposedException(nameof(ProxyManager));
-
-            lock (_streamProxyChannels)
+            // under the lock of the close's sweep: the channel joins before the sweep, which closes it, or is refused
+            lock (_streamProxyChannels) {
+                ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
                 _streamProxyChannels.Add(channel);
+            }
+
             channel.Start();
         }
         catch {

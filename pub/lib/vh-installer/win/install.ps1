@@ -15,24 +15,12 @@ $packageFile = "";
 $autostart = "";
 $autoupdate = "";
 
-# Read arguments. Every option an earlier release took still works, as the updaters of installed
-# servers run this script with theirs.
+# Read arguments. The updater of an installed server runs this script too, with -q.
 for ($i = 0; $i -lt $args.length; $i++) {
 	$arg = $args[$i];
 
-	# Compatibility (2026-10): the default now; the updaters before this release and the access
-	# server's install commands pass it. Drop once the access server no longer writes it, a few months
-	# after this ships.
-	if ($arg -eq "-autostart") {
-		$autostart = "y";
-		$lastArg = ""; continue;
-	}
-	elseif ($arg -eq "-noautostart") {
+	if ($arg -eq "-noautostart") {
 		$autostart = "n";
-		$lastArg = ""; continue;
-	}
-	elseif ($arg -eq "-autoupdate") {
-		$autoupdate = "y";
 		$lastArg = ""; continue;
 	}
 	elseif ($arg -eq "-noautoupdate") {
@@ -55,17 +43,15 @@ for ($i = 0; $i -lt $args.length; $i++) {
 		return;
 	}
 
-	# Compatibility (2026-10): -restBaseUrl, -restAuthorization and -secret, the 2023 names of these
-	# three; drop a few months after this ships.
-	elseif ($lastArg -in @("-httpBaseUrl", "-restBaseUrl")) {
+	elseif ($lastArg -eq "-httpBaseUrl") {
 		$httpBaseUrl = $arg;
 		$lastArg = ""; continue;
 	}
-	elseif ($lastArg -in @("-httpAuthorization", "-restAuthorization")) {
+	elseif ($lastArg -eq "-httpAuthorization") {
 		$httpAuthorization = $arg;
 		$lastArg = ""; continue;
 	}
-	elseif ($lastArg -in @("-managementSecret", "-secret")) {
+	elseif ($lastArg -eq "-managementSecret") {
 		$managementSecret = $arg;
 		$lastArg = ""; continue;
 	}

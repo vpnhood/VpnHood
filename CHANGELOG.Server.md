@@ -1,5 +1,9 @@
 # Latest
 
+* Update: The install scripts no longer take -autostart and -autoupdate, the default since v9.0.856, nor -restBaseUrl, -restAuthorization and -secret, the 2023 names of -httpBaseUrl, -httpAuthorization and -managementSecret. A server still on a release before v9.0.856 no longer updates itself; run its install command again.
+
+# v9.0.859
+
 * Update: UDP has a new protocol; VpnHoodServer offers it to clients that have it, and older clients keep the old one for now.
 * Update: A self-hosted VpnHoodServer now serves UDP by default, on the addresses it listens on for TCP and on a port it picks at its first start and keeps; its log names that port at each start. Allow the port for UDP in the server's firewall and the hosting provider's, as an app set to UDP gets no traffic through a blocked port, or turn UDP off with `"UdpEndPoints": []`.
 * Improve: VpnHoodServer stops with one line and exit code 1 when its settings cannot be read - appsettings.json, naming the file and where its JSON breaks, or VH_APPSETTINGS - rather than crashing with a stack trace and dumping core at each restart.

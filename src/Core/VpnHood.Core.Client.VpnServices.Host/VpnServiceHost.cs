@@ -32,12 +32,6 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
     private bool _disposed;
     private bool _disconnectRequested;
 
-    // Reconfigures, one at a time, as the app sends them. The latest that came before the session was up is
-    // kept, and the connect applies it once it is. Each carries every live setting, so the latest is all
-    // there is to keep - but for the proxies' reset, which the app sends once: a newer one drops it.
-    private readonly AsyncLock _reconfigureLock = new();
-    private ClientReconfigureParams? _missedReconfigureParams;
-
     internal VpnHoodClient? Client { get; private set; }
 
     internal VpnHoodClient RequiredClient =>
@@ -56,6 +50,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
     }
 
     internal VpnServiceContext Context { get; }
+    internal ClientReconfigurer Reconfigurer { get; }
     public static ConnectionInfo DefaultConnectionInfo => ConnectionInfo.Default;
 
     // configFolder and dataFolder: IDevice's VpnServiceConfigFolder and VpnServiceDataFolder.
@@ -84,6 +79,9 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         // logger. The process's other sinks are its head's.
         _logService = withLogger ? new LogService(Context.LogFilePath) : null;
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
+
+        // before the apiController, which may hand it a request at once
+        Reconfigurer = new ClientReconfigurer(this);
 
         // start apiController; the transport (IMessageListener) owns endpoint/key concerns
         _apiController = new ApiController(this, messageListener);
@@ -182,8 +180,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         try {
             // read the client options, and start the log with them: the file holds this session, and a
             // reconfigure kept from before, as the app writes each there before it sends it
-            using (await _reconfigureLock.LockAsync(cancellationToken).Vhc())
-                _missedReconfigureParams = null;
+            await Reconfigurer.Reset(cancellationToken).Vhc();
 
             var serviceOptions = Context.ServiceOptionsFile.Read();
             var clientOptions = serviceOptions.ClientOptions;
@@ -275,7 +272,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             await client.Connect(cancellationToken).Vhc();
 
             // a reconfigure that came while the session was not up
-            await ApplyMissedReconfigure(client).Vhc();
+            await Reconfigurer.ApplyMissed(client).Vhc();
         }
         catch (Exception ex) when (Client is null) {
             // no client, so no adapter is up: the tunnel goes back
@@ -388,58 +385,6 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not disconnect the client.");
         }
-    }
-
-    // A reconfigure's settings, onto the session at once. One that comes before the session is up is kept
-    // for the connect, which applies it once it is.
-    internal async Task Reconfigure(ClientReconfigureParams reconfigureParams)
-    {
-        using var scope = await _reconfigureLock.LockAsync(CancellationToken.None).Vhc();
-        var client = Client;
-        if (client?.Session == null) {
-            // the usage-data switch at once where there is a client: it tracks while it connects
-            client?.Tracker?.IsEnabled = reconfigureParams.AllowAnonymousTracker;
-            _missedReconfigureParams = reconfigureParams;
-            return;
-        }
-
-        // this one is newer than a kept one
-        _missedReconfigureParams = null;
-        await ReconfigureClient(client, reconfigureParams).Vhc();
-    }
-
-    // The kept one, onto the session of the connect that made this client; not once another connect has
-    // replaced it, as one kept since is that connect's.
-    private async Task ApplyMissedReconfigure(VpnHoodClient client)
-    {
-        using var scope = await _reconfigureLock.LockAsync(CancellationToken.None).Vhc();
-        if (Client != client || _missedReconfigureParams is not { } missedReconfigureParams)
-            return;
-
-        _missedReconfigureParams = null;
-        await VhInvoker.TryInvokeAsync("apply a reconfigure that came before the session", LogLevel.Warning,
-            () => ReconfigureClient(client, missedReconfigureParams)).Vhc();
-    }
-
-    private static async Task ReconfigureClient(VpnHoodClient client, ClientReconfigureParams reconfigureParams)
-    {
-        client.UseTcpProxy = reconfigureParams.UseTcpProxy;
-        client.DropUdp = reconfigureParams.DropUdp;
-        client.DropQuic = reconfigureParams.DropQuic;
-        client.ChannelProtocol = reconfigureParams.ChannelProtocol;
-        client.UnroutedIpMode = reconfigureParams.UnroutedIpMode;
-        client.UnsupportedIpV6Mode = reconfigureParams.UnsupportedIpV6Mode;
-
-        // the usage-data switch, at once: the session's tracker was made with the one at the connect
-        if (client.Tracker != null)
-            client.Tracker.IsEnabled = reconfigureParams.AllowAnonymousTracker;
-
-        // live-swap the split filter gates to the current folder manifests (rewritten by the app before
-        // this request); no-op when the db paths did not change
-        client.NetFilter.Reconfigure();
-
-        if (client.ProxyConnector != null)
-            await client.ProxyConnector.UpdateOptions(reconfigureParams.ProxyOptions).Vhc();
     }
 
     // Another app took the machine's one tunnel, which goes to it once this returns. The adapter goes now,

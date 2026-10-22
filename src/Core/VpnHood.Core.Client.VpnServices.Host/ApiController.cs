@@ -140,7 +140,7 @@ internal class ApiController : IDisposable
     private Task Reconfigure(ApiReconfigureRequest request, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        return _vpnHoodService.Reconfigure(request.Params);
+        return _vpnHoodService.Reconfigurer.Reconfigure(request.Params);
     }
 
     private Task SetWaitForAd(ApiSetWaitForAdRequest request, CancellationToken cancellationToken)

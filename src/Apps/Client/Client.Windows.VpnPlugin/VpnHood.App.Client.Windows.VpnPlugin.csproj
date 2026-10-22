@@ -13,6 +13,10 @@
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 		<SelfContained>true</SelfContained>
 		<CsWinRTWindowsMetadata>C:\Windows\System32\WinMetadata</CsWinRTWindowsMetadata>
+		<!-- WinRT.Host.dll loads the component into the default context, beside the copy Main runs: in a context of
+		     its own it brings a second Windows projection, and the task fails on the first Windows object it is
+		     handed (MissingMethodException, IWinRTObject.QueryInterfaceCache). -->
+		<CsWinRTLoadComponentsInDefaultALC>true</CsWinRTLoadComponentsInDefaultALC>
 	</PropertyGroup>
 
 	<ItemGroup>

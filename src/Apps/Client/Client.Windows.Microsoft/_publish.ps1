@@ -49,15 +49,17 @@ New-Item -ItemType Directory -Path (Join-Path $stageDir "Assets") -Force | Out-N
 
 # The component's metadata is the one file of it its consumers do not get: removed first, so the
 # build below writes it again and the package never carries an older one.
-Get-ChildItem -Path (Join-Path $componentDir "bin/$configuration") -Recurse -Filter "$componentName.winmd" -ErrorAction Ignore |
+$componentOutput = Join-Path $componentDir "bin/x64/$configuration";
+Get-ChildItem -Path $componentOutput -Recurse -Filter "$componentName.winmd" -ErrorAction Ignore |
 	Remove-Item -Force;
 
 dotnet publish $appProject -c $configuration -o $appDir;
 if ($LASTEXITCODE -ne 0) { throw "The app's publish failed with exit code $LASTEXITCODE." }
-dotnet publish $vpnHostProject -c $configuration -o $vpnHostDir;
+# x64, or CsWinRT gives the component its x86 WinRT.Host.dll, which Windows refuses in this package (0x80073CFC).
+dotnet publish $vpnHostProject -c $configuration -p:Platform=x64 -o $vpnHostDir;
 if ($LASTEXITCODE -ne 0) { throw "The VPN host's publish failed with exit code $LASTEXITCODE." }
 
-$winmd = @(Get-ChildItem -Path (Join-Path $componentDir "bin/$configuration") -Recurse -Filter "$componentName.winmd");
+$winmd = @(Get-ChildItem -Path $componentOutput -Recurse -Filter "$componentName.winmd");
 if ($winmd.Count -ne 1) { throw "Expected one $componentName.winmd after the build, found $($winmd.Count)." }
 
 # the app first, then the VPN host, whose WinRT.Host.runtimeconfig.json is the component's own
@@ -69,6 +71,17 @@ Copy-Item -LiteralPath $winmd[0].FullName -Destination $stageDir -Force;
 $runtimeConfig = Get-Content -Raw (Join-Path $stageDir "WinRT.Host.runtimeconfig.json") | ConvertFrom-Json;
 if (-not $runtimeConfig.runtimeOptions -or -not $runtimeConfig.activatableClasses) {
 	throw "The staged WinRT.Host.runtimeconfig.json lacks the runtime options or the activatable classes.";
+}
+
+# The two causes of a VPN host that never activates: an x86 WinRT.Host.dll, and the component loaded a second time
+# beside the one the host's Main runs (the VPN host's CsWinRTLoadComponentsInDefaultALC).
+$winrtHost = [IO.File]::ReadAllBytes((Join-Path $stageDir "WinRT.Host.dll"));
+if ([BitConverter]::ToUInt16($winrtHost, [BitConverter]::ToInt32($winrtHost, 60) + 4) -ne 0x8664) {
+	throw "The staged WinRT.Host.dll is not the x64 one.";
+}
+$vpnHostConfig = Get-Content -Raw (Join-Path $stageDir "$($vpnHost.AssemblyName).runtimeconfig.json") | ConvertFrom-Json;
+if ($vpnHostConfig.runtimeOptions.configProperties.CSWINRT_LOAD_COMPONENTS_IN_DEFAULT_ALC -ne $true) {
+	throw "The staged VPN host's runtimeconfig does not load components into the default context.";
 }
 
 # A valid minimal PNG: the package's pictures are phase 2's.

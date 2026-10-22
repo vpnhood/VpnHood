@@ -1,4 +1,4 @@
-# Latest
+# v9.0.859
 
 * Update: UDP has a new protocol; VpnHoodServer offers it to clients that have it, and older clients keep the old one for now.
 * Update: A self-hosted VpnHoodServer now serves UDP by default, on the addresses it listens on for TCP and on a port it picks at its first start and keeps; its log names that port at each start. Allow the port for UDP in the server's firewall and the hosting provider's, as an app set to UDP gets no traffic through a blocked port, or turn UDP off with `"UdpEndPoints": []`.

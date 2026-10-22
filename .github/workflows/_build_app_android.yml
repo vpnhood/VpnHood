@@ -77,6 +77,12 @@ jobs:
       # imports; fastlane/, the other submodule, stays out.
       - name: Check out the asset submodule
         run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
+      # Connect's Google head packs its internal ad's film from the brand repo (the caller), beside
+      # code/ as $(VhDir)/Vpnhood.App.Connect/promotions; without it the head shows the still page.
+      - name: Check out the promotions (connect)
+        if: inputs.app == 'connect' && matrix.id == 'google-aab'
+        uses: actions/checkout@v7
+        with: { path: Vpnhood.App.Connect, sparse-checkout: promotions }
       - uses: actions/setup-dotnet@v6
         with: { global-json-file: code/global.json }
       - uses: actions/setup-java@v6

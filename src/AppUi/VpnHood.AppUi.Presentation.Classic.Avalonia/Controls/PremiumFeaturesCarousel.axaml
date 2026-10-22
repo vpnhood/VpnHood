@@ -3,8 +3,9 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.PremiumFeaturesCarousel">
   <!-- The web UI's PremiumFeaturesCarousel: one premium feature at a time - its picture, name and
-       line - with the arrows either side and a dot per slide beneath. Its 380 is the web UI's design
-       height: the picture takes what the words leave; the words keep their size. -->
+       line - with the arrows either side and a dot per slide beneath. Its height is the page's to set
+       (PurchaseSubscriptionView: the web UI's 380, less on a short phone): the picture takes what
+       the words leave; the words keep their size. -->
   <UserControl.Styles>
     <!-- the web UI's delimiters: a dot in a round button, the current one on a tonal circle -->
     <Style Selector="Border.dot">
@@ -27,7 +28,7 @@
       <Setter Property="Opacity" Value="1" />
     </Style>
   </UserControl.Styles>
-  <Grid RowDefinitions="*,50" Height="380" MaxWidth="560">
+  <Grid RowDefinitions="*,50" MaxWidth="560">
     <!-- the web UI's v-window-x-transition: the two slides move together, 0.3s on Vuetify's curve,
          across the carousel's whole width - the arrows lie over them, as the web UI's do -->
     <TransitioningContentControl x:Name="SlideHost" ClipToBounds="True">

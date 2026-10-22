@@ -8,13 +8,15 @@
        it - the store's plans, or the reason the store cannot be reached; the website, where a link
        can reach the person; a code; and the way back to a premium already owned. From 800 logical
        px - every TV, a wide window - the ways stand beside the carousel, so a TV shows the plans
-       without scrolling; narrower, they follow it. -->
+       without scrolling; narrower, they follow it, and on a phone too short for the whole page (an
+       iPhone 15) the carousel gives up 60 px, so Purchase and the way back are on screen. -->
   <UserControl.Styles>
     <Style Selector="Grid.paywall">
       <Setter Property="MaxWidth" Value="1152" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style Selector="controls|PremiumFeaturesCarousel.features-pane">
+      <Setter Property="Height" Value="380" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style Selector="StackPanel.options-pane">
@@ -36,12 +38,28 @@
         <Setter Property="Margin" Value="0,12,0,0" />
       </Style>
     </ContainerQuery>
+    <!-- 742 is the height the stacked page takes below the header with the carousel at 380 (an App
+         Store build, in English) -->
+    <ContainerQuery Name="Paywall" Query="max-height:741">
+      <Style Selector="controls|PremiumFeaturesCarousel.features-pane">
+        <Setter Property="Height" Value="320" />
+      </Style>
+    </ContainerQuery>
+    <!-- Beside the ways (from 800 px, every TV) the carousel keeps its 380 however short the page.
+         The rule above cannot say "stacked" itself: Avalonia 12.1 compiles "max-width:799 and
+         max-height:741" to its last part alone. -->
+    <ContainerQuery Name="Page" Query="min-width:800">
+      <Style Selector="controls|PremiumFeaturesCarousel.features-pane">
+        <Setter Property="Height" Value="380" />
+      </Style>
+    </ContainerQuery>
   </UserControl.Styles>
 
-  <!-- the header, with no title of its own, keeps the back button in reach as the page scrolls -->
+  <!-- the header, with no title of its own, keeps the back button in reach as the page scrolls; the
+       scroller is the "Paywall" container, as tall as the room below the header -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Padding="0,8,0,4" />
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Container.Name="Paywall" Container.Sizing="Height">
       <!-- Grid.Row and Grid.Column come from the styles above, which the container query
            rewrites for a narrow page; a local value here would beat the query. The two
            options-panes share a cell: the catalog shows one or the other. -->

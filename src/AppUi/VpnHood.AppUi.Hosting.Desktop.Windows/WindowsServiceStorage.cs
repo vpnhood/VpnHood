@@ -9,7 +9,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 
 // The service's storage under ProgramData, which only SYSTEM and Administrators may open - not what
 // ProgramData passes down, which lets any user add files, and the service runs what it stages here
-// (the update, hosting plan §4.5).
+// (the update).
 // Anyone may make a folder in ProgramData, and the app id is public, so what the service finds under
 // its name may not be its own. A link, a file, or a folder whose owner is not SYSTEM or Administrators
 // is moved aside and a fresh folder made, so nothing planted in it is read. One held open, which not

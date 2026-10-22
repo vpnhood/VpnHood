@@ -27,8 +27,8 @@ internal static class ServiceRegistration
     private const int DaclSecurityInformation = 4;
 
     // SYSTEM and Administrators as the default service DACL has them; interactive users may query it
-    // and START it - only start (hosting plan §7.1-6), so a person's window can bring a stopped
-    // service back without a prompt, and no one but an administrator can stop it.
+    // and START it - only start, so a person's window can bring a stopped service back without a
+    // prompt, and no one but an administrator can stop it.
     private const string ServiceSddl =
         "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWRPLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)";
 

@@ -9,8 +9,8 @@
 ;
 ; Shortcuts, the tray's sign-in entry, the service and the PATH name the root, never a version, so
 ; changing the version only re-points "current". The app registers its own service and puts the
-; root on the PATH ("service install"); this runs it, and "service uninstall" on the way out.
-; The desktop service plan (8.1) and the hosting plan (5.5) say why.
+; root on the PATH ("service install"); this runs it, and "service uninstall" on the way out. The
+; app does its own setup, so a zip or another packager gets the same service and PATH.
 
 Unicode true
 ManifestDPIAware true

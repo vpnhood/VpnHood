@@ -15,8 +15,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Windows;
 // service back without a prompt. Stopping it is an administrator's, so without elevation the command
 // runs itself again as one, as sudo does on Linux. A service not registered yet is registered on the
 // way to starting it, which is how a window from a zip, or a fork's own packager, gets one; a
-// registered one is never registered again by a start - only an update moves the service (hosting
-// plan §5.5).
+// registered one is never registered again by a start - only an update moves the service.
 public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsServiceSetup setup, IDaemonChannel channel)
     : IAppInstanceController
 {

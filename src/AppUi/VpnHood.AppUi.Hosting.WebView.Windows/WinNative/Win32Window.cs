@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.App.Windows.WinNative;
 using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Logging;
 

@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.App.Windows;
-using VpnHood.AppLib.App.Windows.WinNative;
 using VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
 using VpnHood.Net.Toolkit.Logging;
 

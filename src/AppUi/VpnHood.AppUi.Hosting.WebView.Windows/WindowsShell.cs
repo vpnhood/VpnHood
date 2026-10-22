@@ -2,10 +2,10 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using VpnHood.Net.Toolkit.Graphics;
 
-namespace VpnHood.AppLib.App.Windows;
+namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
-// What a Windows UI asks of the shell and the window manager, whichever UI it is: a link in the
-// person's browser, a title bar in the app's colour.
+// What the web view's window asks of the shell and the window manager: a link in the person's
+// browser, a title bar in the app's colour.
 public static class WindowsShell
 {
     [DllImport("DwmApi")]

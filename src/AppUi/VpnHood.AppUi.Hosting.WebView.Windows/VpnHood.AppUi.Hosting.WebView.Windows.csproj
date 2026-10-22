@@ -7,7 +7,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppUi.Hosting.WebView\VpnHood.AppUi.Hosting.WebView.csproj" />
 		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop.Abstractions\VpnHood.AppUi.Hosting.Desktop.Abstractions.csproj" />
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Windows\VpnHood.AppLib.App.Windows.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -69,7 +69,7 @@ administrator's password. Or from a terminal:
 ```bash
 sudo /opt/VpnHoodClient/vhuninstall           # keeps your settings and profiles for a later install
 sudo /opt/VpnHoodClient/vhuninstall -purge    # deletes them too
-rm -rf ~/.cache/com.vpnhood.client.linux ~/.cache/VpnHoodClient   # the window's; the second, an older release's
+rm -rf ~/.cache/com.vpnhood.client.linux.web ~/.cache/VpnHoodClient   # the window's; the second, an older release's
 ```
 
 It stops the service and any open window, and removes the units, `vhclient`, the menu entry and its
@@ -178,7 +178,7 @@ and the app's other state live beside it in the same folder, which is root's alo
 it with `sudo` too, or read the log with `vhclient service log`.
 
 The window and the commands write nothing there. The window keeps its own extracted content under
-`~/.cache/com.vpnhood.client.linux/`, per user and named by the app id — which is what lets it run
+`~/.cache/com.vpnhood.client.linux.web/`, per user and named by the app id — which is what lets it run
 without privilege.
 
 ---

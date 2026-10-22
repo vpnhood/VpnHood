@@ -7,10 +7,13 @@
 		<!-- A plain target framework names no platform, so the head does. -->
 		<VhAppPlatform>linux</VhAppPlatform>
 		<!-- The binary, its unit and their folders are called by the app's package title
-		     (../Directory.Build.props). No VhAppIdChannel, though the website hands this build out: it
-		     shipped as com.vpnhood.client.linux before the website's builds said so in their ids, and the
-		     id is part of every install's client id. -->
+		     (../Directory.Build.props). -->
 		<AssemblyName>$(VhAppPackageTitle)</AssemblyName>
+		<!-- The website hands this build out, and its id says so, leaving the bare one to a store build
+		     (Snap, Flatpak). It shipped without the channel, so every install counts once more against
+		     its access key's device limit until its old entry expires - accepted by the owner on
+		     2026-10-22. -->
+		<VhAppIdChannel>web</VhAppIdChannel>
 		<!-- The app's icon, beside its identity (../Directory.Build.props), which every desktop head names:
 		     the build places its 256 px picture beside the binary as AppIcon.png, for the tray and the
 		     menu (VpnHood.AppUi.Hosting.Desktop.Linux's targets). -->

@@ -6,10 +6,13 @@
 		<TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
 		<UseWindowsForms>False</UseWindowsForms>
 		<!-- The executable, its service and their folders are called by the app's package title
-		     (../Directory.Build.props). No VhAppIdChannel, though the website hands this build out: it
-		     shipped as com.vpnhood.client.windows before the website's builds said so in their ids, and
-		     the id is part of every install's client id. -->
+		     (../Directory.Build.props). -->
 		<AssemblyName>$(VhAppPackageTitle)</AssemblyName>
+		<!-- The website hands this build out, and its id says so, leaving the bare one to a Microsoft
+		     Store build. It shipped without the channel, so every install counts once more against its
+		     access key's device limit until its old entry expires - accepted by the owner on
+		     2026-10-22. -->
+		<VhAppIdChannel>web</VhAppIdChannel>
 		<!-- The app's icon, beside its identity (../Directory.Build.props), which every desktop head names:
 		     the executable's, the installer's and the tray's. -->
 		<ApplicationIcon>..\app.ico</ApplicationIcon>

@@ -207,10 +207,12 @@ package reference of it imports) makes the rest, so a head names no id and no na
   built. The product library gets one too, without the ids, which are each head's own: its options
   builder reads the company and the package title there.
 
-What a head states itself is kept. A shipped id never changes - the stores key their listings on it,
-and on Windows and Linux it is part of every install's client id - so a head whose shipped id the
-rule does not give states it: Client's Windows and Linux heads name no channel, and Connect's Play
-head keeps its Play id in Debug, the only package its Firebase configuration knows.
+What a head states itself is kept. A store build's id never changes - the store keys its listing on
+it. On Windows and Linux the id is also part of every install's client id, so changing a website
+build's counts each install once more against its key's device limit until its old entry expires:
+the website builds took that cost to say `web` in their ids. A head whose id the rule does not give
+states it: Connect's Play head keeps its Play id in Debug, the only package its Firebase
+configuration knows.
 
 ## The two zips a head places beside itself
 

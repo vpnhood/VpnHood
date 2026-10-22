@@ -1,3 +1,7 @@
+# Latest
+
+* Update: The install scripts no longer take -autostart and -autoupdate, the default since v9.0.856, nor -restBaseUrl, -restAuthorization and -secret, the 2023 names of -httpBaseUrl, -httpAuthorization and -managementSecret. A server still on a release before v9.0.856 no longer updates itself; run its install command again.
+
 # v9.0.859
 
 * Update: UDP has a new protocol; VpnHoodServer offers it to clients that have it, and older clients keep the old one for now.

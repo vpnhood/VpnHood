@@ -30,26 +30,15 @@ function show_help() {
 	echo "  -help                 this";
 }
 
-# Read arguments. Every option an earlier release took still works, as the updaters of installed
-# servers run this script with theirs.
+# Read arguments. The updaters of installed servers run this script too, with -q and -destination, and
+# -container in a container.
 autostart="";
 autoupdate="";
 for i;
 do
 arg=$i;
-# Compatibility (2026-10): the default now; the updaters before this release and the access server's
-# install commands pass it. Drop once the access server no longer writes it, a few months after this ships.
-if [ "$arg" = "-autostart" ]; then
-	autostart="y";
-	lastArg="";
-	continue;
-
-elif [ "$arg" = "-noautostart" ]; then
+if [ "$arg" = "-noautostart" ]; then
 	autostart="n";
-	lastArg=""; continue;
-
-elif [ "$arg" = "-autoupdate" ]; then
-	autoupdate="y";
 	lastArg=""; continue;
 
 elif [ "$arg" = "-noautoupdate" ]; then
@@ -69,17 +58,15 @@ elif [ "$arg" = "-container" ]; then
 	container="y";
 	lastArg=""; continue;
 
-# Compatibility (2026-10): -restBaseUrl, -restAuthorization and -secret, the 2023 names of these three;
-# drop a few months after this ships.
-elif [ "$lastArg" = "-httpBaseUrl" ] || [ "$lastArg" = "-restBaseUrl" ]; then
+elif [ "$lastArg" = "-httpBaseUrl" ]; then
 	httpBaseUrl=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-httpAuthorization" ] || [ "$lastArg" = "-restAuthorization" ]; then
+elif [ "$lastArg" = "-httpAuthorization" ]; then
 	httpAuthorization=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-managementSecret" ] || [ "$lastArg" = "-secret" ]; then
+elif [ "$lastArg" = "-managementSecret" ]; then
 	managementSecret=$arg;
 	lastArg=""; continue;
 

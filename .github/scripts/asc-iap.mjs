@@ -119,6 +119,8 @@ async function report() {
     log(`App: "${app.attributes.name}" (id ${app.id}, sku ${app.attributes.sku || "—"})`);
 
     // 2) Subscription groups. Zero groups = nothing has been set up yet (the common first-run state).
+    // Subscriptions live only here: the app's inAppPurchasesV2 never lists them, so an empty one
+    // does not mean there are no products.
     const groups = (await apiAll(`/v1/apps/${app.id}/subscriptionGroups?limit=200`)).data;
     log(`Subscription groups: ${groups.length}`);
 

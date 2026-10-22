@@ -11,12 +11,27 @@ launcher="$(launcherNameParam)";
 # The install's folder is this script's own: the installer may have been given another than /opt's.
 destinationPath="$(dirname "$(readlink -f "$0")")";
 
+function show_help() {
+	echo "Usage: $destinationPath/vhuninstall [options]";
+	echo "  -purge                delete the settings and data in $destinationPath/storage too";
+	echo "  -h, -help             this";
+	echo "Options take one dash or two: -purge or --purge.";
+}
+
 purge="";
 for arg in "$@"; do
+	# An option takes two dashes too, as the GNU tools' long options do
+	if [ "${arg:0:2}" = "--" ]; then
+		arg="${arg:1}";
+	fi
+
 	if [ "$arg" = "-purge" ]; then
 		purge="y";
+	elif [ "$arg" = "-help" ] || [ "$arg" = "-h" ]; then
+		show_help;
+		exit 0;
 	else
-		echo "Unknown argument! argument: $arg";
+		echo "Unknown argument! argument: $arg (-help lists the options)";
 		exit 1;
 	fi
 done

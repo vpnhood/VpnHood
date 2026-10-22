@@ -9,10 +9,28 @@ composeUrl="$composeUrlParam";
 destinationPath="/opt/VpnHoodServer";
 composeFile="VpnHoodServer.docker.yml";
 
+# The options an operator chooses. -composeUrl and -composeFile, where the release's compose file comes
+# from and goes, are left out, as the native installer leaves out its package's.
+function show_help() {
+	echo "Usage: VpnHoodServer.docker.sh [options]";
+	echo "  -q                    no questions: Docker is installed only with -install-docker";
+	echo "  -install-docker       install Docker and its compose plugin where they are missing,";
+	echo "                        on Ubuntu, Debian and their derivatives";
+	echo "  -httpBaseUrl <url>    the access server; with -httpAuthorization <value>";
+	echo "  -managementSecret <secret>";
+	echo "  -h, -help             this";
+	echo "Options take one dash or two: -install-docker or --install-docker.";
+}
+
 # Read arguments
 for i;
 do
 arg=$i;
+# An option takes two dashes too, as the GNU tools' long options do; a value is left as it is.
+if [ "$lastArg" = "" ] && [ "${arg:0:2}" = "--" ]; then
+	arg="${arg:1}";
+fi
+
 if [ "$arg" = "-install-docker" ]; then
 	installDocker="y";
 	lastArg=""; continue;
@@ -20,6 +38,10 @@ if [ "$arg" = "-install-docker" ]; then
 elif [ "$arg" = "-q" ]; then
 	quiet="y";
 	lastArg=""; continue;
+
+elif [ "$arg" = "-help" ] || [ "$arg" = "-h" ]; then
+	show_help;
+	exit 0;
 
 elif [ "$lastArg" = "-composeUrl" ]; then
 	composeUrl=$arg;
@@ -42,14 +64,14 @@ elif [ "$lastArg" = "-managementSecret" ]; then
 	lastArg=""; continue;
 
 elif [ "$lastArg" != "" ]; then
-	echo "Unknown argument! argument: $lastArg";
+	echo "Unknown argument! argument: $lastArg (-help lists the options)";
 	exit 1;
 fi;
 lastArg=$arg;
 done;
 # a last option still waiting for its value, or an unknown last one
 if [ "$lastArg" != "" ]; then
-	echo "Unknown argument or missing value! argument: $lastArg";
+	echo "Unknown argument or missing value! argument: $lastArg (-help lists the options)";
 	exit 1;
 fi
 
@@ -59,10 +81,15 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1;
 fi
 
-# User interaction
-if [ "$quiet" != "y" ] && [ "$installDocker" = "" ]; then
-	read -p "Install Docker (y/n)?" installDocker;
-fi;
+# A question, as the native installer asks it: Enter gives the answer in capitals, y or yes in any case
+# is yes, and anything else no.
+function ask() {
+	local answer hint="Y/n";
+	if [ "$2" = "n" ]; then hint="y/N"; fi
+	read -r -p "$1 ($hint)? " answer;
+	answer="${answer,,}";
+	if [ "${answer:-$2}" = "y" ] || [ "${answer:0:1}" = "y" ]; then echo "y"; else echo "n"; fi
+}
 
 # point to latest version if $installUrl is not set
 if [ "$composeUrl" = "" ]; then
@@ -72,10 +99,26 @@ fi
 # -----------------------------------------------
 # Install Docker & Compose
 # -----------------------------------------------
-if [ "$installDocker" = "y" ] && docker compose version >/dev/null 2>&1; then
-	echo "Docker and its compose plugin are installed already.";
+# Everything below needs both. Asked only when they are missing, with Enter for yes, as there is no
+# going on without them; -q asks nothing, so a script installs them only with -install-docker. Without
+# them this stops here, rather than at the container's start.
+dockerFound="n";
+if docker compose version >/dev/null 2>&1; then
+	dockerFound="y";
+elif [ "$installDocker" != "y" ] && [ "$quiet" != "y" ]; then
+	installDocker=$(ask "Docker and its compose plugin are not installed. Install them" "y");
+fi
 
-elif [ "$installDocker" = "y" ]; then
+if [ "$dockerFound" = "y" ]; then
+	if [ "$installDocker" = "y" ]; then
+		echo "Docker and its compose plugin are installed already.";
+	fi
+
+elif [ "$installDocker" != "y" ]; then
+	echo "VpnHoodServer runs in Docker. Install Docker and its compose plugin, then run this again, or run it with -install-docker.";
+	exit 1;
+
+else
 	# Docker's repository for Ubuntu or Debian, which their derivatives take under the codename of the
 	# release they are built on; on any other distro Docker is the operator's to install
 	read -r distro codename <<< "$(. /etc/os-release;

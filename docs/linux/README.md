@@ -52,9 +52,10 @@ Flags worth knowing:
 | `-noautoupdate` | Do not update the app by itself. |
 | `-nodesktop` | Service and commands only: no menu entry, no GUI libraries, even where a display manager is found. |
 | `-desktop` | The menu entry and the libraries where no display manager is found. |
-| `-help` | List the options. |
+| `-help`, `-h` | List the options. |
 
-An option from an earlier release, such as `-autostart`, is still taken.
+Every flag takes two dashes too: `--noautoupdate` is `-noautoupdate`. An option from an earlier
+release, such as `-autostart`, is still taken.
 
 For VpnHood! CONNECT the names are `vhconnect` and `VpnHoodConnect.service`. It ships with its
 server built in and cannot be given another access key, so it has **no `profile` command and no

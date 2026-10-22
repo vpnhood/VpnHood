@@ -27,7 +27,8 @@ function show_help() {
 	echo "  -noautoupdate         do not update the server by itself";
 	echo "  -httpBaseUrl <url>    the access server; with -httpAuthorization <value>";
 	echo "  -managementSecret <secret>";
-	echo "  -help                 this";
+	echo "  -h, -help             this";
+	echo "Options take one dash or two: -noautoupdate or --noautoupdate.";
 }
 
 # Read arguments. The updaters of installed servers run this script too, with -q and -destination, and
@@ -37,6 +38,11 @@ autoupdate="";
 for i;
 do
 arg=$i;
+# An option takes two dashes too, as the GNU tools' long options do; a value is left as it is.
+if [ "$lastArg" = "" ] && [ "${arg:0:2}" = "--" ]; then
+	arg="${arg:1}";
+fi
+
 if [ "$arg" = "-noautostart" ]; then
 	autostart="n";
 	lastArg=""; continue;
@@ -49,7 +55,7 @@ elif [ "$arg" = "-q" ]; then
 	quiet="y";
 	lastArg=""; continue;
 
-elif [ "$arg" = "-help" ] || [ "$arg" = "--help" ]; then
+elif [ "$arg" = "-help" ] || [ "$arg" = "-h" ]; then
 	show_help;
 	exit 0;
 

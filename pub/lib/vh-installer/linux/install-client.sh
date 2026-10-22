@@ -48,7 +48,8 @@ function show_help() {
 	echo "  -noautostart          do not start the VPN service at boot";
 	echo "  -noautoupdate         do not update the app by itself";
 	echo "  -desktop, -nodesktop  the menu entry and the window's libraries, or not (found by default)";
-	echo "  -help                 this";
+	echo "  -h, -help             this";
+	echo "Options take one dash or two: -noautoupdate or --noautoupdate.";
 }
 
 # Read arguments. Every option an earlier release took still works: the updaters of installed apps
@@ -56,6 +57,11 @@ function show_help() {
 for i;
 do
 arg=$i;
+# An option takes two dashes too, as the GNU tools' long options do; a value is left as it is.
+if [ "$lastArg" = "" ] && [ "${arg:0:2}" = "--" ]; then
+	arg="${arg:1}";
+fi
+
 # Compatibility (2026-10): the default now; the updaters before this release pass it. Drop a few months
 # after this ships.
 if [ "$arg" = "-autostart" ]; then
@@ -79,7 +85,7 @@ elif [ "$arg" = "-q" ]; then
 	quiet="y";
 	lastArg=""; continue;
 
-elif [ "$arg" = "-help" ] || [ "$arg" = "--help" ]; then
+elif [ "$arg" = "-help" ] || [ "$arg" = "-h" ]; then
 	show_help;
 	exit 0;
 

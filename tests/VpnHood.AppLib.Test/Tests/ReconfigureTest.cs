@@ -1,5 +1,8 @@
-using VpnHood.AppLib.Api.App;
-using VpnHood.Test.Device;
+using System.Net;
+using VpnHood.AppLib.Api.WebHost.Helpers;
+using VpnHood.Test;
+using WatsonWebserver.Core;
+using WatsonWebserver.Lite;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -8,38 +11,45 @@ namespace VpnHood.AppLib.Test.Tests;
 public class ReconfigureTest : TestAppBase
 {
     [TestMethod]
-    public async Task A_setting_sent_before_the_session_is_up_reaches_it()
+    public async Task A_setting_changed_while_the_app_connects_reaches_the_session()
     {
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-
-        // the service's connect held where it makes its adapter: it has read the options, and has no client
-        var adapterAsked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var adapterRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var device = new TestDevice(TestAppHelper, _ => {
-            adapterAsked.TrySetResult();
-            adapterRelease.Task.Wait(TimeSpan.FromSeconds(30));
-            return new TestNullVpnAdapter();
-        });
-        await using var app = TestAppHelper.CreateClientApp(device: device);
+        await using var app = TestAppHelper.CreateClientApp();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+
+        // the connect held at its diagnose's web check: it has read the settings, and has not handed them to
+        // the service yet. The check wants a page of 100 characters at least
+        var checkAsked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var checkRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var checkEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback);
+        var webServer = new WebserverLite(
+            new WebserverSettings(checkEndPoint.Address.ToString(), checkEndPoint.Port), async ctx => {
+                checkAsked.TrySetResult();
+                await checkRelease.Task;
+                await ctx.Response.Send(new string('-', 100));
+            });
+        _ = webServer.StartAsync(TestCt);
+        app.Diagnoser.TestHttpUris = [new Uri($"http://{checkEndPoint}/")];
+        app.Diagnoser.HttpTimeout = TimeSpan.FromSeconds(30);
+
         var dropQuic = !app.UserSettings.DropQuic;
         try {
-            var connectTask = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-            await adapterAsked.Task.WaitAsync(TimeSpan.FromSeconds(30), TestCt);
+            var connectTask = app.Connect(vpnProfile.VpnProfileId, diagnose: true, cancellationToken: TestCt);
+            await checkAsked.Task.WaitAsync(TimeSpan.FromSeconds(30), TestCt);
 
-            // no error with no session to take it, and the session takes it once up. Dropping QUIC is the
-            // setting to watch: the test server carries TCP only by the proxy, which drops it
+            // the start then writes the settings it read over this one. Dropping QUIC is the setting to watch:
+            // the test server carries TCP only by the proxy, which drops it
             app.UserSettings.DropQuic = dropQuic;
             await app.ReconfigureVpnService(TestCt);
-            adapterRelease.TrySetResult();
+            checkRelease.TrySetResult();
             await connectTask;
         }
         finally {
-            adapterRelease.TrySetResult();
+            checkRelease.TrySetResult();
+            webServer.TryStop();
         }
 
-        await app.WaitForState(AppConnectionState.Connected);
         await AssertEqualsWait(dropQuic, () => app.State.SessionStatus?.IsDropQuic, "the session's QUIC drop");
     }
 }

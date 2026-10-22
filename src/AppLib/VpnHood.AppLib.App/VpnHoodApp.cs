@@ -84,6 +84,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>? _installedApps;
     private bool _isConnecting;
     private int _connectNumber; // the latest connect's: an older one, which it cancelled, leaves the app to it
+    private bool _isReconfiguredWhileConnecting; // after the connect read the settings: its start writes those over it
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
     private readonly AppWebHostManager _webHostManager;
@@ -477,9 +478,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // are rebuilt (or reused) under signature-versioned names, published through the folder manifests,
     // and the service swaps its gates to them without disconnecting. Connected or not, the saved options
     // take the settings too, for a start without the app. Triggered by a UserSettings save
-    // (ApplySettings) and by the split text-file settings' change events (wired in the ctor).
+    // (ApplySettings), by the split text-file settings' change events (wired in the ctor), and by a
+    // connect, again, for one that came while it connected.
     public async Task ReconfigureVpnService(CancellationToken cancellationToken)
     {
+        _isReconfiguredWhileConnecting = true;
+
         // publish the current db set BEFORE signaling a running session: it reads the manifests, not the
         // request; while disconnected, the next connect publishes them
         if (ConnectionInfo.IsStarted())
@@ -998,6 +1002,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogInformation("TokenId: {TokenId}, SupportId: {SupportId}",
                 VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
 
+            // the settings are read from here on: a reconfigure meanwhile is sent again once connected
+            _isReconfiguredWhileConnecting = false;
+
             // all split decisions act on the effective copy: the super toggle and the premium plan
             // are both resolved here, once, for everything below
             var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
@@ -1103,6 +1110,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             else {
                 await _vpnServiceManager.Start(uiContext, serviceOptions, cancellationToken).Vhc();
             }
+
+            // the start may have written the settings read above over a reconfigure that came meanwhile
+            if (_isReconfiguredWhileConnecting)
+                await VhInvoker.TryInvokeAsync("reconfigure the VPN service after a settings change while connecting",
+                    LogLevel.Warning, () => ReconfigureVpnService(cancellationToken)).Vhc();
 
             var connectionInfo = ConnectionInfo;
             if (connectionInfo.SessionInfo == null)

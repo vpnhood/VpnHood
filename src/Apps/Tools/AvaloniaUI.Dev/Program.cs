@@ -25,7 +25,8 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 // add (AppOptions.UiTheme, IsAddAccessKeySupported); without it, as the client. "--store google"
 // or "--store apple" runs it as Connect's build for that store - its premium tier, its sign-in and
 // its paywall - against a stand-in account (DevAccountProvider) that sells sample plans and charges
-// no one; with --tv, as Google TV or Apple TV shows them. Connecting needs the WinDivert driver, so a
+// no one, and whose email sign-in asks for a second factor when the email holds "2fa"
+// (DevAuthenticationProvider); with --tv, as Google TV or Apple TV shows them. Connecting needs the WinDivert driver, so a
 // plain run shows the walk and the pairing; run elevated to connect as well.
 internal static class Program
 {

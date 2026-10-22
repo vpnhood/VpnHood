@@ -4,7 +4,7 @@ using Windows.UI.Notifications;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
-using VpnHood.AppLib.App.Windows;
+using VpnHood.AppLib.App.WindowsTun;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.WebView;
@@ -31,7 +31,7 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         // person's storage folder, which holds its single-instance lock too - and it disconnects on
         // the way out. In this process on purpose, to keep a MAUI app simple: the tunnel runs here
         // too, so the app runs elevated. A shipped Windows app keeps the app in the machine service
-        // instead (VpnHood.AppUi.Hosting.Desktop.Windows), its window unelevated. It keeps no tray, so
+        // instead (VpnHood.AppUi.Hosting.Desktop.WindowsTun), its window unelevated. It keeps no tray, so
         // the app ends with its window.
         var storagePath = initParams.ResolveStoragePath();
         VpnHoodWindowsApp.Init(initParams, storagePath, lockFolderPath: storagePath);

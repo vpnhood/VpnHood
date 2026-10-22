@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
 // What the platform says for itself: the four answers every command reaches for that are not the
-// app's, and the ones only some platforms have. A platform package (Desktop.Linux, Desktop.Windows)
+// app's, and the ones only some platforms have. A platform package (Desktop.Linux, Desktop.WindowsTun)
 // implements it and hands it to DesktopHost with the head's DesktopInitParams; nothing in this
 // project reads a static.
 public interface IDesktopPlatform

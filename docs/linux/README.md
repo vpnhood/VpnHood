@@ -266,7 +266,7 @@ src/AppUi/
 │   ├── LinuxDesktopPaths.cs
 │   ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through
 │   └── LinuxDaemonHost.cs            VpnHoodLinuxApp: the service's, root required, or a debugger's
-├── VpnHood.AppUi.Hosting.Desktop.Windows/  the same design on Windows: a LocalSystem service, ProgramData
+├── VpnHood.AppUi.Hosting.Desktop.WindowsTun/  the same design on Windows: a LocalSystem service, ProgramData
 │   ├── WindowsDesktopHost.cs         a Windows head's entry point
 │   ├── WindowsDesktopPlatform.cs     what Windows answers, as an IDesktopPlatform
 │   ├── WindowsDesktopPaths.cs        ProgramData for the service, the person's local app data for the UI

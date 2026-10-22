@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
 using VpnHood.AppUi.Hosting.Desktop.Channel;
-using VpnHood.AppUi.Hosting.Desktop.Windows;
+using VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 
 namespace VpnHood.AppUi.SmokeTest;
 

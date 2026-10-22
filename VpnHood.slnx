@@ -88,7 +88,7 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="src/AppLib/VpnHood.AppLib.App.Linux/VpnHood.AppLib.App.Linux.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.App.Windows/VpnHood.AppLib.App.Windows.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.App.WindowsTun/VpnHood.AppLib.App.WindowsTun.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App.WindowsVpnPlugin/VpnHood.AppLib.App.WindowsVpnPlugin.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
   </Folder>
@@ -124,7 +124,7 @@
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop/VpnHood.AppUi.Hosting.Desktop.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Abstractions/VpnHood.AppUi.Hosting.Desktop.Abstractions.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Linux/VpnHood.AppUi.Hosting.Desktop.Linux.csproj" />
-    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Windows/VpnHood.AppUi.Hosting.Desktop.Windows.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.WindowsTun/VpnHood.AppUi.Hosting.Desktop.WindowsTun.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin/VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView/VpnHood.AppUi.Hosting.WebView.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Android/VpnHood.AppUi.Hosting.WebView.Android.csproj" />
@@ -193,7 +193,7 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="src/Core/VpnHood.Core.Client.Devices.Linux/VpnHood.Core.Client.Devices.Linux.csproj" />
-    <Project Path="src/Core/VpnHood.Core.Client.Devices.Windows/VpnHood.Core.Client.Devices.Windows.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.Devices.WindowsTun/VpnHood.Core.Client.Devices.WindowsTun.csproj" />
     <Project Path="src/Core/VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation/VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.csproj">
       <Platform Project="x64" />
     </Project>

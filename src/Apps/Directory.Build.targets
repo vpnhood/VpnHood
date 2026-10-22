@@ -13,7 +13,7 @@
   <!-- Windows' console launcher beside the window's executable, for the same reason: the Windows
        hosting package's targets, which its project reference does not carry. They act only on a
        WinExe that names a command. -->
-  <Import Project="$(MSBuildThisFileDirectory)..\AppUi\VpnHood.AppUi.Hosting.Desktop.Windows\buildTransitive\VpnHood.AppUi.Hosting.Desktop.Windows.targets"
+  <Import Project="$(MSBuildThisFileDirectory)..\AppUi\VpnHood.AppUi.Hosting.Desktop.WindowsTun\buildTransitive\VpnHood.AppUi.Hosting.Desktop.WindowsTun.targets"
           Condition="$(TargetFramework.Contains('-windows'))" />
 
   <!-- The app's icon beside a Linux head's binary, AppIcon.png, likewise: the Linux hosting package's

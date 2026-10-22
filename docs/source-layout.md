@@ -12,7 +12,7 @@ this table.
 | --- | --- | --- |
 | `src/Net/` | networking with no VPN in it: packets, a user-space TCP stack, QUIC, the TUN and WinDivert adapters, IP locations, and the toolkit they share | NuGet |
 | `src/Core/` | the VPN engine: the tunnel, the client, the server, split tunneling and proxies | NuGet |
-| `src/AppLib/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.Windows`), and the store and ad providers | NuGet |
+| `src/AppLib/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.WindowsTun`, `App.WindowsVpnPlugin`), and the store and ad providers | NuGet |
 | `src/AppUi/` | the user interface: the app's state as a UI sees it, the look, and the hosts that mount a UI on a platform | NuGet |
 | `src/Apps/` | the apps we ship, and the tools we run ourselves | the stores, our site |
 
@@ -70,7 +70,7 @@ src/Core/
 ├── VpnHood.Core.Client.Devices.Android/
 ├── VpnHood.Core.Client.Devices.Ios/
 ├── VpnHood.Core.Client.Devices.Linux/
-├── VpnHood.Core.Client.Devices.Windows/
+├── VpnHood.Core.Client.Devices.WindowsTun/
 ├── VpnHood.Core.Client.Devices.WindowsVpnPlugin/   the device of an MSIX package, and its VPN host's service
 ├── VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation/  the component Windows activates in that VPN host
 ├── VpnHood.Core.Client.VpnServices.Abstractions/   the VPN service host and the manager that talks to it
@@ -102,7 +102,7 @@ src/AppLib/
 ├── VpnHood.AppLib.App.Android/                 the app on each platform: VpnHoodAndroidApp, VpnHoodIosApp, …
 ├── VpnHood.AppLib.App.Ios/
 ├── VpnHood.AppLib.App.Linux/
-├── VpnHood.AppLib.App.Windows/
+├── VpnHood.AppLib.App.WindowsTun/
 ├── VpnHood.AppLib.App.WindowsVpnPlugin/
 ├── VpnHood.AppLib.Portal/                      accounts and purchases through the VpnHood Portal API
 ├── VpnHood.AppLib.Stores.AppStore/             App Store billing and Sign in with Apple
@@ -162,7 +162,7 @@ ids and names are not among them: they come from the app's identity (below).
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
 hosts it mounts from `AppUi`. A desktop head mounts one more host than a mobile one: its platform's
-`VpnHood.AppUi.Hosting.Desktop.Linux` or `.Desktop.Windows`, over the shared `VpnHood.AppUi.Hosting.Desktop`,
+`VpnHood.AppUi.Hosting.Desktop.Linux` or `.Desktop.WindowsTun`, over the shared `VpnHood.AppUi.Hosting.Desktop`,
 which is the service that holds the app, the window that shows it and the command line in one
 binary — see [linux/](linux/README.md#how-it-fits-together).
 

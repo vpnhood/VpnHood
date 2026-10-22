@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using VpnHood.AppLib.App.Windows;
+using VpnHood.AppLib.App.WindowsTun;
 
 namespace VpnHood.AppLib.Test.Tests;
 

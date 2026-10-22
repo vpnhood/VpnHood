@@ -2,7 +2,7 @@ using System.Diagnostics;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Client.Devices.Linux;
-using VpnHood.Core.Client.Devices.Windows;
+using VpnHood.Core.Client.Devices.WindowsTun;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Test.Device;

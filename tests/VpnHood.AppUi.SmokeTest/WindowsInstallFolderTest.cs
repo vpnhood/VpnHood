@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.AccessControl;
 using System.Security.Principal;
-using VpnHood.AppUi.Hosting.Desktop.Windows;
+using VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 
 namespace VpnHood.AppUi.SmokeTest;
 

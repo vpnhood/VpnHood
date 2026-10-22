@@ -5,7 +5,7 @@
 		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
-	<!-- Not AppLib.App.Windows, whose device brings WinTun and WinDivert. -->
+	<!-- Not AppLib.App.WindowsTun, whose device brings WinTun and WinDivert. -->
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.WindowsVpnPlugin\VpnHood.Core.Client.Devices.WindowsVpnPlugin.csproj" />

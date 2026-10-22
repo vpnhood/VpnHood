@@ -5,7 +5,7 @@
 		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
-	<!-- Not Devices.Windows, whose WinTun and WinDivert would come along into the package. -->
+	<!-- Not Devices.WindowsTun, whose WinTun and WinDivert would come along into the package. -->
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />

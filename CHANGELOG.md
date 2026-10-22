@@ -1,5 +1,6 @@
 # Latest
 
+* Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
 * Feature: Always On comes to Windows and Linux: switch it on in Settings, or with the `always-on on` command on a computer with no desktop, and the VPN connects as the computer starts, before anyone signs in. While the server is out of reach it tries again, waiting longer each time. It stops when you disconnect, when another VPN app takes over, or when the server refuses the connection, and the app says why. On VpnHood! CONNECT it needs premium #windows #linux
 * Update: On Windows and Linux, one VPN app made with VpnHood is connected at a time: connecting another - VpnHood! CLIENT and VpnHood! CONNECT, say - disconnects the first, which says another VPN app took over and stays off, even with Always On, until you connect it again #windows #linux
 * Feature: In the EEA, the UK and Switzerland, the app asks in Google's own form before its ads use your data, and Settings > Privacy > Ad privacy choices changes your answer; with a no you still see ads, but not personalised ones #android #connect #store

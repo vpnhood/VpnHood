@@ -1,12 +1,14 @@
 using System.Net;
 using System.Runtime.InteropServices;
-using VpnHood.AppUi.Hosting.Desktop.Platform;
+using System.Runtime.Versioning;
 using VpnHood.Net.Toolkit.Extensions;
 
-namespace VpnHood.AppUi.Hosting.Desktop.Windows;
+namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
 // Who owns the far end of a loopback connection on Windows: the process its TCP table row names. The
-// row may lag a connect by a moment, so it is read a few times before the answer is no.
+// row may lag a connect by a moment, so it is read a few times before the answer is no. Here rather
+// than in a Windows host, since both have a window to check for: the service's and the Store app's.
+[SupportedOSPlatform("windows")]
 public sealed class WindowsLoopbackPeerCheck : ILoopbackPeerCheck
 {
     private const int Attempts = 10;

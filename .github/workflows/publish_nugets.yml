@@ -53,9 +53,8 @@ jobs:
       # Base SDK pinned by global.json (10.0.x)...
       - uses: actions/setup-dotnet@v6
         with: { global-json-file: global.json }
-      # ...plus the .NET 11 preview SDK: the net11.0-ios libraries (Quic.Ios, VpnAdapters.IosTun,
-      # Client.Devices.Ios, AppLib.Ios.Common) require it. global.json's rollForward=latestMajor then
-      # selects 11 for the build, so net10 and net11 projects both compile.
+      # ...plus the .NET 11 preview SDK, which the iOS libraries (net11.0-ios) require. global.json's
+      # rollForward=latestMajor then selects 11 for the build, so net10 and net11 projects both compile.
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "11.0"

@@ -59,7 +59,7 @@ internal static class UiCommand
             if (connection == null)
                 return 1;
 
-            await RunWindow(platform, initParams, mainThread, connection, startHidden, cancellationToken).Vhc();
+            await RunWindow(platform.Paths, initParams, mainThread, connection, startHidden, cancellationToken).Vhc();
             return 0;
         }
         catch (OperationCanceledException) {
@@ -83,7 +83,7 @@ internal static class UiCommand
         }
         catch (DaemonRefusedException ex) {
             if (!startHidden)
-                await RunMessage(platform, initParams, mainThread, DesktopUiMessageKind.AdministratorsOnly, ex.Message,
+                await RunMessage(platform.Paths, initParams, mainThread, DesktopUiMessageKind.AdministratorsOnly, ex.Message,
                     cancellationToken).Vhc();
         }
         catch (OperationCanceledException) {
@@ -94,7 +94,7 @@ internal static class UiCommand
             // service gives none
             VhLogger.Instance.LogWarning(ex, "The window could not reach the service.");
             if (!startHidden)
-                await RunMessage(platform, initParams, mainThread, DesktopUiMessageKind.Failure, ex.Message,
+                await RunMessage(platform.Paths, initParams, mainThread, DesktopUiMessageKind.Failure, ex.Message,
                     cancellationToken).Vhc();
         }
 
@@ -103,14 +103,14 @@ internal static class UiCommand
 
     // The UI's one message in the window's place, on the host's main thread as the window would run,
     // until the person closes it.
-    private static Task RunMessage(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
+    internal static Task RunMessage(IDesktopUiPaths paths, DesktopInitParams initParams, MainThreadQueue mainThread,
         DesktopUiMessageKind kind, string text, CancellationToken cancellationToken)
     {
         return mainThread.Run(() => initParams.Ui.RunMessage(new DesktopUiMessageParams {
             Kind = kind,
             AppName = initParams.AppName,
             Text = text,
-            UiAssetProvider = CreateUiAssets(platform, initParams)
+            UiAssetProvider = CreateUiAssets(paths, initParams)
         }, cancellationToken));
     }
 
@@ -132,25 +132,25 @@ internal static class UiCommand
 
     // The UI's own copy of the content, under this user's cache: the daemon extracted its own under
     // its storage, which a session may not write, and each provider owns its folder.
-    private static IAssetProvider CreateUiAssets(IDesktopPlatform platform, DesktopInitParams initParams)
+    private static IAssetProvider CreateUiAssets(IDesktopUiPaths paths, DesktopInitParams initParams)
     {
         var packagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory);
         return new ZipAssetProvider(new Asset(packagedAssetProvider, initParams.UiZipAssetPath),
-            platform.Paths.UiContentCachePath);
+            paths.UiContentCachePath);
     }
 
     // The UI over a connection to the app, until it ends: the service's app, or the one this process
-    // holds itself (DevCommand). It ends by itself - its window closed, its tray's Exit - or with the
-    // command: a signal, a logout.
-    internal static async Task RunWindow(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
+    // holds itself (InProcessDesktopHost). It ends by itself - its window closed, its tray's Exit - or
+    // with the command: a signal, a logout.
+    internal static async Task RunWindow(IDesktopUiPaths paths, DesktopInitParams initParams, MainThreadQueue mainThread,
         DaemonConnection connection, bool startHidden, CancellationToken cancellationToken)
     {
         // on the host's main thread, which a window needs; this waits until the UI ends
         var uiParams = new DesktopUiParams {
             Api = connection.Api,
-            UiAssetProvider = CreateUiAssets(platform, initParams),
+            UiAssetProvider = CreateUiAssets(paths, initParams),
             ApiUrlProvider = connection.ApiUrlProvider,
-            UiDataPath = platform.Paths.UiDataPath,
+            UiDataPath = paths.UiDataPath,
             StartHidden = startHidden
         };
         await mainThread.Run(() => initParams.Ui.Run(uiParams, cancellationToken)).Vhc();

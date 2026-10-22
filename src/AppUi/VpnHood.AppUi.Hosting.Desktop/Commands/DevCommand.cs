@@ -1,6 +1,5 @@
 using System.CommandLine;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -32,15 +31,7 @@ internal static class DevCommand
 
         try {
             await using var daemonHost = platform.DaemonHostFactory.CreateDev(platform.Paths.DevStoragePath);
-            var localWebHost = VpnHoodApp.Instance.LocalWebHost ??
-                               throw new InvalidOperationException(
-                                   "The app has no local web host, so the window could not reach it.");
-            await localWebHost.EnsureStarted(cancellationToken).Vhc();
-
-            // No channel to ask: the app is here, and so is the process the window's calls must reach.
-            await using var connection = DaemonConnection.CreateInProcess(localWebHost, platform.PeerCheck,
-                platform.Instance, platform.Paths.InstanceName);
-            await UiCommand.RunWindow(platform, initParams, mainThread, connection,
+            await InProcessDesktopHost.RunWindow(platform.Paths, platform.PeerCheck, initParams, mainThread,
                 startHidden: false, cancellationToken).Vhc();
             return 0;
         }

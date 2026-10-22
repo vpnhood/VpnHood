@@ -20,14 +20,14 @@ public sealed class DaemonConnection : IAsyncDisposable
     private readonly DaemonApiUrlProvider _apiUrlProvider;
     private readonly HttpClient _httpClient;
 
-    private DaemonConnection(IDaemonAnswerProvider answerProvider, ILoopbackPeerCheck peerCheck,
-        IAppInstanceController instance, string instanceName)
+    private DaemonConnection(IDaemonAnswerProvider answerProvider, ILoopbackPeerCheck peerCheck, string instanceName,
+        string notRunningHint)
     {
         _answerProvider = answerProvider;
         _apiUrlProvider = new DaemonApiUrlProvider(answerProvider);
 
         // The base address is a stand-in: the handler puts the latest one on every request.
-        _httpClient = new HttpClient(new DaemonApiHandler(answerProvider, peerCheck, instanceName, instance.NotRunningHint)) {
+        _httpClient = new HttpClient(new DaemonApiHandler(answerProvider, peerCheck, instanceName, notRunningHint)) {
             BaseAddress = new Uri("http://127.0.0.1/"),
             Timeout = TimeSpan.FromMinutes(2) // a connect attempt walks a server list and may be slow
         };
@@ -56,7 +56,7 @@ public sealed class DaemonConnection : IAsyncDisposable
         var answerProvider = new ChannelAnswerProvider(channel, paths.InstanceName);
         try {
             await WaitForAnswer(answerProvider, instance, paths, cancellationToken).Vhc();
-            return new DaemonConnection(answerProvider, peerCheck, instance, paths.InstanceName);
+            return new DaemonConnection(answerProvider, peerCheck, paths.InstanceName, instance.NotRunningHint);
         }
         catch {
             await answerProvider.DisposeAsync().Vhc();
@@ -64,11 +64,13 @@ public sealed class DaemonConnection : IAsyncDisposable
         }
     }
 
-    // The app in this very process (DevCommand), over its own local web host, which must be started.
+    // The app in this very process (InProcessDesktopHost), over its own local web host, which must be
+    // started. It answers while this process runs, so it is never found stopped.
     internal static DaemonConnection CreateInProcess(IAppWebHost webHost, ILoopbackPeerCheck peerCheck,
-        IAppInstanceController instance, string instanceName)
+        string instanceName)
     {
-        return new DaemonConnection(new InProcessAnswerProvider(webHost), peerCheck, instance, instanceName);
+        return new DaemonConnection(new InProcessAnswerProvider(webHost), peerCheck, instanceName,
+            notRunningHint: $"{instanceName} has stopped.");
     }
 
     private static async Task WaitForAnswer(IDaemonAnswerProvider answerProvider, IAppInstanceController instance,

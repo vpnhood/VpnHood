@@ -45,7 +45,7 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     // This launch's window, the UI a later launch brings forward, or null when this person already
     // has one open in this session, which has been asked to come forward. On the calling thread
     // throughout: the lock is let go only once this launch's server holds the name.
-    public static DesktopUiInstance? TryClaim(IAppDesktopPaths paths, IDesktopUi ui)
+    public static DesktopUiInstance? TryClaim(IDesktopUiPaths paths, IDesktopUi ui)
     {
         var name = BuildName(paths.InstanceName);
         using var sessionLock = TakeSessionLock(paths.UiDataPath, name);

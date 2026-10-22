@@ -2,7 +2,7 @@ using VpnHood.AppLib.App.WebHosting;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Channel;
 
-// The answer for the app in this very process (the "dev" command): its local web host's URL, read
+// The answer for the app in this very process (InProcessDesktopHost): its local web host's URL, read
 // again whenever that host rebinds. Nobody refuses, and the process to reach is this one.
 internal sealed class InProcessAnswerProvider : IDaemonAnswerProvider
 {

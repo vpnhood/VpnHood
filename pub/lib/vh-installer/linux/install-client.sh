@@ -196,6 +196,19 @@ fi
 autostart=${autostart:-$defaultAutostart};
 autoupdate=${autoupdate:-$defaultAutoupdate};
 
+# One install at a time from here, where this run starts to change things. Beside another, the one
+# that ends last has the last word - an update ending after a run with -noautoupdate turns updates
+# back on - and each deletes the other's download as a crashed run's leftovers. So the second waits;
+# the lock goes when its run ends, even by a crash. After the questions, so one left unanswered holds
+# up no update.
+if command -v flock >/dev/null 2>&1; then
+	exec 9>>"/run/$assemblyName-install.lock";
+	if ! flock -n 9; then
+		echo "Another install or uninstall of $productName is running. Waiting for it to finish...";
+		flock 9;
+	fi
+fi
+
 # ------------------------------------------------------------------
 # Dependencies
 # ------------------------------------------------------------------

@@ -3,6 +3,7 @@
 * Update: The install scripts no longer take -autostart and -autoupdate, the default since v9.0.856, nor -restBaseUrl, -restAuthorization and -secret, the 2023 names of -httpBaseUrl, -httpAuthorization and -managementSecret. A server still on a release before v9.0.856 no longer updates itself; run its install command again.
 * Fix: The Docker install script asks about installing Docker only when Docker or its compose plugin is missing, with Enter for yes, and takes Y and yes as yes; it used to ask every time, and took anything but a lowercase y as no. Finding no Docker when it is not to install it, it stops at once and says so; it used to fail at the container's start.
 * Improve: The install scripts and the uninstaller list their options with -help, --help or -h; the Docker install script had no help. Every option takes one dash or two: --noautoupdate is -noautoupdate.
+* Fix: An install started while VpnHoodServer updates itself waits for the update to finish, so its choices stand; the update could undo them, turning updates back on after -noautoupdate. The uninstaller waits too.
 
 # v9.0.859
 

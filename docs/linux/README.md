@@ -42,6 +42,8 @@ The installer must run as root and will say so rather than half-install. It:
   unless it was there before; a distribution built on another, such as Linux Mint, takes that
   one's feed. Arch has no package for it: there it puts Microsoft's build in the
   version's folder and installs `numactl`, which MsQuic needs. Without MsQuic the client uses TCP
+- runs one at a time: after its questions, it waits for an install or uninstall already running,
+  such as the updater's, which would otherwise undo its choices (`/run/VpnHoodClient-install.lock`)
 
 Flags worth knowing:
 

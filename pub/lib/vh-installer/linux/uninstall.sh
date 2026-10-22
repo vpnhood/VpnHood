@@ -42,6 +42,16 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1;
 fi
 
+# The installer's lock: an install running now, the updater's say, would write back part of what this
+# removes, so this waits for it, as an install started meanwhile waits for this.
+if command -v flock >/dev/null 2>&1; then
+	exec 9>>"/run/$assemblyName-install.lock";
+	if ! flock -n 9; then
+		echo "Another install or uninstall of $productName is running. Waiting for it to finish...";
+		flock 9;
+	fi
+fi
+
 # Nothing is deleted but an install's folder, which has its publish.json
 if [ "$destinationPath" = "/" ] || [ ! -f "$destinationPath/publish.json" ]; then
 	echo "Not an install of $productName: $destinationPath";

@@ -161,6 +161,19 @@ if [ "$container" != "y" ]; then
 	autoupdate=${autoupdate:-$defaultAutoupdate};
 fi
 
+# One install at a time from here, where this run starts to change things. Beside another, the one
+# that ends last has the last word - an update ending after a run with -noautoupdate turns updates
+# back on - and each deletes the other's download as a crashed run's leftovers. So the second waits;
+# the lock goes when its run ends, even by a crash. After the questions, so one left unanswered holds
+# up no update; not in a container, whose supervisor runs one update at a time.
+if [ "$container" != "y" ] && command -v flock >/dev/null 2>&1; then
+	exec 9>>"/run/$assemblyName-install.lock";
+	if ! flock -n 9; then
+		echo "Another install or uninstall of $productName is running. Waiting for it to finish...";
+		flock 9;
+	fi
+fi
+
 # In a container nothing else patches the libraries the server runs on but never installs itself -
 # the image brought them - so each release upgrades them there: OpenSSL, the root certificates, ICU,
 # zlib and glibc, the installed ones found by pattern since their package names carry versions.

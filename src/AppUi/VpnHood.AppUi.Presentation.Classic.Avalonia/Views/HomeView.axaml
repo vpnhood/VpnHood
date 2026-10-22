@@ -62,7 +62,7 @@
         <!-- The version, and the way to the developer page: five taps, as the web UI counts them,
              or one once a debug field is set - which the chip shows by filling. It never takes the
              focus, as the web UI's chip does not (tabindex="-1"): a remote has no use for it. -->
-        <Button Grid.Column="2" Classes="version-chip" Classes.debug="{Binding HasDebugData}"
+        <Button x:Name="VersionChip" Grid.Column="2" Classes="version-chip" Classes.debug="{Binding HasDebugData}"
                 Focusable="False" Content="{Binding VersionText}" Click="OnVersionClick"
                 HorizontalAlignment="Right" VerticalAlignment="Center" />
       </Grid>

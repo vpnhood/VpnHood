@@ -460,6 +460,16 @@
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Foreground" Duration="0:0:0.2" Easing="SineEaseInOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <!-- a tap that counts toward the developer page lights the version for a moment
+       (HomeView.LightVersion) -->
+  <Style Selector="Button.version-chip.counted">
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
   </Style>
   <Style Selector="Button.version-chip.debug">
     <Setter Property="Background" Value="{StaticResource VersionOnHomeDebugBrush}" />

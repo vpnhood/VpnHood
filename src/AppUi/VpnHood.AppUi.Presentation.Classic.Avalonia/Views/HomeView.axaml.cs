@@ -2,6 +2,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -15,11 +16,13 @@ public partial class HomeView : UserControl, IPage
     // the web UI's openDebugDialog: five clicks, and a counter that forgets after five seconds
     private static readonly TimeSpan DebugTapWindow = TimeSpan.FromSeconds(5);
     private const int DebugTapCount = 5;
+    private static readonly TimeSpan VersionLightTime = TimeSpan.FromMilliseconds(200);
 
     private readonly MainViewModel _viewModel;
     private readonly MainView _host;
     private long _firstDebugTap;
     private int _debugTaps;
+    private IDisposable? _versionLightOff;
 
     public HomeView(MainViewModel viewModel, MainView host)
     {
@@ -179,10 +182,21 @@ public partial class HomeView : UserControl, IPage
         }
 
         _debugTaps++;
-        if (!_viewModel.HasDebugData && _debugTaps < DebugTapCount)
+        if (!_viewModel.HasDebugData && _debugTaps < DebugTapCount) {
+            LightVersion();
             return;
+        }
 
         _debugTaps = 0;
         _host.Navigate(new DeveloperView(_host));
+    }
+
+    // Each tap before the fifth lights the version, so it shows the taps count; quick taps keep it
+    // lit, and the style's transition fades it back after the last.
+    private void LightVersion()
+    {
+        _versionLightOff?.Dispose();
+        VersionChip.Classes.Set("counted", true);
+        _versionLightOff = DispatcherTimer.RunOnce(() => VersionChip.Classes.Set("counted", false), VersionLightTime);
     }
 }

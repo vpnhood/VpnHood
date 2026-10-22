@@ -242,15 +242,19 @@ one small adapter per platform.
 src/AppUi/
 ├── VpnHood.AppUi.Hosting.Desktop/    the commands, the daemon, the window launcher
 │   ├── DesktopHost.cs                builds the command tree and dispatches
+│   ├── InProcessDesktopHost.cs       the app and its window in one process, the whole job where the OS
+│   │                                 holds the tunnel (the Windows VPN plug-in's); "dev" runs its window
 │   ├── DesktopInitParams.cs          what a head declares: its init params, its UI, whether it takes keys
-│   ├── IDesktopPlatform.cs           what a platform implements: paths, the instance, how to be the daemon
-│   │                                 (and a debugger's), its logs, and what only some have:
-│   │                                 "service install"
 │   ├── DaemonConnection.cs           the API over loopback, following the address the channel gives it
 │   ├── MainThreadQueue.cs            the host's main thread, which the window gets
-│   ├── Abstractions/                 what a platform implements: its paths (IAppDesktopPaths), the running
-│   │                                 instance (IAppInstanceController), the headless app (IAppDaemonHost
-│   │                                 and its factory), the channel's pipe or socket, the peer check
+│   ├── Platform/                     what a platform implements: IDesktopPlatform - paths, the instance,
+│   │                                 how to be the daemon (and a debugger's), its logs, and what only some
+│   │                                 have: "service install" - over its paths (IAppDesktopPaths, the
+│   │                                 window's share IDesktopUiPaths), the running instance
+│   │                                 (IAppInstanceController), the headless app (IAppDaemonHost and its
+│   │                                 factory), the channel's pipe or socket, the peer check (Windows' own
+│   │                                 here, for both Windows hosts); IInProcessDesktopPlatform where there
+│   │                                 is no service
 │   ├── Channel/                      the channel the service hands its address over, to administrators
 │   │                                 only: its two ends, and the answer each call follows
 │   ├── Commands/                     one type per command, and what they share: the printer, the
@@ -262,13 +266,18 @@ src/AppUi/
 │   ├── LinuxDesktopPaths.cs
 │   ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through
 │   └── LinuxDaemonHost.cs            VpnHoodLinuxApp: the service's, root required, or a debugger's
-└── VpnHood.AppUi.Hosting.Desktop.Windows/  the same design on Windows: a LocalSystem service, ProgramData
-    ├── WindowsDesktopHost.cs         a Windows head's entry point
-    ├── WindowsDesktopPlatform.cs     what Windows answers, as an IDesktopPlatform
-    ├── WindowsDesktopPaths.cs        ProgramData for the service, the person's local app data for the UI
-    ├── WindowsInstanceController.cs  the service control manager; elevates a stop as sudo would
-    ├── WindowsServiceSetup.cs        "service install | uninstall"
-    └── WindowsDaemonHost.cs          VpnHoodWindowsApp: the service's, in storage only it may write, or a debugger's
+├── VpnHood.AppUi.Hosting.Desktop.Windows/  the same design on Windows: a LocalSystem service, ProgramData
+│   ├── WindowsDesktopHost.cs         a Windows head's entry point
+│   ├── WindowsDesktopPlatform.cs     what Windows answers, as an IDesktopPlatform
+│   ├── WindowsDesktopPaths.cs        ProgramData for the service, the person's local app data for the UI
+│   ├── WindowsInstanceController.cs  the service control manager; elevates a stop as sudo would
+│   ├── WindowsServiceSetup.cs        "service install | uninstall"
+│   └── WindowsDaemonHost.cs          VpnHoodWindowsApp: the service's, in storage only it may write, or a debugger's
+└── VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin/  an MSIX package's: no service, Windows' VPN host has the tunnel
+    ├── WindowsVpnPluginDesktopHost.cs      its head's entry point, over InProcessDesktopHost
+    ├── WindowsVpnPluginDesktopPlatform.cs  what the package answers, as an IInProcessDesktopPlatform
+    ├── WindowsVpnPluginDesktopPaths.cs     LocalState, the instance named by the app id
+    └── WindowsVpnPluginAppHost.cs          VpnHoodWindowsVpnPluginApp, in the window's process
 ```
 
 A head is then its options — the product's, and its channel's lines — and one line naming its UI,
@@ -304,8 +313,9 @@ Points that are easy to get wrong:
    only `VhApp`. `AvaloniaDesktopHost.Run` takes either.
 3. **The seam is "the running instance", not "the service".** On Linux that is a systemd unit, which
    a signal stops; on Windows a service under the service control manager, which stops it with a
-   call (`IDesktopPlatform.HostDaemon`, `ServiceBase`). A Store build, whose app runs in its own process,
-   is a third `IAppDesktopPaths` + `IAppInstanceController` pair, not a third design.
+   call (`IDesktopPlatform.HostDaemon`, `ServiceBase`). The Windows VPN plug-in's build has none: its
+   app runs in the window's process and Windows' VPN host holds the tunnel, so it hosts the window over
+   that app (`InProcessDesktopHost`), with the window's share of the paths (`IDesktopUiPaths`).
 4. **Hints print `CommandName`, not the binary's name.** `vhclient` is on the `PATH`;
    `VpnHoodClient` is not. The launcher script says its own name in `VH_LAUNCHER_NAME`.
 5. **A tun lives with its process, and says whose it is.** The adapter makes its tun itself

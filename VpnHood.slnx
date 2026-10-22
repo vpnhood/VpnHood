@@ -89,6 +89,7 @@
     </Project>
     <Project Path="src/AppLib/VpnHood.AppLib.App.Linux/VpnHood.AppLib.App.Linux.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App.Windows/VpnHood.AppLib.App.Windows.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.App.WindowsVpnPlugin/VpnHood.AppLib.App.WindowsVpnPlugin.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Stores/">
@@ -124,6 +125,7 @@
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Abstractions/VpnHood.AppUi.Hosting.Desktop.Abstractions.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Linux/VpnHood.AppUi.Hosting.Desktop.Linux.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Windows/VpnHood.AppUi.Hosting.Desktop.Windows.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin/VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView/VpnHood.AppUi.Hosting.WebView.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Android/VpnHood.AppUi.Hosting.WebView.Android.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.WebView.Windows/VpnHood.AppUi.Hosting.WebView.Windows.csproj" />
@@ -192,6 +194,10 @@
     </Project>
     <Project Path="src/Core/VpnHood.Core.Client.Devices.Linux/VpnHood.Core.Client.Devices.Linux.csproj" />
     <Project Path="src/Core/VpnHood.Core.Client.Devices.Windows/VpnHood.Core.Client.Devices.Windows.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation/VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/Core/VpnHood.Core.Client.Devices.WindowsVpnPlugin/VpnHood.Core.Client.Devices.WindowsVpnPlugin.csproj" />
   </Folder>
   <Folder Name="/src/Core/Client/VpnServices/">
     <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
@@ -241,6 +247,7 @@
     <Project Path="src/Net/VpnHood.Net.VpnAdapters.IosTun/VpnHood.Net.VpnAdapters.IosTun.csproj" />
     <Project Path="src/Net/VpnHood.Net.VpnAdapters.LinuxTun/VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
     <Project Path="src/Net/VpnHood.Net.VpnAdapters.WinDivert/VpnHood.Net.VpnAdapters.WinDivert.csproj" />
+    <Project Path="src/Net/VpnHood.Net.VpnAdapters.WindowsVpnPlugin/VpnHood.Net.VpnAdapters.WindowsVpnPlugin.csproj" />
     <Project Path="src/Net/VpnHood.Net.VpnAdapters.WinTun/VpnHood.Net.VpnAdapters.WinTun.csproj" />
   </Folder>
   <Folder Name="/tests/">

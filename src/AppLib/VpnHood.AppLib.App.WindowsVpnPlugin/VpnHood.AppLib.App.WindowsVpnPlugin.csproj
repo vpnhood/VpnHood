@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Shared library for VpnHood Windows clients on the Windows VPN plug-in, which run from an MSIX package</Description>
+		<TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<!-- Not AppLib.App.Windows, whose device brings WinTun and WinDivert. -->
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.WindowsVpnPlugin\VpnHood.Core.Client.Devices.WindowsVpnPlugin.csproj" />
+	</ItemGroup>
+</Project>

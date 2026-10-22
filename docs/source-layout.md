@@ -56,6 +56,7 @@ src/Net/
 ├── VpnHood.Net.VpnAdapters.IosTun/
 ├── VpnHood.Net.VpnAdapters.LinuxTun/
 ├── VpnHood.Net.VpnAdapters.WinDivert/
+├── VpnHood.Net.VpnAdapters.WindowsVpnPlugin/  Windows' own VPN interface, through a VPN plug-in
 └── VpnHood.Net.VpnAdapters.WinTun/
 ```
 
@@ -70,6 +71,8 @@ src/Core/
 ├── VpnHood.Core.Client.Devices.Ios/
 ├── VpnHood.Core.Client.Devices.Linux/
 ├── VpnHood.Core.Client.Devices.Windows/
+├── VpnHood.Core.Client.Devices.WindowsVpnPlugin/   the device of an MSIX package, and its VPN host's service
+├── VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation/  the component Windows activates in that VPN host
 ├── VpnHood.Core.Client.VpnServices.Abstractions/   the VPN service host and the manager that talks to it
 ├── VpnHood.Core.Client.VpnServices.Host/
 ├── VpnHood.Core.Client.VpnServices.Manager/
@@ -100,6 +103,7 @@ src/AppLib/
 ├── VpnHood.AppLib.App.Ios/
 ├── VpnHood.AppLib.App.Linux/
 ├── VpnHood.AppLib.App.Windows/
+├── VpnHood.AppLib.App.WindowsVpnPlugin/
 ├── VpnHood.AppLib.Portal/                      accounts and purchases through the VpnHood Portal API
 ├── VpnHood.AppLib.Stores.AppStore/             App Store billing and Sign in with Apple
 ├── VpnHood.AppLib.Stores.AppStore.Core/        App Store updates and reviews

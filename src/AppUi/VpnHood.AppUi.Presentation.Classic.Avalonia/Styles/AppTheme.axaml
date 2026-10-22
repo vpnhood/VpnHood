@@ -1242,13 +1242,15 @@
   <Style Selector="Button.dialog-btn.plain">
     <Setter Property="Opacity" Value="0.7" />
   </Style>
+  <!-- A dialog is as wide as the window lets it be, up to its MaxWidth, whatever its words: the web
+       UI's v-dialog is, and a dialog that goes through steps keeps one width through them. -->
   <Style Selector="Border.dialog">
     <Setter Property="Background" Value="{StaticResource GeneralDialogBrush}" />
     <Setter Property="CornerRadius" Value="24" />
     <Setter Property="Padding" Value="20,16" />
     <Setter Property="MaxWidth" Value="500" />
     <Setter Property="MinWidth" Value="300" />
-    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.dialog TextBlock.dialog-title">

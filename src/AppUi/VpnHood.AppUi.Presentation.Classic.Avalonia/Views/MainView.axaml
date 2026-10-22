@@ -45,10 +45,11 @@
       <ContentControl x:Name="DrawerContent" HorizontalAlignment="Left" />
     </Panel>
 
-    <!-- the dialogs: a scrim, and the one on top of the stack, centred -->
+    <!-- the dialogs: a scrim, and the one on top of the stack, centred, as wide as the window lets
+         it be up to its own MaxWidth (Border.dialog) -->
     <Panel x:Name="DialogLayer" IsVisible="False">
       <Border x:Name="DialogScrim" Background="{StaticResource ScrimBrush}" />
-      <ContentControl x:Name="DialogContent" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16" />
+      <ContentControl x:Name="DialogContent" VerticalAlignment="Center" Margin="16" />
     </Panel>
 
     <!-- UpdateSnackbar: a newer version and the way to it, until Later -->

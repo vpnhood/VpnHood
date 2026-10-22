@@ -214,6 +214,7 @@ public partial class MainView : UserControl
         if (_topLevel != null) {
             _topLevel.BackRequested += OnBackRequested;
             _topLevel.AddHandler(KeyDownEvent, OnTopLevelKeyDown);
+            _topLevel.ScalingChanged += OnTopLevelScalingChanged;
         }
         ApplySystemBars();
         Dispatcher.UIThread.Post(_pages.Peek().FocusDefault, DispatcherPriority.Loaded);
@@ -224,7 +225,9 @@ public partial class MainView : UserControl
     // but the page, the drawer and the scrims, which reach beneath: the page is padded inside instead
     // (also in Show), so a background it sets on itself - the home's gradient - runs to the screen's
     // edges, and beneath a page with none this view's own shows; the drawer does the same for itself
-    // (also in OpenDrawer). The heights come in device pixels.
+    // (also in OpenDrawer). The heights come in device pixels, and the scale may come after them:
+    // Android's view says 1 until its surface exists, which a start sent to the background before
+    // its first frame reaches only on its return, so a change of scale applies them again.
     private void ApplySystemBars()
     {
         var scaling = _topLevel?.RenderScaling ?? 1;
@@ -241,11 +244,17 @@ public partial class MainView : UserControl
             drawer.ApplySystemBars(_systemBars);
     }
 
+    private void OnTopLevelScalingChanged(object? sender, EventArgs e)
+    {
+        ApplySystemBars();
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         if (_topLevel != null) {
             _topLevel.BackRequested -= OnBackRequested;
             _topLevel.RemoveHandler(KeyDownEvent, OnTopLevelKeyDown);
+            _topLevel.ScalingChanged -= OnTopLevelScalingChanged;
         }
         _topLevel = null;
         base.OnDetachedFromVisualTree(e);

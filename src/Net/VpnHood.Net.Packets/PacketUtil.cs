@@ -58,6 +58,6 @@ public static class PacketUtil
 
     public static ushort OnesComplementSum(ReadOnlySpan<byte> pseudoHeader, ReadOnlySpan<byte> data)
     {
-        return ChecksumUtilsUnsafe.OnesComplementSum(pseudoHeader, data);
+        return ChecksumUtils.OnesComplementSum(pseudoHeader, data);
     }
 }

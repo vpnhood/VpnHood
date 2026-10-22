@@ -173,15 +173,10 @@ public class IpV4Packet : IpPacket
 
     public Memory<byte> Options => Buffer.Slice(20, InternetHeaderLength * 4 - 20);
 
+    // with its checksum, a valid header sums to all ones, whose complement is zero, whichever zero the field holds
     public bool IsHeaderChecksumValid()
     {
-        var originalChecksum = HeaderChecksum;
-        Span[10] = 0;
-        Span[11] = 0;
-        var calculated = PacketUtil.OnesComplementSum(Span[..Header.Length]);
-        Span[10] = (byte)(originalChecksum >> 8);
-        Span[11] = (byte)(originalChecksum & 0xFF);
-        return originalChecksum == calculated;
+        return PacketUtil.OnesComplementSum(Span[..Header.Length]) == 0;
     }
 
     public void UpdateHeaderChecksum()

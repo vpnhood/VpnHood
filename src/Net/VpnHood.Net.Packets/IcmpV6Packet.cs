@@ -75,8 +75,9 @@ public class IcmpV6Packet : IChecksumPayloadPacket
 
     public Memory<byte> Payload => _buffer[8..];
 
+    // with its checksum, a valid message sums to all ones, whose complement is zero, whichever zero the field holds
     public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) =>
-        ComputeChecksum(sourceAddress, destinationAddress) == Checksum;
+        PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)IpProtocol.IcmpV6, _buffer.Span) == 0;
 
     public void UpdateChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) =>
         Checksum = ComputeChecksum(sourceAddress, destinationAddress);

@@ -44,9 +44,14 @@ public class UdpPacket : IChecksumPayloadPacket
         set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span.Slice(6, 2), value);
     }
 
+    // With its checksum, a valid datagram sums to all ones, whose complement is zero. A zero field means the sender
+    // computed none (RFC 768), which only IPv4 allows (RFC 8200 8.1).
     public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)
     {
-        return ComputeChecksum(sourceAddress, destinationAddress) == Checksum;
+        if (Checksum == 0)
+            return sourceAddress.Length == 4;
+
+        return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)IpProtocol.Udp, _buffer.Span) == 0;
     }
 
 
@@ -60,8 +65,10 @@ public class UdpPacket : IChecksumPayloadPacket
         var orgChecksum = Checksum;
         Checksum = 0;
 
+        // a computed zero goes as all ones, as a zero field says there is no checksum
         try {
-            return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)IpProtocol.Udp, _buffer.Span);
+            var checksum = PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)IpProtocol.Udp, _buffer.Span);
+            return checksum == 0 ? (ushort)0xFFFF : checksum;
         }
         finally {
             Checksum = orgChecksum;

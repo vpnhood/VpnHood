@@ -126,9 +126,10 @@ public class TcpPacket : IChecksumPayloadPacket
 
     public Memory<byte> Payload => _buffer[DataOffset..];
 
+    // with its checksum, a valid segment sums to all ones, whose complement is zero, whichever zero the field holds
     public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)
     {
-        return ComputeChecksum(sourceAddress, destinationAddress) == Checksum;
+        return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)IpProtocol.Tcp, _buffer.Span) == 0;
     }
 
     public void UpdateChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)

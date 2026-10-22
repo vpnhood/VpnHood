@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The package: the app (Client), a full-trust Win32 process run as the person, and its VPN host
+     (VpnPluginHost), which Windows starts in an AppContainer as its background tasks' server when the
+     app's VPN profile connects. _publish.ps1 stamps the publisher, the version, the names and the two
+     executables. The VPN host's application id begins the class name Windows asks its factory for
+     (VpnActivationNames), which the package's identity completes: both stay as the WinStore fork
+     verified them until another identity is tried. -->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap10 rescap">
+  <Identity Name="VpnHood.Client" Publisher="CN=Stamped" Version="0.0.0.0" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>Stamped</DisplayName>
+    <PublisherDisplayName>VpnHood</PublisherDisplayName>
+    <Logo>Assets\Logo.png</Logo>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Applications>
+    <Application
+      Id="VpnPluginHost"
+      Executable="Stamped.exe"
+      EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnBackgroundTask"
+      uap10:RuntimeBehavior="windowsApp"
+      uap10:TrustLevel="appContainer">
+      <uap:VisualElements
+        DisplayName="Stamped"
+        Description="The VPN host"
+        AppListEntry="none"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Logo.png"
+        Square44x44Logo="Assets\Logo.png" />
+      <Extensions>
+        <!-- the vpnClient task, without which Windows never activates the plug-in (the fork's lesson 1) -->
+        <Extension Category="windows.backgroundTasks" EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnBackgroundTask">
+          <BackgroundTasks ServerName="Stamped">
+            <uap:Task Type="vpnClient" />
+          </BackgroundTasks>
+        </Extension>
+      </Extensions>
+    </Application>
+    <Application
+      Id="Client"
+      Executable="Stamped.exe"
+      EntryPoint="Windows.FullTrustApplication"
+      uap10:RuntimeBehavior="packagedClassicApp"
+      uap10:TrustLevel="mediumIL">
+      <uap:VisualElements
+        DisplayName="Stamped"
+        Description="VPN client"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Logo.png"
+        Square44x44Logo="Assets\Logo.png" />
+    </Application>
+  </Applications>
+  <Capabilities>
+    <Capability Name="internetClientServer" />
+    <Capability Name="privateNetworkClientServer" />
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="networkingVpnProvider" />
+  </Capabilities>
+  <Extensions>
+    <Extension Category="windows.activatableClass.inProcessServer">
+      <InProcessServer>
+        <Path>WinRT.Host.dll</Path>
+        <ActivatableClass ActivatableClassId="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnBackgroundTask" ThreadingModel="both" />
+      </InProcessServer>
+    </Extension>
+  </Extensions>
+</Package>

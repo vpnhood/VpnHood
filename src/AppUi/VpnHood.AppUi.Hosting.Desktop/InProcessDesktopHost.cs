@@ -15,22 +15,27 @@ namespace VpnHood.AppUi.Hosting.Desktop;
 public static class InProcessDesktopHost
 {
     // The whole run, on the calling thread, which is the host's main thread and the window's, as in
-    // DesktopHost.Run. A window's process ends with its window: nothing cancels it from outside.
-    public static int Run(DesktopInitParams initParams, IInProcessDesktopPlatform platform)
+    // DesktopHost.Run. A window's process ends with its window: nothing cancels it from outside. No
+    // argument is acted on yet; the log keeps them.
+    public static int Run(string[] args, DesktopInitParams initParams, IInProcessDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();
-        var run = Task.Run(() => RunAsync(initParams, platform, mainThread));
+        var run = Task.Run(() => RunAsync(args, initParams, platform, mainThread));
         mainThread.RunUntil(run);
         return run.GetAwaiter().GetResult();
     }
 
-    private static async Task<int> RunAsync(DesktopInitParams initParams, IInProcessDesktopPlatform platform,
-        MainThreadQueue mainThread)
+    private static async Task<int> RunAsync(string[] args, DesktopInitParams initParams,
+        IInProcessDesktopPlatform platform, MainThreadQueue mainThread)
     {
         try {
             await using var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, initParams.Ui);
             if (uiInstance == null)
                 return 0;
+
+            VhLogger.AddProvider(platform.CreateLoggerProvider());
+            VhLogger.Instance.LogInformation("{InstanceName} started on .NET {Version}. Args: {Args}",
+                platform.Paths.InstanceName, Environment.Version, string.Join(' ', args));
 
             try {
                 await using var app = platform.CreateApp();

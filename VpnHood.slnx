@@ -151,6 +151,10 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="src/Apps/Client/Client.Linux.Web/VpnHood.App.Client.Linux.Web.csproj" />
+    <Project Path="src/Apps/Client/Client.Windows.Microsoft/VpnHood.App.Client.Windows.Microsoft.csproj" />
+    <Project Path="src/Apps/Client/Client.Windows.VpnPlugin/VpnHood.App.Client.Windows.VpnPlugin.csproj">
+      <Platform Project="x64" />
+    </Project>
     <Project Path="src/Apps/Client/Client.Windows.Web/VpnHood.App.Client.Windows.Web.csproj" />
   </Folder>
   <Folder Name="/src/Apps/Connect/">

@@ -126,6 +126,8 @@ src/Apps/
 │   ├── Client.Ios.Apple/           the App Store distribution
 │   ├── Client.Ios.Extension/       the Network Extension it bundles
 │   ├── Client.Linux.Web/
+│   ├── Client.Windows.Microsoft/   the Microsoft Store distribution, an MSIX package
+│   ├── Client.Windows.VpnPlugin/   the VPN host that package carries
 │   └── Client.Windows.Web/
 ├── Connect/                        the same set, with Connect's own product project
 ├── Server/                         VpnHood.App.Server.Net.csproj + its Docker and Linux packaging
@@ -139,12 +141,14 @@ src/Apps/
 folder, and a head's folder is `<Product>.<Platform>.<Channel>` without the `VpnHood.App.` prefix.
 
 **A head is `<Product>.<Platform>.<Channel>`.** The channel is who hands the app to the user:
-`Google` is Play, `Apple` is the App Store, `Web` is our own site. Every head names its channel, so
+`Google` is Play, `Apple` is the App Store, `Microsoft` is the Microsoft Store, `Web` is our own
+site. Every head names its channel, so
 a second one on the same platform is a sibling rather than a rename.
 
-One folder is not a head and does not follow that rule. `*.Ios.Extension` is the Network Extension
-the iOS app bundles, which belongs to the platform rather than to a channel, so every iOS channel
-of a product would reuse the same one. The Windows setup is not a folder of the product's: one NSIS
+Two folders are not heads and do not follow that rule. `*.Ios.Extension` is the Network Extension
+the iOS app bundles, and `*.Windows.VpnPlugin` the VPN host a Windows package carries: each belongs
+to the platform rather than to a channel, so every channel of a product on that platform would
+reuse the same one. The Windows setup is not a folder of the product's: one NSIS
 script for every app, `pub/lib/vh-installer/win/install-client.nsi`, takes the app's names from its
 identity.
 
@@ -157,14 +161,18 @@ ids and names are not among them: they come from the app's identity (below).
 
 | File | What it does |
 | --- | --- |
-| `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id and name, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params and its UI to the platform's host (`WindowsDesktopHost.Run`, `LinuxDesktopHost.Run`), whose service starts the app. Either way the platform builds its own device and starts `VpnHoodApp` |
+| `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id and name, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params and its UI to the platform's host (`WindowsDesktopHost.Run`, `LinuxDesktopHost.Run`), whose service starts the app, or `WindowsVpnPluginDesktopHost.Run`, which starts it in the window's own process. Either way the platform builds its own device and starts `VpnHoodApp` |
 | `_publish.ps1` | the one entry point that builds and packages this head; CI calls exactly this |
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
 hosts it mounts from `AppUi`. A desktop head mounts one more host than a mobile one: its platform's
 `VpnHood.AppUi.Hosting.Desktop.Linux` or `.Desktop.WindowsTun`, over the shared `VpnHood.AppUi.Hosting.Desktop`,
 which is the service that holds the app, the window that shows it and the command line in one
-binary — see [linux/](linux/README.md#how-it-fits-together).
+binary — see [linux/](linux/README.md#how-it-fits-together). The Microsoft Store head mounts
+`.Desktop.WindowsVpnPlugin` instead, with no service: the app runs in its window's process, and
+Windows' VPN host holds the tunnel. It has two files more, `Package.appxmanifest`, its package's
+manifest, which `_publish.ps1` stamps, and `_install.ps1`, which installs that package on this
+machine.
 
 ## The product project
 

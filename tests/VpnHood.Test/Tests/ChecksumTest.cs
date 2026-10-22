@@ -9,22 +9,21 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class ChecksumTest : TestBase
 {
-    // RFC 1071 as written: network-order words, the carry added back at each step
+    // RFC 1071 as written: the pseudo header and the data as one stream of network-order words, the carry added
+    // back at each step
     private static ushort WordByWordChecksum(ReadOnlySpan<byte> pseudoHeader, ReadOnlySpan<byte> data)
     {
-        var sum = AddWords(0, pseudoHeader);
-        sum = AddWords(sum, data);
-        return (ushort)~sum;
-    }
+        var stream = new byte[pseudoHeader.Length + data.Length];
+        pseudoHeader.CopyTo(stream);
+        data.CopyTo(stream.AsSpan(pseudoHeader.Length));
 
-    private static uint AddWords(uint sum, ReadOnlySpan<byte> data)
-    {
-        for (var i = 0; i < data.Length; i += 2) {
-            sum += (uint)((data[i] << 8) | (i + 1 < data.Length ? data[i + 1] : 0));
+        uint sum = 0;
+        for (var i = 0; i < stream.Length; i += 2) {
+            sum += (uint)((stream[i] << 8) | (i + 1 < stream.Length ? stream[i + 1] : 0));
             sum = (sum & 0xFFFF) + (sum >> 16);
         }
 
-        return sum;
+        return (ushort)~sum;
     }
 
     private static IPAddress Address(IpVersion ipVersion, byte last)
@@ -33,13 +32,14 @@ public class ChecksumTest : TestBase
     }
 
     // The loop this machine runs (Vector256 on x64, AdvSimd on Arm64) and every tail, from aligned and unaligned starts,
-    // on zeros, all ones and random bytes; under DOTNET_EnableAVX2=0 an x64 run takes the scalar loop, Mono's
+    // on zeros, all ones and random bytes, after pseudo headers of even and odd length; under DOTNET_EnableAVX2=0 an
+    // x64 run takes the scalar loop, Mono's
     [TestMethod]
     public void Sum_matches_a_word_by_word_sum()
     {
         var random = new Random(1);
         var buffer = new byte[2200];
-        foreach (var pseudoHeaderLength in new[] { 0, 12, 40 }) {
+        foreach (var pseudoHeaderLength in new[] { 0, 1, 3, 12, 40 }) {
             var pseudoHeader = new byte[pseudoHeaderLength];
             random.NextBytes(pseudoHeader);
             for (var fill = 0; fill < 3; fill++) {
@@ -144,6 +144,17 @@ public class ChecksumTest : TestBase
         var udpPacket = ipPacket.ExtractUdp();
         udpPacket.Checksum = 0;
         Assert.AreEqual(isValid, udpPacket.IsChecksumValid(ipPacket));
+    }
+
+    [TestMethod]
+    public void Udp_without_checksum_needs_IPv4_on_both_sides()
+    {
+        using var ipPacket = PacketBuilder.BuildUdp(Address(IpVersion.IPv4, 1), Address(IpVersion.IPv4, 2), 1000, 53,
+            new byte[11]);
+        var udpPacket = ipPacket.ExtractUdp();
+        udpPacket.Checksum = 0;
+        Assert.IsFalse(udpPacket.IsChecksumValid(ipPacket.SourceAddressSpan,
+            Address(IpVersion.IPv6, 2).GetAddressBytes()));
     }
 
     [TestMethod]

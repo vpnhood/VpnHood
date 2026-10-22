@@ -49,7 +49,7 @@ public class UdpPacket : IChecksumPayloadPacket
     public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress)
     {
         if (Checksum == 0)
-            return sourceAddress.Length == 4;
+            return sourceAddress.Length == 4 && destinationAddress.Length == 4;
 
         return PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)IpProtocol.Udp, _buffer.Span) == 0;
     }

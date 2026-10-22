@@ -19,7 +19,12 @@ public static class ChecksumUtils
     // A computed zero is returned as is; UDP sends it as all ones itself.
     public static ushort OnesComplementSum(ReadOnlySpan<byte> pseudoHeader, ReadOnlySpan<byte> data)
     {
-        var folded = Fold(Sum(pseudoHeader) + Sum(data));
+        // after an odd pseudo header every data byte sits in the other half of its word, which swaps its sum's bytes
+        var dataSum = Sum(data);
+        if ((pseudoHeader.Length & 1) != 0)
+            dataSum = BinaryPrimitives.ReverseEndianness(Fold(dataSum));
+
+        var folded = Fold(Sum(pseudoHeader) + dataSum);
         if (BitConverter.IsLittleEndian)
             folded = BinaryPrimitives.ReverseEndianness(folded);
 

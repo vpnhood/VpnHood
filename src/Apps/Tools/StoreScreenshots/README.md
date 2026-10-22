@@ -26,13 +26,16 @@ VpnHoodStoreScreenshots generate --config <store/screenshots.json> --assets <sto
 
 VpnHoodStoreScreenshots shot  --fixture <one shot's json> --assets <store> --route /protocols
     --width 360 --height 692 --scale 8 --culture en --out <png> [--hide A/B] [--freeze flasher]
+    [--hover A/B | --press A/B]
 
 VpnHoodStoreScreenshots frame --device <device json> --assets <store> --in <png> --out <png>
 ```
 
 `generate` is the one to run; it spawns `shot` and `frame` itself, one process per picture, several
 at a time. The other two exist because that is how a wrong pixel is chased: every run keeps the
-exact input of every picture, so one of them can be drawn again by hand.
+exact input of every picture, so one of them can be drawn again by hand. `shot` also draws what no
+store set shows: `--hover` rests the mouse in the middle of the control so named, `--press` holds
+its button down there too.
 
 `--assets` is the UI's asset store: the folder `src/AppUi/VpnHood.AppUi.Assets.Classic/_sync-assets.ps1` mirrors,
 or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words of its own.

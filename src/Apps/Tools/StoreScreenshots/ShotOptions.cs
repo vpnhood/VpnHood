@@ -27,6 +27,11 @@ internal sealed class ShotOptions
     // How long a page may keep changing before the capture is taken anyway.
     public TimeSpan SettleTimeout { get; init; } = TimeSpan.FromSeconds(8);
 
+    // A look at a hover or a press, never a store set's: the mouse rests in the middle of the control
+    // so named (a path of x:Names, as Hide), its button down for Press.
+    public string? Hover { get; init; }
+    public string? Press { get; init; }
+
     public static ShotOptions Parse(string[] args)
     {
         var values = CommandLine.Parse(args);
@@ -45,7 +50,9 @@ internal sealed class ShotOptions
             Freeze = values.TryGetValue("freeze", out var freeze)
                 ? freeze.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 : ["flasher", "floating"],
-            SettleTimeout = values.TryGetValue("settle-timeout", out var settle) ? TimeSpan.FromMilliseconds(int.Parse(settle)) : TimeSpan.FromSeconds(8)
+            SettleTimeout = values.TryGetValue("settle-timeout", out var settle) ? TimeSpan.FromMilliseconds(int.Parse(settle)) : TimeSpan.FromSeconds(8),
+            Hover = values.GetValueOrDefault("hover"),
+            Press = values.GetValueOrDefault("press")
         };
     }
 }

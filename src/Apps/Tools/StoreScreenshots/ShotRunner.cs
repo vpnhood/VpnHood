@@ -1,8 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -59,6 +61,18 @@ internal sealed class ShotRunner(ShotOptions options, Window window, MainView vi
             Hide(path);
         if (options.Hide.Count > 0)
             await Frames(2);
+
+        // the mouse, for a look at a hover or a press; the frames rest once the light has faded in
+        if ((options.Press ?? options.Hover) is { } target) {
+            var control = Find(target, "pointed at");
+            var middle = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)
+                         ?? throw new InvalidOperationException($"'{target}' is not on the window.");
+            window.MouseMove(middle);
+            if (options.Press != null)
+                window.MouseDown(middle, MouseButton.Left);
+            await WaitForStillFrames();
+            Console.WriteLine($"{(options.Press != null ? "pressed" : "hovered"),-9} {target}");
+        }
 
         FailOnOverlay();
         FailOnErrors();
@@ -122,12 +136,17 @@ internal sealed class ShotRunner(ShotOptions options, Window window, MainView vi
     // chip back into the listing (the web UI engine's rule for its selectors).
     private void Hide(string path)
     {
+        Find(path, "hidden").IsVisible = false;
+        Console.WriteLine($"hidden    {path}");
+    }
+
+    private Control Find(string path, string purpose)
+    {
         Control scope = view;
         foreach (var name in path.Split('/'))
             scope = scope.GetVisualDescendants().OfType<Control>().FirstOrDefault(x => x.Name == name)
-                    ?? throw new InvalidOperationException($"Nothing named '{name}' was found under '{path}', so it was not hidden.");
-        scope.IsVisible = false;
-        Console.WriteLine($"hidden    {path}");
+                    ?? throw new InvalidOperationException($"Nothing named '{name}' was found under '{path}', so it was not {purpose}.");
+        return scope;
     }
 
     // No store screenshot is meant to have a dialog open: that is an error the page caught and

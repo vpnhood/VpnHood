@@ -31,8 +31,23 @@ internal sealed class NetProtector(NetProtectorOptions options) : IDisposable
     private readonly EventReporter _netScanReporter = new(
         "NetScan protector does not allow this request.", GeneralEventId.NetProtect, options.LogScope);
 
+    private readonly EventReporter _unreadableReporter = new(
+        "Some fragments and IPv6 packets with unread extension headers have been dropped.", GeneralEventId.NetProtect,
+        options.LogScope);
+
     // its reporter takes each refusal once
     public int NetScanErrorCount => _netScanReporter.TotalEventCount;
+
+    // false for a packet whose upper layer the checks cannot read, while the kernel reads it all the same: a fragment,
+    // which it reassembles, or an IPv6 packet stopped at an extension header, which it reads through
+    public bool VerifyReadable(IpPacket ipPacket)
+    {
+        if (!ipPacket.IsFragment && ipPacket is not IpV6Packet { HasUnreadExtensionHeader: true })
+            return true;
+
+        _unreadableReporter.Raise();
+        return false;
+    }
 
     // false for a packet over its limit
     public bool VerifyPacket(IpPacket ipPacket, IpProtocol protocol, IpEndPointValue destinationEndPoint)
@@ -92,6 +107,7 @@ internal sealed class NetProtector(NetProtectorOptions options) : IDisposable
         _udpDnsLimitReporter.Dispose();
         _tcpConnectLimitReporter.Dispose();
         _netScanReporter.Dispose();
+        _unreadableReporter.Dispose();
         _netScanDetector?.Dispose();
     }
 }

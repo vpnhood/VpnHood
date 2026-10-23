@@ -72,8 +72,15 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
         }
     }
 
+    // the upper layer's: IPv6 reads through its extension headers, and names the one it stops at
     public abstract IpProtocol Protocol { get; }
+
+    // a piece of a datagram, whose upper-layer packet no one piece holds whole
+    public abstract bool IsFragment { get; }
+
     public abstract byte TimeToLive { get; set; }
+
+    // up to the upper layer, IPv6's extension headers included
     public abstract Memory<byte> Header { get; }
     public Memory<byte> Payload => Buffer[Header.Length..];
 

@@ -20,7 +20,7 @@ public static class IpPacketExtensions
             if (ipPacket.Protocol != IpProtocol.Udp)
                 throw new InvalidDataException($"Invalid UDP packet. It is: {ipPacket.Protocol}");
 
-            ipPacket.PayloadPacket ??= new UdpPacket(ipPacket.Payload, false);
+            ipPacket.PayloadPacket ??= new UdpPacket(GetWholePayload(ipPacket), false);
             return (UdpPacket)ipPacket.PayloadPacket;
         }
 
@@ -40,7 +40,7 @@ public static class IpPacketExtensions
             if (ipPacket.Protocol != IpProtocol.Tcp)
                 throw new InvalidDataException($"Invalid TCP packet. It is: {ipPacket.Protocol}");
 
-            ipPacket.PayloadPacket ??= new TcpPacket(ipPacket.Payload);
+            ipPacket.PayloadPacket ??= new TcpPacket(GetWholePayload(ipPacket));
             return (TcpPacket)ipPacket.PayloadPacket;
         }
 
@@ -71,7 +71,7 @@ public static class IpPacketExtensions
             if (ipPacket.Protocol != IpProtocol.IcmpV4)
                 throw new InvalidDataException($"Invalid IcmpV4 packet. It is: {ipPacket.Protocol}");
 
-            ipPacket.PayloadPacket ??= new IcmpV4Packet(ipPacket.Payload, false);
+            ipPacket.PayloadPacket ??= new IcmpV4Packet(GetWholePayload(ipPacket), false);
             return (IcmpV4Packet)ipPacket.PayloadPacket;
         }
 
@@ -91,7 +91,7 @@ public static class IpPacketExtensions
             if (ipPacket.Protocol != IpProtocol.IcmpV6)
                 throw new InvalidDataException($"Invalid IcmpV6 packet. It is: {ipPacket.Protocol}");
 
-            ipPacket.PayloadPacket ??= new IcmpV6Packet(ipPacket.Payload, false);
+            ipPacket.PayloadPacket ??= new IcmpV6Packet(GetWholePayload(ipPacket), false);
             return (IcmpV6Packet)ipPacket.PayloadPacket;
         }
 
@@ -178,6 +178,10 @@ public static class IpPacketExtensions
             if (ipPacket is IpV4Packet ipV4Packet)
                 ipV4Packet.UpdateHeaderChecksum();
 
+            // the upper layer's checksum covers the whole datagram, which no fragment holds
+            if (ipPacket.IsFragment)
+                return;
+
             if (ipPacket.Protocol == IpProtocol.Udp)
                 ipPacket.ExtractUdp().UpdateChecksum(ipPacket);
 
@@ -228,11 +232,14 @@ public static class IpPacketExtensions
 
         public bool IsIcmpEcho()
         {
+            // a fragment holds no whole echo
             return ipPacket switch {
                 // IPv4
-                { Version: IpVersion.IPv4, Protocol: IpProtocol.IcmpV4 } => ipPacket.ExtractIcmpV4().IsEcho,
+                { Version: IpVersion.IPv4, Protocol: IpProtocol.IcmpV4 } =>
+                    !ipPacket.IsFragment && ipPacket.ExtractIcmpV4().IsEcho,
                 // IPv6
-                { Version: IpVersion.IPv6, Protocol: IpProtocol.IcmpV6 } => ipPacket.ExtractIcmpV6().IsEcho,
+                { Version: IpVersion.IPv6, Protocol: IpProtocol.IcmpV6 } =>
+                    !ipPacket.IsFragment && ipPacket.ExtractIcmpV6().IsEcho,
                 _ => false
             };
         }
@@ -262,5 +269,13 @@ public static class IpPacketExtensions
             length = ipPacket.Buffer.Length;
             return backupBuffer;
         }
+    }
+
+    // a fragment's payload is a piece of its upper-layer packet, which reads as one only by chance
+    private static Memory<byte> GetWholePayload(IpPacket ipPacket)
+    {
+        return ipPacket.IsFragment
+            ? throw new InvalidDataException($"A fragment holds only a piece of its {ipPacket.Protocol} packet.")
+            : ipPacket.Payload;
     }
 }

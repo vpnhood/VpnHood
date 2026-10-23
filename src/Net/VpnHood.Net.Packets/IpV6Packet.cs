@@ -9,6 +9,11 @@ public class IpV6Packet : IpPacket
     private bool _disposed;
     private readonly IMemoryOwner<byte>? _memoryOwner;
 
+    // set by the extension headers a parsed packet reads through, if it has any
+    private readonly IpProtocol? _upperLayerProtocol;
+    private readonly int _headerLength = 40;
+    private readonly bool _isFragment;
+
     public IpV6Packet(IMemoryOwner<byte> memoryOwner)
         : this(memoryOwner.Memory)
     {
@@ -61,12 +66,21 @@ public class IpV6Packet : IpPacket
         var payloadLength = BinaryPrimitives.ReadUInt16BigEndian(buffer.Span.Slice(4, 2));
         if (buffer.Length != 40 + payloadLength)
             throw new ArgumentException("Buffer length does not match IPv6 payload length field.");
+
+        // a packet without extension headers pays this one check
+        if (IpV6ExtensionHeaders.IsExtensionHeader(NextHeader))
+            _upperLayerProtocol =
+                IpV6ExtensionHeaders.FindUpperLayer(buffer.Span, out _headerLength, out _isFragment);
     }
 
     private Span<byte> Span => Buffer.Span;
-    public override IpProtocol Protocol => NextHeader;
+    public override IpProtocol Protocol => _upperLayerProtocol ?? NextHeader;
+    public override bool IsFragment => _isFragment;
     public IpProtocol NextHeader => (IpProtocol)Span[6];
-    public override Memory<byte> Header => Buffer[..40];
+    public override Memory<byte> Header => Buffer[.._headerLength];
+
+    // stopped at an extension header it does not read through, which Protocol names instead of the upper layer
+    public bool HasUnreadExtensionHeader => IpV6ExtensionHeaders.IsExtensionHeader(Protocol);
 
     public override byte TimeToLive {
         get => HopLimit;

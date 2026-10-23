@@ -199,6 +199,97 @@ public class PacketTest : TestBase
     }
 
     [TestMethod]
+    public void IPv6_reads_through_extension_headers()
+    {
+        using var tcpPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("[2001:db8::1]:1000"),
+            IPEndPoint.Parse("[2001:db8::2]:443"), [], [1, 2, 3]);
+        tcpPacket.UpdateAllChecksums();
+
+        // an atomic fragment, a Fragment header with no offset nor more fragments, is a whole packet
+        using var ipPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
+            IpV6ExtensionHeaderBuilder.Options(IpProtocol.IPv6HopByHopOptions),
+            IpV6ExtensionHeaderBuilder.Authentication(),
+            IpV6ExtensionHeaderBuilder.Fragment(offset: 0, moreFragments: false),
+            IpV6ExtensionHeaderBuilder.Options(IpProtocol.IPv6DestinationOptions));
+
+        Assert.AreEqual(IpProtocol.IPv6HopByHopOptions, ((IpV6Packet)ipPacket).NextHeader);
+        Assert.AreEqual(IpProtocol.Tcp, ipPacket.Protocol);
+        Assert.IsFalse(ipPacket.IsFragment);
+        Assert.AreEqual(40 + 8 + 12 + 8 + 8, ipPacket.Header.Length);
+        Assert.AreEqual(443, ipPacket.GetDestinationEndPoint().Port);
+
+        // the TCP checksum covers the TCP packet alone, as without the headers
+        Assert.IsTrue(ipPacket.ExtractTcp().IsChecksumValid(ipPacket));
+    }
+
+    [TestMethod]
+    public void IPv6_stops_at_unread_extension_header()
+    {
+        using var tcpPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("[2001:db8::1]:1000"),
+            IPEndPoint.Parse("[2001:db8::2]:443"), [], [1, 2, 3]);
+
+        // a Routing header, whose final destination the TCP checksum would cover
+        using var routedPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
+            IpV6ExtensionHeaderBuilder.Options(IpProtocol.IPv6HopByHopOptions),
+            IpV6ExtensionHeaderBuilder.Routing());
+        Assert.AreEqual(IpProtocol.IPv6RoutingHeader, routedPacket.Protocol);
+        Assert.AreEqual(48, routedPacket.Header.Length);
+
+        // a header that runs past the packet
+        using var truncatedPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
+            IpV6ExtensionHeaderBuilder.Options(IpProtocol.IPv6DestinationOptions, length: 10));
+        Assert.AreEqual(IpProtocol.IPv6DestinationOptions, truncatedPacket.Protocol);
+        Assert.AreEqual(40, truncatedPacket.Header.Length);
+    }
+
+    [TestMethod]
+    public void IPv6_fragment()
+    {
+        using var udpPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[2001:db8::1]:1000"),
+            IPEndPoint.Parse("[2001:db8::2]:53"), [1, 2, 3]);
+
+        // the first piece holds the upper layer's header, not its whole packet
+        using var firstPiece = IpV6ExtensionHeaderBuilder.Insert(udpPacket,
+            IpV6ExtensionHeaderBuilder.Fragment(offset: 0, moreFragments: true));
+        Assert.AreEqual(IpProtocol.Udp, firstPiece.Protocol);
+        Assert.IsTrue(firstPiece.IsFragment);
+        Assert.AreEqual(48, firstPiece.Header.Length);
+        Assert.ThrowsExactly<InvalidDataException>(() => firstPiece.ExtractUdp());
+
+        // a later piece holds no upper-layer header at all
+        using var laterPiece = IpV6ExtensionHeaderBuilder.Insert(udpPacket,
+            IpV6ExtensionHeaderBuilder.Fragment(offset: 1, moreFragments: false));
+        Assert.AreEqual(IpProtocol.Udp, laterPiece.Protocol);
+        Assert.IsTrue(laterPiece.IsFragment);
+        Assert.AreEqual(48, laterPiece.Header.Length);
+    }
+
+    [TestMethod]
+    public void IPv4_fragment()
+    {
+        using var echoPacket = (IpV4Packet)PacketBuilder.BuildIcmpV4EchoRequest(IPAddress.Parse("10.0.0.2"),
+            IPAddress.Parse("10.0.0.3"), [1, 2, 3]);
+        Assert.IsFalse(echoPacket.IsFragment);
+        echoPacket.MoreFragments = true;
+
+        using var ipPacket = (IpV4Packet)PacketBuilder.Parse(echoPacket.Buffer.Span);
+        Assert.IsTrue(ipPacket.IsFragment);
+        Assert.IsFalse(ipPacket.IsIcmpEcho());
+        Assert.ThrowsExactly<InvalidDataException>(() => ipPacket.ExtractIcmpV4());
+
+        // its header's checksum only, as the ICMP one covers the whole datagram
+        var payload = ipPacket.Payload.ToArray();
+        ipPacket.UpdateAllChecksums();
+        Assert.IsTrue(ipPacket.IsHeaderChecksumValid());
+        CollectionAssert.AreEqual(payload, ipPacket.Payload.ToArray());
+
+        // an offset makes a fragment too
+        ipPacket.MoreFragments = false;
+        ipPacket.FragmentOffset = 1;
+        Assert.IsTrue(ipPacket.IsFragment);
+    }
+
+    [TestMethod]
     [DataRow(IpVersion.IPv4)]
     [DataRow(IpVersion.IPv6)]
     public void Udp(IpVersion ipVersion)

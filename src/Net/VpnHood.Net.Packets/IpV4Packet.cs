@@ -90,6 +90,7 @@ public class IpV4Packet : IpPacket
     private Span<byte> Span => Buffer.Span;
     public override Memory<byte> Header => Buffer[..(InternetHeaderLength * 4)];
     public override IpProtocol Protocol => (IpProtocol)Span[9];
+    public override bool IsFragment => ((Span[6] & 0x3F) | Span[7]) != 0; // more fragments, or an offset
     public int InternetHeaderLength => Span[0] & 0x0F;
 
 

@@ -262,6 +262,7 @@ internal class ChannelManager : IDisposable
             var channelIndex = channelCount switch {
                 0 => throw new Exception("No available PacketChannel to send packets."),
                 1 => 0,
+                _ when ipPacket.IsFragment => 0, // only a datagram's first piece holds its ports
                 _ => ipPacket.Protocol switch {
                     IpProtocol.Tcp => ipPacket.ExtractTcp().SourcePort % channelCount,
                     IpProtocol.Udp => ipPacket.ExtractUdp().SourcePort % channelCount,

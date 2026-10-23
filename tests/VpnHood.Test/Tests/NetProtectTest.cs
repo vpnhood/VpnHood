@@ -7,6 +7,7 @@ using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.VpnAdapters.Abstractions;
+using VpnHood.Test.Packets;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
@@ -134,6 +135,52 @@ public class NetProtectTest : TestBase
 
         // another network is not affected
         Assert.IsTrue(VerifyTcpPacket(netProtector, "10.10.11.1:80", syn: true, ack: false));
+    }
+
+    [TestMethod]
+    public void Unreadable_packets_are_dropped()
+    {
+        using var netProtector = new NetProtector(CreateNetProtectorOptions());
+        using var tcpPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("[2001:db8::1]:50000"),
+            IPEndPoint.Parse("[2001:db8::2]:80"), [], []);
+
+        // the IPv6 headers the packet reads through hide nothing
+        using var readPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
+            IpV6ExtensionHeaderBuilder.Options(IpProtocol.IPv6HopByHopOptions));
+        Assert.IsTrue(netProtector.VerifyReadable(readPacket));
+
+        // one it stops at, behind which the kernel finds TCP all the same
+        using var routedPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket, IpV6ExtensionHeaderBuilder.Routing());
+        Assert.IsFalse(netProtector.VerifyReadable(routedPacket));
+
+        // fragments, which the kernel reassembles
+        using var ipV6Fragment = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
+            IpV6ExtensionHeaderBuilder.Fragment(offset: 0, moreFragments: true));
+        Assert.IsFalse(netProtector.VerifyReadable(ipV6Fragment));
+
+        using var ipV4Fragment = (IpV4Packet)PacketBuilder.BuildTcp(IPEndPoint.Parse("10.255.0.2:50000"),
+            IPEndPoint.Parse("10.10.10.1:80"), [], []);
+        ipV4Fragment.FragmentOffset = 1;
+        Assert.IsFalse(netProtector.VerifyReadable(ipV4Fragment));
+    }
+
+    [TestMethod]
+    public void MaxTcpConnectsPerSecond_counts_syns_behind_extension_headers()
+    {
+        using var netProtector = new NetProtector(CreateNetProtectorOptions(maxTcpConnectsPerSecond: 1));
+        using var tcpPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("[2001:db8::1]:50000"),
+            IPEndPoint.Parse("[2001:db8::2]:80"), [], []);
+        tcpPacket.ExtractTcp().Synchronize = true;
+
+        // a burst of SYNs behind a Hop-by-Hop header: a second's worth passes, or two as the burst may span a second's
+        // turn
+        var passedCount = Enumerable.Range(0, 10).Count(_ => {
+            using var ipPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
+                IpV6ExtensionHeaderBuilder.Options(IpProtocol.IPv6HopByHopOptions));
+            return netProtector.VerifyReadable(ipPacket) &&
+                   netProtector.VerifyPacket(ipPacket, ipPacket.Protocol, ipPacket.GetDestinationEndPoint());
+        });
+        Assert.IsTrue(passedCount is >= 1 and <= 2, $"PassedCount: {passedCount}");
     }
 
     [TestMethod]

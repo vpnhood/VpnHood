@@ -30,6 +30,11 @@ public static class PacketLogger
             var packetPayload = new Memory<byte>();
 
             switch (ipPacket.Protocol) {
+                // a fragment holds a piece of its packet, logged as is
+                case var _ when ipPacket.IsFragment:
+                    packetPayload = ipPacket.Payload;
+                    break;
+
                 case IpProtocol.IcmpV4: {
                     packetEventId = GeneralEventId.Ping;
                     var icmpPacket = ipPacket.ExtractIcmpV4();

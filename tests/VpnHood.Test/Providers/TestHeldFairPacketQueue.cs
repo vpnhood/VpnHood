@@ -1,11 +1,12 @@
+using System.Buffers.Binary;
 using VpnHood.Net.Packets;
-using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.PacketTransports;
 
 namespace VpnHood.Test.Providers;
 
 // A fair queue whose turns wait at a gate until let through, a few or all: a queue whose connection stopped
-// moving. A turn records the packet's UDP source port, then disposes the packet
+// moving. A turn records the packet's UDP source port, then disposes the packet. It reads the port from the bytes, as
+// a test's fragments are whole UDP packets marked as fragments, from which no UDP packet is extracted
 public class TestHeldFairPacketQueue(int capacity) : FairPacketQueue(capacity)
 {
     private readonly SemaphoreSlim _turnGate = new(0);
@@ -33,7 +34,7 @@ public class TestHeldFairPacketQueue(int capacity) : FairPacketQueue(capacity)
         if (!_isReleased)
             await _turnGate.WaitAsync();
 
-        var sourcePort = ipPacket.ExtractUdp().SourcePort;
+        var sourcePort = BinaryPrimitives.ReadUInt16BigEndian(ipPacket.Payload.Span);
         if (sourcePort == FailSendPort)
             throw new InvalidOperationException("Test: the send failed.");
 

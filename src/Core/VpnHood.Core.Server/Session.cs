@@ -300,11 +300,18 @@ public class Session : IDisposable
 
         // read once for the checks below, as each read decodes the packet
         var protocol = ipPacket.Protocol;
-        var destinationEndPoint = ipPacket.GetDestinationEndPoint();
 
         // check TcpPacket
         if (!AllowTcpPacket && protocol == IpProtocol.Tcp)
             throw new NetFilterException("TcpPacket is not allowed in this session.");
+
+        // a packet the checks below cannot read goes without an exception, as a flood would throw one for each packet
+        if (!_netProtector.VerifyReadable(ipPacket)) {
+            ipPacket.Dispose();
+            return;
+        }
+
+        var destinationEndPoint = ipPacket.GetDestinationEndPoint();
 
         // filter before mapper because it supposes to filter user requests
         if (_netFilter.IpFilter?.Process(protocol, destinationEndPoint) == FilterAction.Block) {

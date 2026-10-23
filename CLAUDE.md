@@ -26,57 +26,11 @@ The design and code rules agreed while building are in
   keep noun names (`Common.ps1`, `AppPublishConfig.ps1`); per-app entry scripts keep their
   folder-scoped names (`pub/Client/Publish.ps1`, `src/Apps/*/*/_publish.ps1`).
 
-## UI
-
-- The products' UI is the Avalonia presentation under `src/AppUi`. The look it draws with - images, flags, fonts, words - is the submodule at `src/AppUi/VpnHood.AppUi.Assets.Classic` (vpnhood/VpnHood.AppUi.Assets.Classic); a clone needs `--recurse-submodules` or a head starts with no images and no words. The web UI is kept as a sample in the sibling repo `..\VpnHood.AppUi.Spa\` (its SPA at `src\VpnHood.AppUi.Presentation.Classic.Spa`), where those files were authored and from which `_sync-assets.ps1` still mirrors a change across.
-  relative to this repo. It consumes the generated TypeScript API stub.
-- Never manually edit the TypeScript API stub (the generated .ts file in the Swagger project, e.g.
-  VpnHood.Client.Api.ts). It is auto-generated: build the Swagger project to (re)generate the stub, then
-  the UI consumes the updated stub. Run `_recreate-api.ps1` to regenerate the API stub and update the UI
-  project reference.
-
-## Language
-
-- Use primary constructors when possible.
-- Use `TestHelper.WorkingPath` as the temp directory for tests.
-- Don't use the `async` postfix if there is no async method with the same name.
-- Use `SafeDisposeAsync` if you want to dispose an `IAsyncDisposable` and catch/ignore any exception thrown.
-- Use `AsyncLock` instead of `SemaphoreSlim` for non-hot-path code, and use it with a `using` statement.
-
-## Await and ConfigureAwait
-
-- Use `.Vhc()` instead of `.ConfigureAwait(false)` if it is available, but do not add it to the project if
-  it is not available.
-- For UI code such as Android UI, always use `.ConfigureAwait(false)` when it is required.
-- The build warns on an await that says neither in library and background code (VH0001), and on `.Vhc()`
-  in code that runs on a UI thread (VH0002): `src/Net/VpnHood.Net.Toolkit.Analyzers`, by folder in `.editorconfig`.
-
 ## Documentation
 
 - The wiki repo is a separate repository located at `..\VpnHood.wiki` relative to this repo (i.e.
   `$(SolutionDir)/../VpnHood.wiki`). It holds end-user documentation, not development/internal docs. Update
   it only when I request; keep developer docs inside this repo.
-
-## QUIC
-
-- Our QUIC is a custom protocol, not HTTP3. We use it as a transport protocol and the protocol is exactly
-  the same as HTTP2, so we treat it the same as TCP.
-
-## iOS (Client & Connect apps)
-
-- The iOS apps live in `src/Apps/{Client,Connect}/{Client,Connect}.Ios.Apple` (host) + `….Ios.Extension` (Network
-  Extension `.appex`); the real device/extension/TUN/TCP-stack code is in `src/Core/VpnHood.Core.Client.Devices.Ios`
-  and `src/Net/*` (`VpnAdapters.IosTun`, `TcpStack`, `Quic.Ios`). The extension projects are one-file `[Register]` shims.
-- **Read [`docs/ios/`](docs/ios/) before working on anything iOS** — especially
-  `ios-extension-memory-and-throughput.md` before touching memory/throughput/TCP-stack code (the extension
-  runs under a ~52 MB jetsam limit).
-- Build **Release** for device with `~/.dotnet11/dotnet` (TFM `net11.0-ios` / CoreCLR — the system `dotnet`
-  can't target it). Don't commit a test access key in a head (production has none in code).
-- When asked to build/run/launch an app without naming the product, use the **Client** app
-  (`src/Apps/Client/Client.Ios.Apple`), not Connect.
-- Updates come from the **App Store only**: wire `AppStoreAppUpdaterProvider` and name **no
-  `UpdateInfoUrl`** in the iOS heads' updater options. That feed describes downloadable packages, so a
-  non-null value makes the UI offer a direct download — wrong channel on iOS, and an App Review problem.
 
 ## CI/CD & publishing
 
@@ -87,17 +41,17 @@ The design and code rules agreed while building are in
 - The `fastlane/` **submodule is CI-only**: never init/fetch it on a developer machine (no
   `git submodule update --init`). Keep it registered but uninitialized locally; only the GitHub runners
   check it out.
-- Every app publishes from its own **brand repo**, which holds that app's Fastlane config, store
-  metadata and store secrets. This repo holds the code, the single version, and the one shared
-  build/store/release definition (`publish_app.yml`) that each brand repo calls.
-  **Client** → `vpnhood/Vpnhood.App.Client` (`publish_client.yml`); its GitHub release still lands
-  **here**, because that repo sets `VH_PUBLISH_REPO=vpnhood/VpnHood` so existing download links and
-  in-app update URLs keep working. **Connect** → `vpnhood/Vpnhood.App.Connect`
-  (`connect_publish.yml`), which releases to itself.
-  Publish either with its dispatcher **here** — `pub/Client/PublishByGithub.ps1` or
-  `pub/Connect/PublishByGithub.ps1`: each prompts for the channel, bumps this repo, waits, then
-  dispatches that app's workflow in its brand repo. `bump.yml` never chains an app publish — it
-  cannot reach a brand repo, by design.
-- The iOS **App Store listing** (metadata + screenshots, no binary) is pushed by a Fastlane `deliver` lane
-  (`ios upload_metadata`) via its own workflow — Connect: `publish_appstore_metadata.yml`. The TestFlight
-  **build** ships separately through the `*_publish.yml` iOS leg. Connect iOS is TestFlight-only for now.
+
+## Area rules
+
+Loaded automatically by file path. When a task touches an area before any of its files has been
+opened (a question, a plan), read the rule file first. A new convention for one area goes into its
+rule file.
+
+- [`.claude/rules/csharp.md`](.claude/rules/csharp.md) — C# language and `await`/`ConfigureAwait` conventions.
+- [`.claude/rules/ui.md`](.claude/rules/ui.md) — the Avalonia UI, its Assets submodule and the SPA sample repo.
+- [`.claude/rules/quic.md`](.claude/rules/quic.md) — our QUIC is a transport treated like TCP, not HTTP3.
+- [`.claude/rules/ios.md`](.claude/rules/ios.md) — iOS heads and extensions: where the code lives, `docs/ios/`,
+  the .NET 11 build, the default app, App Store-only updates.
+- [`.claude/rules/ci-cd.md`](.claude/rules/ci-cd.md) — brand repos, the publish dispatchers, the App Store
+  listing workflow.

@@ -29,9 +29,7 @@ public abstract class VpnHoodAvaloniaAppBase : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        // On Android the process's Application class - and so this initialization - is shared with
-        // the VPN service and the quick tile, whose processes hold no app and are given no API:
-        // they get no view.
+        // Avalonia's designer makes the UI with no app and gives it no API: it gets no view.
         if (VhApp.IsInit)
             ShowMainView();
         base.OnFrameworkInitializationCompleted();

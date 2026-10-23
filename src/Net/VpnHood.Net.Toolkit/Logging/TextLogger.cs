@@ -43,9 +43,9 @@ public sealed class TextLogger(
     {
         var logBuilder = new StringBuilder();
 
-        // time
+        // time, in UTC: a process's first read of local time loads its time zone, slow on some phones
         if (includeTime)
-            logBuilder.Append($"{DateTime.Now:HH:mm:ss.ffff} | ");
+            logBuilder.Append($"{DateTime.UtcNow:HH:mm:ss.ffff} | ");
 
         // category
         if (!string.IsNullOrEmpty(categoryName))

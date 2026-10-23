@@ -62,7 +62,7 @@ public class Token
         // remove token prefix
         base64 = base64.Trim().Trim('\"');
         foreach (var prefix in new[] { "vh://", "vhkey://", "vh:", "vhkey:" })
-            if (base64.StartsWith(prefix))
+            if (base64.StartsWith(prefix, StringComparison.Ordinal))
                 base64 = base64[prefix.Length..];
 
         // load

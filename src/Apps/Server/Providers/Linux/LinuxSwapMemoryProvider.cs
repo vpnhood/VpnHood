@@ -108,7 +108,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
         // Skip the header row and parse the lines
         foreach (var line in lines) {
-            if (line.StartsWith("NAME")) continue; // Skip the header
+            if (line.StartsWith("NAME", StringComparison.Ordinal)) continue; // Skip the header
             var swapFile = ParseSwapFileLine(line);
             if (swapFile != null) {
                 swapFiles.Add(swapFile.Value);

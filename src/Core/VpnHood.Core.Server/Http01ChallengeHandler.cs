@@ -107,7 +107,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
 
         // Retrieve token from request in this format: GET /.well-known/acme-challenge/{token} HTTP/1.1
         const string basePath = "/.well-known/acme-challenge/";
-        var token = method == "GET" && path.StartsWith(basePath)
+        var token = method == "GET" && path.StartsWith(basePath, StringComparison.Ordinal)
             ? path[basePath.Length..]
             : throw new HttpRequestException(
                 $"Invalid HTTP-01 challenge request. RemoteEndPoint: {client.Client.GetRemoteEndPoint()}. Request: {request}",

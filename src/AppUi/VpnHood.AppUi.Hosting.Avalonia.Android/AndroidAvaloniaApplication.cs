@@ -13,9 +13,10 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Android;
 // this is Avalonia's own base with the app started before it: the platform first, then the app's
 // API handed to the UI (AvaloniaUiHosting.InitAsync), then Avalonia. The OS makes it in every
 // process of the package - the VPN service's and the Quick Settings tile's too - where the platform
-// starts no app and the UI is given no API, so no view is made there (VpnHoodAvaloniaAppBase). A
-// head that must do something before all of this - a crash reporter that starts in every process -
-// overrides OnCreate and calls this one after; its trackers it lists in AppOptions.TrackerFactories.
+// starts no app, and Avalonia does not start either: its platform, rendering and styles would only
+// lengthen those processes' start, which Android times. A head that must do something before all of
+// this - a crash reporter that starts in every process - overrides OnCreate and calls this one after;
+// its trackers it lists in AppOptions.TrackerFactories.
 public abstract class AndroidAvaloniaApplication<TUi>(IntPtr javaReference, JniHandleOwnership transfer)
     : AvaloniaAndroidApplication<TUi>(javaReference, transfer)
     where TUi : AvaloniaApplication, IAvaloniaUi, new()
@@ -26,9 +27,10 @@ public abstract class AndroidAvaloniaApplication<TUi>(IntPtr javaReference, JniH
     public override void OnCreate()
     {
         VpnHoodAndroidApp.Init(CreateInitParams);
-        if (VpnHoodApp.IsInit)
-            AvaloniaUiHosting.InitAsync(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
+        if (!VpnHoodApp.IsInit)
+            return; // Avalonia's OnCreate starts it; Android's own does nothing
 
+        AvaloniaUiHosting.InitAsync(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
         base.OnCreate();
     }
 

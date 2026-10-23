@@ -22,8 +22,7 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
 
         // every process of the package logs to logcat, through its console, and to a debugger; the
         // VPN service's own process gets its log file from its host (VpnServiceHost). Without the
-        // time, which logcat stamps on each line: a process with no log file, the tile's, so never
-        // reads local time, whose first read loads the time zone, slow on some phones
+        // time, which logcat stamps on each line
         VhLogger.AddProvider(new ConsoleLoggerProvider(includeTime: false));
         VhLogger.AddProvider(new TraceLoggerProvider(includeTime: false));
 

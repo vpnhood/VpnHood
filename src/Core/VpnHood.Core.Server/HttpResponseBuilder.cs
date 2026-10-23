@@ -11,7 +11,7 @@ internal static class HttpResponseBuilder
 {
     public static ReadOnlyMemory<byte> Build(HttpResponseMessage httpResponse)
     {
-        httpResponse.Headers.Date = DateTimeOffset.Now;
+        httpResponse.Headers.Date = DateTimeOffset.UtcNow;
 
         // add headers
         var responseBuilder = new StringBuilder();

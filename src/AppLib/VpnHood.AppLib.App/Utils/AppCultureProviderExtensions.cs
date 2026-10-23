@@ -12,7 +12,7 @@ public static class AppCultureProviderExtensions
             new CultureInfo(cultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
         var culture = systemCulture;
         while (culture.Name != string.Empty) {
-            if (availableCultures.Contains(culture.Name, StringComparer.CurrentCultureIgnoreCase))
+            if (availableCultures.Contains(culture.Name, StringComparer.OrdinalIgnoreCase))
                 return culture;
 
             culture = culture.Parent;

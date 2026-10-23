@@ -164,7 +164,7 @@ internal class DownloadService(string? downloadsPath)
         var response = new HttpResponseMessage(HttpStatusCode.OK) {
             Content = new ByteArrayContent([])
         };
-        response.Headers.Date = DateTimeOffset.Now;
+        response.Headers.Date = DateTimeOffset.UtcNow;
         response.Headers.ConnectionClose = true;
         response.Content.Headers.ContentLength = contentLength;
         response.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);

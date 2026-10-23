@@ -10,9 +10,11 @@ namespace VpnHood.Core.Client.Devices.Ios;
 // /dev/null) and System.Diagnostics.Trace is silent there, so the extension adds this at its start
 // (IosVpnService). One os_log handle per logger category: the MEL category name doubles as the os_log
 // category, so unified-log lines are filterable by both subsystem (the extension) and category;
-// creating a handle is cheap (a value bound to subsystem/category, nothing to release).
+// creating a handle is cheap (a value bound to subsystem/category, nothing to release). Without the
+// time, which os_log stamps on each entry.
 public sealed class IosOsLogLoggerProvider(string subsystem, bool includeScopes = true)
-    : TextLoggerProvider(name => new OsLogLogger(new OSLogHandle(subsystem, name)), includeScopes: includeScopes)
+    : TextLoggerProvider(name => new OsLogLogger(new OSLogHandle(subsystem, name)), includeTime: false,
+        includeScopes: includeScopes)
 {
     private sealed class OsLogLogger(OSLogHandle osLog) : ILogger
     {

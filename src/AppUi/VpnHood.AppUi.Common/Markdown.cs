@@ -71,7 +71,7 @@ public static partial class Markdown
                 continue;
             }
 
-            var isBullet = trimmed.StartsWith("- ") || trimmed.StartsWith("* ");
+            var isBullet = trimmed.StartsWith("- ", StringComparison.Ordinal) || trimmed.StartsWith("* ", StringComparison.Ordinal);
             var isNumbered = NumberedRegex().IsMatch(trimmed);
             if (isBullet || isNumbered) {
                 CloseParagraph();

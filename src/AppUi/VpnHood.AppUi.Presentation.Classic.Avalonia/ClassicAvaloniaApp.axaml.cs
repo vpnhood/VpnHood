@@ -56,8 +56,8 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
         // The palettes first, both of them, and only then the XAML: the styles it loads name their
         // keys with StaticResource, which is read as they load and never again - so a palette that
         // arrives afterwards paints nothing. Blue is the default; the look's own palette is merged
-        // over it, where the head hands the UI the app's API first (the processes that get no view
-        // keep the default), and a dictionary merged later wins.
+        // over it, where the head hands the UI the app's API first (Avalonia's designer, given none,
+        // keeps the default), and a dictionary merged later wins.
         Resources.MergedDictionaries.Add(new BlueTheme());
         var themeOverride = AppTheme.OverrideFor(VhApp.IsInit ? VhApp.Features.UiTheme : null);
         if (themeOverride != null)

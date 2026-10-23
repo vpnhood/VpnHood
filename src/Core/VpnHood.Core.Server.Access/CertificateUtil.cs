@@ -97,11 +97,11 @@ public static class CertificateUtil
         DateTimeOffset? notAfter = null)
     {
         subjectName ??= $"CN={CreateRandomDns()}";
-        notAfter ??= DateTimeOffset.Now.AddYears(20);
+        notAfter ??= DateTimeOffset.UtcNow.AddYears(20);
 
         // Create fake authority Root
         var certRequest = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        var rootCertificate = certRequest.CreateSelfSigned(DateTimeOffset.Now, notAfter.Value);
+        var rootCertificate = certRequest.CreateSelfSigned(DateTimeOffset.UtcNow, notAfter.Value);
         return CreateExportable(rootCertificate);
     }
 
@@ -110,7 +110,7 @@ public static class CertificateUtil
         DateTimeOffset? notAfter = null)
     {
         subjectName ??= $"CN={CreateRandomDns()}";
-        notAfter ??= DateTimeOffset.Now.AddYears(5);
+        notAfter ??= DateTimeOffset.UtcNow.AddYears(5);
 
         var random = new Random();
 
@@ -130,8 +130,8 @@ public static class CertificateUtil
             , true));
 
         var rootCertificate = certRequest.CreateSelfSigned(
-            new DateTimeOffset(new DateTime(2006, 11, 9, 16, 0, 0)),
-            new DateTimeOffset(new DateTime(2031, 11, 9, 16, 0, 0)));
+            new DateTimeOffset(2006, 11, 9, 16, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2031, 11, 9, 16, 0, 0, TimeSpan.Zero));
 
         // Create fake Root
         using var rsa2 = RSA.Create();
@@ -149,8 +149,8 @@ public static class CertificateUtil
         var serial = new byte[20];
         random.NextBytes(serial);
         var authorityCertificate = certRequest.Create(rootCertificate,
-            new DateTimeOffset(new DateTime(2013, 3, 8, 16, 0, 0)),
-            new DateTimeOffset(new DateTime(2027, 3, 8, 16, 0, 0)),
+            new DateTimeOffset(2013, 3, 8, 16, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2027, 3, 8, 16, 0, 0, TimeSpan.Zero),
             serial);
         authorityCertificate = authorityCertificate.CopyWithPrivateKey(rsa2);
 
@@ -158,7 +158,7 @@ public static class CertificateUtil
         certRequest = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         serial = new byte[20];
         random.NextBytes(serial);
-        var certificate = certRequest.Create(authorityCertificate, DateTimeOffset.Now, notAfter.Value, serial);
+        var certificate = certRequest.Create(authorityCertificate, DateTimeOffset.UtcNow, notAfter.Value, serial);
         certificate = certificate.CopyWithPrivateKey(rsa);
 
         return CreateExportable(certificate);

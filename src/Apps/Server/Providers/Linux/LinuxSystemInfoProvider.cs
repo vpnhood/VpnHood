@@ -11,7 +11,7 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
     {
         try {
             var meminfo = File.ReadAllText("/proc/meminfo");
-            var memTotalLine = meminfo.Split('\n').FirstOrDefault(line => line.StartsWith($"{key}:"));
+            var memTotalLine = meminfo.Split('\n').FirstOrDefault(line => line.StartsWith($"{key}:", StringComparison.Ordinal));
             if (memTotalLine == null)
                 return null;
 

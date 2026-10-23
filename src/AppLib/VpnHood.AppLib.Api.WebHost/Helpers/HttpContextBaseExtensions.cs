@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -158,6 +159,8 @@ public static class HttpContextBaseExtensions
         }
     }
 
+    // a query value is machine text: read by no culture; a time without an offset is UTC, and none is
+    // made local
     private static T? ConvertString<T>(string value)
     {
         var underlyingType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
@@ -172,19 +175,20 @@ public static class HttpContextBaseExtensions
             return (T)(object)bool.Parse(value);
 
         if (underlyingType == typeof(DateTime))
-            return (T)(object)DateTime.Parse(value);
+            return (T)(object)DateTime.Parse(value, CultureInfo.InvariantCulture,
+                DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
 
         if (underlyingType == typeof(DateTimeOffset))
-            return (T)(object)DateTimeOffset.Parse(value);
+            return (T)(object)DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
 
         if (underlyingType == typeof(TimeSpan))
-            return (T)(object)TimeSpan.Parse(value);
+            return (T)(object)TimeSpan.Parse(value, CultureInfo.InvariantCulture);
 
         // Use TypeConverter for complex conversions
         var converter = TypeDescriptor.GetConverter(underlyingType);
         if (converter.CanConvertFrom(typeof(string)))
-            return (T?)converter.ConvertFromString(value);
+            return (T?)converter.ConvertFromInvariantString(value);
 
-        return (T)Convert.ChangeType(value, underlyingType);
+        return (T)Convert.ChangeType(value, underlyingType, CultureInfo.InvariantCulture);
     }
 }

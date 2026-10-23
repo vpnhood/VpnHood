@@ -40,9 +40,10 @@ no listener, no JSON - and in a paired browser is the same API over HTTP. That i
 Application hands the UI the API before Avalonia initializes: the features it reads decide the
 theme, which Avalonia applies as it initializes.
 
-Avalonia initializes in every process of the app - the VPN service's and the quick tile's too,
-since it starts from the Application - but a view is made only in the one with an activity:
-`VpnHoodAvaloniaAppBase` hands the activity a view factory, and the activity prepares the UI's
-content - the words, and the fonts it registers - and tells the app the UI's languages before it
-asks for the view. Both halves are the one start every Avalonia host runs
+Avalonia initializes only in the app's own process. The VPN service's and the quick tile's
+processes start from the same Application, but there it starts neither the app nor Avalonia,
+whose platform and styles would only lengthen a start Android times. A view is made when the
+activity asks: `VpnHoodAvaloniaAppBase` hands the activity a view factory, and the activity
+prepares the UI's content - the words, and the fonts it registers - and tells the app the UI's
+languages before it asks for the view. Both halves are the one start every Avalonia host runs
 (`AvaloniaUiHosting`), split at the two moments Android's lifecycle gives.

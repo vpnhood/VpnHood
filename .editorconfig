@@ -9,6 +9,12 @@ dotnet_analyzer_diagnostic.severity = none
 # the UI thread. Not CA2007, which also counts an await using's hidden DisposeAsync.
 dotnet_diagnostic.VH0001.severity = warning
 
+# A string's StartsWith, EndsWith, IndexOf, Compare or CompareTo without a StringComparison compares by
+# the user's culture (CA1310): machine text says Ordinal, text shown in order says CurrentCulture. A
+# process's first culture-aware comparison builds an ICU collator, slow enough on some phones to
+# freeze the app (Play vitals' ANRs).
+dotnet_diagnostic.CA1310.severity = error
+
 csharp_indent_labels = one_less_than_current
 csharp_using_directive_placement = outside_namespace:silent
 csharp_prefer_simple_using_statement = true:suggestion

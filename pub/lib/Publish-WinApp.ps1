@@ -162,6 +162,12 @@ if ($doPackage) {
 		"/DLAUNCHERS_DIR=$((Resolve-Path $launchersDir).Path)",
 		"/DOUTPUT_FILE=$([IO.Path]::GetFullPath($setupFile))"
 	) + @(if ($legacyMsiUpgradeCode) { "/DLEGACY_MSI_UPGRADE_CODE=$legacyMsiUpgradeCode" });
+
+	# the Welcome and Finish pages' picture (VhAppSetupImage, beside the project when not a full path)
+	$setupImage = Get-ProjectProperty $projectFile "VhAppSetupImage";
+	if ($setupImage) {
+		$nsisDefines += "/DWELCOMEFINISHPAGE_BITMAP=$((Resolve-Path ([IO.Path]::Combine($projectDir, $setupImage))).Path)";
+	}
 	# the uninstaller sits inside the setup, so makensis has it signed as it packs it
 	if ($signEnabled) { $nsisDefines += "/DSIGN_SCRIPT=$PSScriptRoot\Sign-File.ps1"; }
 

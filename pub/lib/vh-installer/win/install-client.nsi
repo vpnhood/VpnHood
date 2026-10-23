@@ -25,7 +25,8 @@ SetCompressor /SOLID lzma
 !include FileFunc.nsh
 
 ; What Publish-WinApp.ps1 passes (/D<name>=<value>). LEGACY_MSI_UPGRADE_CODE is optional: the MSI an
-; app shipped before this setup, which is removed first.
+; app shipped before this setup, which is removed first. So is WELCOMEFINISHPAGE_BITMAP, the app's
+; picture for the Welcome and Finish pages (VhAppSetupImage), else NSIS's own.
 !macro VhRequire NAME
 	!ifndef ${NAME}
 		!error "${NAME} is not defined: Publish-WinApp.ps1 passes it as /D${NAME}=..."
@@ -77,6 +78,9 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_TEXT "Open ${PRODUCT_NAME}"
 !define MUI_FINISHPAGE_RUN_FUNCTION OpenApp
+!ifdef WELCOMEFINISHPAGE_BITMAP
+	!define MUI_WELCOMEFINISHPAGE_BITMAP "${WELCOMEFINISHPAGE_BITMAP}"
+!endif
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_INSTFILES

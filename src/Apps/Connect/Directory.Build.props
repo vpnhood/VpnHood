@@ -16,6 +16,8 @@
     <VhAdMobApplicationId>ca-app-pub-8662231806304184~1740102860</VhAdMobApplicationId>
     <!-- the Android and iOS icons, as SVGs (VpnHood.AppLib.App.targets) -->
     <VhAppIconsDir>$(MSBuildThisFileDirectory)icons</VhAppIconsDir>
+    <!-- the Windows setup's Welcome and Finish picture, a BMP it shows as it is (Publish-WinApp.ps1) -->
+    <VhAppSetupImage>$(MSBuildThisFileDirectory)setup.bmp</VhAppSetupImage>
     <!-- the private settings, from the external ".user" folder: the product's project embeds them, and
          the build reads the launch screen's theme from them (VpnHood.AppLib.App.targets). Forward
          slashes: the iOS head builds on macOS. -->

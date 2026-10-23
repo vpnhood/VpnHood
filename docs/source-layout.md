@@ -200,6 +200,7 @@ Each product folder has a `Directory.Build.props` that states the app once, for 
 | `VhAppPackageTitle` | `VpnHoodClient` | the name without spaces: the start of every release file's name, the update feeds' included (`AppConstants.PackageTitle`); the desktop executable, its service or unit, their folders. Taken from the name's letters and digits when not stated; an app that has shipped states it, since installs keep these names |
 | `Company` | `OmegaHood LLC` | the app's maker, as the UI (`AppConstants.CompanyName`) and the executable's details name it, with a copyright made from it where none is stated. The repo's own `Directory.Build.props` states it for every project, so the products do not |
 | `VhAdMobApplicationId` | — | the AdMob application id a head that shows AdMob ads names in its manifest (`AppConstants.AdMobApplicationId`); Connect states it. Google's sample app id when not stated |
+| `VhAppSetupImage` | `setup.bmp` | the picture the Windows setup's Welcome and Finish pages show: a 24-bit BMP, 328 by 628 (twice the pages' 164 by 314, sharp on a high-DPI screen), stretched to them as it is; a path beside the Windows head when not a full one. NSIS's own picture when not stated |
 
 A build target in `VpnHood.AppLib.App` (`buildTransitive/VpnHood.AppLib.App.targets`, the file a
 package reference of it imports) makes the rest, so a head names no id and no name:

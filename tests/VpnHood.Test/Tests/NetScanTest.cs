@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Server;
+using VpnHood.Core.Server.NetProtection;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Test.Extensions;
 

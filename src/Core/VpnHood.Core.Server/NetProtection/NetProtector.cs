@@ -6,7 +6,7 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 
-namespace VpnHood.Core.Server;
+namespace VpnHood.Core.Server.NetProtection;
 
 // A session's limits on what its client sends, set by the session options; the server's NetFilter is the same for
 // every session. A struct whose packet check is inlined, so a packet that no limit covers costs comparisons only

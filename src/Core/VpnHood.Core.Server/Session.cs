@@ -11,6 +11,7 @@ using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Core.Server.Exceptions;
+using VpnHood.Core.Server.NetProtection;
 using VpnHood.Core.Server.Utils;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;

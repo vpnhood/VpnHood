@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Server;
+namespace VpnHood.Core.Server.NetProtection;
 
 // Passes up to a number of acquisitions in each window of time, and refuses the rest. Lock-free: at a window's turn
 // a race may misjudge a few, which a limit against floods can afford

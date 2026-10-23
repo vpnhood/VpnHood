@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's network security, which every head names (AndroidAppConstants.NetworkSecurityConfig); a
+     head's own file of this name replaces it. Let's Encrypt's root is trusted beside the system's:
+     Android 7.0 lacks it (it came in 7.1.1), and hosts the app reads chain to it, GitHub's downloads
+     among them - the update feed and the remote settings. Plain http only to the app's web server on
+     the device itself. -->
+<network-security-config>
+	<base-config>
+		<trust-anchors>
+			<certificates src="system" />
+			<certificates src="@raw/isrg_root_x1" />
+		</trust-anchors>
+	</base-config>
+	<domain-config cleartextTrafficPermitted="true">
+		<domain>localhost</domain>
+		<domain>127.0.0.1</domain>
+	</domain-config>
+</network-security-config>

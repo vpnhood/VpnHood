@@ -21,9 +21,11 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
         AndroidEnvironment.UnhandledExceptionRaiser += OnUnhandledExceptionRaiser;
 
         // every process of the package logs to logcat, through its console, and to a debugger; the
-        // VPN service's own process gets its log file from its host (VpnServiceHost)
-        VhLogger.AddProvider(new ConsoleLoggerProvider());
-        VhLogger.AddProvider(new TraceLoggerProvider());
+        // VPN service's own process gets its log file from its host (VpnServiceHost). Without the
+        // time, which logcat stamps on each line: a process with no log file, the tile's, so never
+        // reads local time, whose first read loads the time zone, slow on some phones
+        VhLogger.AddProvider(new ConsoleLoggerProvider(includeTime: false));
+        VhLogger.AddProvider(new TraceLoggerProvider(includeTime: false));
 
         // do not init again, or in any process but the app's own: the VPN service's, the tile's, or any
         // other a library adds

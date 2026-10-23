@@ -36,7 +36,7 @@ public class TimeoutDictionaryTest
             // WasBackdated must be visible before the expired timestamp, so an eviction implies
             // the flag is observable to whoever sees the disposal
             WasBackdated = true;
-            LastUsedTime = FastDateTime.Now - LongTimeout - TimeSpan.FromHours(1);
+            LastUsedTime = FastDateTime.UtcNow -LongTimeout - TimeSpan.FromHours(1);
         }
     }
 
@@ -78,7 +78,7 @@ public class TimeoutDictionaryTest
     {
         using var dictionary = new TimeoutDictionary<int, TrackedItem>(LongTimeout) { AutoCleanup = false };
         var item = dictionary.GetOrAdd(1, _ => new TrackedItem());
-        item.LastUsedTime = FastDateTime.Now - LongTimeout - TimeSpan.FromHours(1);
+        item.LastUsedTime = FastDateTime.UtcNow -LongTimeout - TimeSpan.FromHours(1);
 
         var returned = dictionary.GetOrAdd(1, _ => item);
         Assert.AreSame(item, returned);
@@ -228,7 +228,7 @@ public class TimeoutDictionaryTest
         using var dictionary = new TimeoutDictionary<int, TrackedItem>(TimeSpan.FromMilliseconds(90));
         var item = dictionary.GetOrAdd(1, _ => new TrackedItem());
         item.WasBackdated = true;
-        item.LastUsedTime = FastDateTime.Now - TimeSpan.FromHours(1);
+        item.LastUsedTime = FastDateTime.UtcNow -TimeSpan.FromHours(1);
 
         for (var i = 0; i < 300 && dictionary.Count > 0; i++)
             await Task.Delay(10);
@@ -242,7 +242,7 @@ public class TimeoutDictionaryTest
     {
         using var dictionary = new TimeoutDictionary<int, TrackedItem>();
         var item = dictionary.GetOrAdd(1, _ => new TrackedItem());
-        item.LastUsedTime = FastDateTime.Now - TimeSpan.FromDays(365);
+        item.LastUsedTime = FastDateTime.UtcNow -TimeSpan.FromDays(365);
         Assert.IsTrue(dictionary.TryGetValue(1, out _), "without a timeout an old item must stay live");
 
         item.Dispose();

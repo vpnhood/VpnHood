@@ -6,20 +6,6 @@ namespace VpnHood.Test.Tests;
 public class FastDateTimeTest
 {
     [TestMethod]
-    public void Now_should_be_local_kind_and_within_precision()
-    {
-        var before = DateTime.Now;
-        var fast = FastDateTime.Now;
-        var after = DateTime.Now;
-
-        Assert.AreEqual(DateTimeKind.Local, fast.Kind);
-        Assert.IsGreaterThanOrEqualTo(before - FastDateTime.Precision - TimeSpan.FromSeconds(5), fast,
-            $"FastDateTime.Now is too old. fast: {fast:O}, before: {before:O}");
-        Assert.IsLessThanOrEqualTo(after + TimeSpan.FromSeconds(1), fast,
-            $"FastDateTime.Now is in the future. fast: {fast:O}, after: {after:O}");
-    }
-
-    [TestMethod]
     public void UtcNow_should_be_utc_kind_and_within_precision()
     {
         var before = DateTime.UtcNow;
@@ -67,15 +53,15 @@ public class FastDateTimeTest
         var oldPrecision = FastDateTime.Precision;
         try {
             FastDateTime.Precision = TimeSpan.FromHours(1);
-            var first = FastDateTime.Now;
+            var first = FastDateTime.UtcNow;
             Thread.Sleep(50);
-            Assert.AreEqual(first, FastDateTime.Now, "within the precision window the cached value must be returned");
+            Assert.AreEqual(first, FastDateTime.UtcNow, "within the precision window the cached value must be returned");
 
             FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
             Thread.Sleep(100); // TickCount64 granularity is ~16ms; give the gate room to reopen
-            var refreshed = FastDateTime.Now;
+            var refreshed = FastDateTime.UtcNow;
             Assert.AreNotEqual(first, refreshed, "after the precision window the value must refresh");
-            Assert.IsLessThan(TimeSpan.FromSeconds(5), (DateTime.Now - refreshed).Duration());
+            Assert.IsLessThan(TimeSpan.FromSeconds(5), (DateTime.UtcNow - refreshed).Duration());
         }
         finally {
             FastDateTime.Precision = oldPrecision;

@@ -23,6 +23,7 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan KeepAwakeStartTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan SessionWaitTimeout = TimeSpan.FromSeconds(15); // Windows connected again within 5 s
     private readonly Lock _hostLock = new();
     private VpnServiceHost? _host;
     private volatile WindowsVpnPluginAppServiceListener? _appServiceListener;
@@ -155,19 +156,20 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     }
 
     // A connection to one of the package's app services, which Windows runs in this process - the app's control channel
-    // or the keep-awake process's: served by the session's host, which closes it with the session, and at once when there
-    // is none, so the app finds the session ended and the keep-awake process leaves.
+    // or the keep-awake process's: served by the session's host, which closes it with the session. The app's, with no
+    // session yet, waits for one (GetWaitingListener); the keep-awake process's is closed at once, so it leaves.
     public async Task ServeAppConnection(AppServiceConnection connection, string appServiceName,
         CancellationToken cancellationToken)
     {
-        var listener = _appServiceListener;
-        if (listener is null) {
-            connection.Dispose();
+        if (appServiceName != WindowsVpnPluginKeepAwake.AppServiceName) {
+            var appListener = _appServiceListener ?? GetWaitingListener();
+            await appListener.Serve(connection, cancellationToken).Vhc();
             return;
         }
 
-        if (appServiceName != WindowsVpnPluginKeepAwake.AppServiceName) {
-            await listener.Serve(connection, cancellationToken).Vhc();
+        var listener = _appServiceListener;
+        if (listener is null) {
+            connection.Dispose();
             return;
         }
 
@@ -179,6 +181,61 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
             // gone while the VPN is connected - killed, or ended by Windows: another takes its place
             if (Interlocked.Decrement(ref _keepAwakeCount) == 0 && Volatile.Read(ref _connectedChannel) is not null)
                 await StartKeepAwake().Vhc();
+        }
+    }
+
+    // A VPN host the app's connection started before a connect: Windows, having lost its VPN host, connects again within
+    // seconds, and the app's requests wait for that session rather than find none, as they did after a restart. The
+    // listener takes the connection at once, so no request comes before it; only then is it known whether a connect comes.
+    private WindowsVpnPluginAppServiceListener GetWaitingListener()
+    {
+        lock (_hostLock) {
+            if (_appServiceListener is { } listener)
+                return listener;
+
+            listener = new WindowsVpnPluginAppServiceListener();
+            _appServiceListener = listener;
+            _ = ExpireWaitingListener(listener);
+            return listener;
+        }
+    }
+
+    // Closes a waiting listener's connections unless a connect has come: at once when Windows holds the package's profile
+    // disconnected, after an update say, else in SessionWaitTimeout.
+    private async Task ExpireWaitingListener(WindowsVpnPluginAppServiceListener listener)
+    {
+        var profiles = await TryGetLiveProfiles().Vhc();
+        VhLogger.Instance.LogInformation(
+            "The app connected before a connect. Profiles connected or connecting: {Count}", profiles?.Length);
+        if (profiles is not { Length: 0 })
+            await Task.Delay(SessionWaitTimeout).Vhc();
+
+        lock (_hostLock) {
+            if (_host is not null || _appServiceListener != listener)
+                return;
+
+            _appServiceListener = null;
+        }
+
+        VhLogger.Instance.LogInformation("No connect came for the app's connection; closing it.");
+        listener.Dispose();
+    }
+
+    // The package's profiles Windows holds other than disconnected; null when Windows does not say.
+    private static async Task<VpnPlugInProfile[]?> TryGetLiveProfiles()
+    {
+        try {
+            var packageFamilyName = Package.Current.Id.FamilyName;
+            var profiles = await new VpnManagementAgent().GetProfilesAsync().AsTask().Vhc();
+            return profiles.OfType<VpnPlugInProfile>()
+                .Where(x =>
+                    string.Equals(x.VpnPluginPackageFamilyName, packageFamilyName, StringComparison.OrdinalIgnoreCase) &&
+                    x.ConnectionStatus != VpnManagementConnectionStatus.Disconnected)
+                .ToArray();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not read the package's VPN profiles from Windows.");
+            return null;
         }
     }
 
@@ -229,18 +286,12 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     {
         try {
             VhLogger.Instance.LogInformation("Asking Windows to disconnect the VPN profile...");
-            var agent = new VpnManagementAgent();
-            var packageFamilyName = Package.Current.Id.FamilyName;
-            var profiles = await agent.GetProfilesAsync().AsTask().Vhc();
-            var connectedProfiles = profiles.OfType<VpnPlugInProfile>()
-                .Where(x =>
-                    string.Equals(x.VpnPluginPackageFamilyName, packageFamilyName, StringComparison.OrdinalIgnoreCase) &&
-                    x.ConnectionStatus != VpnManagementConnectionStatus.Disconnected)
-                .ToArray();
-
+            var connectedProfiles = await TryGetLiveProfiles().Vhc() ??
+                                    throw new InvalidOperationException("Windows did not list the package's VPN profiles.");
             if (connectedProfiles.Length == 0)
                 throw new InvalidOperationException("Windows lists no connected VPN profile of this package.");
 
+            var agent = new VpnManagementAgent();
             foreach (var profile in connectedProfiles) {
                 var status = await agent.DisconnectProfileAsync(profile).AsTask().Vhc();
                 if (status is not (VpnManagementErrorStatus.Ok or VpnManagementErrorStatus.AlreadyDisconnecting))
@@ -273,7 +324,8 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
 
             // withLogger: the VPN host is a process of its own, so the service host keeps its own log file
             var folder = WindowsVpnPluginFolders.VpnServiceFolder;
-            var appServiceListener = new WindowsVpnPluginAppServiceListener();
+            // the listener an app's connection made while waiting for this session, if any
+            var appServiceListener = _appServiceListener ?? new WindowsVpnPluginAppServiceListener();
             _host = new VpnServiceHost(
                 configFolder: folder,
                 dataFolder: folder,

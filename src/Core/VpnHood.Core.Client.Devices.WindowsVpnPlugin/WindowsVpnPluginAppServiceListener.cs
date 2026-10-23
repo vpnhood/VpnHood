@@ -16,12 +16,14 @@ public sealed class WindowsVpnPluginAppServiceListener : IMessageListener
     internal const string AppServiceName = "VpnService";
     internal const string MessageKey = "Message";
 
+    private readonly TaskCompletionSource _startedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource _disposedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private volatile MessageHandler? _messageHandler;
 
     public Task Start(MessageHandler messageHandler, CancellationToken cancellationToken)
     {
         _messageHandler = messageHandler;
+        _startedTcs.TrySetResult();
         return Task.CompletedTask;
     }
 
@@ -49,7 +51,9 @@ public sealed class WindowsVpnPluginAppServiceListener : IMessageListener
     {
         var deferral = args.GetDeferral();
         try {
-            // unanswered once the session has ended: the app finds no session at its next request
+            // A listener the app's connection made before its session waits for that session's start; unanswered once the
+            // session has ended, so the app finds no session at its next request.
+            await Task.WhenAny(_startedTcs.Task, _disposedTcs.Task).Vhc();
             var messageHandler = _messageHandler;
             if (messageHandler is null)
                 return;

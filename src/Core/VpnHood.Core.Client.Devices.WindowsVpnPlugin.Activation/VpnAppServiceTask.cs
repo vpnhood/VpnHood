@@ -25,7 +25,8 @@ public sealed class VpnAppServiceTask : IBackgroundTask
             return;
         }
 
-        using var canceledCts = new CancellationTokenSource();
+        // never disposed: Windows may raise Canceled as the run ends (SystemPolicy), and a timer-less source holds nothing
+        var canceledCts = new CancellationTokenSource();
         void OnCanceled(IBackgroundTaskInstance sender, BackgroundTaskCancellationReason reason)
         {
             VhLogger.Instance.LogInformation("Windows ended a connection to the VPN host. AppService: {AppService}, Reason: {Reason}",

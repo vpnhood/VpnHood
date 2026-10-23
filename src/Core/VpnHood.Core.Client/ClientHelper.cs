@@ -39,6 +39,19 @@ internal static class ClientHelper
             is FilterAction.Default or FilterAction.Include;
     }
 
+    // A default resolver - the server's, Google's - for an in-tunnel plan. IncludeAll keeps DNS inside past the
+    // user's own splits, as for the user's resolver: the packet-level force carries its queries and the device set
+    // routes it, so a split's exclusion is no veto, only the server's word and the user's block, whose queries are
+    // dropped. DefaultRoute lets DNS follow the splits, so they count.
+    private static bool IsTunnelableDns(ServerIpFilter serverIpFilter, IPAddress ipAddress, SplitDnsMode splitDnsMode)
+    {
+        if (splitDnsMode is not SplitDnsMode.IncludeAll)
+            return IsIncluded(serverIpFilter, ipAddress);
+
+        return serverIpFilter.CanServerRoute(ipAddress) &&
+               serverIpFilter.Process(IpProtocol.Udp, new IpEndPointValue(ipAddress, 53)) is not FilterAction.Block;
+    }
+
     /// <summary>
     /// Selects appropriate DNS servers based on user preferences, server configuration, and routing rules.
     /// </summary>
@@ -120,7 +133,7 @@ internal static class ClientHelper
         // pass: a server advertising a resolver outside its own declared ranges contradicts itself, and
         // selection moves on rather than vouching for it.
         if (serverDnsAddresses.Any()) {
-            results = serverDnsAddresses.Where(x => IsIncluded(serverIpFilter, x));
+            results = serverDnsAddresses.Where(x => IsTunnelableDns(serverIpFilter, x, splitDnsMode));
             if (results.Any()) {
                 VhLogger.Instance.LogInformation(
                     "Using Server default DNS servers. DnsServers: {DnsServers}",
@@ -137,7 +150,7 @@ internal static class ClientHelper
 
         // Use Google DNS as last resort if the session can route them
         results = IPAddressUtil.GoogleDnsServers
-            .Where(x => IsIncluded(serverIpFilter, x));
+            .Where(x => IsTunnelableDns(serverIpFilter, x, splitDnsMode));
         if (results.Any()) {
             VhLogger.Instance.LogInformation(
                 "Using Google DNS servers as default. DnsServers: {DnsServers}",

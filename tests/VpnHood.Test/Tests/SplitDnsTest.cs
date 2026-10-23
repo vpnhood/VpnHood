@@ -240,6 +240,83 @@ public class SplitDnsTest : TestBase
     }
 
     [TestMethod]
+    public void IncludeAll_keeps_the_server_resolver_past_a_split_that_excludes_it()
+    {
+        // a country split excluding the user's own country, where the server's resolver and Google's are too:
+        // IncludeAll keeps DNS inside, so the server's resolver goes through the tunnel rather than the connect failing
+        var serverDns = IPAddress.Parse("9.9.9.9");
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpNetwork.All.ToIpRanges(),
+            clientExcludeRanges: new[] { new IpRange(serverDns), new IpRange(PublicDns) }.ToOrderedList());
+
+        var dnsConfig = ClientHelper.GetDnsServers(
+            userDnsAddresses: null,
+            serverDnsAddresses: [serverDns],
+            serverIpFilter: serverIpFilter,
+            splitDnsMode: SplitDnsMode.IncludeAll);
+
+        Assert.IsTrue(dnsConfig.IsIncludedInVpn);
+        Assert.AreEqual(DnsSelection.ServerDns, dnsConfig.DnsSelection);
+        CollectionAssert.AreEquivalent(new[] { serverDns }, dnsConfig.DnsServers);
+    }
+
+    [TestMethod]
+    public void IncludeAll_keeps_google_past_a_split_that_excludes_everything()
+    {
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpNetwork.All.ToIpRanges(),
+            clientExcludeRanges: IpNetwork.All.ToIpRanges());
+
+        var dnsConfig = ClientHelper.GetDnsServers(
+            userDnsAddresses: null,
+            serverDnsAddresses: [],
+            serverIpFilter: serverIpFilter,
+            splitDnsMode: SplitDnsMode.IncludeAll);
+
+        Assert.IsTrue(dnsConfig.IsIncludedInVpn);
+        Assert.AreEqual(DnsSelection.GoogleDns, dnsConfig.DnsSelection);
+    }
+
+    [TestMethod]
+    public void IncludeAll_passes_over_a_server_resolver_the_user_blocks()
+    {
+        // a blocked address stays dropped, DNS too (ClientPacketHandler), so the blocked resolver is no candidate
+        var serverDns = IPAddress.Parse("9.9.9.9");
+        using var serverIpFilter = new ServerIpFilter(
+            new StaticIpFilter(null) { BlockedRanges = new[] { new IpRange(serverDns) }.ToOrderedList() }) {
+            IncludeRanges = IpNetwork.All.ToIpRanges()
+        };
+
+        var dnsConfig = ClientHelper.GetDnsServers(
+            userDnsAddresses: null,
+            serverDnsAddresses: [serverDns],
+            serverIpFilter: serverIpFilter,
+            splitDnsMode: SplitDnsMode.IncludeAll);
+
+        Assert.AreEqual(DnsSelection.GoogleDns, dnsConfig.DnsSelection);
+        Assert.IsFalse(dnsConfig.DnsServers.Contains(serverDns));
+    }
+
+    [TestMethod]
+    public void DefaultRoute_lets_a_split_move_off_the_server_resolver()
+    {
+        // DNS follows the splits: the excluded server resolver is no in-tunnel candidate, Google's is
+        var serverDns = IPAddress.Parse("9.9.9.9");
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpNetwork.All.ToIpRanges(),
+            clientExcludeRanges: new[] { new IpRange(serverDns) }.ToOrderedList());
+
+        var dnsConfig = ClientHelper.GetDnsServers(
+            userDnsAddresses: null,
+            serverDnsAddresses: [serverDns],
+            serverIpFilter: serverIpFilter,
+            splitDnsMode: SplitDnsMode.DefaultRoute);
+
+        Assert.IsTrue(dnsConfig.IsIncludedInVpn);
+        Assert.AreEqual(DnsSelection.GoogleDns, dnsConfig.DnsSelection);
+    }
+
+    [TestMethod]
     public void IncludeAll_throws_when_no_dns_can_be_tunneled()
     {
         // every candidate is vetoed by the client's gates and the server routes an unrelated corner of the

@@ -104,6 +104,13 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
         catch (OperationCanceledException) when (IsDisposed || _cancellationTokenSource.IsCancellationRequested) {
             // normal cancellation, do nothing
         }
+        catch (Exception ex) when (IsDisposed || _cancellationTokenSource.IsCancellationRequested) {
+            // its own close: the read in flight fails on the stream the close disposes, when the close is quicker
+            // than its cancellation (IOException, ObjectDisposedException inside)
+            VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel, ex,
+                "PacketChannel read task ended by its close. ChannelId: {ChannelId}, Type: {Type}",
+                ChannelId, VhLogger.FormatType(this));
+        }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.PacketChannel, ex,
                 "PacketChannel read task failed. ChannelId: {ChannelId}, Type: {Type}",

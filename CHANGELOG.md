@@ -14,6 +14,7 @@
 * Fix: Where Google Play works only through the VPN, its update now comes once you connect - after Play has had 3 days to update the app by itself - and an update you started and left comes back when you return to the app #android #store
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
 * Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts #android
+* Fix: On Android, going back after an access key's link opened the app over itself no longer leaves the app unable to ask for the VPN permission ("Please open the app and grant VPN permission"), to sign in, to buy or to show ads #android
 * Fix: The "Extend it" button on a session's countdown keeps its label in the last 15 minutes #android #connect
 * Feature: The Android app from our website updates itself: "Update now" downloads the new version, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store keeps updating there #android
 * Update: On most phones, the Android app from our website now updates with the version made for the phone's processor, a third of the download #android

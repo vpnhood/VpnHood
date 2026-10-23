@@ -147,8 +147,14 @@ public class AndroidAppMainActivityHandler
         VpnHoodApp.Instance.UpdateUi();
     }
 
+    // The activity in front is the app's UI context. An intent the task did not start with stacks a
+    // second activity, which takes the context in its OnCreate; Back resumes the one beneath before
+    // the second's OnDestroy, so the context comes back here and that OnDestroy leaves it.
     protected virtual void OnResume()
     {
+        var appUiContext = (AndroidUiContext?)AppUiContext.Context;
+        if (appUiContext?.ActivityEvent != ActivityEvent)
+            AppUiContext.Context = new AndroidUiContext(ActivityEvent);
     }
 
     protected virtual void OnPause()

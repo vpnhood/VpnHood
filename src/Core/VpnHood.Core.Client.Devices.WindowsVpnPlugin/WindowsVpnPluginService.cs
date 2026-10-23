@@ -23,7 +23,8 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan KeepAwakeStartTimeout = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan SessionWaitTimeout = TimeSpan.FromSeconds(15); // Windows connected again within 5 s
+    // a connect Windows makes soon after: again within 5 s after a restart, within 2.6 s after an app's switch
+    private static readonly TimeSpan SessionWaitTimeout = TimeSpan.FromSeconds(15);
     private readonly Lock _hostLock = new();
     private VpnServiceHost? _host;
     private volatile WindowsVpnPluginAppServiceListener? _appServiceListener;
@@ -33,11 +34,13 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     private volatile TaskCompletionSource<WindowsVpnPluginAdapter> _adapterTcs = NewAdapterTcs();
     private int _terminationRequested;
     private int _keepAwakeCount; // the keep-awake processes connected
+    private int _connectCount; // Windows' connects so far: a released host's wait tells by it whether one has come
 
     public void Connect(VpnChannel channel)
     {
         try {
             VhLogger.Instance.LogInformation("Windows asked the VPN plug-in to connect.");
+            Interlocked.Increment(ref _connectCount);
             Interlocked.Exchange(ref _terminationRequested, 0);
             Volatile.Write(ref _connectedChannel, null);
             var host = GetHost();
@@ -252,33 +255,44 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
         }
     }
 
-    // The service host is done with this connection; the next connect makes a new one. A connection Windows still
-    // holds - the session ended on the app's request or the server's - ends through Windows' own disconnect, which
-    // then runs Disconnect: a channel the plug-in stops by itself is a dropped connection, which Windows dials again.
+    // The service host is done with this connection. A connection Windows still holds - the session ended on the app's
+    // request or the server's - ends through Windows' own disconnect, which then runs Disconnect: a channel the plug-in
+    // stops by itself is a dropped connection, which Windows dials again.
     public void StopSelf()
     {
         VpnServiceHost? host;
-        lock (_hostLock) {
+        lock (_hostLock)
             host = _host;
-            _host = null;
-            _appServiceListener = null;
-        }
 
         _adapterTcs.TrySetCanceled();
         _adapter = null;
         _channel = null;
         var connectedChannel = Interlocked.Exchange(ref _connectedChannel, null);
-        _ = Release(host, connectedChannel);
+        _ = Release(host, connectedChannel, Volatile.Read(ref _connectCount));
     }
 
-    // The host goes once Windows has disconnected: the app's connection it serves keeps this process awake, which
-    // Windows freezes between VPN events otherwise, and the disconnect waited 7 s for the next one.
-    private static async Task Release(VpnServiceHost? host, VpnChannel? connectedChannel)
+    // The host goes once Windows has disconnected - the app's connection it serves keeps this process awake, which
+    // Windows freezes between VPN events otherwise, and the disconnect waited 7 s for the next one - and SessionWaitTimeout
+    // after. A connect meanwhile keeps it, with the app's connection and the keep-awake process's: the app's switch to
+    // another server, which Windows connected 2.6 s after its disconnect once, found them closed and took 11.5 s.
+    private async Task Release(VpnServiceHost? host, VpnChannel? connectedChannel, int connectCount)
     {
         if (connectedChannel is not null)
             await DisconnectProfile(connectedChannel).Vhc();
 
-        host?.Dispose();
+        if (host is null)
+            return;
+
+        await Task.Delay(SessionWaitTimeout).Vhc();
+        lock (_hostLock) {
+            if (_host != host || Volatile.Read(ref _connectCount) != connectCount)
+                return;
+
+            _host = null;
+            _appServiceListener = null;
+        }
+
+        host.Dispose();
     }
 
     // Windows refusing leaves the channel to stop here: a dialed-again connection rather than one with no session.

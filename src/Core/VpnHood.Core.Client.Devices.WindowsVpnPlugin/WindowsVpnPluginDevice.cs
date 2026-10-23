@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
@@ -17,6 +18,7 @@ public sealed class WindowsVpnPluginDevice : IDevice
     // Windows dials no plug-in profile without ServerUris (RAS 749), though the plug-in holds the real
     // servers: TEST-NET-1, never routed, as on iOS.
     private const string PlaceholderServerUri = "https://192.0.2.1";
+    private const int InvalidHandleHResult = unchecked((int)0x80070006);
     private readonly string _profileName;
 
     // profileName: the profile's name in Windows' VPN settings and quick settings, the app's name
@@ -72,8 +74,11 @@ public sealed class WindowsVpnPluginDevice : IDevice
 
         // A plug-in profile can survive an app or package restart and reconnect with a stale service
         // configuration. Force a fresh activation after VpnServiceManager writes vpn.config.
-        if (profile.ConnectionStatus != VpnManagementConnectionStatus.Disconnected) {
-            await agent.DisconnectProfileAsync(profile).AsTask(cancellationToken).Vhc();
+        var connectionStatus = TryGetConnectionStatus(profile);
+        if (connectionStatus != VpnManagementConnectionStatus.Disconnected) {
+            if (connectionStatus is not null)
+                await agent.DisconnectProfileAsync(profile).AsTask(cancellationToken).Vhc();
+
             await WaitForDisconnected(agent, cancellationToken).Vhc();
             profile = await GetOrCreateProfile(cancellationToken).Vhc();
         }
@@ -93,13 +98,26 @@ public sealed class WindowsVpnPluginDevice : IDevice
             var profiles = await agent.GetProfilesAsync().AsTask(cancellationToken).Vhc();
             var profile = profiles.OfType<VpnPlugInProfile>().FirstOrDefault(x =>
                 string.Equals(x.ProfileName, _profileName, StringComparison.OrdinalIgnoreCase));
-            if (profile is null || profile.ConnectionStatus == VpnManagementConnectionStatus.Disconnected)
+            if (profile is null || TryGetConnectionStatus(profile) == VpnManagementConnectionStatus.Disconnected)
                 return;
 
             await Task.Delay(200, cancellationToken).Vhc();
         }
 
         throw new TimeoutException("Windows did not disconnect the previous VPN plug-in session.");
+    }
+
+    // A profile listed while Windows was taking it out of a connection reads its status through that connection,
+    // which fails once it is gone (0x80070006, the handle is invalid; the app's switch to another server hit it): not
+    // known, so the next list tells.
+    private static VpnManagementConnectionStatus? TryGetConnectionStatus(VpnPlugInProfile profile)
+    {
+        try {
+            return profile.ConnectionStatus;
+        }
+        catch (COMException ex) when (ex.HResult == InvalidHandleHResult) {
+            return null;
+        }
     }
 
     private async Task<VpnPlugInProfile> GetOrCreateProfile(CancellationToken cancellationToken)

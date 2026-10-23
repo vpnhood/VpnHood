@@ -1,5 +1,4 @@
 using VpnHood.AppLib.App;
-using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Hosting.Desktop;
 using VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin;
@@ -25,12 +24,10 @@ internal static class App
         });
     }
 
-    // The product's options. The Store updates its apps, so no update feed, as on Linux; and no
-    // release before it left a folder to import.
+    // The product's options. The Store updates its apps, so no updater: one with no feed answers every
+    // "Check for update" with a failure; and no release before it left a folder to import.
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
-        var options = ClientAppOptions.Create(context, ClientAppConfigs.Load());
-        options.UpdaterOptions = new AppUpdaterOptions();
-        return options;
+        return ClientAppOptions.Create(context, ClientAppConfigs.Load());
     }
 }

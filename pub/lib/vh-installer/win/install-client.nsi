@@ -134,10 +134,18 @@ FunctionEnd
 !macro VhCloseProcessesFunction UN
 Function ${UN}CloseProcesses
 	Exch $0
+	Push $1
+	; a folder that ends in "\", as an MSI's InstallLocation does, would escape the quote closing it on
+	; the command line, and close.ps1 would get the quote in the path
+	StrCpy $1 $0 1 -1
+	${If} $1 == "\"
+		StrCpy $0 $0 -1
+	${EndIf}
 	InitPluginsDir
 	File "/oname=$PLUGINSDIR\close.ps1" "${__FILEDIR__}\install-client-close.ps1"
 	nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\close.ps1" -folder "$0"'
-	Pop $0
+	Pop $1
+	Pop $1
 	Pop $0
 FunctionEnd
 !macroend
@@ -263,14 +271,15 @@ Section "Install"
 	!endif
 
 	; an install of this app already here: its service stopped and what runs from it closed, so
-	; nothing the setup replaces is in use
+	; nothing the setup replaces is in use - closed even where the command is gone, as an uninstall
+	; that could not finish leaves the tray running without it
 	${If} ${FileExists} "$INSTDIR\${COMMAND_NAME}.exe"
 		DetailPrint "Stopping ${INSTANCE_NAME}..."
 		nsExec::ExecToLog '"$INSTDIR\${COMMAND_NAME}.exe" service stop'
 		Pop $0
-		Push "$INSTDIR\"
-		Call CloseProcesses
 	${EndIf}
+	Push "$INSTDIR"
+	Call CloseProcesses
 
 	; the version's own folder, then the root's launchers over it
 	SetOutPath "$INSTDIR\${VERSION}"
@@ -344,7 +353,7 @@ Section "Uninstall"
 	; the service, and the root off the PATH, by the app itself
 	nsExec::ExecToLog '"$INSTDIR\${COMMAND_NAME}.exe" service uninstall'
 	Pop $0
-	Push "$INSTDIR\"
+	Push "$INSTDIR"
 	Call un.CloseProcesses
 
 	DeleteRegValue HKLM "${RUN_KEY}" "${INSTANCE_NAME}"

@@ -126,7 +126,13 @@ public class Session : IDisposable
         _netFilter = netFilter;
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
-        _netProtector = new NetProtector(options, logScope);
+        _netProtector = new NetProtector(new NetProtectorOptions {
+            MaxUdpDnsPacketsPerSecond = options.MaxUdpDnsPacketsPerSecondValue,
+            MaxTcpConnectsPerSecond = options.MaxTcpConnectsPerSecondValue,
+            NetScanLimit = options.NetScanLimit,
+            NetScanTimeout = options.NetScanTimeout,
+            LogScope = logScope
+        });
         AllowTcpPacket = options.AllowTcpPacketValue;
         AllowTcpProxy = options.AllowTcpProxyValue;
         ExtraData = extraData;
@@ -308,17 +314,18 @@ public class Session : IDisposable
                 $"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(ipPacket.DestinationAddress)}");
         }
 
-        // the session's own limits; a packet over its limit goes without an exception, as a flood would throw one for
-        // each packet
-        if (!_netProtector.VerifyPacket(protocol, destinationEndPoint)) {
-            ipPacket.Dispose();
-            return;
-        }
-
         // Map destination
         if (_netFilter.IpMapper?.ToHost(protocol, destinationEndPoint, out var newEndPoint) == true) {
             ipPacket.SetDestinationEndPoint(newEndPoint);
             ipPacket.UpdateAllChecksums();
+            destinationEndPoint = newEndPoint;
+        }
+
+        // the session's own limits, on where the packet goes, as the TCP proxy's are; a packet over its limit goes
+        // without an exception, as a flood would throw one for each packet
+        if (!_netProtector.VerifyPacket(ipPacket, protocol, destinationEndPoint)) {
+            ipPacket.Dispose();
+            return;
         }
 
         // send by the adapter where its NAT translates the version, else by the proxy. A session recovered by a
@@ -611,6 +618,12 @@ public class Session : IDisposable
     private void VerifyTcpChannelRequest(IStreamConnection streamConnection, StreamProxyChannelRequest request)
     {
         lock (_verifyRequestLock) {
+            // connection rate, which the TUN's connections count toward too; before NetScan, as it is the cheaper
+            if (!_netProtector.TryAcquireTcpConnect()) {
+                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "MaxTcpRate");
+                throw new MaxTcpConnectsPerSecondException(streamConnection.RemoteEndPoint, this, request.RequestId);
+            }
+
             // NetScan limit
             VerifyNetScan(IpProtocol.Tcp, request.DestinationEndPoint.ToValue(), request.RequestId);
 

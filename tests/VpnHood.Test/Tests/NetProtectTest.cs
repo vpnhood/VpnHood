@@ -1,6 +1,11 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.NetProtection;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Packets.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Test.Providers;
 
@@ -73,7 +78,8 @@ public class NetProtectTest : TestBase
     [TestMethod]
     public async Task WindowRateLimiter_limits_each_window()
     {
-        var windowRateLimiter = new WindowRateLimiter(3, TimeSpan.FromHours(1));
+        // a window longer than any uptime, so the test cannot span a window's turn
+        var windowRateLimiter = new WindowRateLimiter(3, TimeSpan.FromDays(100_000));
         Assert.IsTrue(windowRateLimiter.TryAcquire());
         Assert.IsTrue(windowRateLimiter.TryAcquire());
         Assert.IsTrue(windowRateLimiter.TryAcquire());
@@ -83,6 +89,70 @@ public class NetProtectTest : TestBase
         var shortRateLimiter = new WindowRateLimiter(1, TimeSpan.FromMilliseconds(200));
         Assert.IsTrue(shortRateLimiter.TryAcquire());
         await AssertEqualsWait(true, shortRateLimiter.TryAcquire);
+    }
+
+    [TestMethod]
+    public void MaxTcpConnectsPerSecond_by_vpn_adapter()
+    {
+        using var netProtector = new NetProtector(CreateNetProtectorOptions(maxTcpConnectsPerSecond: 2));
+
+        // a burst of SYNs: a second's worth passes, or two as the burst may span a second's turn
+        var passedCount = Enumerable.Range(0, 10)
+            .Count(_ => VerifyTcpPacket(netProtector, "10.10.10.1:80", syn: true, ack: false));
+        Assert.IsTrue(passedCount is >= 2 and <= 4, $"PassedCount: {passedCount}");
+
+        // the rest of a connection is not counted
+        Assert.IsTrue(VerifyTcpPacket(netProtector, "10.10.10.1:80", syn: false, ack: true));
+        Assert.IsTrue(VerifyTcpPacket(netProtector, "10.10.10.1:80", syn: true, ack: true));
+    }
+
+    [TestMethod]
+    public void MaxTcpConnectsPerSecond_shared_by_vpn_adapter_and_proxy()
+    {
+        // the proxy's connection takes the second's whole budget, so the TUN's SYN after it is refused; a pair that
+        // spans a second's turn has two budgets, so it is tried again
+        while (true) {
+            using var netProtector = new NetProtector(CreateNetProtectorOptions(maxTcpConnectsPerSecond: 1));
+            var windowIndex = Environment.TickCount64 / 1000;
+            Assert.IsTrue(netProtector.TryAcquireTcpConnect());
+            var synPassed = VerifyTcpPacket(netProtector, "10.10.10.1:80", syn: true, ack: false);
+            if (Environment.TickCount64 / 1000 != windowIndex)
+                continue;
+
+            Assert.IsFalse(synPassed);
+            return;
+        }
+    }
+
+    [TestMethod]
+    public void NetScan_by_vpn_adapter()
+    {
+        using var netProtector = new NetProtector(CreateNetProtectorOptions(netScanLimit: 1));
+        Assert.IsTrue(VerifyTcpPacket(netProtector, "10.10.10.1:80", syn: true, ack: false));
+        Assert.IsFalse(VerifyTcpPacket(netProtector, "10.10.10.2:80", syn: true, ack: false));
+        Assert.AreEqual(1, netProtector.NetScanErrorCount);
+
+        // another network is not affected
+        Assert.IsTrue(VerifyTcpPacket(netProtector, "10.10.11.1:80", syn: true, ack: false));
+    }
+
+    [TestMethod]
+    public async Task MaxTcpConnectsPerSecond_by_proxy()
+    {
+        // create server
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.MaxTcpConnectsPerSecond = 2;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
+
+        // create client
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpProxy: true));
+
+        // connections at once: a second's worth goes, the rest of that second is refused
+        var results = await Task.WhenAll(Enumerable.Range(0, 8)
+            .Select(_ => TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10), throwError: false)));
+        Assert.IsTrue(results.Contains(true));
+        Assert.IsTrue(results.Contains(false));
     }
 
     private async Task Test_MaxUdpDnsPacketsPerSecond(IVpnAdapter? vpnAdapter)
@@ -125,5 +195,27 @@ public class NetProtectTest : TestBase
 
             count++;
         }
+    }
+
+    private static NetProtectorOptions CreateNetProtectorOptions(int maxTcpConnectsPerSecond = 1000,
+        int? netScanLimit = null)
+    {
+        return new NetProtectorOptions {
+            MaxUdpDnsPacketsPerSecond = 1000,
+            MaxTcpConnectsPerSecond = maxTcpConnectsPerSecond,
+            NetScanLimit = netScanLimit,
+            NetScanTimeout = netScanLimit != null ? TimeSpan.FromSeconds(100) : null,
+            LogScope = new LogScope()
+        };
+    }
+
+    private static bool VerifyTcpPacket(NetProtector netProtector, string destinationEndPoint, bool syn, bool ack)
+    {
+        using var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.255.0.2:50000"),
+            IPEndPoint.Parse(destinationEndPoint), [], []);
+        var tcpPacket = ipPacket.ExtractTcp();
+        tcpPacket.Synchronize = syn;
+        tcpPacket.Acknowledgment = ack;
+        return netProtector.VerifyPacket(ipPacket, IpProtocol.Tcp, ipPacket.GetDestinationEndPoint());
     }
 }

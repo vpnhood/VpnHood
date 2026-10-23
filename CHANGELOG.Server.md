@@ -1,6 +1,7 @@
 # Latest
 
 * Feature: VpnHoodServer limits each session's DNS over UDP, by default to 200 packets a second (`MaxUdpDnsPacketsPerSecond` in the session options), and drops the excess, so one client can no longer flood a DNS server through it and get the server's address reported for abuse. Its log names the session that reached the limit.
+* Feature: VpnHoodServer limits the TCP connections each session opens, by default to 200 a second (`MaxTcpConnectsPerSecond` in the session options), whether through its TUN adapter or its proxy, and `NetScanLimit` now covers the TCP connections through its TUN adapter too, where it saw only those through its proxy.
 * Update: The install scripts no longer take -autostart and -autoupdate, the default since v9.0.856, nor -restBaseUrl, -restAuthorization and -secret, the 2023 names of -httpBaseUrl, -httpAuthorization and -managementSecret. A server still on a release before v9.0.856 no longer updates itself; run its install command again.
 * Fix: The Docker install script asks about installing Docker only when Docker or its compose plugin is missing, with Enter for yes, and takes Y and yes as yes; it used to ask every time, and took anything but a lowercase y as no. Finding no Docker when it is not to install it, it stops at once and says so; it used to fail at the container's start.
 * Improve: The install scripts and the uninstaller list their options with -help, --help or -h; the Docker install script had no help. Every option takes one dash or two: --noautoupdate is -noautoupdate.

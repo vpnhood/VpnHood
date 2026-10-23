@@ -29,7 +29,7 @@ public class NetScanDetector(int itemLimit, TimeSpan itemTimeout) : IDisposable
             return true;
 
         item.EndPoints.Cleanup(true);
-        return item.EndPoints.Count < itemLimit;
+        return item.EndPoints.Count <= itemLimit;
     }
 
     private class NetworkIpAddressItem(TimeSpan? timeout) : TimeoutItem

@@ -34,6 +34,7 @@ public class SessionOptions
     public TimeSpan? ChannelIdleTimeout { get; set; }
     public int? MaxTcpConnectWaitCount { get; set; }
     public int? MaxTcpChannelCount { get; set; }
+    public int? MaxTcpConnectsPerSecond { get; set; }
     public int? NetScanLimit { get; set; }
     public TimeSpan? NetScanTimeout { get; set; }
     public bool? AllowTcpProxy { get; set; }
@@ -88,6 +89,10 @@ public class SessionOptions
     [JsonIgnore]
     public int MaxTcpChannelCountValue => MaxTcpChannelCount ?? 1000;
 
+    // a session's new TCP connections; far above a browser's bursts, far below a SYN flood
+    [JsonIgnore]
+    public int MaxTcpConnectsPerSecondValue => MaxTcpConnectsPerSecond ?? 200;
+
     [JsonIgnore]
     public bool AllowTcpProxyValue => AllowTcpProxy ?? true;
 
@@ -115,6 +120,7 @@ public class SessionOptions
         if (obj.ChannelIdleTimeout != null) ChannelIdleTimeout = obj.ChannelIdleTimeout;
         if (obj.MaxTcpConnectWaitCount != null) MaxTcpConnectWaitCount = obj.MaxTcpConnectWaitCount;
         if (obj.MaxTcpChannelCount != null) MaxTcpChannelCount = obj.MaxTcpChannelCount;
+        if (obj.MaxTcpConnectsPerSecond != null) MaxTcpConnectsPerSecond = obj.MaxTcpConnectsPerSecond;
         if (obj.NetScanLimit != null) NetScanLimit = obj.NetScanLimit;
         if (obj.NetScanTimeout != null) NetScanTimeout = obj.NetScanTimeout;
         if (obj.AllowTcpProxy != null) AllowTcpProxy = obj.AllowTcpProxy;
@@ -141,6 +147,7 @@ public class SessionOptions
         ChannelIdleTimeout = ChannelIdleTimeoutValue;
         MaxTcpConnectWaitCount = MaxTcpConnectWaitCountValue;
         MaxTcpChannelCount = MaxTcpChannelCountValue;
+        MaxTcpConnectsPerSecond = MaxTcpConnectsPerSecondValue;
         NetScanLimit = NetScanLimit;
         NetScanTimeout = NetScanTimeout;
         AllowTcpProxy = AllowTcpProxyValue;

@@ -45,9 +45,6 @@ public class Session : IDisposable
     private readonly TransferBufferSize? _tcpKernelBufferSize;
     private readonly TrackingOptions _trackingOptions;
 
-    private readonly EventReporter _netScanExceptionReporter = new(
-        "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
-
     private readonly EventReporter _maxTcpChannelExceptionReporter = new(
         "Maximum TcpChannel has been reached.", GeneralEventId.NetProtect);
 
@@ -62,7 +59,6 @@ public class Session : IDisposable
     private Traffic _prevTraffic = new();
     private long _responseRequestTimestamp; // when the request whose reply is Response went out
     private int _tcpConnectWaitCount;
-    private int _netScanErrorCount;
     private bool _disposing;
     private readonly Lock _stateLock = new();
 
@@ -78,11 +74,10 @@ public class Session : IDisposable
     public SessionResponse Response { get; private set; }
     public bool IsDisposed => DisposedTime != null;
     public DateTime? DisposedTime { get; private set; }
-    public NetScanDetector? NetScanDetector { get; }
     public SessionExtraData ExtraData { get; }
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
-    public int NetScanErrorCount => _netScanErrorCount;
+    public int NetScanErrorCount => _netProtector.NetScanErrorCount;
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + Tunnel.PacketChannelCount;
 
 
@@ -128,7 +123,6 @@ public class Session : IDisposable
         _streamProxyBufferSize = options.StreamProxyBufferSize ?? ServerTransportDefaults.StreamProxyBufferSize;
         _tcpKernelBufferSize = options.TcpKernelBufferSize;
         _netFilter = netFilter;
-        _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _netProtector = new NetProtector(options, logScope);
@@ -173,10 +167,6 @@ public class Session : IDisposable
             : new Tunnel(tunnelOptions);
 
         Tunnel.PacketReceived += Tunnel_PacketReceived;
-
-        // ReSharper disable once MergeIntoPattern
-        if (options.NetScanLimit != null && options.NetScanTimeout != null)
-            NetScanDetector = new NetScanDetector(options.NetScanLimit.Value, options.NetScanTimeout.Value);
     }
 
 
@@ -373,7 +363,7 @@ public class Session : IDisposable
                 ? Redactor.Always.RedactIpAddress(destinationEndPoint.Value.Address)
                 : "*";
             destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Value.Port.ToString() : "*";
-            netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint.Value).ToString() ?? "*";
+            netScanCount = _netProtector.GetNetScanBurstCount(destinationEndPoint.Value)?.ToString() ?? "*";
         }
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
@@ -645,12 +635,10 @@ public class Session : IDisposable
 
     private void VerifyNetScan(IpProtocol protocol, IpEndPointValue remoteEndPoint, string requestId)
     {
-        if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint))
+        if (_netProtector.VerifyNetScan(remoteEndPoint))
             return;
 
         LogTrack(protocol, null, remoteEndPoint, false, true, "NetScan");
-        _netScanExceptionReporter.Raise();
-        Interlocked.Increment(ref _netScanErrorCount);
         throw new NetScanException(remoteEndPoint.ToIPEndPoint(), this, requestId);
     }
 
@@ -664,13 +652,11 @@ public class Session : IDisposable
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
         Tunnel.Dispose();
         TrafficMeter.Dispose();
-        _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();
         _filterBlockDestinationReporter.Dispose();
         _filterBadSourceReporter.Dispose();
         _netProtector.Dispose();
-        NetScanDetector?.Dispose();
 
         // if there is no reason it is temporary
         var reason = "Cleanup";

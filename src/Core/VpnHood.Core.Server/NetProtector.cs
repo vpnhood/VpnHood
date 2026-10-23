@@ -17,6 +17,18 @@ internal readonly struct NetProtector(SessionOptions options, LogScope logScope)
     private readonly EventReporter _udpDnsLimitReporter = new(
         "Some DNS packets have been dropped by MaxUdpDnsPacketsPerSecond.", GeneralEventId.NetProtect, logScope);
 
+    // none unless the options set both its limit and its timeout
+    private readonly NetScanDetector? _netScanDetector =
+        options is { NetScanLimit: { } netScanLimit, NetScanTimeout: { } netScanTimeout }
+            ? new NetScanDetector(netScanLimit, netScanTimeout)
+            : null;
+
+    private readonly EventReporter _netScanReporter = new(
+        "NetScan protector does not allow this request.", GeneralEventId.NetProtect, logScope);
+
+    // its reporter takes each refusal once
+    public int NetScanErrorCount => _netScanReporter.TotalEventCount;
+
     // false for a packet over its limit
     [MethodImpl(MethodImplOptions.AggressiveInlining)] // per packet; RyuJIT inlines this size only when its heuristic agrees
     public bool VerifyPacket(IpProtocol protocol, IpEndPointValue destinationEndPoint)
@@ -26,6 +38,21 @@ internal readonly struct NetProtector(SessionOptions options, LogScope logScope)
             return TryAcquire(_udpDnsLimiter, _udpDnsLimitReporter);
 
         return true;
+    }
+
+    // false for a new remote endpoint that takes its network past NetScanLimit
+    public bool VerifyNetScan(IpEndPointValue remoteEndPoint)
+    {
+        if (_netScanDetector == null || _netScanDetector.Verify(remoteEndPoint))
+            return true;
+
+        _netScanReporter.Raise();
+        return false;
+    }
+
+    public int? GetNetScanBurstCount(IpEndPointValue remoteEndPoint)
+    {
+        return _netScanDetector?.GetBurstCount(remoteEndPoint);
     }
 
     private static bool TryAcquire(WindowRateLimiter limiter, EventReporter limitReporter)
@@ -40,5 +67,7 @@ internal readonly struct NetProtector(SessionOptions options, LogScope logScope)
     public void Dispose()
     {
         _udpDnsLimitReporter.Dispose();
+        _netScanReporter.Dispose();
+        _netScanDetector?.Dispose();
     }
 }

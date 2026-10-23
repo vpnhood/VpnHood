@@ -36,6 +36,11 @@ public sealed class WindowsVpnPluginAppServiceClient : IMessageClient
             }
         }
 
+        // As a TCP client finds no endpoint file: with the package's profile disconnected, after an update say, no VPN
+        // host has a session, and opening the app service would only start one.
+        if (await WindowsVpnPluginService.TryGetLiveProfiles().Vhc() is { Length: 0 })
+            throw new VpnServiceNotReadyException("Windows holds the package's VPN profile disconnected.");
+
         connection = await Open(cancellationToken).Vhc();
         _connection = connection;
         try {

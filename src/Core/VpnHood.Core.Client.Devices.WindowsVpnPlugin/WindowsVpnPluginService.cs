@@ -201,7 +201,7 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     }
 
     // Closes a waiting listener's connections unless a connect has come: at once when Windows holds the package's profile
-    // disconnected, after an update say, else in SessionWaitTimeout.
+    // disconnected, else in SessionWaitTimeout.
     private async Task ExpireWaitingListener(WindowsVpnPluginAppServiceListener listener)
     {
         var profiles = await TryGetLiveProfiles().Vhc();
@@ -222,7 +222,7 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     }
 
     // The package's profiles Windows holds other than disconnected; null when Windows does not say.
-    private static async Task<VpnPlugInProfile[]?> TryGetLiveProfiles()
+    internal static async Task<VpnPlugInProfile[]?> TryGetLiveProfiles()
     {
         try {
             var packageFamilyName = Package.Current.Id.FamilyName;

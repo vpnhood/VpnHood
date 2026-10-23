@@ -24,6 +24,7 @@ public class SessionOptions
     public long? SyncCacheSize { get; set; }
     public int? MaxPacketChannelCount { get; set; }
     public int? MaxUdpClientCount { get; set; }
+    public int? MaxUdpDnsPacketsPerSecond { get; set; }
     public int? MaxIcmpClientCount { get; set; }
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
     public TransferBufferSize? StreamProxyBufferSize { get; set; }
@@ -68,6 +69,10 @@ public class SessionOptions
     [JsonIgnore]
     public int MaxUdpClientCountValue => MaxUdpClientCount ?? 500;
 
+    // a session's DNS over UDP; far above a device's own lookups, far below a flood that gets the server reported
+    [JsonIgnore]
+    public int MaxUdpDnsPacketsPerSecondValue => MaxUdpDnsPacketsPerSecond ?? 200;
+
     [JsonIgnore]
     public int MaxIcmpClientCountValue => MaxIcmpClientCount ?? 20;
 
@@ -100,6 +105,7 @@ public class SessionOptions
         if (obj.SyncCacheSize != null) SyncCacheSize = obj.SyncCacheSize;
         if (obj.MaxPacketChannelCount != null) MaxPacketChannelCount = obj.MaxPacketChannelCount;
         if (obj.MaxUdpClientCount != null) MaxUdpClientCount = obj.MaxUdpClientCount;
+        if (obj.MaxUdpDnsPacketsPerSecond != null) MaxUdpDnsPacketsPerSecond = obj.MaxUdpDnsPacketsPerSecond;
         if (obj.MaxIcmpClientCount != null) MaxIcmpClientCount = obj.MaxIcmpClientCount;
         if (obj.StreamProxyBufferSize != null) StreamProxyBufferSize = obj.StreamProxyBufferSize;
         if (obj.TcpKernelBufferSize != null) TcpKernelBufferSize = obj.TcpKernelBufferSize;
@@ -125,6 +131,7 @@ public class SessionOptions
         SyncCacheSize = SyncCacheSizeValue;
         MaxPacketChannelCount = MaxPacketChannelCountValue;
         MaxUdpClientCount = MaxUdpClientCountValue;
+        MaxUdpDnsPacketsPerSecond = MaxUdpDnsPacketsPerSecondValue;
         MaxIcmpClientCount = MaxIcmpClientCountValue;
         StreamProxyBufferSize = StreamProxyBufferSize; //no default
         TcpKernelBufferSize = TcpKernelBufferSize; //no default

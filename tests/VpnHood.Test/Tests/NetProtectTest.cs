@@ -1,4 +1,8 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using System.Net.Sockets;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Server;
+using VpnHood.Net.VpnAdapters.Abstractions;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -47,5 +51,79 @@ public class NetProtectTest : TestBase
 
         await TestHelper.Test_Https();
         await TestHelper.Test_Https();
+    }
+
+    [TestMethod]
+    public async Task MaxUdpDnsPacketsPerSecond_by_proxy()
+    {
+        await Test_MaxUdpDnsPacketsPerSecond(vpnAdapter: null);
+    }
+
+    [TestMethod]
+    public async Task MaxUdpDnsPacketsPerSecond_by_vpn_adapter()
+    {
+        using var vpnAdapter = new TestUdpServerVpnAdapter();
+        var adapterUsed = false;
+        vpnAdapter.PacketReceived += (_, _) => adapterUsed = true;
+
+        await Test_MaxUdpDnsPacketsPerSecond(vpnAdapter);
+        Assert.IsTrue(adapterUsed);
+    }
+
+    [TestMethod]
+    public async Task WindowRateLimiter_limits_each_window()
+    {
+        var windowRateLimiter = new WindowRateLimiter(3, TimeSpan.FromHours(1));
+        Assert.IsTrue(windowRateLimiter.TryAcquire());
+        Assert.IsTrue(windowRateLimiter.TryAcquire());
+        Assert.IsTrue(windowRateLimiter.TryAcquire());
+        Assert.IsFalse(windowRateLimiter.TryAcquire());
+
+        // the next window passes again
+        var shortRateLimiter = new WindowRateLimiter(1, TimeSpan.FromMilliseconds(200));
+        Assert.IsTrue(shortRateLimiter.TryAcquire());
+        await AssertEqualsWait(true, shortRateLimiter.TryAcquire);
+    }
+
+    private async Task Test_MaxUdpDnsPacketsPerSecond(IVpnAdapter? vpnAdapter)
+    {
+        // create server
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.MaxUdpDnsPacketsPerSecond = 5;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
+
+        // create client
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(token);
+
+        // a flood from one port: a few seconds' worth comes back at most, as the burst may span a second's turn
+        using var udpClient = new UdpClient(AddressFamily.InterNetwork);
+        for (var i = 0; i < 100; i++)
+            await udpClient.SendAsync(new byte[10], MockEps.UdpNsEchoEndPoint1, TestCt);
+
+        var echoCount = await CountReceived(udpClient, quietTime: TimeSpan.FromSeconds(2));
+        Assert.IsTrue(echoCount is > 0 and <= 25, $"EchoCount: {echoCount}");
+
+        // the rest of UDP is not limited
+        await TestHelper.Test_UdpEcho();
+    }
+
+    // the datagrams that arrive until none has for the quiet time
+    private async Task<int> CountReceived(UdpClient udpClient, TimeSpan quietTime)
+    {
+        var count = 0;
+        while (true) {
+            using var quietCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+            quietCts.CancelAfter(quietTime);
+            try {
+                await udpClient.ReceiveAsync(quietCts.Token);
+            }
+            catch (OperationCanceledException) {
+                TestCt.ThrowIfCancellationRequested();
+                return count;
+            }
+
+            count++;
+        }
     }
 }

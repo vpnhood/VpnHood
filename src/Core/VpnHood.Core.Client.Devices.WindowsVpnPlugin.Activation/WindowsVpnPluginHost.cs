@@ -14,6 +14,13 @@ public static class WindowsVpnPluginHost
 
     public static void Run([ReadOnlyArray] string[] args)
     {
+        // the host's own full-trust copy, which keeps it awake while its VPN is connected: no log of its own, as its
+        // connection is in the host's, and a failure in Windows' Application log
+        if (args.Contains(WindowsVpnPluginKeepAwake.Argument)) {
+            WindowsVpnPluginKeepAwake.Run().GetAwaiter().GetResult();
+            return;
+        }
+
         // the process's own log from its first line, as the iOS extension has os_log: what comes before the
         // VPN service opens its log, an activation's failure among it
         var folder = WindowsVpnPluginFolders.VpnServiceFolder;
@@ -22,8 +29,8 @@ public static class WindowsVpnPluginHost
         fileLogger.Open(deleteOld: true);
         VhLogger.AddProvider(new TextLoggerProvider(fileLogger));
 
-        VhLogger.Instance.LogInformation("The VPN host started on .NET {Version}. Args: {Args}",
-            Environment.Version, string.Join(' ', args));
+        VhLogger.Instance.LogInformation("The VPN host started on .NET {Version}. ProcessId: {ProcessId}, Args: {Args}",
+            Environment.Version, Environment.ProcessId, string.Join(' ', args));
         try {
             CoreApplication.RunWithActivationFactories(new ActivationFactoryProvider());
         }

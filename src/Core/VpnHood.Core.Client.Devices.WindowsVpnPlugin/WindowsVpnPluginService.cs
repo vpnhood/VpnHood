@@ -7,6 +7,8 @@ using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.WindowsVpnPlugin;
+using Windows.ApplicationModel;
+using Windows.ApplicationModel.AppService;
 using Windows.Networking.Vpn;
 
 namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
@@ -20,18 +22,23 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
 {
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan KeepAwakeStartTimeout = TimeSpan.FromSeconds(5);
     private readonly Lock _hostLock = new();
     private VpnServiceHost? _host;
+    private volatile WindowsVpnPluginAppServiceListener? _appServiceListener;
     private volatile VpnChannel? _channel;
+    private VpnChannel? _connectedChannel; // the connection Windows holds, until its Disconnect
     private volatile WindowsVpnPluginAdapter? _adapter;
     private volatile TaskCompletionSource<WindowsVpnPluginAdapter> _adapterTcs = NewAdapterTcs();
     private int _terminationRequested;
+    private int _keepAwakeCount; // the keep-awake processes connected
 
     public void Connect(VpnChannel channel)
     {
         try {
             VhLogger.Instance.LogInformation("Windows asked the VPN plug-in to connect.");
             Interlocked.Exchange(ref _terminationRequested, 0);
+            Volatile.Write(ref _connectedChannel, null);
             var host = GetHost();
             _channel = channel;
             if (_adapterTcs.Task.IsCompleted)
@@ -56,17 +63,31 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
                 var remaining = ConnectTimeout - stopwatch.Elapsed;
                 if (remaining < TimeSpan.Zero)
                     remaining = TimeSpan.Zero;
-                if (!startedTask.Wait(remaining))
+                if (Task.WaitAny([startedTask], remaining) == -1)
                     throw new TimeoutException("The VPN adapter did not start in time.");
             }
 
-            // an adapter's start failure surfaces here; a canceled start means the adapter was closed
+            // the adapter went before it started: the session ended itself, refused by the server, say
+            if (startedTask.IsCanceled)
+                throw new OperationCanceledException("The VPN session ended before its adapter started.");
+
+            // an adapter's start failure surfaces here
             startedTask.GetAwaiter().GetResult();
+            Volatile.Write(ref _connectedChannel, channel);
             VhLogger.Instance.LogInformation("The VPN adapter and the Windows VPN channel started.");
+
+            // before this callback returns, after which Windows may freeze the host; one from an earlier connection
+            // of this host still holds
+            if (Volatile.Read(ref _keepAwakeCount) == 0 && !StartKeepAwake().Wait(KeepAwakeStartTimeout))
+                VhLogger.Instance.LogWarning("The keep-awake process did not start in time.");
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "The Windows VPN plug-in could not connect.");
-            TryDisconnect();
+
+            // a session that ended itself has written why; a disconnect could write its end first, with no reason
+            if (ex is not OperationCanceledException)
+                TryDisconnect();
+
             channel.TerminateConnection(ex.Message);
         }
     }
@@ -74,8 +95,12 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     public void Disconnect(VpnChannel channel)
     {
         VhLogger.Instance.LogInformation("Windows asked the VPN plug-in to disconnect.");
-        _adapter?.NotifyOsStopping();
+        Volatile.Write(ref _connectedChannel, null);
         TryDisconnect();
+
+        // Windows holds the connection until its plug-in stops the channel, as Microsoft's VPN sample does here: RAS
+        // ended it 15 s after the plug-in's Disconnect otherwise.
+        StopChannel(channel);
     }
 
     public void Encapsulate(VpnChannel channel, VpnPacketBufferList packets, VpnPacketBufferList encapsulatedPackets)
@@ -129,33 +154,135 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     {
     }
 
-    // The service host is done with this connection; the next connect makes a new one.
+    // A connection to one of the package's app services, which Windows runs in this process - the app's control channel
+    // or the keep-awake process's: served by the session's host, which closes it with the session, and at once when there
+    // is none, so the app finds the session ended and the keep-awake process leaves.
+    public async Task ServeAppConnection(AppServiceConnection connection, string appServiceName,
+        CancellationToken cancellationToken)
+    {
+        var listener = _appServiceListener;
+        if (listener is null) {
+            connection.Dispose();
+            return;
+        }
+
+        if (appServiceName != WindowsVpnPluginKeepAwake.AppServiceName) {
+            await listener.Serve(connection, cancellationToken).Vhc();
+            return;
+        }
+
+        Interlocked.Increment(ref _keepAwakeCount);
+        try {
+            await listener.Serve(connection, cancellationToken).Vhc();
+        }
+        finally {
+            // gone while the VPN is connected - killed, or ended by Windows: another takes its place
+            if (Interlocked.Decrement(ref _keepAwakeCount) == 0 && Volatile.Read(ref _connectedChannel) is not null)
+                await StartKeepAwake().Vhc();
+        }
+    }
+
+    // Never throws: without it the VPN still works while the app runs.
+    private static async Task StartKeepAwake()
+    {
+        try {
+            VhLogger.Instance.LogInformation("Starting the keep-awake process...");
+            await WindowsVpnPluginKeepAwake.Start().Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex,
+                "Could not start the keep-awake process, so Windows freezes the VPN host between VPN events while the app is not running.");
+        }
+    }
+
+    // The service host is done with this connection; the next connect makes a new one. A connection Windows still
+    // holds - the session ended on the app's request or the server's - ends through Windows' own disconnect, which
+    // then runs Disconnect: a channel the plug-in stops by itself is a dropped connection, which Windows dials again.
     public void StopSelf()
     {
         VpnServiceHost? host;
         lock (_hostLock) {
             host = _host;
             _host = null;
+            _appServiceListener = null;
         }
 
         _adapterTcs.TrySetCanceled();
         _adapter = null;
         _channel = null;
+        var connectedChannel = Interlocked.Exchange(ref _connectedChannel, null);
+        _ = Release(host, connectedChannel);
+    }
+
+    // The host goes once Windows has disconnected: the app's connection it serves keeps this process awake, which
+    // Windows freezes between VPN events otherwise, and the disconnect waited 7 s for the next one.
+    private static async Task Release(VpnServiceHost? host, VpnChannel? connectedChannel)
+    {
+        if (connectedChannel is not null)
+            await DisconnectProfile(connectedChannel).Vhc();
+
         host?.Dispose();
+    }
+
+    // Windows refusing leaves the channel to stop here: a dialed-again connection rather than one with no session.
+    private static async Task DisconnectProfile(VpnChannel channel)
+    {
+        try {
+            VhLogger.Instance.LogInformation("Asking Windows to disconnect the VPN profile...");
+            var agent = new VpnManagementAgent();
+            var packageFamilyName = Package.Current.Id.FamilyName;
+            var profiles = await agent.GetProfilesAsync().AsTask().Vhc();
+            var connectedProfiles = profiles.OfType<VpnPlugInProfile>()
+                .Where(x =>
+                    string.Equals(x.VpnPluginPackageFamilyName, packageFamilyName, StringComparison.OrdinalIgnoreCase) &&
+                    x.ConnectionStatus != VpnManagementConnectionStatus.Disconnected)
+                .ToArray();
+
+            if (connectedProfiles.Length == 0)
+                throw new InvalidOperationException("Windows lists no connected VPN profile of this package.");
+
+            foreach (var profile in connectedProfiles) {
+                var status = await agent.DisconnectProfileAsync(profile).AsTask().Vhc();
+                if (status is not (VpnManagementErrorStatus.Ok or VpnManagementErrorStatus.AlreadyDisconnecting))
+                    throw new InvalidOperationException($"Windows could not disconnect the VPN profile. Status: {status}");
+            }
+
+            VhLogger.Instance.LogInformation("Windows has disconnected the VPN profile.");
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Windows did not disconnect the VPN profile, so the plug-in stops its channel.");
+            StopChannel(channel);
+        }
+    }
+
+    private static void StopChannel(VpnChannel channel)
+    {
+        try {
+            channel.Stop();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not stop the Windows VPN channel.");
+        }
     }
 
     private VpnServiceHost GetHost()
     {
         lock (_hostLock) {
+            if (_host is not null)
+                return _host;
+
             // withLogger: the VPN host is a process of its own, so the service host keeps its own log file
             var folder = WindowsVpnPluginFolders.VpnServiceFolder;
-            return _host ??= new VpnServiceHost(
+            var appServiceListener = new WindowsVpnPluginAppServiceListener();
+            _host = new VpnServiceHost(
                 configFolder: folder,
                 dataFolder: folder,
                 vpnServiceHandler: this,
                 socketFactory: new MsQuicSocketFactory(),
-                messageListener: new WindowsVpnPluginPipeListener(),
+                messageListener: appServiceListener,
                 withLogger: true);
+            _appServiceListener = appServiceListener;
+            return _host;
         }
     }
 

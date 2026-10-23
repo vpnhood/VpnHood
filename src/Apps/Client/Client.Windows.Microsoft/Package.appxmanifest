@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The package: the app (Client), a full-trust Win32 process run as the person, and its VPN host
      (VpnPluginHost), which Windows starts in an AppContainer as its background tasks' server when the
-     app's VPN profile connects. _publish.ps1 stamps the publisher, the version, the names and the two
-     executables. The VPN host's application id begins the class name Windows asks its factory for
-     (VpnActivationNames), which the package's identity completes: both stay as the WinStore fork
-     verified them until another identity is tried. -->
+     app's VPN profile connects or a process opens one of its app services; the host starts its own
+     executable once more, with full trust, to keep it awake. _publish.ps1 stamps the publisher, the
+     version, the names, the executables and the server. The VPN host's application id begins the
+     class name Windows asks its factory for (VpnActivationNames), which the package's identity completes:
+     both stay as the WinStore fork verified them until another identity is tried. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap uap10 rescap">
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  IgnorableNamespaces="uap uap10 rescap desktop">
   <Identity Name="VpnHood.Client" Publisher="CN=Stamped" Version="0.0.0.0" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Stamped</DisplayName>
@@ -44,6 +46,21 @@
             <uap:Task Type="vpnClient" />
           </BackgroundTasks>
         </Extension>
+        <!-- The app's control channel (WindowsVpnPluginAppServiceListener.AppServiceName), run by the same server, the
+             VPN host: an open connection keeps it running, which Windows freezes between VPN events otherwise. -->
+        <uap:Extension Category="windows.appService" EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnAppServiceTask">
+          <uap:AppService Name="VpnService" ServerName="Stamped" />
+        </uap:Extension>
+        <!-- The keep-awake process's (WindowsVpnPluginKeepAwake): the VPN host's own executable, which the host starts
+             with full trust at a connect, holds it while the VPN is connected, so the host runs without the app too. -->
+        <uap:Extension Category="windows.appService" EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnAppServiceTask">
+          <uap:AppService Name="VpnKeepAwake" ServerName="Stamped" />
+        </uap:Extension>
+        <desktop:Extension Category="windows.fullTrustProcess" Executable="Stamped.exe">
+          <desktop:FullTrustProcess>
+            <desktop:ParameterGroup GroupId="KeepAwake" Parameters="-KeepAwake" />
+          </desktop:FullTrustProcess>
+        </desktop:Extension>
       </Extensions>
     </Application>
     <Application
@@ -71,6 +88,7 @@
       <InProcessServer>
         <Path>WinRT.Host.dll</Path>
         <ActivatableClass ActivatableClassId="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnBackgroundTask" ThreadingModel="both" />
+        <ActivatableClass ActivatableClassId="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnAppServiceTask" ThreadingModel="both" />
       </InProcessServer>
     </Extension>
   </Extensions>

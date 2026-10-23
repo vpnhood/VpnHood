@@ -98,7 +98,13 @@ foreach ($application in $manifest.Package.Applications.Application) {
 	if ($application.Id -eq "VpnPluginHost") {
 		$application.Executable = "$($vpnHost.AssemblyName).exe";
 		$application.VisualElements.DisplayName = "$($app.VhAppDisplayName) VPN host";
-		$application.Extensions.Extension.BackgroundTasks.ServerName = $vpnHost.AssemblyName;
+		# one server, the VPN host, for the VPN task and both app services; the keep-awake process is its own exe
+		foreach ($extension in $application.Extensions.Extension) {
+			foreach ($server in @($extension.BackgroundTasks, $extension.AppService)) {
+				if ($server) { $server.ServerName = $vpnHost.AssemblyName; }
+			}
+			if ($extension.Category -eq "windows.fullTrustProcess") { $extension.Executable = "$($vpnHost.AssemblyName).exe"; }
+		}
 	}
 	else {
 		$application.Executable = "$($app.AssemblyName).exe";

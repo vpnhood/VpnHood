@@ -1,3 +1,5 @@
+using Windows.ApplicationModel.AppService;
+using Windows.ApplicationModel.Core;
 using Windows.Networking.Vpn;
 
 namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation;
@@ -5,7 +7,28 @@ namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation;
 // The IVpnPlugIn Windows calls, authored here for its callable wrapper; the VPN service does the work.
 public sealed class VpnPluginBridge : IVpnPlugIn
 {
+    private const string PropertyKey = "WindowsVpnPlugin.Bridge";
+    private static readonly Lock CurrentLock = new();
     private readonly WindowsVpnPluginService _service = new();
+
+    // the process's one bridge, which the VPN task's runs and the app's connections share
+    internal static VpnPluginBridge Current {
+        get {
+            lock (CurrentLock) {
+                var properties = (IDictionary<string, object>)CoreApplication.Properties;
+                if (properties.TryGetValue(PropertyKey, out var value) && value is VpnPluginBridge bridge)
+                    return bridge;
+
+                bridge = new VpnPluginBridge();
+                properties[PropertyKey] = bridge;
+                return bridge;
+            }
+        }
+    }
+
+    internal Task ServeAppConnection(AppServiceConnection connection, string appServiceName,
+        CancellationToken cancellationToken) =>
+        _service.ServeAppConnection(connection, appServiceName, cancellationToken);
 
     public void Connect(VpnChannel channel) => _service.Connect(channel);
 

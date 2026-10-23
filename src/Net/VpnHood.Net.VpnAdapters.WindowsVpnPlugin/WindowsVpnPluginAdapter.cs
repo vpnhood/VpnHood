@@ -52,9 +52,6 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
 
     private DatagramSocket? _transport;
     private readonly byte[] _writeBuffer = new byte[ushort.MaxValue];
-    private readonly Lock _stateLock = new();
-    private bool _channelStarted;
-    private bool _osStopping;
     private volatile bool _closed = true;
     private TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -70,13 +67,6 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
     protected override bool RestartAfterNetworkAddressChanged => false;
     protected override bool CheckAdapterInterfaceAfterNetworkChanged => false;
 
-    // Windows is stopping the channel itself, so the close must not stop it again.
-    public void NotifyOsStopping()
-    {
-        lock (_stateLock)
-            _osStopping = true;
-    }
-
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         _clientIpV4List.Clear();
@@ -85,8 +75,6 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         _routesV6.Clear();
         _dnsServers.Clear();
         _mtu = WindowsMaxMtu;
-        lock (_stateLock)
-            _osStopping = false;
 
         ResetPacketQueue(open: false);
         return Task.CompletedTask;
@@ -188,8 +176,6 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
             false,
             transport);
 
-        lock (_stateLock)
-            _channelStarted = true;
         _started.TrySetResult();
         VhLogger.Instance.LogInformation("Windows VPN channel started. MTU: {Mtu}", _mtu);
     }
@@ -199,26 +185,24 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         ResetPacketQueue(open: false);
         _started.TrySetCanceled();
 
+        // The channel stays up: the plug-in stops it in Windows' Disconnect, as a channel it stops by itself is a
+        // dropped connection, which Windows dials again.
         var transport = Interlocked.Exchange(ref _transport, null);
-
-        bool stopChannel;
-        lock (_stateLock) {
-            stopChannel = _channelStarted && !_osStopping;
-            _channelStarted = false;
-        }
-
-        if (stopChannel) {
-            try { vpnChannel.Stop(); }
-            catch (Exception ex) { VhLogger.Instance.LogWarning(ex, "Could not stop the Windows VPN channel."); }
-        }
-
         try { transport?.Dispose(); }
         catch (Exception ex) { VhLogger.Instance.LogDebug(ex, "Could not dispose the VPN transport."); }
     }
 
-    // Windows owns the interface; the close has already stopped the channel.
+    // Windows owns the interface and the channel.
     protected override void AdapterRemove()
     {
+    }
+
+    // An adapter disposed before it started never starts: a session the server refused, say. The close, which
+    // ends a start otherwise, runs only for a started adapter.
+    protected override void DisposeManaged()
+    {
+        _started.TrySetCanceled();
+        base.DisposeManaged();
     }
 
     public void OnEncapsulate(VpnPacketBufferList packets, VpnPacketBufferList encapsulatedPackets)

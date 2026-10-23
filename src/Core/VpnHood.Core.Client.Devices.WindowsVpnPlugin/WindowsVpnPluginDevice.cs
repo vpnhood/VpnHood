@@ -1,3 +1,4 @@
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
@@ -9,7 +10,8 @@ using Windows.Networking.Vpn;
 namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 
 // The app's side of the Windows VPN plug-in. Windows owns the virtual interface and launches the package's
-// VPN host when this device connects its VpnPlugInProfile; the app reaches that host over a named pipe.
+// VPN host when this device connects its VpnPlugInProfile; the app reaches that host through the package's app
+// service, which Windows runs in it.
 public sealed class WindowsVpnPluginDevice : IDevice
 {
     // Windows dials no plug-in profile without ServerUris (RAS 749), though the plug-in holds the real
@@ -76,8 +78,12 @@ public sealed class WindowsVpnPluginDevice : IDevice
             profile = await GetOrCreateProfile(cancellationToken).Vhc();
         }
 
+        // A connect the VPN host took up ends in its status file, whose reason the manager reports - the server's
+        // refusal, say - rather than Windows' bare status; one it never reached is Windows' own failure.
+        var statusFilePath = Path.Combine(VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
+        var connectTime = DateTime.UtcNow;
         var status = await agent.ConnectProfileAsync(profile).AsTask(cancellationToken).Vhc();
-        if (status != VpnManagementErrorStatus.Ok)
+        if (status != VpnManagementErrorStatus.Ok && File.GetLastWriteTimeUtc(statusFilePath) < connectTime)
             throw new InvalidOperationException($"Windows could not connect the VPN profile. Status: {status}");
     }
 
@@ -135,7 +141,7 @@ public sealed class WindowsVpnPluginDevice : IDevice
         return profile;
     }
 
-    public IMessageClient CreateMessageClient() => new WindowsVpnPluginPipeClient();
+    public IMessageClient CreateMessageClient() => new WindowsVpnPluginAppServiceClient();
 
     public void BindProcessToVpn(bool value)
     {

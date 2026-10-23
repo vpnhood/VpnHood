@@ -124,6 +124,9 @@ try {
 	{
 		# not-sure about RestoreDisableParallel yet
 		$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
+		# OutputPath is global, so every project writes here, and an earlier publish's .aar files would be
+		# taken as library imports by the projects built before them (APT2260): it starts empty
+		if (Test-Path $outputPath) { Remove-Item $outputPath -Recurse -Force; }
 		$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
 		dotnet build $tempProjectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
 			/p:SolutionDir=$solutionDir `
@@ -168,6 +171,7 @@ try {
 	{
 		# update variables
 		$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
+		if (Test-Path $outputPath) { Remove-Item $outputPath -Recurse -Force; }
 		$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"
 		$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
 		$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);

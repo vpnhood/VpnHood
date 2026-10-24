@@ -31,9 +31,8 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
 
     private readonly List<HostName> _clientIpV4List = [];
     private readonly List<HostName> _clientIpV6List = [];
-    private readonly List<VpnRoute> _routesV4 = [];
-    private readonly List<VpnRoute> _routesV6 = [];
-    private readonly List<HostName> _dnsServers = [];
+    private readonly List<IpNetwork> _routes = [];
+    private readonly List<IPAddress> _dnsServers = [];
     private int _mtu = WindowsMaxMtu;
 
     private readonly ConcurrentQueue<(byte[] Data, int Length)> _readQueue = new();
@@ -71,8 +70,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
     {
         _clientIpV4List.Clear();
         _clientIpV6List.Clear();
-        _routesV4.Clear();
-        _routesV6.Clear();
+        _routes.Clear();
         _dnsServers.Clear();
         _mtu = WindowsMaxMtu;
 
@@ -89,8 +87,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
 
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        (ipNetwork.IsV4 ? _routesV4 : _routesV6)
-            .Add(new VpnRoute(new HostName(ipNetwork.Prefix.ToString()), (byte)ipNetwork.PrefixLength));
+        _routes.Add(ipNetwork);
         return Task.CompletedTask;
     }
 
@@ -98,7 +95,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         CancellationToken cancellationToken)
     {
         _dnsServers.Clear();
-        _dnsServers.AddRange(dnsServers.Select(x => new HostName(x.ToString())));
+        _dnsServers.AddRange(dnsServers);
         return Task.CompletedTask;
     }
 
@@ -149,19 +146,29 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         await transport.ConnectAsync(new HostName(serverIp.ToString()), "9")
             .AsTask(cancellationToken).Vhc();
 
+        // Windows routes the physical adapter's own DNS servers around the channel while it is connected, by host
+        // routes, which outrun any wider route of it: a resolver the channel carries, if one of them, was reached
+        // around it, every query. Its own host route in the channel keeps it there, by the profile's interface metric,
+        // below the physical adapter's (the device sets it); one the routes leave out stays out.
+        var routes = _routes.ToList();
+        routes.AddRange(_dnsServers
+            .Where(x => routes.Any(route => route.Contains(x)))
+            .Select(x => new IpNetwork(x, x.IsV4() ? 32 : 128))
+            .Where(x => !routes.Contains(x)));
+
         var routeAssignment = new VpnRouteAssignment();
         // Never replace these WinRT-owned vectors with managed Lists: Windows returns the misleading
         // E_OUTOFMEMORY (0x8007000E) from StartWithMainTransport when that ABI boundary is crossed.
-        foreach (var route in _routesV4)
-            routeAssignment.Ipv4InclusionRoutes.Add(route);
-        foreach (var route in _routesV6)
-            routeAssignment.Ipv6InclusionRoutes.Add(route);
+        foreach (var route in routes)
+            (route.IsV4 ? routeAssignment.Ipv4InclusionRoutes : routeAssignment.Ipv6InclusionRoutes)
+                .Add(new VpnRoute(new HostName(route.Prefix.ToString()), (byte)route.PrefixLength));
 
         VpnDomainNameAssignment? dnsAssignment = null;
         if (_dnsServers.Count > 0) {
             dnsAssignment = new VpnDomainNameAssignment();
             dnsAssignment.DomainNameList.Add(new VpnDomainNameInfo(
-                ".", VpnDomainNameType.Suffix, _dnsServers, Array.Empty<HostName>()));
+                ".", VpnDomainNameType.Suffix, _dnsServers.Select(x => new HostName(x.ToString())).ToList(),
+                Array.Empty<HostName>()));
         }
 
         ResetPacketQueue(open: true);

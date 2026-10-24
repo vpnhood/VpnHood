@@ -1,10 +1,14 @@
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 using Windows.ApplicationModel;
 using Windows.Networking.Vpn;
 
@@ -19,6 +23,13 @@ public sealed class WindowsVpnPluginDevice : IDevice
     // servers: TEST-NET-1, never routed, as on iOS.
     private const string PlaceholderServerUri = "https://192.0.2.1";
     private const int InvalidHandleHResult = unchecked((int)0x80070006);
+
+    // Windows routes the physical adapter's own DNS servers around the channel while it is connected, by host routes,
+    // and the channel's host route for one it carries (WindowsVpnPluginAdapter) wins only by the interface metric:
+    // Windows gives the VPN 55, above an Ethernet's 15, unless the profile's phonebook entry names one. No API sets
+    // it; the entry is in the package's LocalState, where Windows keeps the app's profiles.
+    private const int InterfaceMetric = 1;
+    private const string PhonebookFileName = "rasphone.pbk";
     private readonly string _profileName;
 
     // profileName: the profile's name in Windows' VPN settings and quick settings, the app's name
@@ -83,6 +94,8 @@ public sealed class WindowsVpnPluginDevice : IDevice
             profile = await GetOrCreateProfile(cancellationToken).Vhc();
         }
 
+        SetInterfaceMetric();
+
         // A connect the VPN host took up ends in its status file, whose reason the manager reports - the server's
         // refusal, say - rather than Windows' bare status; one it never reached is Windows' own failure.
         var statusFilePath = Path.Combine(VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
@@ -105,6 +118,36 @@ public sealed class WindowsVpnPluginDevice : IDevice
         }
 
         throw new TimeoutException("Windows did not disconnect the previous VPN plug-in session.");
+    }
+
+    // Before a dial, which reads the entry: a DNS server the physical adapter uses too is reached around the VPN
+    // otherwise, so a failure says so, but the VPN still connects.
+    private void SetInterfaceMetric()
+    {
+        var phonebookPath = Path.Combine(WindowsVpnPluginFolders.LocalFolder, PhonebookFileName);
+        try {
+            // Latin-1 maps each byte to one char and back, so the rest stays as Windows wrote it
+            var text = File.ReadAllText(phonebookPath, Encoding.Latin1);
+            var entry = Regex.Match(text, $@"(?ms)^\[{Regex.Escape(_profileName)}\]\r?$.*?(?=^\[|\z)");
+            if (!entry.Success)
+                throw new InvalidDataException("The phonebook has no entry for the VPN profile.");
+
+            const string metricPattern = @"(?m)^(IpInterfaceMetric|Ipv6InterfaceMetric)=\d+";
+            if (Regex.Matches(entry.Value, metricPattern).Count != 2)
+                throw new InvalidDataException("The VPN profile's phonebook entry has no interface metric for each IP version.");
+
+            var newEntry = Regex.Replace(entry.Value, metricPattern, $"$1={InterfaceMetric}");
+            if (newEntry == entry.Value)
+                return;
+
+            File.WriteAllText(phonebookPath,
+                text[..entry.Index] + newEntry + text[(entry.Index + entry.Length)..], Encoding.Latin1);
+            VhLogger.Instance.LogInformation("The VPN profile's interface metric is set. Metric: {Metric}", InterfaceMetric);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex,
+                "Could not set the VPN profile's interface metric, so a DNS server the physical adapter uses too is reached around the VPN.");
+        }
     }
 
     // A profile listed while Windows was taking it out of a connection reads its status through that connection,

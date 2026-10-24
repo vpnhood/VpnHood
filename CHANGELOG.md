@@ -17,6 +17,7 @@
 * Fix: On Android 7.0, the app can check for updates, and the app from our website can download them #android
 * Fix: On some phones, the quick-settings tile and the app no longer stall as they start, where Android could say the app isn't responding #android
 * Update: The times in the app's log are in UTC #android #ios #windows #linux
+* Fix: On Android, the app could close when you connected or disconnected just as a connection was ending #android
 * Fix: On Android, going back after an access key's link opened the app over itself no longer leaves the app unable to ask for the VPN permission ("Please open the app and grant VPN permission"), to sign in, to buy or to show ads #android
 * Fix: The "Extend it" button on a session's countdown keeps its label in the last 15 minutes #android #connect
 * Feature: The Android app from our website updates itself: "Update now" downloads the new version, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store keeps updating there #android

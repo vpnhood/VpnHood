@@ -32,6 +32,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 {
     private VpnServiceHost? _vpnServiceHost;
     private AndroidVpnNotification? _notification;
+    private readonly Lock _notificationLock = new();
     private readonly AndroidMessageListener _messageListener = new();
     public const string ProcessName = ":vpnhood_process";
     public const string ActionConnect = "connect";
@@ -163,15 +164,19 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     }
 
     // Promotes the service to the foreground on first use, then keeps the notification in step with
-    // the connection state. Returns false when the system refused the promotion.
+    // the connection state. Returns false when the system refused the promotion. One at a time with
+    // StopNotification: start commands come on the main thread and the host's calls on its own, and a
+    // notification stopped in between would be updated after its disposal.
     private bool TryShowNotification(ConnectionInfo connectionInfo)
     {
-        var notification = _notification ?? TryStartForeground();
-        if (notification == null)
-            return false;
+        lock (_notificationLock) {
+            var notification = _notification ?? TryStartForeground();
+            if (notification == null)
+                return false;
 
-        notification.Update(connectionInfo.ClientState);
-        return true;
+            notification.Update(connectionInfo.ClientState);
+            return true;
+        }
     }
 
     // Builds the notification and promotes the service with it. _notification is assigned only once
@@ -202,15 +207,17 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public void StopNotification()
     {
-        if (_notification == null)
-            return;
+        lock (_notificationLock) {
+            if (_notification == null)
+                return;
 
-        VhLogger.Instance.LogDebug("Remove VpnService from foreground and stop the notification.");
-        StopForeground(StopForegroundFlags.Remove);
+            VhLogger.Instance.LogDebug("Remove VpnService from foreground and stop the notification.");
+            StopForeground(StopForegroundFlags.Remove);
 
-        // clear notification
-        _notification?.Dispose();
-        _notification = null;
+            // clear notification
+            _notification.Dispose();
+            _notification = null;
+        }
     }
 
     public override void OnRevoke()

@@ -1,3 +1,4 @@
+using System.Management;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -19,17 +20,17 @@ namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 // service, which Windows runs in it.
 public sealed class WindowsVpnPluginDevice : IDevice
 {
-    // Windows dials no plug-in profile without ServerUris (RAS 749), though the plug-in holds the real
+    // Windows dials no plug-in profile without a server (RAS 749), though the plug-in holds the real
     // servers: TEST-NET-1, never routed, as on iOS.
-    private const string PlaceholderServerUri = "https://192.0.2.1";
+    private const string PlaceholderServerAddress = "192.0.2.1";
     private const int InvalidHandleHResult = unchecked((int)0x80070006);
 
     // Windows routes the physical adapter's own DNS servers around the channel while it is connected, by host routes,
     // and the channel's host route for one it carries (WindowsVpnPluginAdapter) wins only by the interface metric:
     // Windows gives the VPN 55, above an Ethernet's 15, unless the profile's phonebook entry names one. No API sets
-    // it; the entry is in the package's LocalState, where Windows keeps the app's profiles.
+    // it; the entry is in the user's own phonebook (AddUserProfile), whose existing file the package changes in place,
+    // unvirtualized.
     private const int InterfaceMetric = 1;
-    private const string PhonebookFileName = "rasphone.pbk";
     private readonly string _profileName;
 
     // profileName: the profile's name in Windows' VPN settings and quick settings, the app's name
@@ -108,9 +109,7 @@ public sealed class WindowsVpnPluginDevice : IDevice
     private async Task WaitForDisconnected(VpnManagementAgent agent, CancellationToken cancellationToken)
     {
         for (var retry = 0; retry < 50; retry++) {
-            var profiles = await agent.GetProfilesAsync().AsTask(cancellationToken).Vhc();
-            var profile = profiles.OfType<VpnPlugInProfile>().FirstOrDefault(x =>
-                string.Equals(x.ProfileName, _profileName, StringComparison.OrdinalIgnoreCase));
+            var profile = await FindProfile(agent, cancellationToken).Vhc();
             if (profile is null || TryGetConnectionStatus(profile) == VpnManagementConnectionStatus.Disconnected)
                 return;
 
@@ -124,7 +123,8 @@ public sealed class WindowsVpnPluginDevice : IDevice
     // otherwise, so a failure says so, but the VPN still connects.
     private void SetInterfaceMetric()
     {
-        var phonebookPath = Path.Combine(WindowsVpnPluginFolders.LocalFolder, PhonebookFileName);
+        var phonebookPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Microsoft", "Network", "Connections", "Pbk", "rasphone.pbk");
         try {
             // Latin-1 maps each byte to one char and back, so the rest stays as Windows wrote it
             var text = File.ReadAllText(phonebookPath, Encoding.Latin1);
@@ -163,12 +163,18 @@ public sealed class WindowsVpnPluginDevice : IDevice
         }
     }
 
+    // the agent lists the user's own phonebook's profiles and the package's
+    private async Task<VpnPlugInProfile?> FindProfile(VpnManagementAgent agent, CancellationToken cancellationToken)
+    {
+        var profiles = await agent.GetProfilesAsync().AsTask(cancellationToken).Vhc();
+        return profiles.OfType<VpnPlugInProfile>().FirstOrDefault(x =>
+            string.Equals(x.ProfileName, _profileName, StringComparison.OrdinalIgnoreCase));
+    }
+
     private async Task<VpnPlugInProfile> GetOrCreateProfile(CancellationToken cancellationToken)
     {
         var agent = new VpnManagementAgent();
-        var profiles = await agent.GetProfilesAsync().AsTask(cancellationToken).Vhc();
-        var profile = profiles.OfType<VpnPlugInProfile>().FirstOrDefault(x =>
-            string.Equals(x.ProfileName, _profileName, StringComparison.OrdinalIgnoreCase));
+        var profile = await FindProfile(agent, cancellationToken).Vhc();
 
         var packageFamilyName = Package.Current.Id.FamilyName;
         if (profile is not null &&
@@ -184,22 +190,28 @@ public sealed class WindowsVpnPluginDevice : IDevice
             await agent.DeleteProfileAsync(profile).AsTask(cancellationToken).Vhc();
         }
 
-        profile = new VpnPlugInProfile {
-            ProfileName = _profileName,
-            VpnPluginPackageFamilyName = packageFamilyName,
-            RequireVpnClientAppUI = false,
-            AlwaysOn = false,
-            RememberCredentials = false,
-            // as the verified profile had it; the plug-in reads nothing from it
-            CustomConfiguration = "VpnPlugin/1"
-        };
-        profile.ServerUris.Add(new Uri(PlaceholderServerUri));
+        await Task.Run(() => AddUserProfile(packageFamilyName), cancellationToken).Vhc();
+        return await FindProfile(agent, cancellationToken).Vhc() ??
+               throw new InvalidOperationException("Windows does not list the VPN profile it has just created.");
+    }
 
-        var status = await agent.AddProfileFromObjectAsync(profile).AsTask(cancellationToken).Vhc();
-        if (status != VpnManagementErrorStatus.Ok)
-            throw new InvalidOperationException($"Windows could not create the VPN profile. Status: {status}");
-
-        return profile;
+    // As Add-VpnConnection makes a plug-in's, through WMI, whose provider runs out of the package: the profile is in the
+    // user's own phonebook, the one Windows' VPN settings and quick settings list. The agent's add writes the package's
+    // own, which they do not. Split tunneling, or Windows adds a default route of its own beside the plug-in's routes.
+    // MSIX runs nothing at an uninstall, so the profile outlives the package, in Windows' settings until the person
+    // removes it.
+    private void AddUserProfile(string packageFamilyName)
+    {
+        using var vpnConnection = new ManagementClass(@"root\Microsoft\Windows\RemoteAccess\Client", "PS_VpnConnection", null);
+        using var parameters = vpnConnection.GetMethodParameters("NewByThirdParty");
+        parameters["Name"] = _profileName;
+        parameters["ServerAddress"] = PlaceholderServerAddress;
+        parameters["PlugInApplicationID"] = packageFamilyName;
+        parameters["CustomConfiguration"] = "<VpnPlugin/>"; // XML, as the method takes it; the plug-in reads nothing of it
+        parameters["SplitTunneling"] = true;
+        parameters["RememberCredential"] = false;
+        // a failure throws a ManagementException ("Object or property already exists"); a success answers nothing
+        vpnConnection.InvokeMethod("NewByThirdParty", parameters, null)?.Dispose();
     }
 
     public IMessageClient CreateMessageClient() => new WindowsVpnPluginAppServiceClient();

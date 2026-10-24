@@ -8,7 +8,6 @@ using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Messaging;
-using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
@@ -74,10 +73,11 @@ public class SessionUsageTest : TestBase
         var session = server.GetSession(client);
         await server.SessionManager.Sync(true, TestCt);
 
-        // applied, then its reply lost: the server drops the usage, which the access manager has billed
+        // applied, then its reply lost: the server drops the usage, which the access manager has billed; a gateway's
+        // 504 reads as maintenance
         AddTraffic(session, sent: 1000, received: 2000);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCodeAfterApply = HttpStatusCode.GatewayTimeout;
-        await Assert.ThrowsExactlyAsync<ApiException>(() => server.SessionManager.Sync(true, TestCt));
+        await Assert.ThrowsExactlyAsync<MaintenanceException>(() => server.SessionManager.Sync(true, TestCt));
 
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCodeAfterApply = null;
         await server.SessionManager.Sync(true, TestCt);

@@ -28,7 +28,6 @@ public class FileAccessManager : IAccessManager
     public X509Certificate2 DefaultCert { get; }
     public ServerStatus? ServerStatus { get; private set; }
     public ServerInfo? ServerInfo { get; private set; }
-    public bool IsMaintenanceMode => false; //this server never goes into maintenance mode
     public AccessTokenService AccessTokenService { get; }
 
     public FileAccessManager(string storagePath, FileAccessManagerOptions options)

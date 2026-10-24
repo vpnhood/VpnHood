@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Buffers;
+using System.Buffers.Binary;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Streams;
@@ -29,6 +30,9 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private bool _disposed;
     public override bool CanReuse => !_isConnectionClosed && _exception == null;
     public int PreserveWriteBufferLength => ChunkHeaderLength;
+
+    // the status the peer's close frame carried, if it carried one
+    public ushort? CloseStatus { get; private set; }
 
     public WebSocketStream(Stream sourceStream, string streamId, bool useBuffer, bool isServer)
         : base(useBuffer
@@ -214,11 +218,10 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
                 // skip close connection payload
                 if (webSocketHeader.IsCloseConnection) {
+                    CloseStatus = await ReadCloseStatus(webSocketHeader, cancellationToken).Vhc();
                     VhLogger.Instance.LogDebug(GeneralEventId.Stream,
-                        "WebSocketStream has been closed by WebSocket close frame. StreamId: {StreamId}", StreamId);
-
-                    // discard the frame payload
-                    await DiscardWebSocketFrame(webSocketHeader, cancellationToken).Vhc();
+                        "WebSocketStream has been closed by WebSocket close frame. CloseStatus: {CloseStatus}, StreamId: {StreamId}",
+                        CloseStatus, StreamId);
 
                     _isConnectionClosed = true;
                     return new WebSocketHeader {
@@ -235,7 +238,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
                         StreamId);
 
                     // discard the frame payload if it is ping or pong
-                    await DiscardWebSocketFrame(webSocketHeader, cancellationToken).Vhc();
+                    await DiscardWebSocketFrame(webSocketHeader.PayloadLength, cancellationToken).Vhc();
                     continue;
                 }
 
@@ -254,17 +257,39 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         }
     }
 
-    private async Task DiscardWebSocketFrame(WebSocketHeader webSocketHeader, CancellationToken cancellationToken)
+    private async Task<ushort?> ReadCloseStatus(WebSocketHeader webSocketHeader, CancellationToken cancellationToken)
     {
-        if (webSocketHeader.PayloadLength > int.MaxValue)
+        if (webSocketHeader.PayloadLength < 2) {
+            await DiscardWebSocketFrame(webSocketHeader.PayloadLength, cancellationToken).Vhc();
+            return null;
+        }
+
+        var buffer = new byte[2];
+        await SourceStream.ReadExactlyAsync(buffer, cancellationToken).Vhc();
+
+        if (!webSocketHeader.MaskKey.IsEmpty) {
+            buffer[0] ^= webSocketHeader.MaskKey.Span[0];
+            buffer[1] ^= webSocketHeader.MaskKey.Span[1];
+        }
+
+        var remaining = webSocketHeader.PayloadLength - 2;
+        if (remaining > 0)
+            await DiscardWebSocketFrame(remaining, cancellationToken).Vhc();
+
+        return BinaryPrimitives.ReadUInt16BigEndian(buffer);
+    }
+
+    private async Task DiscardWebSocketFrame(long payloadLength, CancellationToken cancellationToken)
+    {
+        if (payloadLength > int.MaxValue)
             throw new InvalidOperationException(
-                $"WebSocket close frame payload length is too big: {webSocketHeader.PayloadLength}. StreamId: {StreamId}");
+                $"WebSocket close frame payload length is too big: {payloadLength}. StreamId: {StreamId}");
 
         using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 8);
         var memory = memoryOwner.Memory;
         var read = 0;
-        while (read < webSocketHeader.PayloadLength) {
-            var bytesToRead = (int)Math.Min(webSocketHeader.PayloadLength - read, memory.Length);
+        while (read < payloadLength) {
+            var bytesToRead = (int)Math.Min(payloadLength - read, memory.Length);
             var bytesRead = await SourceStream.ReadAsync(memory[..bytesToRead], cancellationToken).Vhc();
             if (bytesRead == 0)
                 break; // end of stream
@@ -340,6 +365,30 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Trashing unexpected binary stream data. StreamId: {StreamId}, TrashedLength: {TrashedLength}",
                 StreamId, trashedLength);
+        }
+    }
+
+    // the server's only, as a client's frame must be masked
+    public async ValueTask WriteClose(ushort closeStatus, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
+        if (!_isServer)
+            throw new InvalidOperationException("Only the server writes a close status.");
+
+        if (_isConnectionClosed)
+            return;
+
+        _isConnectionClosed = true;
+
+        try {
+            var closeFrame = WebSocketUtils.BuildServerCloseFrame(closeStatus);
+            await SourceStream.WriteAsync(closeFrame, cancellationToken).Vhc();
+            await SourceStream.FlushAsync(cancellationToken).Vhc();
+        }
+        catch (Exception ex) {
+            CloseByError(ex);
+            throw;
         }
     }
 

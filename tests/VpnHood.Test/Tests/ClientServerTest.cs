@@ -612,7 +612,6 @@ public class ClientServerTest : TestBase
         var accessManager = TestHttpAccessManager.Create(TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
 
-        Assert.IsFalse(server.AccessManager.IsMaintenanceMode);
         await server.DisposeAsync();
 
         // ------------
@@ -663,21 +662,6 @@ public class ClientServerTest : TestBase
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = null;
         await using var client4 = await CreateClientAsync(autoConnect: true);
         await client4.WaitForState(ClientState.Connected);
-
-        // ----------
-        // Check: Go Maintenance mode by replying 403 from access-server
-        // ----------
-        accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.Forbidden;
-        await using var client5 = await CreateClientAsync(autoConnect: false);
-        ex = await Assert.ThrowsExactlyAsync<MaintenanceException>(() => client5.Connect(cancellationToken: TestCt));
-        Assert.AreEqual(SessionErrorCode.Maintenance, ex.SessionResponse.ErrorCode);
-
-        // ----------
-        // Check: Connect after Maintenance is done
-        // ----------
-        accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = null;
-        await using var client6 = await CreateClientAsync(autoConnect: true);
-        await client6.WaitForState(ClientState.Connected);
     }
 
     [TestMethod]

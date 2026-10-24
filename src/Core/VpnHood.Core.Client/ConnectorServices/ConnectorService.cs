@@ -10,6 +10,7 @@ using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
@@ -170,6 +171,9 @@ internal class ConnectorService : IAsyncDisposable
 
         // wait for response and websocket upgrade if needed before sending any data because GET can not have body
         var responseMessage = await HttpUtils.ReadResponse(streamConnection.Stream, cancellationToken).Vhc();
+        if (responseMessage.StatusCode == HttpStatusCode.ServiceUnavailable)
+            throw new MaintenanceException();
+
         if (responseMessage.StatusCode != HttpStatusCode.SwitchingProtocols)
             throw new Exception("Unexpected response.");
 

@@ -9,9 +9,11 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Streams;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Tunneling.WebSockets;
 
 namespace VpnHood.Core.Client;
 
@@ -161,6 +163,9 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
                 if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
                     throw new UnauthorizedAccessException();
 
+                if (responseMessage.StatusCode == HttpStatusCode.ServiceUnavailable)
+                    throw new MaintenanceException();
+
                 // other error response will be handled by the SessionResponse
             }
 
@@ -198,7 +203,15 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
     private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        var message = await StreamUtils.ReadMessageAsync(stream, cancellationToken).Vhc();
+        string message;
+        try {
+            message = await StreamUtils.ReadMessageAsync(stream, cancellationToken).Vhc();
+        }
+        // a server in maintenance closes a WebSocket with "Try Again Later" in place of its reply
+        catch when (stream is WebSocketStream { CloseStatus: WebSocketUtils.CloseStatusTryAgainLater }) {
+            throw new MaintenanceException();
+        }
+
         try {
             var response = JsonUtils.Deserialize<T>(message);
             ProcessResponseException(response);
@@ -220,9 +233,6 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
     {
         if (response.ErrorCode == SessionErrorCode.RedirectHost)
             throw new RedirectHostException(response);
-
-        if (response.ErrorCode == SessionErrorCode.Maintenance)
-            throw new MaintenanceException();
 
         if (response.ErrorCode != SessionErrorCode.Ok)
             throw new SessionException(response);

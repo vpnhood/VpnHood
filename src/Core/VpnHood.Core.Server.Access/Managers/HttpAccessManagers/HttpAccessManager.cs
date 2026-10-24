@@ -13,8 +13,6 @@ namespace VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 
 public class HttpAccessManager : ApiClientBase, IAccessManager
 {
-    public bool IsMaintenanceMode { get; private set; }
-
     public HttpAccessManager(HttpClient httpClient)
         : base(httpClient)
     {
@@ -38,12 +36,18 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
     protected override Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response,
         CancellationToken cancellationToken)
     {
-        // check maintenance mode
-        IsMaintenanceMode = response.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.Forbidden;
-        if (IsMaintenanceMode)
+        if (IsMaintenanceStatusCode(response.StatusCode))
             throw new MaintenanceException();
 
         return base.ProcessResponseAsync(client, response, cancellationToken);
+    }
+
+    // The agent answers 503 while it can't serve. Behind a gateway such as Cloudflare, one that is down or restarting
+    // gives the gateway's 502 or 504, or Cloudflare's 520-524, never a refused connection. 500 is the agent's own
+    // error
+    private static bool IsMaintenanceStatusCode(HttpStatusCode statusCode)
+    {
+        return (int)statusCode is 502 or 503 or 504 or (>= 520 and <= 524);
     }
 
     protected override async Task<HttpResult<T>> HttpSendAsync<T>(string urlPart,
@@ -53,7 +57,6 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
             return await base.HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).Vhc();
         }
         catch (Exception ex) when (VhUtils.IsConnectionRefusedException(ex)) {
-            IsMaintenanceMode = true;
             throw new MaintenanceException();
         }
     }

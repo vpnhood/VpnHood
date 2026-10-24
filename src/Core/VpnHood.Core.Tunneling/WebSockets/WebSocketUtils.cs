@@ -1,5 +1,6 @@
 ﻿// ReSharper disable RedundantCast
 
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using VpnHood.Net.Toolkit.Extensions;
@@ -8,6 +9,19 @@ namespace VpnHood.Core.Tunneling.WebSockets;
 
 public static class WebSocketUtils
 {
+    // the close status of RFC 6455's registry for a server that can't serve for now: "Try Again Later"
+    public const ushort CloseStatusTryAgainLater = 1013;
+
+    // a server's frame is unmasked
+    public static ReadOnlyMemory<byte> BuildServerCloseFrame(ushort closeStatus)
+    {
+        var buffer = new byte[4];
+        buffer[0] = 0x88; // FIN bit + opcode 8 (Close)
+        buffer[1] = 2; // unmasked, length 2
+        BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(2), closeStatus);
+        return buffer;
+    }
+
     public static Span<byte> BuildWebSocketFrameHeader(
         Span<byte> buffer, long payloadLength, bool closeConnection = false)
     {

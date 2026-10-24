@@ -2,6 +2,7 @@
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling.WebSockets;
 
@@ -80,6 +81,13 @@ internal static class HttpResponseBuilder
         return Build(response);
     }
 
+    public static ReadOnlyMemory<byte> ServiceUnavailable()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+        response.Headers.ConnectionClose = true;
+        return Build(response);
+    }
+
     public static ReadOnlyMemory<byte> BadRequest(string? message)
     {
         return Error(HttpStatusCode.BadRequest, message);
@@ -91,6 +99,7 @@ internal static class HttpResponseBuilder
             HttpRequestException httpRequestException => Error(httpRequestException.StatusCode, ex.Message),
             KeyNotFoundException => Error(HttpStatusCode.NotFound, ex.Message),
             UnauthorizedAccessException => Unauthorized(),
+            MaintenanceException => ServiceUnavailable(),
             ApiException { StatusCode: (int)HttpStatusCode.NotFound } => Error(HttpStatusCode.NotFound, ex.Message),
             _ => Error(HttpStatusCode.InternalServerError, ex.Message)
         };

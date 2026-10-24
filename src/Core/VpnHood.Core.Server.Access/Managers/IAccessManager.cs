@@ -7,7 +7,6 @@ namespace VpnHood.Core.Server.Access.Managers;
 
 public interface IAccessManager : IDisposable
 {
-    bool IsMaintenanceMode { get; }
     Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx, CancellationToken cancellationToken);
     Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp, CancellationToken cancellationToken);
     Task<SessionResponseEx[]> Session_GetAll(CancellationToken cancellationToken);

@@ -142,8 +142,11 @@ not on it.
 
 **Losing the manager.** Servers keep carrying existing traffic; what breaks is anything
 needing a fresh decision — new sessions, token changes, usage accounting. The server
-detects `503`/`403` as maintenance mode (`IsMaintenanceMode` in `HttpAccessManager`)
-rather than treating it as a fatal error.
+reads the manager's `503` as maintenance rather than a fatal error, and so a gateway's
+`502`/`504` or Cloudflare's `520`–`524`, which stand in for a manager that is down
+(`HttpAccessManager`). It then answers a new request as a web server in maintenance does:
+a `503`, or after a WebSocket upgrade a close with `1013` (Try Again Later); never a
+VpnHood response.
 
 ### The one exception, and it is not a runtime one
 

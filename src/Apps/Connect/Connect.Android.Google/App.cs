@@ -15,6 +15,7 @@ using VpnHood.AppLib.Stores.GooglePlay;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Android.Google;
@@ -119,6 +120,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         // the app, then the UI
         base.OnCreate();
+
+        // the native crashes since the last start, which Crashlytics cannot catch itself
+        if (AndroidDevice.IsMainProcess)
+            _ = Task.Run(NativeCrashReporter.Report);
     }
 
     // AdMob's units are settings; where they name none, the head loads Google's test units and warns,

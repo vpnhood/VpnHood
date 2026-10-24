@@ -6,7 +6,6 @@ using Windows.Networking.Vpn;
 namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation;
 
 // What Windows activates in the VPN host when the profile connects: one finite run per VPN event.
-[WinRT.WinRTRuntimeClassName(VpnActivationNames.GeneratedApplicationClass)]
 public sealed class VpnBackgroundTask : IBackgroundTask
 {
     public void Run(IBackgroundTaskInstance taskInstance)

@@ -12,12 +12,6 @@ public sealed class ActivationFactoryProvider : IGetActivationFactory
     {
         VhLogger.Instance.LogInformation("Windows asked for the activation factory of {ClassId}.", activatableClassId);
         var factory = global::WinRT.Module.GetActivationFactory(activatableClassId);
-
-        // The .mca name Windows asks for carries a hash of the package's identity; the generated application
-        // factory serves any identity, so a fork's package activates too.
-        if (factory == IntPtr.Zero && activatableClassId.EndsWith(".mca", StringComparison.OrdinalIgnoreCase))
-            factory = global::WinRT.Module.GetActivationFactory(VpnActivationNames.GeneratedApplicationClass);
-
         if (factory == IntPtr.Zero)
             throw new TypeLoadException("No activation factory exists for " + activatableClassId);
 

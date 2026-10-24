@@ -8,7 +8,6 @@
 		     lacks the callable wrapper Windows needs, and activation fails. -->
 		<CsWinRTComponent>true</CsWinRTComponent>
 		<CsWinRTWindowsMetadata>C:\Windows\System32\WinMetadata</CsWinRTWindowsMetadata>
-		<CsWinRTGenerateOverridedClassNameActivationFactory>true</CsWinRTGenerateOverridedClassNameActivationFactory>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -16,8 +15,8 @@
 		<ProjectReference Include="..\VpnHood.Core.Client.Devices.WindowsVpnPlugin\VpnHood.Core.Client.Devices.WindowsVpnPlugin.csproj" />
 	</ItemGroup>
 
-	<!-- Both the runtime's options and the .mca class's mapping: without the runtime's, activation fails
-	     with 0x80008093. -->
+	<!-- The runtime's options: without them, activation fails with 0x80008093. Windows activates the component's
+	     classes by their own names, which WinRT.Host finds by their namespace, so no class is mapped. -->
 	<ItemGroup>
 		<None Update="WinRT.Host.runtimeconfig.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

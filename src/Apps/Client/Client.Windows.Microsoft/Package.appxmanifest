@@ -3,9 +3,8 @@
      (VpnPluginHost), which Windows starts in an AppContainer as its background tasks' server when the
      app's VPN profile connects or a process opens one of its app services; the host starts its own
      executable once more, with full trust, to keep it awake. _publish.ps1 stamps the publisher, the
-     version, the names, the executables and the server. The VPN host's application id begins the
-     class name Windows asks its factory for (VpnActivationNames), which the package's identity completes:
-     both stay as the WinStore fork verified them until another identity is tried. -->
+     version, the names, the executables and the server. Windows activates the VPN host's task and app
+     services by their own class names, whatever the package's identity. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"

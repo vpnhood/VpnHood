@@ -6,8 +6,5 @@
       "version": "10.0.0"
     },
     "rollForward": "LatestPatch"
-  },
-  "activatableClasses": {
-    "VpnPluginHost.AppXc6d7gqsjtff8fc4mjx68xsve09xhd10s.mca": "VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.dll"
   }
 }

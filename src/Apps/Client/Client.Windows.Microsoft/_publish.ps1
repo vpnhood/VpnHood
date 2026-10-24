@@ -67,10 +67,10 @@ Copy-Item -Path (Join-Path $appDir "*") -Destination $stageDir -Recurse -Force;
 Copy-Item -Path (Join-Path $vpnHostDir "*") -Destination $stageDir -Recurse -Force;
 Copy-Item -LiteralPath $winmd[0].FullName -Destination $stageDir -Force;
 
-# Without both its runtime section and the class mapping, activation fails (the fork's lesson 3).
+# Without its runtime section, activation fails (0x80008093, the fork's lesson 3).
 $runtimeConfig = Get-Content -Raw (Join-Path $stageDir "WinRT.Host.runtimeconfig.json") | ConvertFrom-Json;
-if (-not $runtimeConfig.runtimeOptions -or -not $runtimeConfig.activatableClasses) {
-	throw "The staged WinRT.Host.runtimeconfig.json lacks the runtime options or the activatable classes.";
+if (-not $runtimeConfig.runtimeOptions) {
+	throw "The staged WinRT.Host.runtimeconfig.json lacks the runtime options.";
 }
 
 # The two causes of a VPN host that never activates: an x86 WinRT.Host.dll, and the component loaded a second time

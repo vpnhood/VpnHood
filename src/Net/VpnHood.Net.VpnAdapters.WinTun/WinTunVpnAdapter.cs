@@ -23,6 +23,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
     private uint _adapterIndex;
+    private readonly Guid _adapterGuid = BuildGuidFromName(adapterSettings.AdapterName);
     private readonly int _ringCapacity = adapterSettings.RingCapacity;
     private IntPtr _tunAdapter;
     private IntPtr _tunSession;
@@ -104,13 +105,13 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // create the adapter. One of this name whose process ended a moment ago (a crash, a debugger's stop)
         // is still being removed: a create racing that removal gives up after WinTun's 15 s wait with the
         // plain code, by when that device is gone, so it is created once more
-        _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", BuildGuidFromName(AdapterName));
+        _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", _adapterGuid);
         var errorCode = _tunAdapter == IntPtr.Zero ? Marshal.GetLastWin32Error() : 0;
         if (errorCode == ErrorAlreadyExists) {
             VhLogger.Instance.LogWarning(
                 "The WinTun adapter {AdapterName} of an ended process was still being removed. Creating it again...",
                 AdapterName);
-            _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", BuildGuidFromName(AdapterName));
+            _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", _adapterGuid);
             errorCode = _tunAdapter == IntPtr.Zero ? Marshal.GetLastWin32Error() : 0;
         }
 
@@ -144,6 +145,16 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                 WinTunApi.WintunCloseAdapter(_tunAdapter);
                 _tunAdapter = IntPtr.Zero;
             }
+        }
+
+        // the DNS client would keep asking the tunnel's servers alone, now around it
+        try {
+            NrptRule.Remove(_adapterGuid);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex,
+                "Could not remove the DNS rule of the {AdapterName} TUN adapter; the next start or boot removes it.",
+                AdapterName);
         }
 
         // WinNAT keeps the NAT after the process, so a removal that fails is worth a warning
@@ -332,8 +343,9 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return Task.CompletedTask;
     }
 
-    // A failure fails the start: without the tunnel's DNS, Windows asks the other adapters' servers, often a
-    // router outside the tunnel, and the user would never know
+    // A failure fails the start: Windows asks every adapter's servers at once, each through its own adapter whatever
+    // the routes, often a router outside the tunnel, unless a rule names the tunnel's alone, and the user would never
+    // know
     protected override async Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,
         CancellationToken cancellationToken)
     {
@@ -351,6 +363,19 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                     $"-ServerAddresses @({string.Join(",", servers.Select(ip => $"'{ip}'"))})",
                     cancellationToken).Vhc();
         }
+
+        // a server's adapter has none; a rule a crash left goes
+        if (dnsServers.Count == 0) {
+            NrptRule.Remove(_adapterGuid);
+            return;
+        }
+
+        if (NrptRule.HasGroupPolicyRules)
+            VhLogger.Instance.LogWarning(
+                "Group Policy sets DNS rules (NRPT) on this device, so Windows ignores the VPN's, and asks the other " +
+                "adapters' DNS servers too, outside the VPN.");
+
+        NrptRule.Set(_adapterGuid, dnsServers, AdapterName);
     }
 
     private string NatName => $"{AdapterName}Nat";

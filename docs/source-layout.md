@@ -273,8 +273,9 @@ that same server.
 
 **It must be built with the .NET 10 SDK**, which a `global.json` in the page project's folder pins,
 plus the `wasm-tools` workload. SkiaSharp's WebAssembly libraries are built for that SDK's
-Emscripten; the .NET 11 preview's cannot link them. Only this one project needs .NET 10 — the iOS
-heads need .NET 11, and nothing else cares.
+Emscripten; .NET 11's cannot link them, and Avalonia 12 stays on that SkiaSharp. So the page and the
+ten libraries it references stay on `net10.0`, which the .NET 11 apps reference too; every other
+project is on .NET 11.
 
 In CI the page is built **once**: the `build-browser` job in `publish_app.yml` runs on .NET 10,
 publishes it, and uploads it as the `browser-page` artifact, which all four platform build jobs

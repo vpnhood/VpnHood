@@ -100,4 +100,4 @@ adapter.SendPacketQueued()
 - `VpnHood.Net.TcpStack.Abstractions` — `ITcpStack`, `ITcpListener`, `ITcpClient`, for code that takes
   a stack without depending on this one
 
-Requires .NET 10.
+Requires .NET 11.

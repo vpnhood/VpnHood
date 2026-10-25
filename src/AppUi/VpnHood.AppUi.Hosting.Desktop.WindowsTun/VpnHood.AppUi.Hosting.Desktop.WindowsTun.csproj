@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net10.0-windows</TargetFramework>
+		<TargetFramework>net11.0-windows</TargetFramework>
 		<Description>The VpnHood desktop host on Windows: a LocalSystem service is the app, ProgramData is its storage, and the window, the tray and the commands run as whoever is signed in. Everything the commands themselves do is VpnHood.AppUi.Hosting.Desktop</Description>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<!-- ServiceBase, for the service control manager's start and stop, and ServiceController. -->
-		<PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.12" />
+		<PackageReference Include="System.ServiceProcess.ServiceController" Version="11.0.0-rc.3.26522.148" />
 	</ItemGroup>
 
 	<ItemGroup>

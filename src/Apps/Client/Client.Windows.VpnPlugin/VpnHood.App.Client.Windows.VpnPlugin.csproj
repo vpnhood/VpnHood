@@ -3,7 +3,7 @@
 		<IsPackable>false</IsPackable>	<!-- the VPN host an MSIX package carries, not a NuGet package -->
 		<Description>The VPN host of VpnHood's Windows VPN plug-in package: the process Windows starts when the app's VPN profile connects</Description>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
 		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
 		<!-- The package's manifest names it: its VPN host's Executable and its background tasks' server. -->
 		<AssemblyName>$(VhAppPackageTitle)VpnPlugin</AssemblyName>

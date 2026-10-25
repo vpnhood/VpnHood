@@ -3,7 +3,7 @@
 		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
 		<Description>VpnHood Windows Client App on the Windows VPN plug-in, from an MSIX package</Description>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
 		<UseWindowsForms>False</UseWindowsForms>
 		<!-- The executable is called by the app's package title (../Directory.Build.props), as the
 		     website build's is; the package's manifest names it. -->

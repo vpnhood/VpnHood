@@ -51,8 +51,8 @@ jobs:
       - name: Check out the asset submodule
         run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
       # net11.0-ios needs the .NET 11 preview SDK. Track the preview channel (matches publish_nugets.yml)
-      # rather than pinning an exact build, so each new preview (currently RC2,
-      # 11.0.100-rc.2.26504.105, iOS workload 27.0.12212-net11-rc.2) is picked up automatically.
+      # rather than pinning an exact build, so each new preview (currently RC3,
+      # 11.0.100-rc.3.26522.148, iOS workload 27.0.12212-net11-rc.2) is picked up automatically.
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "11.0"
@@ -65,7 +65,7 @@ jobs:
       # ValidateXcodeVersion anywhere in the repo). Because the SDK above floats on the preview channel,
       # this pin has to move with it: when a new preview raises the requirement, that error names the
       # version to put here. Each runner image carries one Xcode major (macos-26: 26.x, xcode-27: 27.x),
-      # so a new major moves runs-on as well. RC2's Microsoft.iOS.Sdk.net11.0_27.0 pack declares
+      # so a new major moves runs-on as well. RC2's Microsoft.iOS.Sdk.net11.0_27.0 pack (RC3's too) declares
       # RecommendedXcodeVersion 27.0 (RC1's 26.5 pack declared 26.6), hence xcode-27 since 2026-10-18.
       - name: Select Xcode 27.0
         uses: maxim-lobanov/setup-xcode@v1

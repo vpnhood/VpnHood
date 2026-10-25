@@ -166,7 +166,7 @@ build, working app, wrong result.
    targets directly.
 5. **Never give two packages the same folder.** A `ZipAssetProvider` owns its extraction folder and
    deletes everything in it that is not the version in hand.
-6. **Never build the browser page with the .NET 11 preview.** Its Emscripten cannot link SkiaSharp's
+6. **Never build the browser page with .NET 11.** Its Emscripten cannot link SkiaSharp's
    WebAssembly libraries, and the 11 SDK skips the native relink for a `net10` target saying only
    "Publishing without optimizations". The result is a bundle with no Skia in it that does not draw.
 7. **Never build a second provider over a zip another one already owns.** It extracts the same bytes

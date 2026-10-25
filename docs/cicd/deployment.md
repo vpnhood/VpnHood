@@ -192,9 +192,6 @@ and the build would fall back to an ephemeral keystore that Play rejects.
 `Initialize-CiAndroidSigning.ps1` materializes each into `.user/<app>/<store>/android_keystore_<store>.p12`
 (+ `_password.txt`, optional `_alias.txt`) — see `pub/lib/android-signing.json` for the secret→app/store map.
 
-> The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
-> CI builds fast. Re-enable it before shipping a production release.
-
 ### Android client — Google Play (`publish_client.yml` (in `Vpnhood.App.Client`); the store LISTING ships separately via `publish_listing.yml`)
 - `GOOGLE_PLAY_API_KEY`: create a service account in the Google Play Console with the
   *Release* permission, generate a JSON key, and store the file contents.
@@ -267,7 +264,7 @@ dispatches the run. Like every store leg it is **skip-with-warning** when its se
 prerequisites:
 
 - **Runner.** The project targets `net11.0-ios` and needs the .NET 11 SDK + `ios` workload and **the exact
-  Xcode that workload names** (27.0 for RC2). `build-ios` runs on GitHub's hosted **`xcode-27`** image and
+  Xcode that workload names** (27.0 for RC3). `build-ios` runs on GitHub's hosted **`xcode-27`** image and
   installs .NET 11 itself; `publish-appstore-ios` only uploads the `.ipa` and stays on `macos-26` — no
   self-hosted mac required.
 - **Signing can't self-sign.** An App Store `.ipa` requires an **Apple Distribution** certificate and

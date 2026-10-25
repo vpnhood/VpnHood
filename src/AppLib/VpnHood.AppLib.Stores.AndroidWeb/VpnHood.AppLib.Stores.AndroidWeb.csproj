@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>VpnHood Android app library for the APK handed out outside the stores: the app downloads its own update and installs it. Never referenced by a store's head: it asks for REQUEST_INSTALL_PACKAGES, which Google Play forbids for an app's own updates.</Description>
-		<TargetFramework>net10.0-android36.1</TargetFramework>
+		<TargetFramework>net11.0-android37.0</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.AppLib.Stores.AndroidWeb</RootNamespace>
 	</PropertyGroup>

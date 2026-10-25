@@ -1,5 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- The Android the app is written for: the build compiles against the TFM's API (.NET 11 builds
+       only against 37), and the target stays at 36 until 37's behaviour changes are checked. -->
+  <uses-sdk android:targetSdkVersion="36" />
   <application 
 	  android:localeConfig="@xml/locales_config"
 	  android:fullBackupContent="@xml/backup_rules"

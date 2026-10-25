@@ -92,7 +92,7 @@ Write-Output "Build $module_packageFileName...";
 dotnet publish $projectDir `
     -c "Release" `
     --output "$publishDir/$versionTag" `
-    --framework "net10.0" `
+    --framework "net11.0" `
     --self-contained `
     --runtime "$runtime" `
     -p:SolutionDir=$solutionDir `

@@ -50,17 +50,14 @@ jobs:
       # at the commit this ref pins; fastlane/, the other submodule, stays out.
       - name: Check out the asset submodule
         run: git submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
-      # Base SDK pinned by global.json (10.0.x)...
+      # The .NET 11 SDK global.json names, for the build...
       - uses: actions/setup-dotnet@v6
         with: { global-json-file: global.json }
-      # ...plus the .NET 11 preview SDK, which the iOS libraries (net11.0-ios) require. global.json's
-      # rollForward=latestMajor then selects 11 for the build, so net10 and net11 projects both compile.
+      # ...and the .NET 10 SDK the browser page's own global.json names, for the page alone (below).
       - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: "11.0"
-          dotnet-quality: preview
+        with: { global-json-file: src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/global.json }
       # The packable set spans net*-android and net*-ios TFMs; install those workloads (for the SDK
-      # resolved here, i.e. 11 preview) so `dotnet pack` can build them, and MAUI's for Android and
+      # resolved here, i.e. 11) so `dotnet pack` can build them, and MAUI's for Android and
       # Windows, the TFMs of the MAUI host (VpnHood.AppUi.Hosting.Maui). net*-windows / WPF build
       # natively on Windows.
       - name: Install .NET workloads (android, ios, maui)
@@ -68,8 +65,8 @@ jobs:
         run: dotnet workload install android ios maui-android maui-windows
       # The page the classic UI's package carries (VpnHood.AppUi.Presentation.Classic.Avalonia's
       # buildTransitive/web-root.zip), published first: that pack fails without it. Under the .NET 10
-      # SDK the page's own global.json names, with its wasm-tools workload - the .NET 11 preview's
-      # Emscripten cannot link SkiaSharp's WebAssembly libraries.
+      # SDK the page's own global.json names, with its wasm-tools workload - .NET 11's Emscripten
+      # cannot link SkiaSharp's WebAssembly libraries.
       - name: Publish the browser page
         shell: pwsh
         run: |

@@ -105,7 +105,7 @@ jobs:
 
   # The browser page every head embeds (assets/web-root.zip): built ONCE here and handed to every
   # platform build as the `browser-page` artifact. Built under the .NET 10 SDK the page's own
-  # global.json names, with the wasm-tools workload - the .NET 11 preview's Emscripten cannot link
+  # global.json names, with the wasm-tools workload - .NET 11's Emscripten cannot link
   # SkiaSharp's WebAssembly libraries, and the iOS runner has only 11. A head build that finds no
   # page warns and ships a web host with nothing to serve, so the platform builds `need` this job.
   build-browser:

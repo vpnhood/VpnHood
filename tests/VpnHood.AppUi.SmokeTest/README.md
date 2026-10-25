@@ -16,7 +16,7 @@ It takes about 45 seconds. It needs an interactive desktop to draw on; without o
 reports inconclusive rather than failing. It never connects, so it needs no elevation, no WinDivert
 driver and none of your own keys.
 
-Pictures of every page land in `bin/<config>/net10.0-windows/ui-walk/`, one per control, plus the
+Pictures of every page land in `bin/<config>/net11.0-windows/ui-walk/`, one per control, plus the
 terms page and the home. They are artifacts for you to look at, never assertions: nothing here
 compares pixels, so a theme or an asset change cannot fail the run.
 

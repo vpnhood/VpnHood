@@ -4,7 +4,7 @@
 # the publish_app workflow runs this once (build-browser) and hands the zip to every head build as an
 # artifact, and publish_nugets runs it before the pack. Runs under the .NET 10 SDK named by global.json
 # in this folder, with its wasm-tools workload: SkiaSharp's WebAssembly libraries are built for its
-# Emscripten, which the .NET 11 preview's cannot link.
+# Emscripten, which .NET 11's cannot link.
 $ErrorActionPreference = "Stop"
 Push-Location $PSScriptRoot
 try {

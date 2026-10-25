@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>SQLite-backed offline IP range provider for VpnHood.</Description>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -13,7 +13,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="11.0.0-rc.3.26522.148" />
 		<!--Override the bundled native SQLite binary to a patched build. Microsoft.Data.Sqlite still pins the vulnerable
 		    SQLitePCLRaw.lib.e_sqlite3 2.1.11 (GHSA-2m69-gcr7-jv3q, e_sqlite3 <= 2.1.11); 3.50.3 ships patched SQLite.
 		    REMOVE THIS once MDS pins a patched SQLitePCLRaw: delete this line, build, and if NU1903 does not return it's

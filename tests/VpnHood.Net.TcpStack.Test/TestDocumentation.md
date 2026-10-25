@@ -11,5 +11,5 @@ and the stack's packets go back through the adapter.
 
 WinDivert is a Windows kernel driver: it needs an elevated process and intercepts the machine's own traffic.
 Exclude these tests from a unit run with `--filter FullyQualifiedName!~IntegrationTest`, and run them on a Windows
-VM: install the .NET 10 SDK there, copy the test build (`bin/Debug/net10.0`) over, and run
+VM: install the .NET 11 SDK there, copy the test build (`bin/Debug/net11.0`) over, and run
 `dotnet test VpnHood.Net.TcpStack.Test.dll --filter FullyQualifiedName~IntegrationTest` as Administrator.

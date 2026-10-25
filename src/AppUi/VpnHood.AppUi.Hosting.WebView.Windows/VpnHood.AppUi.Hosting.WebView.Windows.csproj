@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>Hosts the app web UI in a Win32 window through WebView2, with no UI framework: the IWebView adapter, the main window, and WindowsWebViewUi, the UI a Windows head names to show the app that runs in its service</Description>
-		<TargetFramework>net10.0-windows</TargetFramework>
+		<TargetFramework>net11.0-windows</TargetFramework>
 	</PropertyGroup>
 
 	<ItemGroup>

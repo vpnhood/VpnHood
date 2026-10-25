@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>VpnHood Android Client App Common Library</Description>
-		<TargetFramework>net10.0-android36.1</TargetFramework>
+		<TargetFramework>net11.0-android37.0</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -17,7 +17,7 @@
 	<ItemGroup>
 		<!-- Draws the app's icons from its SVGs at build time (VpnHood.AppLib.App.targets): its targets reach
 		     every head that references this, and nothing of it ships in the app. -->
-		<PackageReference Include="Microsoft.Maui.Resizetizer" Version="10.0.110" />
+		<PackageReference Include="Microsoft.Maui.Resizetizer" Version="11.0.0-rc.2.26505.5" />
 	</ItemGroup>
 
 </Project>

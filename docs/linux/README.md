@@ -33,9 +33,9 @@ The installer must run as root and will say so rather than half-install. It:
   keeping the three newest, any installed in the last 30 days and any still running
 - puts `vhclient` on your `PATH` (`/usr/local/bin/vhclient`)
 - writes and starts `VpnHoodClient.service`, enabled at boot unless you answer no
-- writes `VpnHoodClientUpdater.timer`, which keeps the app up to date unless you answer no: at boot
-  and every 12 hours it downloads a newer version, and installs it only while the VPN is
-  disconnected, or once it disconnects; a question of its own, apart from the one about the boot
+- writes `VpnHoodClientUpdater.timer`, which keeps the app up to date unless you install with
+  `-noautoupdate`, without asking: at boot and every 12 hours it downloads a newer version, and
+  installs it only while the VPN is disconnected, or once it disconnects
 - on a machine with a display manager, or WSLg, adds **VpnHood! CLIENT** to the application menu and
   installs the libraries the window needs (`libx11-6`, `libice6`, `libsm6`, `libfontconfig1`,
   `xdg-utils`); without `apt`, it names any of them it cannot find, for you to install
@@ -53,6 +53,7 @@ Flags worth knowing:
 | `-q` | No questions. An update keeps the install's choices; a new install starts at boot and updates itself. |
 | `-noautostart` | Do not start the service at boot. |
 | `-noautoupdate` | Do not update the app by itself. |
+| `-autoupdate` | Update the app by itself again, after `-noautoupdate`. |
 | `-nodesktop` | Service and commands only: no menu entry, no GUI libraries, even where a display manager is found. |
 | `-desktop` | The menu entry and the libraries where no display manager is found. |
 | `-help`, `-h` | List the options. |

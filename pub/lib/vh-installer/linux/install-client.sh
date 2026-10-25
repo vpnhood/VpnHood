@@ -49,6 +49,7 @@ function show_help() {
 	echo "                        and a new install starts at boot and updates itself";
 	echo "  -noautostart          do not start the VPN service at boot";
 	echo "  -noautoupdate         do not update the app by itself";
+	echo "  -autoupdate           update it by itself again, after -noautoupdate";
 	echo "  -desktop, -nodesktop  the menu entry and the window's libraries, or not (found by default)";
 	echo "  -h, -help             this";
 	echo "Options take one dash or two: -noautoupdate or --noautoupdate.";
@@ -174,7 +175,8 @@ if [ "$withDesktop" == "" ]; then
 fi
 
 # A choice no option made keeps the install's own, so an update - run with -q alone - changes none; a
-# new install starts at boot and updates itself. Asked unless -q, with that as the answer Enter gives.
+# new install starts at boot and updates itself. The boot is asked unless -q, with that as the answer
+# Enter gives; updating never is, as on Windows: -noautoupdate alone turns it off, -autoupdate on again.
 function unit_choice() {
 	if [ ! -f "$destinationPath/publish.json" ] || systemctl is-enabled --quiet "$1" 2>/dev/null; then
 		echo "y";
@@ -198,7 +200,6 @@ fi
 defaultAutoupdate=$(unit_choice "$updaterChoiceUnit");
 if [ "$quiet" != "y" ]; then
 	[ -z "$autostart" ] && autostart=$(ask "Start the VpnHood service at boot" "$defaultAutostart");
-	[ -z "$autoupdate" ] && autoupdate=$(ask "Keep VpnHood up to date by itself" "$defaultAutoupdate");
 fi
 autostart=${autostart:-$defaultAutostart};
 autoupdate=${autoupdate:-$defaultAutoupdate};

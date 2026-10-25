@@ -70,7 +70,7 @@
 * Update: On a plan with a speed limit, the first megabytes after a pause go at full speed, so pages load quickly, and only steady heavy use is held to the limit
 * Fix: A big upload over a slow connection no longer holds up the device's other traffic, such as browsing
 * Feature: On Linux the app has an uninstaller: Uninstall on its menu entry's right-click menu, or `sudo /opt/VpnHoodClient/vhuninstall` (`/opt/VpnHoodConnect/vhuninstall` for CONNECT). Settings and profiles stay for a later install unless you add `-purge` #linux
-* Update: On Linux the installer asks about updating apart from starting at boot, both on by default (`-noautostart`, `-noautoupdate`); a no to starting at boot no longer turns updates off #linux
+* Update: On Linux updating is no longer tied to starting at boot: a no to starting at boot leaves updates on, which only `-noautoupdate` turns off #linux
 * Feature: On Linux the installer sets up MsQuic, for QUIC, on more distributions: openSUSE, Arch-based ones such as EndeavourOS and Manjaro, and those built on Ubuntu, Debian or RHEL, such as Linux Mint, Pop!_OS, Rocky Linux and AlmaLinux. They used to get none, and the app used TCP #linux
 * Fix: On Linux the installer installs ICU where it is missing, as on Debian 13's cloud image: the app did not start without it #linux
 * Improve: On Linux, the installer and the uninstaller list their options with `-help`, `--help` or `-h`, and take every option with one dash or two: `--noautoupdate` is `-noautoupdate` #linux

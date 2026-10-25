@@ -68,6 +68,10 @@ public class WindowsDesktopPaths(string appId) : IAppDesktopPaths
     // (VpnHood.AppUi.Hosting.Desktop.WindowsTun.targets) and the installer name it too.
     public const string CurrentFolderName = "current";
 
+    // The root's window launcher, over "current".
+    public string? InstalledLauncherPath =>
+        InstallRootPath is { } installRootPath ? Path.Combine(installRootPath, InstanceName + ".exe") : null;
+
     // What the service runs and an elevated copy of a command is started as: the install root's
     // launcher, which an update never moves, else the apphost beside the entry assembly, even when
     // this process is dotnet.

@@ -10,13 +10,19 @@ namespace VpnHood.AppUi.Hosting.Desktop.Updaters;
 
 // The notice's Update and Install on a desktop installed from our site, as on Android's website APK, in the service.
 // The feed is the one the install's publish.json names, the release's info file its installer put there. Update
-// downloads the feed's package into the storage's updates folder; Install hands it to the platform's installer,
+// downloads the feed's package into the install's updates folder; Install hands it to the platform's installer,
 // whose install stops this service, replaces it and starts the new version: an Install that ends with this service
-// still here installed nothing.
-public abstract class DesktopAppUpdaterProvider(string storagePath, Uri updateInfoUrl) : IAppUpdaterProvider
+// still here installed nothing. The automatic update is the platform's updater, a script apart from the service so
+// that a broken release still gets the next one: it downloads into the same folder under the same name, and leaves
+// a download made while the VPN was in use for the service to hand back after the next disconnect
+// (InstallDownloadedUpdate). So the folder is shared, and each side removes only what it is done with: this one the
+// downloads of this version and older, and of one overtaken by the release it downloads.
+public abstract class DesktopAppUpdaterProvider(string updatesPath, Uri updateInfoUrl, Version appVersion)
+    : IAppUpdaterProvider
 {
     private static readonly HttpClient HttpClient = new();
-    private readonly string _updatesPath = Path.Combine(storagePath, "updates");
+    private readonly string _updatesPath = updatesPath;
+    private readonly Version _appVersion = appVersion;
     private readonly Lock _stateLock = new();
 
     // this service's update, for one release: a restart forgets it, as an install ends it
@@ -34,6 +40,70 @@ public abstract class DesktopAppUpdaterProvider(string storagePath, Uri updateIn
     // Runs the platform's installer on the package: null once its install is stopping this service, which the
     // install goes on without, else why it installed nothing.
     protected abstract Task<string?> RunInstaller(string packagePath);
+
+    // whether the platform's updater runs by itself: its timer or task on, as its installer left it
+    protected abstract Task<bool> IsAutomaticUpdateOn();
+
+    /// <summary>
+    /// The automatic update's part in the service, with the VPN idle again: a release downloaded already - by the
+    /// updater while the VPN was in use, or by the notice's Update - and newer than this app, installed now, while
+    /// automatic updates are on. An install stops this service; else this logs why there was none.
+    /// </summary>
+    public async Task InstallDownloadedUpdate()
+    {
+        try {
+            if (FindDownload() is not { } packagePath || !await IsAutomaticUpdateOn().Vhc())
+                return;
+
+            VhLogger.Instance.LogInformation("Installing the downloaded update. Package: {Package}",
+                Path.GetFileName(packagePath));
+            if (await RunInstaller(packagePath).Vhc() is { } message)
+                VhLogger.Instance.LogWarning("The downloaded update was not installed. Message: {Message}", message);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not install the downloaded update.");
+        }
+    }
+
+    // the newest whole download of a release newer than this app
+    private string? FindDownload()
+    {
+        string? newestPath = null;
+        var newestVersion = _appVersion;
+        foreach (var (path, version) in EnumerateDownloads()) {
+            if (version > newestVersion) {
+                newestPath = path;
+                newestVersion = version;
+            }
+        }
+
+        return newestPath;
+    }
+
+    // The whole downloads in the updates folder, "<version>-<file>" as GetPackagePath names them. A download under way
+    // is neither: a .part of the app's, or a file of the updater's whose name is no version.
+    private IEnumerable<(string Path, Version Version)> EnumerateDownloads()
+    {
+        if (!Directory.Exists(_updatesPath))
+            yield break;
+
+        foreach (var path in Directory.EnumerateFiles(_updatesPath)) {
+            var fileName = Path.GetFileName(path);
+            if (!fileName.EndsWith(".part", StringComparison.OrdinalIgnoreCase) &&
+                Version.TryParse(fileName.Split('-')[0], out var version))
+                yield return (path, version);
+        }
+    }
+
+    // The whole downloads up to a version: those of this version and older, installed; or those older than the
+    // release a download is for, overtaken.
+    private void RemoveDownloads(Version version, bool isVersionIncluded)
+    {
+        foreach (var download in EnumerateDownloads().ToArray()) {
+            if (download.Version < version || (isVersionIncluded && download.Version == version))
+                VhInvoker.TryInvoke("delete an old update", LogLevel.Warning, () => File.Delete(download.Path));
+        }
+    }
 
     // the feed a publish.json names; null where there is none, as outside an install
     protected static Uri? ReadUpdateInfoUrl(string publishInfoPath)
@@ -59,9 +129,10 @@ public abstract class DesktopAppUpdaterProvider(string storagePath, Uri updateIn
         lock (_stateLock) {
             var isBusy = _isInstalling || _downloadTask is { IsCompleted: false };
             if (feedRelease is null) {
-                // an update installed or overtaken: its package goes
+                // an update installed: its package goes, and none newer, which the updater may have downloaded since
+                // the feed was read
                 if (!isBusy)
-                    DeletePackages();
+                    RemoveDownloads(_appVersion, isVersionIncluded: true);
                 return AppUpdateState.None;
             }
 
@@ -151,7 +222,7 @@ public abstract class DesktopAppUpdaterProvider(string storagePath, Uri updateIn
         try {
             VhLogger.Instance.LogInformation("Downloading the update. Version: {Version}", release.Version);
             Directory.CreateDirectory(_updatesPath);
-            DeletePackages();
+            RemoveDownloads(release.Version, isVersionIncluded: false);
 
             using var response = await HttpClient
                 .GetAsync(release.PackageUrl, HttpCompletionOption.ResponseHeadersRead).Vhc();
@@ -205,15 +276,5 @@ public abstract class DesktopAppUpdaterProvider(string storagePath, Uri updateIn
             _isInstalling = false;
             _errorMessage = message;
         }
-    }
-
-    // every file of the updates folder: a download starts whole, and an installed or overtaken update is done
-    private void DeletePackages()
-    {
-        if (!Directory.Exists(_updatesPath))
-            return;
-
-        foreach (var filePath in Directory.EnumerateFiles(_updatesPath))
-            VhInvoker.TryInvoke("delete an old update", LogLevel.Warning, () => File.Delete(filePath));
     }
 }

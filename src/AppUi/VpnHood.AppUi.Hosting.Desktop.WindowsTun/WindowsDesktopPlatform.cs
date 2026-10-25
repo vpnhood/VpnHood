@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App.WindowsTun;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
@@ -39,4 +40,18 @@ public sealed class WindowsDesktopPlatform : IDesktopPlatform
 
     public Task<int> HostDaemon(DaemonRun run, CancellationToken cancellationToken) =>
         WindowsDaemonService.Host(_paths.InstanceName, run, cancellationToken);
+
+    // The root's launcher, over "current". An update's setup closes the window before it switches the version, and
+    // the new service opens it again (WindowsUiRelaunch); this is for a window that outlived one nonetheless.
+    public void StartUiAgain(bool startHidden)
+    {
+        if (_paths.InstalledLauncherPath is not { } launcherPath)
+            return;
+
+        var startInfo = new ProcessStartInfo { FileName = launcherPath, UseShellExecute = false };
+        startInfo.ArgumentList.Add("ui");
+        if (startHidden)
+            startInfo.ArgumentList.Add("--tray");
+        Process.Start(startInfo)?.Dispose();
+    }
 }

@@ -9,6 +9,8 @@
 #   /opt/<name>/storage/         settings.json, profiles, the log  (root's alone, 700)
 #   /usr/local/bin/<launcher>    so the commands can be typed from anywhere
 #   /etc/systemd/system/<name>.service           the root service, headless
+#   /etc/systemd/system/<name>Updater.service    the updater, vhupdate, run by its timer
+#   /etc/systemd/system/<name>Updater.timer      at boot and every 12 hours, while updates are on
 #   /usr/share/applications/<name>.desktop       the window, in the app grid
 #   /etc/xdg/autostart/<name>.desktop            the tray, at every sign-in
 #   /usr/share/icons/hicolor/256x256/apps/<name>.png   its icon
@@ -188,7 +190,12 @@ function ask() {
 	if [ "${answer:-$2}" = "y" ] || [ "${answer:0:1}" = "y" ]; then echo "y"; else echo "n"; fi
 }
 defaultAutostart=$(unit_choice "$assemblyName.service");
-defaultAutoupdate=$(unit_choice "${assemblyName}Updater.service");
+# the timer, or the updater unit itself in an install from before it, which restarted every 12 hours
+updaterChoiceUnit="${assemblyName}Updater.timer";
+if [ ! -f "/etc/systemd/system/$updaterChoiceUnit" ]; then
+	updaterChoiceUnit="${assemblyName}Updater.service";
+fi
+defaultAutoupdate=$(unit_choice "$updaterChoiceUnit");
 if [ "$quiet" != "y" ]; then
 	[ -z "$autostart" ] && autostart=$(ask "Start the VpnHood service at boot" "$defaultAutostart");
 	[ -z "$autoupdate" ] && autoupdate=$(ask "Keep VpnHood up to date by itself" "$defaultAutoupdate");
@@ -454,9 +461,19 @@ WantedBy=multi-user.target
 ";
 echo "$service" > "/etc/systemd/system/$assemblyName.service";
 
-# network-online: at boot the first check would otherwise run before there is a route, fail, and wait
-# 12 hours for the next
-echo "Writing the $assemblyName updater service...";
+# The updater: vhupdate once per run, by its timer at boot and every 12 hours. -waitForIdle: it installs only while
+# the VPN is idle, and the service hands a download back after the next disconnect. The unit of earlier releases
+# restarted itself every 12 hours and was enabled for the boot: disabled before it is replaced, and stopped unless
+# this script runs inside it, so neither its boot entry nor a restart it is waiting for is left.
+# network-online: at boot the first check would otherwise run before there is a route, fail, and wait 12 hours.
+echo "Writing the $assemblyName updater...";
+updaterUnitFile="/etc/systemd/system/${assemblyName}Updater.service";
+if [ -f "$updaterUnitFile" ] && ! grep -qx "Type=oneshot" "$updaterUnitFile"; then
+	systemctl disable "${assemblyName}Updater.service" >/dev/null 2>&1;
+	if [ "$insideUpdaterUnit" != "y" ]; then
+		systemctl stop "${assemblyName}Updater.service";
+	fi
+fi
 updaterService="
 [Unit]
 Description=$productName Updater
@@ -464,16 +481,23 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-Type=simple
-ExecStart=\"$destinationPath/vhupdate\"
-TimeoutStartSec=0
-Restart=always
-RestartSec=720min
+Type=oneshot
+ExecStart=\"$destinationPath/vhupdate\" -waitForIdle
+";
+echo "$updaterService" > "$updaterUnitFile";
+updaterTimer="
+[Unit]
+Description=$productName Updater
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=12h
+RandomizedDelaySec=10min
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=timers.target
 ";
-echo "$updaterService" > "/etc/systemd/system/${assemblyName}Updater.service";
+echo "$updaterTimer" > "/etc/systemd/system/${assemblyName}Updater.timer";
 
 systemctl daemon-reload;
 
@@ -483,19 +507,13 @@ else
 	systemctl disable "$assemblyName.service" >/dev/null 2>&1;
 fi
 
-# Its own choice, apart from the boot's. Never stopped from inside it (above): this script would stop
-# with it and nothing would start it again; its next run takes the unit file and the vhupdate written
+# Its own choice, apart from the boot's, which is the timer's. The updater's run is never stopped from here: inside
+# it, this script would stop with it; outside, the timer's next run takes the unit file and the vhupdate written
 # here anyway.
 if [ "$autoupdate" = "y" ]; then
-	systemctl enable "${assemblyName}Updater.service";
-	if [ "$insideUpdaterUnit" != "y" ]; then
-		systemctl restart "${assemblyName}Updater.service";
-	fi
+	systemctl enable --now "${assemblyName}Updater.timer";
 else
-	systemctl disable "${assemblyName}Updater.service" >/dev/null 2>&1;
-	if [ "$insideUpdaterUnit" != "y" ]; then
-		systemctl stop "${assemblyName}Updater.service";
-	fi
+	systemctl disable --now "${assemblyName}Updater.timer" >/dev/null 2>&1;
 fi
 
 # Started either way: a person who said no to "at boot" still expects the app they just installed

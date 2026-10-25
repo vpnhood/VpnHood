@@ -20,6 +20,7 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
     : IAppInstanceController
 {
     private static readonly TimeSpan StatusTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan SetupTimeout = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
 
     public string NotRunningHint =>
@@ -46,6 +47,14 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
             // a stop still under way is let finish; the manager refuses a start meanwhile
             if (controller.Status == ServiceControllerStatus.StopPending)
                 await WaitForStatus(controller, ServiceControllerStatus.Stopped, cancellationToken).Vhc();
+
+            // A setup replacing the install - the updater's, at a disconnect - starts the service itself once it is
+            // done: a start before would bring back the version it is replacing, over the files it writes. The
+            // setup's own start goes through the service manager, not this.
+            if (controller.Status == ServiceControllerStatus.Stopped) {
+                await WaitForSetup(cancellationToken).Vhc();
+                controller.Refresh();
+            }
 
             if (controller.Status == ServiceControllerStatus.Stopped)
                 controller.Start();
@@ -202,6 +211,27 @@ public class WindowsInstanceController(WindowsDesktopPaths paths, WindowsService
         }
 
         return string.Join(" ", record.Properties.Select(x => x.Value));
+    }
+
+    // Until no setup holds its mutex (install-client.nsi), or the time a setup takes has passed. One that is there but
+    // not this person's to open, a SYSTEM setup's for a standard user, is there all the same.
+    private async Task WaitForSetup(CancellationToken cancellationToken)
+    {
+        var mutexName = $@"Global\{paths.InstanceName}-setup";
+        var deadline = DateTime.UtcNow + SetupTimeout;
+        while (DateTime.UtcNow < deadline) {
+            try {
+                if (!Mutex.TryOpenExisting(mutexName, out var mutex))
+                    return;
+
+                mutex.Dispose();
+            }
+            catch (UnauthorizedAccessException) {
+                // held by a setup this person may not open
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).Vhc();
+        }
     }
 
     // Null when no such service is registered.

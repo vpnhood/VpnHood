@@ -60,8 +60,9 @@ fi
 
 echo "Uninstalling $productName...";
 
-# The services first, while the launcher their stop runs is still there
-for unit in "$assemblyName.service" "${assemblyName}Updater.service"; do
+# The services first, while the launcher their stop runs is still there; the updater's timer before it, which would
+# start it again
+for unit in "$assemblyName.service" "${assemblyName}Updater.timer" "${assemblyName}Updater.service"; do
 	if [ -f "/etc/systemd/system/$unit" ]; then
 		systemctl disable --now "$unit" >/dev/null 2>&1;
 		rm -f "/etc/systemd/system/$unit";

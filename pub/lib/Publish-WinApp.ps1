@@ -144,7 +144,8 @@ if ($doPackage) {
 	PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 	# publish info: the release's feed file, which the setup also installs as the version's publish.json, the feed
-	# the app's updater reads (WindowsAppUpdaterProvider)
+	# the app's updater reads (WindowsAppUpdaterProvider, vhupdate.ps1), with the root's two launchers: the window's,
+	# and the console's, which vhupdate.ps1 asks whether the VPN is idle
 	$json = @{
 		Version = $versionParam;
 		UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
@@ -153,6 +154,8 @@ if ($doPackage) {
 		ReleaseDate = "$releaseDate";
 		DeprecatedVersion = "$deprecatedVersion";
 		NotificationDelay = "$versionNotificationDelay";
+		ExeFile = "$assemblyName.exe";
+		CommandFile = $(if ($commandName) { "$commandName.exe" } else { "" });
 	};
 	$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 

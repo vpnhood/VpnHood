@@ -51,6 +51,19 @@ public class LinuxDesktopPaths(string appId) : IAppDesktopPaths
         }
     }
 
+    // The launcher script that started this, beside the install's publish.json, whose version it runs.
+    public string? InstalledLauncherPath {
+        get {
+            if (!IsStartedAsCommand || Path.GetDirectoryName(StoragePath) is not { } installPath)
+                return null;
+
+            var launcherPath = Path.Combine(installPath, CommandName);
+            return File.Exists(launcherPath) && File.Exists(Path.Combine(installPath, "publish.json"))
+                ? launcherPath
+                : null;
+        }
+    }
+
     // The service's folder under /run, which only root writes: nobody else takes a name in it first.
     public string RuntimePath => Path.Combine("/run", InstanceName);
 

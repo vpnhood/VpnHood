@@ -16,12 +16,13 @@ public sealed class LinuxDaemonHostFactory(AppInitParams initParams, LinuxDeskto
                 "The VPN service must run as root: it creates the tunnel device and edits the routing table. " +
                 $"Try: sudo systemctl start {paths.InstanceName}");
 
-        return new LinuxDaemonHost(initParams, paths.StoragePath, lockFolderPath: paths.RuntimePath);
+        return new LinuxDaemonHost(initParams, paths.StoragePath, lockFolderPath: paths.RuntimePath,
+            updater: LinuxAppUpdaterProvider.TryCreate(paths.StoragePath, initParams.AppVersion));
     }
 
     // Its lock in its own storage: a run as the person cannot write the service's folder.
     public IAppDaemonHost CreateDev(string storagePath)
     {
-        return new LinuxDaemonHost(initParams, storagePath, lockFolderPath: storagePath);
+        return new LinuxDaemonHost(initParams, storagePath, lockFolderPath: storagePath, updater: null);
     }
 }

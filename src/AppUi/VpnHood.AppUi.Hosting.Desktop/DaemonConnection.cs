@@ -33,9 +33,21 @@ public sealed class DaemonConnection : IAsyncDisposable
         };
 
         Api = VpnHoodApiHttpFactory.Create(_httpClient);
+        _answerProvider.Changed += AnswerProvider_Changed;
     }
 
     public VpnHoodApi Api { get; }
+
+    // A service that answers as a newer version than this binary: an update replaced it under an open window, which
+    // starts itself again on the new version (UiCommand).
+    public event EventHandler? NewerServiceAnswered;
+
+    private void AnswerProvider_Changed(object? sender, EventArgs e)
+    {
+        if (Version.TryParse(_answerProvider.Current?.Version, out var serviceVersion) &&
+            Version.TryParse(DaemonChannelAnswer.CurrentVersion, out var version) && serviceVersion > version)
+            NewerServiceAnswered?.Invoke(this, EventArgs.Empty);
+    }
 
     // The daemon's API URL, followed as it moves: what a web view loads, token and all.
     public IDesktopApiUrlProvider ApiUrlProvider => _apiUrlProvider;
@@ -121,6 +133,7 @@ public sealed class DaemonConnection : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _answerProvider.Changed -= AnswerProvider_Changed;
         _httpClient.Dispose();
         _apiUrlProvider.Dispose();
         await _answerProvider.DisposeAsync().Vhc();

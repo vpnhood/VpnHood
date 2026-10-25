@@ -6,12 +6,16 @@
 ;   <root>\current                    a junction naming the version in use
 ;   <root>\<version>\                 each version's own folder; the one before is kept
 ;   <root>\<version>\publish.json     the release's feed file, whose feed the app's updater reads
+;   <root>\vhupdate.ps1               the updater, which its task runs at boot and every 12 hours
+;   <root>\updates\, update.log       the updater's and the app's downloads, and what the updater last did
 ;   <root>\uninstall\uninstall.exe    out of the root, which is on the PATH
 ;
 ; Shortcuts, the tray's sign-in entry, the service and the PATH name the root, never a version, so
 ; changing the version only re-points "current". The app registers its own service and puts the
 ; root on the PATH ("service install"); this runs it, and "service uninstall" on the way out. The
-; app does its own setup, so a zip or another packager gets the same service and PATH.
+; app does its own setup, so a zip or another packager gets the same service and PATH. The updater's
+; task, <INSTANCE_NAME>Updater, is this setup's, as Linux's updater unit is its installer's: on for a
+; new install, as an update leaves it, or as /AUTOUPDATE and /NOAUTOUPDATE say.
 
 Unicode true
 ManifestDPIAware true
@@ -97,6 +101,32 @@ Var IsServerCore
 Var JunctionLink
 Var JunctionTarget
 Var JunctionError
+Var SetupMutex
+Var AutoUpdateChoice
+Var CloseExtraArgs
+
+; One setup at a time - the app's updater runs one silently, a person one by hand: beside another, each would close
+; what the other runs and write over its files. A silent one waits for the other; a person is asked to. A setup that
+; ended without letting go leaves the mutex abandoned, which is as good as free. Held until this setup ends.
+Function TakeSetupMutex
+	System::Call 'kernel32::CreateMutexW(p 0, i 0, w "Global\${INSTANCE_NAME}-setup") p .s'
+	Pop $SetupMutex
+	${Do}
+		StrCpy $1 0
+		${If} ${Silent}
+			StrCpy $1 600000
+		${EndIf}
+		System::Call 'kernel32::WaitForSingleObject(p $SetupMutex, i $1) i .r0'
+		${If} $0 = 0
+		${OrIf} $0 = 0x80
+			${Break}
+		${EndIf}
+		MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "Another setup of ${PRODUCT_NAME} is running. Wait for it to finish, then try again." /SD IDCANCEL IDRETRY retry
+		SetErrorLevel 5
+		Abort
+		retry:
+	${Loop}
+FunctionEnd
 
 Function .onInit
 	SetShellVarContext all
@@ -111,6 +141,20 @@ Function .onInit
 		MessageBox MB_ICONSTOP "${PRODUCT_NAME} needs Windows 10 or later." /SD IDOK
 		SetErrorLevel 1
 		Abort
+	${EndIf}
+	Call TakeSetupMutex
+
+	; the updater's task: as told, else as an earlier install left it, else on (install-client-task.ps1)
+	${GetParameters} $R0
+	ClearErrors
+	${GetOptions} $R0 "/NOAUTOUPDATE" $R1
+	${IfNot} ${Errors}
+		StrCpy $AutoUpdateChoice "off"
+	${EndIf}
+	ClearErrors
+	${GetOptions} $R0 "/AUTOUPDATE" $R1
+	${IfNot} ${Errors}
+		StrCpy $AutoUpdateChoice "on"
 	${EndIf}
 
 	; Server Core has no desktop: no shortcuts, no tray at sign-in, no window to open, as Linux's
@@ -149,7 +193,7 @@ Function ${UN}CloseProcesses
 	${EndIf}
 	InitPluginsDir
 	File "/oname=$PLUGINSDIR\close.ps1" "${__FILEDIR__}\install-client-close.ps1"
-	nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\close.ps1" -folder "$0"'
+	nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\close.ps1" -folder "$0" $CloseExtraArgs'
 	Pop $1
 	Pop $1
 	Pop $0
@@ -284,15 +328,21 @@ Section "Install"
 		nsExec::ExecToLog '"$INSTDIR\${COMMAND_NAME}.exe" service stop'
 		Pop $0
 	${EndIf}
+	; the windows and trays it closes are listed for the new service to open again; this setup's own process, which
+	; the app's updater runs from the install's updates folder, is spared
+	System::Call 'kernel32::GetCurrentProcessId() i .r1'
+	StrCpy $CloseExtraArgs '-exceptProcessId $1 -relaunchFile "$INSTDIR\relaunch.json" -uiExe "$INSTDIR\${INSTANCE_NAME}.exe"'
 	Push "$INSTDIR"
 	Call CloseProcesses
+	StrCpy $CloseExtraArgs ""
 
-	; the version's own folder, then the root's launchers over it
+	; the version's own folder, then the root's launchers and the updater over it
 	SetOutPath "$INSTDIR\${VERSION}"
 	File /r "${SOURCE_DIR}\*.*"
 	File "/oname=publish.json" "${PUBLISH_INFO_FILE}"
 	SetOutPath "$INSTDIR"
 	File "${LAUNCHERS_DIR}\*.exe"
+	File "/oname=vhupdate.ps1" "${__FILEDIR__}\install-client-updater.ps1"
 
 	StrCpy $JunctionLink "$INSTDIR\${CURRENT_FOLDER}"
 	StrCpy $JunctionTarget "$INSTDIR\${VERSION}"
@@ -334,14 +384,31 @@ Section "Install"
 		SetErrorLevel 4
 		Abort
 	${EndIf}
-	nsExec::ExecToLog '"$INSTDIR\${COMMAND_NAME}.exe" service start'
+	; through the service manager: the app's own start waits for a setup that holds the mutex, as this one does
+	nsExec::ExecToLog '"$SYSDIR\sc.exe" start "${INSTANCE_NAME}"'
 	Pop $0
 	${If} $0 != 0
 		DetailPrint "The service did not start (exit $0); the window starts it when opened."
 	${EndIf}
 
+	; the updater's task, as the choice says
+	InitPluginsDir
+	File "/oname=$PLUGINSDIR\task.ps1" "${__FILEDIR__}\install-client-task.ps1"
+	nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\task.ps1" -taskName "${INSTANCE_NAME}Updater" -scriptPath "$INSTDIR\vhupdate.ps1" -choice "$AutoUpdateChoice"'
+	Pop $0
+	${If} $0 != 0
+		DetailPrint "The updater's task could not be registered (exit $0): ${PRODUCT_NAME} updates when asked to."
+	${EndIf}
+
 	Call RemoveOldVersions
 SectionEnd
+
+; An install that failed after it stopped the service leaves none running: the one there is started again, as the
+; Linux install script's exit does, and opens again the windows and trays this closed.
+Function .onInstFailed
+	nsExec::Exec '"$SYSDIR\sc.exe" start "${INSTANCE_NAME}"'
+	Pop $0
+FunctionEnd
 
 Function un.onInit
 	SetShellVarContext all
@@ -357,6 +424,10 @@ FunctionEnd
 ; The settings, the profiles and the log stay in the service's storage (ProgramData) for a later
 ; install, as the Linux uninstaller keeps them.
 Section "Uninstall"
+	; the updater's task first, which would install the app again
+	nsExec::ExecToLog '"$SYSDIR\schtasks.exe" /Delete /TN "${INSTANCE_NAME}Updater" /F'
+	Pop $0
+
 	; the service, and the root off the PATH, by the app itself
 	nsExec::ExecToLog '"$INSTDIR\${COMMAND_NAME}.exe" service uninstall'
 	Pop $0

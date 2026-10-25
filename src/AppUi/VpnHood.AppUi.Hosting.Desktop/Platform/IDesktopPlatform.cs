@@ -40,6 +40,11 @@ public interface IDesktopPlatform
     // under the service's name on Windows, the journal under the instance's name on Linux.
     ILoggerProvider CreateSystemLogLoggerProvider();
 
+    // The window started again, as it was started - in the tray, or open - by the install's own launcher, which
+    // runs the version the install names now: an update replaced the service under the open window. A process of
+    // its own, which outlives this one; nothing for a copy run where it lies, which has no such launcher.
+    void StartUiAgain(bool startHidden);
+
     // The daemon's run as the platform's service manager hosts it, with the time the stop leaves the
     // app's graceful close (DaemonRun), so the adapter is released before the manager ends the process.
     // Windows' stops it with a call rather than a signal (the service control manager, through

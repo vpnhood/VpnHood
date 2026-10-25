@@ -26,4 +26,6 @@ internal sealed class TestDesktopPlatform : IDesktopPlatform
 
     public Task<int> HostDaemon(DaemonRun run, CancellationToken cancellationToken) =>
         run(cancellationToken, QuickCloseToken);
+
+    public void StartUiAgain(bool startHidden) => throw new NotSupportedException();
 }

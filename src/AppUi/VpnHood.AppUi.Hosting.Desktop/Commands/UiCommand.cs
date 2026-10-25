@@ -48,18 +48,28 @@ internal static class UiCommand
         VhLogger.AddProvider(platform.CreateSystemLogLoggerProvider());
 
         try {
+            bool isServiceNewer;
+
             // One window per person and session: a second launch brings the open one forward, and that
             // is all it does.
-            await using var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, initParams.Ui);
-            if (uiInstance == null)
-                return 0;
+            await using (var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, initParams.Ui)) {
+                if (uiInstance == null)
+                    return 0;
 
-            await using var connection = await TryReach(platform, initParams, mainThread, startHidden,
-                cancellationToken).Vhc();
-            if (connection == null)
-                return 1;
+                await using var connection = await TryReach(platform, initParams, mainThread, startHidden,
+                    cancellationToken).Vhc();
+                if (connection == null)
+                    return 1;
 
-            await RunWindow(platform.Paths, initParams, mainThread, connection, startHidden, cancellationToken).Vhc();
+                isServiceNewer = await RunWindow(platform.Paths, initParams, mainThread, connection, startHidden,
+                    cancellationToken).Vhc();
+            }
+
+            // out of this window's claim, which the new one takes
+            if (isServiceNewer) {
+                VhLogger.Instance.LogInformation("The service is a newer version; starting the window again on it.");
+                platform.StartUiAgain(startHidden);
+            }
             return 0;
         }
         catch (OperationCanceledException) {
@@ -141,10 +151,16 @@ internal static class UiCommand
 
     // The UI over a connection to the app, until it ends: the service's app, or the one this process
     // holds itself (InProcessDesktopHost). It ends by itself - its window closed, its tray's Exit - or
-    // with the command: a signal, a logout.
-    internal static async Task RunWindow(IDesktopUiPaths paths, DesktopInitParams initParams, MainThreadQueue mainThread,
-        DaemonConnection connection, bool startHidden, CancellationToken cancellationToken)
+    // with the command: a signal, a logout; or once the service answers as a newer version - an update
+    // replaced it under the open window - which this returns true for.
+    internal static async Task<bool> RunWindow(IDesktopUiPaths paths, DesktopInitParams initParams,
+        MainThreadQueue mainThread, DaemonConnection connection, bool startHidden, CancellationToken cancellationToken)
     {
+        using var serviceNewer = new CancellationTokenSource();
+        using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serviceNewer.Token);
+        void OnNewerServiceAnswered(object? sender, EventArgs e) => serviceNewer.Cancel();
+        connection.NewerServiceAnswered += OnNewerServiceAnswered;
+
         // on the host's main thread, which a window needs; this waits until the UI ends
         var uiParams = new DesktopUiParams {
             Api = connection.Api,
@@ -153,6 +169,13 @@ internal static class UiCommand
             UiDataPath = paths.UiDataPath,
             StartHidden = startHidden
         };
-        await mainThread.Run(() => initParams.Ui.Run(uiParams, cancellationToken)).Vhc();
+        try {
+            await mainThread.Run(() => initParams.Ui.Run(uiParams, uiCancellation.Token)).Vhc();
+        }
+        finally {
+            connection.NewerServiceAnswered -= OnNewerServiceAnswered;
+        }
+
+        return serviceNewer.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
     }
 }

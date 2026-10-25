@@ -244,6 +244,18 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
         return Task.FromResult(false);
     }
 
+    public bool IsAutomaticUpdateSupported => false;
+
+    public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("The website's APK updates only from the notice.");
+    }
+
+    public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("The website's APK updates only from the notice.");
+    }
+
     internal void OnInstallStatus(Context context, Intent intent)
     {
         var status = (PackageInstallStatus)intent.GetIntExtra(PackageInstaller.ExtraStatus,

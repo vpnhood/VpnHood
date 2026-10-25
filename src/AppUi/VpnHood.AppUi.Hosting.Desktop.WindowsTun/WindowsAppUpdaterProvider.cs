@@ -47,30 +47,40 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
         return new WindowsAppUpdaterProvider(installRootPath, paths.InstanceName, updateInfoUrl, appVersion);
     }
 
-    // the task's choice, which the setup makes and keeps: its XML's Enabled, which only a disabled task says
-    protected override async Task<bool> IsAutomaticUpdateOn()
-    {
-        var startInfo = new ProcessStartInfo {
-            FileName = Path.Combine(Environment.SystemDirectory, "schtasks.exe"),
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-        foreach (var argument in new[] { "/Query", "/TN", $"{_instanceName}Updater", "/XML" })
-            startInfo.ArgumentList.Add(argument);
+    private string TaskName => $"{_instanceName}Updater";
+    private static string SchTasksPath => Path.Combine(Environment.SystemDirectory, "schtasks.exe");
 
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not run schtasks.");
-        var outputTask = process.StandardOutput.ReadToEndAsync();
-        var errorTask = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync().Vhc();
-        await Task.WhenAll(outputTask, errorTask).Vhc();
-        if (process.ExitCode != 0)
+    // the task's choice, which the setup makes and keeps: its XML's Enabled, which only a disabled task says
+    public override async Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    {
+        var result = await RunTool(SchTasksPath, ["/Query", "/TN", TaskName, "/XML"], cancellationToken).Vhc();
+        if (result.ExitCode != 0)
             return false;
 
-        var enabled = XDocument.Parse(outputTask.Result).Root?
+        var enabled = XDocument.Parse(result.Output).Root?
             .Element(XName.Get("Settings", "http://schemas.microsoft.com/windows/2004/02/mit/task"))?
             .Element(XName.Get("Enabled", "http://schemas.microsoft.com/windows/2004/02/mit/task"))?.Value;
         return enabled != "false";
+    }
+
+    // The task on or off, as the setup leaves it; a run under way ends as it would. Turned on, it runs once at once,
+    // as Linux's timer runs its updater when it starts: a check now rather than at the next boot or 12 hours on.
+    public override async Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    {
+        var result = await RunTool(SchTasksPath, ["/Change", "/TN", TaskName, isOn ? "/ENABLE" : "/DISABLE"],
+            cancellationToken).Vhc();
+        if (result.ExitCode != 0)
+            throw new InvalidOperationException(
+                $"schtasks could not {(isOn ? "enable" : "disable")} the {TaskName} task. {result.Error.Trim()}");
+
+        if (!isOn)
+            return;
+
+        // the switch is on either way; only the check waits for the task's own triggers
+        var run = await RunTool(SchTasksPath, ["/Run", "/TN", TaskName], cancellationToken).Vhc();
+        if (run.ExitCode != 0)
+            VhLogger.Instance.LogWarning("Could not run the updater's task. ExitCode: {ExitCode}, Error: {Error}",
+                run.ExitCode, run.Error.Trim());
     }
 
     protected override async Task<string?> RunInstaller(string packagePath)

@@ -45,6 +45,8 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
     public Task VersionCheckPostpone(CancellationToken cancellationToken) => Task.CompletedTask;
     public Task StartUpdate(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.StartUpdate");
     public Task CompleteUpdate(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.CompleteUpdate");
+    public Task<bool> GetAutomaticUpdate(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetAutomaticUpdate");
+    public Task SetAutomaticUpdate(bool value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetAutomaticUpdate");
 
     public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetSplitIpsViaApp");
     public Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitIpsViaApp");

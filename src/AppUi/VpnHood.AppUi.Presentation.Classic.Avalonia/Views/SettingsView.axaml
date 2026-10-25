@@ -4,8 +4,9 @@
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SettingsView">
   <!-- The web UI's settings/index: three sections of rows, each a page - how the app presents
-       itself, how traffic is carried, and what it guarantees about exposure. A row a platform
-       cannot serve is left out, and a section left with no rows loses its title too. -->
+       itself, how traffic is carried, and what it guarantees about exposure - but the automatic
+       updates' switch, which has nothing more to show. A row a platform cannot serve is left out,
+       and a section left with no rows loses its title too. -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Settings, Source={x:Static res:Strings.Current}}" />
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -14,6 +15,7 @@
         <controls:SettingsItem x:Name="LanguageItem" Clicked="OnLanguageClick" />
         <controls:SettingsItem x:Name="NotificationsItem" Clicked="OnNotificationsClick" />
         <controls:SettingsItem x:Name="QuickLaunchItem" Clicked="OnQuickLaunchClick" />
+        <controls:SettingsToggleItem x:Name="AutomaticUpdatesItem" Toggled="OnAutomaticUpdatesToggled" />
 
         <controls:SettingsSectionTitle x:Name="ConnectivitySection" />
         <controls:SettingsItem x:Name="ProxiesItem" Clicked="OnProxiesClick" />

@@ -145,7 +145,7 @@ public sealed partial class Strings
     /// <summary>Add server key</summary>
     public string AddAccessKeyTitle => Get("ADD_ACCESS_KEY_TITLE");
 
-    /// <summary>Copy and paste an server key to add a server.</summary>
+    /// <summary>Copy and paste a server key to add a server.</summary>
     public string AddAccessKeySubtitle => Get("ADD_ACCESS_KEY_SUBTITLE");
 
     /// <summary>The serverKey has invalid format.</summary>
@@ -699,6 +699,12 @@ public sealed partial class Strings
 
     /// <summary>Cancel anytime in your store's subscription settings.</summary>
     public string CancelAnytimeInStore => Get("CANCEL_ANYTIME_IN_STORE");
+
+    /// <summary>Automatic Updates</summary>
+    public string AutomaticUpdates => Get("AUTOMATIC_UPDATES");
+
+    /// <summary>Keeps the app up to date by itself. Updates install while the VPN is disconnected.</summary>
+    public string AutomaticUpdatesDesc => Get("AUTOMATIC_UPDATES_DESC");
 
     /// <summary>Always On</summary>
     public string AlwaysOn => Get("ALWAYS_ON");
@@ -1729,7 +1735,7 @@ public sealed partial class Strings
     /// <summary>Server IP and port</summary>
     public string CustomEndpointPlaceHolder => Get("CUSTOM_ENDPOINT_PLACE_HOLDER");
 
-    /// <summary>Enter an server IP and port in the following format:</summary>
+    /// <summary>Enter a server IP and port in the following format:</summary>
     public string CustomEndpointDesc => Get("CUSTOM_ENDPOINT_DESC");
 
     /// <summary>Please enter a valid IP address (IPv4 or IPv6).</summary>

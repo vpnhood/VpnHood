@@ -441,14 +441,69 @@ public class CheckNewVersionTest : TestAppBase
             UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions);
-        var localHost = app.LocalWebHost ?? throw new InvalidOperationException("The app has no local web host.");
-        var localUrl = await localHost.EnsureStarted(TestCt);
-        using var http = new HttpClient { BaseAddress = new Uri(localUrl.GetLeftPart(UriPartial.Authority) + "/") };
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
-            LocalApiToken.Read(localUrl) ?? throw new InvalidOperationException("The local address carries no token."));
+        using var http = await CreateLocalHttpClient(app);
         var api = VpnHoodApiHttpFactory.Create(http);
 
         Assert.AreEqual(VersionCheckResult.Latest, await api.App.VersionCheck(TestCt));
+    }
+
+    // The settings' switch turns the platform's own, a desktop's timer or task, through the web host as a window
+    // over a desktop service asks; the app says it has one.
+    [TestMethod]
+    public async Task The_automatic_update_switch_turns_the_platforms_own_over_http()
+    {
+        SetNewRelease(CurrentAppVersion, DateTime.UtcNow);
+        var packageUpdater = new TestPackageUpdaterProvider();
+        var appOptions = TestAppHelper.CreateAppOptions(isDebugMode: false);
+        appOptions.WebHostFactory = new VpnHoodAppWebHostFactory();
+        appOptions.WebRootZipAsset = TestAppHelper.CreateWebRootZip("web-root-test");
+        appOptions.UpdaterOptions = new AppUpdaterOptions {
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1,
+            UpdaterProvider = packageUpdater
+        };
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        using var http = await CreateLocalHttpClient(app);
+        var api = VpnHoodApiHttpFactory.Create(http);
+
+        Assert.IsTrue(app.Features.IsAutomaticUpdateSupported);
+        Assert.IsTrue(await api.App.GetAutomaticUpdate(TestCt));
+
+        await api.App.SetAutomaticUpdate(false, TestCt);
+        Assert.IsFalse(packageUpdater.IsAutomaticUpdateOnValue);
+        Assert.IsFalse(await api.App.GetAutomaticUpdate(TestCt));
+
+        await api.App.SetAutomaticUpdate(true, TestCt);
+        Assert.IsTrue(packageUpdater.IsAutomaticUpdateOnValue);
+    }
+
+    // A store keeps its own setting: no switch to offer, and none to turn.
+    [TestMethod]
+    public async Task A_store_updater_has_no_automatic_update_switch()
+    {
+        SetNewRelease(CurrentAppVersion, DateTime.UtcNow);
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.UpdaterOptions = new AppUpdaterOptions {
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1,
+            UpdaterProvider = new TestAppUpdaterProvider()
+        };
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        var updaterService = app.Services.UpdaterService ?? throw new InvalidOperationException("The app has no updater.");
+
+        Assert.IsFalse(app.Features.IsAutomaticUpdateSupported);
+        await Assert.ThrowsExactlyAsync<NotSupportedException>(() => updaterService.IsAutomaticUpdateOn(TestCt));
+        await Assert.ThrowsExactlyAsync<NotSupportedException>(() => updaterService.SetAutomaticUpdate(false, TestCt));
+    }
+
+    // the app's local web host, with the token its address carries
+    private async Task<HttpClient> CreateLocalHttpClient(VpnHoodApp app)
+    {
+        var localHost = app.LocalWebHost ?? throw new InvalidOperationException("The app has no local web host.");
+        var localUrl = await localHost.EnsureStarted(TestCt);
+        var token = LocalApiToken.Read(localUrl) ??
+                    throw new InvalidOperationException("The local address carries no token.");
+        var http = new HttpClient { BaseAddress = new Uri(localUrl.GetLeftPart(UriPartial.Authority) + "/") };
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return http;
     }
 
     // While the store offers the update, a check that cannot reach the store has no answer: not "the

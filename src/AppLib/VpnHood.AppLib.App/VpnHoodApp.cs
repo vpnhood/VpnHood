@@ -231,6 +231,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsTcpProxySupported = device.IsTcpProxySupported,
             IsQuicSupported = device.IsQuicSupported,
             AlwaysOnSupport = GetAlwaysOnSupport(device, deviceUiProvider),
+            IsAutomaticUpdateSupported = options.UpdaterOptions?.UpdaterProvider?.IsAutomaticUpdateSupported == true,
             IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
             IsSplitCountrySupported = options.IpLocationZipAsset != null,
             IsUserReviewSupported = options.UserReviewProvider != null,

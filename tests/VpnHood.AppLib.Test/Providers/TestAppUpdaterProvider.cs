@@ -74,4 +74,16 @@ internal class TestAppUpdaterProvider : IAppUpdaterProvider
         ResumeUpdateCalls++;
         return Task.FromResult(true);
     }
+
+    public bool IsAutomaticUpdateSupported => false;
+
+    public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("The store keeps its own automatic update setting.");
+    }
+
+    public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("The store keeps its own automatic update setting.");
+    }
 }

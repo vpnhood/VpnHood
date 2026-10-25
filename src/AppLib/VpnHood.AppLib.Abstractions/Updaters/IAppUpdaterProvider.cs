@@ -34,4 +34,13 @@ public interface IAppUpdaterProvider
     // Brings back the screen of an update the person started and left before it finished; false when
     // there is none. Asked with a window in front, apart from the checks' interval.
     Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken);
+
+    // Whether the app turns the channel's automatic update on and off: an install's own updater, a desktop's.
+    // A store's is the store's own setting.
+    bool IsAutomaticUpdateSupported { get; }
+
+    // The automatic update's switch, read where the platform keeps it each time, as its installer and its own
+    // tools change it too. One with no switch throws NotSupportedException.
+    Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken);
+    Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken);
 }

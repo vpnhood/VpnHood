@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Updaters;
@@ -41,8 +42,34 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, Uri updateIn
     // install goes on without, else why it installed nothing.
     protected abstract Task<string?> RunInstaller(string packagePath);
 
+    public bool IsAutomaticUpdateSupported => true;
+
     // whether the platform's updater runs by itself: its timer or task on, as its installer left it
-    protected abstract Task<bool> IsAutomaticUpdateOn();
+    public abstract Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken);
+
+    // the timer or the task on or off, which the installers keep at an update
+    public abstract Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken);
+
+    // a platform tool's run to its end: its exit code and what it wrote
+    protected static async Task<(int ExitCode, string Output, string Error)> RunTool(string fileName,
+        IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+    {
+        var startInfo = new ProcessStartInfo {
+            FileName = fileName,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        foreach (var argument in arguments)
+            startInfo.ArgumentList.Add(argument);
+
+        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException($"Could not run {fileName}.");
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken).Vhc();
+        return (process.ExitCode, await outputTask.Vhc(), await errorTask.Vhc());
+    }
 
     /// <summary>
     /// The automatic update's part in the service, with the VPN idle again: a release downloaded already - by the
@@ -52,7 +79,7 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, Uri updateIn
     public async Task InstallDownloadedUpdate()
     {
         try {
-            if (FindDownload() is not { } packagePath || !await IsAutomaticUpdateOn().Vhc())
+            if (FindDownload() is not { } packagePath || !await IsAutomaticUpdateOn(CancellationToken.None).Vhc())
                 return;
 
             VhLogger.Instance.LogInformation("Installing the downloaded update. Package: {Package}",

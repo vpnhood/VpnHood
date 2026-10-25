@@ -24,6 +24,8 @@ public partial class SettingsView : UserControl, IPage
     {
         base.OnAttachedToVisualTree(e);
         Fill();
+        if (AutomaticUpdatesItem.IsVisible)
+            _ = LoadAutomaticUpdates();
     }
 
     private void Fill()
@@ -48,6 +50,10 @@ public partial class SettingsView : UserControl, IPage
         QuickLaunchItem.Subtitle = s.QuickLaunchDesc;
         QuickLaunchItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.QuickLaunch);
         QuickLaunchItem.IsVisible = intents.IsQuickLaunchSupported;
+
+        AutomaticUpdatesItem.Title = s.AutomaticUpdates;
+        AutomaticUpdatesItem.Description = s.AutomaticUpdatesDesc;
+        AutomaticUpdatesItem.IsVisible = VhApp.Features.IsAutomaticUpdateSupported;
         AppSection.IsVisible = true;
 
         ConnectivitySection.Title = s.Connectivity;
@@ -102,4 +108,34 @@ public partial class SettingsView : UserControl, IPage
     private void OnPrivacyClick(object? sender, EventArgs e) => _host.Navigate(new PrivacyView(_host));
     private void OnKillSwitchClick(object? sender, EventArgs e) => _host.Navigate(FeaturePages.KillSwitch(_host));
     private void OnAlwaysOnClick(object? sender, EventArgs e) => _host.Navigate(FeaturePages.AlwaysOn(_host));
+
+    // The platform's switch, a desktop's timer or task, read at every arrival: its installer and its own tools
+    // turn it too. Held until read, so a press never answers a state the row did not show.
+    private async Task LoadAutomaticUpdates()
+    {
+        AutomaticUpdatesItem.IsDisabled = true;
+        try {
+            AutomaticUpdatesItem.IsOn = await VhApp.Api.App.GetAutomaticUpdate(CancellationToken.None);
+            AutomaticUpdatesItem.IsDisabled = false;
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async void OnAutomaticUpdatesToggled(object? sender, EventArgs e)
+    {
+        var isOn = AutomaticUpdatesItem.IsOn;
+        AutomaticUpdatesItem.IsDisabled = true;
+        try {
+            await VhApp.Api.App.SetAutomaticUpdate(isOn, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            AutomaticUpdatesItem.IsOn = !isOn;
+            await this.ReportError(ex);
+        }
+        finally {
+            AutomaticUpdatesItem.IsDisabled = false;
+        }
+    }
 }

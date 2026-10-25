@@ -44,16 +44,23 @@ public sealed class LinuxAppUpdaterProvider : DesktopAppUpdaterProvider
         return new LinuxAppUpdaterProvider(installPath, storagePath, updateInfoUrl, appVersion);
     }
 
-    // the timer's choice, which the installer makes and keeps
-    protected override async Task<bool> IsAutomaticUpdateOn()
-    {
-        var startInfo = new ProcessStartInfo { FileName = "systemctl", UseShellExecute = false };
-        foreach (var argument in new[] { "is-enabled", "--quiet", $"{_installName}Updater.timer" })
-            startInfo.ArgumentList.Add(argument);
+    private string TimerName => $"{_installName}Updater.timer";
 
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not run systemctl.");
-        await process.WaitForExitAsync().Vhc();
-        return process.ExitCode == 0;
+    // the timer's choice, which the installer makes and keeps
+    public override async Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    {
+        var result = await RunTool("systemctl", ["is-enabled", "--quiet", TimerName], cancellationToken).Vhc();
+        return result.ExitCode == 0;
+    }
+
+    // --now, as the installer leaves it: the timer starts or stops at once, and a run under way ends as it would.
+    // Started past boot's five minutes, the timer runs the updater at once: a check now, as on Windows.
+    public override async Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    {
+        var verb = isOn ? "enable" : "disable";
+        var result = await RunTool("systemctl", [verb, "--now", "--quiet", TimerName], cancellationToken).Vhc();
+        if (result.ExitCode != 0)
+            throw new InvalidOperationException($"systemctl could not {verb} {TimerName}. {result.Error.Trim()}");
     }
 
     protected override async Task<string?> RunInstaller(string packagePath)

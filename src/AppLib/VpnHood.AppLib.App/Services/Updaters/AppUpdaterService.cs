@@ -128,6 +128,23 @@ public class AppUpdaterService : IDisposable
         return updater.CompleteUpdate(release, uiContext, cancellationToken);
     }
 
+    // The updater whose automatic update the settings turn on and off (AppFeatures.IsAutomaticUpdateSupported)
+    private ProviderUpdaters.IAppUpdaterProvider? AutomaticUpdater =>
+        _updateOptions.UpdaterProvider is { IsAutomaticUpdateSupported: true } updater ? updater : null;
+
+    public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    {
+        var updater = AutomaticUpdater ?? throw new NotSupportedException("The app has no automatic update to switch.");
+        return updater.IsAutomaticUpdateOn(cancellationToken);
+    }
+
+    public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    {
+        var updater = AutomaticUpdater ?? throw new NotSupportedException("The app has no automatic update to switch.");
+        VhLogger.Instance.LogInformation("Turning the automatic update {State}.", isOn ? "on" : "off");
+        return updater.SetAutomaticUpdate(isOn, cancellationToken);
+    }
+
     // The store said lately that it has an update for the installed version: its own screen is the way.
     // An offer to the version before an install, or from before the version was kept with it, is none.
     private bool IsUpdaterOffering =>

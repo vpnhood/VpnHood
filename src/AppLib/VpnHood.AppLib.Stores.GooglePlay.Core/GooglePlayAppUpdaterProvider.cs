@@ -80,6 +80,18 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             UpdateAvailability.DeveloperTriggeredUpdateInProgress, cancellationToken);
     }
 
+    public bool IsAutomaticUpdateSupported => false;
+
+    public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("Google Play keeps its own automatic update setting.");
+    }
+
+    public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("Google Play keeps its own automatic update setting.");
+    }
+
     // Play's immediate update screen for an update in that availability; false where Play has none
     private static async Task<bool> TryStartUpdateFlow(AndroidUiContext appUiContext, int availability,
         CancellationToken cancellationToken)

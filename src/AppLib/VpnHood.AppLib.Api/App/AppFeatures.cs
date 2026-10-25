@@ -51,6 +51,10 @@ public class AppFeatures
     public required bool IsQuicSupported { get; init; }
 
     public required AlwaysOnSupport AlwaysOnSupport { get; init; }
+
+    // Whether the settings turn the automatic update on and off: an install's own updater, a desktop's
+    // (IAppApi.GetAutomaticUpdate). A store keeps its own setting.
+    public required bool IsAutomaticUpdateSupported { get; init; }
     public required bool IsSplitDomainSupported { get; init; }
 
     // Whether this build has the IP-location data (AppOptions.IpLocationZipAsset) a country split

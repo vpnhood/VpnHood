@@ -116,6 +116,17 @@ internal class AppController(IAppApi api) : ControllerBase
             await ctx.SendNoContent().Vhc();
         });
 
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "automatic-update", async ctx => {
+            var res = await api.GetAutomaticUpdate(ctx.Token).Vhc();
+            await ctx.SendJson(res).Vhc();
+        });
+
+        mapper.AddStatic(HttpMethod.PUT, baseUrl + "automatic-update", async ctx => {
+            var body = ctx.ReadJson<bool>();
+            await api.SetAutomaticUpdate(body, ctx.Token).Vhc();
+            await ctx.SendNoContent().Vhc();
+        });
+
         mapper.AddStatic(HttpMethod.POST, baseUrl + "clear-last-error", async ctx => {
             await api.ClearLastError(ctx.Token).Vhc();
             await ctx.SendNoContent().Vhc();

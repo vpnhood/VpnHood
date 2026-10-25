@@ -36,6 +36,8 @@ public interface IAppApi
     Task VersionCheckPostpone(CancellationToken cancellationToken);
     Task StartUpdate(CancellationToken cancellationToken);
     Task CompleteUpdate(CancellationToken cancellationToken);
+    Task<bool> GetAutomaticUpdate(CancellationToken cancellationToken);
+    Task SetAutomaticUpdate(bool value, CancellationToken cancellationToken);
     Task ExtendByRewardedAd(CancellationToken cancellationToken);
     Task ShowAdPrivacyOptions(CancellationToken cancellationToken);
     Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken);

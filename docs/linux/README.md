@@ -35,7 +35,8 @@ The installer must run as root and will say so rather than half-install. It:
 - writes and starts `VpnHoodClient.service`, enabled at boot unless you answer no
 - writes `VpnHoodClientUpdater.timer`, which keeps the app up to date unless you install with
   `-noautoupdate`, without asking: at boot and every 12 hours it downloads a newer version, and
-  installs it only while the VPN is disconnected, or once it disconnects
+  installs it only while the VPN is disconnected, or once it disconnects. The app's
+  **Settings › Automatic Updates** turns the timer on and off, and an update keeps that choice
 - on a machine with a display manager, or WSLg, adds **VpnHood! CLIENT** to the application menu and
   installs the libraries the window needs (`libx11-6`, `libice6`, `libsm6`, `libfontconfig1`,
   `xdg-utils`); without `apt`, it names any of them it cannot find, for you to install

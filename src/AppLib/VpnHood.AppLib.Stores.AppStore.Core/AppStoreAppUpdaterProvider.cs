@@ -103,6 +103,18 @@ public class AppStoreAppUpdaterProvider(Version appVersion) : IAppUpdaterProvide
         return Task.FromResult(false);
     }
 
+    public bool IsAutomaticUpdateSupported => false;
+
+    public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("The App Store keeps its own automatic update setting.");
+    }
+
+    public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    {
+        throw new NotSupportedException("The App Store keeps its own automatic update setting.");
+    }
+
     private static Version Normalize(Version version) =>
         new(version.Major, version.Minor, Math.Max(version.Build, 0));
 

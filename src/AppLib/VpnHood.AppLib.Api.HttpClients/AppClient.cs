@@ -140,6 +140,16 @@ internal sealed class AppClient(HttpClient httpClient) : AppApiClientBase(httpCl
         return HttpPostAsync(BaseUrl + "complete-update", null, null, cancellationToken);
     }
 
+    public Task<bool> GetAutomaticUpdate(CancellationToken cancellationToken)
+    {
+        return HttpGetAsync<bool>(BaseUrl + "automatic-update", null, cancellationToken);
+    }
+
+    public Task SetAutomaticUpdate(bool value, CancellationToken cancellationToken)
+    {
+        return HttpPutAsync(BaseUrl + "automatic-update", null, value, cancellationToken);
+    }
+
     public Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
         return HttpPostAsync(BaseUrl + "extend-by-rewarded-ad", null, null, cancellationToken);

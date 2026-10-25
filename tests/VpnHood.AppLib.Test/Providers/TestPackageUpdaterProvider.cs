@@ -57,4 +57,20 @@ internal class TestPackageUpdaterProvider : IAppUpdaterProvider
     {
         return Task.FromResult(false);
     }
+
+    // the platform's switch, a desktop's timer or task
+    public bool IsAutomaticUpdateOnValue { get; set; } = true;
+
+    public bool IsAutomaticUpdateSupported => true;
+
+    public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(IsAutomaticUpdateOnValue);
+    }
+
+    public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    {
+        IsAutomaticUpdateOnValue = isOn;
+        return Task.CompletedTask;
+    }
 }

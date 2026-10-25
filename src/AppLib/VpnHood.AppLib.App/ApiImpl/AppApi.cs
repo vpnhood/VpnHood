@@ -153,6 +153,22 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
         return app.Services.UpdaterService.CompleteUpdate(AppUiContext.Context, cancellationToken);
     }
 
+    public Task<bool> GetAutomaticUpdate(CancellationToken cancellationToken)
+    {
+        if (app.Services.UpdaterService is null)
+            throw new NotSupportedException("App Updater is not supported.");
+
+        return app.Services.UpdaterService.IsAutomaticUpdateOn(cancellationToken);
+    }
+
+    public Task SetAutomaticUpdate(bool value, CancellationToken cancellationToken)
+    {
+        if (app.Services.UpdaterService is null)
+            throw new NotSupportedException("App Updater is not supported.");
+
+        return app.Services.UpdaterService.SetAutomaticUpdate(value, cancellationToken);
+    }
+
     public Task ClearLastError(CancellationToken cancellationToken)
     {
         app.ClearLastError();

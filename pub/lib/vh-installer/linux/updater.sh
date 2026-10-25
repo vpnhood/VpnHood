@@ -28,6 +28,14 @@ for arg in "$@"; do
 	lastArg="$arg";
 done
 
+# The desktop client's own runs (-waitForIdle, no -packageFile): one that cannot reach the feed or a file it names
+# leaves update.missed in the install's folder, for the service to run the updater again once its VPN connects -
+# through the tunnel, where a filtered network may let it through - and one that reaches them takes it away.
+missedFile="";
+if [ "$waitForIdle" = "y" ] && [ "$packageFile" = "" ]; then
+	missedFile="$curDir/update.missed";
+fi
+
 # One updater at a time - the timer's, the service's, the notice's - each reading the install only once the one
 # before has ended: a run that waited finds the update done, at the version check below. The install script keeps
 # a lock of its own, for an install run by hand.
@@ -56,6 +64,14 @@ function json_extract() {
 
 function version {
     echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+}
+
+function missed() {
+	if [ "$missedFile" != "" ]; then touch "$missedFile"; fi
+}
+
+function reached() {
+	if [ "$missedFile" != "" ]; then rm -f "$missedFile"; fi
 }
 
 # The files in the updates folder but the one given: a release overtaken, one installed, a download a run before this
@@ -95,8 +111,10 @@ onlinePackageUrl=$(json_extract PackageUrl "$onlinePublishInfoJson");
 # Check is latest version available
 if [ "$onlinePublishInfoJson" == "" ]; then
     echo "Could not retrieve the latest package information! Url: $localUpdateInfoUrl";
+    missed;
     exit 1;
 fi
+reached;
 
 # Compare the update code
 if [ "$localUpdateCode" != "$onlineUpdateCode" ]; then
@@ -135,6 +153,7 @@ if [ "$waitForIdle" = "y" ] && [ "$packageFile" = "" ]; then
 		if ! wget -nv -O "$downloadFile" "$onlinePackageUrl" || ! mv -f "$downloadFile" "$packageFile"; then
 			echo "Could not download the update! Url: $onlinePackageUrl";
 			rm -f "$downloadFile";
+			missed;
 			exit 1;
 		fi
 	fi
@@ -162,6 +181,7 @@ installScriptFile=$(mktemp) || exit 1;
 trap 'rm -f "$installScriptFile"' EXIT;
 if ! wget -qO "$installScriptFile" "$onlineInstallScriptUrl"; then
     echo "Could not download the install script! Url: $onlineInstallScriptUrl";
+    missed;
     exit 1;
 fi
 # -q alone: the install keeps its own choices, starting at boot and updating among them

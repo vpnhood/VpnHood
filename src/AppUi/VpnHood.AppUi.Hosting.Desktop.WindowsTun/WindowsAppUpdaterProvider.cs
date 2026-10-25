@@ -22,7 +22,8 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
 
     private WindowsAppUpdaterProvider(string installRootPath, string instanceName, Uri updateInfoUrl,
         Version appVersion)
-        : base(Path.Combine(installRootPath, "updates"), updateInfoUrl, appVersion)
+        : base(Path.Combine(installRootPath, "updates"), Path.Combine(installRootPath, MissedFileName), updateInfoUrl,
+            appVersion)
     {
         _installRootPath = installRootPath;
         _instanceName = instanceName;
@@ -77,10 +78,20 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
             return;
 
         // the switch is on either way; only the check waits for the task's own triggers
-        var run = await RunTool(SchTasksPath, ["/Run", "/TN", TaskName], cancellationToken).Vhc();
-        if (run.ExitCode != 0)
-            VhLogger.Instance.LogWarning("Could not run the updater's task. ExitCode: {ExitCode}, Error: {Error}",
-                run.ExitCode, run.Error.Trim());
+        try {
+            await RunUpdater(cancellationToken).Vhc();
+        }
+        catch (InvalidOperationException ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not run the updater's task at once.");
+        }
+    }
+
+    // the task's run, whose triggers keep their times; one while it runs is ignored (IgnoreNew)
+    protected override async Task RunUpdater(CancellationToken cancellationToken)
+    {
+        var result = await RunTool(SchTasksPath, ["/Run", "/TN", TaskName], cancellationToken).Vhc();
+        if (result.ExitCode != 0)
+            throw new InvalidOperationException($"schtasks could not run the {TaskName} task. {result.Error.Trim()}");
     }
 
     protected override async Task<string?> RunInstaller(string packagePath)

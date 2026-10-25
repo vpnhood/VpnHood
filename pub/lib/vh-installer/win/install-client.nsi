@@ -8,6 +8,7 @@
 ;   <root>\<version>\publish.json     the release's feed file, whose feed the app's updater reads
 ;   <root>\vhupdate.ps1               the updater, which its task runs at boot and every 12 hours
 ;   <root>\updates\, update.log       the updater's and the app's downloads, and what the updater last did
+;   <root>\update.missed              there while the updater's last run could not reach the server
 ;   <root>\uninstall\uninstall.exe    out of the root, which is on the PATH
 ;
 ; Shortcuts, the tray's sign-in entry, the service and the PATH name the root, never a version, so

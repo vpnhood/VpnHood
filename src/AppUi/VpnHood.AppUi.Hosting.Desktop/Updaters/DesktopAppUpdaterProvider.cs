@@ -17,12 +17,18 @@ namespace VpnHood.AppUi.Hosting.Desktop.Updaters;
 // that a broken release still gets the next one: it downloads into the same folder under the same name, and leaves
 // a download made while the VPN was in use for the service to hand back after the next disconnect
 // (InstallDownloadedUpdate). So the folder is shared, and each side removes only what it is done with: this one the
-// downloads of this version and older, and of one overtaken by the release it downloads.
-public abstract class DesktopAppUpdaterProvider(string updatesPath, Uri updateInfoUrl, Version appVersion)
-    : IAppUpdaterProvider
+// downloads of this version and older, and of one overtaken by the release it downloads. A run of the updater that
+// could not reach the server says so in a file of its own, and the service runs the updater again at the next connect
+// (RetryMissedUpdate).
+public abstract class DesktopAppUpdaterProvider(string updatesPath, string missedPath, Uri updateInfoUrl,
+    Version appVersion) : IAppUpdaterProvider
 {
+    // what the updater leaves while its last run could not reach the server (updater.sh, install-client-updater.ps1)
+    protected const string MissedFileName = "update.missed";
+
     private static readonly HttpClient HttpClient = new();
     private readonly string _updatesPath = updatesPath;
+    private readonly string _missedPath = missedPath;
     private readonly Version _appVersion = appVersion;
     private readonly Lock _stateLock = new();
 
@@ -49,6 +55,9 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, Uri updateIn
 
     // the timer or the task on or off, which the installers keep at an update
     public abstract Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken);
+
+    // a run of the platform's updater now, as its timer or task starts one, going on by itself
+    protected abstract Task RunUpdater(CancellationToken cancellationToken);
 
     // a platform tool's run to its end: its exit code and what it wrote
     protected static async Task<(int ExitCode, string Output, string Error)> RunTool(string fileName,
@@ -89,6 +98,25 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, Uri updateIn
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not install the downloaded update.");
+        }
+    }
+
+    /// <summary>
+    /// The automatic update's part in the service at a connect: a run of the updater that could not reach the feed or
+    /// its package - a filtered network may let it through only in the tunnel - is made again now, while automatic
+    /// updates are on. What it downloads waits for the disconnect, as any download made while the VPN is in use.
+    /// </summary>
+    public async Task RetryMissedUpdate()
+    {
+        try {
+            if (!File.Exists(_missedPath) || !await IsAutomaticUpdateOn(CancellationToken.None).Vhc())
+                return;
+
+            VhLogger.Instance.LogInformation("Running the updater again: its last run could not reach the server.");
+            await RunUpdater(CancellationToken.None).Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not run the updater again.");
         }
     }
 

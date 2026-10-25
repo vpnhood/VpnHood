@@ -19,7 +19,8 @@ public sealed class LinuxAppUpdaterProvider : DesktopAppUpdaterProvider
     private readonly string _logPath;
 
     private LinuxAppUpdaterProvider(string installPath, string storagePath, Uri updateInfoUrl, Version appVersion)
-        : base(Path.Combine(storagePath, "updates"), updateInfoUrl, appVersion)
+        : base(Path.Combine(storagePath, "updates"), Path.Combine(installPath, MissedFileName), updateInfoUrl,
+            appVersion)
     {
         _updaterPath = Path.Combine(installPath, "vhupdate");
         _installName = Path.GetFileName(installPath);
@@ -61,6 +62,15 @@ public sealed class LinuxAppUpdaterProvider : DesktopAppUpdaterProvider
         var result = await RunTool("systemctl", [verb, "--now", "--quiet", TimerName], cancellationToken).Vhc();
         if (result.ExitCode != 0)
             throw new InvalidOperationException($"systemctl could not {verb} {TimerName}. {result.Error.Trim()}");
+    }
+
+    // the timer's own unit, which counts its next run from this one; a start while one runs joins it
+    protected override async Task RunUpdater(CancellationToken cancellationToken)
+    {
+        var unitName = $"{_installName}Updater.service";
+        var result = await RunTool("systemctl", ["start", "--no-block", unitName], cancellationToken).Vhc();
+        if (result.ExitCode != 0)
+            throw new InvalidOperationException($"systemctl could not start {unitName}. {result.Error.Trim()}");
     }
 
     protected override async Task<string?> RunInstaller(string packagePath)

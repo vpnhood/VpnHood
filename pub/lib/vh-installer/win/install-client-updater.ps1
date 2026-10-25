@@ -21,6 +21,16 @@ function Write-Log([string]$message) {
 	Add-Content -Path $logPath -Value $message -Encoding UTF8
 }
 
+# The task's runs, not the service's -packageFile ones: a run that cannot reach the feed or the package leaves
+# update.missed beside this script, for the service to run the task again once its VPN connects - through the tunnel,
+# where a filtered network may let it through - and one that reaches them takes it away.
+function Set-Missed([bool]$isMissed) {
+	if ($packageFile) { return }
+	$missedPath = Join-Path $root "update.missed"
+	if ($isMissed) { $null = New-Item $missedPath -ItemType File -Force }
+	else { Remove-Item $missedPath -Force -ErrorAction SilentlyContinue }
+}
+
 # The files in the updates folder but the one given: a release overtaken, one installed, a download a run before this
 # one left unfinished - one updater runs at a time. Never the app's download under way (.part).
 function Remove-Downloads([string]$keepPath) {
@@ -38,8 +48,10 @@ function Update-App {
 	}
 	catch {
 		Write-Log "Could not retrieve the latest package information! Url: $($localInfo.UpdateInfoUrl)"
+		Set-Missed $true
 		return 1
 	}
+	Set-Missed $false
 
 	Write-Log "Installed version: $($localInfo.Version)"
 	Write-Log "Latest version: $($onlineInfo.Version)"
@@ -73,6 +85,7 @@ function Update-App {
 			catch {
 				Remove-Item $downloadPath -Force -ErrorAction SilentlyContinue
 				Write-Log "Could not download the update! Url: $packageUrl"
+				Set-Missed $true
 				return 1
 			}
 		}

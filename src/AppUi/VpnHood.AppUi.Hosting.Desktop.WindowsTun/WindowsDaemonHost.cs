@@ -8,11 +8,13 @@ namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 // The app as the Windows service runs it, or a debugger does: VpnHoodWindowsApp, which takes the
 // single-instance lock on the app id before anything is built - the service's where only
 // administrators reach, a debugger's in the folder it is handed. The service's, in an install, also
-// hands the updater's download back once the VPN is idle again.
+// hands the updater's download back once the VPN is idle again, and runs the updater again at a
+// connect when its last run could not reach the server.
 internal sealed class WindowsDaemonHost : IAppDaemonHost
 {
     private readonly VpnHoodWindowsApp _windowsApp;
     private readonly IdleUpdateInstaller? _idleUpdateInstaller;
+    private readonly MissedUpdateRetrier? _missedUpdateRetrier;
 
     public WindowsDaemonHost(AppInitParams initParams, string storagePath, string? lockFolderPath,
         WindowsAppUpdaterProvider? updater)
@@ -20,12 +22,14 @@ internal sealed class WindowsDaemonHost : IAppDaemonHost
         // AnotherInstanceIsRunningException passes through as it is: its message is the answer.
         _windowsApp = VpnHoodWindowsApp.Init(initParams, storagePath, lockFolderPath);
         _idleUpdateInstaller = updater is null ? null : new IdleUpdateInstaller(VpnHoodApp.Instance, updater);
+        _missedUpdateRetrier = updater is null ? null : new MissedUpdateRetrier(VpnHoodApp.Instance, updater);
     }
 
     // The stop: the tunnel comes down, then the app.
     public ValueTask DisposeAsync()
     {
         _idleUpdateInstaller?.Dispose();
+        _missedUpdateRetrier?.Dispose();
         return _windowsApp.DisposeAsync();
     }
 
@@ -33,6 +37,7 @@ internal sealed class WindowsDaemonHost : IAppDaemonHost
     public void Dispose()
     {
         _idleUpdateInstaller?.Dispose();
+        _missedUpdateRetrier?.Dispose();
         _windowsApp.Dispose();
     }
 }

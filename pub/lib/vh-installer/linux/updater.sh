@@ -43,6 +43,10 @@ if command -v flock >/dev/null 2>&1 && exec 8>>"/run/$(basename "$curDir")-updat
 	flock 8;
 fi
 
+# A minute for each of wget's waits, and three tries, which also resume a cut download: by default a network that
+# drops what it filters, rather than refusing it, holds a wget for some forty minutes - and the lock with it.
+wgetLimits=(--timeout=60 --tries=3);
+
 # -------------------
 # Functions
 # -------------------
@@ -102,7 +106,7 @@ if [ "$localPublishInfoJson" == "" ]; then
 fi
 
 # load online publish info
-onlinePublishInfoJson=$( wget -qO- $localUpdateInfoUrl);
+onlinePublishInfoJson=$(wget "${wgetLimits[@]}" -qO- "$localUpdateInfoUrl");
 onlineVersion=$(json_extract Version "$onlinePublishInfoJson");
 onlineUpdateCode=$(json_extract UpdateCode "$onlinePublishInfoJson");
 onlineInstallScriptUrl=$(json_extract InstallScriptUrl "$onlinePublishInfoJson");
@@ -150,7 +154,7 @@ if [ "$waitForIdle" = "y" ] && [ "$packageFile" = "" ]; then
 		echo "Downloading $onlineVersion...";
 		mkdir -p "$updatesDir" || exit 1;
 		downloadFile=$(mktemp "$updatesDir/.download.XXXXXX") || exit 1;
-		if ! wget -nv -O "$downloadFile" "$onlinePackageUrl" || ! mv -f "$downloadFile" "$packageFile"; then
+		if ! wget "${wgetLimits[@]}" -nv -O "$downloadFile" "$onlinePackageUrl" || ! mv -f "$downloadFile" "$packageFile"; then
 			echo "Could not download the update! Url: $onlinePackageUrl";
 			rm -f "$downloadFile";
 			missed;
@@ -179,7 +183,7 @@ fi
 echo "Installing the latest version";
 installScriptFile=$(mktemp) || exit 1;
 trap 'rm -f "$installScriptFile"' EXIT;
-if ! wget -qO "$installScriptFile" "$onlineInstallScriptUrl"; then
+if ! wget "${wgetLimits[@]}" -qO "$installScriptFile" "$onlineInstallScriptUrl"; then
     echo "Could not download the install script! Url: $onlineInstallScriptUrl";
     missed;
     exit 1;

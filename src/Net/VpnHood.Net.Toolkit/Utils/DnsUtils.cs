@@ -5,7 +5,7 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
-public static class DnsResolver
+public static class DnsUtils
 {
     public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
         TimeSpan timeout, CancellationToken cancellationToken)

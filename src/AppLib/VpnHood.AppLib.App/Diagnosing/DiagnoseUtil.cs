@@ -86,7 +86,7 @@ public static class DiagnoseUtil
                 "UdpTest: {UdpTestStatus}, DnsName: {DnsName}, NsServer: {NsServer}, Timeout: {Timeout}...",
                 "Started", dnsName, nsIpEndPoint, timeout);
 
-            var res = await DnsResolver.GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout, cancellationToken)
+            var res = await DnsUtils.GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout, cancellationToken)
                 .Vhc();
 
             if (res.AddressList.Length == 0)

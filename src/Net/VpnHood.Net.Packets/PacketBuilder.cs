@@ -304,7 +304,7 @@ public static class PacketBuilder
         int sourcePort, int destinationPort, string host, ushort? queryId = null)
     {
         queryId ??= (ushort)new Random().Next(ushort.MaxValue);
-        var query = DnsResolver.BuildDnsQuery(queryId.Value, host);
+        var query = DnsUtils.BuildDnsQuery(queryId.Value, host);
         var dnsPacket = BuildUdp(
             sourceAddress: sourceAddress,
             destinationAddress: destinationAddress,

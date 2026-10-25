@@ -255,7 +255,7 @@ public class AppAdManager(
         // check google dns
         try {
             var hostEntry =
-                await DnsResolver.GetHostEntry(
+                await DnsUtils.GetHostEntry(
                     adDomain,
                     new IPEndPoint(IPAddressUtil.GoogleDnsServers.First(), 53),
                     TimeSpan.FromSeconds(4), cancellationToken).Vhc();

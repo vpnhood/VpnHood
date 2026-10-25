@@ -30,7 +30,7 @@ public static class TestHelperTransferExtensions
             CancellationToken cancellationToken = default)
         {
             timeout ??= TimeSpan.FromSeconds(3);
-            var hostEntry = await DnsResolver.GetHostEntry("www.google.com",
+            var hostEntry = await DnsUtils.GetHostEntry("www.google.com",
                 nsEndPoint ?? testHelper.WebServer.MockEps.UdpV4EndPoint1,
                 timeout.Value, cancellationToken);
             Assert.IsNotNull(hostEntry);
@@ -67,7 +67,7 @@ public static class TestHelperTransferExtensions
             CancellationToken cancellationToken = default)
         {
             timeout ??= TestConstants.DefaultUdpTimeout;
-            var result = await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, cancellationToken);
+            var result = await DnsUtils.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, cancellationToken);
             Assert.IsNotEmpty(result.AddressList);
         }
 

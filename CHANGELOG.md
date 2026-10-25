@@ -8,6 +8,7 @@
 * Feature: In the EEA, the UK and Switzerland, usage data stays off until you agree: the first-run page asks once, with a box you tick yourself, on Google Play and after this update too #android #windows #linux
 * Improve: On the picture pages - a feature's page, Go Premium and the premium offers - the back button stays at the top as you scroll, and the page's title appears there once its large title has scrolled away; on every page, what scrolls up to the top fades out softly instead of being cut along a line #android #ios #windows #linux
 * Fix: On Android, the page's own colours run under the status and navigation bars, where a band of another colour showed: dark navy on CLIENT's home, a lighter one at the bottom of the premium pages; the menu runs the full height of the screen too #android
+* Fix: On Android, a server added from a link or a key file shows on the home page at once and stays selected, and its message no longer says "updated" for a new one #android
 * Fix: On Linux each log line appears in the journal once, and whole #linux
 * Fix: With "Share anonymous usage data" off, the app no longer reports each start, nor the VPN each connection and its usage, and turning it off while connected stops the VPN's reports at once #android
 * Fix: Where the app asks you to accept its terms at first run, it sends no usage data before you accept them #android #windows #linux

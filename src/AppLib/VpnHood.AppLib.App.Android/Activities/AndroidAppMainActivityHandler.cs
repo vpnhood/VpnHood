@@ -9,6 +9,7 @@ using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Graphics;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
 
@@ -98,7 +99,8 @@ public class AndroidAppMainActivityHandler
 
             ImportAccessKey(accessKey);
         }
-        catch {
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not import the access key of a link or a file.");
             Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resources.Strings.MsgCantReadAccessKey,
                 ToastLength.Long)?.Show();
         }
@@ -110,9 +112,13 @@ public class AndroidAppMainActivityHandler
     {
         var profiles = VpnHoodApp.Instance.VpnProfileService.List();
         var profileInfo = VpnHoodApp.Instance.VpnProfileService.ImportAccessKey(accessKey).ToInfo(VpnHoodApp.Instance.Features);
-        VpnHoodApp.Instance.UserSettings.VpnProfileId = profileInfo.VpnProfileId;
 
-        var isNew = profiles.Any(x => x.VpnProfileId == profileInfo.VpnProfileId);
+        // the key's server becomes the chosen one; the save keeps it, and moves the configuration time,
+        // on which a UI reads the servers and the settings again
+        VpnHoodApp.Instance.UserSettings.VpnProfileId = profileInfo.VpnProfileId;
+        VpnHoodApp.Instance.SettingsService.Save();
+
+        var isNew = profiles.All(x => x.VpnProfileId != profileInfo.VpnProfileId);
         var message = isNew
             ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, profileInfo.VpnProfileName)
             : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, profileInfo.VpnProfileName);

@@ -186,9 +186,10 @@ public class VpnServiceManager : IDisposable
                 throw ClientExceptionConverter.ApiErrorToException(connectionInfo.Error) ??
                       connectionInfo.Error.ToException();
 
-            // make sure it is not disposed
+            // the service ended with no error: the service's own end, as one after the connect is; the app
+            // may have shown Connected before this poll saw it
             if (connectionInfo.ClientState is ClientState.Disposed or ClientState.Disconnecting)
-                throw new Exception("VpnService could not establish any connection.");
+                throw new VpnServiceException("VpnService could not establish any connection.");
 
             if (connectionInfo.ClientState == ClientState.Connected)
                 break;

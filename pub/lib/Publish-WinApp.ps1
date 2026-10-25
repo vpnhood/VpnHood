@@ -143,6 +143,19 @@ if ($doPackage) {
 	# prepare module folders
 	PrepareModuleFolder $moduleDir $moduleDirLatest;
 
+	# publish info: the release's feed file, which the setup also installs as the version's publish.json, the feed
+	# the app's updater reads (WindowsAppUpdaterProvider)
+	$json = @{
+		Version = $versionParam;
+		UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
+		PackageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
+		InstallationPageUrl = "$installationPageUrl";
+		ReleaseDate = "$releaseDate";
+		DeprecatedVersion = "$deprecatedVersion";
+		NotificationDelay = "$versionNotificationDelay";
+	};
+	$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
+
 	# the app's names and files, as its identity and its publish give them
 	$company = Get-ProjectProperty $projectFile "Company";
 	$copyright = Get-ProjectProperty $projectFile "Copyright";
@@ -160,6 +173,7 @@ if ($doPackage) {
 		"/DICON=$((Resolve-Path $iconFile).Path)",
 		"/DSOURCE_DIR=$((Resolve-Path $publishDir).Path)",
 		"/DLAUNCHERS_DIR=$((Resolve-Path $launchersDir).Path)",
+		"/DPUBLISH_INFO_FILE=$((Resolve-Path $module_infoFile).Path)",
 		"/DOUTPUT_FILE=$([IO.Path]::GetFullPath($setupFile))"
 	) + @(if ($legacyMsiUpgradeCode) { "/DLEGACY_MSI_UPGRADE_CODE=$legacyMsiUpgradeCode" });
 
@@ -200,18 +214,6 @@ if ($doPackage) {
 			"configured — the signing step produced no signature.") `
 			"Windows installer failed to sign";
 	}
-
-	# publish info
-	$json = @{
-		Version = $versionParam;
-		UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
-		PackageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
-		InstallationPageUrl = "$installationPageUrl";
-		ReleaseDate = "$releaseDate";
-		DeprecatedVersion = "$deprecatedVersion";
-		NotificationDelay = "$versionNotificationDelay";
-	};
-	$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 
 	if ($isLatest)
 	{

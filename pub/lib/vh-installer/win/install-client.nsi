@@ -5,6 +5,7 @@
 ;   <root>\<App>.exe, <command>.exe   the root's launchers, over current\<App>.dll
 ;   <root>\current                    a junction naming the version in use
 ;   <root>\<version>\                 each version's own folder; the one before is kept
+;   <root>\<version>\publish.json     the release's feed file, whose feed the app's updater reads
 ;   <root>\uninstall\uninstall.exe    out of the root, which is on the PATH
 ;
 ; Shortcuts, the tray's sign-in entry, the service and the PATH name the root, never a version, so
@@ -42,6 +43,7 @@ SetCompressor /SOLID lzma
 !insertmacro VhRequire ICON
 !insertmacro VhRequire SOURCE_DIR      ; the publish output: the version's folder
 !insertmacro VhRequire LAUNCHERS_DIR   ; the root's two launchers
+!insertmacro VhRequire PUBLISH_INFO_FILE ; the release's feed file: <title>-win-x64.json
 !insertmacro VhRequire OUTPUT_FILE
 
 ; SIGN_SCRIPT (optional, when signing is configured): signs the uninstaller before it is packed. The
@@ -288,6 +290,7 @@ Section "Install"
 	; the version's own folder, then the root's launchers over it
 	SetOutPath "$INSTDIR\${VERSION}"
 	File /r "${SOURCE_DIR}\*.*"
+	File "/oname=publish.json" "${PUBLISH_INFO_FILE}"
 	SetOutPath "$INSTDIR"
 	File "${LAUNCHERS_DIR}\*.exe"
 

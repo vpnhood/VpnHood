@@ -9,7 +9,9 @@ param(
     # Which install template to fill. The server takes "install"; a desktop client takes
     # "install-client", which writes a headless service, a PATH entry and a desktop entry instead
     # of a server's single daemon. Named rather than switched so a fork can add its own.
-    [Parameter(Mandatory = $false)] [string]$installTemplate = "install"
+    [Parameter(Mandatory = $false)] [string]$installTemplate = "install",
+    # Where the app's update notice sends a person (the feed's InstallationPageUrl); unset, the latest release.
+    [Parameter(Mandatory = $false)] [string]$installationPageUrl
 )
  
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
@@ -134,12 +136,18 @@ $installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName")
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$publish_uninstallerFile" -Encoding ASCII -Force -NoNewline;
 
-# publish info
+# publish info: the updater's, and the app's feed (PublishInfo), which reads the same file
+if ([string]::IsNullOrWhiteSpace($installationPageUrl)) { $installationPageUrl = "$repoBaseUrl/releases/latest"; }
 $json = @{
-    Version = $versionParam; 
-    ExeFile = $launcher_exeFile; 
+    Version = $versionParam;
+    ExeFile = $launcher_exeFile;
     UpdateInfoUrl = "$repoBaseUrl/releases/latest/download/$module_infoFileName";
     InstallScriptUrl = $module_installerUrl;
+    PackageUrl = "$releaseUrl/$module_packageFileName";
+    InstallationPageUrl = "$installationPageUrl";
+    ReleaseDate = "$releaseDate";
+    DeprecatedVersion = "$deprecatedVersion";
+    NotificationDelay = "$versionNotificationDelay";
     # The compatibility contract: changed only when an existing install or image cannot apply or run the
     # release (its layout, launcher or updater; a container's OS). A change stops every auto-update with
     # an error to reinstall or pull the image, so that release ships its image.

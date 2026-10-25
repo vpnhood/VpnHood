@@ -31,8 +31,8 @@ internal static class App
         });
     }
 
-    // The product's options, and this channel's lines on top: the installer from our site, whose
-    // newer version the app announces with its download link.
+    // The product's options, and this channel's lines on top: the setup from our site, whose notice's
+    // Update downloads it and Install runs it; none outside an install.
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
         // the folder every release before the service used; the service's first start copies it in
@@ -46,9 +46,11 @@ internal static class App
         // own shop.
         options.Premium = ConnectAppOptions.CreatePremium(allowImportAccessCode: true, isPurchaseUrlSupported: true);
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
-        options.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "win-x64")
-        };
+        if (WindowsAppUpdaterProvider.TryCreate(context) is { } updater)
+            options.UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = updater.UpdateInfoUrl,
+                UpdaterProvider = updater
+            };
         return options;
     }
 

@@ -447,6 +447,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         if (state.UpdaterStatus?.Prompt == true && !_isUpdatePostponed && !host.IsUpdateNoticeShown)
             host.ShowUpdateNotice(state.UpdaterStatus);
+        // the update done or gone, as when a desktop's service comes back on the new version
+        else if (host.IsUpdateNoticeShown && state.UpdaterStatus?.Prompt != true)
+            host.HideUpdateNotice();
         else if (host.IsUpdateNoticeShown)
             host.RefreshUpdateState(state.UpdaterStatus?.UpdateState);
 

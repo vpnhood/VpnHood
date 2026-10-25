@@ -6,12 +6,23 @@ localPublishInfoFile="$curDir/publish.json";
 
 # -container: run by the container's supervisor, where there is no systemd. The install script then
 # writes no units and starts nothing; the supervisor starts the new version.
+# -packageFile <file>: the package the app downloaded for the notice's Install, installed rather than downloaded
+# again; the checks below still decide.
 container="";
+packageFile="";
+lastArg="";
 for arg in "$@"; do
-	if [ "$arg" = "-container" ]; then
+	if [ "$lastArg" = "-packageFile" ]; then
+		packageFile="$arg";
+	elif [ "$arg" = "-container" ]; then
 		container="y";
 	fi
+	lastArg="$arg";
 done
+packageArgs=();
+if [ "$packageFile" != "" ]; then
+	packageArgs=(-packageFile "$packageFile");
+fi
 
 # -------------------
 # Functions
@@ -93,7 +104,7 @@ if ! wget -qO "$installScriptFile" "$onlineInstallScriptUrl"; then
 fi
 # -q alone: the install keeps its own choices, starting at boot and updating among them
 if [ "$container" = "y" ]; then
-    bash "$installScriptFile" -q -destination "$curDir" -container;
+    bash "$installScriptFile" -q -destination "$curDir" -container "${packageArgs[@]}";
 else
-    bash "$installScriptFile" -q -destination "$curDir";
+    bash "$installScriptFile" -q -destination "$curDir" "${packageArgs[@]}";
 fi

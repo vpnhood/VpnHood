@@ -37,7 +37,7 @@ Assert-DefaultAccessKey $publishDirName "web" -Connect:$connect;
 . "$PSScriptRoot/Publish-InstallerImpl.ps1" `
     -projectDir $projectDir -repoBaseUrl $repoBaseUrl -os $os `
     -publishDirName $publishDirName -launcherName $launcherName `
-    -installTemplate $installTemplate `
+    -installTemplate $installTemplate -installationPageUrl $appConfig.installationPageUrl `
     -cpu "x64";
 
 $installerUrl_x64 = $module_installerUrl;
@@ -46,7 +46,7 @@ $installerUrl_x64 = $module_installerUrl;
 . "$PSScriptRoot/Publish-InstallerImpl.ps1" `
     -projectDir $projectDir -repoBaseUrl $repoBaseUrl -os $os `
     -publishDirName $publishDirName -launcherName $launcherName `
-    -installTemplate $installTemplate `
+    -installTemplate $installTemplate -installationPageUrl $appConfig.installationPageUrl `
     -cpu "arm64";
 
 $installerUrl_arm64 = $module_installerUrl;

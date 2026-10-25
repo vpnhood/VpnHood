@@ -424,6 +424,11 @@ public partial class MainView : UserControl
     public bool IsSnackbarShown => Snackbar.IsVisible;
     public bool IsUpdateNoticeShown => UpdateNotice.IsVisible;
 
+    public void HideUpdateNotice()
+    {
+        UpdateNotice.IsVisible = false;
+    }
+
     // UpdateSnackbar.vue: a newer version, with the way to it - the store, else the direct link -
     // and Later, which postpones the notice
     public void ShowUpdateNotice(AppUpdaterStatus status)

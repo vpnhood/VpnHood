@@ -16,8 +16,8 @@ namespace VpnHood.App.Connect.Linux.Web;
 // this run is - is the same on both Linux heads and lives in Hosting/Desktop.
 internal static class App
 {
-    // The product's options, and this channel's lines on top: the package from our site, which
-    // updates itself, so the app names no update feed.
+    // The product's options, and this channel's lines on top: the package from our site, whose notice's
+    // Update downloads it and Install hands it to the install's own updater; none outside an install.
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
         var appConfigs = ConnectAppConfigs.Load(typeof(App).Assembly);
@@ -27,7 +27,11 @@ internal static class App
         // own shop.
         options.Premium = ConnectAppOptions.CreatePremium(allowImportAccessCode: true, isPurchaseUrlSupported: true);
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
-        options.UpdaterOptions = new AppUpdaterOptions();
+        if (LinuxAppUpdaterProvider.TryCreate(context) is { } updater)
+            options.UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = updater.UpdateInfoUrl,
+                UpdaterProvider = updater
+            };
         return options;
     }
 

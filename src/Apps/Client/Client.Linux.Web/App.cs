@@ -26,13 +26,16 @@ internal static class App
         });
     }
 
-    // The product's options, and this channel's lines on top: the package from our site, which
-    // updates itself, so the app names no update feed.
+    // The product's options, and this channel's lines on top: the package from our site, whose notice's
+    // Update downloads it and Install hands it to the install's own updater; none outside an install.
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
-        var appConfigs = ClientAppConfigs.Load();
-        var options = ClientAppOptions.Create(context, appConfigs);
-        options.UpdaterOptions = new AppUpdaterOptions();
+        var options = ClientAppOptions.Create(context, ClientAppConfigs.Load());
+        if (LinuxAppUpdaterProvider.TryCreate(context) is { } updater)
+            options.UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = updater.UpdateInfoUrl,
+                UpdaterProvider = updater
+            };
         return options;
     }
 }

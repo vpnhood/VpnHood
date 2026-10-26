@@ -296,6 +296,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 AppConnectionState.Disconnecting => Strings.Current.Disconnecting,
                 AppConnectionState.Diagnosing => Strings.Current.StopDiagnosing,
                 AppConnectionState.None => Strings.Current.Connect,
+                AppConnectionState.Updating => Strings.Current.Updating,
                 _ => Strings.Current.Disconnect
             };
         IsConnectEnabled = connectionState == AppConnectionState.None || state.CanDisconnect;

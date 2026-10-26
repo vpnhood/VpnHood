@@ -9,20 +9,23 @@ namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 // single-instance lock on the app id before anything is built - the service's where only
 // administrators reach, a debugger's in the folder it is handed. The service's, in an install, also
 // hands the updater's download back once the VPN is idle again, and runs the updater again at a
-// connect when its last run could not reach the server.
+// connect when its last run could not reach the server - by the app's own updater, the notice's, so
+// that both installs are the one the app refuses connects during.
 internal sealed class WindowsDaemonHost : IAppDaemonHost
 {
     private readonly VpnHoodWindowsApp _windowsApp;
     private readonly IdleUpdateInstaller? _idleUpdateInstaller;
     private readonly MissedUpdateRetrier? _missedUpdateRetrier;
 
-    public WindowsDaemonHost(AppInitParams initParams, string storagePath, string? lockFolderPath,
-        WindowsAppUpdaterProvider? updater)
+    public WindowsDaemonHost(AppInitParams initParams, string storagePath, string? lockFolderPath, bool isService)
     {
         // AnotherInstanceIsRunningException passes through as it is: its message is the answer.
         _windowsApp = VpnHoodWindowsApp.Init(initParams, storagePath, lockFolderPath);
-        _idleUpdateInstaller = updater is null ? null : new IdleUpdateInstaller(VpnHoodApp.Instance, updater);
-        _missedUpdateRetrier = updater is null ? null : new MissedUpdateRetrier(VpnHoodApp.Instance, updater);
+        if (isService && VpnHoodApp.Instance.Services.UpdaterService?.UpdaterProvider is DesktopAppUpdaterProvider updater) {
+            _idleUpdateInstaller =
+                new IdleUpdateInstaller(VpnHoodApp.Instance, updater, IdleUpdateInstaller.DefaultIdleWait);
+            _missedUpdateRetrier = new MissedUpdateRetrier(VpnHoodApp.Instance, updater);
+        }
     }
 
     // The stop: the tunnel comes down, then the app.

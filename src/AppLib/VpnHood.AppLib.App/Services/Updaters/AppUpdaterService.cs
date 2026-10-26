@@ -74,6 +74,12 @@ public class AppUpdaterService : IDisposable
             ? new ProviderUpdaters.AppRelease { Version = publishInfo.Version, PackageUrl = publishInfo.PackageUrl }
             : null;
 
+    // the channel's updater, the one the app was built with: a desktop service's hand-back installs by it too
+    public ProviderUpdaters.IAppUpdaterProvider? UpdaterProvider => _updateOptions.UpdaterProvider;
+
+    // an install the app runs itself, which stops it in a moment (AppConnectionState.Updating)
+    public bool IsInstalling => _updateOptions.UpdaterProvider?.IsInstalling == true;
+
     // The updater whose update the notice offers: one with no screen of its own
     private ProviderUpdaters.IAppUpdaterProvider? NoticeUpdater =>
         _updateOptions.UpdaterProvider is { HasOwnScreen: false } updater ? updater : null;

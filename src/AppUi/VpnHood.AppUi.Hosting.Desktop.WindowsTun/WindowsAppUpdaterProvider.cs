@@ -38,7 +38,7 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
         return TryCreate(new WindowsDesktopPaths(context.AppId), context.AppVersion);
     }
 
-    public static WindowsAppUpdaterProvider? TryCreate(WindowsDesktopPaths paths, Version appVersion)
+    private static WindowsAppUpdaterProvider? TryCreate(WindowsDesktopPaths paths, Version appVersion)
     {
         if (paths.InstallRootPath is not { } installRootPath ||
             !File.Exists(Path.Combine(installRootPath, UpdaterFileName)) ||

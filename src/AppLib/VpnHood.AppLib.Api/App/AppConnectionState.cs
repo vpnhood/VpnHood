@@ -16,5 +16,8 @@ public enum AppConnectionState
     Connecting,
     Connected,
     Unstable,
-    Disconnecting
+    Disconnecting,
+
+    // an update this app is installing, which stops it in a moment: no connect until it has
+    Updating
 }

@@ -35,6 +35,11 @@ public interface IAppUpdaterProvider
     // there is none. Asked with a window in front, apart from the checks' interval.
     Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken);
 
+    // An install the app runs itself and waits on is under way, which stops the app once it puts the new version in:
+    // the app refuses connects meanwhile (AppConnectionState.Updating). A desktop's; a store's install and Android's
+    // package installer are the system's, which stops the app itself.
+    bool IsInstalling { get; }
+
     // Whether the app turns the channel's automatic update on and off: an install's own updater, a desktop's.
     // A store's is the store's own setting.
     bool IsAutomaticUpdateSupported { get; }

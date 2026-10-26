@@ -32,10 +32,12 @@ public static class AppConnectionStateExtensions
                 AppConnectionState.None;
         }
 
+        // not while the app installs its update, which ends the session itself
         public bool CanDisconnect()
         {
             return connectionState != AppConnectionState.None &&
-                   connectionState != AppConnectionState.Disconnecting;
+                   connectionState != AppConnectionState.Disconnecting &&
+                   connectionState != AppConnectionState.Updating;
         }
     }
 }

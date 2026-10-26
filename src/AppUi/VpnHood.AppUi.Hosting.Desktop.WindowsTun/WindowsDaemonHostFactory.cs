@@ -16,8 +16,7 @@ public sealed class WindowsDaemonHostFactory(AppInitParams initParams, WindowsDe
                 $"Try: {paths.CommandName} service start");
 
         var storagePath = WindowsServiceStorage.Prepare(paths);
-        var daemonHost = new WindowsDaemonHost(initParams, storagePath, lockFolderPath: null,
-            updater: WindowsAppUpdaterProvider.TryCreate(paths, initParams.AppVersion));
+        var daemonHost = new WindowsDaemonHost(initParams, storagePath, lockFolderPath: null, isService: true);
 
         // the windows and trays an update's setup closed, open again now that the service is up to answer them
         WindowsUiRelaunch.Run(paths);
@@ -27,6 +26,6 @@ public sealed class WindowsDaemonHostFactory(AppInitParams initParams, WindowsDe
     // Its lock in its own storage: a run as the person cannot reach the service's.
     public IAppDaemonHost CreateDev(string storagePath)
     {
-        return new WindowsDaemonHost(initParams, storagePath, lockFolderPath: storagePath, updater: null);
+        return new WindowsDaemonHost(initParams, storagePath, lockFolderPath: storagePath, isService: false);
     }
 }

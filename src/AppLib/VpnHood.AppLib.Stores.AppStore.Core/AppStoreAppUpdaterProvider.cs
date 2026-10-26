@@ -27,6 +27,9 @@ public class AppStoreAppUpdaterProvider(Version appVersion) : IAppUpdaterProvide
 
     public bool HasOwnScreen => true;
 
+    // the App Store installs it, and stops the app itself
+    public bool IsInstalling => false;
+
     public async Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {

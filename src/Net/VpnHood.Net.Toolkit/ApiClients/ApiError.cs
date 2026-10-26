@@ -8,6 +8,9 @@ namespace VpnHood.Net.Toolkit.ApiClients;
 public class ApiError : ICloneable, IEquatable<ApiError>
 {
     public const string Flag = "IsApiError";
+
+    // either casing: .NET's default (TypeName) or a web host's camelCase (typeName), as the app's own API writes it
+    private static readonly JsonSerializerOptions ParseOptions = new() { PropertyNameCaseInsensitive = true };
     public required string TypeName { get; init; }
     public string? TypeFullName { get; init; }
     public required string Message { get; init; }
@@ -28,7 +31,7 @@ public class ApiError : ICloneable, IEquatable<ApiError>
         apiError = null;
 
         try {
-            var res = JsonSerializer.Deserialize<ApiError>(value);
+            var res = JsonSerializer.Deserialize<ApiError>(value, ParseOptions);
             if (res?.TypeName == null)
                 return false;
 

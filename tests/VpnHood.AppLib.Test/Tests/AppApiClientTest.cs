@@ -1,13 +1,19 @@
 using System.Net;
 using System.Net.Http.Headers;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Api.SplitTunneling;
+using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Utils;
+using ConnectPlanId = VpnHood.AppLib.Api.App.ConnectPlanId;
 // ReSharper disable ShortLivedHttpClient
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -39,23 +45,35 @@ public class AppApiClientTest : TestAppBase
         };
     }
 
-    [TestMethod]
-    public async Task Http_client_reads_and_writes_through_the_web_host()
+    // a release build, whose loopback API asks for the token
+    private AppOptions CreateAppOptions()
     {
-        // a release build, whose loopback API asks for the token
         var appOptions = TestAppHelper.CreateAppOptions(isDebugMode: false);
         appOptions.WebHostFactory = new VpnHoodAppWebHostFactory();
         appOptions.WebRootZipAsset = TestAppHelper.CreateWebRootZip("web-root-test");
+        return appOptions;
+    }
+
+    // The address without the web view's cache-buster: the client builds its own paths on it, and sends the token the
+    // address carries, as the window does.
+    private static async Task<HttpClient> CreateHttpClient(VpnHoodApp app)
+    {
+        var localHost = app.LocalWebHost ?? throw new InvalidOperationException("The app has no local web host.");
+        var localUrl = await localHost.EnsureStarted(CancellationToken.None);
+        var http = new HttpClient { BaseAddress = new Uri(localUrl.GetLeftPart(UriPartial.Authority) + "/") };
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+            LocalApiToken.Read(localUrl) ?? throw new InvalidOperationException("The local address carries no token."));
+        return http;
+    }
+
+    [TestMethod]
+    public async Task Http_client_reads_and_writes_through_the_web_host()
+    {
+        var appOptions = CreateAppOptions();
         var token = CreateToken();
         appOptions.AccessKeys = [token.ToAccessKey()];
         await using var app = TestAppHelper.CreateClientApp(appOptions);
-        var localHost = app.LocalWebHost ?? throw new InvalidOperationException("The app has no local web host.");
-        var localUrl = await localHost.EnsureStarted(CancellationToken.None);
-        // the address without the web view's cache-buster: the client builds its own paths on it, and
-        // sends the token the address carries, as the window does
-        using var http = new HttpClient { BaseAddress = new Uri(localUrl.GetLeftPart(UriPartial.Authority) + "/") };
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
-            LocalApiToken.Read(localUrl) ?? throw new InvalidOperationException("The local address carries no token."));
+        using var http = await CreateHttpClient(app);
         var api = VpnHoodApiHttpFactory.Create(http);
 
         // the configuration, whole: the features, the state, the settings, the profiles, the languages
@@ -102,5 +120,31 @@ public class AppApiClientTest : TestAppBase
 
         // a failure the server reported comes back as the exception it names
         await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.VpnProfiles.Get(Guid.NewGuid(), CancellationToken.None));
+    }
+
+    // A failure of a type only the app knows - a connect refused while the app installs its update - comes back as an
+    // ApiException with the app's message and the type's name, which the web host's camelCase body carries.
+    [TestMethod]
+    public async Task An_app_failure_comes_back_with_its_message_and_name()
+    {
+        var appOptions = CreateAppOptions();
+        var folderPath = Directory.CreateDirectory(Path.Combine(TestHelper.WorkingPath, $"desktop-{Guid.NewGuid():N}"))
+            .FullName;
+        var updater = new TestDesktopUpdaterProvider(folderPath);
+        appOptions.UpdaterOptions = new AppUpdaterOptions { UpdaterProvider = updater };
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        using var http = await CreateHttpClient(app);
+        var api = VpnHoodApiHttpFactory.Create(http);
+
+        Directory.CreateDirectory(updater.UpdatesPath);
+        await File.WriteAllTextAsync(Path.Combine(updater.UpdatesPath, "2.0.0-setup.exe"), "setup", TestCt);
+        var install = updater.InstallDownloadedUpdate();
+        var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            api.App.Connect(null, null, ConnectPlanId.Normal, CancellationToken.None));
+        Assert.AreEqual(new AppUpdatingException().Message, exception.Message);
+        Assert.AreEqual(nameof(AppUpdatingException), exception.ExceptionTypeName);
+
+        updater.InstallerEnd.SetResult("The installed version is up to date.");
+        await install;
     }
 }

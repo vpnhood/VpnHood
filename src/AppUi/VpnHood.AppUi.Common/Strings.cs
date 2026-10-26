@@ -157,6 +157,7 @@ public sealed partial class Strings : INotifyPropertyChanged
             AppConnectionState.FindingReachableServer => FindingNetwork,
             AppConnectionState.FindingBestServer => FindingBestServer,
             AppConnectionState.Unstable => Unstable,
+            AppConnectionState.Updating => Updating,
             _ => connectionState.ToString()
         };
     }

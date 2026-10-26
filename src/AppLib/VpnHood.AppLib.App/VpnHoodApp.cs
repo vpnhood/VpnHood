@@ -652,6 +652,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get {
             var connectionInfo = ConnectionInfo;
             var clientState = connectionInfo.ClientState;
+            
+            // an update this app installs stops it in a moment, whatever the session does meanwhile
+            if (Services.UpdaterService?.IsInstalling == true)
+                return AppConnectionState.Updating;
 
             // in diagnose mode, we need to either cancel it or wait for it
             if (Diagnoser.IsWorking)
@@ -858,6 +862,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 connectOptions.VpnProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
                 connectOptions.Diagnose, connectOptions.IsAlwaysOn);
 
+            // The update this app installs stops it in a moment, so a connect would only be dropped. Refused with
+            // no last error, as nothing failed; always on waits its pause, and the new version's start connects it.
+            if (ConnectionState == AppConnectionState.Updating)
+                throw new AppUpdatingException();
+
             // protect double call
             if (!IsIdle) {
                 VhLogger.Instance.LogInformation("Disconnecting due to user request to connect...");
@@ -877,6 +886,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _appPersistState.IsReconnectRequired = false; // this connect applies every pending change
             await ConnectInternal1(uiContext, connectOptions, linkedCts.Token).Vhc();
             _alwaysOnService.EndConnect(alwaysOnConnectNumber, exception: null);
+        }
+        catch (AppUpdatingException ex) {
+            VhLogger.Instance.LogInformation("The connect is refused: an update is being installed.");
+            failure = ex;
+            throw;
         }
         catch (Exception ex) {
             _errorReporter.ReportConnectError(ex, stopwatch.Elapsed);

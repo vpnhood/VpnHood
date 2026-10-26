@@ -46,6 +46,15 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
 
     public bool HasOwnScreen => false;
 
+    // the notice's Install or a download handed back, from the installer's start until it stops this service or ends
+    // without installing
+    public bool IsInstalling {
+        get {
+            lock (_stateLock)
+                return _isInstalling;
+        }
+    }
+
     // Runs the platform's installer on the package: null once its install is stopping this service, which the
     // install goes on without, else why it installed nothing.
     protected abstract Task<string?> RunInstaller(string packagePath);
@@ -85,7 +94,8 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     /// <summary>
     /// The automatic update's part in the service, with the VPN idle again: a release downloaded already - by the
     /// updater while the VPN was in use, or by the notice's Update - and newer than this app, installed now, while
-    /// automatic updates are on. An install stops this service; else this logs why there was none.
+    /// automatic updates are on. An install stops this service; else this logs why there was none. Not beside the
+    /// notice's own Install or Update.
     /// </summary>
     public async Task InstallDownloadedUpdate()
     {
@@ -93,10 +103,28 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
             if (FindDownload() is not { } packagePath || !await IsAutomaticUpdateOn(CancellationToken.None).Vhc())
                 return;
 
+            lock (_stateLock) {
+                if (_isInstalling || _downloadTask is { IsCompleted: false })
+                    return;
+
+                _isInstalling = true;
+            }
+
             VhLogger.Instance.LogInformation("Installing the downloaded update. Package: {Package}",
                 Path.GetFileName(packagePath));
-            if (await RunInstaller(packagePath).Vhc() is { } message)
-                VhLogger.Instance.LogWarning("The downloaded update was not installed. Message: {Message}", message);
+            var isStopping = false;
+            try {
+                if (await RunInstaller(packagePath).Vhc() is { } message)
+                    VhLogger.Instance.LogWarning("The downloaded update was not installed. Message: {Message}", message);
+                else
+                    isStopping = true;
+            }
+            finally {
+                // an install stopping this service is installing to the end
+                if (!isStopping)
+                    lock (_stateLock)
+                        _isInstalling = false;
+            }
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not install the downloaded update.");

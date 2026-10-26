@@ -28,6 +28,8 @@ internal class TestAppUpdaterProvider : IAppUpdaterProvider
 
     public bool HasOwnScreen => true;
 
+    public bool IsInstalling => false;
+
     public async Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {

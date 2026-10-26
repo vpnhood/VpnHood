@@ -82,6 +82,9 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
 
     public bool HasOwnScreen => false;
 
+    // the package installer's, the system's, which stops the app itself
+    public bool IsInstalling => false;
+
     // DownloadManager's list is all there is to ask: no network
     public Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)

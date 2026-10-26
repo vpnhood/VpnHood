@@ -36,7 +36,7 @@ public sealed class LinuxAppUpdaterProvider : DesktopAppUpdaterProvider
         return TryCreate(context.StoragePath, context.AppVersion);
     }
 
-    public static LinuxAppUpdaterProvider? TryCreate(string storagePath, Version appVersion)
+    private static LinuxAppUpdaterProvider? TryCreate(string storagePath, Version appVersion)
     {
         if (Path.GetDirectoryName(Path.GetFullPath(storagePath)) is not { } installPath ||
             ReadUpdateInfoUrl(Path.Combine(installPath, "publish.json")) is not { } updateInfoUrl)

@@ -18,6 +18,12 @@ internal sealed class TestDesktopUpdaterProvider(string folderPath)
     // a platform whose updater cannot be started
     public Exception? RunError { get; set; }
 
+    // The platform's installer, under way until the test ends it: with null, an install that stops the service; with
+    // a message, one that installed nothing.
+    public TaskCompletionSource<string?> InstallerEnd { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public int InstallerRuns => _installerRuns;
+    private int _installerRuns;
+
     public override Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
     {
         return Task.FromResult(IsOn);
@@ -37,6 +43,7 @@ internal sealed class TestDesktopUpdaterProvider(string folderPath)
 
     protected override Task<string?> RunInstaller(string packagePath)
     {
-        throw new NotSupportedException("The double installs nothing.");
+        Interlocked.Increment(ref _installerRuns);
+        return InstallerEnd.Task;
     }
 }

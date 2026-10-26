@@ -52,6 +52,9 @@ public sealed partial class Strings
     /// <summary>Disconnecting</summary>
     public string Disconnecting => Get("DISCONNECTING");
 
+    /// <summary>Updating</summary>
+    public string Updating => Get("UPDATING");
+
     /// <summary>Stop Diagnosing</summary>
     public string StopDiagnosing => Get("STOP_DIAGNOSING");
 

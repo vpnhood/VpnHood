@@ -20,6 +20,9 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 
     public bool HasOwnScreen => true;
 
+    // Play installs it, and stops the app itself
+    public bool IsInstalling => false;
+
     // Play's update flow shows over the window: without one the check waits, outside the service's
     // catch, which would answer "no update" and restart the prompt's delay
     public async Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext,

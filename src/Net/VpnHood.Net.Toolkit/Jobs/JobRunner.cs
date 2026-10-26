@@ -88,6 +88,7 @@ public class JobRunner
         try {
             await job.RunNow().Vhc();
         }
+        // a job whose owner is disposed throws it on purpose, to end itself; not an error
         catch (ObjectDisposedException) {
             Remove(job);
         }

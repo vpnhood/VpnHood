@@ -120,7 +120,7 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
             return false; // nobody serves it: this launch is the window
         }
 
-        // a key is one line: vh:// and its base64
+        // a key is one line: vh: and its base64
         using var writer = new StreamWriter(client);
         if (accessKey != null) {
             writer.WriteLine(ImportAccessKeyCommand);

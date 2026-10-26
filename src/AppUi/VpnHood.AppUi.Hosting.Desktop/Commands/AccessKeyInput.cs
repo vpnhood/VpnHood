@@ -11,7 +11,7 @@ internal static class AccessKeyInput
     public static Option<string> CreateOption()
     {
         return new Option<string>("--access-key") {
-            Description = "An access key (vh://...), or the path of a file holding one, to add and choose.",
+            Description = "An access key (vh:...), or the path of a file holding one, to add and choose.",
             Hidden = true
         };
     }

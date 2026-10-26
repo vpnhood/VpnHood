@@ -26,6 +26,7 @@ internal static class App
             // the extension Android's file managers know (Client.Android.Google's MainActivity), so one file an
             // admin mails opens on every platform
             AccessKeyFileExtensions = [".cdy"],
+            AccessKeySchemes = ["vh"],
             Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
         });
     }

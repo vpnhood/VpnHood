@@ -97,7 +97,7 @@ immediately.
 ### First run
 
 ```bash
-vhclient profile add 'vh://...'     # or a file: vhclient profile add ~/mykey.txt
+vhclient profile add 'vh:...'     # or a file: vhclient profile add ~/mykey.txt
 vhclient connect
 vhclient status
 ```

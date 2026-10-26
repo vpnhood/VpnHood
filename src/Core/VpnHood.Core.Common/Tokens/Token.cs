@@ -54,7 +54,10 @@ public class Token
         var json = JsonSerializer.Serialize(this, new JsonSerializerOptions {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
         });
-        return "vh://" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+        // "vh:" with no "//", the URI form that carries data rather than a host (RFC 3986), as mailto: does: as a
+        // host the key is too long for .NET's Uri, which iOS's Avalonia parses an opened link with. Apps since 2023
+        // read it, and still read the vh:// keys given out before.
+        return "vh:" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
     }
 
     public static Token FromAccessKey(string base64)

@@ -111,7 +111,7 @@ function Assert-DefaultAccessKey {
     $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot);
     $file = Join-Path (Join-Path "$repoRoot/../.user" $appFolder) "access_key_$keyKind.txt";
     if (-not (Test-Path $file)) {
-        Throw "publish.json is present (strict mode) but Connect's default access key is missing: '$file' (the '$keyKind' key, embedding for the '$distribution' distribution). It is embedded as access_key_default.txt; a build without it ships with NO default server and the app opens on an empty server list. In CI this file is written from the ACCESS_KEY_$($keyKind.ToUpperInvariant()) secret — set it on the publishing repo. Locally, drop the vh:// key in that path.";
+        Throw "publish.json is present (strict mode) but Connect's default access key is missing: '$file' (the '$keyKind' key, embedding for the '$distribution' distribution). It is embedded as access_key_default.txt; a build without it ships with NO default server and the app opens on an empty server list. In CI this file is written from the ACCESS_KEY_$($keyKind.ToUpperInvariant()) secret — set it on the publishing repo. Locally, drop the vh: key in that path.";
     }
     if ([string]::IsNullOrWhiteSpace((Get-Content $file -Raw))) {
         Throw "Connect's default access key file is present but EMPTY: '$file'. An empty file embeds an empty resource, which the app treats as no default server at all. In CI this means the ACCESS_KEY_$($keyKind.ToUpperInvariant()) secret is set to an empty value.";

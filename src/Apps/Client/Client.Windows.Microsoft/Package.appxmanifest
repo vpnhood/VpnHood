@@ -87,6 +87,12 @@
             </uap:SupportedFileTypes>
           </uap3:FileTypeAssociation>
         </uap:Extension>
+        <!-- A link that is an access key itself (vh:...), the same way. -->
+        <uap:Extension Category="windows.protocol">
+          <uap3:Protocol Name="vh" Parameters="--access-key &quot;%1&quot;">
+            <uap:DisplayName>Access key</uap:DisplayName>
+          </uap3:Protocol>
+        </uap:Extension>
       </Extensions>
     </Application>
   </Applications>

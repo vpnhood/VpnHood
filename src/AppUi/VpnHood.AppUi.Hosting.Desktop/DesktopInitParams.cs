@@ -30,6 +30,9 @@ public class DesktopInitParams : AppInitParams
     // them in an installer's layout. None for a head that takes no keys.
     public IReadOnlyList<string> AccessKeyFileExtensions { get; init; } = [];
 
+    // The schemes of a link that is an access key itself (vh:...), which opens in this app the same way.
+    public IReadOnlyList<string> AccessKeySchemes { get; init; } = [];
+
     // Where this package placed the UI's content, beside the binary. The default is what the
     // Classic assets targets place for every head that imports them.
     public string UiZipAssetPath { get; init; } = "assets/ui.zip";

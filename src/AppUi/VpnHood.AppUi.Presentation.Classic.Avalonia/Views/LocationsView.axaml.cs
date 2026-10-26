@@ -133,7 +133,7 @@ public partial class LocationsView : UserControl, IPage
         _ = _viewModel.ConnectToProfile(profile.VpnProfileId);
     }
 
-    // A vh:// key is a long base64 blob no remote can type, so a TV sends the person to their phone
+    // A vh: key is a long base64 blob no remote can type, so a TV sends the person to their phone
     // - the page that hands the address out - and says so there; anything with a keyboard gets the
     // field. The web UI's onAddServer, with its dialog as our page.
     private void OnAddServerClick(object? sender, RoutedEventArgs e)

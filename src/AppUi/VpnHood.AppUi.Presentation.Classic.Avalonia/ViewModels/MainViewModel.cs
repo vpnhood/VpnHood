@@ -70,7 +70,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string ServersPageTitle => IsSingleProfileMode ? Strings.Current.Location : Strings.Current.Servers;
 
     // A server is added by its access key, which only a client head takes (IsAddAccessKeySupported).
-    // A remote cannot type a vh:// key, so on a TV the button says so and leads to the phone -
+    // A remote cannot type a vh: key, so on a TV the button says so and leads to the phone -
     // exactly what the web UI's servers page does with it.
     public bool CanAddServer => VhApp.Features.IsAddAccessKeySupported;
     public string AddServerText => IsTv ? Strings.Current.AddOrRemoveServers : Strings.Current.AddServer;

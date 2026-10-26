@@ -53,7 +53,7 @@ internal static class ProfileCommand
     private static Command CreateAdd(IDesktopPlatform platform)
     {
         var keyArgument = new Argument<string>("access-key") {
-            Description = "An access key (vh://...), or the path of a file holding one."
+            Description = "An access key (vh:...), or the path of a file holding one."
         };
         var command = new Command("add", "Add a profile from an access key.") { keyArgument };
 

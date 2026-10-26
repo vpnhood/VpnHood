@@ -63,6 +63,18 @@
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<!-- A link that is an access key itself (vh:...), the same way. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.vpnhood.access-key</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>vh</string>
+			</array>
+		</dict>
+	</array>
 	<!-- The SPA is served over plain HTTP from an in-process loopback web server; allow it. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>

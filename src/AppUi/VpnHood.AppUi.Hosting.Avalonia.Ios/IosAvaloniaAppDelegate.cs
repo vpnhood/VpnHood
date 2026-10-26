@@ -23,9 +23,9 @@ public abstract class IosAvaloniaAppDelegate<TUi> : AvaloniaAppDelegate<TUi>
 {
     private NSObject? _foregroundObserver; // kept for the app's life, as the observation is
 
-    // A file the app is opened with - an access key's, as the head's Info.plist declares - goes to the UI, which
-    // imports it. Avalonia raises it as the scene connects, after the UI has made its view, and later as one comes
-    // to the running app.
+    // A file or a link the app is opened with - an access key's, as the head's Info.plist declares - goes to the UI,
+    // which imports it. Avalonia raises it as the scene connects, after the UI has made its view, and later as one
+    // comes to the running app. A web page's link (a universal link) is not a key.
     protected IosAvaloniaAppDelegate()
     {
         ((IAvaloniaAppDelegate)this).Activated += OnActivated;
@@ -36,9 +36,19 @@ public abstract class IosAvaloniaAppDelegate<TUi> : AvaloniaAppDelegate<TUi>
 
     private static void OnActivated(object? sender, ActivatedEventArgs e)
     {
-        if (e is FileActivatedEventArgs { Files: [IStorageFile file, ..] } &&
-            Application.Current is VpnHoodAvaloniaAppBase ui)
-            _ = ui.ImportAccessKeyFile(file);
+        if (Application.Current is not VpnHoodAvaloniaAppBase ui)
+            return;
+
+        switch (e) {
+            case FileActivatedEventArgs { Files: [IStorageFile file, ..] }:
+                _ = ui.ImportAccessKeyFile(file);
+                break;
+
+            // the link as it came: Uri.ToString unescapes
+            case ProtocolActivatedEventArgs { Uri: { Scheme: not ("http" or "https") } uri }:
+                _ = ui.ImportAccessKey(uri.OriginalString);
+                break;
+        }
     }
 
     protected override AppBuilder CreateAppBuilder()

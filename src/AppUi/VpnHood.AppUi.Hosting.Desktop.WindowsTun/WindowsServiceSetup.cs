@@ -9,15 +9,20 @@ namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 // "service install" and "service uninstall": the service registered at this executable - automatic,
 // LocalSystem, restarted on failure, startable by anyone signed in - and removed again; in an
 // installer's layout, at the install root's launcher, with the root on the machine PATH so the command
-// is typed by its name (WindowsDesktopPaths.InstallRootPath), and an access key's file opening in the
-// window, which imports the key (DesktopInitParams.AccessKeyFileExtensions). The installer runs them; a window that finds no service runs install itself (WindowsInstanceController.Start).
+// is typed by its name (WindowsDesktopPaths.InstallRootPath), and an access key's file and link opening in the
+// window, which imports the key (DesktopInitParams.AccessKeyFileExtensions, AccessKeySchemes). The installer runs
+// them; a window that finds no service runs install itself (WindowsInstanceController.Start).
 // Without elevation each runs itself again as an administrator, behind one UAC prompt.
 //
 // Only a copy that nobody else can change is registered, since the service runs it as SYSTEM
 // (WindowsInstallFolder). The folder is checked before the prompt, since reading access lists needs
 // no elevation, so the reason reaches whoever asked: the elevated copy's output reaches nobody. The
 // elevated copy checks again, as the boundary, and answers with an exit code of its own.
-public class WindowsServiceSetup(WindowsDesktopPaths paths, string appName, IReadOnlyList<string> accessKeyFileExtensions)
+public class WindowsServiceSetup(
+    WindowsDesktopPaths paths,
+    string appName,
+    IReadOnlyList<string> accessKeyFileExtensions,
+    IReadOnlyList<string> accessKeySchemes)
     : IAppInstanceSetup
 {
     private const int UnsafeFolderExitCode = 4;
@@ -27,6 +32,10 @@ public class WindowsServiceSetup(WindowsDesktopPaths paths, string appName, IRea
 
     // the file type the access key's extensions name, one per instance
     private string AccessKeyProgId => paths.InstanceName + ".AccessKey";
+
+    // what an access key's file or link runs: the root's launcher, which an update never moves
+    private string? AccessKeyOpenCommand =>
+        paths.InstalledLauncherPath is { } launcherPath ? $"\"{launcherPath}\" ui --access-key \"%1\"" : null;
 
     public async Task<int> Install(CancellationToken cancellationToken)
     {
@@ -52,11 +61,17 @@ public class WindowsServiceSetup(WindowsDesktopPaths paths, string appName, IRea
         if (paths.InstallRootPath is { } installRoot && WindowsMachinePath.Add(installRoot))
             Console.WriteLine($"{installRoot} is on the PATH: a terminal opened from now on runs {paths.CommandName} by its name.");
 
-        // at the root's launcher, which an update never moves
-        if (paths.InstalledLauncherPath is { } launcherPath && accessKeyFileExtensions.Count > 0) {
-            WindowsFileAssociation.Add(AccessKeyProgId, $"{appName} access key", launcherPath,
-                $"\"{launcherPath}\" ui --access-key \"%1\"", accessKeyFileExtensions);
-            Console.WriteLine($"{string.Join(", ", accessKeyFileExtensions)} files open in {appName}.");
+        if (paths.InstalledLauncherPath is { } launcherPath && AccessKeyOpenCommand is { } openCommand) {
+            if (accessKeyFileExtensions.Count > 0) {
+                WindowsFileAssociation.Add(AccessKeyProgId, $"{appName} access key", launcherPath, openCommand,
+                    accessKeyFileExtensions);
+                Console.WriteLine($"{string.Join(", ", accessKeyFileExtensions)} files open in {appName}.");
+            }
+
+            foreach (var scheme in accessKeySchemes)
+                Console.WriteLine(WindowsUrlScheme.Add(scheme, $"{appName} access key", launcherPath, openCommand)
+                    ? $"{scheme}: links open in {appName}."
+                    : $"{scheme}: links stay with the app that already opens them.");
         }
 
         return 0;
@@ -101,6 +116,10 @@ public class WindowsServiceSetup(WindowsDesktopPaths paths, string appName, IRea
 
         if (WindowsFileAssociation.Remove(AccessKeyProgId, accessKeyFileExtensions))
             Console.WriteLine($"{string.Join(", ", accessKeyFileExtensions)} files no longer open in {appName}.");
+
+        if (AccessKeyOpenCommand is { } openCommand)
+            foreach (var scheme in accessKeySchemes.Where(scheme => WindowsUrlScheme.Remove(scheme, openCommand)))
+                Console.WriteLine($"{scheme}: links no longer open in {appName}.");
 
         if (!IsRegistered) {
             Console.WriteLine($"{paths.InstanceName} is not registered.");

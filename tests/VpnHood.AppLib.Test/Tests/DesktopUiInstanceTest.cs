@@ -37,7 +37,7 @@ public class DesktopUiInstanceTest
     [TestMethod]
     public async Task A_second_launch_hands_its_access_key_to_the_open_window()
     {
-        const string accessKey = "vh://test-access-key";
+        const string accessKey = "vh:test-access-key";
         var paths = new TestDesktopPaths("VpnHoodTest-" + Guid.CreateVersion7().ToString("N"));
         var ui = new TestDesktopUi();
 

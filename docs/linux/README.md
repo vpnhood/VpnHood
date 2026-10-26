@@ -117,6 +117,7 @@ vhclient status
 | `vhclient profile add <access-key>` *(CLIENT only)* | Adds a profile from an access key, or from the path of a file holding one. |
 | `vhclient profile remove <profile>` *(CLIENT only)* | Removes one. |
 | `vhclient profile set-default <profile>` *(CLIENT only)* | Chooses the profile `connect` uses when given none. |
+| `vhclient update` | Installs the newer version now, downloading it first, even with updates off; the VPN disconnects while it installs. Exit 0 once the install has started, or when there is none; `status` says when the service is back. |
 | `vhclient service start\|stop\|restart` | Drives the systemd unit. Asks for your password. |
 | `vhclient service status` | What systemd says. No password needed. |
 | `vhclient service log [-f] [-n N]` | The service's log, which the service sends: the last N lines of its two parts, the app's and the VPN service's; `-f` follows both. The journal's instead when the service does not answer: the unit's lines and the window's. No password needed. |

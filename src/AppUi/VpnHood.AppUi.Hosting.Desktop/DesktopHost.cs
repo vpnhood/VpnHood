@@ -70,6 +70,7 @@ public static class DesktopHost
         if (initParams.IsAddAccessKeySupported)
             rootCommand.Subcommands.Add(ProfileCommand.Create(platform));
 
+        rootCommand.Subcommands.Add(UpdateCommand.Create(platform));
         rootCommand.Subcommands.Add(ServiceCommand.Create(platform));
         rootCommand.Subcommands.Add(UiCommand.Create(platform, initParams, mainThread));
 

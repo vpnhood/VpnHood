@@ -176,7 +176,11 @@ internal class TcpListenerHost(
                 new SslServerAuthenticationOptions {
                     ClientCertificateRequired = false,
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                    ServerCertificateSelectionCallback = ServerCertificateSelectionCallback
+                    ServerCertificateSelectionCallback = ServerCertificateSelectionCallback,
+                    // Kestrel's list with HTTP/2 off, so a hello gets what such a web server gives it: http/1.1 when
+                    // offered, no ALPN when it offers none, as older clients do, and a failed handshake when it offers
+                    // only h2. A server that never answers ALPN stands out to a prober.
+                    ApplicationProtocols = [SslApplicationProtocol.Http11]
                 },
                 ct).Vhc();
 

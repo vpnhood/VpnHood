@@ -72,7 +72,10 @@ internal class TcpStreamConnectionFactory(
 
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
                 TargetHost = hostName,
-                EnabledSslProtocols = SslProtocols.None // auto
+                EnabledSslProtocols = SslProtocols.None, // auto
+                // http/1.1 alone, as an HTTP library offers it: a hello without ALPN stands out, and a reverse proxy
+                // would take an h2 offer, which the tunnel does not speak. .NET drops it on Android below 10.
+                ApplicationProtocols = [SslApplicationProtocol.Http11]
             }, cancellationToken).Vhc();
 
             var tcpConnection = new TcpStreamConnection(tcpClient, sslStream,

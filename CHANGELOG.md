@@ -38,7 +38,7 @@
 * Update: On Windows the VPN runs as a service: it starts with Windows, the connection no longer depends on the window, and the window and its tray no longer ask for administrator rights #windows
 * Update: On Windows and Linux only an administrator can use the app; on a standard account its window says so #windows #linux
 * Update: On Windows, the first time you open this version, your settings, profiles, split lists and sign-in move into the service, and your device keeps its identity #windows
-* Update: On Windows a new version is announced in the app with its download link; the separate updater no longer runs #windows
+* Feature: On Windows and Linux, the app from our website updates itself: it downloads each new version in the background and installs it while the VPN is disconnected, and the window opens again on it. Settings > Automatic Updates turns this off. With Always On, which keeps the VPN connected, the app tells you after a few days, and its Install updates it at once, the VPN disconnecting while it installs; on a computer with no desktop, the `update` command does the same #windows #linux
 * Update: VpnHood! CLIENT on Windows, on Linux and from our website shares anonymous usage data as its Google Play build does, and shows the switch that turns it off in Settings > Privacy #windows #linux #android
 * Fix: Rare crash after a cancelled Google sign-in or when the VPN service answered late #android #connect #store
 * Fix: The system could kill the app ten seconds after a refused VPN service start instead of the service stopping cleanly #android #store

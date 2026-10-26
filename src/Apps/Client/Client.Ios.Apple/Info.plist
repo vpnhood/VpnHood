@@ -63,7 +63,8 @@
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
-	<!-- A link that is an access key itself (vh:...), the same way. -->
+	<!-- A link that is an access key itself (vh:...), the same way; and vhkey:, a form keys may switch to, so an
+	     app from before the switch opens its links. -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -72,6 +73,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>vh</string>
+				<string>vhkey</string>
 			</array>
 		</dict>
 	</array>

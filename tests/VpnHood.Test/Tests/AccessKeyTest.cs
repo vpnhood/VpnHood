@@ -28,4 +28,16 @@ public class AccessKeyTest : TestBase
         Assert.AreEqual(token.ToAccessKey(), Token.FromAccessKey(oldKey).ToAccessKey());
         Assert.IsFalse(Uri.TryCreate(oldKey, UriKind.Absolute, out _), "as a host, the key is too long for Uri");
     }
+
+    // the form keys may switch to, whose links the apps already open
+    [TestMethod]
+    public void A_vhkey_key_reads_the_same_and_is_a_link()
+    {
+        var token = Token.FromAccessKey(ClientOptions.SampleAccessKey);
+        var vhkeyKey = "vhkey:" + token.ToAccessKey()["vh:".Length..];
+
+        Assert.AreEqual(token.ToAccessKey(), Token.FromAccessKey(vhkeyKey).ToAccessKey());
+        Assert.IsTrue(Uri.TryCreate(vhkeyKey, UriKind.Absolute, out var uri), "a key is a link");
+        Assert.AreEqual("vhkey", uri.Scheme);
+    }
 }

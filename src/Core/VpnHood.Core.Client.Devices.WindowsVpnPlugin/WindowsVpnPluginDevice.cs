@@ -50,7 +50,9 @@ public sealed class WindowsVpnPluginDevice : IDevice
     public bool IsTcpProxySupported => true;
     public bool IsQuicSupported => MsQuicClient.IsSupported;
 
-    // Windows keeps it, by the profile's own AlwaysOn: the app does not
+    // Not the app's: nothing of the package runs at boot, and the app ends with its window. Nor Windows': it dials no
+    // plug-in profile again, its AlwaysOn set or not. A VPN a sleep ended is dialed again at the wake all the same
+    // (WindowsVpnPluginKeepAwake).
     public bool IsAlwaysOnSupported => false;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 

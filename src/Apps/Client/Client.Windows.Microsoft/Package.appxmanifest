@@ -52,7 +52,8 @@
           <uap:AppService Name="VpnService" ServerName="Stamped" />
         </uap:Extension>
         <!-- The keep-awake process's (WindowsVpnPluginKeepAwake): the VPN host's own executable, which the host starts
-             with full trust at a connect, holds it while the VPN is connected, so the host runs without the app too. -->
+             with full trust at a connect, holds it while the VPN is connected, so the host runs without the app too;
+             and it dials the VPN again at the wake when a sleep ended it. -->
         <uap:Extension Category="windows.appService" EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnAppServiceTask">
           <uap:AppService Name="VpnKeepAwake" ServerName="Stamped" />
         </uap:Extension>

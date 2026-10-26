@@ -14,8 +14,9 @@ public static class WindowsVpnPluginHost
 
     public static void Run([ReadOnlyArray] string[] args)
     {
-        // the host's own full-trust copy, which keeps it awake while its VPN is connected: no log of its own, as its
-        // connection is in the host's, and a failure in Windows' Application log
+        // the host's own full-trust copy, which keeps it awake while its VPN is connected, and dials it again after a
+        // sleep: a log of its own only for that, as its connection is in the host's, and a failure in Windows'
+        // Application log
         if (args.Contains(WindowsVpnPluginKeepAwake.Argument)) {
             WindowsVpnPluginKeepAwake.Run().GetAwaiter().GetResult();
             return;

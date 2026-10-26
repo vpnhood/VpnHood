@@ -349,9 +349,11 @@ fi
 
 # MsQuic, for the QUIC channel, once the package is in: a run that fails before changes nothing else.
 # Optional everywhere: without it the client uses TCP. Where the distribution has no package for it,
-# it goes in the version folder.
+# it goes in the version folder. One try of 30 s at its download: an update installed from its package
+# alone, after a disconnect, may find the server out of reach, and a connect made meanwhile is dropped
+# at the service's stop below.
 msquic_url="$releaseUrl/$assemblyName-linux-msquic.sh"
-if ! msquic_script=$(wget -qO- "$msquic_url"); then
+if ! msquic_script=$(wget -q --timeout=30 --tries=1 -O- "$msquic_url"); then
 	echo "WARNING: Could not download MsQuic installer from: $msquic_url"
 	echo "WARNING: wget failed. Skipping MsQuic installation."
 elif ! bash <(printf '%s' "$msquic_script") "$binDir"; then

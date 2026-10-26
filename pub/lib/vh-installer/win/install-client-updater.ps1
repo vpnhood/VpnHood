@@ -5,7 +5,9 @@
 # finds it too, and runs its setup silently only while the VPN is idle - or when the service does not answer, as a
 # broken one would not; else the download waits there for the service. The setup stops the service and closes what
 # runs from the install, then starts the new version, which opens again the windows and trays it closed. Its output
-# goes to update.log beside it, whose last line says why when nothing was installed.
+# goes to update.log beside it, whose last line says why when nothing was installed. A setup given describes itself,
+# by its own version, so nothing is read from the server - which a filtered network may let through only in the
+# tunnel, down again after a disconnect.
 param([string]$packageFile = "")
 $ErrorActionPreference = "Stop"
 # Invoke-WebRequest's progress bar slows a download many times over
@@ -43,19 +45,33 @@ function Update-App {
 	$localInfo = Get-Content $publishInfoPath -Raw | ConvertFrom-Json
 	# GitHub takes TLS 1.2 or later, which Windows PowerShell does not offer by default everywhere
 	[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-	try {
-		$onlineInfo = Invoke-RestMethod -Uri $localInfo.UpdateInfoUrl -TimeoutSec 60 -UseBasicParsing
+	$version = $null
+	if ($packageFile) {
+		# the setup's own ProductVersion (install-client.nsi); one without it goes, as a cut download would
+		if (-not [Version]::TryParse((Get-Item $packageFile).VersionInfo.ProductVersion, [ref]$version)) {
+			Write-Log "Could not read the package! File: $packageFile"
+			if ($packageFile.StartsWith("$updatesPath\", [StringComparison]::OrdinalIgnoreCase)) {
+				Remove-Item $packageFile -Force -ErrorAction SilentlyContinue
+			}
+			return 1
+		}
 	}
-	catch {
-		Write-Log "Could not retrieve the latest package information! Url: $($localInfo.UpdateInfoUrl)"
-		Set-Missed $true
-		return 1
+	else {
+		try {
+			$onlineInfo = Invoke-RestMethod -Uri $localInfo.UpdateInfoUrl -TimeoutSec 60 -UseBasicParsing
+		}
+		catch {
+			Write-Log "Could not retrieve the latest package information! Url: $($localInfo.UpdateInfoUrl)"
+			Set-Missed $true
+			return 1
+		}
+		Set-Missed $false
+		$version = [Version]$onlineInfo.Version
 	}
-	Set-Missed $false
 
 	Write-Log "Installed version: $($localInfo.Version)"
-	Write-Log "Latest version: $($onlineInfo.Version)"
-	if ([Version]$localInfo.Version -ge [Version]$onlineInfo.Version) {
+	Write-Log "$(if ($packageFile) { 'Package' } else { 'Latest' }) version: $version"
+	if ([Version]$localInfo.Version -ge $version) {
 		Write-Log "The installed version is up to date."
 		if (-not $packageFile) { Remove-Downloads "" }
 		return 0
@@ -110,7 +126,7 @@ function Update-App {
 	# Here again only when the setup ended before it stopped the service, or this run was not the service's: a
 	# setup that installs stops the service that ran this, and the new version starts. A setup that fails its own
 	# check, spliced or cut short, goes, and the next run downloads it again whole.
-	Write-Log "Installing $($onlineInfo.Version)..."
+	Write-Log "Installing $version..."
 	$setup = Start-Process -FilePath $setupPath -ArgumentList "/S" -Wait -PassThru
 	if ($setup.ExitCode -ne 0) {
 		if ($setupPath.StartsWith("$updatesPath\", [StringComparison]::OrdinalIgnoreCase)) {
@@ -120,7 +136,7 @@ function Update-App {
 		return 1
 	}
 
-	Write-Log "Installed $($onlineInfo.Version)."
+	Write-Log "Installed $version."
 	return 0
 }
 

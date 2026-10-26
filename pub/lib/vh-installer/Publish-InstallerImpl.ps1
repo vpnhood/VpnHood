@@ -114,6 +114,9 @@ $installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName")
 $installScript = $installScript.Replace('$(companyNameParam)', "$companyName");
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
+# carried in the package too: the updater handed a package installs it by its own script, reading nothing from the
+# server (updater.sh)
+if ($os -ieq "linux") { Copy-Item -Path "$module_InstallerFile" -Destination "$publish_infoDir/install.sh" -Force; }
 
 # launcher script
 Write-Output "Creating launcher script...";

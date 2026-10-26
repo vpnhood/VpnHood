@@ -8,7 +8,9 @@ updatesDir="$curDir/storage/updates";
 # -container: run by the container's supervisor, where there is no systemd. The install script then
 # writes no units and starts nothing; the supervisor starts the new version.
 # -packageFile <file>: the package the app downloaded, installed rather than downloaded again: the notice's Install,
-# or the desktop client's service handing back a download after a disconnect. The checks below still decide.
+# or the desktop client's service handing back a download after a disconnect. It describes itself: the checks below
+# read its release's publish.json, and the install runs the install script it carries, so nothing is read from the
+# server - which a filtered network may let through only in the tunnel, down again after a disconnect.
 # -waitForIdle: the desktop client's runs from its timer. The package is downloaded first, at any time, into the
 # storage's updates folder, where the app finds it too, and installed only while the client's VPN is idle - or when
 # its service does not answer, as a broken one would not, so that a broken release still gets the next one; else
@@ -46,6 +48,10 @@ fi
 # A minute for each of wget's waits, and three tries, which also resume a cut download: by default a network that
 # drops what it filters, rather than refusing it, holds a wget for some forty minutes - and the lock with it.
 wgetLimits=(--timeout=60 --tries=3);
+
+# this run's files: a package's own, or the install script downloaded
+runDir=$(mktemp -d) || exit 1;
+trap 'rm -rf "$runDir"' EXIT;
 
 # -------------------
 # Functions
@@ -89,6 +95,20 @@ function remove_downloads() {
 	done
 }
 
+# The package's own release files into this run's folder: its publish.json, and the install script it carries, which
+# an older package does not. Whole first, by gzip's own check: a cut one could hold half a script. One that does not
+# read goes, as a cut download would, for the next run to download again.
+function read_package() {
+	gzip -t "$packageFile" 2>/dev/null &&
+		tar -xzf "$packageFile" -C "$runDir" --strip-components=2 --wildcards \
+			'*/publish_info/publish.json' '*/publish_info/install.sh' 2>/dev/null;
+	if [ ! -s "$runDir/publish.json" ]; then
+		echo "Could not read the package! File: $packageFile";
+		if [[ "$packageFile" == "$updatesDir/"* ]]; then rm -f "$packageFile"; fi
+		exit 1;
+	fi
+}
+
 # -------------------
 # Check for Update
 # -------------------
@@ -105,20 +125,23 @@ if [ "$localPublishInfoJson" == "" ]; then
     exit 1;
 fi
 
-# load online publish info
-onlinePublishInfoJson=$(wget "${wgetLimits[@]}" -qO- "$localUpdateInfoUrl");
+# load the release's publish info: a package given describes itself; else the feed names the latest
+if [ "$packageFile" != "" ]; then
+	read_package;
+	onlinePublishInfoJson=$(cat "$runDir/publish.json");
+else
+	onlinePublishInfoJson=$(wget "${wgetLimits[@]}" -qO- "$localUpdateInfoUrl");
+	if [ "$onlinePublishInfoJson" == "" ]; then
+		echo "Could not retrieve the latest package information! Url: $localUpdateInfoUrl";
+		missed;
+		exit 1;
+	fi
+	reached;
+fi
 onlineVersion=$(json_extract Version "$onlinePublishInfoJson");
 onlineUpdateCode=$(json_extract UpdateCode "$onlinePublishInfoJson");
 onlineInstallScriptUrl=$(json_extract InstallScriptUrl "$onlinePublishInfoJson");
 onlinePackageUrl=$(json_extract PackageUrl "$onlinePublishInfoJson");
-
-# Check is latest version available
-if [ "$onlinePublishInfoJson" == "" ]; then
-    echo "Could not retrieve the latest package information! Url: $localUpdateInfoUrl";
-    missed;
-    exit 1;
-fi
-reached;
 
 # Compare the update code
 if [ "$localUpdateCode" != "$onlineUpdateCode" ]; then
@@ -132,7 +155,7 @@ fi
 
 # Compare Version
 echo "Installed version: $localVersion";
-echo "Latest version: $onlineVersion";
+if [ "$packageFile" != "" ]; then echo "Package version: $onlineVersion"; else echo "Latest version: $onlineVersion"; fi
 if [ $(version "$localVersion") -ge $(version "$onlineVersion") ]; then
     echo "The installed version is up to date.";
     [ "$waitForIdle" = "y" ] && remove_downloads "";
@@ -176,14 +199,16 @@ fi
 packageArgs=();
 if [ "$packageFile" != "" ]; then
 	packageArgs=(-packageFile "$packageFile");
+	# this run's own download, read only now
+	[ -s "$runDir/publish.json" ] || read_package;
 fi
 
-# Install the new version. The script is downloaded whole before it runs: run from a pipe, a broken
-# download would run as far as it got.
+# Install the new version, by the install script its package carries: its own release's. A run with no package - the
+# server's, whose install script downloads it - or an older one downloads the release's script, whole before it runs:
+# run from a pipe, a broken download would run as far as it got.
 echo "Installing the latest version";
-installScriptFile=$(mktemp) || exit 1;
-trap 'rm -f "$installScriptFile"' EXIT;
-if ! wget "${wgetLimits[@]}" -qO "$installScriptFile" "$onlineInstallScriptUrl"; then
+installScriptFile="$runDir/install.sh";
+if [ ! -s "$installScriptFile" ] && ! wget "${wgetLimits[@]}" -qO "$installScriptFile" "$onlineInstallScriptUrl"; then
     echo "Could not download the install script! Url: $onlineInstallScriptUrl";
     missed;
     exit 1;

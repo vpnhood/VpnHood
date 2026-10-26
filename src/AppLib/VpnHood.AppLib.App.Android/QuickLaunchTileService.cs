@@ -59,6 +59,20 @@ public class QuickLaunchTileService : TileService
         VhLogger.Instance.LogDebug("QuickLaunchTileService has been created.");
     }
 
+    // Android 7 to 12 throw from their own bind when the system UI that bound the tile has died since
+    // ("Unable to reach IQSService"), which crashes the app; Android 13 and later give it no binder
+    // instead, and the system UI binds the tile again when it needs it. So does this.
+    public override IBinder? OnBind(Intent? intent)
+    {
+        try {
+            return base.OnBind(intent);
+        }
+        catch (Java.Lang.RuntimeException ex) when (ex.Cause is RemoteException) {
+            VhLogger.Instance.LogWarning(ex, "Could not reach the system UI that bound the Quick Launch tile.");
+            return null;
+        }
+    }
+
     public override void OnDestroy()
     {
         _listeningCts?.TryCancel();

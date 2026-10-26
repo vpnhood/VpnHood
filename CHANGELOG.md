@@ -22,6 +22,7 @@
 * Update: The times in the app's log are in UTC #android #ios #windows #linux
 * Fix: On Android, the app could close when you connected or disconnected just as a connection was ending #android
 * Fix: On Android, connecting again right after a disconnect or a failed connect no longer closes the app #android
+* Fix: On Android 12 and older, the app no longer closes when Android's quick settings restart just as they show the app's tile #android
 * Fix: On Android, going back after an access key's link opened the app over itself no longer leaves the app unable to ask for the VPN permission ("Please open the app and grant VPN permission"), to sign in, to buy or to show ads #android
 * Fix: The "Extend it" button on a session's countdown keeps its label in the last 15 minutes #android #connect
 * Feature: The Android app from our website updates itself: "Update now" downloads the new version, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store keeps updating there #android

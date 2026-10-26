@@ -34,6 +34,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     private AndroidVpnNotification? _notification;
     private readonly Lock _notificationLock = new();
     private readonly AndroidMessageListener _messageListener = new();
+    private volatile int _lastStartId = -1; // -1: no start yet, and a stop then stops all
     public const string ProcessName = ":vpnhood_process";
     public const string ActionConnect = "connect";
     public const string ActionDisconnect = "disconnect";
@@ -72,6 +73,12 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
             return StartCommandResult.NotSticky;
         }
 
+        // Every stop from here on is of this start, once promoted. Android counts a start as it is asked
+        // for, before this method hears of it, and stopping the service while it waits for that start's
+        // promotion crashes the app (ForegroundServiceDidNotStartInTime): a connect right after a
+        // disconnect or a failed connect met the host's stop of the one before.
+        _lastStartId = startId;
+
         // get "manual" in
         return action switch {
             // signal start command
@@ -109,11 +116,11 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                     withLogger: AndroidDevice.IsVpnServiceProcess);
 
                 if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn).Vhc())
-                    StopSelf();
+                    StopSelf(_lastStartId);
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not start VPN service host.");
-                StopSelf();
+                StopSelf(_lastStartId);
             }
         });
 
@@ -125,7 +132,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         if (_vpnServiceHost != null)
             _ = _vpnServiceHost.TryDisconnect();
         else
-            StopSelf();
+            StopSelf(_lastStartId);
         return StartCommandResult.NotSticky;
     }
 
@@ -135,10 +142,15 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         if (_vpnServiceHost != null)
             return StartCommandResult.Sticky;
 
-        StopSelf(); // unknow command
+        StopSelf(_lastStartId); // unknow command
         return StartCommandResult.NotSticky;
     }
 
+    // the host's stop, of the last start this service has promoted: a start Android has taken since keeps it
+    void IVpnServiceHandler.StopSelf()
+    {
+        StopSelf(_lastStartId);
+    }
 
     public VpnHoodClientFactory CreateClientFactory()
     {

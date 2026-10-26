@@ -31,7 +31,6 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private const double Megabyte = 1_000_000;
-    private static readonly TimeSpan NoticeLife = TimeSpan.FromSeconds(6);
     private static readonly TimeSpan FiveMinutes = TimeSpan.FromSeconds(299);
     private static readonly TimeSpan FifteenMinutes = TimeSpan.FromSeconds(899);
 
@@ -39,7 +38,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private Task _stateRead = Task.CompletedTask;
     private bool _isStateReadFailing;
     private bool _disposed;
-    private DateTime _noticeUntil;
     private string? _shownErrorMessage;
     private DateTime? _ignoredSuppressTime;
     private bool _isUpdatePostponed;
@@ -157,11 +155,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // warning, which it shows only where a key can be added at all.
     public bool HasNoServer { get; private set => Set(ref field, value); }
     public string NoServerText => Strings.Current.NoServerAvailable;
-
-    // What the web UI says in a snackbar: a sentence about the tap just made, gone a few seconds
-    // later. The two the servers row can produce are the reasons it does not open at all.
-    public string NoticeText { get; private set => Set(ref field, value); } = "";
-    public bool HasNotice { get; private set => Set(ref field, value); }
 
     public MainViewModel()
     {
@@ -326,11 +319,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // rebuild the rows under the remote, and the focus with them
         RefreshLocations(profile, cultureChanged);
         RefreshProfiles(cultureChanged);
-
-        if (HasNotice && DateTime.UtcNow > _noticeUntil) {
-            HasNotice = false;
-            NoticeText = "";
-        }
 
         RefreshPrompts(state);
     }
@@ -818,7 +806,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // A key the OS opened the app with - its file, mailed on by an admin - as Android's activity imports one: its
-    // server becomes the chosen one, and the notice says it was added or updated, or that the key could not be read.
+    // server becomes the chosen one, and the snackbar says it was added or updated, or that the key could not be read.
     public async Task ImportAccessKey(string accessKey)
     {
         try {
@@ -826,7 +814,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not import the access key the app was opened with.");
-            ShowNotice(Strings.Current.MsgCantReadAccessKey);
+            Host?.ShowSnackbar(Strings.Current.MsgCantReadAccessKey, SnackbarKind.Warning);
         }
     }
 
@@ -840,7 +828,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not import the access key file the app was opened with.");
-            ShowNotice(Strings.Current.MsgCantReadAccessKey);
+            Host?.ShowSnackbar(Strings.Current.MsgCantReadAccessKey, SnackbarKind.Warning);
         }
     }
 
@@ -848,7 +836,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private async Task AddAndChooseAccessKey(string accessKey)
     {
         if (!CanAddServer) {
-            ShowNotice(Strings.Current.MsgUnsupportedContent);
+            Host?.ShowSnackbar(Strings.Current.MsgUnsupportedContent, SnackbarKind.Warning);
             return;
         }
 
@@ -863,7 +851,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         await ReloadInfo();
 
         var message = isNew ? Strings.Current.MsgAccessKeyAdded : Strings.Current.MsgAccessKeyUpdated;
-        ShowNotice(string.Format(CultureInfo.CurrentCulture, message, profile.VpnProfileName));
+        Host?.ShowSnackbar(string.Format(CultureInfo.CurrentCulture, message, profile.VpnProfileName));
     }
 
     // Why the servers row leads nowhere, when it does: a head that takes no keys can hold nothing
@@ -880,13 +868,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         return profiles is [{ LocationInfos.Count: < 2 }]
             ? Strings.Current.NoAdditionalLocationAvailable
             : null;
-    }
-
-    public void ShowNotice(string text)
-    {
-        NoticeText = text;
-        HasNotice = true;
-        _noticeUntil = DateTime.UtcNow + NoticeLife;
     }
 
     // ---- the account, as the web UI's VpnHoodApp.signIn and friends ----

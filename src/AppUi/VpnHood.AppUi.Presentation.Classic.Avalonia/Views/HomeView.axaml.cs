@@ -75,7 +75,7 @@ public partial class HomeView : UserControl, IPage
     private void OnServersClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel.ServersUnreachableReason() is { } reason) {
-            _viewModel.ShowNotice(reason);
+            _host.ShowSnackbar(reason);
             return;
         }
 

@@ -160,10 +160,6 @@
         <Button x:Name="ConnectButton" Classes="connect-btn" Classes.connected="{Binding IsConnected}"
                 Content="{Binding ConnectButtonText}" IsEnabled="{Binding IsConnectEnabled}"
                 Margin="0,20,0,16" HorizontalAlignment="Center" Click="OnConnectClick" />
-
-        <!-- what the web UI would say in a snackbar: why the row just tapped led nowhere -->
-        <TextBlock Classes="body-small" Text="{Binding NoticeText}" IsVisible="{Binding HasNotice}"
-                   TextWrapping="Wrap" TextAlignment="Center" MaxWidth="320" Margin="0,8,0,0" />
       </StackPanel>
 
       <!-- Grid.Row and Grid.Column come from the styles above, which the container query

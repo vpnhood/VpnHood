@@ -4,19 +4,20 @@ using Microsoft.Win32;
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 
 // A file type that opens in an app, for the whole machine: the app's ProgID - the type's name, its icon,
-// its open command - and each extension naming it. An extension's default is taken only while no other
-// app holds it; the app is offered under "Open with" either way, and a person's own choice (Explorer's
-// UserChoice) stays theirs. Explorer is told at once.
+// its open command and the app's name, which Explorer shows rather than the executable's description -
+// and each extension naming it. An extension's default is taken only while no other app holds it; the
+// app is offered under "Open with" either way, and a person's own choice (Explorer's UserChoice) stays
+// theirs. Explorer is told at once.
 internal static class WindowsFileAssociation
 {
     private const string ClassesKeyPath = @"SOFTWARE\Classes";
     private const string OpenWithProgIdsKeyName = "OpenWithProgids";
 
-    public static void Add(string progId, string typeName, string iconPath, string openCommand,
+    public static void Add(string progId, string typeName, string appName, string iconPath, string openCommand,
         IReadOnlyList<string> extensions)
     {
         using var classesKey = OpenClassesKey();
-        WriteProgId(classesKey, progId, typeName, iconPath, openCommand);
+        WriteProgId(classesKey, progId, typeName, appName, iconPath, openCommand);
         foreach (var extension in extensions)
             AddExtension(classesKey, extension, progId);
 
@@ -44,8 +45,8 @@ internal static class WindowsFileAssociation
                throw new InvalidOperationException($@"Could not open HKLM\{ClassesKeyPath}.");
     }
 
-    private static void WriteProgId(RegistryKey classesKey, string progId, string typeName, string iconPath,
-        string openCommand)
+    private static void WriteProgId(RegistryKey classesKey, string progId, string typeName, string appName,
+        string iconPath, string openCommand)
     {
         using var progIdKey = classesKey.CreateSubKey(progId);
         progIdKey.SetValue("", typeName);
@@ -53,7 +54,10 @@ internal static class WindowsFileAssociation
         using var iconKey = progIdKey.CreateSubKey("DefaultIcon");
         iconKey.SetValue("", $"\"{iconPath}\",0");
 
-        using var commandKey = progIdKey.CreateSubKey(@"shell\open\command");
+        using var openKey = progIdKey.CreateSubKey(@"shell\open");
+        openKey.SetValue("FriendlyAppName", appName);
+
+        using var commandKey = openKey.CreateSubKey("command");
         commandKey.SetValue("", openCommand);
     }
 

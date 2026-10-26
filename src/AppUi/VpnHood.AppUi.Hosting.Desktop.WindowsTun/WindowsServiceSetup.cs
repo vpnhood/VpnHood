@@ -63,7 +63,7 @@ public class WindowsServiceSetup(
 
         if (paths.InstalledLauncherPath is { } launcherPath && AccessKeyOpenCommand is { } openCommand) {
             if (accessKeyFileExtensions.Count > 0) {
-                WindowsFileAssociation.Add(AccessKeyProgId, $"{appName} access key", launcherPath, openCommand,
+                WindowsFileAssociation.Add(AccessKeyProgId, $"{appName} access key", appName, launcherPath, openCommand,
                     accessKeyFileExtensions);
                 Console.WriteLine($"{string.Join(", ", accessKeyFileExtensions)} files open in {appName}.");
             }

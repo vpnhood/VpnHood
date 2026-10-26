@@ -1,7 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Text;
 using System.Threading;
 using Microsoft.Win32;
 using VpnHood.AppUi.Hosting.Desktop.WindowsTun;
@@ -26,12 +28,13 @@ public class WindowsFileAssociationTest
             // the open command writes the path it was given, as the window's --access-key takes it
             var marker = Path.Combine(folder, "opened.txt");
             var command = $"\"{Environment.SystemDirectory}\\cmd.exe\" /c echo \"%1\"> \"{marker}\"";
-            WindowsFileAssociation.Add(progId, "Test access key", Path.Combine(Environment.SystemDirectory, "cmd.exe"),
-                command, [extension]);
+            WindowsFileAssociation.Add(progId, "Test access key", "Test App",
+                Path.Combine(Environment.SystemDirectory, "cmd.exe"), command, [extension]);
 
             Assert.AreEqual(progId, ReadDefault(extension), "no app held the extension, so it is the app's");
             Assert.IsTrue(IsOfferedUnderOpenWith(extension, progId));
             Assert.AreEqual(command, ReadDefault($@"{progId}\shell\open\command"));
+            Assert.AreEqual("Test App", ReadFriendlyAppName(extension), "Explorer names the app, not cmd.exe");
 
             var file = Path.Combine(folder, "Test Server" + extension);
             File.WriteAllText(file, "vh:test");
@@ -59,8 +62,8 @@ public class WindowsFileAssociationTest
         const string otherProgId = "VpnHoodTest.OtherApp";
         try {
             WriteDefault(extension, otherProgId);
-            WindowsFileAssociation.Add(progId, "Test access key", Path.Combine(Environment.SystemDirectory, "cmd.exe"),
-                "cmd.exe", [extension]);
+            WindowsFileAssociation.Add(progId, "Test access key", "Test App",
+                Path.Combine(Environment.SystemDirectory, "cmd.exe"), "cmd.exe", [extension]);
             Assert.AreEqual(otherProgId, ReadDefault(extension));
             Assert.IsTrue(IsOfferedUnderOpenWith(extension, progId), "offered under Open with all the same");
 
@@ -108,6 +111,15 @@ public class WindowsFileAssociationTest
         return key?.GetValue("") as string;
     }
 
+    // as Explorer asks Windows which app opens a file type
+    private static string? ReadFriendlyAppName(string extension)
+    {
+        const int friendlyAppName = 4; // ASSOCSTR_FRIENDLYAPPNAME
+        var length = 512u;
+        var name = new StringBuilder((int)length);
+        return AssocQueryString(0, friendlyAppName, extension, null, name, ref length) == 0 ? name.ToString() : null;
+    }
+
     private static bool IsOfferedUnderOpenWith(string extension, string progId)
     {
         using var key = Registry.LocalMachine.OpenSubKey($@"{ClassesKeyPath}\{extension}\OpenWithProgids");
@@ -124,6 +136,10 @@ public class WindowsFileAssociationTest
     {
         Registry.LocalMachine.DeleteSubKeyTree($@"{ClassesKeyPath}\{subKeyPath}", throwOnMissingSubKey: false);
     }
+
+    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
+    private static extern int AssocQueryString(int flags, int str, string assoc, string? extra, StringBuilder? outString,
+        ref uint outLength);
 
     private static void RequireElevation()
     {

@@ -4,13 +4,14 @@ namespace VpnHood.AppLib.Test.Providers;
 
 /// <summary>
 /// A desktop install's updater double: the platform's switch and its run-now are recorded, not made, and the
-/// updater's marker of a missed run is a file in the folder given.
+/// updater's marker of a missed run and the updates folder are in the folder given; the download is the app's own.
 /// </summary>
 internal sealed class TestDesktopUpdaterProvider(string folderPath)
     : DesktopAppUpdaterProvider(Path.Combine(folderPath, "updates"), Path.Combine(folderPath, MissedFileName),
         new Uri("https://localhost/feed.json"), new Version(1, 0, 0))
 {
     public string MissedPath { get; } = Path.Combine(folderPath, MissedFileName);
+    public string UpdatesPath { get; } = Path.Combine(folderPath, "updates");
     public bool IsOn { get; set; } = true;
     public int RunCalls { get; private set; }
 

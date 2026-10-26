@@ -84,14 +84,16 @@ function reached() {
 	if [ "$missedFile" != "" ]; then rm -f "$missedFile"; fi
 }
 
-# The files in the updates folder but the one given: a release overtaken, one installed, a download a run before this
-# one left unfinished - one updater runs at a time. Never the app's download under way (.part).
+# The files in the updates folder but the ones given: a release overtaken, one installed, a download of another one
+# that a run before this one left cut - one updater runs at a time. Never the app's download (.part), its own to keep.
 function remove_downloads() {
-	local download;
+	local download keep;
 	for download in "$updatesDir"/*; do
-		if [ -f "$download" ] && [ "$download" != "$1" ] && [[ "$download" != *.part ]]; then
-			rm -f "$download";
-		fi
+		if [ ! -f "$download" ] || [[ "$download" == *.part ]]; then continue; fi
+		for keep in "$@"; do
+			if [ "$download" = "$keep" ]; then continue 2; fi
+		done
+		rm -f "$download";
 	done
 }
 
@@ -169,17 +171,17 @@ if [ "$waitForIdle" = "y" ] && [ "$packageFile" = "" ]; then
 		exit 1;
 	fi
 
-	# downloaded whole under the app's name for it (DesktopAppUpdaterProvider), into a file of this run's that
-	# becomes the package by rename
+	# downloaded under the app's name for it (DesktopAppUpdaterProvider), into a file that becomes the package by
+	# rename once whole. A cut download stays for the next run to continue (-c), or to start over where the server
+	# ignores ranges: one per release, its name no version, so the app takes it for no package.
 	packageFile="$updatesDir/$onlineVersion-$(basename "$onlinePackageUrl")";
-	remove_downloads "$packageFile";
+	downloadFile="$updatesDir/download-$(basename "$packageFile")";
+	remove_downloads "$packageFile" "$downloadFile";
 	if [ ! -f "$packageFile" ]; then
 		echo "Downloading $onlineVersion...";
 		mkdir -p "$updatesDir" || exit 1;
-		downloadFile=$(mktemp "$updatesDir/.download.XXXXXX") || exit 1;
-		if ! wget "${wgetLimits[@]}" -nv -O "$downloadFile" "$onlinePackageUrl" || ! mv -f "$downloadFile" "$packageFile"; then
+		if ! wget "${wgetLimits[@]}" -nv -c -O "$downloadFile" "$onlinePackageUrl" || ! mv -f "$downloadFile" "$packageFile"; then
 			echo "Could not download the update! Url: $onlinePackageUrl";
-			rm -f "$downloadFile";
 			missed;
 			exit 1;
 		fi

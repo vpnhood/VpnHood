@@ -425,8 +425,11 @@ FunctionEnd
 ; The settings, the profiles and the log stay in the service's storage (ProgramData) for a later
 ; install, as the Linux uninstaller keeps them.
 Section "Uninstall"
-	; the updater's task first, which would install the app again
+	; the updater's task first, which would install the app again; then its downloads that BITS goes on with, SYSTEM's
+	; jobs, named as vhupdate.ps1's Get-JobName names them
 	nsExec::ExecToLog '"$SYSDIR\schtasks.exe" /Delete /TN "${INSTANCE_NAME}Updater" /F'
+	Pop $0
+	nsExec::ExecToLog `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -Command "Get-BitsTransfer -AllUsers | Where-Object DisplayName -like '${INSTANCE_NAME} update *' | Remove-BitsTransfer"`
 	Pop $0
 
 	; the service, and the root off the PATH, by the app itself

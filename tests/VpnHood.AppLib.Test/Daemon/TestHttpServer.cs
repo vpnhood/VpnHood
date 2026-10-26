@@ -48,7 +48,7 @@ internal sealed class TestHttpServer : IDisposable
     }
 
     // The request line and the headers; a body, when there is one, is read and dropped.
-    private static async Task<TestHttpRequest?> ReadRequest(Stream stream, CancellationToken cancellationToken)
+    internal static async Task<TestHttpRequest?> ReadRequest(Stream stream, CancellationToken cancellationToken)
     {
         var buffer = new byte[16 * 1024];
         var length = 0;

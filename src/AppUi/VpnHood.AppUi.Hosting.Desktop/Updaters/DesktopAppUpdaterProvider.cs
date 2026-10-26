@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Updaters;
@@ -125,7 +127,7 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     {
         string? newestPath = null;
         var newestVersion = _appVersion;
-        foreach (var (path, version) in EnumerateDownloads()) {
+        foreach (var (path, version) in EnumerateDownloads(isPartIncluded: false)) {
             if (version > newestVersion) {
                 newestPath = path;
                 newestVersion = version;
@@ -135,26 +137,27 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         return newestPath;
     }
 
-    // The whole downloads in the updates folder, "<version>-<file>" as GetPackagePath names them. A download under way
-    // is neither: a .part of the app's, or a file of the updater's whose name is no version.
-    private IEnumerable<(string Path, Version Version)> EnumerateDownloads()
+    // The downloads in the updates folder, "<version>-<file>" as GetPackagePath names them: the whole ones, and with
+    // the parts the app's cut or under way too (.part). The updater's own under way are neither: their names are no
+    // version.
+    private IEnumerable<(string Path, Version Version)> EnumerateDownloads(bool isPartIncluded)
     {
         if (!Directory.Exists(_updatesPath))
             yield break;
 
         foreach (var path in Directory.EnumerateFiles(_updatesPath)) {
             var fileName = Path.GetFileName(path);
-            if (!fileName.EndsWith(".part", StringComparison.OrdinalIgnoreCase) &&
+            if ((isPartIncluded || !fileName.EndsWith(".part", StringComparison.OrdinalIgnoreCase)) &&
                 Version.TryParse(fileName.Split('-')[0], out var version))
                 yield return (path, version);
         }
     }
 
-    // The whole downloads up to a version: those of this version and older, installed; or those older than the
-    // release a download is for, overtaken.
+    // The downloads up to a version, whole or cut: those of this version and older, installed; or those older than
+    // the release a download is for, overtaken.
     private void RemoveDownloads(Version version, bool isVersionIncluded)
     {
-        foreach (var download in EnumerateDownloads().ToArray()) {
+        foreach (var download in EnumerateDownloads(isPartIncluded: true).ToArray()) {
             if (download.Version < version || (isVersionIncluded && download.Version == version))
                 VhInvoker.TryInvoke("delete an old update", LogLevel.Warning, () => File.Delete(download.Path));
         }
@@ -270,6 +273,8 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         return Path.Combine(_updatesPath, $"{release.Version}-{Path.GetFileName(release.PackageUrl.AbsolutePath)}");
     }
 
+    // A cut download keeps its .part, which the next Update continues by a range request; a server that ignores the
+    // range sends the whole file again, which starts it over.
     private async Task Download(AppRelease release)
     {
         var packagePath = GetPackagePath(release);
@@ -279,22 +284,28 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
             Directory.CreateDirectory(_updatesPath);
             RemoveDownloads(release.Version, isVersionIncluded: false);
 
-            using var response = await HttpClient
-                .GetAsync(release.PackageUrl, HttpCompletionOption.ResponseHeadersRead).Vhc();
+            var partBytes = File.Exists(partPath) ? new FileInfo(partPath).Length : 0;
+            using var response = await RequestPackage(release.PackageUrl, partBytes).Vhc();
             response.EnsureSuccessStatusCode();
-            var totalBytes = response.Content.Headers.ContentLength;
+
+            var isContinued = response.StatusCode == HttpStatusCode.PartialContent;
+            if (isContinued && response.Content.Headers.ContentRange?.From != partBytes) {
+                File.Delete(partPath);
+                throw new InvalidDataException("The server sent another part of the update than the one asked for.");
+            }
+
+            if (isContinued)
+                VhLogger.Instance.LogInformation("Continuing the cut download. Version: {Version}, From: {Bytes} bytes",
+                    release.Version, partBytes);
+
+            var totalBytes = isContinued
+                ? response.Content.Headers.ContentRange?.Length
+                : response.Content.Headers.ContentLength;
+            Interlocked.Exchange(ref _downloadedBytes, isContinued ? partBytes : 0);
             lock (_stateLock)
                 _totalBytes = totalBytes;
 
-            await using (var source = await response.Content.ReadAsStreamAsync().Vhc())
-            await using (var target = File.Create(partPath)) {
-                var buffer = new byte[81920];
-                int read;
-                while ((read = await source.ReadAsync(buffer).Vhc()) > 0) {
-                    await target.WriteAsync(buffer.AsMemory(0, read)).Vhc();
-                    Interlocked.Add(ref _downloadedBytes, read);
-                }
-            }
+            await WritePart(response, partPath, isContinued).Vhc();
 
             // a cut connection may end the stream early: only the whole file becomes the package
             var downloadedBytes = Interlocked.Read(ref _downloadedBytes);
@@ -306,9 +317,38 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not download the update. Version: {Version}", release.Version);
-            File.Delete(partPath);
             lock (_stateLock)
                 _errorMessage = ex.Message;
+        }
+    }
+
+    // The package from the byte given on; a part the server's file ends at or before, as an upload replaced by a
+    // shorter one, is asked for again whole.
+    private static async Task<HttpResponseMessage> RequestPackage(Uri packageUrl, long fromBytes)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, packageUrl);
+        if (fromBytes > 0)
+            request.Headers.Range = new RangeHeaderValue(fromBytes, null);
+
+        var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).Vhc();
+        if (fromBytes == 0 || response.StatusCode != HttpStatusCode.RequestedRangeNotSatisfiable)
+            return response;
+
+        response.Dispose();
+        return await RequestPackage(packageUrl, 0).Vhc();
+    }
+
+    // the response's body into the part: after its bytes when it continues it, else in their place
+    private async Task WritePart(HttpResponseMessage response, string partPath, bool isContinued)
+    {
+        await using var source = await response.Content.ReadAsStreamAsync().Vhc();
+        await using var target = new FileStream(partPath, isContinued ? FileMode.Append : FileMode.Create,
+            FileAccess.Write);
+        var buffer = new byte[81920];
+        int read;
+        while ((read = await source.ReadAsync(buffer).Vhc()) > 0) {
+            await target.WriteAsync(buffer.AsMemory(0, read)).Vhc();
+            Interlocked.Add(ref _downloadedBytes, read);
         }
     }
 

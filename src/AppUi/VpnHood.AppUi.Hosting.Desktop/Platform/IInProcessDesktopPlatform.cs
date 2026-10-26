@@ -10,6 +10,9 @@ public interface IInProcessDesktopPlatform
     IDesktopUiPaths Paths { get; }
     ILoopbackPeerCheck PeerCheck { get; }
 
+    // How a second launch lets the open window come forward (Windows); null where the platform needs none.
+    IForegroundHandOff? ForegroundHandOff { get; }
+
     // The process's log, added once this launch holds the window: a second launch, which only brings
     // that window forward, leaves its file alone.
     ILoggerProvider CreateLoggerProvider();

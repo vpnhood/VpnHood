@@ -51,11 +51,12 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     // has one open in this session, which has been asked to come forward and been handed the access
     // key, if this launch has one. On the calling thread throughout: the lock is let go only once this
     // launch's server holds the name.
-    public static DesktopUiInstance? TryClaim(IDesktopUiPaths paths, IDesktopUi ui, string? accessKey)
+    public static DesktopUiInstance? TryClaim(IDesktopUiPaths paths, IForegroundHandOff? foregroundHandOff,
+        IDesktopUi ui, string? accessKey)
     {
         var name = BuildName(paths.InstanceName);
         using var sessionLock = TakeSessionLock(paths.UiDataPath, name);
-        return TryShowExisting(name, accessKey) ? null : new DesktopUiInstance(name, ui);
+        return TryShowExisting(name, foregroundHandOff, accessKey) ? null : new DesktopUiInstance(name, ui);
     }
 
     // one name per instance, person and session, in characters every platform's pipe and file names take
@@ -110,7 +111,7 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
         }
     }
 
-    private static bool TryShowExisting(string pipeName, string? accessKey)
+    private static bool TryShowExisting(string pipeName, IForegroundHandOff? foregroundHandOff, string? accessKey)
     {
         using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, Options);
         try {
@@ -119,6 +120,9 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
         catch (Exception ex) when (ex is TimeoutException or IOException) {
             return false; // nobody serves it: this launch is the window
         }
+
+        // before the command, on which the window comes forward
+        foregroundHandOff?.HandTo(client);
 
         // a key is one line: vh: and its base64
         using var writer = new StreamWriter(client);

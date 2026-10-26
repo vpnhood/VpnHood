@@ -15,11 +15,13 @@ public class DesktopUiInstanceTest
         const int launchCount = 8;
         var paths = new TestDesktopPaths("VpnHoodTest-" + Guid.CreateVersion7().ToString("N"));
         var ui = new TestDesktopUi();
+        var foregroundHandOff = new TestForegroundHandOff();
 
         var claims = await Task.WhenAll(Enumerable.Range(0, launchCount)
-            .Select(_ => Task.Run(() => DesktopUiInstance.TryClaim(paths, ui, accessKey: null))));
+            .Select(_ => Task.Run(() => DesktopUiInstance.TryClaim(paths, foregroundHandOff, ui, accessKey: null))));
         try {
             Assert.AreEqual(1, claims.Count(x => x != null));
+            Assert.AreEqual(launchCount - 1, foregroundHandOff.HandOffCount);
             await VhTestUtil.AssertEqualsWait(launchCount - 1, () => ui.BringToFrontCount);
         }
         finally {
@@ -28,7 +30,7 @@ public class DesktopUiInstanceTest
         }
 
         // the window gone, the next launch opens one
-        await using var next = DesktopUiInstance.TryClaim(paths, ui, accessKey: null);
+        await using var next = DesktopUiInstance.TryClaim(paths, foregroundHandOff, ui, accessKey: null);
         Assert.IsNotNull(next);
     }
 
@@ -41,9 +43,9 @@ public class DesktopUiInstanceTest
         var paths = new TestDesktopPaths("VpnHoodTest-" + Guid.CreateVersion7().ToString("N"));
         var ui = new TestDesktopUi();
 
-        await using var window = DesktopUiInstance.TryClaim(paths, ui, accessKey: null);
+        await using var window = DesktopUiInstance.TryClaim(paths, foregroundHandOff: null, ui, accessKey: null);
         Assert.IsNotNull(window);
-        Assert.IsNull(DesktopUiInstance.TryClaim(paths, ui, accessKey));
+        Assert.IsNull(DesktopUiInstance.TryClaim(paths, foregroundHandOff: null, ui, accessKey));
 
         await VhTestUtil.AssertEqualsWait(1, () => ui.BringToFrontCount);
         CollectionAssert.AreEqual(new[] { accessKey }, ui.ImportedAccessKeys.ToArray());
@@ -53,7 +55,7 @@ public class DesktopUiInstanceTest
     public async Task A_second_close_after_the_first_does_nothing()
     {
         var paths = new TestDesktopPaths("VpnHoodTest-" + Guid.CreateVersion7().ToString("N"));
-        var instance = DesktopUiInstance.TryClaim(paths, new TestDesktopUi(), accessKey: null);
+        var instance = DesktopUiInstance.TryClaim(paths, foregroundHandOff: null, new TestDesktopUi(), accessKey: null);
         Assert.IsNotNull(instance);
 
         await instance.DisposeAsync();

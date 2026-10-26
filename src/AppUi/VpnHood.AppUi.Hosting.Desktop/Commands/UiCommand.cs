@@ -63,7 +63,8 @@ internal static class UiCommand
 
             // One window per person and session: a second launch brings the open one forward, after
             // handing it the key it was given, and that is all it does.
-            await using (var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, initParams.Ui, accessKey)) {
+            await using (var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, platform.ForegroundHandOff,
+                initParams.Ui, accessKey)) {
                 if (uiInstance == null)
                     return 0;
 

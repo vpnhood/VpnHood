@@ -40,7 +40,8 @@ public static class InProcessDesktopHost
             if (accessKeyInput != null && accessKey == null)
                 return 1;
 
-            await using var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, initParams.Ui, accessKey);
+            await using var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, platform.ForegroundHandOff,
+                initParams.Ui, accessKey);
             if (uiInstance == null)
                 return 0;
 

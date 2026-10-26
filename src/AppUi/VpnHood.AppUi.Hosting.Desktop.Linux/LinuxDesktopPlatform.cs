@@ -27,6 +27,7 @@ public sealed class LinuxDesktopPlatform : IDesktopPlatform
     public IAppInstanceController Instance { get; }
     public IDaemonChannel Channel { get; }
     public ILoopbackPeerCheck PeerCheck { get; } = new LinuxLoopbackPeerCheck();
+    public IForegroundHandOff? ForegroundHandOff => null;
     public IAppInstanceSetup? InstanceSetup => null;
     public IAppDaemonHostFactory DaemonHostFactory { get; }
 

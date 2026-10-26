@@ -17,6 +17,9 @@ public interface IDesktopPlatform
     // How this OS tells who owns the far end of a loopback connection, checked before a call is sent.
     ILoopbackPeerCheck PeerCheck { get; }
 
+    // How a second launch lets the open window come forward (Windows); null where the platform needs none.
+    IForegroundHandOff? ForegroundHandOff { get; }
+
     // Registering and removing the instance, where the app does it itself (Windows: the service, which
     // "service install" registers); null where the package's installer does (Linux), and then those
     // commands are not offered.

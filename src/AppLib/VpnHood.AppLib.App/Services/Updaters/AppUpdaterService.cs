@@ -165,10 +165,10 @@ public class AppUpdaterService : IDisposable
         _appVersion.Equals(Data.UpdaterAvailableVersion) &&
         FastDateTime.UtcNow - Data.UpdaterLastAvailableTime < _updateOptions.UpdaterOfferPeriod;
 
-    // A desktop's automatic update installs unseen while the VPN is idle (owner, 2026-10-25: a notice at once is noise):
-    // its newer version is left to it for PromptDelay from the release, and the notice comes only if it is still not
-    // installed then, as under always on, which it never disconnects. Not with automatic updates off, not for a
-    // version the person checked for themselves, and not for a deprecated one.
+    // A desktop's automatic update installs unseen while the VPN is idle, and a notice for what it will install anyway
+    // is noise: its newer version is left to it for PromptDelay from the release, and the notice comes only if it is
+    // still not installed then, as under always on, which it never disconnects - never disconnect it for an update.
+    // Not with automatic updates off, not for a version the person checked for themselves, not for a deprecated one.
     private bool IsLeftToAutomaticUpdate(VersionStatus versionStatus)
     {
         return _isAutomaticUpdateOn &&

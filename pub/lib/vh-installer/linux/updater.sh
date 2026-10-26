@@ -10,7 +10,8 @@ updatesDir="$curDir/storage/updates";
 # -packageFile <file>: the package the app downloaded, installed rather than downloaded again: the notice's Install,
 # or the desktop client's service handing back a download after a disconnect. It describes itself: the checks below
 # read its release's publish.json, and the install runs the install script it carries, so nothing is read from the
-# server - which a filtered network may let through only in the tunnel, down again after a disconnect.
+# server - which a filtered network may let through only in the tunnel, down again after a disconnect. Carried in the
+# package, not beside the download: the service takes any file in the updates folder named by a version for one.
 # -waitForIdle: the desktop client's runs from its timer. The package is downloaded first, at any time, into the
 # storage's updates folder, where the app finds it too, and installed only while the client's VPN is idle - or when
 # its service does not answer, as a broken one would not, so that a broken release still gets the next one; else
@@ -127,7 +128,10 @@ if [ "$localPublishInfoJson" == "" ]; then
     exit 1;
 fi
 
-# load the release's publish info: a package given describes itself; else the feed names the latest
+# load the release's publish info: a package given describes itself; else the feed names the latest. A package given
+# reads no feed, though a release taken back after its download then still installs (unless a run has read the feed
+# since, which removes it): the feed first would help only on open networks, and cost every filtered install the
+# feed's timeout
 if [ "$packageFile" != "" ]; then
 	read_package;
 	onlinePublishInfoJson=$(cat "$runDir/publish.json");
@@ -165,7 +169,8 @@ if [ $(version "$localVersion") -ge $(version "$onlineVersion") ]; then
 fi
 
 if [ "$waitForIdle" = "y" ] && [ "$packageFile" = "" ]; then
-	# https alone, as the app's own download takes it, or a test feed on this machine
+	# https alone, as the app's own download takes it (HTTPS is the check: DesktopAppUpdaterProvider), or a test feed on
+	# this machine
 	if [[ "$onlinePackageUrl" != https://* && "$onlinePackageUrl" != http://127.0.0.1[:/]* && "$onlinePackageUrl" != http://localhost[:/]* ]]; then
 		echo "The package is not on https: $onlinePackageUrl";
 		exit 1;
@@ -187,7 +192,9 @@ if [ "$waitForIdle" = "y" ] && [ "$packageFile" = "" ]; then
 		fi
 	fi
 
-	# what the client's service says of its VPN: 0 and "connected", 3 and its state, any other code no answer
+	# what the client's service says of its VPN: 0 and "connected", 3 and its state, any other code no answer. A connect
+	# made in the seconds between this answer and the install's stop is dropped at the stop: the service's own
+	# hand-back, which waits for the VPN to stay idle (IdleUpdateInstaller) and refuses connects meanwhile, has no gap
 	exeFile=$(json_extract ExeFile "$localPublishInfoJson");
 	stateJson=$("$curDir/$exeFile" status --json 2>/dev/null);
 	stateCode=$?;

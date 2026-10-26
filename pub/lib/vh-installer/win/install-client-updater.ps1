@@ -8,7 +8,7 @@
 # then starts the new version, which opens again the windows and trays it closed. Its output goes to update.log beside
 # it, whose last line says why when nothing was installed. A setup given describes itself, by its own version, so
 # nothing is read from the server - which a filtered network may let through only in the tunnel, down again after a
-# disconnect.
+# disconnect - and a release taken back after its download still installs, as Linux's vhupdate tells why.
 param([string]$packageFile = "")
 $ErrorActionPreference = "Stop"
 # the web cmdlets' progress bar slows them many times over
@@ -55,7 +55,8 @@ function Get-JobName([string]$setupPath) {
 # The release's download by BITS, as Windows Update's: a job of SYSTEM's per release, which goes on by itself between
 # runs - across network drops, sleeps and restarts - and resumes where it stopped. This run waits while it moves; one
 # that stops moving for a minute is left to BITS, for a later run to find done or going on. A job that failed for good
-# goes, and the next run starts it again.
+# goes, and the next run starts it again. BITS works with GitHub's releases: its HEAD follows their redirects, and a
+# job resumed past the signed redirect's life still ends whole - no downloader of our own is needed.
 function Receive-Package([Uri]$packageUrl, [string]$setupPath) {
 	$jobName = Get-JobName $setupPath
 	$job = @(Get-BitsTransfer | Where-Object DisplayName -eq $jobName)[0]
@@ -132,7 +133,8 @@ function Update-App {
 
 	$setupPath = $packageFile
 	if (-not $setupPath) {
-		# https alone, as the app's own download takes it, or a test feed on this machine
+		# https alone, as the app's own download takes it (HTTPS is the check: DesktopAppUpdaterProvider), or a test
+		# feed on this machine
 		$packageUrl = [Uri]$onlineInfo.PackageUrl
 		if ($packageUrl.Scheme -ne "https" -and -not $packageUrl.IsLoopback) {
 			Write-Log "The package is not on https: $packageUrl"
@@ -152,7 +154,9 @@ function Update-App {
 		}
 
 		# what the service says of its VPN: 0 and "connected", 3 and its state, any other code no answer. A
-		# release built without the console launcher cannot be asked.
+		# release built without the console launcher cannot be asked. A connect made in the seconds between this
+		# answer and the setup's stop is dropped at the stop: the service's own hand-back, which waits for the VPN to
+		# stay idle (IdleUpdateInstaller) and refuses connects meanwhile, has no gap.
 		if ($localInfo.CommandFile) {
 			# Continue: under Stop, Windows PowerShell throws at a native command's first line on stderr, which the
 			# command writes when the service does not answer

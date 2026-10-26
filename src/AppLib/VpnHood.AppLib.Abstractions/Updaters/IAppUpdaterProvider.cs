@@ -45,7 +45,8 @@ public interface IAppUpdaterProvider
     bool IsAutomaticUpdateSupported { get; }
 
     // The automatic update's switch, read where the platform keeps it each time, as its installer and its own
-    // tools change it too. One with no switch throws NotSupportedException.
+    // tools change it too. Off stops only the automatic update: the person's check, Update and Install still work.
+    // One with no switch throws NotSupportedException.
     Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken);
     Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken);
 }

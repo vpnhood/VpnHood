@@ -16,7 +16,8 @@
 ; root on the PATH ("service install"); this runs it, and "service uninstall" on the way out. The
 ; app does its own setup, so a zip or another packager gets the same service and PATH. The updater's
 ; task, <INSTANCE_NAME>Updater, is this setup's, as Linux's updater unit is its installer's: on for a
-; new install, as an update leaves it, or as /AUTOUPDATE and /NOAUTOUPDATE say.
+; new install, as an update leaves it, or as /AUTOUPDATE and /NOAUTOUPDATE say. Add no page that asks:
+; modern apps' setups do not, and Settings has the switch.
 
 Unicode true
 ManifestDPIAware true
@@ -205,7 +206,8 @@ FunctionEnd
 
 ; Points the folder $JunctionLink at $JunctionTarget: makes it a junction, or re-points the junction it
 ; is, in one call on the folder itself - FSCTL_SET_REPARSE_POINT replaces a junction's target in place,
-; so there is no moment without one (the desktop updater plan's rule 7). $JunctionError says why not.
+; so there is no moment without one: the root's launchers, the service and the PATH run the version
+; through it, and a power cut mid-switch must still leave them one. $JunctionError says why not.
 Function SetJunction
 	StrCpy $JunctionError ""
 	${IfNot} ${FileExists} "$JunctionLink\*.*"
@@ -323,7 +325,9 @@ Section "Install"
 
 	; an install of this app already here: its service stopped and what runs from it closed, so
 	; nothing the setup replaces is in use - closed even where the command is gone, as an uninstall
-	; that could not finish leaves the tray running without it
+	; that could not finish leaves the tray running without it. A version's own folder stays, but a
+	; process sees its files through "current" (the launcher's app root), so one left open past the
+	; switch would load the new version's assemblies beside its own as it first used each
 	${If} ${FileExists} "$INSTDIR\${COMMAND_NAME}.exe"
 		DetailPrint "Stopping ${INSTANCE_NAME}..."
 		nsExec::ExecToLog '"$INSTDIR\${COMMAND_NAME}.exe" service stop'

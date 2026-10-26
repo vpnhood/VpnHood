@@ -12,11 +12,14 @@ using VpnHood.Net.Toolkit.Utils;
 namespace VpnHood.AppUi.Hosting.Desktop.Updaters;
 
 // The notice's Update and Install on a desktop installed from our site, as on Android's website APK, in the service.
-// The feed is the one the install's publish.json names, the release's info file its installer put there. Update
-// downloads the feed's package into the install's updates folder; Install hands it to the platform's installer,
-// whose install stops this service, replaces it and starts the new version: an Install that ends with this service
-// still here installed nothing. The automatic update is the platform's updater, a script apart from the service so
-// that a broken release still gets the next one: it downloads into the same folder under the same name, and leaves
+// The feed is the one the install's publish.json names, the release's info file its installer put there, so it always
+// matches the installed release and its processor, and no setting can drift from it. Update downloads the feed's
+// package into the install's updates folder; Install hands it to the platform's installer, whose install stops this
+// service, replaces it and starts the new version: an Install that ends with this service still here installed
+// nothing. The automatic update's rules are not the person's: their Install installs now, the VPN disconnecting, as
+// the notice warns. Add no way back to the version before: a broken release stays until the next, as on Android and
+// iOS - a rollback is the hard, bug-prone part, and the updater outside the service still installs the next. The automatic update is the platform's updater, a script apart from the service so that a
+// broken release still gets the next one: it downloads into the same folder under the same name, and leaves
 // a download made while the VPN was in use for the service to hand back after the next disconnect
 // (InstallDownloadedUpdate). So the folder is shared, and each side removes only what it is done with: this one the
 // downloads of this version and older, and of one overtaken by the release it downloads. A run of the updater that
@@ -249,7 +252,8 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         if (feedRelease is null)
             throw new InvalidOperationException("There is no newer release to update to.");
 
-        // https alone, or a test feed on this machine
+        // https alone, or a test feed on this machine. HTTPS is the check; add no release key: whoever can change our
+        // GitHub releases can change far more than a signature on the package would stop
         if (feedRelease.PackageUrl.Scheme != Uri.UriSchemeHttps && !feedRelease.PackageUrl.IsLoopback)
             throw new InvalidOperationException($"The package is not on https: {feedRelease.PackageUrl}");
 
@@ -303,7 +307,10 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     }
 
     // A cut download keeps its .part, which the next Update continues by a range request; a server that ignores the
-    // range sends the whole file again, which starts it over.
+    // range sends the whole file again, which starts it over. The resume need not check that the server's file is
+    // still the same: the package's address names its version, so only an upload replaced under the same version
+    // could splice two files, and a spliced package fails its own check - NSIS's CRC, gzip's - before its install
+    // stops anything, and goes.
     private async Task Download(AppRelease release)
     {
         var packagePath = GetPackagePath(release);

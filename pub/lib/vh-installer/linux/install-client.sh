@@ -351,7 +351,8 @@ fi
 # Optional everywhere: without it the client uses TCP. Where the distribution has no package for it,
 # it goes in the version folder. One try of 30 s at its download: an update installed from its package
 # alone, after a disconnect, may find the server out of reach, and a connect made meanwhile is dropped
-# at the service's stop below.
+# at the service's stop below. Such a version, where the distribution has none - Arch's - stays without
+# QUIC until an install that reaches the server: left so, as it is rare and TCP still works.
 msquic_url="$releaseUrl/$assemblyName-linux-msquic.sh"
 if ! msquic_script=$(wget -q --timeout=30 --tries=1 -O- "$msquic_url"); then
 	echo "WARNING: Could not download MsQuic installer from: $msquic_url"
@@ -362,7 +363,9 @@ fi
 
 # The service goes down for the switch and comes back at the end - which is also what makes this
 # script an in-place upgrade. Not before: a package that does not extract leaves it running. A run
-# that fails after the stop starts it again on its way out.
+# that fails after the stop starts it again on its way out: the version the root names, the new one once
+# switched. Add no way back to the one before: a broken release stays until the next, as on Android and
+# iOS, which the updater, outside the service, still installs; a rollback is the hard, bug-prone part.
 if systemctl is-active --quiet "$assemblyName.service" 2>/dev/null; then
 	echo "Stopping the running service...";
 	systemctl stop "$assemblyName.service";

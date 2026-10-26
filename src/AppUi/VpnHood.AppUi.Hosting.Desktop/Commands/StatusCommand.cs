@@ -92,7 +92,9 @@ internal static class StatusCommand
     }
 
     // The newer version and how far its update has come, as the window's notice shows it; null with none. The install
-    // itself is the state's Updating too.
+    // itself is the state's Updating too. The version is the one the service's own check of the feed found - after a
+    // connect or a window's start, at most once a day - so a release the updater downloaded before that check shows
+    // only after it.
     internal static string? Describe(AppUpdaterStatus? updaterStatus, bool isAutomaticUpdateOn)
     {
         // an app whose updater has no part in the notice still knows the feed's newer version

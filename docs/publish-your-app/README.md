@@ -164,6 +164,8 @@ accept an agreement, or answer a questionnaire for you.
 
 - **Apple:** [Apple App Store — the steps only you can do](apple-app-store.md)
 - **Google:** [Google Play — the steps only you can do](google-play.md)
+- **Microsoft:** [Microsoft Store — the steps only you can do](microsoft-store.md), for the Store
+  edition of the Windows app.
 - **Windows and Linux:** nothing to create. The installer and packages are published as downloads
   on your own project page. Signing the Windows installer is optional but recommended —
   unsigned installers show a scary warning. See [deployment](../cicd/deployment.md).
@@ -291,6 +293,7 @@ The failures we hit most often, and what they actually mean:
 | Every credential, and where to get it | [cicd/deployment.md](../cicd/deployment.md) |
 | Apple hand steps | [apple-app-store.md](apple-app-store.md) |
 | Google hand steps | [google-play.md](google-play.md) |
+| Microsoft hand steps | [microsoft-store.md](microsoft-store.md) |
 | Countries to switch off | [legal/developer/APP_STORE_TERRITORIES.md](../legal/developer/APP_STORE_TERRITORIES.md) |
 | Encryption paperwork | [legal/developer/APP_STORE_EXPORT_COMPLIANCE.md](../legal/developer/APP_STORE_EXPORT_COMPLIANCE.md) |
 | Privacy questionnaire and policy rules | [legal/developer/APP_STORE_PRIVACY.md](../legal/developer/APP_STORE_PRIVACY.md) |

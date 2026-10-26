@@ -2,9 +2,10 @@
 <!-- The package: the app (Client), a full-trust Win32 process run as the person, and its VPN host
      (VpnPluginHost), which Windows starts in an AppContainer as its background tasks' server when the
      app's VPN profile connects or a process opens one of its app services; the host starts its own
-     executable once more, with full trust, to keep it awake. _publish.ps1 stamps the publisher, the
-     version, the names, the executables and the server. Windows activates the VPN host's task and app
-     services by their own class names, whatever the package's identity. -->
+     executable once more, with full trust, to keep it awake. _publish.ps1 stamps the identity, the
+     version, the names, the executables and the server, and draws the logos from the app's icon. Windows
+     activates the VPN host's task and app services by their own class names, whatever the package's
+     identity. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
@@ -13,11 +14,11 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap uap3 uap10 rescap desktop">
-  <Identity Name="VpnHood.Client" Publisher="CN=Stamped" Version="0.0.0.0" ProcessorArchitecture="x64" />
+  <Identity Name="Stamped" Publisher="CN=Stamped" Version="0.0.0.0" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Stamped</DisplayName>
-    <PublisherDisplayName>VpnHood</PublisherDisplayName>
-    <Logo>Assets\Logo.png</Logo>
+    <PublisherDisplayName>Stamped</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0" MaxVersionTested="10.0.26100.0" />
@@ -37,8 +38,8 @@
         Description="The VPN host"
         AppListEntry="none"
         BackgroundColor="transparent"
-        Square150x150Logo="Assets\Logo.png"
-        Square44x44Logo="Assets\Logo.png" />
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <!-- the vpnClient task, without which Windows never activates the plug-in (the fork's lesson 1) -->
         <Extension Category="windows.backgroundTasks" EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnBackgroundTask">
@@ -74,8 +75,8 @@
         DisplayName="Stamped"
         Description="VPN client"
         BackgroundColor="transparent"
-        Square150x150Logo="Assets\Logo.png"
-        Square44x44Logo="Assets\Logo.png" />
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <!-- An access key's file, opened, starts the app with its path, which the window imports
              (InProcessDesktopHost): .cdy, the extension Android's file managers know, so one file an admin

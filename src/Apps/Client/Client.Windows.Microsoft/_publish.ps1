@@ -1,17 +1,22 @@
 # The head's MSIX: the app and its VPN host (../Client.Windows.VpnPlugin), each published
-# self-contained for win-x64, staged with the C#/WinRT component's metadata and the manifest stamped,
-# then packed and signed. A development certificate is made here and kept beside the package while it
-# matches -publisher; _install.ps1 trusts it. The Store's own identity and signing are phase 2's.
+# self-contained for win-x64, staged with the C#/WinRT component's metadata, the logos and the manifest
+# stamped, then packed and signed. A development certificate is made here and kept beside the package
+# while it matches -publisher; _install.ps1 trusts it. With -store, the Microsoft Store's upload package,
+# in its own folder: the publisher Partner Center gave the app, and unsigned, as Partner Center signs it.
 param(
 	[Parameter(Mandatory=$false)] [ValidateSet("Debug", "Release")] [String]$configuration = "Release",
 	[Parameter(Mandatory=$false)] [String]$publisher = "CN=VpnHoodDevelopment",
 	# Windows updates an installed package in place only to another version, and an uninstall first
 	# can strand the VPN plug-in (the fork's lesson 14), so a development package's revision is its
 	# build's minute; a Store package's is 0, the only one the Store takes.
-	[Parameter(Mandatory=$false)] [int]$revision = [int](([DateTime]::UtcNow - [DateTime]::new(2026, 1, 1)).TotalMinutes % 65535)
+	[Parameter(Mandatory=$false)] [int]$revision = [int](([DateTime]::UtcNow - [DateTime]::new(2026, 1, 1)).TotalMinutes % 65535),
+	[Parameter(Mandatory=$false)] [switch]$store
 )
 
 $ErrorActionPreference = "Stop";
+if ($store -and ($PSBoundParameters.ContainsKey("publisher") -or $PSBoundParameters.ContainsKey("revision"))) {
+	throw "-store takes the publisher Partner Center gave and revision 0.";
+}
 $projectDir = $PSScriptRoot;
 $solutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $projectDir)));
 $appProject = Join-Path $projectDir "VpnHood.App.Client.Windows.Microsoft.csproj";
@@ -19,10 +24,11 @@ $vpnHostProject = Join-Path $projectDir "../Client.Windows.VpnPlugin/VpnHood.App
 $componentDir = Join-Path $solutionDir "src/Core/VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation";
 $componentName = "VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation";
 
-$outDir = Join-Path $projectDir "bin/Publish-microsoft";
+$outDir = Join-Path $projectDir "bin/Publish-microsoft$(if ($store) { '-store' })";
 $appDir = Join-Path $outDir "app";
 $vpnHostDir = Join-Path $outDir "vpn-host";
 $stageDir = Join-Path $outDir "stage";
+$logosDir = Join-Path $outDir "logos"; # MakePri's root: the logos alone, at their path in the package
 $pfxPath = Join-Path $outDir "dev-certificate.pfx";
 $cerPath = Join-Path $outDir "dev-certificate.cer";
 $pfxPassword = "VpnHoodDevelopment"; # a throwaway certificate's, for sideloading only
@@ -35,14 +41,24 @@ function Get-ProjectProperties([string]$project, [string[]]$names) {
 }
 
 # what the manifest names, from the projects themselves
-$app = Get-ProjectProperties $appProject @("AssemblyName", "VhAppDisplayName", "Version");
+$app = Get-ProjectProperties $appProject @("AssemblyName", "VhAppDisplayName", "Version", "ApplicationIcon",
+	"VhAppMsixIdentityName", "VhAppMsixPublisher", "VhAppMsixPublisherDisplayName");
 $vpnHost = Get-ProjectProperties $vpnHostProject @("AssemblyName");
+if (-not $app.VhAppMsixIdentityName -or -not $app.VhAppMsixPublisher -or -not $app.VhAppMsixPublisherDisplayName) {
+	throw "The app has no Microsoft Store identity: VhAppMsixIdentityName, VhAppMsixPublisher and VhAppMsixPublisherDisplayName, from its product's Product identity page in Partner Center.";
+}
+# The Store takes a package only under its own identity for the app and the name reserved, which Debug's is not.
+if ($store) {
+	if ($configuration -ne "Release") { throw "A Store package is Release: Debug's name is not the reserved one." }
+	$publisher = $app.VhAppMsixPublisher;
+	$revision = 0;
+}
 $numbers = [Version]($app.Version.Split('-')[0]);
 $packageVersion = "$($numbers.Major).$($numbers.Minor).$($numbers.Build).$revision";
 $packagePath = Join-Path $outDir "$($app.AssemblyName).msix";
 
 # a clean stage every time, so no file of another build or configuration reaches the package
-foreach ($dir in @($appDir, $vpnHostDir, $stageDir)) {
+foreach ($dir in @($appDir, $vpnHostDir, $stageDir, $logosDir)) {
 	Remove-Item $dir -Recurse -Force -ErrorAction Ignore;
 }
 New-Item -ItemType Directory -Path (Join-Path $stageDir "Assets") -Force | Out-Null;
@@ -84,16 +100,56 @@ if ($vpnHostConfig.runtimeOptions.configProperties.CSWINRT_LOAD_COMPONENTS_IN_DE
 	throw "The staged VPN host's runtimeconfig does not load components into the default context.";
 }
 
-# A valid minimal PNG: the package's pictures are phase 2's.
-[IO.File]::WriteAllBytes((Join-Path $stageDir "Assets/Logo.png"),
-	[Convert]::FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="));
+# The logos, drawn from the app's icon (the head's ApplicationIcon, the website edition's too) at each size Windows
+# shows them, none above its 256-pixel picture: Square44x44Logo's target sizes are the taskbar's and Start's,
+# unplated, as Windows draws a plated one on the accent colour.
+$icon = [IO.File]::ReadAllBytes((Join-Path $projectDir $app.ApplicationIcon));
+$picture = $null;
+for ($i = 0; $i -lt [BitConverter]::ToUInt16($icon, 4); $i++) {
+	$entry = 6 + 16 * $i;
+	$offset = [BitConverter]::ToInt32($icon, $entry + 12);
+	# the 256-pixel one, whose width byte is 0, kept as a PNG
+	if ($icon[$entry] -eq 0 -and $icon[$offset] -eq 0x89) {
+		$picture = [byte[]]$icon[$offset..($offset + [BitConverter]::ToInt32($icon, $entry + 8) - 1)];
+	}
+}
+if (-not $picture) { throw "The app's icon has no 256-pixel PNG picture to draw the package's logos from." }
+
+$logos = @{ "StoreLogo.scale-100" = 50; "StoreLogo.scale-200" = 100; "Square44x44Logo.scale-100" = 44;
+	"Square44x44Logo.scale-200" = 88; "Square150x150Logo.scale-100" = 150; "Square150x150Logo.scale-150" = 225 };
+foreach ($size in @(16, 24, 32, 48, 256)) {
+	$logos["Square44x44Logo.targetsize-$size"] = $size;
+	$logos["Square44x44Logo.targetsize-${size}_altform-unplated"] = $size;
+}
+
+Add-Type -AssemblyName System.Drawing;
+New-Item -ItemType Directory -Path (Join-Path $logosDir "Assets") -Force | Out-Null;
+$image = [System.Drawing.Image]::FromStream([IO.MemoryStream]::new($picture));
+try {
+	foreach ($logo in $logos.GetEnumerator()) {
+		$bitmap = [System.Drawing.Bitmap]::new($logo.Value, $logo.Value);
+		$graphics = [System.Drawing.Graphics]::FromImage($bitmap);
+		$graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic;
+		$graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality;
+		$graphics.DrawImage($image, 0, 0, $logo.Value, $logo.Value);
+		$graphics.Dispose();
+		$bitmap.Save((Join-Path $logosDir "Assets/$($logo.Key).png"), [System.Drawing.Imaging.ImageFormat]::Png);
+		$bitmap.Dispose();
+	}
+}
+finally {
+	$image.Dispose();
+}
+Copy-Item -Path (Join-Path $logosDir "Assets/*") -Destination (Join-Path $stageDir "Assets") -Force;
 
 # the manifest, stamped
 $manifestPath = Join-Path $stageDir "AppxManifest.xml";
 [xml]$manifest = Get-Content -Raw (Join-Path $projectDir "Package.appxmanifest");
+$manifest.Package.Identity.Name = $app.VhAppMsixIdentityName;
 $manifest.Package.Identity.Publisher = $publisher;
 $manifest.Package.Identity.Version = $packageVersion;
 $manifest.Package.Properties.DisplayName = $app.VhAppDisplayName;
+$manifest.Package.Properties.PublisherDisplayName = $app.VhAppMsixPublisherDisplayName;
 foreach ($application in $manifest.Package.Applications.Application) {
 	if ($application.Id -eq "VpnPluginHost") {
 		$application.Executable = "$($vpnHost.AssemblyName).exe";
@@ -119,7 +175,27 @@ $sdkBins = @(Get-ChildItem -LiteralPath "${env:ProgramFiles(x86)}\Windows Kits\1
 	Sort-Object { [Version]$_.Name } -Descending);
 if ($sdkBins.Count -eq 0) { throw "No Windows SDK with MakeAppx.exe was found." }
 $makeAppx = Join-Path $sdkBins[0].FullName "x64/makeappx.exe";
+$makePri = Join-Path $sdkBins[0].FullName "x64/makepri.exe";
 $signTool = Join-Path $sdkBins[0].FullName "x64/signtool.exe";
+
+# resources.pri, by which Windows finds a logo's scaled and sized files under the manifest's name for it, and takes
+# the name literally without it: MakePri's own configuration, less the resource packs only a bundle splits off.
+$priConfigPath = Join-Path $outDir "priconfig.xml";
+& $makePri createconfig /cf $priConfigPath /dq en-US /o | Out-Null;
+if ($LASTEXITCODE -ne 0) { throw "MakePri could not write its configuration (exit code $LASTEXITCODE)." }
+[xml]$priConfig = Get-Content -Raw $priConfigPath;
+$priConfig.resources.RemoveChild($priConfig.resources.packaging) | Out-Null;
+$priConfig.Save($priConfigPath);
+& $makePri new /pr $logosDir /cf $priConfigPath /mn $manifestPath /of (Join-Path $stageDir "resources.pri") /o | Out-Null;
+if ($LASTEXITCODE -ne 0) { throw "MakePri failed with exit code $LASTEXITCODE." }
+
+Remove-Item -LiteralPath $packagePath -Force -ErrorAction Ignore;
+& $makeAppx pack /d $stageDir /p $packagePath /o;
+if ($LASTEXITCODE -ne 0) { throw "MakeAppx failed with exit code $LASTEXITCODE." }
+if ($store) {
+	Write-Host "Package: $packagePath ($packageVersion, $publisher), unsigned: Partner Center signs it" -ForegroundColor Green;
+	return;
+}
 
 # Windows installs no package whose publisher differs from its signer's subject, so a kept
 # certificate serves only while it names -publisher and has a day left.
@@ -148,9 +224,6 @@ if ($needCertificate) {
 	if (Test-Path -LiteralPath $caCopy) { Remove-Item -LiteralPath $caCopy; }
 }
 
-Remove-Item -LiteralPath $packagePath -Force -ErrorAction Ignore;
-& $makeAppx pack /d $stageDir /p $packagePath /o;
-if ($LASTEXITCODE -ne 0) { throw "MakeAppx failed with exit code $LASTEXITCODE." }
 & $signTool sign /fd SHA256 /f $pfxPath /p $pfxPassword $packagePath;
 if ($LASTEXITCODE -ne 0) { throw "SignTool failed with exit code $LASTEXITCODE." }
 

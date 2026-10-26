@@ -200,10 +200,27 @@ public sealed class WindowsVpnPluginDevice : IDevice
     // user's own phonebook, the one Windows' VPN settings and quick settings list. The agent's add writes the package's
     // own, which they do not. Split tunneling, or Windows adds a default route of its own beside the plug-in's routes.
     // MSIX runs nothing at an uninstall, so the profile outlives the package, in Windows' settings until the person
-    // removes it.
+    // removes it, and keeps the name once the agent lists it no more, its plug-in gone: a development package's, say,
+    // which a Store install follows. Such a one is removed, as Remove-VpnConnection -Force does.
     private void AddUserProfile(string packageFamilyName)
     {
         using var vpnConnection = new ManagementClass(@"root\Microsoft\Windows\RemoteAccess\Client", "PS_VpnConnection", null);
+        try {
+            NewByThirdParty(vpnConnection, packageFamilyName);
+        }
+        catch (ManagementException ex) when (ex.ErrorCode == ManagementStatus.AlreadyExists) {
+            VhLogger.Instance.LogInformation(
+                "The VPN profile's name is held by a profile whose plug-in Windows does not list, which is removed.");
+            using var parameters = vpnConnection.GetMethodParameters("Remove");
+            parameters["Name"] = new[] { _profileName };
+            parameters["Force"] = true;
+            vpnConnection.InvokeMethod("Remove", parameters, null)?.Dispose();
+            NewByThirdParty(vpnConnection, packageFamilyName);
+        }
+    }
+
+    private void NewByThirdParty(ManagementClass vpnConnection, string packageFamilyName)
+    {
         using var parameters = vpnConnection.GetMethodParameters("NewByThirdParty");
         parameters["Name"] = _profileName;
         parameters["ServerAddress"] = PlaceholderServerAddress;

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api.App;
@@ -813,6 +814,55 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var profile = await VhApp.Api.VpnProfiles.AddByAccessKey(accessKey, CancellationToken.None);
         await ReloadInfo();
         return profile.VpnProfileId;
+    }
+
+    // A key the OS opened the app with - its file, mailed on by an admin - as Android's activity imports one: its
+    // server becomes the chosen one, and the notice says it was added or updated, or that the key could not be read.
+    public async Task ImportAccessKey(string accessKey)
+    {
+        try {
+            await AddAndChooseAccessKey(accessKey);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not import the access key the app was opened with.");
+            ShowNotice(Strings.Current.MsgCantReadAccessKey);
+        }
+    }
+
+    // The same for the file itself, as iOS hands it over: one it cannot read is said as a key it cannot.
+    public async Task ImportAccessKeyFile(IStorageFile file)
+    {
+        try {
+            await using var stream = await file.OpenReadAsync();
+            using var reader = new StreamReader(stream);
+            await AddAndChooseAccessKey(await reader.ReadToEndAsync());
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not import the access key file the app was opened with.");
+            ShowNotice(Strings.Current.MsgCantReadAccessKey);
+        }
+    }
+
+    // A head that takes no keys says so of the file: it holds nothing a key could be added to.
+    private async Task AddAndChooseAccessKey(string accessKey)
+    {
+        if (!CanAddServer) {
+            ShowNotice(Strings.Current.MsgUnsupportedContent);
+            return;
+        }
+
+        // the profiles before the add, which a configuration read during it would already show
+        var knownIds = VhApp.VpnProfileInfos.Select(x => x.VpnProfileId).ToArray();
+        var profile = await VhApp.Api.VpnProfiles.AddByAccessKey(accessKey.Trim(), CancellationToken.None);
+        var isNew = !knownIds.Contains(profile.VpnProfileId);
+
+        var userSettings = VhApp.UserSettings;
+        userSettings.VpnProfileId = profile.VpnProfileId;
+        await VhApp.SaveUserSettings(userSettings, CancellationToken.None);
+        await ReloadInfo();
+
+        var message = isNew ? Strings.Current.MsgAccessKeyAdded : Strings.Current.MsgAccessKeyUpdated;
+        ShowNotice(string.Format(CultureInfo.CurrentCulture, message, profile.VpnProfileName));
     }
 
     // Why the servers row leads nowhere, when it does: a head that takes no keys can hold nothing

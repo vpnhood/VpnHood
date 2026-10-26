@@ -21,9 +21,14 @@ namespace VpnHood.AppUi.Hosting.Desktop.Commands;
 // window and the other finds it. The pipe is asked before it is served, since on Linux a second
 // server would take the name over rather than fail, and the open window always has the next
 // listener waiting, so the name never goes unanswered between two launches.
+//
+// A launch given an access key - a file opened with the app - hands it to the open window, whose UI
+// imports it, before bringing it forward: in the Store edition the app is in that window's process,
+// and nothing else could reach it.
 internal sealed class DesktopUiInstance : IAsyncDisposable
 {
     private const string ShowCommand = "show";
+    private const string ImportAccessKeyCommand = "import-access-key"; // the key on the next line
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan LockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan LockRetryDelay = TimeSpan.FromMilliseconds(50);
@@ -43,13 +48,14 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     }
 
     // This launch's window, the UI a later launch brings forward, or null when this person already
-    // has one open in this session, which has been asked to come forward. On the calling thread
-    // throughout: the lock is let go only once this launch's server holds the name.
-    public static DesktopUiInstance? TryClaim(IDesktopUiPaths paths, IDesktopUi ui)
+    // has one open in this session, which has been asked to come forward and been handed the access
+    // key, if this launch has one. On the calling thread throughout: the lock is let go only once this
+    // launch's server holds the name.
+    public static DesktopUiInstance? TryClaim(IDesktopUiPaths paths, IDesktopUi ui, string? accessKey)
     {
         var name = BuildName(paths.InstanceName);
         using var sessionLock = TakeSessionLock(paths.UiDataPath, name);
-        return TryShowExisting(name) ? null : new DesktopUiInstance(name, ui);
+        return TryShowExisting(name, accessKey) ? null : new DesktopUiInstance(name, ui);
     }
 
     // one name per instance, person and session, in characters every platform's pipe and file names take
@@ -104,7 +110,7 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
         }
     }
 
-    private static bool TryShowExisting(string pipeName)
+    private static bool TryShowExisting(string pipeName, string? accessKey)
     {
         using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, Options);
         try {
@@ -114,8 +120,16 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
             return false; // nobody serves it: this launch is the window
         }
 
+        // a key is one line: vh:// and its base64
         using var writer = new StreamWriter(client);
-        writer.WriteLine(ShowCommand);
+        if (accessKey != null) {
+            writer.WriteLine(ImportAccessKeyCommand);
+            writer.WriteLine(accessKey);
+        }
+        else {
+            writer.WriteLine(ShowCommand);
+        }
+
         writer.Flush();
         return true;
     }
@@ -147,15 +161,21 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
         }
     }
 
-    // What a second launch asks: this window, to the front.
+    // What a second launch asks: this window, to the front, after importing the key it was given.
     private async Task Answer(NamedPipeServerStream connected, CancellationToken cancellationToken)
     {
         await using var pipe = connected;
         try {
             using var reader = new StreamReader(pipe);
             var command = await reader.ReadLineAsync(cancellationToken).Vhc();
-            if (command == ShowCommand)
+            if (command == ImportAccessKeyCommand &&
+                await reader.ReadLineAsync(cancellationToken).Vhc() is { } accessKey) {
+                await _ui.ImportAccessKey(accessKey, cancellationToken).Vhc();
                 await _ui.BringToFront(cancellationToken).Vhc();
+            }
+            else if (command == ShowCommand) {
+                await _ui.BringToFront(cancellationToken).Vhc();
+            }
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested) {
             VhLogger.Instance.LogWarning(ex, "Could not bring the window forward for a second launch.");

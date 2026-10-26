@@ -1,5 +1,7 @@
 ﻿using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.iOS;
+using Avalonia.Platform.Storage;
 using Foundation;
 using UIKit;
 using VpnHood.AppLib.App;
@@ -21,8 +23,23 @@ public abstract class IosAvaloniaAppDelegate<TUi> : AvaloniaAppDelegate<TUi>
 {
     private NSObject? _foregroundObserver; // kept for the app's life, as the observation is
 
+    // A file the app is opened with - an access key's, as the head's Info.plist declares - goes to the UI, which
+    // imports it. Avalonia raises it as the scene connects, after the UI has made its view, and later as one comes
+    // to the running app.
+    protected IosAvaloniaAppDelegate()
+    {
+        ((IAvaloniaAppDelegate)this).Activated += OnActivated;
+    }
+
     // The head's init params: the app's, and the two iOS facts the platform builds its device from.
     protected abstract IosInitParams CreateInitParams();
+
+    private static void OnActivated(object? sender, ActivatedEventArgs e)
+    {
+        if (e is FileActivatedEventArgs { Files: [IStorageFile file, ..] } &&
+            Application.Current is VpnHoodAvaloniaAppBase ui)
+            _ = ui.ImportAccessKeyFile(file);
+    }
 
     protected override AppBuilder CreateAppBuilder()
     {

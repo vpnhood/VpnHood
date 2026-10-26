@@ -14,25 +14,30 @@ internal static class DevCommand
 {
     public static Command Create(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread)
     {
+        // the window's own --access-key, for a debugger of the import
+        var accessKeyOption = AccessKeyInput.CreateOption();
         var command = new Command("dev", "Run the service and the window in this one process, for a debugger.") {
-            Hidden = true
+            Hidden = true,
+            Options = { accessKeyOption }
         };
 
-        command.SetAction((_, cancellationToken) => Run(platform, initParams, mainThread, cancellationToken));
+        command.SetAction((parseResult, cancellationToken) => Run(platform, initParams, mainThread,
+            parseResult.GetValue(accessKeyOption), cancellationToken));
 
         return command;
     }
 
     private static async Task<int> Run(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
-        CancellationToken cancellationToken)
+        string? accessKeyInput, CancellationToken cancellationToken)
     {
         // the platform's console from the first line, as the daemon has it
         VhLogger.AddProvider(platform.CreateConsoleLoggerProvider());
 
         try {
+            var accessKey = accessKeyInput == null ? null : AccessKeyInput.Read(accessKeyInput);
             await using var daemonHost = platform.DaemonHostFactory.CreateDev(platform.Paths.DevStoragePath);
             await InProcessDesktopHost.RunWindow(platform.Paths, platform.PeerCheck, initParams, mainThread,
-                startHidden: false, cancellationToken).Vhc();
+                startHidden: false, accessKey, cancellationToken).Vhc();
             return 0;
         }
         catch (OperationCanceledException) {

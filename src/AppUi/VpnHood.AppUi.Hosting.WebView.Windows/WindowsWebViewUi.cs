@@ -1,8 +1,11 @@
 using System.IO;
+using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Api;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
@@ -18,11 +21,16 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
     // message in its place
     private volatile WebViewMainWindow? _window;
     private volatile uint _messageThreadId;
+    private volatile VpnHoodApi? _api;
 
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested || uiParams.StartHidden)
             return;
+
+        _api = uiParams.Api;
+        if (uiParams.AccessKey is { } accessKey)
+            ImportAccessKey(uiParams.Api, accessKey, cancellationToken).GetAwaiter().GetResult();
 
         // What the window draws with, read before it is made: a window that changes colour under the
         // person is seen, one that appears a moment later is not. The calls do not come back to this
@@ -82,5 +90,26 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
             Win32MessageBox.BringToFront(messageThreadId);
 
         return Task.CompletedTask;
+    }
+
+    public Task ImportAccessKey(string accessKey, CancellationToken cancellationToken)
+    {
+        return _api is { } api ? ImportAccessKey(api, accessKey, cancellationToken) : Task.CompletedTask;
+    }
+
+    // Through the app, the key's server made the chosen one: the page has the words, and it shows the server as it
+    // reads the configuration again. One the app refuses is in the log only, as the page has no way to be told.
+    private static async Task ImportAccessKey(VpnHoodApi api, string accessKey, CancellationToken cancellationToken)
+    {
+        try {
+            var profile = await api.VpnProfiles.AddByAccessKey(accessKey.Trim(), cancellationToken).ConfigureAwait(false);
+            var info = await api.App.GetInfo(cancellationToken).ConfigureAwait(false);
+            var userSettings = info.UserSettings;
+            userSettings.VpnProfileId = profile.VpnProfileId;
+            await api.App.SetUserSettings(userSettings, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException) {
+            VhLogger.Instance.LogError(ex, "Could not import the access key the app was opened with.");
+        }
     }
 }

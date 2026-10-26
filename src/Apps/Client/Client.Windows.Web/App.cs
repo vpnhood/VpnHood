@@ -23,6 +23,9 @@ internal static class App
             AppVersion = Version.Parse(AppConstants.AppVersion),
             AppOptionsFactory = CreateAppOptions,
             IsAddAccessKeySupported = ClientAppOptions.IsAddAccessKeySupported,
+            // the extension Android's file managers know (Client.Android.Google's MainActivity), so one file an
+            // admin mails opens on every platform
+            AccessKeyFileExtensions = [".cdy"],
             Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
         });
     }

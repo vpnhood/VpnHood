@@ -19,6 +19,50 @@
 	     ships every build as 1.0 (1.0), which also collides on the next TestFlight upload. -->
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- An access key's file opens in the app, whose UI imports the key (IosAvaloniaAppDelegate): .cdy, the
+	     extension Android's file managers know, so one file an admin mails opens on every platform. Opened in
+	     place, read through its security scope: a copy would be left in Documents/Inbox, which is backed up. -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Access key</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.vpnhood.access-key</string>
+			</array>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.vpnhood.access-key</string>
+			<key>UTTypeDescription</key>
+			<string>Access key</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>cdy</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/vnd.cinderella</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<!-- The SPA is served over plain HTTP from an in-process loopback web server; allow it. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>

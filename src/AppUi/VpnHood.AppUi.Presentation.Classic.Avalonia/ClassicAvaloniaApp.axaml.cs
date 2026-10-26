@@ -1,12 +1,14 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Styles;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Graphics;
@@ -69,8 +71,26 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
         AutomationNames.Register();
     }
 
+    // the view last made, whose notice an imported key's message goes on: one per run, but on Android, which
+    // imports keys in its activity
+    private MainView? _mainView;
+
     protected override Control CreateMainView()
     {
-        return new MainView();
+        _mainView = new MainView();
+        return _mainView;
     }
+
+    public override Task ImportAccessKey(string accessKey)
+    {
+        return MainViewModel.ImportAccessKey(accessKey);
+    }
+
+    public override Task ImportAccessKeyFile(IStorageFile file)
+    {
+        return MainViewModel.ImportAccessKeyFile(file);
+    }
+
+    private MainViewModel MainViewModel => _mainView?.ViewModel ??
+                                           throw new InvalidOperationException("The UI has no view to import an access key in.");
 }

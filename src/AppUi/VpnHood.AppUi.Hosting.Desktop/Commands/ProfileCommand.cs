@@ -58,8 +58,8 @@ internal static class ProfileCommand
         var command = new Command("add", "Add a profile from an access key.") { keyArgument };
 
         command.SetAction((parseResult, cancellationToken) => DaemonSession.Run(platform, async (api, token) => {
-            var accessKey = ReadAccessKey(parseResult.GetValue(keyArgument) ??
-                                          throw new InvalidOperationException("No access key was given."));
+            var accessKey = AccessKeyInput.Read(parseResult.GetValue(keyArgument) ??
+                                                throw new InvalidOperationException("No access key was given."));
             var profile = await api.VpnProfiles.AddByAccessKey(accessKey, token).Vhc();
             await CliPrinter.Line($"Added: {profile.VpnProfileName} ({profile.VpnProfileId})", token).Vhc();
             return 0;
@@ -125,12 +125,5 @@ internal static class ProfileCommand
     {
         return ProfileLookup.Resolve(profiles, named, commandName) ??
                throw new InvalidOperationException("No profile was given.");
-    }
-
-    // A key on the command line is in that person's shell history and in ps; a file is how a
-    // script should pass one, so both are taken and the file wins when the argument names one.
-    private static string ReadAccessKey(string keyOrPath)
-    {
-        return File.Exists(keyOrPath) ? File.ReadAllText(keyOrPath).Trim() : keyOrPath.Trim();
     }
 }

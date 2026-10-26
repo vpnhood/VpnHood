@@ -17,6 +17,8 @@ public class AvaloniaDesktopUi<TUi> : IDesktopUi
             return;
 
         using var registration = cancellationToken.Register(AvaloniaDesktopHost.Shutdown);
+        if (uiParams.AccessKey is { } accessKey)
+            AvaloniaDesktopHost.ImportAccessKey(accessKey);
         AvaloniaDesktopHost.Run<TUi>([], uiParams.Api, uiParams.UiAssetProvider, useTray: true,
             startHidden: uiParams.StartHidden, cancellationToken);
     }
@@ -33,6 +35,12 @@ public class AvaloniaDesktopUi<TUi> : IDesktopUi
     public Task BringToFront(CancellationToken cancellationToken)
     {
         AvaloniaDesktopHost.ShowMainWindow();
+        return Task.CompletedTask;
+    }
+
+    public Task ImportAccessKey(string accessKey, CancellationToken cancellationToken)
+    {
+        AvaloniaDesktopHost.ImportAccessKey(accessKey);
         return Task.CompletedTask;
     }
 }

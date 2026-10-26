@@ -8,10 +8,11 @@
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  IgnorableNamespaces="uap uap10 rescap desktop">
+  IgnorableNamespaces="uap uap3 uap10 rescap desktop">
   <Identity Name="VpnHood.Client" Publisher="CN=Stamped" Version="0.0.0.0" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Stamped</DisplayName>
@@ -74,6 +75,19 @@
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Logo.png"
         Square44x44Logo="Assets\Logo.png" />
+      <Extensions>
+        <!-- An access key's file, opened, starts the app with its path, which the window imports
+             (InProcessDesktopHost): .cdy, the extension Android's file managers know, so one file an admin
+             mails opens on every platform. -->
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap3:FileTypeAssociation Name="accesskey" Parameters="--access-key &quot;%1&quot;">
+            <uap:DisplayName>Access key</uap:DisplayName>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.cdy</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap3:FileTypeAssociation>
+        </uap:Extension>
+      </Extensions>
     </Application>
   </Applications>
   <Capabilities>

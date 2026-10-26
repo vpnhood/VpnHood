@@ -30,9 +30,14 @@ public static class AvaloniaDesktopHost
     // A second launch's ask for the window, kept when it comes before the run has one, so the window
     // opens as the run starts rather than the ask being lost.
     private static readonly TaskCompletionSource ShowRequest = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    // Access keys a launch was given before the run has its UI - this launch's own, a second one's -
+    // which the UI imports as the run starts.
+    private static readonly List<string> PendingAccessKeys = [];
     private static readonly Lock RunLock = new();
     private static ClassicDesktopStyleApplicationLifetime? _lifetime;
     private static Window? _window;
+    private static VpnHoodAvaloniaAppBase? _ui;
 
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
@@ -113,8 +118,14 @@ public static class AvaloniaDesktopHost
         lock (RunLock) {
             _lifetime = lifetime;
             _window = window;
+            _ui = ui;
             if (startHidden && !ShowRequest.Task.IsCompleted)
                 lifetime.MainWindow = null;
+
+            // run by the dispatcher once Start runs its loop
+            foreach (var accessKey in PendingAccessKeys)
+                Dispatcher.UIThread.Post(() => _ = ui.ImportAccessKey(accessKey));
+            PendingAccessKeys.Clear();
         }
 
         // a stop that came while the UI was made, when Shutdown had no lifetime to end yet
@@ -212,6 +223,19 @@ public static class AvaloniaDesktopHost
                 window.WindowState = WindowState.Normal;
                 window.Activate();
             });
+        }
+    }
+
+    // From any thread: an access key a launch was given, which the UI imports and says so (VpnHoodAvaloniaAppBase).
+    // Before the run has its UI the key is kept for its start, as in ShowMainWindow; a run that shows a message in
+    // the window's place has no app to import it into.
+    public static void ImportAccessKey(string accessKey)
+    {
+        lock (RunLock) {
+            if (_ui is { } ui)
+                Dispatcher.UIThread.Post(() => _ = ui.ImportAccessKey(accessKey));
+            else
+                PendingAccessKeys.Add(accessKey);
         }
     }
 

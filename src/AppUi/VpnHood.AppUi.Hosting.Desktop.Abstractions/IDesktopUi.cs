@@ -20,4 +20,9 @@ public interface IDesktopUi
     // Shows the running UI's window and brings it to the front, from any thread: a second launch.
     // Nothing while no run has a window.
     Task BringToFront(CancellationToken cancellationToken);
+
+    // Imports an access key a second launch was given - a file opened with the app - as the UI's own
+    // import does: the key's server becomes the chosen one, and the UI says so, or that it could not
+    // read the key. From any thread; a key that comes before the run has the app waits for it.
+    Task ImportAccessKey(string accessKey, CancellationToken cancellationToken);
 }

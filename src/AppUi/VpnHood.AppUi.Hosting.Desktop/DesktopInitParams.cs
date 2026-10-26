@@ -25,6 +25,11 @@ public class DesktopInitParams : AppInitParams
     // and a new head that forgets it would silently offer Connect's users a profile list of one.
     public required bool IsAddAccessKeySupported { get; init; }
 
+    // The extensions of an access key's file - one an admin downloads and mails on - that open in
+    // this app, which imports the key ("ui --access-key"): on Windows, "service install" registers
+    // them in an installer's layout. None for a head that takes no keys.
+    public IReadOnlyList<string> AccessKeyFileExtensions { get; init; } = [];
+
     // Where this package placed the UI's content, beside the binary. The default is what the
     // Classic assets targets place for every head that imports them.
     public string UiZipAssetPath { get; init; } = "assets/ui.zip";

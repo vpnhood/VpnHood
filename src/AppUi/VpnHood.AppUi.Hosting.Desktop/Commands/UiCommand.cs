@@ -34,14 +34,18 @@ internal static class UiCommand
         };
         command.Options.Add(trayOption);
 
+        // An access key's file opened with the app: the window imports the key.
+        var accessKeyOption = AccessKeyInput.CreateOption();
+        command.Options.Add(accessKeyOption);
+
         command.SetAction((parseResult, cancellationToken) => Run(platform, initParams, mainThread,
-            startHidden: parseResult.GetValue(trayOption), cancellationToken));
+            startHidden: parseResult.GetValue(trayOption), parseResult.GetValue(accessKeyOption), cancellationToken));
 
         return command;
     }
 
     private static async Task<int> Run(IDesktopPlatform platform, DesktopInitParams initParams, MainThreadQueue mainThread,
-        bool startHidden, CancellationToken cancellationToken)
+        bool startHidden, string? accessKeyInput, CancellationToken cancellationToken)
     {
         // before anything logs: the window has no console, so its warnings and errors go to the
         // platform's own log
@@ -50,9 +54,16 @@ internal static class UiCommand
         try {
             bool isServiceNewer;
 
-            // One window per person and session: a second launch brings the open one forward, and that
-            // is all it does.
-            await using (var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, initParams.Ui)) {
+            // read before the window is looked for, which a second launch hands it to: a file that
+            // cannot be read is this launch's failure, said in its own message
+            var accessKey = accessKeyInput == null ? null : await TryReadAccessKey(platform.Paths, initParams,
+                mainThread, accessKeyInput, cancellationToken).Vhc();
+            if (accessKeyInput != null && accessKey == null)
+                return 1;
+
+            // One window per person and session: a second launch brings the open one forward, after
+            // handing it the key it was given, and that is all it does.
+            await using (var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, initParams.Ui, accessKey)) {
                 if (uiInstance == null)
                     return 0;
 
@@ -62,7 +73,7 @@ internal static class UiCommand
                     return 1;
 
                 isServiceNewer = await RunWindow(platform.Paths, initParams, mainThread, connection, startHidden,
-                    cancellationToken).Vhc();
+                    accessKey, cancellationToken).Vhc();
             }
 
             // out of this window's claim, which the new one takes
@@ -111,6 +122,22 @@ internal static class UiCommand
         return null;
     }
 
+    // The key a launch was given, out of its file; or null once the person has been told why the file
+    // could not be read, in the UI's one message - in the window's place, or beside the open one.
+    internal static async Task<string?> TryReadAccessKey(IDesktopUiPaths paths, DesktopInitParams initParams,
+        MainThreadQueue mainThread, string accessKeyInput, CancellationToken cancellationToken)
+    {
+        try {
+            return AccessKeyInput.Read(accessKeyInput);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+            VhLogger.Instance.LogError(ex, "Could not read the access key's file.");
+            await RunMessage(paths, initParams, mainThread, DesktopUiMessageKind.Failure, ex.Message,
+                cancellationToken).Vhc();
+            return null;
+        }
+    }
+
     // The UI's one message in the window's place, on the host's main thread as the window would run,
     // until the person closes it.
     internal static Task RunMessage(IDesktopUiPaths paths, DesktopInitParams initParams, MainThreadQueue mainThread,
@@ -152,9 +179,11 @@ internal static class UiCommand
     // The UI over a connection to the app, until it ends: the service's app, or the one this process
     // holds itself (InProcessDesktopHost). It ends by itself - its window closed, its tray's Exit - or
     // with the command: a signal, a logout; or once the service answers as a newer version - an update
-    // replaced it under the open window - which this returns true for.
+    // replaced it under the open window - which this returns true for. The UI imports the access key
+    // the launch was given, if any.
     internal static async Task<bool> RunWindow(IDesktopUiPaths paths, DesktopInitParams initParams,
-        MainThreadQueue mainThread, DaemonConnection connection, bool startHidden, CancellationToken cancellationToken)
+        MainThreadQueue mainThread, DaemonConnection connection, bool startHidden, string? accessKey,
+        CancellationToken cancellationToken)
     {
         using var serviceNewer = new CancellationTokenSource();
         using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serviceNewer.Token);
@@ -167,7 +196,8 @@ internal static class UiCommand
             UiAssetProvider = CreateUiAssets(paths, initParams),
             ApiUrlProvider = connection.ApiUrlProvider,
             UiDataPath = paths.UiDataPath,
-            StartHidden = startHidden
+            StartHidden = startHidden,
+            AccessKey = accessKey
         };
         try {
             await mainThread.Run(() => initParams.Ui.Run(uiParams, uiCancellation.Token)).Vhc();

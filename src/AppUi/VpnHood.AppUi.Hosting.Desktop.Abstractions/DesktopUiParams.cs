@@ -27,4 +27,8 @@ public class DesktopUiParams
     // the entry an installer runs at sign-in. A UI with no tray to wait in ends at once. Whether
     // closing the window ends the UI is the UI's own to decide, by its tray.
     public required bool StartHidden { get; init; }
+
+    // The access key this launch was given - a file opened with the app - which the UI imports once it
+    // runs, as IDesktopUi.ImportAccessKey does a second launch's; null for a plain start.
+    public string? AccessKey { get; init; }
 }

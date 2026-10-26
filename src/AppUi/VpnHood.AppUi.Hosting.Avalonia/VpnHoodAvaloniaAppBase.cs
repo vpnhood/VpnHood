@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Graphics;
@@ -26,6 +27,13 @@ public abstract class VpnHoodAvaloniaAppBase : Application
     // The shape a desktop window takes for this UI (DesktopWindowFit): its layout's, which only its
     // design knows, so the UI states it and a head names the UI alone.
     public abstract DesktopWindowFitOptions WindowFit { get; }
+
+    // An access key the OS opened the app with - its file, mailed on by an admin - which the UI imports as the
+    // chosen server and says so, or that it could not read the key, in its own words: the key a desktop launch
+    // read from its file (AvaloniaDesktopHost), or the file itself, as iOS hands it over. On the UI thread, once
+    // the view is made; they fail only where none is.
+    public abstract Task ImportAccessKey(string accessKey);
+    public abstract Task ImportAccessKeyFile(IStorageFile file);
 
     public override void OnFrameworkInitializationCompleted()
     {

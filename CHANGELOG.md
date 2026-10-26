@@ -1,5 +1,6 @@
 # Latest
 
+* Feature: On Windows and iOS, an access key's file (.cdy) opens in VpnHood! CLIENT, which adds its server, chooses it and says so, as on Android #windows #ios
 * Improve: The Android app starts two to four times faster, most of all on budget phones #android
 * Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
 * Feature: Always On comes to Windows and Linux: switch it on in Settings, or with the `always-on on` command on a computer with no desktop, and the VPN connects as the computer starts, before anyone signs in. While the server is out of reach it tries again, waiting longer each time. It stops when you disconnect, when another VPN app takes over, or when the server refuses the connection, and the app says why. On VpnHood! CONNECT it needs premium #windows #linux

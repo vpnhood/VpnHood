@@ -17,7 +17,7 @@ public sealed class WindowsDesktopPlatform : IDesktopPlatform
     public WindowsDesktopPlatform(DesktopInitParams initParams)
     {
         _paths = new WindowsDesktopPaths(initParams.AppId);
-        var setup = new WindowsServiceSetup(_paths, initParams.AppName);
+        var setup = new WindowsServiceSetup(_paths, initParams.AppName, initParams.AccessKeyFileExtensions);
         var channel = new WindowsDaemonChannel(_paths);
         Instance = new WindowsInstanceController(_paths, setup, channel);
         Channel = channel;

@@ -69,7 +69,7 @@ public class WindowsServiceSetup(
             }
 
             foreach (var scheme in accessKeySchemes)
-                Console.WriteLine(WindowsUrlScheme.Add(scheme, $"{appName} access key", launcherPath, openCommand)
+                Console.WriteLine(WindowsUrlScheme.Add(scheme, $"{appName} access key", appName, launcherPath, openCommand)
                     ? $"{scheme}: links open in {appName}."
                     : $"{scheme}: links stay with the app that already opens them.");
         }

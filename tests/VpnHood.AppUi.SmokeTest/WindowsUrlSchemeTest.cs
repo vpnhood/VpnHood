@@ -1,7 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Text;
 using System.Threading;
 using Microsoft.Win32;
 using VpnHood.AppUi.Hosting.Desktop.WindowsTun;
@@ -26,10 +28,11 @@ public class WindowsUrlSchemeTest
             // the open command writes the link it was given, as the window's --access-key takes it
             var marker = Path.Combine(folder, "opened.txt");
             var command = $"\"{Environment.SystemDirectory}\\cmd.exe\" /c echo \"%1\"> \"{marker}\"";
-            Assert.IsTrue(WindowsUrlScheme.Add(scheme, "Test access key", Path.Combine(Environment.SystemDirectory, "cmd.exe"),
-                command));
-            Assert.IsTrue(WindowsUrlScheme.Add(scheme, "Test access key", Path.Combine(Environment.SystemDirectory, "cmd.exe"),
-                command), "its own again, as a reinstall");
+            Assert.IsTrue(WindowsUrlScheme.Add(scheme, "Test access key", "Test App",
+                Path.Combine(Environment.SystemDirectory, "cmd.exe"), command));
+            Assert.IsTrue(WindowsUrlScheme.Add(scheme, "Test access key", "Test App",
+                Path.Combine(Environment.SystemDirectory, "cmd.exe"), command), "its own again, as a reinstall");
+            Assert.AreEqual("Test App", ReadFriendlyAppName(scheme), "a browser's prompt names the app, not cmd.exe");
 
             // as long as a real key, past the 2083 characters of a browser's old URL limit
             var link = $"{scheme}://{new string('A', 2700)}+b/c==";
@@ -57,8 +60,8 @@ public class WindowsUrlSchemeTest
             using (var commandKey = Registry.LocalMachine.CreateSubKey($@"{ClassesKeyPath}\{scheme}\shell\open\command"))
                 commandKey.SetValue("", otherCommand);
 
-            Assert.IsFalse(WindowsUrlScheme.Add(scheme, "Test access key", Path.Combine(Environment.SystemDirectory, "cmd.exe"),
-                "cmd.exe"));
+            Assert.IsFalse(WindowsUrlScheme.Add(scheme, "Test access key", "Test App",
+                Path.Combine(Environment.SystemDirectory, "cmd.exe"), "cmd.exe"));
             Assert.IsFalse(WindowsUrlScheme.Remove(scheme, "cmd.exe"));
             Assert.AreEqual(otherCommand, ReadCommand(scheme), "the other app keeps it");
         }
@@ -88,6 +91,16 @@ public class WindowsUrlSchemeTest
         return key?.GetValue("") as string;
     }
 
+    // as a browser asks Windows which app a scheme opens
+    private static string? ReadFriendlyAppName(string scheme)
+    {
+        const int isProtocol = 0x1000; // ASSOCF_IS_PROTOCOL
+        const int friendlyAppName = 4; // ASSOCSTR_FRIENDLYAPPNAME
+        var length = 512u;
+        var name = new StringBuilder((int)length);
+        return AssocQueryString(isProtocol, friendlyAppName, scheme, null, name, ref length) == 0 ? name.ToString() : null;
+    }
+
     private static bool HasKey(string subKeyPath)
     {
         using var key = Registry.LocalMachine.OpenSubKey($@"{ClassesKeyPath}\{subKeyPath}");
@@ -98,6 +111,10 @@ public class WindowsUrlSchemeTest
     {
         Registry.LocalMachine.DeleteSubKeyTree($@"{ClassesKeyPath}\{subKeyPath}", throwOnMissingSubKey: false);
     }
+
+    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
+    private static extern int AssocQueryString(int flags, int str, string assoc, string? extra, StringBuilder? outString,
+        ref uint outLength);
 
     private static void RequireElevation()
     {

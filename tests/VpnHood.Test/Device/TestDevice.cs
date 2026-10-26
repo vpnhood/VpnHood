@@ -20,7 +20,6 @@ public class TestDevice(
     public int BindProcessToVpnFalseCount { get; private set; }
     public int BindProcessToVpnTrueCount { get; private set; }
     public bool LastBindProcessToVpnValue { get; private set; }
-    public bool IsTcpProxySupported => true;
     public bool IsQuicSupported => SocketFactory.IsQuicSupported;
     public bool IsBindProcessToVpnSupported => true;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");

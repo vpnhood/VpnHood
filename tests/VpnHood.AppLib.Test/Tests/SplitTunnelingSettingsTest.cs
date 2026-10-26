@@ -147,6 +147,8 @@ public class SplitTunnelingSettingsTest
             IsTcpPacketIpV4Supported = true,
             IsTcpPacketIpV6Supported = true,
             IsTcpProxySupported = true,
+            IsQuicPacketSupported = true,
+            IsUdpPacketSupported = true,
             IsLocalNetworkAllowed = false,
             ServerLocationInfo = null,
             IsPremiumSession = false,

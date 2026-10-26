@@ -528,6 +528,9 @@ public class ServerHost : IAsyncDisposable
             IsTcpPacketSupported = isTcpPacketIpV4Supported,
 #pragma warning restore CS0618
             IsTcpProxySupported = session.AllowTcpProxy,
+            // no UDP means no QUIC either, so a client reads only one of them for each
+            IsQuicPacketSupported = session.AllowQuicPacket && session.AllowUdpPacket,
+            IsUdpPacketSupported = session.AllowUdpPacket,
             ClientPublicAddress = clientIp,
             ClientCountry = sessionResponseEx.ClientCountry,
             VirtualIpNetworkV4 = new IpNetwork(session.VirtualIps.IpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),

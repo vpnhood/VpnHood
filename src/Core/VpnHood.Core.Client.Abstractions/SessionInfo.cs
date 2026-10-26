@@ -16,6 +16,11 @@ public class SessionInfo
     public required bool IsTcpPacketIpV4Supported { get; init; }
     public required bool IsTcpPacketIpV6Supported { get; init; }
     public required bool IsTcpProxySupported { get; init; }
+
+    // The users' QUIC and UDP, which the client drops when the server does not carry them, whatever the user's own
+    // drops say; DNS passes either way. The channels above are the server's own.
+    public required bool IsQuicPacketSupported { get; init; }
+    public required bool IsUdpPacketSupported { get; init; }
     public required bool IsLocalNetworkAllowed { get; set; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsPremiumSession { get; init; }

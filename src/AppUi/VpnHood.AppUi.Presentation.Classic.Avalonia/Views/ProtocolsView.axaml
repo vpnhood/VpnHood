@@ -11,7 +11,7 @@
       <StackPanel MaxWidth="720" Spacing="16">
         <TextBlock Classes="card-subtitle" Text="{Binding ProtocolDesc, Source={x:Static res:Strings.Current}}" />
 
-        <Border x:Name="CloakCard" Classes="config-card" Padding="0,4,0,12">
+        <Border Classes="config-card" Padding="0,4,0,12">
           <StackPanel>
             <controls:SettingsToggleItem x:Name="CloakItem" Margin="0" Toggled="OnCloakToggled" />
             <StackPanel Margin="16,0,16,0" Spacing="8">
@@ -31,6 +31,9 @@
             <StackPanel x:Name="QuicPanel" IsVisible="False">
               <Border Classes="divider" Margin="16,8,16,4" />
               <controls:SettingsToggleItem x:Name="DropQuicItem" Margin="0" Toggled="OnDropQuicToggled" />
+              <Border x:Name="DropQuicEnforcedAlert" Classes="alert-warning" Margin="16,0,16,0" IsVisible="False">
+                <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding EnforcedByServer, Source={x:Static res:Strings.Current}}" />
+              </Border>
             </StackPanel>
           </StackPanel>
         </Border>

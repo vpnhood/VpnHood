@@ -40,6 +40,11 @@ public class SessionOptions
     public bool? AllowTcpProxy { get; set; }
     public bool? AllowTcpPacket { get; set; }
 
+    // The users' own QUIC and UDP inside the tunnel, not the server's UDP and QUIC channels. Turned off, they are
+    // enforced only with AllowTcpPacket off, as otherwise the tunnel carries the users' TCP as packets anyway.
+    public bool? AllowQuicPacket { get; set; }
+    public bool? AllowUdpPacket { get; set; }
+
     [JsonIgnore]
     public TimeSpan TimeoutValue => Timeout ?? TimeSpan.FromMinutes(30);
 
@@ -99,6 +104,11 @@ public class SessionOptions
     [JsonIgnore]
     public bool AllowTcpPacketValue => AllowTcpPacket ?? true;
 
+    [JsonIgnore]
+    public bool AllowQuicPacketValue => AllowQuicPacket ?? true;
+
+    [JsonIgnore]
+    public bool AllowUdpPacketValue => AllowUdpPacket ?? true;
 
     public void Merge(SessionOptions obj)
     {
@@ -125,6 +135,8 @@ public class SessionOptions
         if (obj.NetScanTimeout != null) NetScanTimeout = obj.NetScanTimeout;
         if (obj.AllowTcpProxy != null) AllowTcpProxy = obj.AllowTcpProxy;
         if (obj.AllowTcpPacket != null) AllowTcpPacket = obj.AllowTcpPacket;
+        if (obj.AllowQuicPacket != null) AllowQuicPacket = obj.AllowQuicPacket;
+        if (obj.AllowUdpPacket != null) AllowUdpPacket = obj.AllowUdpPacket;
     }
 
     public void ApplyDefaults()
@@ -152,5 +164,7 @@ public class SessionOptions
         NetScanTimeout = NetScanTimeout;
         AllowTcpProxy = AllowTcpProxyValue;
         AllowTcpPacket = AllowTcpPacketValue;
+        AllowQuicPacket = AllowQuicPacketValue;
+        AllowUdpPacket = AllowUdpPacketValue;
     }
 }

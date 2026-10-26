@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.ConnectorServices;
@@ -10,6 +11,7 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Dom;
@@ -142,6 +144,55 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
         await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_UdpEcho(timeout: TimeSpan.FromSeconds(3)),
             "UDP must be failed.");
+    }
+
+    [TestMethod]
+    public async Task UdpPackets_Drop_by_server()
+    {
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.AllowTcpPacket = false;
+        fileAccessManagerOptions.SessionOptions.AllowUdpPacket = false;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
+
+        // the client drops the users' UDP itself, though its own setting is off, and lets DNS through by its port
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token));
+        Assert.IsFalse(client.RequiredSession.Info.IsUdpPacketSupported);
+        Assert.IsFalse(client.RequiredSession.Info.IsQuicPacketSupported, "Dropping all UDP drops QUIC too.");
+        await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_UdpEcho(timeout: TimeSpan.FromSeconds(3)),
+            "UDP must be dropped.");
+        await TestHelper.Test_UdpEcho(MockEps.UdpNsEchoEndPoint1);
+    }
+
+    // the server enforces its drops only with Cloak Mode
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(true, true)]
+    public async Task QuicPackets_Drop_by_server(bool allowTcpPacket, bool isQuicPacketSupported)
+    {
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.AllowTcpPacket = allowTcpPacket;
+        fileAccessManagerOptions.SessionOptions.AllowQuicPacket = false;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
+
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token));
+        Assert.AreEqual(isQuicPacketSupported, client.RequiredSession.Info.IsQuicPacketSupported);
+        Assert.AreEqual(!isQuicPacketSupported, client.RequiredSession.Status.IsDropQuic);
+    }
+
+    // an older server sends neither flag, which must not read as a server that drops the users' QUIC and UDP
+    [TestMethod]
+    public void Hello_of_an_older_server_carries_quic_and_udp()
+    {
+        var helloJson = JsonSerializer.SerializeToNode(new HelloResponse { ErrorCode = SessionErrorCode.Ok })?.AsObject()
+                        ?? throw new InvalidOperationException("The hello has no JSON object.");
+        helloJson.Remove(nameof(HelloResponse.IsQuicPacketSupported));
+        helloJson.Remove(nameof(HelloResponse.IsUdpPacketSupported));
+
+        var helloResponse = JsonUtils.Deserialize<HelloResponse>(helloJson.ToJsonString());
+        Assert.IsTrue(helloResponse.IsQuicPacketSupported);
+        Assert.IsTrue(helloResponse.IsUdpPacketSupported);
     }
 
 
@@ -921,6 +972,28 @@ public class ClientServerTest : TestBase
         Assert.IsTrue(client.RequiredSession.Info.IsTcpPacketIpV4Supported);
         Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV6Supported);
         Assert.IsFalse(client.RequiredSession.Status.IsTcpProxy);
+    }
+
+    [TestMethod]
+    public async Task Server_cloak_mode_sends_the_client_tcp_by_the_proxy()
+    {
+        // a server whose adapter could take TCP packets, but whose options refuse them
+        using var vpnAdapter = new TestUdpServerVpnAdapter();
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.AllowTcpPacket = false;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
+
+        // a client with Cloak Mode off turns its TCP proxy on by itself
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpProxy: false));
+        Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV4Supported);
+        Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV6Supported);
+        Assert.IsTrue(client.RequiredSession.Status.IsTcpProxy);
+
+        // and its TCP goes by the proxy
+        var streamTunnelledCount = client.RequiredSession.Status.StreamTunnelledCount;
+        await TestHelper.Test_Https();
+        Assert.IsTrue(client.RequiredSession.Status.StreamTunnelledCount > streamTunnelledCount);
     }
 
     [TestMethod]

@@ -69,7 +69,6 @@ public class IosDevice : IDevice
     internal NETunnelProviderManager VpnManager => _vpnManager;
 
     public bool IsBindProcessToVpnSupported => false;
-    public bool IsTcpProxySupported => true;
     public bool IsQuicSupported => IosQuicClient.IsSupported;
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;

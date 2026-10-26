@@ -246,10 +246,6 @@ internal static class ClientHelper
             throw new NotSupportedException(
                 "The server does not support any protocol to support TCP. Please contact support.");
 
-        if (!helloResponse.IsTcpPacketIpV4Supported && !config.IsTcpProxySupported)
-            throw new NotSupportedException(
-                "The server does not support any protocol to support your client. Please contact support.");
-
         if (!helloResponse.IsTcpPacketIpV4Supported && !config.UseTcpProxy)
             VhLogger.Instance.LogWarning("TCP Proxy enabled because the server does not support TCP packets.");
 

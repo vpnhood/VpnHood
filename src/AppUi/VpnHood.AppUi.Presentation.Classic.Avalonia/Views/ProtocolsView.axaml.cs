@@ -21,7 +21,6 @@ public partial class ProtocolsView : UserControl, IPage
         InitializeComponent();
         var s = Strings.Current;
 
-        CloakCard.IsVisible = VhApp.Features.IsTcpProxySupported;
         CloakItem.Title = s.CloakMode;
         CloakItem.Description = s.CloakModeShortDesc;
         DropQuicItem.Title = s.ProtocolBlockQuic;
@@ -57,7 +56,12 @@ public partial class ProtocolsView : UserControl, IPage
         ServerEnforcedAlert.IsVisible = reason is TcpProxyUsageReason.ServerRequiredOff or TcpProxyUsageReason.ServerRequiredOn;
         DomainEnforcedAlert.IsVisible = reason == TcpProxyUsageReason.SplitDomainRequiredOn;
         QuicPanel.IsVisible = CloakItem.IsOn;
-        DropQuicItem.IsOn = state.SessionStatus?.IsDropQuic ?? settings.DropQuic;
+
+        // a server that does not carry QUIC enforces the block
+        var isQuicPacketSupported = state.SessionInfo?.IsQuicPacketSupported ?? true;
+        DropQuicItem.IsOn = !isQuicPacketSupported || (state.SessionStatus?.IsDropQuic ?? settings.DropQuic);
+        DropQuicItem.IsDisabled = !isQuicPacketSupported;
+        DropQuicEnforcedAlert.IsVisible = !isQuicPacketSupported;
 
         var active = VhApp.ActiveProtocol(state);
         foreach (var (protocol, row) in _rows) {
@@ -75,7 +79,7 @@ public partial class ProtocolsView : UserControl, IPage
 
     public void FocusDefault()
     {
-        if (CloakCard.IsVisible && !CloakItem.IsDisabled) {
+        if (!CloakItem.IsDisabled) {
             CloakItem.FindFirstButton()?.LandFocus();
             return;
         }

@@ -17,7 +17,6 @@ public class ClientSessionConfig
     public required TimeSpan MaxPacketChannelLifespan { get; init; }
     public required TimeSpan MinPacketChannelLifespan { get; init; }
     public required DnsConfig DnsConfig { get; init; }
-    public required bool IsTcpProxySupported { get; init; }
     public required IPEndPoint? HostTcpEndPoint { get; init; }
     public required IPEndPoint? HostUdpEndPoint { get; init; }
     public required IPEndPoint? HostQuicEndPoint { get; init; }

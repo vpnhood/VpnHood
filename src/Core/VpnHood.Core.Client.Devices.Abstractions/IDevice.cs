@@ -16,7 +16,6 @@ public interface IDevice : IDisposable
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
     bool IsBindProcessToVpnSupported { get; }
-    bool IsTcpProxySupported { get; }
     bool IsQuicSupported { get; }
 
     // Whether the app keeps always on itself (the app's AlwaysOn setting): a desktop's service, which

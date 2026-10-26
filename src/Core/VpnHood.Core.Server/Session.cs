@@ -88,6 +88,8 @@ public class Session : IDisposable
     public VirtualIpBundle VirtualIps { get; }
     public bool AllowTcpPacket { get; }
     public bool AllowTcpProxy { get; }
+    public bool AllowQuicPacket { get; }
+    public bool AllowUdpPacket { get; }
 
     internal Session(IAccessManager accessManager,
         IVpnAdapter? vpnAdapter,
@@ -135,6 +137,8 @@ public class Session : IDisposable
         });
         AllowTcpPacket = options.AllowTcpPacketValue;
         AllowTcpProxy = options.AllowTcpProxyValue;
+        AllowQuicPacket = AllowTcpPacket || options.AllowQuicPacketValue;
+        AllowUdpPacket = AllowTcpPacket || options.AllowUdpPacketValue;
         ExtraData = extraData;
         VirtualIps = virtualIps;
         Response = sessionResponseEx;
@@ -313,6 +317,13 @@ public class Session : IDisposable
 
         var destinationEndPoint = ipPacket.GetDestinationEndPoint();
 
+        // the users' UDP the session does not carry, which its hello tells the client to drop itself: this stops an app
+        // that ignores it, without an exception, as a flood would throw one for each packet
+        if (protocol == IpProtocol.Udp && ShouldDropUdpPacket(destinationEndPoint.Port)) {
+            ipPacket.Dispose();
+            return;
+        }
+
         // filter before mapper because it supposes to filter user requests
         if (_netFilter.IpFilter?.Process(protocol, destinationEndPoint) == FilterAction.Block) {
             LogTrack(protocol, null, destinationEndPoint, false, true, "NetFilter");
@@ -342,6 +353,18 @@ public class Session : IDisposable
             _vpnAdapter.SendPacketQueued(ipPacket);
         else
             _proxyManager.SendPacketQueued(ipPacket);
+    }
+
+    // DNS always passes, as on the client
+    private bool ShouldDropUdpPacket(int destinationPort)
+    {
+        if (AllowUdpPacket && AllowQuicPacket)
+            return false;
+
+        if (DnsPorts.IsDnsPort(destinationPort))
+            return false;
+
+        return !AllowUdpPacket || destinationPort is 80 or 443;
     }
 
     public void LogTrack(IpProtocol protocol, IpEndPointValue? localEndPoint, IpEndPointValue? destinationEndPoint,

@@ -40,6 +40,11 @@ public class HelloResponse : SessionResponse
     public bool IsTcpProxySupported { get; set; } = true;
     public bool IsTcpPacketIpV4Supported { get; set; }
     public bool IsTcpPacketIpV6Supported { get; set; }
+
+    // Whether the server carries the users' QUIC and UDP; a client drops what it does not, so it never crosses the
+    // link. True by default, as an older server sends neither.
+    public bool IsQuicPacketSupported { get; set; } = true;
+    public bool IsUdpPacketSupported { get; set; } = true;
     public int Mtu { get; set; } = TransportDefaults.MtuServer;
 
     [Obsolete("Deprecated on 2026-10-08: use IsTcpPacketIpV4Supported and IsTcpPacketIpV6Supported. Still " +

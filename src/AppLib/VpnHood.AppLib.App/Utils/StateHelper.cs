@@ -93,15 +93,10 @@ internal static class StateHelper
     }
 
     public static TcpProxyUsageReason GetTcpProxyUsageReason(
-        AppFeatures appFeatures,
         UserSettings userSettings,
         SessionInfo? sessionInfo,
         IPremiumFeatureChecker premiumFeatureChecker)
     {
-        // client platform does not support TcpProxy at all
-        if (!appFeatures.IsTcpProxySupported)
-            return TcpProxyUsageReason.ClientNotSupported;
-
         // server requires TcpProxy because it cannot deliver raw TCP packets (IPv4's: the switch acts on it,
         // while IPv6 may go by the proxy anyway)
         if (sessionInfo is { IsTcpPacketIpV4Supported: false })

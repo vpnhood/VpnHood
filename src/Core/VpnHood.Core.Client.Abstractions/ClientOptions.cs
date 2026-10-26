@@ -53,7 +53,6 @@ public class ClientOptions
     public bool AllowAnonymousTracker { get; set; } = true;
     public bool AllowEndPointTracker { get; set; }
     public bool AllowChannelReuse { get; set; } = true;
-    public bool IsTcpProxySupported { get; set; } = true;
     public string? ServerLocation { get; set; }
     public ConnectPlanId PlanId { get; set; }
     public bool ForceLogSni { get; set; }

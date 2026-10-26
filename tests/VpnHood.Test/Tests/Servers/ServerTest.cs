@@ -39,6 +39,21 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    public async Task Configure_refuses_options_that_leave_tcp_no_way()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.SessionOptions.AllowTcpPacket = false;
+        accessManager.ServerConfig.SessionOptions.AllowTcpProxy = false;
+
+        // autoStart: false, as the server never becomes ready
+        await using var server = await TestHelper.CreateServer(accessManager, autoStart: false);
+        await server.Start(TestCt);
+
+        Assert.AreEqual(ServerState.Waiting, server.State);
+        Assert.IsNotNull(accessManager.LastServerStatus?.ConfigError);
+    }
+
+    [TestMethod]
     public async Task Add_IpAddress_ToSystem()
     {
         using var accessManager = TestHelper.CreateAccessManager();

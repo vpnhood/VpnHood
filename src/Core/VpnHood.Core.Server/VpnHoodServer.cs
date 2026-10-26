@@ -460,6 +460,12 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
         }
 
+        // refused rather than applied: every session would connect, then find no way for its TCP
+        if (serverConfig.SessionOptions is { AllowTcpPacketValue: false, AllowTcpProxyValue: false })
+            throw new NotSupportedException(
+                $"The configuration turns off both {nameof(SessionOptions.AllowTcpPacket)} and " +
+                $"{nameof(SessionOptions.AllowTcpProxy)}, which leaves TCP no way through.");
+
         // override defaults
         return serverConfig;
     }

@@ -47,7 +47,6 @@ public class AppFeatures
     public required string LogoAssetPath { get; init; }
     public required string PrivacyConsentAssetName { get; init; }
 
-    public required bool IsTcpProxySupported { get; init; }
     public required bool IsQuicSupported { get; init; }
 
     public required AlwaysOnSupport AlwaysOnSupport { get; init; }
@@ -55,7 +54,6 @@ public class AppFeatures
     // Whether the settings turn the automatic update on and off: an install's own updater, a desktop's
     // (IAppApi.GetAutomaticUpdate). A store keeps its own setting.
     public required bool IsAutomaticUpdateSupported { get; init; }
-    public required bool IsSplitDomainSupported { get; init; }
 
     // Whether this build has the IP-location data (AppOptions.IpLocationZipAsset) a country split
     // needs. False means a country mode fails the connect, so a UI hides the option rather than

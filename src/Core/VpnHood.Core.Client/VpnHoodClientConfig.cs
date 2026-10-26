@@ -36,7 +36,6 @@ public class VpnHoodClientConfig
     public required string UserAgent { get; init; }
     public required bool AllowStreamReuse { get; init; }
     public required UserReview? UserReview { get; init; }
-    public required bool IsTcpProxySupported { get; init; }
     public required bool UseWebSocket { get; init; }
     public required bool UseTcpProxy { get; init; }
     public required bool DropUdp { get; init; }

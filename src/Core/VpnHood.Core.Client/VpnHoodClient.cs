@@ -109,7 +109,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             SplitDnsMode = options.SplitDnsMode,
             UnroutedIpMode = options.UnroutedIpMode,
             UnsupportedIpV6Mode = options.UnsupportedIpV6Mode,
-            IsTcpProxySupported = options.IsTcpProxySupported,
             UseTcpProxy = options.UseTcpProxy,
             DropUdp = options.DropUdp,
             DropQuic = options.DropQuic,

@@ -7,6 +7,8 @@
 * Fix: The Docker install script asks about installing Docker only when Docker or its compose plugin is missing, with Enter for yes, and takes Y and yes as yes; it used to ask every time, and took anything but a lowercase y as no. Finding no Docker when it is not to install it, it stops at once and says so; it used to fail at the container's start.
 * Improve: The install scripts and the uninstaller list their options with -help, --help or -h; the Docker install script had no help. Every option takes one dash or two: --noautoupdate is -noautoupdate.
 * Fix: An install started while VpnHoodServer updates itself waits for the update to finish, so its choices stand; the update could undo them, turning updates back on after -noautoupdate. The uninstaller waits too.
+* Feature: For a censored network, VpnHoodServer can stop carrying its users' own QUIC and UDP, which would show through: `AllowQuicPacket` and `AllowUdpPacket` in the session options, on by default; turned off, they take effect only with `AllowTcpPacket` off, which is Cloak Mode for everyone. The server tells the apps, which drop that traffic on the device, and drops what an older app sends anyway; DNS always passes.
+* Improve: VpnHoodServer refuses settings that turn off both `AllowTcpPacket` and `AllowTcpProxy`, which leave TCP no way through, and says why in its log, rather than taking connections whose TCP then fails.
 
 # v9.0.859
 

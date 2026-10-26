@@ -15,7 +15,6 @@ internal sealed class TvOverrideDevice(IDevice inner, bool isTv) : IDevice
     public bool IsExcludeAppsSupported => inner.IsExcludeAppsSupported;
     public bool IsIncludeAppsSupported => inner.IsIncludeAppsSupported;
     public bool IsBindProcessToVpnSupported => inner.IsBindProcessToVpnSupported;
-    public bool IsTcpProxySupported => inner.IsTcpProxySupported;
     public bool IsQuicSupported => inner.IsQuicSupported;
     public bool IsAlwaysOnSupported => inner.IsAlwaysOnSupported;
     public string OsInfo => inner.OsInfo;

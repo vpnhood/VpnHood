@@ -11,6 +11,8 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.DatagramMessaging;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Streams;
 using VpnHood.Test.Providers;
 
@@ -34,11 +36,12 @@ public class SessionTest : TestBase
         }
     }
 
-    private static Session CreateSession(IAccessManager accessManager, NetFilter netFilter)
+    private static Session CreateSession(IAccessManager accessManager, NetFilter netFilter,
+        SessionOptions? options = null)
     {
         return new Session(accessManager, vpnAdapter: null, new TestSocketFactory(), netFilter,
             new SessionResponseEx { ErrorCode = SessionErrorCode.Ok, SessionId = 1, SessionKey = new byte[16] },
-            new SessionOptions(), new TrackingOptions(), new SessionExtraData(),
+            options ?? new SessionOptions(), new TrackingOptions(), new SessionExtraData(),
             new VirtualIpBundle { IpV4 = IPAddress.Parse("10.10.0.2"), IpV6 = IPAddress.Parse("fd00::2") });
     }
 
@@ -120,5 +123,47 @@ public class SessionTest : TestBase
         await session.ProcessTcpPacketChannelRequest(lateRequest, await Accept(lateClient), TestCt);
 
         Assert.AreEqual(PacketChannelState.Connected, newerChannel.State);
+    }
+
+    // the users' UDP that an app sends anyway, though the hello told the client to drop it: dropped only with Cloak
+    // Mode, and DNS always passes
+    [TestMethod]
+    [DataRow(false, false, true, new[] { 53 })]
+    [DataRow(false, true, false, new[] { 1234, 53 })]
+    [DataRow(true, false, false, new[] { 1234, 443, 80, 53 })]
+    public void Udp_drop_stops_what_an_app_sends_anyway(bool allowTcpPacket, bool allowUdpPacket,
+        bool allowQuicPacket, int[] passedPorts)
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        var ipFilter = new PortRecorderFilter();
+        using var netFilter = new NetFilter { IpFilter = ipFilter };
+        using var session = CreateSession(accessManager, netFilter, new SessionOptions {
+            AllowTcpPacket = allowTcpPacket, AllowUdpPacket = allowUdpPacket, AllowQuicPacket = allowQuicPacket
+        });
+        using var channel = new TestPacketChannel();
+        session.Tunnel.AddChannel(channel);
+
+        foreach (var port in new[] { 1234, 443, 80, 53 })
+            channel.Receive(PacketBuilder.BuildUdp(session.VirtualIps.IpV4, IPAddress.Parse("192.0.2.1"), 5000, port,
+                new byte[16]));
+
+        CollectionAssert.AreEqual(passedPorts, ipFilter.Ports);
+    }
+
+    // records the port of each packet that reaches it, and blocks it, so nothing leaves the test
+    private sealed class PortRecorderFilter : IIpFilter
+    {
+        public List<int> Ports { get; } = [];
+        public event EventHandler? Changed { add { } remove { } }
+        public void Reconfigure() { }
+        public bool IsEmpty => false;
+
+        public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
+        {
+            Ports.Add(endPoint.Port);
+            return FilterAction.Block;
+        }
+
+        public void Dispose() { }
     }
 }

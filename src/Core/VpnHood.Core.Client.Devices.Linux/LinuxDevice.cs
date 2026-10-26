@@ -19,7 +19,6 @@ public class LinuxDevice(string storageFolder) : IDevice
     public string VpnServiceDataFolder => VpnServiceConfigFolder; // nothing backs up a desktop app's data
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
-    public bool IsTcpProxySupported => true;
     public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsAlwaysOnSupported => true;
     public bool IsTv => false;

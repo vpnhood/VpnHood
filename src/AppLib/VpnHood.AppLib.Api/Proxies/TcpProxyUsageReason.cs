@@ -8,9 +8,6 @@ public enum TcpProxyUsageReason
     /// <summary>The user can freely toggle TcpProxy on or off.</summary>
     None,
 
-    /// <summary>The client platform does not support TcpProxy (forced off).</summary>
-    ClientNotSupported,
-
     /// <summary>The server does not support TCP packets, so TcpProxy is required (forced on).</summary>
     ServerRequiredOn,
 

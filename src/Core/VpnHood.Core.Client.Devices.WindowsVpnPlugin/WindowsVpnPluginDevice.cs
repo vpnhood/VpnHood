@@ -47,7 +47,6 @@ public sealed class WindowsVpnPluginDevice : IDevice
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsBindProcessToVpnSupported => false;
-    public bool IsTcpProxySupported => true;
     public bool IsQuicSupported => MsQuicClient.IsSupported;
 
     // Not the app's: nothing of the package runs at boot, and the app ends with its window. Nor Windows': it dials no

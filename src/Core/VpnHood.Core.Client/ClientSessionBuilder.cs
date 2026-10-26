@@ -162,6 +162,8 @@ internal class ClientSessionBuilder(
                 $"IsTcpPacketIpV4Supported: {helloResponse.IsTcpPacketIpV4Supported}, " +
                 $"IsTcpPacketIpV6Supported: {helloResponse.IsTcpPacketIpV6Supported}, " +
                 $"IsTcpProxySupported: {helloResponse.IsTcpProxySupported}, " +
+                $"IsQuicPacketSupported: {helloResponse.IsQuicPacketSupported}, " +
+                $"IsUdpPacketSupported: {helloResponse.IsUdpPacketSupported}, " +
                 $"IsLocalNetworkAllowed: {serverAllowedLocalNetworks.Any()}, " +
                 $"NetworkV4: {helloResponse.VirtualIpNetworkV4}, " +
                 $"NetworkV6: {helloResponse.VirtualIpNetworkV6}, " +
@@ -261,6 +263,8 @@ internal class ClientSessionBuilder(
                 IsTcpPacketIpV4Supported = helloResponse.IsTcpPacketIpV4Supported,
                 IsTcpPacketIpV6Supported = helloResponse.IsTcpPacketIpV6Supported,
                 IsTcpProxySupported = helloResponse.IsTcpProxySupported,
+                IsQuicPacketSupported = helloResponse.IsQuicPacketSupported,
+                IsUdpPacketSupported = helloResponse.IsUdpPacketSupported,
                 IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.IsQuicSupported,
                 ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse, socketFactory.IsQuicSupported),
                 ServerLocationInfo = helloResponse.ServerLocation != null
@@ -345,7 +349,6 @@ internal class ClientSessionBuilder(
                     MinPacketChannelLifespan = config.MinPacketChannelLifespan,
                     Transport = config.Transport,
                     DnsConfig = dnsConfig,
-                    IsTcpProxySupported = config.IsTcpProxySupported,
                     HostTcpEndPoint = connectorService.VpnEndPoint.TcpEndPoint,
                     HostUdpEndPoint = hostUdpEndPoint,
                     HostQuicEndPoint = hostQuicEndPoint,

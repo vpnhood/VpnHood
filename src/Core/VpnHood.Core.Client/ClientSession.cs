@@ -381,10 +381,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         }
 
         if (useTcpProxyIpV4 != _useTcpProxy)
-            VhLogger.Instance.LogWarning("UseTcpProxy is changed to {UseTcpProxy} because of config or capability change.", _packetHandler.UseTcpProxyIpV4);
+            VhLogger.Instance.LogWarning("UseTcpProxy is changed to {UseTcpProxy} because of config or capability change.", useTcpProxyIpV4);
 
         if (dropQuic != _dropQuic)
-            VhLogger.Instance.LogWarning("DropQuic is changed to {DropQuic} because client can not use TcpProxy.", _packetHandler.DropQuic);
+            VhLogger.Instance.LogWarning("DropQuic is changed to {DropQuic} because client can not use TcpProxy.", dropQuic);
 
         if (dropUdp != _dropUdp)
             VhLogger.Instance.LogWarning("DropUdp is changed to {DropUdp} because client can not use TcpProxy.", dropUdp);

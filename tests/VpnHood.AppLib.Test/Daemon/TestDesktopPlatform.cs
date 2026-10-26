@@ -17,7 +17,7 @@ internal sealed class TestDesktopPlatform : IDesktopPlatform
     public IAppInstanceController Instance { get; } = new TestInstanceController();
     public IDaemonChannel Channel { get; init; } = new TestDaemonChannel();
     public ILoopbackPeerCheck PeerCheck { get; } = new TestLoopbackPeerCheck();
-    public IForegroundHandOff? ForegroundHandOff => null;
+    public IDesktopSession DesktopSession { get; } = new TestDesktopSession();
     public IAppInstanceSetup? InstanceSetup => null;
     public IAppDaemonHostFactory DaemonHostFactory { get; init; } = new TestDaemonHostFactory();
 

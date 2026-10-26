@@ -30,7 +30,7 @@ public sealed class WindowsDesktopPlatform : IDesktopPlatform
     public IAppInstanceController Instance { get; }
     public IDaemonChannel Channel { get; }
     public ILoopbackPeerCheck PeerCheck { get; } = new WindowsLoopbackPeerCheck();
-    public IForegroundHandOff ForegroundHandOff { get; } = new WindowsForegroundHandOff();
+    public IDesktopSession DesktopSession { get; } = new WindowsDesktopSession();
     public IAppInstanceSetup InstanceSetup { get; }
     public IAppDaemonHostFactory DaemonHostFactory { get; }
 

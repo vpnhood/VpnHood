@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Globalization;
 using System.IO.Pipes;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
@@ -51,37 +50,21 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     // has one open in this session, which has been asked to come forward and been handed the access
     // key, if this launch has one. On the calling thread throughout: the lock is let go only once this
     // launch's server holds the name.
-    public static DesktopUiInstance? TryClaim(IDesktopUiPaths paths, IForegroundHandOff? foregroundHandOff,
-        IDesktopUi ui, string? accessKey)
+    public static DesktopUiInstance? TryClaim(IDesktopUiPaths paths, IDesktopSession desktopSession, IDesktopUi ui,
+        string? accessKey)
     {
-        var name = BuildName(paths.InstanceName);
+        var name = BuildName(paths.InstanceName, desktopSession.Name);
         using var sessionLock = TakeSessionLock(paths.UiDataPath, name);
-        return TryShowExisting(name, foregroundHandOff, accessKey) ? null : new DesktopUiInstance(name, ui);
+        return TryShowExisting(name, desktopSession, accessKey) ? null : new DesktopUiInstance(name, ui);
     }
 
     // one name per instance, person and session, in characters every platform's pipe and file names take
-    private static string BuildName(string instanceName)
+    private static string BuildName(string instanceName, string sessionName)
     {
-        var name = GetSession() is { Length: > 0 } session
-            ? $"{instanceName}-ui-{Environment.UserName}-{session}"
+        var name = sessionName.Length > 0
+            ? $"{instanceName}-ui-{Environment.UserName}-{sessionName}"
             : $"{instanceName}-ui-{Environment.UserName}";
         return new string(name.Select(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' ? c : '_').ToArray());
-    }
-
-    // The session the window opens in: Windows' own, which the console and each Remote Desktop
-    // session have apart; on Linux its display, which every app of a desktop session is started with,
-    // where logind's XDG_SESSION_ID is not: apps the user's systemd starts lack it. Empty with no
-    // display, and then the person's alone.
-    private static string GetSession()
-    {
-        if (OperatingSystem.IsWindows()) {
-            using var process = Process.GetCurrentProcess();
-            return process.SessionId.ToString(CultureInfo.InvariantCulture);
-        }
-
-        return Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") is { Length: > 0 } waylandDisplay
-            ? waylandDisplay
-            : Environment.GetEnvironmentVariable("DISPLAY") ?? "";
     }
 
     // A file of the person's held with no sharing: an exclusive flock on Linux, a share lock on
@@ -111,7 +94,7 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
         }
     }
 
-    private static bool TryShowExisting(string pipeName, IForegroundHandOff? foregroundHandOff, string? accessKey)
+    private static bool TryShowExisting(string pipeName, IDesktopSession desktopSession, string? accessKey)
     {
         using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, Options);
         try {
@@ -122,7 +105,7 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
         }
 
         // before the command, on which the window comes forward
-        foregroundHandOff?.HandTo(client);
+        desktopSession.HandForegroundTo(client);
 
         // a key is one line: vh: and its base64
         using var writer = new StreamWriter(client);

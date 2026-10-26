@@ -14,7 +14,7 @@ internal sealed class WindowsVpnPluginDesktopPlatform(DesktopInitParams initPara
 
     public IDesktopUiPaths Paths { get; } = new WindowsVpnPluginDesktopPaths(initParams.AppId);
     public ILoopbackPeerCheck PeerCheck { get; } = new WindowsLoopbackPeerCheck();
-    public IForegroundHandOff ForegroundHandOff { get; } = new WindowsForegroundHandOff();
+    public IDesktopSession DesktopSession { get; } = new WindowsDesktopSession();
 
     // A file of the run's own, as the VPN host keeps one: the window has no console, and the Event Log
     // no source here, which only an administrator registers.

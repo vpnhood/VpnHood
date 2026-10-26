@@ -744,6 +744,51 @@ public class CheckNewVersionTest : TestAppBase
         Assert.AreEqual("No storage.", updateState.ErrorMessage);
     }
 
+    // An updater that installs by itself is left to do so unseen: no notice, not even for its download, until the
+    // release is PromptDelay old and still not installed (always on, which it never disconnects). status's line shows
+    // it all along, read from UpdateState.
+    [TestMethod]
+    public async Task Update_installed_by_itself_has_no_notice_until_prompt_delay()
+    {
+        SetNewRelease(new Version(CurrentAppVersion.Major + 1, 0, 0), DateTime.UtcNow.AddHours(-1));
+        var packageUpdater = new TestPackageUpdaterProvider();
+        using var updaterService = CreatePackageUpdaterService(packageUpdater);
+        await updaterService.CheckForUpdate(null, force: false, TestCt);
+        Assert.IsFalse(updaterService.Status.Prompt, "available");
+
+        packageUpdater.Stage = ProviderUpdateStage.Downloaded;
+        Assert.IsFalse(updaterService.Status.Prompt, "downloaded by the updater");
+        Assert.AreEqual(AppUpdateStage.Downloaded, updaterService.Status.UpdateState?.Stage);
+
+        // still not installed once PromptDelay has passed since the release
+        SetNewRelease(new Version(CurrentAppVersion.Major + 1, 0, 0), DateTime.UtcNow.AddDays(-4));
+        using var laterService = CreatePackageUpdaterService(packageUpdater);
+        await laterService.CheckForUpdate(null, force: false, TestCt);
+        Assert.IsTrue(laterService.Status.Prompt);
+    }
+
+    // Nothing comes unseen with the automatic update off, nor for a check the person asked for, nor for a deprecated
+    // version: the notice at once.
+    [TestMethod]
+    public async Task Update_has_its_notice_at_once_where_none_installs_it_unseen()
+    {
+        var newVersion = new Version(CurrentAppVersion.Major + 1, 0, 0);
+        SetNewRelease(newVersion, DateTime.UtcNow.AddHours(-1));
+        var offUpdater = new TestPackageUpdaterProvider { IsAutomaticUpdateOnValue = false };
+        using var offService = CreatePackageUpdaterService(offUpdater);
+        await offService.CheckForUpdate(null, force: false, TestCt);
+        Assert.IsTrue(offService.Status.Prompt, "automatic updates off");
+
+        using var checkedService = CreatePackageUpdaterService(new TestPackageUpdaterProvider());
+        await checkedService.CheckForUpdate(null, force: true, TestCt);
+        Assert.IsTrue(checkedService.Status.Prompt, "the person's own check");
+
+        SetNewRelease(newVersion, DateTime.UtcNow.AddHours(-1), deprecatedVersion: CurrentAppVersion);
+        using var deprecatedService = CreatePackageUpdaterService(new TestPackageUpdaterProvider());
+        await deprecatedService.CheckForUpdate(null, force: false, TestCt);
+        Assert.IsTrue(deprecatedService.Status.Prompt, "a deprecated version");
+    }
+
     private AppUpdaterService CreatePackageUpdaterService(TestPackageUpdaterProvider packageUpdater)
     {
         return new AppUpdaterService(CreateUpdaterFolder(), CurrentAppVersion,

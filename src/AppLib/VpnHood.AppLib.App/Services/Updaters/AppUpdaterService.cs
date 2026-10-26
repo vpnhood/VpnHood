@@ -24,6 +24,10 @@ public class AppUpdaterService : IDisposable
     private string? _lastUpdateStateError;
     private bool _disposed;
 
+    // the app's own updater's switch, as the last check or change read it: on until one has, so nothing is shown that
+    // it may yet install unseen
+    private bool _isAutomaticUpdateOn = true;
+
     /// <param name="isConnected">
     /// Whether the VPN is connected: a filtered network may reach the store only through the tunnel,
     /// so the store's "none" counts only then.
@@ -57,12 +61,15 @@ public class AppUpdaterService : IDisposable
                 CheckedTime = Data.CheckedTime,
                 PublishInfo = Data.PublishInfo,
                 // the feed's notice is the way only where a store's own screen is not; an update the
-                // person started keeps it, whatever Later: their own choice, not a prompt
-                Prompt = updateState?.Stage is AppUpdateStage.Downloading or AppUpdateStage.Downloaded or
-                             AppUpdateStage.Installing or AppUpdateStage.Failed ||
-                         (!IsUpdaterOffering &&
-                          versionStatus is VersionStatus.Old or VersionStatus.Deprecated &&
-                          !IsInPostponeTime),
+                // person started keeps it, whatever Later: their own choice, not a prompt. One the app's
+                // own updater may yet install unseen is left to it first
+                Prompt = updateState?.Stage is AppUpdateStage.Downloading or AppUpdateStage.Installing or
+                             AppUpdateStage.Failed ||
+                         (!IsLeftToAutomaticUpdate(versionStatus) &&
+                          (updateState?.Stage is AppUpdateStage.Downloaded ||
+                           (!IsUpdaterOffering &&
+                            versionStatus is VersionStatus.Old or VersionStatus.Deprecated &&
+                            !IsInPostponeTime))),
                 UpdateState = updateState
             };
         }
@@ -144,11 +151,12 @@ public class AppUpdaterService : IDisposable
         return updater.IsAutomaticUpdateOn(cancellationToken);
     }
 
-    public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    public async Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
     {
         var updater = AutomaticUpdater ?? throw new NotSupportedException("The app has no automatic update to switch.");
         VhLogger.Instance.LogInformation("Turning the automatic update {State}.", isOn ? "on" : "off");
-        return updater.SetAutomaticUpdate(isOn, cancellationToken);
+        await updater.SetAutomaticUpdate(isOn, cancellationToken).Vhc();
+        _isAutomaticUpdateOn = isOn;
     }
 
     // The store said lately that it has an update for the installed version: its own screen is the way.
@@ -156,6 +164,20 @@ public class AppUpdaterService : IDisposable
     private bool IsUpdaterOffering =>
         _appVersion.Equals(Data.UpdaterAvailableVersion) &&
         FastDateTime.UtcNow - Data.UpdaterLastAvailableTime < _updateOptions.UpdaterOfferPeriod;
+
+    // A desktop's automatic update installs unseen while the VPN is idle (owner, 2026-10-25: a notice at once is noise):
+    // its newer version is left to it for PromptDelay from the release, and the notice comes only if it is still not
+    // installed then, as under always on, which it never disconnects. Not with automatic updates off, not for a
+    // version the person checked for themselves, and not for a deprecated one.
+    private bool IsLeftToAutomaticUpdate(VersionStatus versionStatus)
+    {
+        return _isAutomaticUpdateOn &&
+               NoticeUpdater is { IsAutomaticUpdateSupported: true } &&
+               versionStatus != VersionStatus.Deprecated &&
+               !_appVersion.Equals(Data.CheckRequestedVersion) &&
+               Data.PublishInfo is { } publishInfo &&
+               FastDateTime.UtcNow - publishInfo.ReleaseDate < _updateOptions.PromptDelay;
+    }
 
     private bool IsInPostponeTime =>
         Data.PostponeTime != null &&
@@ -213,6 +235,7 @@ public class AppUpdaterService : IDisposable
         if (force) {
             Data.PostponeTime = null; // reset postpone time if forced
             Data.PostponeVersion = null; // reset postpone version if forced
+            Data.CheckRequestedVersion = _appVersion; // the person asked: their notice waits for no automatic update
         }
 
         VhLogger.Instance.LogDebug("VersionCheck requested. Force: {Force}", force);
@@ -241,6 +264,9 @@ public class AppUpdaterService : IDisposable
 
                 if (updater != null)
                     await updater.Check(NewerRelease, uiContext, cancellationToken).Vhc();
+
+                if (updater is { IsAutomaticUpdateSupported: true })
+                    _isAutomaticUpdateOn = await updater.IsAutomaticUpdateOn(cancellationToken).Vhc();
 
                 return GetCheckResult(isAnswered: isFeedRead);
             }

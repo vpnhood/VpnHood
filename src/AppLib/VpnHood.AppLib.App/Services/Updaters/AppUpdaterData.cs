@@ -7,6 +7,10 @@ internal class AppUpdaterData
 {
     public Version? PostponeVersion { get; set; }
     public DateTime? PostponeTime { get; set; }
+
+    // the installed version on which the person checked for an update themselves: its notice no longer waits for the
+    // automatic update
+    public Version? CheckRequestedVersion { get; set; }
     public DateTime? CheckedTime { get; set; }
     public PublishInfo? PublishInfo { get; set; }
     // the installed version the store's update was offered to; an install of any version ends the offer

@@ -110,7 +110,7 @@ vhclient status
 | `vhclient ui` | Opens the window. Starts the service first if it is not running. |
 | `vhclient connect [--profile P] [--location L] [--no-wait]` | Connects, and waits until it has an answer: exit 0 means connected, not merely requested. |
 | `vhclient disconnect` | Drops the tunnel. The service keeps running. |
-| `vhclient status [--json] [--watch]` | What the app is doing. |
+| `vhclient status [--json] [--watch]` | What the app is doing, and a newer version on its way: downloading, waiting for the VPN to disconnect, installing. |
 | `vhclient locations [--profile P] [--json]` | The server locations a profile offers. |
 | `vhclient always-on [on\|off]` | Connects when the service starts, before anyone signs in, and again after a failure to reach a server, waiting longer each time; a refused key, a used-up quota or a disconnect stops it until the next connect. Bare, it says which; `status` says what it is doing. |
 | `vhclient profile list [--json]` *(CLIENT only)* | Profiles on this device; `*` marks the one connect uses. |

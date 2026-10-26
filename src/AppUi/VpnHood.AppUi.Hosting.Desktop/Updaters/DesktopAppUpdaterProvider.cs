@@ -222,10 +222,11 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
                 return AppUpdateState.None;
             }
 
-            if (_version == feedRelease.Version) {
-                if (_isInstalling)
-                    return new AppUpdateState { Stage = AppUpdateStage.Installing };
+            // the notice's Install, or a download the updater left and the service handed back
+            if (_isInstalling)
+                return new AppUpdateState { Stage = AppUpdateStage.Installing };
 
+            if (_version == feedRelease.Version) {
                 if (_downloadTask is { IsCompleted: false })
                     return new AppUpdateState {
                         Stage = AppUpdateStage.Downloading,

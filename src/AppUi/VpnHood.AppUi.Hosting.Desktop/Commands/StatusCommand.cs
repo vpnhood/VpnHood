@@ -1,6 +1,7 @@
 using System.CommandLine;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Updaters;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -40,8 +41,13 @@ internal static class StatusCommand
 
             if (json)
                 await CliPrinter.Json(state, cancellationToken).Vhc();
-            else
-                await CliPrinter.Fields(Describe(state), cancellationToken).Vhc();
+            else {
+                // asked only where the update's line depends on it: whether it comes by itself
+                var isAutomaticUpdateOn = state.UpdaterStatus?.UpdateState?.Stage is AppUpdateStage.Available
+                                              or AppUpdateStage.Downloaded &&
+                                          await api.App.GetAutomaticUpdate(cancellationToken).Vhc();
+                await CliPrinter.Fields(Describe(state, isAutomaticUpdateOn), cancellationToken).Vhc();
+            }
 
             if (!watch)
                 return state.ConnectionState is AppConnectionState.Connected or AppConnectionState.Unstable
@@ -53,7 +59,7 @@ internal static class StatusCommand
         }
     }
 
-    private static IReadOnlyList<(string, string)> Describe(AppState state)
+    private static IReadOnlyList<(string, string)> Describe(AppState state, bool isAutomaticUpdateOn)
     {
         var fields = new List<(string, string)> {
             ("State", state.ConnectionState.ToString()),
@@ -79,7 +85,37 @@ internal static class StatusCommand
         if (state.AlwaysOnState != null)
             fields.Add(("Always on", Describe(state.AlwaysOnState)));
 
+        if (Describe(state.UpdaterStatus, isAutomaticUpdateOn) is { } update)
+            fields.Add(("Update", update));
+
         return fields;
+    }
+
+    // The newer version and how far its update has come, as the window's notice shows it; null with none. The install
+    // itself is the state's Updating too.
+    internal static string? Describe(AppUpdaterStatus? updaterStatus, bool isAutomaticUpdateOn)
+    {
+        // an app whose updater has no part in the notice still knows the feed's newer version
+        if (updaterStatus?.UpdateState is not { } update)
+            return updaterStatus is
+                { VersionStatus: VersionStatus.Old or VersionStatus.Deprecated, PublishInfo: { } info }
+                ? $"{info.Version} available"
+                : null;
+
+        return update.Stage switch {
+            AppUpdateStage.Available => isAutomaticUpdateOn
+                ? $"{update.Version} available"
+                : $"{update.Version} available; automatic updates are off",
+            AppUpdateStage.Downloading => update.TotalBytes is { } total and > 0
+                ? $"downloading {update.Version}: {update.DownloadedBytes * 100 / total}%"
+                : $"downloading {update.Version}: {CliPrinter.Bytes(update.DownloadedBytes)}",
+            AppUpdateStage.Downloaded => isAutomaticUpdateOn
+                ? $"{update.Version} downloaded, installs while the VPN is disconnected"
+                : $"{update.Version} downloaded; automatic updates are off",
+            AppUpdateStage.Installing => $"installing {update.Version}",
+            AppUpdateStage.Failed => $"updating to {update.Version} failed: {update.ErrorMessage}",
+            _ => null
+        };
     }
 
     // why it waits and until when, or why it stopped; a person's connect starts it again either way

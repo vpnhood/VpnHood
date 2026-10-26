@@ -1,3 +1,4 @@
+using VpnHood.AppLib.Abstractions.Updaters;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.App;
@@ -22,9 +23,13 @@ public class DesktopUpdateInstallTest : TestAppBase
         await using var app = CreateApp(updater);
         await AddDownload(updater);
 
-        // the installer under way
+        // the installer under way, on a download the updater left: the notice and status say installing too
         var install = updater.InstallDownloadedUpdate();
         Assert.AreEqual(AppConnectionState.Updating, app.State.ConnectionState);
+        var release = new AppRelease {
+            Version = new Version(2, 0, 0), PackageUrl = new Uri("https://localhost/setup.exe")
+        };
+        Assert.AreEqual(AppUpdateStage.Installing, updater.GetState(release).Stage);
         Assert.IsFalse(app.State.CanConnect);
         Assert.IsFalse(app.State.CanDisconnect);
         await Assert.ThrowsExactlyAsync<AppUpdatingException>(() =>

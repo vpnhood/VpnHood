@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The package: the app (Client), a Win32 process run as the person, and its VPN host (VpnPluginHost),
      which Windows starts as its background tasks' server when the app's VPN profile connects or the app
-     opens its app service. Both run in the package's AppContainer, Windows' sandbox, and nothing here
-     with full trust: what needs more - a tray, a service, the machine's own tunnel - is the website
-     edition's. _publish.ps1 stamps the identity, the version, the names, the executables and the server,
-     and draws the logos from the app's icon. Windows activates the VPN host's task and app service by
-     their own class names, whatever the package's identity. -->
+     opens its app service. The VPN host has an entry of its own in Start, Quick Launch, as the Store takes
+     no application without one: its launch opens the app, which connects (QuickLaunchView). Both run in
+     the package's AppContainer, Windows' sandbox, and nothing here with full trust: what needs more - a
+     tray, a service, the machine's own tunnel - is the website edition's. _publish.ps1 stamps the
+     identity, the version, the names, the executables and the server, and draws the logos from the app's
+     icon. Windows activates the VPN host's task and app service by their own class names, whatever the
+     package's identity. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
@@ -34,8 +36,7 @@
       uap10:TrustLevel="appContainer">
       <uap:VisualElements
         DisplayName="Stamped"
-        Description="The VPN host"
-        AppListEntry="none"
+        Description="Quick Launch"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png" />
@@ -67,9 +68,9 @@
         Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <!-- A link that is an access key itself (vh:...) starts the app with it, which the window imports
-             (InProcessDesktopHost): the one way a key comes into the sandbox, which lets the app read neither the
-             clipboard nor a file opened with it - so no .cdy here, which the website edition opens. And vhkey:, a
-             form keys may switch to, so a package from before the switch opens its links. -->
+             (InProcessDesktopHost): with paste, how a key comes into the sandbox, which may not read a file opened
+             with the app - so no .cdy here, which the website edition opens. And vhkey:, a form keys may switch to,
+             so a package from before the switch opens its links. -->
         <uap:Extension Category="windows.protocol">
           <uap3:Protocol Name="vh" Parameters="--access-key &quot;%1&quot;">
             <uap:DisplayName>Access key</uap:DisplayName>
@@ -78,6 +79,13 @@
         <uap:Extension Category="windows.protocol">
           <uap3:Protocol Name="vhkey" Parameters="--access-key &quot;%1&quot;">
             <uap:DisplayName>Access key</uap:DisplayName>
+          </uap3:Protocol>
+        </uap:Extension>
+        <!-- Quick Launch: the VPN host's entry opens this (QuickLaunchView.AppScheme), and the window connects as its
+             Connect button does (InProcessDesktopHost). -->
+        <uap:Extension Category="windows.protocol">
+          <uap3:Protocol Name="vh-quick-launch" Parameters="--quick-launch">
+            <uap:DisplayName>Quick Launch</uap:DisplayName>
           </uap3:Protocol>
         </uap:Extension>
       </Extensions>

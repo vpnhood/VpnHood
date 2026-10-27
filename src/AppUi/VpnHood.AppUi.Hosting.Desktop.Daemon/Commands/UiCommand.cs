@@ -65,7 +65,7 @@ internal static class UiCommand
             // One window per person and session: a second launch brings the open one forward, after
             // handing it the key it was given, and that is all it does.
             await using (var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, platform.DesktopSession,
-                initParams.Ui, accessKey)) {
+                initParams.Ui, accessKey, isQuickLaunch: false)) {
                 if (uiInstance == null)
                     return 0;
 
@@ -76,7 +76,7 @@ internal static class UiCommand
 
                 isServiceNewer = await DesktopUiWindow.RunWindow(platform.Paths, initParams, mainThread, connection,
                     useTray: true, keepRunningWhileConnected: false, shell: null, startHidden, accessKey,
-                    cancellationToken).Vhc();
+                    isQuickLaunch: false, cancellationToken).Vhc();
             }
 
             // out of this window's claim, which the new one takes

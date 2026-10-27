@@ -37,8 +37,9 @@ public static class AvaloniaDesktopHost
     private static readonly TaskCompletionSource ShowRequest = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     // Access keys a launch was given before the run has its UI - this launch's own, a second one's -
-    // which the UI imports as the run starts.
+    // which the UI imports as the run starts; and a Quick Launch the same way, which it connects for.
     private static readonly List<string> PendingAccessKeys = [];
+    private static bool _isQuickLaunchPending;
     private static readonly Lock RunLock = new();
     private static ClassicDesktopStyleApplicationLifetime? _lifetime;
     private static Window? _window;
@@ -133,10 +134,13 @@ public static class AvaloniaDesktopHost
             if (startHidden && !ShowRequest.Task.IsCompleted)
                 lifetime.MainWindow = null;
 
-            // run by the dispatcher once Start runs its loop
+            // run by the dispatcher once Start runs its loop: a key before the connect, which may be for its server
             foreach (var accessKey in PendingAccessKeys)
                 Dispatcher.UIThread.Post(() => _ = ui.ImportAccessKey(accessKey));
             PendingAccessKeys.Clear();
+            if (_isQuickLaunchPending)
+                Dispatcher.UIThread.Post(() => _ = ui.QuickLaunch());
+            _isQuickLaunchPending = false;
         }
 
         // a stop that came while the UI was made, when Shutdown had no lifetime to end yet
@@ -269,6 +273,18 @@ public static class AvaloniaDesktopHost
                 Dispatcher.UIThread.Post(() => _ = ui.ImportAccessKey(accessKey));
             else
                 PendingAccessKeys.Add(accessKey);
+        }
+    }
+
+    // From any thread: a Quick Launch, on which the UI connects as its Connect button does (VpnHoodAvaloniaAppBase).
+    // Before the run has its UI it is kept for its start, as an access key is.
+    public static void QuickLaunch()
+    {
+        lock (RunLock) {
+            if (_ui is { } ui)
+                Dispatcher.UIThread.Post(() => _ = ui.QuickLaunch());
+            else
+                _isQuickLaunchPending = true;
         }
     }
 

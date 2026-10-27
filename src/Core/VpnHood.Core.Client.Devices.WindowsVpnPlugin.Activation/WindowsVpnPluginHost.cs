@@ -11,9 +11,20 @@ namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation;
 public static class WindowsVpnPluginHost
 {
     private const string LogFileName = "vpn-host.log";
+    private const string ServerNameArgument = "-ServerName:";
 
     public static void Run([ReadOnlyArray] string[] args)
     {
+        // A person's launch of the VPN host's own entry in Start, Quick Launch (the package's manifest): Windows starts
+        // the server of the VPN's task and the app service by the name the manifest gives it, the host's own
+        // executable's, and the entry's launch by another (VpnPluginHost.AppX...mca), which awaits a view. A failure
+        // goes to Windows' Application log, as the host's own log is the server's.
+        var processPath = Environment.ProcessPath ?? throw new InvalidOperationException("The VPN host has no path.");
+        if (!args.Contains(ServerNameArgument + Path.GetFileNameWithoutExtension(processPath), StringComparer.OrdinalIgnoreCase)) {
+            CoreApplication.Run(new QuickLaunchView());
+            return;
+        }
+
         // the process's own log from its first line, as the iOS extension has os_log: what comes before the
         // VPN service opens its log, an activation's failure among it
         var folder = WindowsVpnPluginFolders.VpnServiceFolder;

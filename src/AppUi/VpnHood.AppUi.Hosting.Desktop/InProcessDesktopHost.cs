@@ -17,8 +17,9 @@ public static class InProcessDesktopHost
 {
     // The whole run, on the calling thread, which is the host's main thread and the window's, as in
     // DesktopHost.Run. A window's process ends with its window: nothing cancels it from outside. The
-    // one argument acted on is --access-key, which a vh: link passes (the package's scheme); the log
-    // keeps them all.
+    // arguments acted on are --access-key, which a vh: link passes (the package's scheme), and
+    // --quick-launch, which the package's Quick Launch entry passes (vh-quick-launch:); the log keeps
+    // them all.
     public static int Run(string[] args, DesktopInitParams initParams, IInProcessDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();
@@ -31,17 +32,20 @@ public static class InProcessDesktopHost
         IInProcessDesktopPlatform platform, MainThreadQueue mainThread)
     {
         try {
-            // read before the window is looked for, which a second launch hands it to, as the service's
+            // read before the window is looked for, which a second launch hands them to, as the service's
             // window does (UiCommand)
             var accessKeyOption = AccessKeyInput.CreateOption();
-            var accessKeyInput = new RootCommand { accessKeyOption }.Parse(args).GetValue(accessKeyOption);
+            var quickLaunchOption = CreateQuickLaunchOption();
+            var parseResult = new RootCommand { accessKeyOption, quickLaunchOption }.Parse(args);
+            var accessKeyInput = parseResult.GetValue(accessKeyOption);
+            var isQuickLaunch = parseResult.GetValue(quickLaunchOption);
             var accessKey = accessKeyInput == null ? null : await DesktopUiWindow.TryReadAccessKey(platform.Paths,
                 initParams, mainThread, accessKeyInput, CancellationToken.None).Vhc();
             if (accessKeyInput != null && accessKey == null)
                 return 1;
 
             await using var uiInstance = DesktopUiInstance.TryClaim(platform.Paths, platform.DesktopSession,
-                initParams.Ui, accessKey);
+                initParams.Ui, accessKey, isQuickLaunch);
             if (uiInstance == null)
                 return 0;
 
@@ -52,7 +56,7 @@ public static class InProcessDesktopHost
             try {
                 await using var app = platform.CreateApp();
                 await RunWindow(platform.Paths, platform.PeerCheck, initParams, mainThread, platform.UseTray,
-                    platform.Shell, startHidden: false, accessKey, CancellationToken.None).Vhc();
+                    platform.Shell, startHidden: false, accessKey, isQuickLaunch, CancellationToken.None).Vhc();
                 return 0;
             }
             catch (Exception ex) {
@@ -75,7 +79,7 @@ public static class InProcessDesktopHost
     // (DesktopUiParams.KeepRunningWhileConnected).
     internal static async Task RunWindow(IDesktopUiPaths paths, ILoopbackPeerCheck peerCheck,
         DesktopInitParams initParams, MainThreadQueue mainThread, bool useTray, IDesktopShell? shell, bool startHidden,
-        string? accessKey, CancellationToken cancellationToken)
+        string? accessKey, bool isQuickLaunch, CancellationToken cancellationToken)
     {
         var localWebHost = VpnHoodApp.Instance.LocalWebHost ??
                            throw new InvalidOperationException(
@@ -85,6 +89,15 @@ public static class InProcessDesktopHost
         // No channel to ask: the app is here, and so is the process the window's calls must reach.
         await using var connection = DaemonConnection.CreateInProcess(localWebHost, peerCheck, paths.InstanceName);
         await DesktopUiWindow.RunWindow(paths, initParams, mainThread, connection, useTray,
-            keepRunningWhileConnected: true, shell, startHidden, accessKey, cancellationToken).Vhc();
+            keepRunningWhileConnected: true, shell, startHidden, accessKey, isQuickLaunch, cancellationToken).Vhc();
+    }
+
+    // For the package's scheme, not for a person, so help leaves it out.
+    private static Option<bool> CreateQuickLaunchOption()
+    {
+        return new Option<bool>("--quick-launch") {
+            Description = "Connect as the Connect button does, unless connected already.",
+            Hidden = true
+        };
     }
 }

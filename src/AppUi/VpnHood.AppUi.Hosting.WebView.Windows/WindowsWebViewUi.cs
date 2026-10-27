@@ -1,6 +1,7 @@
 using System.IO;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api;
+using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
@@ -31,6 +32,10 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
         _api = uiParams.Api;
         if (uiParams.AccessKey is { } accessKey)
             ImportAccessKey(uiParams.Api, accessKey, cancellationToken).GetAwaiter().GetResult();
+
+        // beside the window, which a connect would keep waiting for its whole length
+        if (uiParams.IsQuickLaunch)
+            _ = QuickLaunch(uiParams.Api, cancellationToken);
 
         // What the window draws with, read before it is made: a window that changes colour under the
         // person is seen, one that appears a moment later is not. The calls do not come back to this
@@ -110,6 +115,25 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
         }
         catch (Exception ex) when (ex is not OperationCanceledException) {
             VhLogger.Instance.LogError(ex, "Could not import the access key the app was opened with.");
+        }
+    }
+
+    public Task QuickLaunch(CancellationToken cancellationToken)
+    {
+        return _api is { } api ? QuickLaunch(api, cancellationToken) : Task.CompletedTask;
+    }
+
+    // Through the app, with its chosen server, as the page's Connect does when it has nothing to ask; the page shows
+    // the connect as it reads the state. A failure is in the log, and in the state's last error the page shows.
+    private static async Task QuickLaunch(VpnHoodApi api, CancellationToken cancellationToken)
+    {
+        try {
+            var state = await api.App.GetState(cancellationToken).ConfigureAwait(false);
+            if (state.CanConnect)
+                await api.App.Connect(null, null, ConnectPlanId.Normal, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException) {
+            VhLogger.Instance.LogError(ex, "Could not connect for a Quick Launch.");
         }
     }
 }

@@ -25,4 +25,9 @@ public interface IDesktopUi
     // import does: the key's server becomes the chosen one, and the UI says so, or that it could not
     // read the key. From any thread; a key that comes before the run has the app waits for it.
     Task ImportAccessKey(string accessKey, CancellationToken cancellationToken);
+
+    // Connects as the UI's Connect button does, for a second launch that is a Quick Launch - the Store
+    // edition's entry of its own in Start - unless the app is connected or on its way. From any thread;
+    // one that comes before the run has the app waits for it.
+    Task QuickLaunch(CancellationToken cancellationToken);
 }

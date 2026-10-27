@@ -23,11 +23,13 @@ namespace VpnHood.AppUi.Hosting.Desktop.Window;
 //
 // A launch given an access key - a file opened with the app - hands it to the open window, whose UI
 // imports it, before bringing it forward: in the Store edition the app is in that window's process,
-// and nothing else could reach it.
+// and nothing else could reach it. A Quick Launch - the Store edition's entry of its own - has the
+// open window connect, the same way.
 internal sealed class DesktopUiInstance : IAsyncDisposable
 {
     private const string ShowCommand = "show";
     private const string ImportAccessKeyCommand = "import-access-key"; // the key on the next line
+    private const string QuickLaunchCommand = "quick-launch";
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan LockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan LockRetryDelay = TimeSpan.FromMilliseconds(50);
@@ -56,17 +58,17 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
 
     // This launch's window, the UI a later launch brings forward, or null when this person already
     // has one open in this session, which has been asked to come forward and been handed the access
-    // key, if this launch has one. On the calling thread throughout: the lock is let go only once this
-    // launch's server holds the name.
+    // key, if this launch has one, or asked to connect, if it is a Quick Launch. On the calling thread
+    // throughout: the lock is let go only once this launch's server holds the name.
     public static DesktopUiInstance? TryClaim(IDesktopUiPaths paths, IDesktopSession desktopSession, IDesktopUi ui,
-        string? accessKey)
+        string? accessKey, bool isQuickLaunch)
     {
         var name = BuildName(paths.InstanceName, desktopSession.Name);
         using var sessionLock = TakeSessionLock(paths.UiDataPath, name);
         var (pipeName, pipeOptions) = desktopSession.IsSandboxed
             ? (SandboxedPipePrefix + name, SandboxedOptions)
             : (name, Options);
-        return TryShowExisting(pipeName, pipeOptions, desktopSession, accessKey)
+        return TryShowExisting(pipeName, pipeOptions, desktopSession, accessKey, isQuickLaunch)
             ? null
             : new DesktopUiInstance(pipeName, pipeOptions, ui);
     }
@@ -108,7 +110,7 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     }
 
     private static bool TryShowExisting(string pipeName, PipeOptions pipeOptions, IDesktopSession desktopSession,
-        string? accessKey)
+        string? accessKey, bool isQuickLaunch)
     {
         using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, pipeOptions);
         try {
@@ -126,6 +128,9 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
         if (accessKey != null) {
             writer.WriteLine(ImportAccessKeyCommand);
             writer.WriteLine(accessKey);
+        }
+        else if (isQuickLaunch) {
+            writer.WriteLine(QuickLaunchCommand);
         }
         else {
             writer.WriteLine(ShowCommand);
@@ -162,7 +167,8 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
         }
     }
 
-    // What a second launch asks: this window, to the front, after importing the key it was given.
+    // What a second launch asks: this window, to the front, after importing the key it was given or
+    // connecting for a Quick Launch.
     private async Task Answer(NamedPipeServerStream connected, CancellationToken cancellationToken)
     {
         await using var pipe = connected;
@@ -172,6 +178,10 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
             if (command == ImportAccessKeyCommand &&
                 await reader.ReadLineAsync(cancellationToken).Vhc() is { } accessKey) {
                 await _ui.ImportAccessKey(accessKey, cancellationToken).Vhc();
+                await _ui.BringToFront(cancellationToken).Vhc();
+            }
+            else if (command == QuickLaunchCommand) {
+                await _ui.QuickLaunch(cancellationToken).Vhc();
                 await _ui.BringToFront(cancellationToken).Vhc();
             }
             else if (command == ShowCommand) {

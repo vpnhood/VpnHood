@@ -44,10 +44,10 @@ internal static class DesktopUiWindow
     // holds itself (InProcessDesktopHost). It ends by itself - its window closed, its tray's Exit - or
     // with the command: a signal, a logout; or once the service answers as a newer version - an update
     // replaced it under the open window - which this returns true for. The UI imports the access key
-    // the launch was given, if any.
+    // the launch was given, if any, and connects for a Quick Launch.
     internal static async Task<bool> RunWindow(IDesktopUiPaths paths, DesktopInitParams initParams,
         MainThreadQueue mainThread, DaemonConnection connection, bool useTray, bool keepRunningWhileConnected,
-        IDesktopShell? shell, bool startHidden, string? accessKey, CancellationToken cancellationToken)
+        IDesktopShell? shell, bool startHidden, string? accessKey, bool isQuickLaunch, CancellationToken cancellationToken)
     {
         using var serviceNewer = new CancellationTokenSource();
         using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serviceNewer.Token);
@@ -64,7 +64,8 @@ internal static class DesktopUiWindow
             UseTray = useTray,
             KeepRunningWhileConnected = keepRunningWhileConnected,
             Shell = shell,
-            AccessKey = accessKey
+            AccessKey = accessKey,
+            IsQuickLaunch = isQuickLaunch
         };
         try {
             await mainThread.Run(() => initParams.Ui.Run(uiParams, uiCancellation.Token)).Vhc();

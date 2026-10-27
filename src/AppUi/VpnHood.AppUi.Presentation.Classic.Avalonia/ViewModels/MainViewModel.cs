@@ -662,6 +662,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             await ConnectWithCurrentProfile();
     }
 
+    // Quick Launch - the Windows Store edition's entry of its own in Start: the button's connect, with the chosen
+    // server, decided on a fresh state; nothing when the app is connected or on its way.
+    public async Task QuickLaunch()
+    {
+        await Reload();
+        if (VhApp.State.CanConnect)
+            await ConnectWithCurrentProfile();
+    }
+
     public async Task Disconnect()
     {
         try {

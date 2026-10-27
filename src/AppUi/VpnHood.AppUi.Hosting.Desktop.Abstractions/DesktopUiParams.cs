@@ -44,4 +44,8 @@ public class DesktopUiParams
     // The access key this launch was given - a file opened with the app - which the UI imports once it
     // runs, as IDesktopUi.ImportAccessKey does a second launch's; null for a plain start.
     public string? AccessKey { get; init; }
+
+    // Whether this launch is a Quick Launch - the Store edition's entry of its own in Start - on which the UI
+    // connects once it runs, as IDesktopUi.QuickLaunch does for a second launch.
+    public bool IsQuickLaunch { get; init; }
 }

@@ -18,7 +18,8 @@ public class DesktopUiInstanceTest
         var desktopSession = new TestDesktopSession();
 
         var claims = await Task.WhenAll(Enumerable.Range(0, launchCount)
-            .Select(_ => Task.Run(() => DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey: null))));
+            .Select(_ => Task.Run(() =>
+                DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey: null, isQuickLaunch: false))));
         try {
             Assert.AreEqual(1, claims.Count(x => x != null));
             Assert.AreEqual(launchCount - 1, desktopSession.HandForegroundCount);
@@ -30,7 +31,8 @@ public class DesktopUiInstanceTest
         }
 
         // the window gone, the next launch opens one
-        await using var next = DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey: null);
+        await using var next = DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey: null,
+            isQuickLaunch: false);
         Assert.IsNotNull(next);
     }
 
@@ -44,12 +46,33 @@ public class DesktopUiInstanceTest
         var ui = new TestDesktopUi();
         var desktopSession = new TestDesktopSession();
 
-        await using var window = DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey: null);
+        await using var window = DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey: null,
+            isQuickLaunch: false);
         Assert.IsNotNull(window);
-        Assert.IsNull(DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey));
+        Assert.IsNull(DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey, isQuickLaunch: false));
 
         await VhTestUtil.AssertEqualsWait(1, () => ui.BringToFrontCount);
         CollectionAssert.AreEqual(new[] { accessKey }, ui.ImportedAccessKeys.ToArray());
+        Assert.AreEqual(0, ui.QuickLaunchCount);
+    }
+
+    // The Store edition's Quick Launch entry while the window is open: the second launch has the open window
+    // connect, and brings it forward.
+    [TestMethod]
+    public async Task A_second_launch_for_quick_launch_has_the_open_window_connect()
+    {
+        var paths = new TestDesktopPaths("VpnHoodTest-" + Guid.CreateVersion7().ToString("N"));
+        var ui = new TestDesktopUi();
+        var desktopSession = new TestDesktopSession();
+
+        await using var window = DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey: null,
+            isQuickLaunch: false);
+        Assert.IsNotNull(window);
+        Assert.IsNull(DesktopUiInstance.TryClaim(paths, desktopSession, ui, accessKey: null, isQuickLaunch: true));
+
+        await VhTestUtil.AssertEqualsWait(1, () => ui.BringToFrontCount);
+        Assert.AreEqual(1, ui.QuickLaunchCount);
+        Assert.AreEqual(0, ui.ImportedAccessKeys.Count);
     }
 
     // A person signed in at the console and over Remote Desktop has a window in each.
@@ -59,9 +82,9 @@ public class DesktopUiInstanceTest
         var paths = new TestDesktopPaths("VpnHoodTest-" + Guid.CreateVersion7().ToString("N"));
 
         await using var consoleWindow = DesktopUiInstance.TryClaim(paths, new TestDesktopSession("1"),
-            new TestDesktopUi(), accessKey: null);
+            new TestDesktopUi(), accessKey: null, isQuickLaunch: false);
         await using var remoteWindow = DesktopUiInstance.TryClaim(paths, new TestDesktopSession("2"),
-            new TestDesktopUi(), accessKey: null);
+            new TestDesktopUi(), accessKey: null, isQuickLaunch: false);
         Assert.IsNotNull(consoleWindow);
         Assert.IsNotNull(remoteWindow);
     }
@@ -70,7 +93,8 @@ public class DesktopUiInstanceTest
     public async Task A_second_close_after_the_first_does_nothing()
     {
         var paths = new TestDesktopPaths("VpnHoodTest-" + Guid.CreateVersion7().ToString("N"));
-        var instance = DesktopUiInstance.TryClaim(paths, new TestDesktopSession(), new TestDesktopUi(), accessKey: null);
+        var instance = DesktopUiInstance.TryClaim(paths, new TestDesktopSession(), new TestDesktopUi(), accessKey: null,
+            isQuickLaunch: false);
         Assert.IsNotNull(instance);
 
         await instance.DisposeAsync();

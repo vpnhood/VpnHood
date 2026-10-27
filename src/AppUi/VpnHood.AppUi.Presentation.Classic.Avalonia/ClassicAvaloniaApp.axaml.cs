@@ -99,6 +99,11 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
         return MainViewModel.ImportAccessKeyFile(file);
     }
 
+    public override Task QuickLaunch()
+    {
+        return MainViewModel.QuickLaunch();
+    }
+
     private MainViewModel MainViewModel => _mainView?.ViewModel ??
-                                           throw new InvalidOperationException("The UI has no view to import an access key in.");
+                                           throw new InvalidOperationException("The UI has no view yet.");
 }

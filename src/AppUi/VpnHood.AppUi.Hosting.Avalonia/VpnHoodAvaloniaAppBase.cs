@@ -35,6 +35,11 @@ public abstract class VpnHoodAvaloniaAppBase : Application
     public abstract Task ImportAccessKey(string accessKey);
     public abstract Task ImportAccessKeyFile(IStorageFile file);
 
+    // A Quick Launch - the Windows Store edition's entry of its own in Start (AvaloniaDesktopHost) - on which the UI
+    // connects as its Connect button does, unless the app is connected or on its way. On the UI thread, once the view
+    // is made.
+    public abstract Task QuickLaunch();
+
     public override void OnFrameworkInitializationCompleted()
     {
         // Avalonia's designer makes the UI with no app and gives it no API: it gets no view.

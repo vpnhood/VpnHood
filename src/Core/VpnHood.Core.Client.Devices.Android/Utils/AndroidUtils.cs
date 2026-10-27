@@ -100,4 +100,12 @@ public static class AndroidUtils
         var packageManager = ctx.PackageManager;
         return packageManager?.HasSystemFeature(PackageManager.FeatureLeanback) is true;
     }
+
+    // a phone as Chrome tells one, by its "Mobile": narrower than a tablet's 600 dp, and no TV, which
+    // the width alone would take for a phone (a 1080p TV is 540 dp)
+    public static bool IsPhone(Context? context = null)
+    {
+        var ctx = context ?? Application.Context;
+        return !IsTv(ctx) && ctx.Resources?.Configuration?.SmallestScreenWidthDp < 600;
+    }
 }

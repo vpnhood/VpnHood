@@ -11,6 +11,7 @@ using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppLib.App;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
+using VpnHood.Core.Client.Devices.Android.Utils;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Android;
 
@@ -61,8 +62,19 @@ public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityE
         MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions(),
             Task.FromResult((AvaloniaApplication.Current as VpnHoodAvaloniaAppBase)?.ChromeColor));
 
+        ApplyOrientation();
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });
+    }
+
+    // A phone stays upright: the UI's wide layout is for tablets, TVs and windows, not a phone on its
+    // side. Asked at run time, never in the manifest, whose portrait would make Play hide the app from
+    // TVs. Asked again on every configuration change, so a fold opened into a tablet turns.
+    private void ApplyOrientation()
+    {
+        RequestedOrientation = AndroidUtils.IsPhone(this)
+            ? ScreenOrientation.Portrait
+            : ScreenOrientation.Unspecified;
     }
 
     protected override void OnNewIntent(Intent? intent)
@@ -122,6 +134,7 @@ public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityE
     public override void OnConfigurationChanged(Configuration newConfig)
     {
         base.OnConfigurationChanged(newConfig);
+        ApplyOrientation();
         ConfigurationChangedEvent?.Invoke(this, newConfig);
     }
 }

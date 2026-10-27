@@ -35,17 +35,11 @@ public class AndroidDevice : IDevice
     public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
         Platform = $"Linux; Android {Build.VERSION.Release}",
         Model = Build.Model,
-        Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: IsPhone())
+        Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: AndroidUtils.IsPhone())
     };
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
     public string VpnServiceDataFolder => AndroidVpnService.VpnServiceDataFolder;
     public bool IsTv => AndroidUtils.IsTv();
-
-    // a phone as Chrome tells one, by its "Mobile": no TV, and narrower than a tablet's 600 dp
-    private static bool IsPhone()
-    {
-        return !AndroidUtils.IsTv() && Application.Context.Resources?.Configuration?.SmallestScreenWidthDp < 600;
-    }
 
     public static AndroidDevice Create()
     {

@@ -49,4 +49,4 @@
 * Fix: A paired browser's tab and the command line's help name the app, not VpnHood
 * Breaking: IDevice.IsTcpProxySupported is gone, with ClientOptions.IsTcpProxySupported, AppFeatures.IsTcpProxySupported, AppFeatures.IsSplitDomainSupported and TcpProxyUsageReason.ClientNotSupported: every device supports the TCP proxy, through its local TCP stack. A fork's UI that read them offers Cloak Mode and the domain split always.
 * Feature: A server can stop carrying its users' QUIC and UDP (SessionOptions.AllowQuicPacket and AllowUdpPacket off, with AllowTcpPacket off), which the client then drops itself whatever the user's own drops say. SessionInfo and AppSessionInfo say so as IsQuicPacketSupported and IsUdpPacketSupported, and a UI shows the Block QUIC switch on and enforced while QUIC is not supported.
-* Breaking: ServerHost.MinClientProtocolVersion is gone; SessionOptions.MinClientProtocolVersion sets the oldest protocol a client may connect with.
+* Breaking: ServerHost.MinClientProtocolVersion is gone; SessionOptions.MinClientProtocolVersion raises the oldest protocol a client may connect with above ServerHost.MinProtocolVersion.

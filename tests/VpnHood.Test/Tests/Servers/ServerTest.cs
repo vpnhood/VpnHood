@@ -702,6 +702,19 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    [DataRow(null, ServerHost.MinProtocolVersion)]
+    [DataRow(ServerHost.MinProtocolVersion - 1, ServerHost.MinProtocolVersion)]
+    [DataRow(1000, 1000)]
+    public async Task The_setting_only_raises_the_servers_own_minimum_protocol(int? minClientProtocolVersion,
+        int expectedMinClientProtocolVersion)
+    {
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.MinClientProtocolVersion = minClientProtocolVersion;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
+        Assert.AreEqual(expectedMinClientProtocolVersion, server.ServerHost.MinClientProtocolVersion);
+    }
+
+    [TestMethod]
     public void Merge_config()
     {
         var oldServerConfig = new ServerConfig();

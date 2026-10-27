@@ -41,6 +41,11 @@ public class ServerHost : IAsyncDisposable
 
     public const int MaxProtocolVersion = 14;
     public const int MinProtocolVersion = 8;
+
+    // the setting can only raise it: the server speaks nothing older than MinProtocolVersion
+    internal int MinClientProtocolVersion =>
+        Math.Max(MinProtocolVersion, _sessionManager.SessionOptions.MinClientProtocolVersion ?? 0);
+
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterVpnAdapterIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
@@ -186,7 +191,9 @@ public class ServerHost : IAsyncDisposable
                         if (httpMethod != "GET")
                             throw new UnauthorizedAccessException();
 
-                        // reply HTTP response for websocket upgrade
+                        // the 101 goes out unchecked, as an upgrade carries no key before protocol 15. No gate by the
+                        // client's IP: it would refuse a client after an IP change or a restart; the minimum protocol
+                        // turns old clients away instead
                         var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
                         await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
@@ -454,7 +461,7 @@ public class ServerHost : IAsyncDisposable
 
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity. Not at the
         // version check before the key either: every client up to protocol 14 sends its hello as 8
-        if (request.ClientInfo == null || protocolVersion < _sessionManager.SessionOptions.MinClientProtocolVersionValue)
+        if (request.ClientInfo == null || protocolVersion < MinClientProtocolVersion)
             throw new ServerSessionException(streamConnection.RemoteEndPoint, session,
                 SessionErrorCode.UnsupportedClient, request.RequestId,
                 "This client is outdated and not supported anymore! Please update your app.");

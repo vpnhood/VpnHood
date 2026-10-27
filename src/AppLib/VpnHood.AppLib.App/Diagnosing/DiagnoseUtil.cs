@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.ComponentModel;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
@@ -105,6 +106,13 @@ public static class DiagnoseUtil
 
             return ex;
         }
+    }
+
+    // Whether a ping failed because the OS lets this app send no ICMP at all - a sandboxed app's, the Windows Store
+    // edition's (an AppContainer): its failure says nothing of the network.
+    public static bool IsPingRefused(Exception? error)
+    {
+        return error is PingException { InnerException: Win32Exception { NativeErrorCode: 5 } };
     }
 
     public static async Task<Exception?> CheckPing(IPAddress ipAddress, TimeSpan timeout,

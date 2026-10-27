@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -13,16 +13,15 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
 public partial class HomeView : UserControl, IPage
 {
-    // the web UI's openDebugDialog: five clicks, and a counter that forgets after five seconds
-    private static readonly TimeSpan DebugTapWindow = TimeSpan.FromSeconds(5);
+    // five taps, each within two seconds of the one before: an unhurried finger gets there, and a
+    // pause starts over. A limit from the first tap made the fifth a race.
+    private static readonly TimeSpan DebugTapGap = TimeSpan.FromSeconds(2);
     private const int DebugTapCount = 5;
-    private static readonly TimeSpan VersionLightTime = TimeSpan.FromMilliseconds(200);
 
     private readonly MainViewModel _viewModel;
     private readonly MainView _host;
-    private long _firstDebugTap;
+    private long _lastDebugTap;
     private int _debugTaps;
-    private IDisposable? _versionLightOff;
 
     public HomeView(MainViewModel viewModel, MainView host)
     {
@@ -172,15 +171,29 @@ public partial class HomeView : UserControl, IPage
         }
     }
 
-    // The developer page, opened as the web UI opens its dialog (HomePageHeader.vue): the fifth
-    // tap of a burst, or the first when a debug field is already set.
+    // A press beside the chip; one on the chip is its click, which the chip has handled by then.
+    private void OnVersionAreaPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        e.Handled = true;
+        CountVersionTap();
+    }
+
     private void OnVersionClick(object? sender, RoutedEventArgs e)
     {
-        if (_debugTaps == 0 || Stopwatch.GetElapsedTime(_firstDebugTap) > DebugTapWindow) {
-            _firstDebugTap = Stopwatch.GetTimestamp();
-            _debugTaps = 0;
-        }
+        CountVersionTap();
+    }
 
+    // The developer page, opened as the web UI opens its dialog (HomePageHeader.vue): the fifth
+    // tap of a run, or the first when a debug field is already set.
+    private void CountVersionTap()
+    {
+        if (_debugTaps > 0 && Stopwatch.GetElapsedTime(_lastDebugTap) > DebugTapGap)
+            _debugTaps = 0;
+
+        _lastDebugTap = Stopwatch.GetTimestamp();
         _debugTaps++;
         if (!_viewModel.HasDebugData && _debugTaps < DebugTapCount) {
             LightVersion();
@@ -191,12 +204,12 @@ public partial class HomeView : UserControl, IPage
         _host.Navigate(new DeveloperView(_host));
     }
 
-    // Each tap before the fifth lights the version, so it shows the taps count; quick taps keep it
-    // lit, and the style's transition fades it back after the last.
+    // Each tap before the fifth lights the version, so it shows the taps count. The class runs the
+    // style's light, white at once and then fading; set again, it starts over for a tap that comes
+    // while the last one's light still fades.
     private void LightVersion()
     {
-        _versionLightOff?.Dispose();
-        VersionChip.Classes.Set("counted", true);
-        _versionLightOff = DispatcherTimer.RunOnce(() => VersionChip.Classes.Set("counted", false), VersionLightTime);
+        VersionChip.Classes.Remove("counted");
+        VersionChip.Classes.Add("counted");
     }
 }

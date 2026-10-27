@@ -460,16 +460,23 @@
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="Transitions">
-      <Transitions>
-        <BrushTransition Property="Foreground" Duration="0:0:0.2" Easing="SineEaseInOut" />
-      </Transitions>
-    </Setter>
   </Style>
-  <!-- a tap that counts toward the developer page lights the version for a moment
-       (HomeView.LightVersion) -->
+  <!-- a tap that counts toward the developer page lights the version (HomeView.LightVersion):
+       white at once, as a transition would only start toward it, then fading back -->
   <Style Selector="Button.version-chip.counted">
-    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Style.Animations>
+      <Animation Duration="0:0:0.4">
+        <KeyFrame Cue="0%">
+          <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+        </KeyFrame>
+        <KeyFrame Cue="25%">
+          <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="Foreground" Value="{StaticResource AppText40Brush}" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
   </Style>
   <Style Selector="Button.version-chip.debug">
     <Setter Property="Background" Value="{StaticResource VersionOnHomeDebugBrush}" />

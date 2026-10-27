@@ -59,12 +59,17 @@
           <TextBlock Classes="mdi" Text="{x:Static res:Mdi.Menu}" />
         </Button>
         <TextBlock Grid.Column="1" Classes="h4" FontSize="15" Text="{Binding AppName}" TextAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight" />
-        <!-- The version, and the way to the developer page: five taps, as the web UI counts them,
-             or one once a debug field is set - which the chip shows by filling. It never takes the
-             focus, as the web UI's chip does not (tabindex="-1"): a remote has no use for it. -->
-        <Button x:Name="VersionChip" Grid.Column="2" Classes="version-chip" Classes.debug="{Binding HasDebugData}"
-                Focusable="False" Content="{Binding VersionText}" Click="OnVersionClick"
-                HorizontalAlignment="Right" VerticalAlignment="Center" />
+        <!-- The version, and the way to the developer page: five taps, or one once a debug field is
+             set - which the chip shows by filling. It never takes the focus, as the web UI's chip
+             does not (tabindex="-1"): a remote has no use for it. A tap counts as the finger lands,
+             and lands on the header's full height around the chip: the chip is no taller than its
+             words, and a tap beside it was lost. -->
+        <Panel Grid.Column="2" Background="Transparent" Cursor="Hand" HorizontalAlignment="Right"
+               PointerPressed="OnVersionAreaPressed">
+          <Button x:Name="VersionChip" Classes="version-chip" Classes.debug="{Binding HasDebugData}"
+                  Focusable="False" Content="{Binding VersionText}" ClickMode="Press" Click="OnVersionClick"
+                  Margin="20,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Panel>
       </Grid>
 
       <!-- HomeBadge and GoPremiumButton: the badges of the features in use, and the premium

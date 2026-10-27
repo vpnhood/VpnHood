@@ -52,7 +52,7 @@ what `MainView.ProcessError` writes whenever a page hands it an exception it did
 - **The premium and account screens.** This head configures no premium tier and no account
   provider, so those pages and the paywall do not exist in it.
 - **What's New, Send Feedback, the site and the privacy policy.** They open a browser, not a page.
-- **The developer page.** Its button has no name of its own and wants five taps in a burst.
+- **The developer page.** Its button has no name of its own and wants five taps, each within two seconds of the last.
 
 ## Two things that will trip you up
 

@@ -25,6 +25,9 @@ internal static class AutomationNames
         Control.LoadedEvent.AddClassHandler<Button>((button, _) => Update(button));
         Control.LoadedEvent.AddClassHandler<ListBoxItem>((item, _) => Update(item));
         TextBlock.TextProperty.Changed.AddClassHandler<TextBlock>((text, _) => UpdateOwner(text));
+        // a text drawn after its button - a list's item inside it - got its words before it was in
+        // the button, so its arrival is the change
+        Control.LoadedEvent.AddClassHandler<TextBlock>((text, _) => UpdateOwner(text));
         Visual.IsVisibleProperty.Changed.AddClassHandler<Control>((control, _) => UpdateOwner(control));
         Control.LoadedEvent.AddClassHandler<TextBox>((textBox, _) => Update(textBox));
         TextBox.PlaceholderTextProperty.Changed.AddClassHandler<TextBox>((textBox, _) => {

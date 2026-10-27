@@ -1,11 +1,15 @@
 ﻿using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Configuration;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Net.Toolkit.Logging;
@@ -13,6 +17,7 @@ using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
+using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
@@ -217,7 +222,8 @@ public class ServerTest : TestBase
             QuicEndPoints = [IPEndPoint.Parse("127.0.0.1:443")],
             DnsServers = null,
             Certificates = [accessManager.DefaultCert],
-            UdpChannelBufferSize = null
+            UdpChannelBufferSize = null,
+            ReverseProxyIpRanges = null
         };
 
         // a configuration under way, held in its listen
@@ -651,6 +657,25 @@ public class ServerTest : TestBase
         Assert.AreEqual(HttpStatusCode.Unauthorized, ex.StatusCode);
     }
 
+    // written by hand, with our version header, as a scan that knows it sends them
+    [TestMethod]
+    [DataRow("GET", "X-BinaryStream: None\r\n")]
+    [DataRow("POST", "Upgrade: websocket\r\nConnection: Upgrade\r\nContent-Length: 0\r\n")]
+    [DataRow("GET", "X-BinaryStream: WebSocketNoHandshake\r\n")]
+    public async Task A_request_no_client_of_ours_sends_gets_the_401_of_a_scan(string method, string headers)
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        var request =
+            $"{method} /{Guid.NewGuid()} HTTP/1.1\r\n" +
+            $"Host: {token.ServerToken.HostName}\r\n" +
+            $"X-ProtocolVersion: {VpnHoodClientConfig.MaxProtocolVersion}\r\n" +
+            headers +
+            "\r\n";
+        Assert.AreEqual(HttpStatusCode.Unauthorized, await SendRawRequest(token, request));
+    }
+
     [TestMethod]
     public async Task Server_should_close_session_if_it_does_not_exist_in_access_server()
     {
@@ -695,6 +720,7 @@ public class ServerTest : TestBase
             },
             TcpEndPoints = [IPEndPoint.Parse("2.2.2.2:4433")],
             UdpEndPoints = [IPEndPoint.Parse("3.3.3.3:5533")],
+            ReverseProxyIpRanges = [IpRange.Parse("4.4.4.0-4.4.4.255")],
             TrackingOptions = new TrackingOptions {
                 TrackClientIp = true,
                 TrackDestinationIp = false,
@@ -718,7 +744,8 @@ public class ServerTest : TestBase
                 TcpConnectTimeout = TimeSpan.FromMinutes(53),
                 TcpTimeout = TimeSpan.FromMinutes(54),
                 Timeout = TimeSpan.FromMinutes(55),
-                UdpTimeout = TimeSpan.FromMinutes(56)
+                UdpTimeout = TimeSpan.FromMinutes(56),
+                MinClientProtocolVersion = 57
             }
         };
 
@@ -984,5 +1011,23 @@ public class ServerTest : TestBase
 
         Assert.AreEqual(UdpDatagram.MinProtocolVersion - 1, server2.GetSession(client).ProtocolVersion);
         await client.DisposeAsync(); // before server2
+    }
+
+    private async Task<HttpStatusCode> SendRawRequest(Token token, string request)
+    {
+        var serverEndPoint = token.ServerToken.HostEndPoints?.First()
+                             ?? throw new InvalidOperationException("The token has no endpoint.");
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(serverEndPoint, TestCt);
+        await using var sslStream = new SslStream(tcpClient.GetStream());
+        await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
+            TargetHost = token.ServerToken.HostName,
+            RemoteCertificateValidationCallback = (_, _, _, _) => true
+        }, TestCt);
+
+        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(request), TestCt);
+        await sslStream.FlushAsync(TestCt);
+        var response = await HttpUtils.ReadResponse(sslStream, TestCt);
+        return response.StatusCode;
     }
 }

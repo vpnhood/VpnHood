@@ -292,7 +292,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 QuicEndPoints = serverConfig.QuicEndPointsValue,
                 Certificates =
                     serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null)).ToArray(),
-                UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue
+                UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue,
+                ReverseProxyIpRanges = serverConfig.ReverseProxyIpRanges
             }).Vhc();
 
             //empty array means no error, null means not reported

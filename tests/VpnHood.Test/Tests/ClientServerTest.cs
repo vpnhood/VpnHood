@@ -719,8 +719,9 @@ public class ClientServerTest : TestBase
     public async Task Disconnect_if_client_not_supported()
     {
         // create server
-        await using var server = await TestHelper.CreateServer();
-        server.ServerHost.MinClientProtocolVersion = 1000;
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.MinClientProtocolVersion = 1000;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         var token = TestHelper.CreateAccessToken(server);
 

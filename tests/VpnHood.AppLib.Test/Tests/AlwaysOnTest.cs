@@ -108,8 +108,9 @@ public class AlwaysOnTest : TestAppBase
     [TestMethod]
     public async Task A_refusal_stops_it()
     {
-        await using var server = await TestHelper.CreateServer();
-        server.ServerHost.MinClientProtocolVersion = 1000; // a version the server no longer takes
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.MinClientProtocolVersion = 1000; // a version the server no longer takes
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
         var token = TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
 

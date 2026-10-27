@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Server.Utils;
 
@@ -64,17 +65,22 @@ public static class ServerUtils
             maxWorkerThreads, newMaxCompletionPortThreads);
     }
 
-    public static IPAddress? GetClientIpFromXForwarded(string value)
+    // Without the reverse proxies' ranges, the first entry counts. With them, the last one outside them does: a proxy
+    // appends the address it saw to what the sender wrote, so the entries before it are the sender's own word
+    public static IPAddress? GetClientIpFromXForwarded(string value, IpRangeOrderedList? reverseProxyIpRanges)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
+        var entries = value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (reverseProxyIpRanges == null)
+            return entries.Length > 0 && IPAddress.TryParse(entries[0], out var firstIpAddress) ? firstIpAddress : null;
 
-        var parts = value.Split(',');
-        if (parts.Length == 0)
-            return null;
+        for (var i = entries.Length - 1; i >= 0; i--) {
+            if (!IPAddress.TryParse(entries[i], out var ipAddress))
+                return null;
 
-        // Take the first part, which is the most trusted
-        var ipString = parts[0].Trim();
-        return IPAddress.TryParse(ipString, out var ipAddress) ? ipAddress : null;
+            if (!reverseProxyIpRanges.Contains(ipAddress))
+                return ipAddress;
+        }
+
+        return null;
     }
 }

@@ -36,11 +36,11 @@ public class ServerHost : IAsyncDisposable
     private readonly Job _cleanupConnectionsJob;
     private readonly AsyncLock _configureLock = new();
     private readonly AsyncLock _disposeLock = new();
+    private IpRangeOrderedList? _reverseProxyIpRanges;
     private bool _disposed;
 
     public const int MaxProtocolVersion = 14;
     public const int MinProtocolVersion = 8;
-    public int MinClientProtocolVersion { get; set; } = 8;
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterVpnAdapterIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
@@ -85,6 +85,9 @@ public class ServerHost : IAsyncDisposable
         // reconfigure
         DnsServers = configuration.DnsServers;
         Certificates = configuration.Certificates.Select(x => new CertificateHostName(x)).ToArray();
+        _reverseProxyIpRanges = configuration.ReverseProxyIpRanges != null
+            ? new IpRangeOrderedList(configuration.ReverseProxyIpRanges)
+            : null;
 
         var tcpStatuses = await _tcpListenerHost.Configure(configuration.TcpEndPoints, Certificates).Vhc();
         var quicStatuses = await _quicListenerHost.Configure(configuration.QuicEndPoints, Certificates).Vhc();
@@ -131,8 +134,12 @@ public class ServerHost : IAsyncDisposable
             var httpMethod = httpRequestLine.Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
-            var clientIp = ServerUtils.GetClientIpFromXForwarded(clientIpByProxy) ?? streamConnection.RemoteEndPoint.Address;
-            var isRevereProxy = !string.IsNullOrEmpty(clientIpByProxy);
+            var remoteIp = streamConnection.RemoteEndPoint.Address;
+            var reverseProxyIpRanges = _reverseProxyIpRanges;
+            var isRevereProxy = reverseProxyIpRanges?.Contains(remoteIp) ?? !string.IsNullOrEmpty(clientIpByProxy);
+            var clientIp = isRevereProxy
+                ? ServerUtils.GetClientIpFromXForwarded(clientIpByProxy, reverseProxyIpRanges) ?? remoteIp
+                : remoteIp;
 
             // Try to serve download file if requested
             if (await _downloadService.TryServeDownloadAsync(streamConnection, httpRequestLine, cancellationToken).Vhc())
@@ -145,10 +152,12 @@ public class ServerHost : IAsyncDisposable
             if (protocolVersion is < MinProtocolVersion or > MaxProtocolVersion)
                 throw new UnauthorizedAccessException();
 
+            // a request no client of ours sends gets the same 401 as one without our headers: a 400 would tell a
+            // scan that knows them it is us
             switch (streamType) {
                 case TunnelStreamType.None:
                     if (httpMethod != "POST")
-                        throw new Exception("Bad request");
+                        throw new UnauthorizedAccessException();
 
                     return new ServerStreamConnection(streamConnection) {
                         ClientIp = clientIp,
@@ -159,7 +168,7 @@ public class ServerHost : IAsyncDisposable
 
                 case TunnelStreamType.WebSocketNoHandshake: {
                         if (httpMethod != "POST")
-                            throw new Exception("Bad request");
+                            throw new UnauthorizedAccessException();
 
                         // create WebSocket stream without handshake
                         var websocketStream = new WebSocketStream(
@@ -175,7 +184,7 @@ public class ServerHost : IAsyncDisposable
 
                 case TunnelStreamType.WebSocket: {
                         if (httpMethod != "GET")
-                            throw new Exception("Bad request");
+                            throw new UnauthorizedAccessException();
 
                         // reply HTTP response for websocket upgrade
                         var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
@@ -443,8 +452,9 @@ public class ServerHost : IAsyncDisposable
         var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
             throw new InvalidOperationException("Session is lost!");
 
-        // check client version; unfortunately it must be after CreateSession to preserve server anonymity
-        if (request.ClientInfo == null || protocolVersion < MinClientProtocolVersion)
+        // check client version; unfortunately it must be after CreateSession to preserve server anonymity. Not at the
+        // version check before the key either: every client up to protocol 14 sends its hello as 8
+        if (request.ClientInfo == null || protocolVersion < _sessionManager.SessionOptions.MinClientProtocolVersionValue)
             throw new ServerSessionException(streamConnection.RemoteEndPoint, session,
                 SessionErrorCode.UnsupportedClient, request.RequestId,
                 "This client is outdated and not supported anymore! Please update your app.");

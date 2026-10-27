@@ -9,6 +9,9 @@
 * Fix: An install started while VpnHoodServer updates itself waits for the update to finish, so its choices stand; the update could undo them, turning updates back on after -noautoupdate. The uninstaller waits too.
 * Feature: For a censored network, VpnHoodServer can stop carrying its users' own QUIC and UDP, which would show through: `AllowQuicPacket` and `AllowUdpPacket` in the session options, on by default; turned off, they take effect only with `AllowTcpPacket` off, which is Cloak Mode for everyone. The server tells the apps, which drop that traffic on the device, and drops what an older app sends anyway; DNS always passes.
 * Improve: VpnHoodServer refuses settings that turn off both `AllowTcpPacket` and `AllowTcpProxy`, which leave TCP no way through, and says why in its log, rather than taking connections whose TCP then fails.
+* Feature: `MinClientProtocolVersion` in the session options sets the oldest protocol an app may connect with, 8 by default; an older app is told to update.
+* Feature: VpnHoodServer can take the client's IP from `X-Forwarded-For` only on connections from its reverse proxies, listed in `ReverseProxyIpRanges`; `[]` lists none. Left out, as before, it takes the header from anyone, so a client can pass for another IP.
+* Improve: A request with VpnHoodServer's own headers in a form no app sends gets the same 401 as any request it does not take, rather than a 400 that set the server apart.
 
 # v9.0.859
 

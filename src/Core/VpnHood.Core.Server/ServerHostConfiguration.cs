@@ -12,4 +12,5 @@ internal class ServerHostConfiguration
     public required IPAddress[]? DnsServers { get; init; }
     public required X509Certificate2[] Certificates { get; init; } = [];
     public required TransferBufferSize? UdpChannelBufferSize { get; init; }
+    public required IReadOnlyList<IpRange>? ReverseProxyIpRanges { get; init; }
 }

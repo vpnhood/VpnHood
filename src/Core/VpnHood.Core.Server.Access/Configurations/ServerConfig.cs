@@ -25,6 +25,10 @@ public class ServerConfig
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? QuicEndPoints { get; set; }
 
+    // Left out, X-Forwarded-For counts from any sender, so anyone can name the client IP the access manager locks
+    // and locates; set, only from these proxies, and [] lists none
+    public IpRange[]? ReverseProxyIpRanges { get; set; }
+
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
 
@@ -80,6 +84,7 @@ public class ServerConfig
         if (obj.TcpEndPoints != null) TcpEndPoints = obj.TcpEndPoints;
         if (obj.UdpEndPoints != null) UdpEndPoints = obj.UdpEndPoints;
         if (obj.QuicEndPoints != null) QuicEndPoints = obj.QuicEndPoints;
+        if (obj.ReverseProxyIpRanges != null) ReverseProxyIpRanges = obj.ReverseProxyIpRanges;
         if (obj.UpdateStatusInterval != null) UpdateStatusInterval = obj.UpdateStatusInterval;
         if (obj.DnsServers != null) DnsServers = obj.DnsServers;
         if (obj.LogAnonymizer != null) LogAnonymizer = obj.LogAnonymizer;

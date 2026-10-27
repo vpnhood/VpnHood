@@ -45,6 +45,9 @@ public class SessionOptions
     public bool? AllowQuicPacket { get; set; }
     public bool? AllowUdpPacket { get; set; }
 
+    // an older client is told to update once it has proven its key
+    public int? MinClientProtocolVersion { get; set; }
+
     [JsonIgnore]
     public TimeSpan TimeoutValue => Timeout ?? TimeSpan.FromMinutes(30);
 
@@ -110,6 +113,9 @@ public class SessionOptions
     [JsonIgnore]
     public bool AllowUdpPacketValue => AllowUdpPacket ?? true;
 
+    [JsonIgnore]
+    public int MinClientProtocolVersionValue => MinClientProtocolVersion ?? 8;
+
     public void Merge(SessionOptions obj)
     {
         if (obj.Timeout != null) Timeout = obj.Timeout;
@@ -137,6 +143,7 @@ public class SessionOptions
         if (obj.AllowTcpPacket != null) AllowTcpPacket = obj.AllowTcpPacket;
         if (obj.AllowQuicPacket != null) AllowQuicPacket = obj.AllowQuicPacket;
         if (obj.AllowUdpPacket != null) AllowUdpPacket = obj.AllowUdpPacket;
+        if (obj.MinClientProtocolVersion != null) MinClientProtocolVersion = obj.MinClientProtocolVersion;
     }
 
     public void ApplyDefaults()
@@ -166,5 +173,6 @@ public class SessionOptions
         AllowTcpPacket = AllowTcpPacketValue;
         AllowQuicPacket = AllowQuicPacketValue;
         AllowUdpPacket = AllowUdpPacketValue;
+        MinClientProtocolVersion = MinClientProtocolVersionValue;
     }
 }

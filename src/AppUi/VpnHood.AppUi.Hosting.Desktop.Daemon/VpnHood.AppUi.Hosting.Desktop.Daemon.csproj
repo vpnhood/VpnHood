@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<Description>The VpnHood desktop service: the daemon that is the app on a machine with no window, the commands that drive it over its own API, the channel that hands that API to an administrator, and its updater. Platform-free - what a service is and where an install keeps things is the platform package's to say (Desktop.Linux, Desktop.WindowsTun)</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- the channel's line protocol and the connection over it, tested with stand-ins; the
+		     Windows pipe itself in the smoke test, which targets Windows -->
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+		<InternalsVisibleTo Include="VpnHood.AppUi.SmokeTest" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The window the ui command opens, and the connection every command reaches the app by. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop\VpnHood.AppUi.Hosting.Desktop.csproj" />
+	</ItemGroup>
+</Project>

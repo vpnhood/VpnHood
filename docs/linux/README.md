@@ -243,31 +243,38 @@ name: `journalctl -t VpnHoodClient`.
 ## How it fits together
 
 For anyone changing this. The command line is a UI over the app's API, exactly as the Avalonia
-window is, so it lives beside the Avalonia hosts and is split the same way: one shared project,
-one small adapter per platform.
+window is, so it lives beside the Avalonia hosts and is split the same way: shared projects - the
+window, and the service with its commands - and one small adapter per platform.
 
 ```
 src/AppUi/
-├── VpnHood.AppUi.Hosting.Desktop/    the commands, the daemon, the window launcher
-│   ├── DesktopHost.cs                builds the command tree and dispatches
+├── VpnHood.AppUi.Hosting.Desktop/    the window, which every desktop host runs
 │   ├── InProcessDesktopHost.cs       the app and its window in one process, the whole job where the OS
 │   │                                 holds the tunnel (the Windows VPN plug-in's); "dev" runs its window
 │   ├── DesktopInitParams.cs          what a head declares: its init params, its UI, whether it takes keys
-│   ├── DaemonConnection.cs           the API over loopback, following the address the channel gives it
+│   ├── DaemonConnection.cs           the app's API over loopback: the service's, or this process's own
 │   ├── MainThreadQueue.cs            the host's main thread, which the window gets
-│   ├── Platform/                     what a platform implements: IDesktopPlatform - paths, the instance,
-│   │                                 how to be the daemon (and a debugger's), its logs, and what only some
-│   │                                 have: "service install" - over its paths (IAppDesktopPaths, the
-│   │                                 window's share IDesktopUiPaths), the running instance
-│   │                                 (IAppInstanceController), the headless app (IAppDaemonHost and its
-│   │                                 factory), the channel's pipe or socket, the peer check (Windows' own
-│   │                                 here, for both Windows hosts); IInProcessDesktopPlatform where there
-│   │                                 is no service
-│   ├── Channel/                      the channel the service hands its address over, to administrators
-│   │                                 only: its two ends, and the answer each call follows
-│   ├── Commands/                     one type per command, and what they share: the printer, the
-│   │                                 session, the profile lookup, one window per person and session
+│   ├── Window/                       the window and the one message in its place, one window per person
+│   │                                 and session, the access key a launch was given
+│   ├── Platform/                     what every host implements: the window's paths (IDesktopUiPaths),
+│   │                                 the session, the app it holds (IAppDaemonHost), the peer check
+│   │                                 (Windows' own here, for both Windows hosts); IInProcessDesktopPlatform
+│   │                                 where there is no service
+│   ├── Channel/                      the handler every call of the window goes through, and the answer
+│   │                                 it follows
 │   └── Exceptions/                   the daemon not running, or refusing the caller
+├── VpnHood.AppUi.Hosting.Desktop.Daemon/  the service and the command line, for the hosts that have one
+│   ├── DesktopHost.cs                builds the command tree and dispatches
+│   ├── Platform/                     what a service's platform implements: IDesktopPlatform - paths, the
+│   │                                 instance, how to be the daemon (and a debugger's), its logs, and what
+│   │                                 only some have: "service install" - over its paths (IAppDesktopPaths),
+│   │                                 the running instance (IAppInstanceController), the headless app's
+│   │                                 factory, the channel's pipe or socket
+│   ├── Channel/                      the channel the service hands its address over, to administrators
+│   │                                 only: its two ends, and the connection that follows it
+│   ├── Commands/                     one type per command, and what they share: the printer, the
+│   │                                 session, the profile lookup
+│   └── Updaters/                     the desktop's own updater
 ├── VpnHood.AppUi.Hosting.Desktop.Linux/  systemd, /opt, XDG, root
 │   ├── LinuxDesktopHost.cs           a Linux head's entry point
 │   ├── LinuxDesktopPlatform.cs       what Linux answers, as an IDesktopPlatform
@@ -292,7 +299,7 @@ A head is then its options — the product's, and its channel's lines — and on
 an `IDesktopUi` (`VpnHood.AppUi.Hosting.Desktop.Abstractions`), which the window runs on the host's main
 thread: `static int Main` returns `LinuxDesktopHost.Run(args, …)` — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
-project reads a static or names a platform: every command is handed an `IDesktopPlatform`, which
+projects read a static or name a platform: every command is handed an `IDesktopPlatform`, which
 each platform implements (`LinuxDesktopPlatform`, `WindowsDesktopPlatform`). Only Windows has
 `service install`, and a daemon run the service control manager stops by a call. The tray is the
 UI's, not the platform's (`AvaloniaDesktopUi`).

@@ -1,7 +1,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Linux.Utils;
-using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 

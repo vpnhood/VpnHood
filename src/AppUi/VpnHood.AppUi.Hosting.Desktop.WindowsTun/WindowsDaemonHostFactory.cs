@@ -1,4 +1,5 @@
 using VpnHood.AppLib.App;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.AppUi.Hosting.Desktop.WindowsTun.Utils;
 

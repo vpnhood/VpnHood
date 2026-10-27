@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
-		<Description>The VpnHood desktop host: the commands that drive a running app over its own API, and the daemon that is that app on a machine with no window. Platform-free - what a service is and where an install keeps things is the platform package's to say (Desktop.Linux, Desktop.WindowsTun, Desktop.WindowsVpnPlugin)</Description>
+		<Description>The VpnHood desktop window: the window over a running app's own API, one per person and session, and the host that runs the app and its window in one process. Platform-free - the service and its commands are VpnHood.AppUi.Hosting.Desktop.Daemon's, and where an install keeps things is the platform package's to say (Desktop.Linux, Desktop.WindowsTun, Desktop.WindowsVpnPlugin)</Description>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -9,17 +9,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- the channel's line protocol and the connection's handler, tested with stand-ins; the
-		     Windows pipe itself in the smoke test, which targets Windows -->
+		<!-- the service's window and its debugger's run (dev) are this window, over this connection -->
+		<InternalsVisibleTo Include="VpnHood.AppUi.Hosting.Desktop.Daemon" />
+		<!-- the window's single instance and the connection's handler, tested with stand-ins -->
 		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
 		<InternalsVisibleTo Include="VpnHood.AppUi.SmokeTest" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- The commands hold no app: they reach the running one over loopback, through the same
-		     generated clients a paired browser uses. -->
+		<!-- The window reaches the app over loopback, through the same generated clients a paired
+		     browser uses. -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api.HttpClients\VpnHood.AppLib.Api.HttpClients.csproj" />
-		<!-- The one command that IS the app - daemon - builds it; the rest never touch this. -->
+		<!-- The in-process host builds the app in the window's own process. -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<!-- The UI a head names, which the window runs. -->
 		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop.Abstractions\VpnHood.AppUi.Hosting.Desktop.Abstractions.csproj" />

@@ -1,4 +1,4 @@
-using VpnHood.AppUi.Hosting.Desktop.Updaters;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Updaters;
 
 namespace VpnHood.AppLib.Test.Providers;
 

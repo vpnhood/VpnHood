@@ -1,5 +1,5 @@
 using VpnHood.AppLib.Test.Daemon;
-using VpnHood.AppUi.Hosting.Desktop.Commands;
+using VpnHood.AppUi.Hosting.Desktop.Window;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;

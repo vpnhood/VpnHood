@@ -2,8 +2,8 @@ using System.CommandLine;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
-using VpnHood.AppUi.Hosting.Desktop.Commands;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
+using VpnHood.AppUi.Hosting.Desktop.Window;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
@@ -35,7 +35,7 @@ public static class InProcessDesktopHost
             // window does (UiCommand)
             var accessKeyOption = AccessKeyInput.CreateOption();
             var accessKeyInput = new RootCommand { accessKeyOption }.Parse(args).GetValue(accessKeyOption);
-            var accessKey = accessKeyInput == null ? null : await UiCommand.TryReadAccessKey(platform.Paths,
+            var accessKey = accessKeyInput == null ? null : await DesktopUiWindow.TryReadAccessKey(platform.Paths,
                 initParams, mainThread, accessKeyInput, CancellationToken.None).Vhc();
             if (accessKeyInput != null && accessKey == null)
                 return 1;
@@ -58,7 +58,7 @@ public static class InProcessDesktopHost
             catch (Exception ex) {
                 // in the window's place: a person who clicked an icon has nowhere else to read it
                 VhLogger.Instance.LogError(ex, "{InstanceName} could not run.", platform.Paths.InstanceName);
-                await UiCommand.RunMessage(platform.Paths, initParams, mainThread, DesktopUiMessageKind.Failure,
+                await DesktopUiWindow.RunMessage(platform.Paths, initParams, mainThread, DesktopUiMessageKind.Failure,
                     ex.Message, CancellationToken.None).Vhc();
                 return 1;
             }
@@ -82,7 +82,7 @@ public static class InProcessDesktopHost
 
         // No channel to ask: the app is here, and so is the process the window's calls must reach.
         await using var connection = DaemonConnection.CreateInProcess(localWebHost, peerCheck, paths.InstanceName);
-        await UiCommand.RunWindow(paths, initParams, mainThread, connection, startHidden, accessKey,
+        await DesktopUiWindow.RunWindow(paths, initParams, mainThread, connection, startHidden, accessKey,
             cancellationToken).Vhc();
     }
 }

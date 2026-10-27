@@ -1,3 +1,4 @@
+using VpnHood.AppUi.Hosting.Desktop.Daemon;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;

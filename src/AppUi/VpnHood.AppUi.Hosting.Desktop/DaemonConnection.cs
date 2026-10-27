@@ -3,24 +3,20 @@ using VpnHood.AppLib.Api.HttpClients;
 using VpnHood.AppLib.App.WebHosting;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.Desktop.Channel;
-using VpnHood.AppUi.Hosting.Desktop.Exceptions;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop;
 
-// The way in to the daemon's API, followed over the service's channel as it moves. Open waits for a
-// service still coming up - the first command after an install meets one - but not for one stopped.
+// The way in to the app's API, followed as it moves: the service's, over its channel
+// (DaemonChannelConnector), or this process's own (CreateInProcess).
 public sealed class DaemonConnection : IAsyncDisposable
 {
-    private static readonly TimeSpan BindTimeout = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
-
     private readonly IDaemonAnswerProvider _answerProvider;
     private readonly DaemonApiUrlProvider _apiUrlProvider;
     private readonly HttpClient _httpClient;
 
-    private DaemonConnection(IDaemonAnswerProvider answerProvider, ILoopbackPeerCheck peerCheck, string instanceName,
+    internal DaemonConnection(IDaemonAnswerProvider answerProvider, ILoopbackPeerCheck peerCheck, string instanceName,
         string notRunningHint)
     {
         _answerProvider = answerProvider;
@@ -52,30 +48,6 @@ public sealed class DaemonConnection : IAsyncDisposable
     // The daemon's API URL, followed as it moves: what a web view loads, token and all.
     public IDesktopApiUrlProvider ApiUrlProvider => _apiUrlProvider;
 
-    // A standard user is refused before the channel is asked: told at once, rather than after a wait
-    // for a service that would only refuse them, or a hint to start one they may not start.
-    public static Task<DaemonConnection> Open(IDesktopPlatform platform, CancellationToken cancellationToken)
-    {
-        if (!platform.IsAdministrator())
-            throw new DaemonRefusedException(platform.AdministratorsOnlyMessage);
-
-        return Open(platform.Channel, platform.PeerCheck, platform.Instance, platform.Paths, cancellationToken);
-    }
-
-    internal static async Task<DaemonConnection> Open(IDaemonChannel channel, ILoopbackPeerCheck peerCheck,
-        IAppInstanceController instance, IAppDesktopPaths paths, CancellationToken cancellationToken)
-    {
-        var answerProvider = new ChannelAnswerProvider(channel, paths.InstanceName);
-        try {
-            await WaitForAnswer(answerProvider, instance, paths, cancellationToken).Vhc();
-            return new DaemonConnection(answerProvider, peerCheck, paths.InstanceName, instance.NotRunningHint);
-        }
-        catch {
-            await answerProvider.DisposeAsync().Vhc();
-            throw;
-        }
-    }
-
     // The app in this very process (InProcessDesktopHost), over its own local web host, which must be
     // started. It answers while this process runs, so it is never found stopped.
     internal static DaemonConnection CreateInProcess(IAppWebHost webHost, ILoopbackPeerCheck peerCheck,
@@ -83,52 +55,6 @@ public sealed class DaemonConnection : IAsyncDisposable
     {
         return new DaemonConnection(new InProcessAnswerProvider(webHost), peerCheck, instanceName,
             notRunningHint: $"{instanceName} has stopped.");
-    }
-
-    private static async Task WaitForAnswer(IDaemonAnswerProvider answerProvider, IAppInstanceController instance,
-        IAppDesktopPaths paths, CancellationToken cancellationToken)
-    {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(BindTimeout);
-
-        try {
-            while (true) {
-                if (answerProvider.Refusal is { } refusal)
-                    throw new DaemonRefusedException(refusal);
-
-                if (answerProvider.Current != null)
-                    return;
-
-                // Nothing is starting, so there is nothing to wait for; and one that died while we
-                // waited is said so rather than spend the whole timeout on it.
-                if (!await instance.IsRunning(cancellationToken).Vhc())
-                    throw new DaemonNotRunningException(instance.NotRunningHint);
-
-                await WaitForChange(answerProvider, PollInterval, timeout.Token).Vhc();
-            }
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
-            throw new InvalidOperationException(
-                $"{paths.InstanceName} is running but has not answered. " +
-                $"See: {paths.CommandName} service log");
-        }
-    }
-
-    // Until the answer changes, or the interval passes: the answer is taken the moment it comes.
-    private static async Task WaitForChange(IDaemonAnswerProvider answerProvider, TimeSpan interval,
-        CancellationToken cancellationToken)
-    {
-        var changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        void OnChanged(object? sender, EventArgs e) => changed.TrySetResult();
-
-        answerProvider.Changed += OnChanged;
-        try {
-            await Task.WhenAny(changed.Task, Task.Delay(interval, cancellationToken)).Vhc();
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-        finally {
-            answerProvider.Changed -= OnChanged;
-        }
     }
 
     public async ValueTask DisposeAsync()

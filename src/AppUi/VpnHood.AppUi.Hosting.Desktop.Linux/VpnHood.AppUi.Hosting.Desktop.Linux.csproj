@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
-		<Description>The VpnHood desktop host on Linux: systemd is the service, /opt is the install, XDG is the cache, and root is who runs the daemon. Everything the commands themselves do is VpnHood.AppUi.Hosting.Desktop</Description>
+		<Description>The VpnHood desktop host on Linux: systemd is the service, /opt is the install, XDG is the cache, and root is who runs the daemon. Everything the commands themselves do is VpnHood.AppUi.Hosting.Desktop.Daemon</Description>
 	</PropertyGroup>
 
 	<!-- The app's icon as Linux reads it (buildTransitive/), for every Linux head that takes this
@@ -12,7 +12,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop\VpnHood.AppUi.Hosting.Desktop.csproj" />
+		<ProjectReference Include="..\VpnHood.AppUi.Hosting.Desktop.Daemon\VpnHood.AppUi.Hosting.Desktop.Daemon.csproj" />
 		<!-- The app as Linux hosts it: the single-instance lock, the command file, the adapter
 		     a previous run may have left. -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App.Linux\VpnHood.AppLib.App.Linux.csproj" />

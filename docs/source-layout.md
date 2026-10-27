@@ -166,10 +166,10 @@ ids and names are not among them: they come from the app's identity (below).
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
 hosts it mounts from `AppUi`. A desktop head mounts one more host than a mobile one: its platform's
-`VpnHood.AppUi.Hosting.Desktop.Linux` or `.Desktop.WindowsTun`, over the shared `VpnHood.AppUi.Hosting.Desktop`,
-which is the service that holds the app, the window that shows it and the command line in one
-binary — see [linux/](linux/README.md#how-it-fits-together). The Microsoft Store head mounts
-`.Desktop.WindowsVpnPlugin` instead, with no service: the app runs in its window's process, and
+`VpnHood.AppUi.Hosting.Desktop.Linux` or `.Desktop.WindowsTun`, over the shared
+`VpnHood.AppUi.Hosting.Desktop.Daemon`, the service that holds the app and the command line, and
+`VpnHood.AppUi.Hosting.Desktop`, the window that shows it, all in one binary — see [linux/](linux/README.md#how-it-fits-together). The Microsoft Store head mounts
+`.Desktop.WindowsVpnPlugin` instead, over the window's project alone, with no service: the app runs in its window's process, and
 Windows' VPN host holds the tunnel. It has two files more, `Package.appxmanifest`, its package's
 manifest, which `_publish.ps1` stamps, and `_install.ps1`, which installs that package on this
 machine.

@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App.Linux;
+using VpnHood.AppUi.Hosting.Desktop.Daemon;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.Net.Toolkit.Logging;
 

@@ -1,5 +1,5 @@
 using System.Reflection;
-using VpnHood.AppUi.Hosting.Desktop.Platform;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 

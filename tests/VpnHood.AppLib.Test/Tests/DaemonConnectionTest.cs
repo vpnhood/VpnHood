@@ -4,6 +4,7 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Test.Daemon;
 using VpnHood.AppUi.Hosting.Desktop;
 using VpnHood.AppUi.Hosting.Desktop.Channel;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Channel;
 using VpnHood.AppUi.Hosting.Desktop.Exceptions;
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -32,7 +33,7 @@ public class DaemonConnectionTest
     private static Task<DaemonConnection> Open(TestDaemonChannel channel, TestLoopbackPeerCheck? peerCheck = null,
         TestInstanceController? instance = null)
     {
-        return DaemonConnection.Open(channel, peerCheck ?? new TestLoopbackPeerCheck(),
+        return DaemonChannelConnector.Open(channel, peerCheck ?? new TestLoopbackPeerCheck(),
             instance ?? new TestInstanceController(), new TestDesktopPaths(), CancellationToken.None);
     }
 
@@ -145,7 +146,7 @@ public class DaemonConnectionTest
         var platform = new TestDesktopPlatform { IsUserAdministrator = false };
 
         var refused = await Assert.ThrowsExactlyAsync<DaemonRefusedException>(() =>
-            DaemonConnection.Open(platform, CancellationToken.None));
+            DaemonChannelConnector.Open(platform, CancellationToken.None));
         Assert.AreEqual("Only administrators can use VpnHoodTest on this computer.", refused.Message);
     }
 

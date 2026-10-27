@@ -1,3 +1,5 @@
+using VpnHood.AppUi.Hosting.Desktop.Daemon;
+
 namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 
 // A Linux head's whole entry point: the machine facts Linux answers (LinuxDesktopPlatform) joined to

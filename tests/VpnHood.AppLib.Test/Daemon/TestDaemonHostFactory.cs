@@ -1,3 +1,4 @@
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 
 namespace VpnHood.AppLib.Test.Daemon;

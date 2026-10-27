@@ -4,7 +4,7 @@ using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.Test.Providers;
-using VpnHood.AppUi.Hosting.Desktop.Updaters;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Updaters;
 
 namespace VpnHood.AppLib.Test.Tests;
 

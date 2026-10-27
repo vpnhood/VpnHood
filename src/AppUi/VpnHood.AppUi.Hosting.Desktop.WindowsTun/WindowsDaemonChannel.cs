@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Security.Principal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
-using VpnHood.AppUi.Hosting.Desktop.Platform;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 

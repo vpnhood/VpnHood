@@ -3,7 +3,8 @@ using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App.WindowsTun;
-using VpnHood.AppUi.Hosting.Desktop.Platform;
+using VpnHood.AppUi.Hosting.Desktop.Daemon;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;

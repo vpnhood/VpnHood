@@ -2,7 +2,7 @@ using System.CommandLine;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.Test.Daemon;
-using VpnHood.AppUi.Hosting.Desktop.Commands;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Commands;
 
 namespace VpnHood.AppLib.Test.Tests;
 

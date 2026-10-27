@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App;
-using VpnHood.AppUi.Hosting.Desktop.Updaters;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Updaters;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 

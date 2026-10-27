@@ -123,6 +123,7 @@
     </Project>
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop/VpnHood.AppUi.Hosting.Desktop.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Abstractions/VpnHood.AppUi.Hosting.Desktop.Abstractions.csproj" />
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Daemon/VpnHood.AppUi.Hosting.Desktop.Daemon.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Linux/VpnHood.AppUi.Hosting.Desktop.Linux.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.WindowsTun/VpnHood.AppUi.Hosting.Desktop.WindowsTun.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin/VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin.csproj" />

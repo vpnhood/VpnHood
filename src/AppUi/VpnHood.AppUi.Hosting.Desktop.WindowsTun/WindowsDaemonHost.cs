@@ -1,7 +1,7 @@
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.WindowsTun;
+using VpnHood.AppUi.Hosting.Desktop.Daemon.Updaters;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
-using VpnHood.AppUi.Hosting.Desktop.Updaters;
 
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 

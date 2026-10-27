@@ -29,6 +29,16 @@ public class AccessKeyTest : TestBase
         Assert.IsFalse(Uri.TryCreate(oldKey, UriKind.Absolute, out _), "as a host, the key is too long for Uri");
     }
 
+    // as Windows' protocol activation passes the link: the base64 a host, the root path after it
+    [TestMethod]
+    public void A_vh_slash_slash_link_with_the_root_path_reads_the_same()
+    {
+        var token = Token.FromAccessKey(ClientOptions.SampleAccessKey);
+        var link = "vh://" + token.ToAccessKey()["vh:".Length..] + "/";
+
+        Assert.AreEqual(token.ToAccessKey(), Token.FromAccessKey(link).ToAccessKey());
+    }
+
     // the form keys may switch to, whose links the apps already open
     [TestMethod]
     public void A_vhkey_key_reads_the_same_and_is_a_link()

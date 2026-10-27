@@ -24,6 +24,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
     : TunVpnAdapter(adapterSettings)
 {
     private const int PollTimeoutMs = 1000;
+    private const int ReceivePoolEmptyHResult = unchecked((int)0x8007000E);
 
     // The MTU and the frame size verified with packets end to end; another pair needs a packet-level test of its own.
     private const int WindowsMaxMtu = 1400;
@@ -48,6 +49,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
     private int _queueFullWarningLogged;
     private int _outboundSizeWarningLogged;
     private int _inboundSizeWarningLogged;
+    private bool _receivePoolEmpty; // the write path's only: a warning per run of drops, not per packet
 
     private DatagramSocket? _transport;
     private readonly byte[] _writeBuffer = new byte[ushort.MaxValue];
@@ -320,7 +322,23 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
             return true;
         }
 
-        var packet = vpnChannel.GetVpnReceivePacketBuffer();
+        // Windows' receive pool runs dry when the host falls behind it - frozen between VPN events while no app holds
+        // it, Windows' rule for a plug-in - and says so as E_OUTOFMEMORY. A full ring drops the packet, as a TUN's
+        // does, and TCP resends it; taken for the adapter's end, ten in a row ended the VPN.
+        VpnPacketBuffer packet;
+        try {
+            packet = vpnChannel.GetVpnReceivePacketBuffer();
+        }
+        catch (Exception ex) when (ex.HResult == ReceivePoolEmptyHResult) {
+            if (!_receivePoolEmpty) {
+                _receivePoolEmpty = true;
+                VhLogger.Instance.LogWarning(
+                    "Windows VPN receive pool is empty; inbound packets are dropped until Windows returns its buffers.");
+            }
+            return true;
+        }
+
+        _receivePoolEmpty = false;
         var appended = false;
         try {
             buffer.CopyTo(offset, packet.Buffer, 0, length);

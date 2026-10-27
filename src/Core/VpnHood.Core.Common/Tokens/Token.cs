@@ -68,6 +68,10 @@ public class Token
             if (base64.StartsWith(prefix, StringComparison.Ordinal))
                 base64 = base64[prefix.Length..];
 
+        // Windows' protocol activation takes a vh:// key's base64 for the link's host and adds the root path, a '/',
+        // which no key's base64 ends in: the JSON it carries ends in '}'
+        base64 = base64.TrimEnd('/');
+
         // load
         var json = Encoding.UTF8.GetString(VhUtils.ConvertFromBase64AndFixPadding(base64));
         var tokenVersion = JsonUtils.Deserialize<TokenVersion>(json);

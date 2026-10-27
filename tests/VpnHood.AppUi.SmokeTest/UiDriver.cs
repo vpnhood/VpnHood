@@ -13,7 +13,8 @@ namespace VpnHood.AppUi.SmokeTest;
 
 // The window as a test can touch it. Windows publishes every Avalonia control through UI
 // Automation, so the tree a screen reader would read is the tree a walk drives, and a control is
-// addressed by its x:Name, which Avalonia reports as the automation id. Nothing here knows a page.
+// addressed by its x:Name, which Avalonia reports as the automation id. Nothing here knows a page;
+// it knows only where pages are shown (MainView's Host), to tell when a page change is over.
 internal sealed class UiDriver(Process process) : IDisposable
 {
     private static readonly TimeSpan PollDelay = TimeSpan.FromMilliseconds(150);
@@ -106,9 +107,11 @@ internal sealed class UiDriver(Process process) : IDisposable
     }
 
     // What the page calls itself: a page header's own block, or the title a feature page draws.
-    // Null on the home, which wears the app's name rather than a title.
+    // Null on the home, which wears the app's name rather than a title. Read once a page change is
+    // over: until then the leaving page is still there, its title too.
     public string? PageTitle {
         get {
+            WaitForOnePage();
             var element = TryFind("TitleBlock") ?? TryFind("TitleText");
             var title = element?.Current.Name;
             return string.IsNullOrWhiteSpace(title) ? null : title;
@@ -136,9 +139,13 @@ internal sealed class UiDriver(Process process) : IDisposable
 
     // Back until no page header is left, which is the home. A page that will not leave is a defect
     // of its own, so this says so rather than looping for ever.
+    // Each step waits for the page it leaves to be gone: the leaving page's Back is still there while
+    // it fades, and a press on it goes back once more.
     public void ReturnHome()
     {
         for (var depth = 0; depth < 12; depth++) {
+            var page = WaitForOnePage();
+
             // a dialog first: it sits over the page and swallows the page's own back
             if (TryFind("CloseButton") != null) {
                 Invoke("CloseButton");
@@ -151,18 +158,77 @@ internal sealed class UiDriver(Process process) : IDisposable
             // drawer in one act, and the page it opens is popped on the next turn of this loop.
             if (TryFind("SettingsItem") != null) {
                 Invoke("SettingsItem");
-                Thread.Sleep(PollDelay);
+                WaitForPageChange(page);
                 continue;
             }
 
             if (TryFind("BackButton") == null)
                 return;
 
+            // a page that saves on the way out (ILeaveGuard) goes once the save is done, not at
+            // the press
             Invoke("BackButton");
-            Thread.Sleep(PollDelay);
+            WaitForPageChange(page);
         }
 
         throw new InvalidOperationException($"The walk could not get back to the home page. Page: '{PageTitle ?? "(none)"}'.");
+    }
+
+    // A page change keeps the leaving page in the tree, full size and on screen, while it fades
+    // (MainView's OutInTransition, about a quarter of a second), so a title read or a press then
+    // can land on it. Over is the page host holding one page again; this answers that page.
+    private AutomationElement WaitForOnePage()
+    {
+        var until = DateTime.UtcNow + FindTimeout;
+        do {
+            if (SettledPage() is { } page)
+                return page;
+            Thread.Sleep(PollDelay);
+        } while (DateTime.UtcNow < until);
+
+        throw new InvalidOperationException("The page host never came to hold a single page.");
+    }
+
+    private void WaitForPageChange(AutomationElement from)
+    {
+        var until = DateTime.UtcNow + FindTimeout;
+        do {
+            if (SettledPage() is { } page && !Automation.Compare(page, from))
+                return;
+            Thread.Sleep(PollDelay);
+        } while (DateTime.UtcNow < until);
+
+        throw new InvalidOperationException($"The page did not leave. Page: '{PageTitle ?? "(home)"}'.");
+    }
+
+    // The host keeps a presenter for each page in it and drops the leaving one's from the tree
+    // when its fade ends; null while there are two, or while the tree changes under the walk.
+    private AutomationElement? SettledPage()
+    {
+        try {
+            var walker = TreeWalker.RawViewWalker;
+            var panel = FindHost() is { } host ? walker.GetFirstChild(host) : null;
+            var presenter = panel != null ? walker.GetFirstChild(panel) : null;
+            if (presenter == null || walker.GetNextSibling(presenter) != null)
+                return null;
+
+            return walker.GetFirstChild(presenter);
+        }
+        catch (COMException) {
+            return null;
+        }
+        catch (ElementNotAvailableException) {
+            return null;
+        }
+    }
+
+    // where MainView shows its pages; a plain container is no control to a screen reader, so only
+    // the raw view has it
+    private AutomationElement? FindHost()
+    {
+        var request = new CacheRequest { TreeFilter = Automation.RawViewCondition };
+        using var activation = request.Activate();
+        return Root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.AutomationIdProperty, "Host"));
     }
 
     // Best effort, and never a verdict: a picture is for a person to look at after the run. A

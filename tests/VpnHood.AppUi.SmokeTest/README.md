@@ -54,10 +54,14 @@ what `MainView.ProcessError` writes whenever a page hands it an exception it did
 - **What's New, Send Feedback, the site and the privacy policy.** They open a browser, not a page.
 - **The developer page.** Its button has no name of its own and wants five taps, each within two seconds of the last.
 
-## Two things that will trip you up
+## Three things that will trip you up
 
 - **The page titles below the data rows are English.** A machine whose UI language is not English
   fails on the title, not on the app.
 - **A collapsed Avalonia control still says it is on screen.** The driver treats size as the test
   of what a person can touch; without it, the closed drawer's items and the statistics row that a
   disconnected home does not draw are all "found", and invoking them throws.
+- **A page change shows both pages for a quarter of a second.** The leaving page stays on screen,
+  title and Back button included, while it fades. The driver reads a title or presses Back only
+  once the page host holds one page again; a step that does not wait reads the wrong page or goes
+  back twice.

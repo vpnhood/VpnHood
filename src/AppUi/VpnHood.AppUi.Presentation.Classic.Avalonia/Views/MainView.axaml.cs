@@ -45,6 +45,7 @@ public partial class MainView : UserControl
     private DateTime _snackbarUntil;
     private TopLevel? _topLevel;
     private IInputElement? _focusBeforeOverlay;
+    private IPage? _pageAwaitingFocus;
     private Thickness _systemBars;
 
     public MainViewModel ViewModel { get; } = new();
@@ -197,6 +198,41 @@ public partial class MainView : UserControl
         }
 
         page.FocusDefault();
+        AwaitFocus(page);
+    }
+
+    // On a TV nothing shows where the input is until a control has the focus, and a page whose
+    // controls come after it opens - the account, the apps, a store's plans - has none to give at
+    // first: it is asked again as its layout changes, until a control of its own has the focus or
+    // another page is shown.
+    private void AwaitFocus(IPage page)
+    {
+        StopAwaitingFocus();
+        if (!VhApp.IsTvUi || page is not Control root || root.IsKeyboardFocusWithin)
+            return;
+
+        _pageAwaitingFocus = page;
+        root.LayoutUpdated += OnAwaitingPageLayoutUpdated;
+    }
+
+    private void OnAwaitingPageLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (_pageAwaitingFocus is not Control root || Host.Content != _pageAwaitingFocus) {
+            StopAwaitingFocus();
+            return;
+        }
+
+        if (!root.IsKeyboardFocusWithin)
+            _pageAwaitingFocus.FocusDefault();
+        if (root.IsKeyboardFocusWithin)
+            StopAwaitingFocus();
+    }
+
+    private void StopAwaitingFocus()
+    {
+        if (_pageAwaitingFocus is Control root)
+            root.LayoutUpdated -= OnAwaitingPageLayoutUpdated;
+        _pageAwaitingFocus = null;
     }
 
     // the page's own controls only: the dialogs and the drawer live outside the host, and a leaving
@@ -330,8 +366,26 @@ public partial class MainView : UserControl
         DrawerLayer.IsEnabled = true;
         var target = _focusBeforeOverlay;
         _focusBeforeOverlay = null;
-        if (target is Control { IsEffectivelyVisible: true, IsEffectivelyEnabled: true } control)
-            Dispatcher.UIThread.Post(control.LandFocus, DispatcherPriority.Loaded);
+        Dispatcher.UIThread.Post(() => LandRestoredFocus(target), DispatcherPriority.Loaded);
+    }
+
+    // Judged when it lands, not when the dialog closed: the dialog's answer may have closed the page
+    // beneath it (a sign-out leaves the account page), and a control of a page on its way out keeps
+    // the focus only until the page is gone - then nothing has it, and a remote has nothing to move.
+    // The page shown then lands its own instead, unless it has the focus already.
+    private void LandRestoredFocus(IInputElement? target)
+    {
+        var isOnLeavingPage = target is Visual visual && Host.IsVisualAncestorOf(visual) &&
+                              !(Host.Content is Visual shown && shown.IsVisualAncestorOf(visual));
+        if (target is Control { IsEffectivelyVisible: true, IsEffectivelyEnabled: true } control && !isOnLeavingPage) {
+            control.LandFocus();
+            return;
+        }
+
+        if (Host.Content is IPage page and Control root && !root.IsKeyboardFocusWithin) {
+            page.FocusDefault();
+            AwaitFocus(page);
+        }
     }
 
     public Task<bool> Confirm(string title, string message)

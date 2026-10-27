@@ -71,10 +71,12 @@ public partial class PageHeader : UserControl
     }
 
     // for a page that has nothing else to land on; on a TV, where there is no back button, such a
-    // page takes no focus and the remote's Back leaves it
+    // page takes no focus and the remote's Back leaves it. Avalonia focuses a hidden button too,
+    // which would leave the ring nowhere and stop MainView waiting for the page's controls.
     public void FocusBack()
     {
-        BackButton.LandFocus();
+        if (BackButton.IsVisible)
+            BackButton.LandFocus();
     }
 
     // the same pop the Back key does

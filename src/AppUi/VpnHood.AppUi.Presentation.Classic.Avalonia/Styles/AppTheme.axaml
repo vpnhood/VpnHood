@@ -1314,6 +1314,14 @@
   <Style Selector="Border.dialog.active Border.inset TextBlock.error">
     <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
   </Style>
+  <!-- the ring is white for dark cards; on a light card a text button's ring is in the card's words'
+       colour, or it would not show -->
+  <Style Selector="Border.dialog.alert Button:not(.dialog-action):focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource OnDialogAlertBrush}" />
+  </Style>
+  <Style Selector="Border.dialog.active Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource OnActiveBrush}" />
+  </Style>
   <!-- the rows of a dialog's list (the badge dialog): a rule between them in the dialog's tone -->
   <Style Selector="Border.dialog Button.list-item">
     <Setter Property="BorderBrush" Value="#1AFFFFFF" />

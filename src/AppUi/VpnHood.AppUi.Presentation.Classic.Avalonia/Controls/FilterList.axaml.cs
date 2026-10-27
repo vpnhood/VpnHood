@@ -1,4 +1,5 @@
 ﻿using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Interactivity;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
@@ -57,7 +58,8 @@ public partial class FilterList : UserControl
         }
     }
 
-    public Control? FirstRow => List.ItemCount > 0 ? List.ContainerFromIndex(0) : null;
+    // the row itself: the list's container around it takes no focus
+    public Control? FirstRow => (List.ContainerFromIndex(0) as ContentPresenter)?.Child;
 
     private void ApplyFilter()
     {

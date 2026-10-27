@@ -60,9 +60,10 @@ public class ServerConfig
     public IPEndPoint[] UdpEndPointsValue =>
         UdpEndPoints ?? [];
 
+    // not CloudFront: edge code on any AWS account may write X-Forwarded-For, and CloudFront marks none of it
     [JsonIgnore]
     public ReverseProxyProvider[] ReverseProxyProvidersValue =>
-        ReverseProxyProviders ?? [ReverseProxyProvider.Cloudflare, ReverseProxyProvider.CloudFront];
+        ReverseProxyProviders ?? [ReverseProxyProvider.Cloudflare];
 
     [JsonIgnore]
     public IpRange[] ReverseProxyIpRangesValue => ReverseProxyIpRanges ?? [];

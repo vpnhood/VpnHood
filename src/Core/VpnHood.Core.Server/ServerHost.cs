@@ -139,7 +139,7 @@ public class ServerHost : IAsyncDisposable
             var httpMethod = httpRequestLine.Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
-            var clientIp = _reverseProxyTrust.GetClientIp(streamConnection.RemoteEndPoint.Address, clientIpByProxy);
+            var clientIp = _reverseProxyTrust.GetClientIp(streamConnection.RemoteEndPoint.Address, headers);
 
             // whether or not the proxy may name the client: the UDP and QUIC ports the hello would give lead straight
             // to the server, past a proxy no list names too

@@ -55,16 +55,23 @@ public class ReverseProxyTest : TestBase
         var proxyIp = IPAddress.Parse("2.2.2.1");
 
         // what the proxy saw, not what its sender wrote before it
-        Assert.AreEqual(IPAddress.Parse("1.1.1.1"), trust.GetClientIp(proxyIp, "9.9.9.9, 1.1.1.1, 2.2.2.2"));
+        Assert.AreEqual(IPAddress.Parse("1.1.1.1"), trust.GetClientIp(proxyIp, Forwarded("9.9.9.9, 1.1.1.1, 2.2.2.2")));
 
         // nothing outside them, or nothing readable: the proxy's own address
-        Assert.AreEqual(proxyIp, trust.GetClientIp(proxyIp, "2.2.2.3"));
-        Assert.AreEqual(proxyIp, trust.GetClientIp(proxyIp, "bad, 2.2.2.3"));
-        Assert.AreEqual(proxyIp, trust.GetClientIp(proxyIp, ""));
+        Assert.AreEqual(proxyIp, trust.GetClientIp(proxyIp, Forwarded("2.2.2.3")));
+        Assert.AreEqual(proxyIp, trust.GetClientIp(proxyIp, Forwarded("bad, 2.2.2.3")));
+        Assert.AreEqual(proxyIp, trust.GetClientIp(proxyIp, Forwarded("")));
 
         // a sender outside them is taken at its own address
         var senderIp = IPAddress.Parse("3.3.3.3");
-        Assert.AreEqual(senderIp, trust.GetClientIp(senderIp, "1.1.1.1"));
+        Assert.AreEqual(senderIp, trust.GetClientIp(senderIp, Forwarded("1.1.1.1")));
+    }
+
+    // edge code on any AWS account may write the header, and CloudFront marks none of it
+    [TestMethod]
+    public void By_default_Cloudflare_alone_is_trusted()
+    {
+        CollectionAssert.AreEqual(new[] { ReverseProxyProvider.Cloudflare }, new ServerConfig().ReverseProxyProvidersValue);
     }
 
     [TestMethod]
@@ -76,17 +83,17 @@ public class ReverseProxyTest : TestBase
         using var trust = new ReverseProxyTrust(storagePath, new FeedHandler(CloudflareList, CloudFrontList));
         trust.Configure(providers, ipRanges: []);
         await trust.RefreshNow(TestCt);
-        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudflareIp, ForwardedIp.ToString()));
-        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudFrontIp, ForwardedIp.ToString()));
-        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudFrontIpV6, ForwardedIp.ToString()));
-        Assert.AreEqual(CloudFrontViewerIp, trust.GetClientIp(CloudFrontViewerIp, ForwardedIp.ToString()));
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudflareIp, Forwarded(ForwardedIp)));
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudFrontIp, Forwarded(ForwardedIp)));
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudFrontIpV6, Forwarded(ForwardedIp)));
+        Assert.AreEqual(CloudFrontViewerIp, trust.GetClientIp(CloudFrontViewerIp, Forwarded(ForwardedIp)));
 
         // the next start can't fetch: the lists the last fetch left stand
         using var nextTrust = new ReverseProxyTrust(storagePath, new FeedHandler(null, null));
         nextTrust.Configure(providers, ipRanges: []);
         await nextTrust.RefreshNow(TestCt);
-        Assert.AreEqual(ForwardedIp, nextTrust.GetClientIp(CloudflareIp, ForwardedIp.ToString()));
-        Assert.AreEqual(ForwardedIp, nextTrust.GetClientIp(CloudFrontIp, ForwardedIp.ToString()));
+        Assert.AreEqual(ForwardedIp, nextTrust.GetClientIp(CloudflareIp, Forwarded(ForwardedIp)));
+        Assert.AreEqual(ForwardedIp, nextTrust.GetClientIp(CloudFrontIp, Forwarded(ForwardedIp)));
     }
 
     [TestMethod]
@@ -95,10 +102,24 @@ public class ReverseProxyTest : TestBase
         using var trust = new ReverseProxyTrust(CreateStoragePath(), new FeedHandler(null, null));
         trust.Configure([ReverseProxyProvider.Cloudflare], [IpRange.Parse("10.0.0.0/8")]);
         await trust.RefreshNow(TestCt);
-        Assert.AreEqual(CloudflareIp, trust.GetClientIp(CloudflareIp, ForwardedIp.ToString()));
+        Assert.AreEqual(CloudflareIp, trust.GetClientIp(CloudflareIp, Forwarded(ForwardedIp)));
 
         // the listed ranges still are
-        Assert.AreEqual(ForwardedIp, trust.GetClientIp(IPAddress.Parse("10.1.1.1"), ForwardedIp.ToString()));
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(IPAddress.Parse("10.1.1.1"), Forwarded(ForwardedIp)));
+    }
+
+    // anyone may run a Worker on Cloudflare, whose script writes the address headers of its own requests
+    [TestMethod]
+    public async Task A_cloudflare_worker_request_names_no_client()
+    {
+        using var trust = new ReverseProxyTrust(CreateStoragePath(), new FeedHandler(CloudflareList, CloudFrontList));
+        trust.Configure([ReverseProxyProvider.Cloudflare], ipRanges: []);
+        await trust.RefreshNow(TestCt);
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudflareIp, Forwarded(ForwardedIp)));
+
+        var workerHeaders = Forwarded(ForwardedIp);
+        workerHeaders["cf-worker"] = "example.com";
+        Assert.AreEqual(CloudflareIp, trust.GetClientIp(CloudflareIp, workerHeaders));
     }
 
     [TestMethod]
@@ -146,6 +167,17 @@ public class ReverseProxyTest : TestBase
         var forwardedHelloResponse = await SendHello(token, forwardedFor: ForwardedIp.ToString());
         Assert.IsNull(forwardedHelloResponse.UdpPort);
         Assert.IsNull(forwardedHelloResponse.QuicPort);
+    }
+
+    // as the server's parser hands them over: names in any case
+    private static Dictionary<string, string> Forwarded(string xForwardedFor)
+    {
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["X-Forwarded-For"] = xForwardedFor };
+    }
+
+    private static Dictionary<string, string> Forwarded(IPAddress ipAddress)
+    {
+        return Forwarded(ipAddress.ToString());
     }
 
     private string CreateStoragePath()

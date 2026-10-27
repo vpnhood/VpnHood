@@ -21,7 +21,7 @@ internal class ReverseProxyTrust : IDisposable
     private readonly HttpMessageHandler? _httpMessageHandler;
     private readonly Job _refreshJob;
     private readonly EventReporter _ignoredReporter = new(
-        "X-Forwarded-For from senders that no reverse proxy list names has been ignored.", GeneralEventId.Request);
+        "X-Forwarded-For has been ignored.", GeneralEventId.Request);
     private readonly Dictionary<ReverseProxyProvider, IReadOnlyList<IpRange>> _providerIpRanges = new();
     private IReadOnlyList<ReverseProxyProvider> _providers = [];
     private IReadOnlyList<IpRange> _ipRanges = [];
@@ -51,14 +51,22 @@ internal class ReverseProxyTrust : IDisposable
 
     // the last entry outside the trusted ranges: a proxy appends the address it saw to what its sender wrote, so the
     // entries before it are the sender's own word
-    public IPAddress GetClientIp(IPAddress remoteIp, string xForwardedFor)
+    public IPAddress GetClientIp(IPAddress remoteIp, IReadOnlyDictionary<string, string> headers)
     {
+        var xForwardedFor = headers.GetValueOrDefault("X-Forwarded-For", "");
         if (string.IsNullOrWhiteSpace(xForwardedFor))
             return remoteIp;
 
         var trustedIpRanges = _trustedIpRanges;
         if (!trustedIpRanges.Contains(remoteIp)) {
-            ReportIgnored(remoteIp);
+            ReportIgnored(remoteIp, "no reverse proxy list names the sender; a server behind another proxy lists it in ReverseProxyIpRanges.");
+            return remoteIp;
+        }
+
+        // anyone may run a Worker on Cloudflare, whose script writes the address headers of its own requests: Cloudflare
+        // marks those requests after the script has run
+        if (headers.ContainsKey("CF-Worker")) {
+            ReportIgnored(remoteIp, "a Cloudflare Worker sent the request.");
             return remoteIp;
         }
 
@@ -180,13 +188,11 @@ internal class ReverseProxyTrust : IDisposable
     }
 
     // a server behind a proxy that no list names takes the proxy for every client
-    private void ReportIgnored(IPAddress remoteIp)
+    private void ReportIgnored(IPAddress remoteIp, string reason)
     {
         if (_ignoredReporter.Raise())
             VhLogger.Instance.LogWarning(GeneralEventId.Request,
-                "X-Forwarded-For from {RemoteIp} has been ignored, as no reverse proxy list names it. " +
-                "A server behind another proxy lists it in ReverseProxyIpRanges.",
-                VhLogger.Format(remoteIp));
+                "X-Forwarded-For from {RemoteIp} has been ignored: {Reason}", VhLogger.Format(remoteIp), reason);
     }
 
     public void Dispose()

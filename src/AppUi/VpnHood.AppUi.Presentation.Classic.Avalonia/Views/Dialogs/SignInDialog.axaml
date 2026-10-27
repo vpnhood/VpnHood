@@ -55,6 +55,8 @@
         <Button x:Name="ForgotButton" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnForgotClick" IsVisible="False">
           <TextBlock Classes="body-small highlight" TextWrapping="Wrap" Text="{Binding ForgotPassword, Source={x:Static res:Strings.Current}}" />
         </Button>
+        <!-- a remote's Up from Cancel goes to the password, past the two links: Avalonia's XY focus
+             prefers what spans Cancel's column. Down from the password reaches them. -->
         <Button Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
 

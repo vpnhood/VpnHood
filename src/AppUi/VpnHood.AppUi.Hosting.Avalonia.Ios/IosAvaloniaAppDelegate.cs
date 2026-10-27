@@ -35,7 +35,9 @@ public abstract class IosAvaloniaAppDelegate<TUi> : AvaloniaAppDelegate<TUi>
     protected abstract IosInitParams CreateInitParams();
 
     // An iPhone stays upright: the UI's wide layout is for an iPad, not a phone on its side. iOS takes
-    // this answer over the Info.plist's orientations; an iPad turns every way.
+    // this answer over the Info.plist's orientations; an iPad turns every way, and shares the
+    // screen with other apps too (no UIRequiresFullScreen in the heads' Info.plist): nothing here
+    // needs the whole screen.
     [Export("application:supportedInterfaceOrientationsForWindow:")]
     public UIInterfaceOrientationMask GetSupportedInterfaceOrientations(UIApplication application, UIWindow? forWindow)
     {

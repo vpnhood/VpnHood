@@ -4,7 +4,8 @@ using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 namespace VpnHood.App.AvaloniaUI.Dev;
 
 // A store's billing without the store: two sample plans, and a purchase that answers after the
-// moment a payment sheet would take, charging no one.
+// moment a payment sheet would take, charging no one. Its proof brings no premium code, so the home
+// still offers Go Premium after a purchase.
 internal sealed class DevBillingProvider(string storeId, bool isSubscriptionManagementSupported) : IBillingProvider
 {
     public static IReadOnlyList<string> ProductIds { get; } = ["dev_monthly", "dev_yearly"];

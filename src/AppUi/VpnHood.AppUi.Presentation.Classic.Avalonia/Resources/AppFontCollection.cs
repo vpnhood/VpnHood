@@ -13,7 +13,9 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 // loader, which knows avares:// and nothing of a store chosen at run time - but a collection is
 // named by a URI of its own, so "fonts:VpnHood#Poppins" in a style resolves here instead.
 // FontCollectionBase does the matching, including the character fallback that puts a Persian word
-// on a Persian face when Poppins has no glyph for it.
+// on a Persian face when Poppins has no glyph for it. A character none of the faces has draws as a
+// box on the paired browser page, where no system face stands in: Poppins has "›" (U+203A) but no
+// "→", so the words point with "›".
 internal sealed class AppFontCollection : FontCollectionBase
 {
     public const string Scheme = AppFonts.CollectionScheme;

@@ -39,7 +39,8 @@
       </Style>
     </ContainerQuery>
     <!-- 742 is the height the stacked page takes below the header with the carousel at 380 (an App
-         Store build, in English) -->
+         Store build, in English); at 320 the 6.1" and 6.3" iPhones fit it, and the 13 mini (by
+         17 px) and the SE still scroll -->
     <ContainerQuery Name="Paywall" Query="max-height:741">
       <Style Selector="controls|PremiumFeaturesCarousel.features-pane">
         <Setter Property="Height" Value="320" />

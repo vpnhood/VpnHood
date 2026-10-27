@@ -60,7 +60,8 @@
 
     <!-- Every scroll bar, in place of Fluent's: a 5px rounded track in the theme's scroll colours,
          8px under the pointer, with no arrows; its thumb lightens under the pointer, and a click on
-         the track pages. -->
+         the track pages. The track is the page's own colour in each theme: a lighter one ran down
+         the page as a stripe. -->
     <ControlTheme x:Key="ScrollBarThumb" TargetType="Thumb">
       <Setter Property="Background" Value="{StaticResource ScrollThumbBrush}" />
       <Setter Property="CornerRadius" Value="5" />

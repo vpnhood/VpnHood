@@ -7,6 +7,9 @@ namespace VpnHood.App.StoreScreenshots;
 internal sealed class ShotOptions
 {
     public required string FixturePath { get; init; }
+    // laid over the fixture in order, as a platform's patch file is: what a store set's composed
+    // fixture would say, for a picture no store set draws (the App Review screenshot)
+    public IReadOnlyList<string> PatchPaths { get; init; } = [];
     public required string AssetsPath { get; init; }
     public required string Route { get; init; }
     public required int Width { get; init; }
@@ -39,6 +42,9 @@ internal sealed class ShotOptions
 
         return new ShotOptions {
             FixturePath = Path.GetFullPath(Required("fixture")),
+            PatchPaths = values.TryGetValue("patch", out var patch)
+                ? patch.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(Path.GetFullPath).ToArray()
+                : [],
             AssetsPath = Path.GetFullPath(Required("assets")),
             Route = Required("route"),
             Width = int.Parse(Required("width")),

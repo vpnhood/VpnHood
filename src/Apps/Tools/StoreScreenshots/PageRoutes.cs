@@ -34,6 +34,13 @@ internal static class PageRoutes
         ["/user/account"] = host => new AccountView(host)
     };
 
+    // Drawn for a store's reviewers only - the App Store's subscription screenshot - and never in a
+    // public listing, whose pictures stay for months: the purchase page shows prices, and prices
+    // change. A store set that names one fails (StoreConfig.Load).
+    private static readonly HashSet<string> ReviewOnly = new(StringComparer.OrdinalIgnoreCase) { "/purchase-subscription" };
+
+    public static bool IsReviewOnly(string route) => ReviewOnly.Contains(route.TrimEnd('/'));
+
     public static bool IsHome(string route) => route.TrimEnd('/') == "";
 
     public static IPage Open(string route, MainView host)

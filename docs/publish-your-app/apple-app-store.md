@@ -126,9 +126,12 @@ product per plan (for example monthly and yearly). Each product needs **all** of
   defaults to everywhere: [set it to match](../legal/developer/APP_STORE_TERRITORIES.md#your-subscriptions-have-their-own-list).
 
 Miss any one and the product sits in *missing metadata* and cannot be sold, with no explanation of
-which piece is absent. Our audit tool lists exactly what is missing for every product, and the
-screenshot can be generated for you rather than photographed by hand — see
-[the in-app purchase checklist](../ios/build-deploy-and-provisioning.md#enable-in-app-purchase-connect-style-apps-white-labelfork-checklist).
+which piece is absent. Our audit tool lists exactly what is missing for every product — see
+[the in-app purchase checklist](../ios/build-deploy-and-provisioning.md#enable-in-app-purchase-connect-style-apps-white-labelfork-checklist) —
+and the screenshot can be drawn for you rather than photographed by hand: see
+[the App Review screenshot](../../src/Apps/Tools/StoreScreenshots/README.md#the-app-review-screenshot).
+Keep the purchase page out of your public screenshots: its prices change, and the screenshot tool
+refuses it there.
 
 **Translate the subscription texts, and do it before you submit.** Your in-app paywall is translated
 with the rest of the app, but the **native purchase sheet** — the system panel where the money is

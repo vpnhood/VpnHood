@@ -4,8 +4,9 @@ using VpnHood.AppLib.Api.Premium;
 
 namespace VpnHood.App.StoreScreenshots;
 
-// The profiles, read out of the fixture; nothing about them can be changed from a screenshot.
-internal sealed class FakeVpnProfilesApi(FakeAppApi app) : IVpnProfilesApi
+// The profiles, read out of the fixture; nothing about them can be changed from a screenshot. The
+// purchase options are the fixture's too, for every profile, where a patch gives them.
+internal sealed class FakeVpnProfilesApi(FakeAppApi app, AppPurchaseOptions? purchaseOptions) : IVpnProfilesApi
 {
     public Task<VpnProfileInfo> Get(Guid vpnProfileId, CancellationToken cancellationToken)
     {
@@ -18,5 +19,10 @@ internal sealed class FakeVpnProfilesApi(FakeAppApi app) : IVpnProfilesApi
     public Task<string> GetAccessCode(Guid vpnProfileId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("VpnProfiles.GetAccessCode");
     public Task<VpnProfileInfo> Update(Guid vpnProfileId, VpnProfileUpdateParams updateParams, CancellationToken cancellationToken) => throw UnmockedCalls.Record("VpnProfiles.Update");
     public Task Delete(Guid vpnProfileId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("VpnProfiles.Delete");
-    public Task<AppPurchaseOptions> GetPurchaseOptions(Guid vpnProfileId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("VpnProfiles.GetPurchaseOptions");
+    public Task<AppPurchaseOptions> GetPurchaseOptions(Guid vpnProfileId, CancellationToken cancellationToken)
+    {
+        return purchaseOptions != null
+            ? Task.FromResult(purchaseOptions)
+            : throw UnmockedCalls.Record("VpnProfiles.GetPurchaseOptions");
+    }
 }

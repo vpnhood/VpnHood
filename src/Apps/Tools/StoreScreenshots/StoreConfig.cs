@@ -38,6 +38,12 @@ internal sealed class StoreConfig
             for (var i = 0; i < platform.Shots.Count; i++)
                 platform.Shots[i].Number = (i + 1).ToString();
 
+        var reviewOnly = config.Platforms.Values.SelectMany(x => x.Shots).FirstOrDefault(x => PageRoutes.IsReviewOnly(x.Route));
+        if (reviewOnly != null)
+            throw new InvalidOperationException(
+                $"{reviewOnly.Route} ({reviewOnly.Label}) is never in a public listing: it shows prices, which change. " +
+                "It is drawn for a store's reviewers only, with `shot` (README, \"The App Review screenshot\").");
+
         return config;
     }
 

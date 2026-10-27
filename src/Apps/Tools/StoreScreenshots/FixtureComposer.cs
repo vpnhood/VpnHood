@@ -22,7 +22,7 @@ internal static class FixtureComposer
         return composed;
     }
 
-    private static void Merge(JsonObject target, JsonObject? patch)
+    public static void Merge(JsonObject target, JsonObject? patch)
     {
         if (patch == null)
             return;

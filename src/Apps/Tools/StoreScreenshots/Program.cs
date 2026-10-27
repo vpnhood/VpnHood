@@ -20,6 +20,7 @@ namespace VpnHood.App.StoreScreenshots;
 //
 //   VpnHoodStoreScreenshots --fixture <fixture.json> --assets <store folder or ui.zip> --route /protocols
 //       --width 360 --height 692 --scale 8 --out raw/android-phone/4_en-US.png [--culture fa] [--hide EnabledItem/Chip]
+//       [--patch fixture.ios.json,fixture.app-review.json]
 //
 // One process per shot, deliberately: VhApp and the UI's stores are static, so a page that changed
 // a setting cannot leak into the next shot, and the engine runs shots in parallel as processes the
@@ -70,14 +71,14 @@ internal static class Program
         var log = new CapturingLogger();
         VhLogger.AddProvider(log);
 
-        var fixture = StoreFixture.Load(options.FixturePath, options.Culture);
+        var fixture = StoreFixture.Load(options.FixturePath, options.PatchPaths, options.Culture);
         foreach (var filled in fixture.Filled)
             Console.WriteLine($"filled    {filled} (the fixture predates this member of the contract - re-record it)");
         if (fixture.ContractDrift != null)
             Console.WriteLine($"warning   the fixture is behind the API contract: {fixture.ContractDrift}");
 
         var app = new FakeAppApi(fixture.Info, fixture.InstalledApps);
-        var api = new VpnHoodApi(app, new FakeVpnProfilesApi(app), new FakeAccountApi(), new FakeBillingApi(), new FakeIntentsApi(), new FakeProxyEndPointsApi());
+        var api = new VpnHoodApi(app, new FakeVpnProfilesApi(app, fixture.PurchaseOptions), new FakeAccountApi(), new FakeBillingApi(), new FakeIntentsApi(), new FakeProxyEndPointsApi());
 
         // The UI's start, as every host runs it before Avalonia starts: the API, the content out of
         // the store, the languages the UI has words for.

@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Device;
+using VpnHood.AppLib.Api.Premium;
 
 namespace VpnHood.App.StoreScreenshots;
 
@@ -21,13 +22,18 @@ internal sealed class StoreFixture
 {
     public required AppInfo Info { get; init; }
     public required IReadOnlyList<DeviceAppInfo> InstalledApps { get; init; }
+
+    // what GetPurchaseOptions answers: only the App Review screenshot's patch carries it
+    public AppPurchaseOptions? PurchaseOptions { get; init; }
     public required IReadOnlyList<string> Filled { get; init; }
     public string? ContractDrift { get; init; }
 
-    public static StoreFixture Load(string path, string? culture)
+    // The patches are laid over the recording in order, as a store set's platform file is.
+    public static StoreFixture Load(string path, IReadOnlyList<string> patchPaths, string? culture)
     {
-        var root = JsonNode.Parse(File.ReadAllText(path)) as JsonObject
-                   ?? throw new InvalidOperationException($"{path} is not a JSON object.");
+        var root = ReadObject(path);
+        foreach (var patchPath in patchPaths)
+            FixtureComposer.Merge(root, ReadObject(patchPath));
 
         var filled = new List<string>();
         FillDefaults(root, filled);
@@ -46,8 +52,17 @@ internal sealed class StoreFixture
         var info = root.Deserialize<AppInfo>(Options(strict: false))
                    ?? throw new InvalidOperationException($"{path} holds no app info.");
         var installedApps = root["installedApps"]?.Deserialize<List<DeviceAppInfo>>(Options(strict: false)) ?? [];
+        var purchaseOptions = root["purchaseOptions"]?.Deserialize<AppPurchaseOptions>(Options(strict: true));
 
-        return new StoreFixture { Info = info, InstalledApps = installedApps, Filled = filled, ContractDrift = drift };
+        return new StoreFixture {
+            Info = info, InstalledApps = installedApps, PurchaseOptions = purchaseOptions, Filled = filled, ContractDrift = drift
+        };
+    }
+
+    private static JsonObject ReadObject(string path)
+    {
+        return JsonNode.Parse(File.ReadAllText(path)) as JsonObject
+               ?? throw new InvalidOperationException($"{path} is not a JSON object.");
     }
 
     // The language, the way the app itself reports one: the person's choice in the settings, and the

@@ -26,7 +26,7 @@ VpnHoodStoreScreenshots generate --config <store/screenshots.json> --assets <sto
 
 VpnHoodStoreScreenshots shot  --fixture <one shot's json> --assets <store> --route /protocols
     --width 360 --height 692 --scale 8 --culture en --out <png> [--hide A/B] [--freeze flasher]
-    [--hover A/B | --press A/B]
+    [--hover A/B | --press A/B] [--patch <json>,<json>]
 
 VpnHoodStoreScreenshots frame --device <device json> --assets <store> --in <png> --out <png>
 ```
@@ -35,7 +35,8 @@ VpnHoodStoreScreenshots frame --device <device json> --assets <store> --in <png>
 at a time. The other two exist because that is how a wrong pixel is chased: every run keeps the
 exact input of every picture, so one of them can be drawn again by hand. `shot` also draws what no
 store set shows: `--hover` rests the mouse in the middle of the control so named, `--press` holds
-its button down there too.
+its button down there too, and `--patch` lays files over the fixture in order, as a platform's
+`patchFile` is - for a picture that is no store set's, such as the App Review screenshot below.
 
 `--assets` is the UI's asset store: the folder `src/AppUi/VpnHood.AppUi.Assets.Classic/_sync-assets.ps1` mirrors,
 or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words of its own.
@@ -45,8 +46,9 @@ or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words o
 | file | what it is |
 |---|---|
 | `store/screenshots.json` | languages, stores, devices, screens, install destinations. THIS is what a fork edits; the tool is never edited to change a listing. JSON with `//` comments. |
-| `store/fixture.json` | the app's own answers, recorded from a Release client. Never real keys, IPs or accounts. |
+| `store/fixture.json` | the app's own answers, recorded from a Release client. Never real keys, IPs or accounts. An address a page shows (Statistics' protected IP) is from 203.0.113.0/24, the range reserved for examples; null where the API promises one breaks that page. |
 | `store/fixture.ios.json` | a patch too long to read inline — Connect's premium-only location list, derived from its fixture by the app's own rules. |
+| `store/fixture.app-review.json` | Connect only, never read by `generate`: what the iOS build adds for its purchase page (Sign in with Apple, App Store billing - `Connect.Ios.Apple/AppDelegate.cs`) and the purchase options the page shows. |
 
 ## Invariants — do not break these
 
@@ -66,6 +68,26 @@ or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words o
 5. **Numbers in a patch have the app's own type.** The fixture goes through the typed API, so a
    value for an integer field must be whole. `82.4 * 100_000` is not an integer in JavaScript, which
    is what the retired engine used to write.
+6. **The purchase page is never in a public listing.** It shows prices, and prices change while a
+   listing's pictures stay for months. `generate` refuses a store set that names it
+   (`PageRoutes.IsReviewOnly`); it is drawn only for a store's reviewers, as below.
+
+## The App Review screenshot
+
+App Store Connect wants a picture of the purchase page on every subscription. Only Apple's reviewer
+sees it; it is uploaded by hand on each subscription. From the VpnHood repo, with the store repo
+beside it:
+
+```
+VpnHoodStoreScreenshots shot --fixture ../Vpnhood.App.Connect/store/fixture.json
+    --patch ../Vpnhood.App.Connect/store/fixture.ios.json,../Vpnhood.App.Connect/store/fixture.app-review.json
+    --assets <store> --route /purchase-subscription --width 430 --height 839 --scale 3 --culture en
+    --out purchase-review.png
+```
+
+That is the 6.9-inch iPhone below its status bar, 1290 x 2517. The carousel slides on its own, so
+the run logs `the page kept changing`; the picture is its first slide. The prices are the fixture's,
+not the store's: set them in `fixture.app-review.json` to what the subscriptions cost.
 
 ## What a screenshot must not contain
 

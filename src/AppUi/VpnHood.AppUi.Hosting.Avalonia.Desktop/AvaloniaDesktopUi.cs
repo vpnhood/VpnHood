@@ -20,6 +20,7 @@ public class AvaloniaDesktopUi<TUi> : IDesktopUi
         if (uiParams.AccessKey is { } accessKey)
             AvaloniaDesktopHost.ImportAccessKey(accessKey);
         AvaloniaDesktopHost.Run<TUi>([], uiParams.Api, uiParams.UiAssetProvider, useTray: uiParams.UseTray,
+            keepRunningWhileConnected: uiParams.KeepRunningWhileConnected, shell: uiParams.Shell,
             startHidden: uiParams.StartHidden, cancellationToken);
     }
 

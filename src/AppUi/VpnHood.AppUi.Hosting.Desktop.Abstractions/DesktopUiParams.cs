@@ -32,6 +32,15 @@ public class DesktopUiParams
     // refuses a tray icon.
     public required bool UseTray { get; init; }
 
+    // Whether closing the window while the app's VPN is up only hides it, until the VPN is down: the app runs in
+    // the UI's process, and the VPN only while the app does (the Windows plug-in's). A second launch shows it
+    // again.
+    public required bool KeepRunningWhileConnected { get; init; }
+
+    // The OS's ways for links and the clipboard where the UI framework's own are refused, a sandboxed app's
+    // (IDesktopShell); null: the framework's own.
+    public required IDesktopShell? Shell { get; init; }
+
     // The access key this launch was given - a file opened with the app - which the UI imports once it
     // runs, as IDesktopUi.ImportAccessKey does a second launch's; null for a plain start.
     public string? AccessKey { get; init; }

@@ -17,8 +17,8 @@ public static class InProcessDesktopHost
 {
     // The whole run, on the calling thread, which is the host's main thread and the window's, as in
     // DesktopHost.Run. A window's process ends with its window: nothing cancels it from outside. The
-    // one argument acted on is --access-key, which opening an access key's file passes (the package's
-    // file type); the log keeps them all.
+    // one argument acted on is --access-key, which a vh: link passes (the package's scheme); the log
+    // keeps them all.
     public static int Run(string[] args, DesktopInitParams initParams, IInProcessDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();
@@ -52,7 +52,7 @@ public static class InProcessDesktopHost
             try {
                 await using var app = platform.CreateApp();
                 await RunWindow(platform.Paths, platform.PeerCheck, initParams, mainThread, platform.UseTray,
-                    startHidden: false, accessKey, CancellationToken.None).Vhc();
+                    platform.Shell, startHidden: false, accessKey, CancellationToken.None).Vhc();
                 return 0;
             }
             catch (Exception ex) {
@@ -71,9 +71,11 @@ public static class InProcessDesktopHost
 
     // The window over the app this process holds, until the window ends: this host's, and a debugger's
     // beside the service's (DevCommand). Over the app's loopback API, as the service's window reaches it.
+    // The app ends with the window, so a close while its VPN is up only hides the window
+    // (DesktopUiParams.KeepRunningWhileConnected).
     internal static async Task RunWindow(IDesktopUiPaths paths, ILoopbackPeerCheck peerCheck,
-        DesktopInitParams initParams, MainThreadQueue mainThread, bool useTray, bool startHidden, string? accessKey,
-        CancellationToken cancellationToken)
+        DesktopInitParams initParams, MainThreadQueue mainThread, bool useTray, IDesktopShell? shell, bool startHidden,
+        string? accessKey, CancellationToken cancellationToken)
     {
         var localWebHost = VpnHoodApp.Instance.LocalWebHost ??
                            throw new InvalidOperationException(
@@ -82,7 +84,7 @@ public static class InProcessDesktopHost
 
         // No channel to ask: the app is here, and so is the process the window's calls must reach.
         await using var connection = DaemonConnection.CreateInProcess(localWebHost, peerCheck, paths.InstanceName);
-        await UiCommand.RunWindow(paths, initParams, mainThread, connection, useTray, startHidden, accessKey,
-            cancellationToken).Vhc();
+        await UiCommand.RunWindow(paths, initParams, mainThread, connection, useTray, keepRunningWhileConnected: true,
+            shell, startHidden, accessKey, cancellationToken).Vhc();
     }
 }

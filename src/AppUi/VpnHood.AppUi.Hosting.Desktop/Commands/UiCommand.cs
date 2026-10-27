@@ -74,7 +74,7 @@ internal static class UiCommand
                     return 1;
 
                 isServiceNewer = await RunWindow(platform.Paths, initParams, mainThread, connection, useTray: true,
-                    startHidden, accessKey, cancellationToken).Vhc();
+                    keepRunningWhileConnected: false, shell: null, startHidden, accessKey, cancellationToken).Vhc();
             }
 
             // out of this window's claim, which the new one takes
@@ -183,8 +183,8 @@ internal static class UiCommand
     // replaced it under the open window - which this returns true for. The UI imports the access key
     // the launch was given, if any.
     internal static async Task<bool> RunWindow(IDesktopUiPaths paths, DesktopInitParams initParams,
-        MainThreadQueue mainThread, DaemonConnection connection, bool useTray, bool startHidden, string? accessKey,
-        CancellationToken cancellationToken)
+        MainThreadQueue mainThread, DaemonConnection connection, bool useTray, bool keepRunningWhileConnected,
+        IDesktopShell? shell, bool startHidden, string? accessKey, CancellationToken cancellationToken)
     {
         using var serviceNewer = new CancellationTokenSource();
         using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serviceNewer.Token);
@@ -199,6 +199,8 @@ internal static class UiCommand
             UiDataPath = paths.UiDataPath,
             StartHidden = startHidden,
             UseTray = useTray,
+            KeepRunningWhileConnected = keepRunningWhileConnected,
+            Shell = shell,
             AccessKey = accessKey
         };
         try {

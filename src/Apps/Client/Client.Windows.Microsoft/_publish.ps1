@@ -102,7 +102,8 @@ if ($vpnHostConfig.runtimeOptions.configProperties.CSWINRT_LOAD_COMPONENTS_IN_DE
 
 # The logos, drawn from the app's icon (the head's ApplicationIcon, the website edition's too) at each size Windows
 # shows them, none above its 256-pixel picture: Square44x44Logo's target sizes are the taskbar's and Start's,
-# unplated, as Windows draws a plated one on the accent colour.
+# unplated, one set for a dark taskbar and one for a light: Windows plates the icon on the accent colour for a
+# taskbar that has no set of its own.
 $icon = [IO.File]::ReadAllBytes((Join-Path $projectDir $app.ApplicationIcon));
 $picture = $null;
 for ($i = 0; $i -lt [BitConverter]::ToUInt16($icon, 4); $i++) {
@@ -120,6 +121,7 @@ $logos = @{ "StoreLogo.scale-100" = 50; "StoreLogo.scale-200" = 100; "Square44x4
 foreach ($size in @(16, 24, 32, 48, 256)) {
 	$logos["Square44x44Logo.targetsize-$size"] = $size;
 	$logos["Square44x44Logo.targetsize-${size}_altform-unplated"] = $size;
+	$logos["Square44x44Logo.targetsize-${size}_altform-lightunplated"] = $size;
 }
 
 Add-Type -AssemblyName System.Drawing;

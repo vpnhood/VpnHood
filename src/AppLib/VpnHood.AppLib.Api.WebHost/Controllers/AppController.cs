@@ -188,11 +188,6 @@ internal class AppController(IAppApi api) : ControllerBase
             await ctx.SendNoContent().Vhc();
         });
 
-        mapper.AddStatic(HttpMethod.GET, baseUrl + "countries", async ctx => {
-            var res = await api.GetCountries(ctx.Token).Vhc();
-            await ctx.SendJson(res).Vhc();
-        });
-
         mapper.AddStatic(HttpMethod.GET, baseUrl + "supported-split-by-countries", async ctx => {
             var res = await api.GetSupportedSplitCountries(ctx.Token).Vhc();
             await ctx.SendJson(res).Vhc();

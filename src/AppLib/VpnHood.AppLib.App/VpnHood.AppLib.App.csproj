@@ -5,11 +5,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Nager.Country" Version="4.8.0" />
-	  <PackageReference Include="Nager.Country.Translation" Version="4.7.1" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <InternalsVisibleTo Include="VpnHood.Test" />
 	  <InternalsVisibleTo Include="VpnHood.AppLib.Test" />
 	</ItemGroup>

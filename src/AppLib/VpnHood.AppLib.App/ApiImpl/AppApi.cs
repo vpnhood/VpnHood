@@ -2,14 +2,12 @@
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.Api.Ads;
-using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.Api.Updaters;
 using VpnHood.AppLib.App.DtoConverters;
-using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.AppLib.App.WebHosting;
@@ -240,13 +238,7 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<CountryInfo>> GetCountries(CancellationToken cancellationToken)
-    {
-        _ = cancellationToken;
-        return Task.FromResult(AppCountryInfo.GetAll());
-    }
-
-    public Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<string>> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
         return app.Services.SplitCountryService.GetSupportedSplitCountries(cancellationToken);
     }

@@ -13,8 +13,6 @@ using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Net.Toolkit.ApiClients;
 using CoreDeviceAppInfo = VpnHood.Core.Client.Devices.Abstractions.DeviceAppInfo;
 
-using VpnHood.AppLib.App.Services.Countries;
-
 namespace VpnHood.AppLib.App.DtoConverters;
 
 public static class AppDtoConverterExtensions
@@ -107,8 +105,7 @@ public static class AppDtoConverterExtensions
         };
     }
 
-    // The shape a UI reads a location as, with the country name already in the language the app
-    // speaks - the contract carries names, it never looks one up.
+    // The shape a UI reads a location as; the UI names the country from its code.
     public static CurrentServerLocationInfo ToAppDto(this ServerLocationInfo value, bool hasMultipleRegions = false)
     {
         return new CurrentServerLocationInfo {
@@ -118,8 +115,7 @@ public static class AppDtoConverterExtensions
             CountryName = value.CountryName,
             IsAuto = value.IsAuto,
             HasRegion = value.HasRegion,
-            HasMultipleRegions = hasMultipleRegions,
-            TranslatedCountryName = TranslatedNameOf(value.CountryCode, value.CountryName)
+            HasMultipleRegions = hasMultipleRegions
         };
     }
 
@@ -134,16 +130,8 @@ public static class AppDtoConverterExtensions
             CountryName = value.CountryName,
             IsAuto = value.IsAuto,
             HasRegion = value.HasRegion,
-            HasMultipleRegions = hasMultipleRegions,
-            TranslatedCountryName = TranslatedNameOf(value.CountryCode, value.CountryName)
+            HasMultipleRegions = hasMultipleRegions
         };
-    }
-
-    private static string TranslatedNameOf(string countryCode, string countryName)
-    {
-        return countryCode == ServerLocationInfo.AutoCountryCode
-            ? countryName
-            : AppCountryInfo.TryGet(countryCode)?.TranslatedName ?? countryName;
     }
 
     // What the device can open or ask for, read off the providers the head supplied. The shape is

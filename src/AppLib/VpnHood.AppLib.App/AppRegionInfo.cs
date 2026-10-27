@@ -17,6 +17,11 @@ public static class AppRegionInfo
         set => _currentRegion = value;
     }
 
+    // The region as a country, by its two-letter code; null for a region that is no country (419,
+    // Latin America), which has no flag and no name to show.
+    public static string? CurrentCountryCode =>
+        CurrentRegion.Name is { Length: 2 } name && name.All(char.IsAsciiLetter) ? name : null;
+
     public static void Reset()
     {
         _currentRegion = null;

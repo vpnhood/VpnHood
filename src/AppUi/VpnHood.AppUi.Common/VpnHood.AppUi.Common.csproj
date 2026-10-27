@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-		<Description>The VpnHood app as a UI sees it, for any UI toolkit: the app's state and API in one place, the words of every language read from the assets folder, and the code that turns the app's state into text - errors, dates, traffic, documents. No toolkit, no theme, no picture, no file of its own</Description>
+		<Description>The VpnHood app as a UI sees it, for any UI toolkit: the app's state and API in one place, the words of every language read from the assets folder, and the code that turns the app's state into text - errors, dates, traffic, country names, documents. No toolkit, no theme, no picture, no file of its own</Description>
 	</PropertyGroup>
 
 	<!-- The web UI's src/services and src/helpers, in C#: what a page needs that is not drawing.
@@ -21,5 +21,11 @@
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
 		<!-- IAssetProvider: the store's files, wherever this platform reads them from. -->
 		<ProjectReference Include="..\..\Net\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Country names in every language (CountryNames). -->
+		<PackageReference Include="Nager.Country" Version="4.8.0" />
+		<PackageReference Include="Nager.Country.Translation" Version="4.7.1" />
 	</ItemGroup>
 </Project>

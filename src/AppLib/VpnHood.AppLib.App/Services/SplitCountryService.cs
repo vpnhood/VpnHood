@@ -1,11 +1,10 @@
-﻿using System.IO.Compression;
+﻿using System.Globalization;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.App.Premium;
-using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
@@ -20,8 +19,7 @@ using VpnHood.Net.Toolkit.Utils;
 namespace VpnHood.AppLib.App.Services;
 
 // Prepares the on-disk split-country filter db before connecting. Uses the app's ip-range provider
-// as a data source; the client country itself comes from AppRegionInfo and country names from
-// AppCountryInfo; nothing is discovered here.
+// as a data source; the client country itself comes from AppRegionInfo; nothing is discovered here.
 public class SplitCountryService(
     AppSettingsService settingsService,
     IPremiumFeatureChecker premiumFeatureChecker,
@@ -34,18 +32,20 @@ public class SplitCountryService(
 
     public bool IsBusy { get; private set; }
 
-    public async Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken)
+    // The ip-range provider's countries, as codes: a UI names them. Only the ones a culture names, as
+    // the list has always been: the UIs hold its length as the count of all countries, for their
+    // "all except" text, so a longer list would put that text wrong.
+    public async Task<IReadOnlyList<string>> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
         if (ipRangeLocationProvider is null)
             return [];
 
-        // get all countries from the ip-range provider
         var splitByCountries = await ipRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
-        var countryInfos = AppCountryInfo.GetAll()
-            .Where(country => splitByCountries.Contains(country.CountryCode))
+        return CultureInfo.GetCultures(CultureTypes.SpecificCultures)
+            .Select(culture => new RegionInfo(culture.Name).Name)
+            .Where(splitByCountries.Contains)
+            .Distinct()
             .ToArray();
-
-        return countryInfos;
     }
 
     // Build or reuse the on-disk split-country db and return its path, or null when the feature is
@@ -114,8 +114,7 @@ public class SplitCountryService(
     private static string GetSplitMyCountryCode()
     {
         var countryCode = AppRegionInfo.CurrentRegion.Name;
-        VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}",
-            AppCountryInfo.TryGet(countryCode)?.EnglishName);
+        VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}", countryCode);
         return countryCode;
     }
 

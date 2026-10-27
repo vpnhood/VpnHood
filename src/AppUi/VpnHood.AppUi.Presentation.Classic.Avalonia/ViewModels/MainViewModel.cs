@@ -307,7 +307,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ServersRowValue = IsSingleProfileMode
             ? location == null ? Strings.Current.NoLocationSelected
             : location.IsAuto ? Strings.Current.AutoSelect
-            : LocationDisplay(location.TranslatedCountryName, location is { HasRegion: true, HasMultipleRegions: true } ? location.RegionName : null)
+            : LocationDisplay(CountryNames.Get(location.CountryCode, location.CountryName), location is { HasRegion: true, HasMultipleRegions: true } ? location.RegionName : null)
             : profile?.VpnProfileName ?? Strings.Current.NoServerSelected;
         IsLocationAuto = location == null || location.IsAuto;
         HasLocationFlag = !IsLocationAuto;
@@ -381,7 +381,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SplitCountryText = AppText.SplitCountryStatusText(state);
         ShowSplitCountryText = !allowMultipleFlags || excluded.Count < 3;
         var flagCodes = allowMultipleFlags ? excluded.ToArray()
-            : showMyFlag && state.ClientCountryInfo != null ? [state.ClientCountryInfo.CountryCode]
+            : showMyFlag && state.ClientCountryCode != null ? [state.ClientCountryCode]
             : [];
         if (flagCodes.Length != SplitCountryFlags.Count || flagCodes.Length > 0 && !ReferenceEquals(_flagCodes, null) && !flagCodes.SequenceEqual(_flagCodes))
             SplitCountryFlags = flagCodes.Select(AppAssets.FlagPath).OfType<string>().ToArray();
@@ -619,7 +619,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                     VpnProfileId: profile.VpnProfileId,
                     ServerLocation: x.ServerLocation,
                     CountryCode: x.CountryCode,
-                    Name: x.IsAuto ? Strings.Current.Fastest : x.IsNestedCountry ? x.RegionName : x.TranslatedCountryName,
+                    CountryName: x.CountryName,
+                    RegionName: x.RegionName,
                     IsNested: x.IsNestedCountry,
                     IsAuto: x.IsAuto,
                     // only under the server the app is set to: another server's own choice is not

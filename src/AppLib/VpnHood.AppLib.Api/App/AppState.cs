@@ -1,7 +1,6 @@
 ﻿using VpnHood.AppLib.Api.Billing;
 using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.VpnProfiles;
-using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.SplitTunneling;
@@ -33,7 +32,7 @@ public class AppState
     public required int UserReviewRecommended { get; init; }
     public required bool IsQuickLaunchRecommended { get; init; }
     public required bool IsAnonymousTrackerPromptRequired { get; init; } // the first-run page asks for usage data first
-    public required CountryInfo? ClientCountryInfo { get; init; }
+    public required string? ClientCountryCode { get; init; } // null for a region that is no country (419)
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
     public required PurchaseState? PurchaseState { get; init; }

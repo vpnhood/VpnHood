@@ -2,7 +2,6 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.VpnProfiles;
-using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.App.VpnProfiles;
@@ -42,9 +41,6 @@ internal static class ServerLocationItemBuilder
         if (policy?.UnblockableOnly == true)
             drafts = drafts.Where(x => x.Options.HasUnblockable).ToArray();
 
-        // the name a UI shows, in the language the app was told to speak: the shape carries the
-        // name, it does not look one up, which is what keeps the country database out of the
-        // contract and out of a paired browser's download
         return drafts.Select(ToItem).ToArray();
     }
 
@@ -61,10 +57,7 @@ internal static class ServerLocationItemBuilder
             HasRegion = location.HasRegion,
             IsNestedCountry = draft.IsNestedCountry,
             IsDefault = draft.IsDefault,
-            Options = draft.Options,
-            TranslatedCountryName = location.CountryCode == ServerLocationInfo.AutoCountryCode
-                ? ServerLocationInfo.AutoCountryCode
-                : AppCountryInfo.TryGet(location.CountryCode)?.TranslatedName ?? location.CountryName
+            Options = draft.Options
         };
     }
 

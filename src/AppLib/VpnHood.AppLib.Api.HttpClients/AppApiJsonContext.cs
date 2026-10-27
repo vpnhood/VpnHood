@@ -3,7 +3,6 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.Api.Billing;
 using VpnHood.AppLib.Api.VpnProfiles;
-using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Api.Proxies;
 using VpnHood.AppLib.Api.Settings;
@@ -27,7 +26,7 @@ namespace VpnHood.AppLib.Api.HttpClients;
 [JsonSerializable(typeof(SplitDomains))]
 [JsonSerializable(typeof(IReadOnlyList<DeviceAppInfo>))]
 [JsonSerializable(typeof(AppUserReview))]
-[JsonSerializable(typeof(CountryInfo[]))]
+[JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(RemoteAccessState))]
 [JsonSerializable(typeof(VersionCheckResult))]
 [JsonSerializable(typeof(VpnProfileInfo))]

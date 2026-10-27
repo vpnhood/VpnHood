@@ -1,7 +1,6 @@
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.Ads;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
@@ -21,8 +20,7 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
     public Task<AppInfo> GetInfo(CancellationToken cancellationToken) => Task.FromResult(Info);
     public Task<AppState> GetState(CancellationToken cancellationToken) => Task.FromResult(Info.State);
     public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken) => Task.FromResult(installedApps);
-    public Task<IReadOnlyList<CountryInfo>> GetCountries(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<CountryInfo>>([]);
-    public Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<CountryInfo>>([]);
+    public Task<IReadOnlyList<string>> GetSupportedSplitCountries(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<string>>([]);
 
     // the settings a page saves come back as the app would report them: the same object, unchanged
     public Task SetUserSettings(UserSettings userSettings, CancellationToken cancellationToken)

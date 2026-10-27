@@ -33,7 +33,7 @@ public partial class StatisticsView : UserControl, IPage
         var isPremiumUser = VhApp.IsPremiumUser;
         var isConnected = VhApp.IsConnected(state);
         // no traffic figures for a person in China (statistics.vue's isChinaCountry)
-        var isChina = string.Equals(state.ClientCountryInfo?.CountryCode, "CN", StringComparison.OrdinalIgnoreCase);
+        var isChina = string.Equals(state.ClientCountryCode, "CN", StringComparison.OrdinalIgnoreCase);
 
         if (isPremiumUser && access != null) {
             // a private key is premium by its token, but a build with no premium tier sells nothing:
@@ -53,7 +53,7 @@ public partial class StatisticsView : UserControl, IPage
             if (isConnected) {
                 var isUdp = VhApp.IsProtocolEnabled(state, ChannelProtocol.Udp);
                 AddRow(card, s.YourProtectedIp, session.ClientPublicIpAddress.ToString(), "highlight");
-                AddRow(card, s.Country, session.ServerLocationInfo?.TranslatedCountryName ?? "", "active");
+                AddRow(card, s.Country, session.ServerLocationInfo is { } location ? CountryNames.Get(location.CountryCode, location.CountryName) : "", "active");
                 AddRow(card, s.Region, session.ServerLocationInfo?.RegionName ?? "", "active");
                 AddRow(card, s.UdpSupported, isUdp ? s.Yes : s.No, isUdp ? "active" : "error", isLast: true);
             }

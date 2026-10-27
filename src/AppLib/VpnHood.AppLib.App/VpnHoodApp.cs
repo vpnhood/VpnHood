@@ -19,7 +19,6 @@ using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.App.Premium;
 using VpnHood.AppLib.App.Providers;
-using VpnHood.AppLib.App.Services.Countries;
 using VpnHood.AppLib.App.Services;
 using VpnHood.AppLib.App.Services.Accounts;
 using VpnHood.AppLib.App.Services.Ads;
@@ -596,7 +595,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsDiagnosing = _appPersistState.HasDiagnoseRequested && !IsIdle,
             HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
             IsReconnectRequired = _appPersistState.IsReconnectRequired,
-            ClientCountryInfo = AppCountryInfo.TryGet(AppRegionInfo.CurrentRegion.Name),
+            ClientCountryCode = AppRegionInfo.CurrentCountryCode,
             ConnectRequestTime = _appPersistState.ConnectRequestTime,
             CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
             SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
@@ -963,9 +962,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogInformation("UserAgent: {UserAgent}", Services.TrackerService.UserAgent);
             VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
-            if (connectOptions.Diagnose) // log country name
-                VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
-                    AppCountryInfo.TryGet(AppRegionInfo.CurrentRegion.Name)?.EnglishName);
+            if (connectOptions.Diagnose)
+                VhLogger.Instance.LogInformation("CountryCode: {CountryCode}", AppRegionInfo.CurrentRegion.Name);
 
             // request features for the first time
             VhLogger.Instance.LogDebug("Requesting Features ...");

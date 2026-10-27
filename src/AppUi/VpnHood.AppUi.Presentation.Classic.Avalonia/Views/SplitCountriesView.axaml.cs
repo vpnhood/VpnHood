@@ -55,13 +55,13 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         List.IsLoading = true;
         try {
             var excluded = Split.Countries;
-            var countries = await VhApp.Api.App.GetSupportedSplitCountries(CancellationToken.None);
+            var countryCodes = await VhApp.Api.App.GetSupportedSplitCountries(CancellationToken.None);
             // the flags together: at once from a folder, in one round from a web server
-            var mapped = await Task.WhenAll(countries.Select(async x => new FilterItem {
-                Id = x.CountryCode,
-                Name = x.TranslatedName,
-                Icon = AppAssets.FlagPath(x.CountryCode) is { } flagPath ? await AppAssets.LoadBitmapAsync(flagPath) : null,
-                IsSelected = !excluded.Contains(x.CountryCode, StringComparer.OrdinalIgnoreCase)
+            var mapped = await Task.WhenAll(countryCodes.Select(async countryCode => new FilterItem {
+                Id = countryCode,
+                Name = CountryNames.Get(countryCode),
+                Icon = AppAssets.FlagPath(countryCode) is { } flagPath ? await AppAssets.LoadBitmapAsync(flagPath) : null,
+                IsSelected = !excluded.Contains(countryCode, StringComparer.OrdinalIgnoreCase)
             }));
 
             var onCount = mapped.Count(x => x.IsSelected);

@@ -1,7 +1,6 @@
 ﻿using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Api.Ads;
-using VpnHood.AppLib.Api.Countries;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Api.SplitTunneling;
@@ -41,8 +40,7 @@ public interface IAppApi
     Task ExtendByRewardedAd(CancellationToken cancellationToken);
     Task ShowAdPrivacyOptions(CancellationToken cancellationToken);
     Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken);
-    Task<IReadOnlyList<CountryInfo>> GetCountries(CancellationToken cancellationToken);
-    Task<IReadOnlyList<CountryInfo>> GetSupportedSplitCountries(CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>> GetSupportedSplitCountries(CancellationToken cancellationToken);
     Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken);
     Task InternalAdError(string errorMessage, CancellationToken cancellationToken);
     Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken);

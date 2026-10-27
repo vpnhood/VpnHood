@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Globalization;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Updaters;
@@ -76,8 +77,9 @@ internal static class StatusCommand
             fields.Add(("Speed up", $"{CliPrinter.Bytes(sessionStatus.Speed.Sent)}/s"));
         }
 
-        if (state.ClientCountryInfo != null)
-            fields.Add(("Country", state.ClientCountryInfo.EnglishName));
+        // the code is this machine's own region, so RegionInfo knows it
+        if (state.ClientCountryCode != null)
+            fields.Add(("Country", new RegionInfo(state.ClientCountryCode).EnglishName));
 
         if (state.LastError != null)
             fields.Add(("Last error", state.LastError.Message));

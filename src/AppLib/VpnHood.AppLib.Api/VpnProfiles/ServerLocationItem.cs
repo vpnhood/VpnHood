@@ -1,8 +1,8 @@
 ﻿namespace VpnHood.AppLib.Api.VpnProfiles;
 
 // One location a UI may pick, as the app built it: the country and region, whether it is a country
-// head above its own regions, and what this person may do with it (Options). The names are carried,
-// not looked up - the app fills TranslatedCountryName in the language it was told to speak.
+// head above its own regions, and what this person may do with it (Options). A UI names the
+// country from its code, in the language it shows, as it does for CurrentServerLocationInfo.
 //
 // Flat on purpose. This used to derive from the engine's ServerLocationInfo, which published that
 // whole type - parsing, matching, comparison and every field later added to it - to every UI and to
@@ -25,6 +25,5 @@ public class ServerLocationItem
     public required bool HasRegion { get; init; }
     public required bool IsNestedCountry { get; init; }
     public required bool IsDefault { get; init; }
-    public string TranslatedCountryName { get; set; } = string.Empty;
     public ServerLocationOptions Options { get; set; } = new() { Normal = 0 };
 }

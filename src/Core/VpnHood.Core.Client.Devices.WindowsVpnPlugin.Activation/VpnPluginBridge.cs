@@ -26,9 +26,8 @@ public sealed class VpnPluginBridge : IVpnPlugIn
         }
     }
 
-    internal Task ServeAppConnection(AppServiceConnection connection, string appServiceName,
-        CancellationToken cancellationToken) =>
-        _service.ServeAppConnection(connection, appServiceName, cancellationToken);
+    internal Task ServeAppConnection(AppServiceConnection connection, CancellationToken cancellationToken) =>
+        _service.ServeAppConnection(connection, cancellationToken);
 
     public void Connect(VpnChannel channel) => _service.Connect(channel);
 

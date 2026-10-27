@@ -21,11 +21,16 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 // while the desktop shows tray icons - Windows always, Linux where its panel does - closing the
 // window only hides it: the tray's Open and a second launch bring it back, and the run ends with the
 // tray's Exit or Shutdown. Without one, or where the desktop shows none, closing the window ends the
-// run. The service lives on either way. Run takes the calling thread as the UI thread until then.
+// run - or, with the app in this process and its VPN up, hides it until the VPN is down
+// (keepRunningWhileConnected). The service lives on either way. Run takes the calling thread as the UI
+// thread until then.
 public static class AvaloniaDesktopHost
 {
     // How long a start in the tray waits for the desktop's panel, which a sign-in may start after it.
     private static readonly TimeSpan TrayAreaWait = TimeSpan.FromSeconds(30);
+
+    // How often a window hidden while the app's VPN is up reads whether it is down yet.
+    private static readonly TimeSpan HiddenStateInterval = TimeSpan.FromSeconds(2);
 
     // A second launch's ask for the window, kept when it comes before the run has one, so the window
     // opens as the run starts rather than the ask being lost.
@@ -51,7 +56,7 @@ public static class AvaloniaDesktopHost
     // OperationCanceledException; after, through Shutdown, which the caller registers. The window takes
     // the shape its UI states, fitted to its screen (DesktopWindowFit), its title bar in the UI's colour.
     public static void Run<TUi>(string[] args, VpnHoodApi api, IAssetProvider? uiAssetProvider, bool useTray,
-        bool startHidden, CancellationToken cancellationToken)
+        bool keepRunningWhileConnected, IDesktopShell? shell, bool startHidden, CancellationToken cancellationToken)
         where TUi : Application, IAvaloniaUi, new()
     {
         using var trayArea = useTray ? AvaloniaTrayArea.Watch() : null;
@@ -61,6 +66,7 @@ public static class AvaloniaDesktopHost
             return;
         }
 
+        AvaloniaUiHosting.Shell = shell;
         AvaloniaUiHosting.StartAsync<TUi>(api, uiAssetProvider, cancellationToken).GetAwaiter().GetResult();
 
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
@@ -77,15 +83,20 @@ public static class AvaloniaDesktopHost
         SetTitleBar(window, ui.ChromeColor);
 
         // A person's close only hides the window while the desktop shows the tray, which the UI waits
-        // in; otherwise it ends the run, as the run's own end and the system's shutdown close it.
+        // in; or, without one, while the app's VPN is up where the VPN runs only while this app does
+        // (keepRunningWhileConnected), until the VPN is down. Otherwise it ends the run, as the run's own
+        // end and the system's shutdown close it.
         Size? hiddenSize = null;
         window.Closing += (_, e) => {
-            if (e.CloseReason != WindowCloseReason.WindowClosing || trayArea?.IsShown != true)
+            var isToTray = trayArea?.IsShown == true;
+            if (e.CloseReason != WindowCloseReason.WindowClosing || (!isToTray && !keepRunningWhileConnected))
                 return;
 
             e.Cancel = true;
             hiddenSize = window.ClientSize;
             window.Hide();
+            if (!isToTray)
+                _ = EndOnceDisconnected(api, window, lifetime);
         };
 
         // Avalonia 12 on X11 draws the frame itself, and the window manager (KWin and Mutter alike) maps
@@ -131,6 +142,28 @@ public static class AvaloniaDesktopHost
         // a stop that came while the UI was made, when Shutdown had no lifetime to end yet
         cancellationToken.ThrowIfCancellationRequested();
         lifetime.Start(args);
+    }
+
+    // A window hidden while the app's VPN is up: the run ends once the VPN is down - at once, if it was down
+    // already - unless a launch shows the window again first. Read as the tray reads the app's state.
+    private static async Task EndOnceDisconnected(VpnHoodApi api, Window window,
+        ClassicDesktopStyleApplicationLifetime lifetime)
+    {
+        try {
+            while (!window.IsVisible) {
+                var state = await api.App.GetState(CancellationToken.None);
+                if (!state.CanDisconnect) {
+                    lifetime.Shutdown();
+                    return;
+                }
+
+                await Task.Delay(HiddenStateInterval);
+            }
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not read the app's state for its hidden window, so the run ends.");
+            lifetime.Shutdown();
+        }
     }
 
     // Within a pixel: a size read back from the platform at a fractional scaling is rounded.

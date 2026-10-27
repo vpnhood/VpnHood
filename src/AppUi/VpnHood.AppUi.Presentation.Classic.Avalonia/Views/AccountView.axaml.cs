@@ -238,10 +238,13 @@ public partial class AccountView : UserControl, IPage
         var code = await LoadPremiumCode();
         if (code == null)
             return;
-        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-        if (clipboard == null)
+        // through the host's shell where it names one (a sandboxed app's, AvaloniaUiHosting.Shell)
+        if (AvaloniaUiHosting.Shell is { } shell)
+            shell.CopyText(code);
+        else if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+            await clipboard.SetTextAsync(code);
+        else
             return;
-        await clipboard.SetTextAsync(code);
         if (copy.Content is not TextBlock glyph)
             return;
         glyph.Text = Mdi.Check;

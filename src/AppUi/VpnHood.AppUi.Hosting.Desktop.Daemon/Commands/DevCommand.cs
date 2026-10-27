@@ -38,7 +38,7 @@ internal static class DevCommand
             var accessKey = accessKeyInput == null ? null : AccessKeyInput.Read(accessKeyInput);
             await using var daemonHost = platform.DaemonHostFactory.CreateDev(platform.Paths.DevStoragePath);
             await InProcessDesktopHost.RunWindow(platform.Paths, platform.PeerCheck, initParams, mainThread,
-                startHidden: false, accessKey, cancellationToken).Vhc();
+                useTray: true, shell: null, startHidden: false, accessKey, cancellationToken).Vhc();
             return 0;
         }
         catch (OperationCanceledException) {

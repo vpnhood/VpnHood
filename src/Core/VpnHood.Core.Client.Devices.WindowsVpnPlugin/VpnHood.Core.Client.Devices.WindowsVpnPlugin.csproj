@@ -13,11 +13,4 @@
 		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.WindowsVpnPlugin\VpnHood.Net.VpnAdapters.WindowsVpnPlugin.csproj" />
 	</ItemGroup>
 
-	<!-- WMI, for the VPN profile in the user's own phonebook (WindowsVpnPluginDevice.AddUserProfile); the event log,
-	     for RAS's reason when it ends the VPN (WindowsVpnPluginKeepAwake). -->
-	<ItemGroup>
-		<PackageReference Include="System.Diagnostics.EventLog" Version="11.0.0-rc.3.26522.148" />
-		<PackageReference Include="System.Management" Version="11.0.0-rc.3.26522.148" />
-	</ItemGroup>
-
 </Project>

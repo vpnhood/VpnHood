@@ -11,6 +11,8 @@ public sealed class LinuxDesktopSession : IDesktopSession
         ? waylandDisplay
         : Environment.GetEnvironmentVariable("DISPLAY") ?? "";
 
+    public bool IsSandboxed => false;
+
     public void HandForegroundTo(NamedPipeClientStream window)
     {
         // nothing to hand on: the window asks the desktop itself

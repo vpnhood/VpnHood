@@ -100,11 +100,13 @@ public class Diagnoser
 
         try {
             await Task.WhenAll(taskPing, taskUdp, taskHttps).Vhc();
-            var hasInternet = successOnAny
-                ? taskPing.Result == null || taskUdp.Result == null || taskHttps.Result == null
-                : taskPing.Result == null && taskUdp.Result == null && taskHttps.Result == null;
 
-            return hasInternet;
+            // a ping the OS refuses this app (DiagnoseUtil.IsPingRefused) tells nothing either way, so the check
+            // goes by the others
+            Exception?[] results = DiagnoseUtil.IsPingRefused(taskPing.Result)
+                ? [taskUdp.Result, taskHttps.Result]
+                : [taskPing.Result, taskUdp.Result, taskHttps.Result];
+            return successOnAny ? results.Any(x => x == null) : results.All(x => x == null);
         }
         catch (Exception) {
             cancellationToken

@@ -75,7 +75,8 @@ internal static class UiCommand
                     return 1;
 
                 isServiceNewer = await DesktopUiWindow.RunWindow(platform.Paths, initParams, mainThread, connection,
-                    startHidden, accessKey, cancellationToken).Vhc();
+                    useTray: true, keepRunningWhileConnected: false, shell: null, startHidden, accessKey,
+                    cancellationToken).Vhc();
             }
 
             // out of this window's claim, which the new one takes

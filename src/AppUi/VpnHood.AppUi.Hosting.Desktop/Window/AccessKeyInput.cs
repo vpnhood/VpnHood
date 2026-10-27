@@ -4,7 +4,8 @@ namespace VpnHood.AppUi.Hosting.Desktop.Window;
 
 // An access key as a command line gives it: the key itself, or the path of a file holding one. "profile
 // add" takes it as its argument; a window's launch as --access-key, which is what opening an access
-// key's file runs (the Windows file association, the Store package's) and which the window imports.
+// key's file runs (the website edition's Windows file association), as does a vh: link (the Store
+// package's scheme), and which the window imports.
 internal static class AccessKeyInput
 {
     // For that association, not for a person, so help leaves it out.

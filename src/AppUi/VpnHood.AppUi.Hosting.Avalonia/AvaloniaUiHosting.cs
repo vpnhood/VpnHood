@@ -1,5 +1,6 @@
 ﻿using VpnHood.AppLib.Api;
 using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;
@@ -39,6 +40,10 @@ public static class AvaloniaUiHosting
     // The colours of the OS chrome around the UI, its theme's (ThemeColors), as PrepareAsync read them
     // from the UI's store; the system's until then.
     public static ThemeColors ThemeColors { get; private set; } = new();
+
+    // The OS's ways for links and the clipboard where Avalonia's own are refused, a sandboxed app's
+    // (IDesktopShell), as its desktop host names them before the UI starts; null: Avalonia's own.
+    public static IDesktopShell? Shell { get; set; }
 
     // The second half: the UI's content and its theme's colours, and its languages told to the app.
     public static async Task PrepareAsync<TUi>(IAssetProvider? uiAssetProvider, CancellationToken cancellationToken)

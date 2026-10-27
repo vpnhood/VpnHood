@@ -22,7 +22,6 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
 {
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan KeepAwakeStartTimeout = TimeSpan.FromSeconds(5);
     // a connect Windows makes soon after: again within 5 s after a restart, within 2.6 s after an app's switch
     private static readonly TimeSpan SessionWaitTimeout = TimeSpan.FromSeconds(15);
     private readonly Lock _hostLock = new();
@@ -33,7 +32,6 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     private volatile WindowsVpnPluginAdapter? _adapter;
     private volatile TaskCompletionSource<WindowsVpnPluginAdapter> _adapterTcs = NewAdapterTcs();
     private int _terminationRequested;
-    private int _keepAwakeCount; // the keep-awake processes connected
     private int _connectCount; // Windows' connects so far: a released host's wait tells by it whether one has come
 
     public void Connect(VpnChannel channel)
@@ -79,11 +77,6 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
             startedTask.GetAwaiter().GetResult();
             Volatile.Write(ref _connectedChannel, channel);
             VhLogger.Instance.LogInformation("The VPN adapter and the Windows VPN channel started.");
-
-            // before this callback returns, after which Windows may freeze the host; one from an earlier connection
-            // of this host still holds
-            if (Volatile.Read(ref _keepAwakeCount) == 0 && !StartKeepAwake().Wait(KeepAwakeStartTimeout))
-                VhLogger.Instance.LogWarning("The keep-awake process did not start in time.");
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "The Windows VPN plug-in could not connect.");
@@ -158,33 +151,12 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     {
     }
 
-    // A connection to one of the package's app services, which Windows runs in this process - the app's control channel
-    // or the keep-awake process's: served by the session's host, which closes it with the session. The app's, with no
-    // session yet, waits for one (GetWaitingListener); the keep-awake process's is closed at once, so it leaves.
-    public async Task ServeAppConnection(AppServiceConnection connection, string appServiceName,
-        CancellationToken cancellationToken)
+    // A connection to the package's app service, which Windows runs in this process - the app's control channel: served
+    // by the session's host, which closes it with the session; with no session yet, it waits for one (GetWaitingListener).
+    public async Task ServeAppConnection(AppServiceConnection connection, CancellationToken cancellationToken)
     {
-        if (appServiceName != WindowsVpnPluginKeepAwake.AppServiceName) {
-            var appListener = _appServiceListener ?? GetWaitingListener();
-            await appListener.Serve(connection, cancellationToken).Vhc();
-            return;
-        }
-
-        var listener = _appServiceListener;
-        if (listener is null) {
-            connection.Dispose();
-            return;
-        }
-
-        Interlocked.Increment(ref _keepAwakeCount);
-        try {
-            await listener.Serve(connection, cancellationToken).Vhc();
-        }
-        finally {
-            // gone while the VPN is connected - killed, or ended by Windows: another takes its place
-            if (Interlocked.Decrement(ref _keepAwakeCount) == 0 && Volatile.Read(ref _connectedChannel) is not null)
-                await StartKeepAwake().Vhc();
-        }
+        var appListener = _appServiceListener ?? GetWaitingListener();
+        await appListener.Serve(connection, cancellationToken).Vhc();
     }
 
     // A VPN host the app's connection started before a connect: Windows, having lost its VPN host, connects again within
@@ -242,19 +214,6 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
         }
     }
 
-    // Never throws: without it the VPN still works while the app runs.
-    private static async Task StartKeepAwake()
-    {
-        try {
-            VhLogger.Instance.LogInformation("Starting the keep-awake process...");
-            await WindowsVpnPluginKeepAwake.Start().Vhc();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex,
-                "Could not start the keep-awake process, so Windows freezes the VPN host between VPN events while the app is not running.");
-        }
-    }
-
     // The service host is done with this connection. A connection Windows still holds - the session ended on the app's
     // request or the server's - ends through Windows' own disconnect, which then runs Disconnect: a channel the plug-in
     // stops by itself is a dropped connection, which Windows dials again.
@@ -273,8 +232,8 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
 
     // The host goes once Windows has disconnected - the app's connection it serves keeps this process awake, which
     // Windows freezes between VPN events otherwise, and the disconnect waited 7 s for the next one - and SessionWaitTimeout
-    // after. A connect meanwhile keeps it, with the app's connection and the keep-awake process's: the app's switch to
-    // another server, which Windows connected 2.6 s after its disconnect once, found them closed and took 11.5 s.
+    // after. A connect meanwhile keeps it, with the app's connection: the app's switch to another server, which Windows
+    // connected 2.6 s after its disconnect once, found it closed and took 11.5 s.
     private async Task Release(VpnServiceHost? host, VpnChannel? connectedChannel, int connectCount)
     {
         if (connectedChannel is not null)

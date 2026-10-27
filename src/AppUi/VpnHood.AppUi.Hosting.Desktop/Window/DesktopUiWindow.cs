@@ -46,8 +46,8 @@ internal static class DesktopUiWindow
     // replaced it under the open window - which this returns true for. The UI imports the access key
     // the launch was given, if any.
     internal static async Task<bool> RunWindow(IDesktopUiPaths paths, DesktopInitParams initParams,
-        MainThreadQueue mainThread, DaemonConnection connection, bool startHidden, string? accessKey,
-        CancellationToken cancellationToken)
+        MainThreadQueue mainThread, DaemonConnection connection, bool useTray, bool keepRunningWhileConnected,
+        IDesktopShell? shell, bool startHidden, string? accessKey, CancellationToken cancellationToken)
     {
         using var serviceNewer = new CancellationTokenSource();
         using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serviceNewer.Token);
@@ -61,6 +61,9 @@ internal static class DesktopUiWindow
             ApiUrlProvider = connection.ApiUrlProvider,
             UiDataPath = paths.UiDataPath,
             StartHidden = startHidden,
+            UseTray = useTray,
+            KeepRunningWhileConnected = keepRunningWhileConnected,
+            Shell = shell,
             AccessKey = accessKey
         };
         try {

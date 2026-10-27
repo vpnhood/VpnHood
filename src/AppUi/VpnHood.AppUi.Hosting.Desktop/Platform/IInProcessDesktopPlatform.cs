@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
@@ -12,6 +13,13 @@ public interface IInProcessDesktopPlatform
 
     // The desktop session this launch runs in, as the window's single instance asks it.
     IDesktopSession DesktopSession { get; }
+
+    // Whether the window may keep a tray icon (DesktopUiParams.UseTray).
+    bool UseTray { get; }
+
+    // The OS's ways for links and the clipboard where the UI's own are refused (DesktopUiParams.Shell); null: the
+    // UI's own.
+    IDesktopShell? Shell { get; }
 
     // The process's log, added once this launch holds the window: a second launch, which only brings
     // that window forward, leaves its file alone.

@@ -694,7 +694,8 @@ public partial class MainView : UserControl
     // ---- outbound links ----
 
     // The web UI's onExternalLinkClick: a TV is not guaranteed a browser, so there the link
-    // becomes a code to scan; anywhere else the device's browser opens it.
+    // becomes a code to scan; anywhere else the device's browser opens it, through the host's shell
+    // where it names one (a sandboxed app's, AvaloniaUiHosting.Shell), else through Avalonia's launcher.
     public async Task OpenLink(Uri url, string title)
     {
         if (VhApp.IsTvUi) {
@@ -702,8 +703,10 @@ public partial class MainView : UserControl
             return;
         }
 
-        var launcher = _topLevel?.Launcher;
-        if (launcher == null || !await launcher.LaunchUriAsync(url))
+        var isOpened = AvaloniaUiHosting.Shell is { } shell
+            ? await shell.OpenLink(url, CancellationToken.None)
+            : _topLevel?.Launcher is { } launcher && await launcher.LaunchUriAsync(url);
+        if (!isOpened)
             await ShowDialog(new OpenOnPhoneDialog(url, title));
     }
 

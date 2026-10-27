@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The package: the app (Client), a full-trust Win32 process run as the person, and its VPN host
-     (VpnPluginHost), which Windows starts in an AppContainer as its background tasks' server when the
-     app's VPN profile connects or a process opens one of its app services; the host starts its own
-     executable once more, with full trust, to keep it awake. _publish.ps1 stamps the identity, the
-     version, the names, the executables and the server, and draws the logos from the app's icon. Windows
-     activates the VPN host's task and app services by their own class names, whatever the package's
-     identity. -->
+<!-- The package: the app (Client), a Win32 process run as the person, and its VPN host (VpnPluginHost),
+     which Windows starts as its background tasks' server when the app's VPN profile connects or the app
+     opens its app service. Both run in the package's AppContainer, Windows' sandbox, and nothing here
+     with full trust: what needs more - a tray, a service, the machine's own tunnel - is the website
+     edition's. _publish.ps1 stamps the identity, the version, the names, the executables and the server,
+     and draws the logos from the app's icon. Windows activates the VPN host's task and app service by
+     their own class names, whatever the package's identity. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  IgnorableNamespaces="uap uap3 uap10 rescap desktop">
+  IgnorableNamespaces="uap uap3 uap10 rescap">
   <Identity Name="Stamped" Publisher="CN=Stamped" Version="0.0.0.0" ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Stamped</DisplayName>
@@ -48,29 +47,18 @@
           </BackgroundTasks>
         </Extension>
         <!-- The app's control channel (WindowsVpnPluginAppServiceListener.AppServiceName), run by the same server, the
-             VPN host: an open connection keeps it running, which Windows freezes between VPN events otherwise. -->
+             VPN host: an open connection keeps it running, which Windows freezes between VPN events otherwise, so the
+             VPN works while the app runs. -->
         <uap:Extension Category="windows.appService" EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnAppServiceTask">
           <uap:AppService Name="VpnService" ServerName="Stamped" />
         </uap:Extension>
-        <!-- The keep-awake process's (WindowsVpnPluginKeepAwake): the VPN host's own executable, which the host starts
-             with full trust at a connect, holds it while the VPN is connected, so the host runs without the app too;
-             and it dials the VPN again at the wake when a sleep ended it. -->
-        <uap:Extension Category="windows.appService" EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnAppServiceTask">
-          <uap:AppService Name="VpnKeepAwake" ServerName="Stamped" />
-        </uap:Extension>
-        <desktop:Extension Category="windows.fullTrustProcess" Executable="Stamped.exe">
-          <desktop:FullTrustProcess>
-            <desktop:ParameterGroup GroupId="KeepAwake" Parameters="-KeepAwake" />
-          </desktop:FullTrustProcess>
-        </desktop:Extension>
       </Extensions>
     </Application>
     <Application
       Id="Client"
       Executable="Stamped.exe"
-      EntryPoint="Windows.FullTrustApplication"
       uap10:RuntimeBehavior="packagedClassicApp"
-      uap10:TrustLevel="mediumIL">
+      uap10:TrustLevel="appContainer">
       <uap:VisualElements
         DisplayName="Stamped"
         Description="VPN client"
@@ -78,19 +66,10 @@
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
-        <!-- An access key's file, opened, starts the app with its path, which the window imports
-             (InProcessDesktopHost): .cdy, the extension Android's file managers know, so one file an admin
-             mails opens on every platform. -->
-        <uap:Extension Category="windows.fileTypeAssociation">
-          <uap3:FileTypeAssociation Name="accesskey" Parameters="--access-key &quot;%1&quot;">
-            <uap:DisplayName>Access key</uap:DisplayName>
-            <uap:SupportedFileTypes>
-              <uap:FileType>.cdy</uap:FileType>
-            </uap:SupportedFileTypes>
-          </uap3:FileTypeAssociation>
-        </uap:Extension>
-        <!-- A link that is an access key itself (vh:...), the same way; and vhkey:, a form keys may switch to, so a
-             package from before the switch opens its links. -->
+        <!-- A link that is an access key itself (vh:...) starts the app with it, which the window imports
+             (InProcessDesktopHost): the one way a key comes into the sandbox, which lets the app read neither the
+             clipboard nor a file opened with it - so no .cdy here, which the website edition opens. And vhkey:, a
+             form keys may switch to, so a package from before the switch opens its links. -->
         <uap:Extension Category="windows.protocol">
           <uap3:Protocol Name="vh" Parameters="--access-key &quot;%1&quot;">
             <uap:DisplayName>Access key</uap:DisplayName>
@@ -107,7 +86,6 @@
   <Capabilities>
     <Capability Name="internetClientServer" />
     <Capability Name="privateNetworkClientServer" />
-    <rescap:Capability Name="runFullTrust" />
     <rescap:Capability Name="networkingVpnProvider" />
   </Capabilities>
   <Extensions>

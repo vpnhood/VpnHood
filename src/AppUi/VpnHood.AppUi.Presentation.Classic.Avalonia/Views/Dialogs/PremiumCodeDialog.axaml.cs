@@ -78,8 +78,7 @@ public partial class PremiumCodeDialog : DialogBase
             }, CancellationToken.None);
         }
         catch (Exception) {
-            ErrorText.Text = Strings.Current.InvalidPremiumCodeNumbersMsg;
-            ErrorText.IsVisible = true;
+            LiveText.Say(ErrorText, Strings.Current.InvalidPremiumCodeNumbersMsg);
             return;
         }
 

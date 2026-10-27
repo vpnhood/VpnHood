@@ -400,11 +400,11 @@ public partial class MainView : UserControl
             SnackbarKind.Warning => Mdi.AlertCircle,
             _ => Mdi.Information
         };
-        SnackbarText.Text = message;
         SnackbarClose.IsVisible = hasClose ?? !hasTimer;
         SnackbarBar.IsVisible = hasTimer;
         SnackbarBar.Value = 1;
         Snackbar.IsVisible = true;
+        LiveText.Say(SnackbarText, message);
         if (hasTimer) {
             _snackbarUntil = DateTime.UtcNow + SnackbarLife;
             _snackbarTimer.Start();

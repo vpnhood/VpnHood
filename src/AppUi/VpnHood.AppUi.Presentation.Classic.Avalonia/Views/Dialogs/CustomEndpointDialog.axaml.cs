@@ -79,8 +79,7 @@ public partial class CustomEndpointDialog : DialogBase
             Close(true);
         }
         catch (Exception ex) {
-            ErrorText.Text = string.IsNullOrEmpty(ex.Message) ? Strings.Current.CustomEndpointValidationError : ex.Message;
-            ErrorText.IsVisible = true;
+            LiveText.Say(ErrorText, string.IsNullOrEmpty(ex.Message) ? Strings.Current.CustomEndpointValidationError : ex.Message);
         }
     }
 }

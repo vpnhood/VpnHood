@@ -212,9 +212,10 @@
       <Ellipse x:Name="DotB" Classes="dot" />
     </Canvas>
 
-    <!-- the state, and under it the check, the plug, or the session's usage -->
+    <!-- the state, which a screen reader says as it changes, and under it the check, the plug, or
+         the session's usage -->
     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-      <TextBlock x:Name="StateTextBlock" Classes="body-small" TextAlignment="Center" />
+      <TextBlock x:Name="StateTextBlock" Classes="body-small" TextAlignment="Center" AutomationProperties.LiveSetting="Polite" />
       <TextBlock x:Name="GlyphBlock" Classes="mdi" FontSize="40" HorizontalAlignment="Center" IsVisible="False" />
       <TextBlock x:Name="UsageBlock" Classes="body-large" TextAlignment="Center" IsVisible="False" />
       <!-- the access key's expiry, in the alert colour, the warning colour in its last days -->

@@ -66,8 +66,7 @@ public partial class AddServerView : UserControl, IPage
             _ = _viewModel.ConnectToProfile(vpnProfileId);
         }
         catch {
-            ErrorText.Text = Strings.Current.InvalidAccessKeyFormat;
-            ErrorText.IsVisible = true;
+            LiveText.Say(ErrorText, Strings.Current.InvalidAccessKeyFormat);
         }
     }
 }

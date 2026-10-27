@@ -152,6 +152,7 @@ public class TestHelper : IDisposable
             TcpEndPoints = [TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback)],
             QuicEndPoints = [TestWebServerLocalEps.AllocateFreeUdpEndPoint(IPAddress.Loopback)],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
+            ReverseProxyProviders = [], // no fetch of the providers' lists from the internet
             TrackingOptions = new TrackingOptions {
                 TrackClientIp = true,
                 TrackDestinationIp = true,

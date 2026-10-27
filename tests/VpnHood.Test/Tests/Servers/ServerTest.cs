@@ -222,8 +222,7 @@ public class ServerTest : TestBase
             QuicEndPoints = [IPEndPoint.Parse("127.0.0.1:443")],
             DnsServers = null,
             Certificates = [accessManager.DefaultCert],
-            UdpChannelBufferSize = null,
-            ReverseProxyIpRanges = null
+            UdpChannelBufferSize = null
         };
 
         // a configuration under way, held in its listen
@@ -733,6 +732,7 @@ public class ServerTest : TestBase
             },
             TcpEndPoints = [IPEndPoint.Parse("2.2.2.2:4433")],
             UdpEndPoints = [IPEndPoint.Parse("3.3.3.3:5533")],
+            ReverseProxyProviders = [ReverseProxyProvider.CloudFront],
             ReverseProxyIpRanges = [IpRange.Parse("4.4.4.0-4.4.4.255")],
             TrackingOptions = new TrackingOptions {
                 TrackClientIp = true,

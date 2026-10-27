@@ -5,7 +5,8 @@ using System.Text;
 using VpnHood.Core.Client;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Server.Utils;
+using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Server.ReverseProxies;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Net.Toolkit.Net;
@@ -19,29 +20,102 @@ namespace VpnHood.Test.Tests.Servers;
 public class ReverseProxyTest : TestBase
 {
     private static readonly IPAddress ProxyIp = IPAddress.Parse("127.0.0.2");
+    private static readonly IPAddress ForwardedIp = IPAddress.Parse("1.2.3.4");
+
+    // in the lists below: Cloudflare's, CloudFront's that connect to origins, and one of CloudFront's viewers reach
+    private static readonly IPAddress CloudflareIp = IPAddress.Parse("173.245.48.1");
+    private static readonly IPAddress CloudFrontIp = IPAddress.Parse("130.176.88.1");
+    private static readonly IPAddress CloudFrontIpV6 = IPAddress.Parse("2600:9000:1000::1");
+    private static readonly IPAddress CloudFrontViewerIp = IPAddress.Parse("23.228.249.1");
+
+    private const string CloudflareList =
+        """{"result":{"ipv4_cidrs":["173.245.48.0/20"],"ipv6_cidrs":["2400:cb00::/32"],"etag":"1"},"success":true,"errors":[],"messages":[]}""";
+
+    private const string CloudFrontList =
+        """
+        {
+          "syncToken": "1",
+          "createDate": "2026-10-27-00-00-00",
+          "prefixes": [
+            { "ip_prefix": "130.176.88.0/21", "region": "GLOBAL", "service": "CLOUDFRONT_ORIGIN_FACING", "network_border_group": "GLOBAL" },
+            { "ip_prefix": "23.228.249.0/24", "region": "GLOBAL", "service": "CLOUDFRONT", "network_border_group": "GLOBAL" },
+            { "ip_prefix": "3.4.12.4/32", "region": "eu-west-1", "service": "AMAZON", "network_border_group": "eu-west-1" }
+          ],
+          "ipv6_prefixes": [
+            { "ipv6_prefix": "2600:9000:1000::/36", "region": "GLOBAL", "service": "CLOUDFRONT_ORIGIN_FACING", "network_border_group": "GLOBAL" }
+          ]
+        }
+        """;
 
     [TestMethod]
-    public void The_forwarded_client_ip_follows_the_reverse_proxy_ranges()
+    public void The_client_is_the_last_entry_outside_the_trusted_ranges()
     {
-        // left out: the first entry, the sender's own word
-        Assert.AreEqual(IPAddress.Parse("1.1.1.1"),
-            ServerUtils.GetClientIpFromXForwarded("1.1.1.1, 2.2.2.2", reverseProxyIpRanges: null));
+        using var trust = new ReverseProxyTrust(CreateStoragePath(), httpMessageHandler: null);
+        trust.Configure(providers: [], ipRanges: [IpRange.Parse("2.2.2.0/24")]);
+        var proxyIp = IPAddress.Parse("2.2.2.1");
 
-        // set: the last entry outside them, as the proxy appended what it saw to what the sender wrote
-        var reverseProxyIpRanges = new IpRangeOrderedList([IpRange.Parse("2.2.2.0-2.2.2.255")]);
-        Assert.AreEqual(IPAddress.Parse("1.1.1.1"),
-            ServerUtils.GetClientIpFromXForwarded("9.9.9.9, 1.1.1.1, 2.2.2.2", reverseProxyIpRanges));
-        Assert.IsNull(ServerUtils.GetClientIpFromXForwarded("2.2.2.1", reverseProxyIpRanges));
-        Assert.IsNull(ServerUtils.GetClientIpFromXForwarded("bad, 2.2.2.1", reverseProxyIpRanges));
-        Assert.IsNull(ServerUtils.GetClientIpFromXForwarded("", reverseProxyIpRanges));
+        // what the proxy saw, not what its sender wrote before it
+        Assert.AreEqual(IPAddress.Parse("1.1.1.1"), trust.GetClientIp(proxyIp, "9.9.9.9, 1.1.1.1, 2.2.2.2"));
+
+        // nothing outside them, or nothing readable: the proxy's own address
+        Assert.AreEqual(proxyIp, trust.GetClientIp(proxyIp, "2.2.2.3"));
+        Assert.AreEqual(proxyIp, trust.GetClientIp(proxyIp, "bad, 2.2.2.3"));
+        Assert.AreEqual(proxyIp, trust.GetClientIp(proxyIp, ""));
+
+        // a sender outside them is taken at its own address
+        var senderIp = IPAddress.Parse("3.3.3.3");
+        Assert.AreEqual(senderIp, trust.GetClientIp(senderIp, "1.1.1.1"));
     }
 
-    // the client IP the hello names is the one the access manager gets
     [TestMethod]
-    [DataRow(null, "1.2.3.4", "1.2.3.4")] // left out: the header counts from anyone
-    [DataRow("", "1.2.3.4", "127.0.0.2")] // []: from no one
-    [DataRow("10.0.0.0-10.255.255.255", "1.2.3.4", "127.0.0.2")] // from a proxy that is not this sender
-    [DataRow("127.0.0.2-127.0.0.2", "1.2.3.4", "1.2.3.4")] // from this proxy
+    public async Task The_providers_published_addresses_are_trusted_and_kept_for_the_next_start()
+    {
+        var storagePath = CreateStoragePath();
+        ReverseProxyProvider[] providers = [ReverseProxyProvider.Cloudflare, ReverseProxyProvider.CloudFront];
+
+        using var trust = new ReverseProxyTrust(storagePath, new FeedHandler(CloudflareList, CloudFrontList));
+        trust.Configure(providers, ipRanges: []);
+        await trust.RefreshNow(TestCt);
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudflareIp, ForwardedIp.ToString()));
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudFrontIp, ForwardedIp.ToString()));
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudFrontIpV6, ForwardedIp.ToString()));
+        Assert.AreEqual(CloudFrontViewerIp, trust.GetClientIp(CloudFrontViewerIp, ForwardedIp.ToString()));
+
+        // the next start can't fetch: the lists the last fetch left stand
+        using var nextTrust = new ReverseProxyTrust(storagePath, new FeedHandler(null, null));
+        nextTrust.Configure(providers, ipRanges: []);
+        await nextTrust.RefreshNow(TestCt);
+        Assert.AreEqual(ForwardedIp, nextTrust.GetClientIp(CloudflareIp, ForwardedIp.ToString()));
+        Assert.AreEqual(ForwardedIp, nextTrust.GetClientIp(CloudFrontIp, ForwardedIp.ToString()));
+    }
+
+    [TestMethod]
+    public async Task A_provider_never_fetched_is_not_trusted()
+    {
+        using var trust = new ReverseProxyTrust(CreateStoragePath(), new FeedHandler(null, null));
+        trust.Configure([ReverseProxyProvider.Cloudflare], [IpRange.Parse("10.0.0.0/8")]);
+        await trust.RefreshNow(TestCt);
+        Assert.AreEqual(CloudflareIp, trust.GetClientIp(CloudflareIp, ForwardedIp.ToString()));
+
+        // the listed ranges still are
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(IPAddress.Parse("10.1.1.1"), ForwardedIp.ToString()));
+    }
+
+    [TestMethod]
+    public async Task Without_providers_nothing_is_fetched()
+    {
+        var feedHandler = new FeedHandler(CloudflareList, CloudFrontList);
+        using var trust = new ReverseProxyTrust(CreateStoragePath(), feedHandler);
+        trust.Configure(providers: [], ipRanges: []);
+        await trust.RefreshNow(TestCt);
+        Assert.AreEqual(0, feedHandler.RequestCount);
+    }
+
+    // the client IP the hello names is the one the access manager gets; the tests' servers have no provider
+    [TestMethod]
+    [DataRow(null, "1.2.3.4", "127.0.0.2")] // left out: no proxy listed
+    [DataRow("10.0.0.0-10.255.255.255", "1.2.3.4", "127.0.0.2")] // a proxy that is not this sender
+    [DataRow("127.0.0.2-127.0.0.2", "1.2.3.4", "1.2.3.4")] // this proxy
     [DataRow("127.0.0.2-127.0.0.2", "1.2.3.4, 127.0.0.9", "127.0.0.9")] // what the proxy saw, not what its sender wrote
     public async Task The_client_ip_follows_the_reverse_proxy_ranges(string? reverseProxyIpRanges,
         string forwardedFor, string expectedClientIp)
@@ -58,7 +132,28 @@ public class ReverseProxyTest : TestBase
         Assert.AreEqual(IPAddress.Parse(expectedClientIp), helloResponse.ClientPublicAddress);
     }
 
-    private async Task<HelloResponse> SendHello(Token token, string forwardedFor)
+    // its ports would lead past the proxy, even one no list names
+    [TestMethod]
+    public async Task A_forwarded_hello_gets_no_udp_or_quic_port()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+
+        var directHelloResponse = await SendHello(token, forwardedFor: null);
+        Assert.IsNotNull(directHelloResponse.UdpPort);
+
+        var forwardedHelloResponse = await SendHello(token, forwardedFor: ForwardedIp.ToString());
+        Assert.IsNull(forwardedHelloResponse.UdpPort);
+        Assert.IsNull(forwardedHelloResponse.QuicPort);
+    }
+
+    private string CreateStoragePath()
+    {
+        return Path.Combine(TestHelper.WorkingPath, "reverse-proxy", Guid.NewGuid().ToString());
+    }
+
+    private async Task<HelloResponse> SendHello(Token token, string? forwardedFor)
     {
         var serverEndPoint = token.ServerToken.HostEndPoints?.First(x => x.AddressFamily == ProxyIp.AddressFamily)
                              ?? throw new InvalidOperationException("The token has no endpoint.");
@@ -78,7 +173,7 @@ public class ReverseProxyTest : TestBase
             $"Content-Length: {payload.Length}\r\n" +
             $"X-ProtocolVersion: {VpnHoodClientConfig.MaxProtocolVersion}\r\n" +
             "X-BinaryStream: None\r\n" +
-            $"X-Forwarded-For: {forwardedFor}\r\n" +
+            (forwardedFor != null ? $"X-Forwarded-For: {forwardedFor}\r\n" : "") +
             "\r\n";
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), TestCt);
         await sslStream.WriteAsync(payload, TestCt);
@@ -112,5 +207,22 @@ public class ReverseProxyTest : TestBase
         payload[1] = request.RequestCode;
         requestBuffer.Span.CopyTo(payload.AsSpan(2));
         return payload;
+    }
+
+    // serves the providers' lists from memory; a missing list answers as a provider that is down
+    private class FeedHandler(string? cloudflareList, string? cloudFrontList) : HttpMessageHandler
+    {
+        private int _requestCount;
+        public int RequestCount => _requestCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _requestCount);
+            var list = request.RequestUri?.Host == "api.cloudflare.com" ? cloudflareList : cloudFrontList;
+            return Task.FromResult(list != null
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(list) }
+                : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        }
     }
 }

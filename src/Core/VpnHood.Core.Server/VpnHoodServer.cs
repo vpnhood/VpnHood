@@ -13,6 +13,7 @@ using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
+using VpnHood.Core.Server.ReverseProxies;
 using VpnHood.Core.Server.SystemInformation;
 using VpnHood.Core.Server.Utils;
 using VpnHood.Net.Toolkit.ApiClients;
@@ -45,6 +46,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private readonly ISystemInfoProvider _systemInfoProvider;
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
     private readonly NetFilter _netFilter;
+    private readonly ReverseProxyTrust _reverseProxyTrust;
     private string? _tcpCongestionControl;
     private bool _isRestarted = true;
     private readonly Job _configureAndSendStatusJob;
@@ -99,7 +101,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         _swapMemoryProvider = options.SwapMemoryProvider;
         _config = options.Config;
         _serverHostDisposeTimeout = options.ServerHostDisposeTimeout;
-        ServerHost = new ServerHost(SessionManager, options.DownloadsPath, options.QuicServer);
+        _reverseProxyTrust = new ReverseProxyTrust(options.StoragePath, httpMessageHandler: null);
+        ServerHost = new ServerHost(SessionManager, options.DownloadsPath, options.QuicServer, _reverseProxyTrust);
 
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
         // started by Start, its first periodic run an interval after Start's own: a run queued before that sent a
@@ -284,6 +287,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             }
 
             // Reconfigure server host
+            _reverseProxyTrust.Configure(serverConfig.ReverseProxyProvidersValue, serverConfig.ReverseProxyIpRangesValue);
             _endPointStatusesSent = false;
             var endPointStatuses = await ServerHost.Configure(new ServerHostConfiguration {
                 DnsServers = serverConfig.DnsServersValue,
@@ -292,8 +296,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 QuicEndPoints = serverConfig.QuicEndPointsValue,
                 Certificates =
                     serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null)).ToArray(),
-                UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue,
-                ReverseProxyIpRanges = serverConfig.ReverseProxyIpRanges
+                UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue
             }).Vhc();
 
             //empty array means no error, null means not reported
@@ -623,6 +626,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         _ = ServerHost.TryDisposeAsync(LogLevel.Warning);
         SessionManager.Dispose();
         _http01ChallengeService.Dispose();
+        _reverseProxyTrust.Dispose();
         _netConfigurationService?.Dispose();
         if (_autoDisposeAccessManager)
             AccessManager.Dispose();

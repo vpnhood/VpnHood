@@ -7,6 +7,7 @@ using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Exceptions;
 using VpnHood.Core.Server.Listeners;
+using VpnHood.Core.Server.ReverseProxies;
 using VpnHood.Core.Server.Utils;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
@@ -36,7 +37,7 @@ public class ServerHost : IAsyncDisposable
     private readonly Job _cleanupConnectionsJob;
     private readonly AsyncLock _configureLock = new();
     private readonly AsyncLock _disposeLock = new();
-    private IpRangeOrderedList? _reverseProxyIpRanges;
+    private readonly ReverseProxyTrust _reverseProxyTrust;
     private bool _disposed;
 
     public const int MaxProtocolVersion = 14;
@@ -56,9 +57,11 @@ public class ServerHost : IAsyncDisposable
     public bool Started => !_disposed && !_cancellationTokenSource.IsCancellationRequested;
     public string? DownloadPath => _downloadService.DownloadPath;
 
-    public ServerHost(SessionManager sessionManager, string? downloadsPath, IQuicServer? quicServer)
+    internal ServerHost(SessionManager sessionManager, string? downloadsPath, IQuicServer? quicServer,
+        ReverseProxyTrust reverseProxyTrust)
     {
         _sessionManager = sessionManager;
+        _reverseProxyTrust = reverseProxyTrust;
         _downloadService = new DownloadService(downloadsPath);
         _cleanupConnectionsJob = new Job(CleanupConnections, TimeSpan.FromMinutes(5), nameof(ServerHost));
         UniqueIdFactory.DebugInitId = 5000;
@@ -90,9 +93,6 @@ public class ServerHost : IAsyncDisposable
         // reconfigure
         DnsServers = configuration.DnsServers;
         Certificates = configuration.Certificates.Select(x => new CertificateHostName(x)).ToArray();
-        _reverseProxyIpRanges = configuration.ReverseProxyIpRanges != null
-            ? new IpRangeOrderedList(configuration.ReverseProxyIpRanges)
-            : null;
 
         var tcpStatuses = await _tcpListenerHost.Configure(configuration.TcpEndPoints, Certificates).Vhc();
         var quicStatuses = await _quicListenerHost.Configure(configuration.QuicEndPoints, Certificates).Vhc();
@@ -139,12 +139,11 @@ public class ServerHost : IAsyncDisposable
             var httpMethod = httpRequestLine.Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
-            var remoteIp = streamConnection.RemoteEndPoint.Address;
-            var reverseProxyIpRanges = _reverseProxyIpRanges;
-            var isRevereProxy = reverseProxyIpRanges?.Contains(remoteIp) ?? !string.IsNullOrEmpty(clientIpByProxy);
-            var clientIp = isRevereProxy
-                ? ServerUtils.GetClientIpFromXForwarded(clientIpByProxy, reverseProxyIpRanges) ?? remoteIp
-                : remoteIp;
+            var clientIp = _reverseProxyTrust.GetClientIp(streamConnection.RemoteEndPoint.Address, clientIpByProxy);
+
+            // whether or not the proxy may name the client: the UDP and QUIC ports the hello would give lead straight
+            // to the server, past a proxy no list names too
+            var isRevereProxy = !string.IsNullOrEmpty(clientIpByProxy);
 
             // Try to serve download file if requested
             if (await _downloadService.TryServeDownloadAsync(streamConnection, httpRequestLine, cancellationToken).Vhc())

@@ -25,8 +25,9 @@ public class ServerConfig
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? QuicEndPoints { get; set; }
 
-    // Left out, X-Forwarded-For counts from any sender, so anyone can name the client IP the access manager locks
-    // and locates; set, only from these proxies, and [] lists none
+    // X-Forwarded-For names the client IP, which the access manager locks and locates, only from these providers'
+    // published addresses and these ranges: any other sender is taken at its own address
+    public ReverseProxyProvider[]? ReverseProxyProviders { get; set; }
     public IpRange[]? ReverseProxyIpRanges { get; set; }
 
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
@@ -59,6 +60,13 @@ public class ServerConfig
     public IPEndPoint[] UdpEndPointsValue =>
         UdpEndPoints ?? [];
 
+    [JsonIgnore]
+    public ReverseProxyProvider[] ReverseProxyProvidersValue =>
+        ReverseProxyProviders ?? [ReverseProxyProvider.Cloudflare, ReverseProxyProvider.CloudFront];
+
+    [JsonIgnore]
+    public IpRange[] ReverseProxyIpRangesValue => ReverseProxyIpRanges ?? [];
+
 
     [JsonIgnore]
     public IPAddress[] DnsServersValue => DnsServers ?? [.. IPAddressUtil.GoogleDnsServers];
@@ -84,6 +92,7 @@ public class ServerConfig
         if (obj.TcpEndPoints != null) TcpEndPoints = obj.TcpEndPoints;
         if (obj.UdpEndPoints != null) UdpEndPoints = obj.UdpEndPoints;
         if (obj.QuicEndPoints != null) QuicEndPoints = obj.QuicEndPoints;
+        if (obj.ReverseProxyProviders != null) ReverseProxyProviders = obj.ReverseProxyProviders;
         if (obj.ReverseProxyIpRanges != null) ReverseProxyIpRanges = obj.ReverseProxyIpRanges;
         if (obj.UpdateStatusInterval != null) UpdateStatusInterval = obj.UpdateStatusInterval;
         if (obj.DnsServers != null) DnsServers = obj.DnsServers;
@@ -104,6 +113,8 @@ public class ServerConfig
         NetFilterOptions.ApplyDefaults();
         TcpEndPoints = TcpEndPointsValue;
         UdpEndPoints = UdpEndPointsValue;
+        ReverseProxyProviders = ReverseProxyProvidersValue;
+        ReverseProxyIpRanges = ReverseProxyIpRangesValue;
         DnsServers = DnsServersValue;
         UpdateStatusInterval = UpdateStatusIntervalValue;
         LogAnonymizer = LogAnonymizerValue;

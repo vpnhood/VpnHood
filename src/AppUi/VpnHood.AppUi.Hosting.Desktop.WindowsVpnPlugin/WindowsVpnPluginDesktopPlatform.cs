@@ -7,14 +7,16 @@ namespace VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin;
 
 // The machine facts the Windows VPN plug-in answers: the app runs in the window's process, as whoever is
 // signed in, in the package's LocalState, and Windows' own VPN host holds the tunnel, so there is no
-// service to start, reach or install.
+// service to start, reach or install. The package's sandbox (an AppContainer) shapes the rest: the
+// window's pipe in the app's own namespace, no tray icon, and the loopback check of its own.
 internal sealed class WindowsVpnPluginDesktopPlatform(DesktopInitParams initParams) : IInProcessDesktopPlatform
 {
     private const string LogFileName = "window.log";
 
     public IDesktopUiPaths Paths { get; } = new WindowsVpnPluginDesktopPaths(initParams.AppId);
-    public ILoopbackPeerCheck PeerCheck { get; } = new WindowsLoopbackPeerCheck();
-    public IDesktopSession DesktopSession { get; } = new WindowsDesktopSession();
+    public ILoopbackPeerCheck PeerCheck { get; } = new WindowsVpnPluginLoopbackPeerCheck();
+    public IDesktopSession DesktopSession { get; } = new WindowsDesktopSession { IsSandboxed = true };
+    public bool UseTray => false;
 
     // A file of the run's own, as the VPN host keeps one: the window has no console, and the Event Log
     // no source here, which only an administrator registers.

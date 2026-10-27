@@ -16,6 +16,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 public sealed class WindowsDesktopSession : IDesktopSession
 {
     public string Name { get; } = ReadSessionId();
+    public bool IsSandboxed { get; init; }
 
     public void HandForegroundTo(NamedPipeClientStream window)
     {

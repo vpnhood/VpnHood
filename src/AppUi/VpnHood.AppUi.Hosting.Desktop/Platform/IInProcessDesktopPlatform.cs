@@ -13,6 +13,9 @@ public interface IInProcessDesktopPlatform
     // The desktop session this launch runs in, as the window's single instance asks it.
     IDesktopSession DesktopSession { get; }
 
+    // Whether the window may keep a tray icon (DesktopUiParams.UseTray).
+    bool UseTray { get; }
+
     // The process's log, added once this launch holds the window: a second launch, which only brings
     // that window forward, leaves its file alone.
     ILoggerProvider CreateLoggerProvider();

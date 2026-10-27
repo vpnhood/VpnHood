@@ -14,14 +14,6 @@ public static class WindowsVpnPluginHost
 
     public static void Run([ReadOnlyArray] string[] args)
     {
-        // the host's own full-trust copy, which keeps it awake while its VPN is connected, and dials it again after a
-        // sleep: a log of its own only for that, as its connection is in the host's, and a failure in Windows'
-        // Application log
-        if (args.Contains(WindowsVpnPluginKeepAwake.Argument)) {
-            WindowsVpnPluginKeepAwake.Run().GetAwaiter().GetResult();
-            return;
-        }
-
         // the process's own log from its first line, as the iOS extension has os_log: what comes before the
         // VPN service opens its log, an activation's failure among it
         var folder = WindowsVpnPluginFolders.VpnServiceFolder;

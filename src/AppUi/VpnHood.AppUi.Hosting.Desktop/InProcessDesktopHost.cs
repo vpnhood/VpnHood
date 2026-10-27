@@ -51,8 +51,8 @@ public static class InProcessDesktopHost
 
             try {
                 await using var app = platform.CreateApp();
-                await RunWindow(platform.Paths, platform.PeerCheck, initParams, mainThread, startHidden: false,
-                    accessKey, CancellationToken.None).Vhc();
+                await RunWindow(platform.Paths, platform.PeerCheck, initParams, mainThread, platform.UseTray,
+                    startHidden: false, accessKey, CancellationToken.None).Vhc();
                 return 0;
             }
             catch (Exception ex) {
@@ -72,7 +72,7 @@ public static class InProcessDesktopHost
     // The window over the app this process holds, until the window ends: this host's, and a debugger's
     // beside the service's (DevCommand). Over the app's loopback API, as the service's window reaches it.
     internal static async Task RunWindow(IDesktopUiPaths paths, ILoopbackPeerCheck peerCheck,
-        DesktopInitParams initParams, MainThreadQueue mainThread, bool startHidden, string? accessKey,
+        DesktopInitParams initParams, MainThreadQueue mainThread, bool useTray, bool startHidden, string? accessKey,
         CancellationToken cancellationToken)
     {
         var localWebHost = VpnHoodApp.Instance.LocalWebHost ??
@@ -82,7 +82,7 @@ public static class InProcessDesktopHost
 
         // No channel to ask: the app is here, and so is the process the window's calls must reach.
         await using var connection = DaemonConnection.CreateInProcess(localWebHost, peerCheck, paths.InstanceName);
-        await UiCommand.RunWindow(paths, initParams, mainThread, connection, startHidden, accessKey,
+        await UiCommand.RunWindow(paths, initParams, mainThread, connection, useTray, startHidden, accessKey,
             cancellationToken).Vhc();
     }
 }

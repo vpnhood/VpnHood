@@ -6,9 +6,9 @@ using Windows.ApplicationModel.Background;
 
 namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation;
 
-// What Windows activates in the VPN host when a process opens one of the package's app services: the app's control
-// channel to the VPN service, or the keep-awake process's. A run lasts as long as its connection, and keeps the host
-// running meanwhile, which Windows freezes between VPN events otherwise.
+// What Windows activates in the VPN host when the app opens the package's app service, its control channel to the VPN
+// service. A run lasts as long as its connection, and keeps the host running meanwhile, which Windows freezes between
+// VPN events otherwise.
 public sealed class VpnAppServiceTask : IBackgroundTask
 {
     public void Run(IBackgroundTaskInstance taskInstance)
@@ -38,7 +38,7 @@ public sealed class VpnAppServiceTask : IBackgroundTask
         try {
             VhLogger.Instance.LogInformation("A process connected to the VPN host. AppService: {AppService}, ProcessId: {ProcessId}",
                 details.Name, Environment.ProcessId);
-            await VpnPluginBridge.Current.ServeAppConnection(details.AppServiceConnection, details.Name, canceledCts.Token).Vhc();
+            await VpnPluginBridge.Current.ServeAppConnection(details.AppServiceConnection, canceledCts.Token).Vhc();
             VhLogger.Instance.LogInformation("A connection to the VPN host has closed. AppService: {AppService}", details.Name);
         }
         catch (Exception ex) {

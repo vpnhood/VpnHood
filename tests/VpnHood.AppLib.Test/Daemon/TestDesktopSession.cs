@@ -9,6 +9,7 @@ internal sealed class TestDesktopSession(string name = "") : IDesktopSession
     private int _handForegroundCount;
 
     public string Name => name;
+    public bool IsSandboxed => false;
     public int HandForegroundCount => _handForegroundCount;
 
     public void HandForegroundTo(NamedPipeClientStream window) => Interlocked.Increment(ref _handForegroundCount);

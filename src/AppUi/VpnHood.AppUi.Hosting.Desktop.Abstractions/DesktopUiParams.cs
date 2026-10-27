@@ -24,9 +24,13 @@ public class DesktopUiParams
     public required string UiDataPath { get; init; }
 
     // Whether the run starts with the window closed, waiting in the UI's tray until it is asked for:
-    // the entry an installer runs at sign-in. A UI with no tray to wait in ends at once. Whether
-    // closing the window ends the UI is the UI's own to decide, by its tray.
+    // the entry an installer runs at sign-in. A UI with no tray to wait in ends at once.
     public required bool StartHidden { get; init; }
+
+    // Whether the UI may keep a tray icon, in which a closed window waits until the tray's Exit; with
+    // none, closing the window ends the UI. Not in a sandboxed app (the Store edition's), which Windows
+    // refuses a tray icon.
+    public required bool UseTray { get; init; }
 
     // The access key this launch was given - a file opened with the app - which the UI imports once it
     // runs, as IDesktopUi.ImportAccessKey does a second launch's; null for a plain start.

@@ -32,16 +32,24 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     private static readonly TimeSpan LockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan LockRetryDelay = TimeSpan.FromMilliseconds(50);
     private const PipeOptions Options = PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly;
+
+    // A sandboxed app may serve a pipe only in its own namespace, which Windows keeps to the app and the session; kept to
+    // the current user too, the pipe's DACL leaves the app's package out, and a second launch could not open it.
+    private const string SandboxedPipePrefix = @"LOCAL\";
+    private const PipeOptions SandboxedOptions = PipeOptions.Asynchronous;
+
     private readonly string _pipeName;
+    private readonly PipeOptions _pipeOptions;
     private readonly IDesktopUi _ui;
     private readonly CancellationTokenSource _cancellation = new();
     private readonly Task _serving;
     private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
 
-    private DesktopUiInstance(string pipeName, IDesktopUi ui)
+    private DesktopUiInstance(string pipeName, PipeOptions pipeOptions, IDesktopUi ui)
     {
         _pipeName = pipeName;
+        _pipeOptions = pipeOptions;
         _ui = ui;
         _serving = Serve(CreateServer(), _cancellation.Token);
     }
@@ -55,7 +63,12 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     {
         var name = BuildName(paths.InstanceName, desktopSession.Name);
         using var sessionLock = TakeSessionLock(paths.UiDataPath, name);
-        return TryShowExisting(name, desktopSession, accessKey) ? null : new DesktopUiInstance(name, ui);
+        var (pipeName, pipeOptions) = desktopSession.IsSandboxed
+            ? (SandboxedPipePrefix + name, SandboxedOptions)
+            : (name, Options);
+        return TryShowExisting(pipeName, pipeOptions, desktopSession, accessKey)
+            ? null
+            : new DesktopUiInstance(pipeName, pipeOptions, ui);
     }
 
     // one name per instance, person and session, in characters every platform's pipe and file names take
@@ -94,9 +107,10 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
         }
     }
 
-    private static bool TryShowExisting(string pipeName, IDesktopSession desktopSession, string? accessKey)
+    private static bool TryShowExisting(string pipeName, PipeOptions pipeOptions, IDesktopSession desktopSession,
+        string? accessKey)
     {
-        using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, Options);
+        using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, pipeOptions);
         try {
             client.Connect(ConnectTimeout);
         }
@@ -124,7 +138,7 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     private NamedPipeServerStream CreateServer()
     {
         return new NamedPipeServerStream(_pipeName, PipeDirection.In,
-            NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, Options);
+            NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, _pipeOptions);
     }
 
     private async Task Serve(NamedPipeServerStream server, CancellationToken cancellationToken)

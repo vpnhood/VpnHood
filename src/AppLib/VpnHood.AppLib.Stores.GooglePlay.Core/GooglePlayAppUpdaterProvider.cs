@@ -131,6 +131,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
                 AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build())).ConfigureAwait(false);
         // ReSharper restore AccessToDisposedClosure
 
+        // no time limit: the flow lasts as long as Play's screen, which shows only with the app in front
         if (updateFlowPlayTask != null)
             await updateFlowPlayTask.AsAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
 

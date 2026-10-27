@@ -70,6 +70,8 @@ public partial class SignInDialog : DialogBase
             BrandCanvas.Children.Add(shape);
         BrandMark.IsVisible = true;
         PrimaryButton.Background = new SolidColorBrush(background);
+        // the white ring would not show on a white button
+        PrimaryButton.Classes.Set("light", background == Colors.White);
         PrimaryText.Foreground = new SolidColorBrush(foreground);
         if (border is { } borderColor) {
             PrimaryButton.BorderBrush = new SolidColorBrush(borderColor);

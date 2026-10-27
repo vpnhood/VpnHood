@@ -1282,6 +1282,10 @@
   <Style Selector="Border.dialog.alert Button.dialog-btn">
     <Setter Property="Foreground" Value="{StaticResource OnDialogAlertBrush}" />
   </Style>
+  <!-- its "learn more" link too: a button's white words would not show on the card -->
+  <Style Selector="Border.dialog.alert Button.alert-link">
+    <Setter Property="Foreground" Value="{StaticResource OnDialogAlertBrush}" />
+  </Style>
   <Style Selector="Border.dialog.alert Button.dialog-action">
     <Setter Property="Background" Value="{StaticResource DialogAlertBtnTonalBrush}" />
     <Setter Property="Foreground" Value="{StaticResource DialogAlertBtnBrush}" />
@@ -1321,6 +1325,12 @@
   </Style>
   <Style Selector="Border.dialog.active Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderBrush" Value="{StaticResource OnActiveBrush}" />
+  </Style>
+  <!-- a white button (a store's sign-in) or a filled one on the light card: white or the card's
+       colour would each match the fill or the card around it, so the ring is the accent a focused
+       text box has -->
+  <Style Selector="Button.light:focus-visible /template/ ContentPresenter#PART_ContentPresenter, Border.dialog.alert Button.dialog-action:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource HighlightBrush}" />
   </Style>
   <!-- the rows of a dialog's list (the badge dialog): a rule between them in the dialog's tone -->
   <Style Selector="Border.dialog Button.list-item">

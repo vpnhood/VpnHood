@@ -16,6 +16,10 @@ namespace VpnHood.AppLib.Stores.GooglePlay;
 // treats a failed check like Play's "none", and a failed screen as one to show again.
 public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 {
+    // with Google out of reach Play answers "none" only after minutes, holding the check, and the check
+    // after the connect behind it; a reachable Play answers within a second or two
+    private static readonly TimeSpan QueryTimeout = TimeSpan.FromSeconds(15);
+
     private AppUpdateState _state = AppUpdateState.None;
 
     public bool HasOwnScreen => true;
@@ -30,7 +34,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
     {
         var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
         using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-        using var appUpdateInfo = await appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>().Vhc();
+        using var appUpdateInfo = await GetAppUpdateInfo(appUpdateManager, cancellationToken).Vhc();
 
         // Play answers "not available" also with no connection to Google: the service tells the two
         // apart by the connect
@@ -100,7 +104,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
         CancellationToken cancellationToken)
     {
         using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-        using var appUpdateInfo = await appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>().Vhc();
+        using var appUpdateInfo = await GetAppUpdateInfo(appUpdateManager, cancellationToken).Vhc();
         var updateAvailability = appUpdateInfo.UpdateAvailability();
         if (updateAvailability != availability) {
             VhLogger.Instance.LogDebug(
@@ -131,5 +135,13 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             await updateFlowPlayTask.AsAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
 
         return true;
+    }
+
+    // a TimeoutException is a failed check, which the service takes as Play's "none"
+    private static Task<AppUpdateInfo> GetAppUpdateInfo(IAppUpdateManager appUpdateManager,
+        CancellationToken cancellationToken)
+    {
+        return appUpdateManager.GetAppUpdateInfo().AsAsync<AppUpdateInfo>()
+            .WaitAsync(QueryTimeout, cancellationToken);
     }
 }

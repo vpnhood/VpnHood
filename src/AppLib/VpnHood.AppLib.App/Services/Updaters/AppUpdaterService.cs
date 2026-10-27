@@ -14,6 +14,9 @@ namespace VpnHood.AppLib.App.Services.Updaters;
 
 public class AppUpdaterService : IDisposable
 {
+    // a DNS lookup can take minutes, and on Android the HttpClient's own timeout cannot end it
+    private static readonly TimeSpan FeedTimeout = TimeSpan.FromSeconds(30);
+
     private readonly AsyncLock _versionCheckLock = new();
     private readonly Version _appVersion;
     private readonly AppUpdaterOptions _updateOptions;
@@ -417,7 +420,8 @@ public class AppUpdaterService : IDisposable
             VhLogger.Instance.LogDebug("Retrieving the latest publish info...");
             // ReSharper disable once ShortLivedHttpClient
             using var httpClient = new HttpClient();
-            var publishInfoJson = await httpClient.GetStringAsync(updateInfoUrl, cancellationToken).Vhc();
+            var publishInfoJson = await httpClient.GetStringAsync(updateInfoUrl, cancellationToken)
+                .WaitAsync(FeedTimeout, cancellationToken).Vhc();
             Data.PublishInfo = JsonUtils.Deserialize<PublishInfo>(publishInfoJson);
 
             VhLogger.Instance.LogInformation(

@@ -70,6 +70,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public event EventHandler? StateChanged;
     public ISessionStatus Status => _status;
     public ClientSessionConfig Config { get; }
+    public VpnEndPoint VpnEndPoint => _requestSender.ConnectorService.VpnEndPoint;
     public SessionInfo Info { get; }
     public ISessionAdHandler AdHandler { get; }
     public Exception? LastException { get; private set; }

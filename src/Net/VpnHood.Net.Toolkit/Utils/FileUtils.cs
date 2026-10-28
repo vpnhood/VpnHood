@@ -59,4 +59,10 @@ public static class FileUtils
             }
         }
     }
+
+    // a name from outside, so a file of it stays in its folder: "..\x" becomes ".._x"
+    public static string ReplaceInvalidFileNameChars(string name)
+    {
+        return string.Join('_', name.Split(Path.GetInvalidFileNameChars()));
+    }
 }

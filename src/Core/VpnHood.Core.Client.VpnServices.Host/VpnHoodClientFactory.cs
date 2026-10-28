@@ -31,6 +31,8 @@ public class VpnHoodClientFactory
             netFilter: netFilter,
             proxyConnector: await CreateProxyConnector(clientParams, cancellationToken).Vhc(),
             tracker: CreateTracker(clientParams),
+            // this device's, so the config folder: the data folder travels with a backup
+            workingFolder: clientParams.ConfigFolder,
             options: clientParams.ServiceOptions.ClientOptions);
     }
 

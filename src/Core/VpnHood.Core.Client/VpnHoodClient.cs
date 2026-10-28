@@ -30,6 +30,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ClientState _lastState = ClientState.None;
     private readonly Lock _stateEventLock = new();
     private readonly ServerFinder _serverFinder;
+    private readonly ConnectedServerFile _connectedServerFile;
     private readonly AsyncLock _disposeLock = new();
     private readonly DomainFilteringService _domainFilteringService;
     // the filter stage that speaks for the server; its rules (routing declaration + SplitUnsupportedIpMode) are
@@ -80,6 +81,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         NetFilter? netFilter,
         IProxyConnector? proxyConnector,
         ITracker? tracker,
+        string workingFolder,
         ClientOptions options)
     {
         if (!VhUtils.IsInfinite(options.MaxPacketChannelTimespan) &&
@@ -117,6 +119,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
+        Directory.CreateDirectory(workingFolder);
 
         // the client owns this decoration so that no caller can supply an unprotected factory; services
         // built outside (e.g. the proxy connector) are handed the decorated one in Connect
@@ -127,6 +130,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Tracker = tracker;
         ChannelProtocol = options.ChannelProtocol;
         ProxyConnector = proxyConnector;
+        _connectedServerFile = new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), Token.TokenId);
 
         // Prepare filters. The gate chain (e.g. the split-ip/split-domain dbs) is supplied by the caller
         // via netFilter; the client only adds its own gates and the caching layer on top of it.
@@ -153,7 +157,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null,
             proxyConnector: ProxyConnector,
-            includeIpV6: _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6));
+            includeIpV6: _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
+            connectedServer: _connectedServerFile.Read());
 
         // SNI extraction is sensitive and costly, so it runs only while a domain rule could consume it
         // (or SNI logging is forced). Nobody tells the client: it derives the answer from its own pipe
@@ -257,6 +262,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         _session = await sessionBuilder.Build(_cancellationTokenSource.Token, cancellationToken).Vhc();
         _session.StateChanged += Session_StateChanged;
+
+        // before the adapter starts: a crash from then on leaves it for the redial
+        _connectedServerFile.Write(_session.VpnEndPoint);
         await _session.Start(cancellationToken).Vhc();
 
         State = ClientState.Connected;
@@ -319,6 +327,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         _cancellationTokenSource.TryCancel();
         _session?.Dispose();
+
+        // a close, not a crash: the next connect looks its server up again
+        _connectedServerFile.TryDelete();
 
         // dispose ProxyConnector before adapter get closed and it needs Adapter's SocketFactory.
         // this sync path cannot await; the flush runs in the background and only touches the

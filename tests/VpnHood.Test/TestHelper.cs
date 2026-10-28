@@ -380,6 +380,7 @@ public class TestHelper : IDisposable
             netFilter: ClientNetFilter,
             proxyConnector: await CreateProxyConnector(clientOptions, proxyOptions),
             new TestTracker { IsEnabled = clientOptions.AllowAnonymousTracker },
+            workingFolder: Path.Combine(WorkingPath, $"Client_{Guid.NewGuid()}"),
             clientOptions);
 
         // test starting the client

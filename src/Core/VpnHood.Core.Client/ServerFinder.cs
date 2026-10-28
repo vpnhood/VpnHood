@@ -29,6 +29,7 @@ public class ServerFinder(
     ITracker? tracker,
     IProxyConnector? proxyConnector,
     bool includeIpV6,
+    VpnEndPoint? connectedServer,
     int maxDegreeOfParallelism = 10)
 {
     private ProgressMonitor? _progressMonitor;
@@ -112,6 +113,14 @@ public class ServerFinder(
             "Finding a reachable server... " +
             "QueryTimeout: {QueryTimeout}, ServerLocation: {ServerLocation}",
             serverQueryTimeout, ServerLocation);
+
+        // before any lookup: after a VPN host's crash, the dead connection's routes let only this server through
+        if (connectedServer != null) {
+            var connectedServerStatus = new HostStatus { VpnEndPoint = connectedServer };
+            await VerifyHostStatus(connectedServerStatus, serverQueryTimeout, cancellationToken).Vhc();
+            if (connectedServerStatus.Available == true)
+                return connectedServer;
+        }
 
         // create server finder items from ServerToken.HostEndPoints using SelectMany
         var vpnEndPoints = await ResolveVpnEndPoints(serverTokens, IncludeIpV6, cancellationToken).Vhc();

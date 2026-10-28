@@ -51,15 +51,21 @@ public partial class ProtocolsView : UserControl, IPage
         var settings = VhApp.UserSettings;
         var reason = state.TcpProxyUsageReason;
 
-        CloakItem.IsOn = state.SessionStatus?.IsTcpProxy ?? settings.UseTcpProxy;
+        // the setting, or what the server or Split Domains force; never the session's status, which a save does not
+        // wait for: read back at once, the switch would jump to the old value and stay there
+        CloakItem.IsOn = reason switch {
+            TcpProxyUsageReason.ServerRequiredOn or TcpProxyUsageReason.SplitDomainRequiredOn => true,
+            TcpProxyUsageReason.ServerRequiredOff => false,
+            _ => settings.UseTcpProxy
+        };
         CloakItem.IsDisabled = reason != TcpProxyUsageReason.None;
         ServerEnforcedAlert.IsVisible = reason is TcpProxyUsageReason.ServerRequiredOff or TcpProxyUsageReason.ServerRequiredOn;
         DomainEnforcedAlert.IsVisible = reason == TcpProxyUsageReason.SplitDomainRequiredOn;
         QuicPanel.IsVisible = CloakItem.IsOn;
 
-        // a server that does not carry QUIC enforces the block
+        // a server that does not carry QUIC enforces the block; else the setting, as for the cloak
         var isQuicPacketSupported = state.SessionInfo?.IsQuicPacketSupported ?? true;
-        DropQuicItem.IsOn = !isQuicPacketSupported || (state.SessionStatus?.IsDropQuic ?? settings.DropQuic);
+        DropQuicItem.IsOn = !isQuicPacketSupported || settings.DropQuic;
         DropQuicItem.IsDisabled = !isQuicPacketSupported;
         DropQuicEnforcedAlert.IsVisible = !isQuicPacketSupported;
 

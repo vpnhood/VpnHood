@@ -35,6 +35,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     UiAssetProvider = app.UiAssetProvider,
                     AppName = app.Features.AppName,
                     LogoAssetPath = app.Features.LogoAssetPath,
+                    UiTheme = app.Features.UiTheme,
                     WebUiPort = WebUiPort,
                     IsAlwaysOn = true, // the app's own UI loads it; nothing ever stops it
                     IsTokenRequired = !app.Features.IsDebugMode // a debug build keeps its open door here too
@@ -56,6 +57,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     UiAssetProvider = app.UiAssetProvider,
                     AppName = app.Features.AppName,
                     LogoAssetPath = app.Features.LogoAssetPath,
+                    UiTheme = app.Features.UiTheme,
                     WebUiPort = WebUiPort,
                     IsAlwaysOn = _remoteIsDeveloperAccess, // otherwise a pairing screen holds it
                     IsTokenRequired = !_remoteIsDeveloperAccess

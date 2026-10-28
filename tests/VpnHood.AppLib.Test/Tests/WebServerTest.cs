@@ -1,5 +1,7 @@
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost;
@@ -247,6 +249,58 @@ public class WebServerTest : TestAppBase
 
         StringAssert.Contains(await http.GetStringAsync(localUrl),
             $"<title>{app.Features.AppName}|/assets/{app.Features.LogoAssetPath}</title>");
+    }
+
+    [TestMethod]
+    public async Task Page_loads_in_the_themes_colours()
+    {
+        // the loading screen shows before any of the page runs, so the host writes the theme's colours
+        // into it, out of the UI's own files
+        var appOptions = CreateWebHostOptions(isDebugMode: false);
+        appOptions.WebRootZipAsset = TestAppHelper.CreateWebRootZip("{backgroundColor}|{barColor}");
+        appOptions.UiZipAssets = [TestAppHelper.CreateZip("ui", ($"themes/{appOptions.UiTheme}/manifest.json",
+            """{ "colors": { "windowBackground": "#1940b0", "progressBar": "#23c99d" } }"""u8.ToArray()))];
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        var localUrl = await RequireHost(app.LocalWebHost, "local").EnsureStarted(CancellationToken.None);
+        using var http = new HttpClient();
+
+        StringAssert.Contains(await http.GetStringAsync(localUrl), "<title>#1940b0ff|#23c99dff</title>");
+    }
+
+    [TestMethod]
+    public async Task Page_files_go_compressed_where_gzip_is_taken()
+    {
+        // the page as published holds its files as name.gz: sent as they lie to a browser that takes
+        // gzip, and unpacked for one that does not
+        var script = "console.log('page');"u8.ToArray();
+        var gzip = Gzip(script);
+        var appOptions = CreateWebHostOptions(isDebugMode: false);
+        appOptions.WebRootZipAsset = TestAppHelper.CreateZip("web-root",
+            ("index.html", Encoding.UTF8.GetBytes($"<html><title>{PageTitle}</title></html>")),
+            ("main.js.gz", gzip));
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        var localUrl = await RequireHost(app.LocalWebHost, "local").EnsureStarted(CancellationToken.None);
+        using var http = new HttpClient(); // asks for no encoding and unpacks nothing itself
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(localUrl, "/main.js"));
+        request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+        using var compressed = await http.SendAsync(request, TestCt);
+        CollectionAssert.AreEqual(new[] { "gzip" }, compressed.Content.Headers.ContentEncoding.ToArray());
+        Assert.AreEqual("application/javascript", compressed.Content.Headers.ContentType?.MediaType);
+        CollectionAssert.AreEqual(gzip, await compressed.Content.ReadAsByteArrayAsync(TestCt));
+
+        using var plain = await http.GetAsync(new Uri(localUrl, "/main.js"), TestCt);
+        Assert.IsEmpty(plain.Content.Headers.ContentEncoding);
+        CollectionAssert.AreEqual(script, await plain.Content.ReadAsByteArrayAsync(TestCt));
+    }
+
+    private static byte[] Gzip(byte[] bytes)
+    {
+        using var stream = new MemoryStream();
+        using (var gzip = new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true))
+            gzip.Write(bytes);
+
+        return stream.ToArray();
     }
 
     [TestMethod]

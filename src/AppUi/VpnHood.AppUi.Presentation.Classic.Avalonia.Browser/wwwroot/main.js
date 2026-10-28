@@ -7,8 +7,16 @@ import { dotnet } from './_framework/dotnet.js'
 // rather than waiting forever - the app's web view shows this page, and a spinner that never ends
 // reads as a hung app.
 try {
+    // the bar under the logo: how many of the files the runtime asks for are in
+    const progress = document.getElementById('progress');
     const runtime = await dotnet
         .withDiagnosticTracing(false)
+        .withModuleConfig({
+            onDownloadResourceProgress: (loaded, total) => {
+                if (progress && total > 0)
+                    progress.style.width = `${Math.round(100 * loaded / total)}%`;
+            }
+        })
         .create();
 
     const config = runtime.getConfig();

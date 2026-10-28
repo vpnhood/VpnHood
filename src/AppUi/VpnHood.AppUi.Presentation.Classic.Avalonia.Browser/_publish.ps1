@@ -22,8 +22,10 @@ try {
     $zipPath = Join-Path $PSScriptRoot "../VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip"
     if (Test-Path $zipPath) { Remove-Item $zipPath }
 
-    # The loader asks for the plain names, so the .br and .gz twins the SDK writes beside every file
-    # would only double the zip; the symbol and map files serve a debugger, not a phone.
+    # Each file goes as the gzip twin the SDK writes beside it, name.gz, which the host sends as it
+    # lies with Content-Encoding: gzip - about a third of the bytes. Not the .br twin: browsers take
+    # brotli only over HTTPS, and the host is plain HTTP. index.html goes plain, as the host writes the
+    # app's name, logo and colours into it. The symbol and map files serve a debugger, not a phone.
     $files = Get-ChildItem $wwwroot -Recurse -File | Where-Object { $_.Extension -notin ".br", ".gz", ".pdb", ".map" }
 
     # In front of the zip goes its stamp (ZipStamp in VpnHood.Net.Toolkit), as the UI store's
@@ -50,8 +52,15 @@ try {
         try {
             foreach ($file in $files) {
                 $entryName = $file.FullName.Substring($wwwroot.Length + 1).Replace("\", "/")
-                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $entryName,
-                    [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+                $twin = "$($file.FullName).gz"
+                if ($entryName -ne "index.html" -and (Test-Path $twin)) {
+                    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $twin, "$entryName.gz",
+                        [System.IO.Compression.CompressionLevel]::NoCompression) | Out-Null
+                }
+                else {
+                    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $entryName,
+                        [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+                }
             }
         }
         finally {
@@ -79,7 +88,7 @@ try {
     if ($count -ne @($files).Count) { throw "web-root.zip opens with $count files rather than $(@($files).Count)." }
 
     $raw = ($files | Measure-Object -Property Length -Sum).Sum
-    Write-Host ("web-root.zip: {0:N1} MB zipped, {1:N1} MB extracted, {2} files, stamp {3}" -f ((Get-Item $zipPath).Length / 1MB), ($raw / 1MB), $files.Count, $stamp)
+    Write-Host ("web-root.zip: {0:N1} MB zipped, {1:N1} MB of files, {2} files, stamp {3}" -f ((Get-Item $zipPath).Length / 1MB), ($raw / 1MB), $files.Count, $stamp)
 }
 finally {
     Pop-Location

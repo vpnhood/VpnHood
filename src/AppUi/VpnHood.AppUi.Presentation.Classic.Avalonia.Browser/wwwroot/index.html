@@ -3,19 +3,23 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <!-- the app's name and logo, which its web host writes in as it serves the page -->
+    <!-- the app's name, logo and colours, which its web host writes in as it serves the page -->
     <title>{appName}</title>
     <link rel="icon" href="{logoUrl}" />
     <style>
-        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1b1e3a; color: #ffffff; font-family: sans-serif; }
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: {backgroundColor}; color: #ffffff; font-family: sans-serif; }
         #out { width: 100%; height: 100%; }
-        #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        /* while the page loads: the app's logo over a bar of the files in so far - no words, so nothing to translate */
+        #loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; }
+        #loading img { width: 96px; height: 96px; object-fit: contain; }
+        #loading .track { width: 160px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.2); overflow: hidden; }
+        #progress { width: 0; height: 100%; background: {barColor}; transition: width 0.2s; }
         /* the same notice once main.js has something to report: the message, readable and whole */
-        #loading.failed { align-items: flex-start; justify-content: flex-start; padding: 16px; overflow: auto; color: #ff9d9d; font: 13px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; }
+        #loading.failed { display: block; padding: 16px; overflow: auto; color: #ff9d9d; font: 13px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; user-select: text; }
     </style>
 </head>
 <body>
-    <div id="loading">Loading…</div>
+    <div id="loading"><img src="{logoUrl}" alt="" /><div class="track"><div id="progress"></div></div></div>
     <div id="out"></div>
     <script type="module" src="./main.js"></script>
 </body>

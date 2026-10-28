@@ -106,6 +106,21 @@ public class TestAppHelper : TestHelper
         return new FileAsset(path);
     }
 
+    // A zip of the given entries, as a head ships one: a page's or the UI's files, as a test needs them.
+    public IAsset CreateZip(string name, params (string Path, byte[] Bytes)[] entries)
+    {
+        Directory.CreateDirectory(WorkingPath);
+        var path = Path.Combine(WorkingPath, $"{name}_{Guid.CreateVersion7()}.zip");
+        using (var archive = ZipFile.Open(path, ZipArchiveMode.Create)) {
+            foreach (var (entryPath, bytes) in entries) {
+                using var stream = archive.CreateEntry(entryPath).Open();
+                stream.Write(bytes);
+            }
+        }
+
+        return new FileAsset(path);
+    }
+
     public VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)
     {
         appOptions ??= CreateAppOptions();

@@ -134,8 +134,16 @@ What follows from that:
   `wasm-tools` workload.
 - **Cache headers follow the bundle's own fingerprints.** `dotnet.native.<hash>.wasm` is immutable;
   `index.html`, `main.js` and `dotnet.js` are no-cache.
+- **Sent compressed.** The zip holds each file as the gzip twin the SDK writes beside it,
+  `name.gz`, which the host sends as it lies with `Content-Encoding: gzip`, and unpacks for a
+  browser that takes no gzip. Not brotli: browsers take it only over HTTPS, and the host is plain
+  HTTP. `index.html` stays plain, since the host writes the app's name, logo and colours into it.
+- **A loading screen in the app's look, with no words.** The app's logo over a bar of the files
+  loaded so far (`dotnet.js`'s `onDownloadResourceProgress`), on the theme's window background and in
+  its progress bar's colour (`themes/<theme>/manifest.json`), which the host writes in; a page that
+  fails shows the error there instead.
 
-The bundle is 7.4 MB zipped, 20.3 MB extracted, 70 files.
+The bundle is 7.5 MB zipped and 7.5 MB on the wire: 72 files, 20.8 MB unpacked.
 
 ## Adding a set of files
 

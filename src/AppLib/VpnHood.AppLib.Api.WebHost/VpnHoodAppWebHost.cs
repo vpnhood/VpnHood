@@ -1,7 +1,9 @@
 ﻿using System.Collections.Concurrent;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Assets;
@@ -10,6 +12,7 @@ using VpnHood.AppLib.Api.WebHost.Controllers;
 using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
@@ -45,6 +48,10 @@ public class VpnHoodAppWebHost : IAppWebHost
 
     // Where the UI's files are served, by name, out of the same provider the app's own UI reads.
     private const string AssetsPrefix = "assets/";
+
+    // The page's loading screen where the theme names no colours: the page's own dark look.
+    private const string DefaultBackgroundColor = "#1b1e3a";
+    private const string DefaultBarColor = "#ffffff";
 
     // A file whose name carries a hash of its content: Vite's "name-<8>.ext", the .NET browser build's
     // "name.<10>.ext" (dotnet.native.<hash>.wasm). index.html, main.js and dotnet.js keep their names.
@@ -632,6 +639,13 @@ public class VpnHoodAppWebHost : IAppWebHost
             return;
         }
 
+        // the page as published holds its files compressed, as name.gz (_publish.ps1)
+        await using var compressed = await _webRoot.TryOpenReadAsync(localPath + ".gz", CancellationToken.None).Vhc();
+        if (compressed != null) {
+            await SendCompressed(context, localPath, compressed, IsFingerprinted(localPath)).Vhc();
+            return;
+        }
+
         // the charset said here too: a page without its own meta would garble a non-ASCII app name
         context.Response.ContentType = "text/html; charset=utf-8";
         await context.Response.Send(_indexHtml ?? await ReadIndexHtml(CancellationToken.None).Vhc()).Vhc();
@@ -650,6 +664,28 @@ public class VpnHoodAppWebHost : IAppWebHost
         await context.Response.Send(memoryStream.ToArray()).Vhc();
     }
 
+    // Sent as it lies, with Content-Encoding, to a browser that takes gzip - every one does, where
+    // brotli goes only over HTTPS and this host is plain HTTP - and unpacked here for one that does not.
+    private static async Task SendCompressed(HttpContextBase context, string name, Stream gzip, bool isFingerprinted)
+    {
+        context.Response.Headers["Vary"] = "Accept-Encoding";
+        if (AcceptsGzip(context.Request)) {
+            context.Response.Headers["Content-Encoding"] = "gzip";
+            await Send(context, name, gzip, isFingerprinted).Vhc();
+            return;
+        }
+
+        await using var unpacked = new GZipStream(gzip, CompressionMode.Decompress);
+        await Send(context, name, unpacked, isFingerprinted).Vhc();
+    }
+
+    private static bool AcceptsGzip(HttpRequestBase request)
+    {
+        var acceptEncoding = request.Headers.Get("Accept-Encoding");
+        return acceptEncoding != null && acceptEncoding.Split(',')
+            .Any(x => x.Split(';')[0].Trim().Equals("gzip", StringComparison.OrdinalIgnoreCase));
+    }
+
     private async Task<string?> TryReadIndexHtml(CancellationToken cancellationToken)
     {
         try {
@@ -665,8 +701,9 @@ public class VpnHoodAppWebHost : IAppWebHost
     }
 
     // The one file every unmatched path falls back to, so the UI can route itself. The page is every
-    // app's, so the app's name and logo go into it here ({appName}, {logoUrl}): the tab shows them
-    // before any of the page has run.
+    // app's, so the app's name, logo and colours go into it here ({appName}, {logoUrl},
+    // {backgroundColor}, {barColor}): the tab and the loading screen show them before any of the page
+    // has run.
     private async Task<string> ReadIndexHtml(CancellationToken cancellationToken)
     {
         await using var stream = await _webRoot.OpenReadAsync("index.html", cancellationToken).Vhc();
@@ -674,8 +711,44 @@ public class VpnHoodAppWebHost : IAppWebHost
         var html = await reader.ReadToEndAsync(cancellationToken).Vhc();
         var logoUrl = "/" + AssetsPrefix + string.Join('/',
             _createParams.LogoAssetPath.TrimStart('/').Split('/').Select(Uri.EscapeDataString));
+        var (backgroundColor, barColor) = await ReadThemeColors(cancellationToken).Vhc();
         return html
             .Replace("{appName}", WebUtility.HtmlEncode(_createParams.AppName))
-            .Replace("{logoUrl}", WebUtility.HtmlEncode(logoUrl));
+            .Replace("{logoUrl}", WebUtility.HtmlEncode(logoUrl))
+            .Replace("{backgroundColor}", backgroundColor)
+            .Replace("{barColor}", barColor);
+    }
+
+    // The loading screen's colours: the theme's window background and progress bar, from
+    // themes/<theme>/manifest.json in the UI's files, which ThemeColors reads for the native chrome.
+    // A manifest that cannot be read is logged and the page keeps its own look, as the chrome does.
+    private async Task<(string Background, string Bar)> ReadThemeColors(CancellationToken cancellationToken)
+    {
+        try {
+            await using var stream = _uiAssetProvider != null
+                ? await _uiAssetProvider.TryOpenReadAsync($"themes/{_createParams.UiTheme}/manifest.json",
+                    cancellationToken).Vhc()
+                : null;
+            if (stream == null)
+                return (DefaultBackgroundColor, DefaultBarColor);
+
+            using var manifest = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).Vhc();
+            return (ReadColor(manifest, "windowBackground") ?? DefaultBackgroundColor,
+                ReadColor(manifest, "progressBar") ?? DefaultBarColor);
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException) {
+            VhLogger.Instance.LogError(ex, "Could not read the theme's colours for the page's loading screen.");
+            return (DefaultBackgroundColor, DefaultBarColor);
+        }
+    }
+
+    // as CSS, #rrggbbaa, whichever form the manifest gives
+    private static string? ReadColor(JsonDocument manifest, string name)
+    {
+        return manifest.RootElement.TryGetProperty("colors", out var colors) &&
+               colors.TryGetProperty(name, out var value) &&
+               VhColor.TryParse(value.GetString(), out var color)
+            ? $"#{color.R:x2}{color.G:x2}{color.B:x2}{color.A:x2}"
+            : null;
     }
 }

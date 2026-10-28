@@ -32,6 +32,7 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
     private const string InstallStatusAction = "VpnHood.AppLib.Stores.AndroidWeb.INSTALL_STATUS";
 
     private readonly Lock _lock = new();
+    private readonly Lazy<bool> _isSupported = new(CalcIsSupported);
     private InstallStatusReceiver? _installStatusReceiver;
     private Version? _installingVersion;
     private Version? _failedVersion;
@@ -42,14 +43,19 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
     }
 
     /// <summary>
-    /// The updater, where this install may take the package. Null where it may not, and the notice keeps
-    /// the feed's link: a store installed the app and keeps it updated. It checks no key: Android itself
-    /// refuses a package signed with another key than the installed app's.
+    /// The updater of the website's APK. Where this install may not take the package - a store installed
+    /// the app and keeps it updated - it offers nothing, and the notice keeps the feed's link. It checks no
+    /// key: Android itself refuses a package signed with another key than the installed app's.
     /// </summary>
-    public static AndroidWebAppUpdaterProvider? TryCreate()
+    public static AndroidWebAppUpdaterProvider Create()
     {
-        return CalcIsSupported() ? new AndroidWebAppUpdaterProvider() : null;
+        return new AndroidWebAppUpdaterProvider();
     }
+
+    // Asked of Android at the first update check or the first newer release, never at the start, whose
+    // state read has neither: the installer's checks are a few binder calls. DownloadManager's list waits
+    // with it.
+    private bool IsSupported => _isSupported.Value;
 
     /// <summary>
     /// The feed this install reads, as AppConfigs.GetUpdateInfoUrl names it: in an arm64 process the arm64
@@ -80,15 +86,24 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
     // the package installer's, the system's, which stops the app itself
     public bool IsInstalling => false;
 
-    // DownloadManager's list is all there is to ask: no network
+    // whether this install may update itself is asked here first; then DownloadManager's list is all there
+    // is to ask: no network
     public Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
-        return Task.FromResult(GetState(feedRelease));
+        return Task.FromResult(IsSupported ? GetState(feedRelease) : AppUpdateState.None);
     }
 
     public AppUpdateState GetState(AppRelease? feedRelease)
     {
+        // no newer release and no update check yet: nothing to offer, and nothing to ask Android, as
+        // what an install left is cleared by the first check
+        if (feedRelease is null && !_isSupported.IsValueCreated)
+            return AppUpdateState.None;
+
+        if (!IsSupported)
+            return AppUpdateState.None;
+
         var version = feedRelease?.Version;
         lock (_lock) {
             PackageDownload? current = null;
@@ -140,6 +155,7 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
     public Task StartUpdate(AppRelease? feedRelease, IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var release = feedRelease ?? throw new InvalidOperationException("There is no newer version to download.");
+        EnsureSupported();
         if (!IsAllowedPackageUrl(release.PackageUrl))
             throw new NotSupportedException($"The package must come over https. PackageUrl: {release.PackageUrl}");
 
@@ -176,6 +192,7 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
     {
         var version = feedRelease?.Version ??
                       throw new InvalidOperationException("There is no newer version to install.");
+        EnsureSupported();
         var activity = (uiContext as AndroidUiContext ?? throw new UiContextNotAvailableException()).Activity;
         var packageManager = activity.PackageManager ??
                              throw new InvalidOperationException("The activity has no PackageManager.");
@@ -297,9 +314,7 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
     {
         var confirmIntent = OperatingSystem.IsAndroidVersionAtLeast(33)
             ? intent.GetParcelableExtra(Intent.ExtraIntent, Java.Lang.Class.FromType(typeof(Intent))) as Intent
-#pragma warning disable CA1422 // the typed overload is Android 13's
             : intent.GetParcelableExtra(Intent.ExtraIntent) as Intent;
-#pragma warning restore CA1422
 
         var packageManager = context.PackageManager;
         var targetPackage = packageManager != null ? confirmIntent?.ResolveActivity(packageManager)?.PackageName : null;
@@ -328,6 +343,14 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
 
             _installStatusReceiver = receiver;
         }
+    }
+
+    // the notice offers no Update or Install here, so only a caller of the API gets this far
+    private void EnsureSupported()
+    {
+        if (!IsSupported)
+            throw new NotSupportedException(
+                "This install does not update itself: a store keeps it updated.");
     }
 
     private void SetFailed(Version version, string message)
@@ -461,20 +484,17 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
         if (OperatingSystem.IsAndroidVersionAtLeast(30))
             return packageManager.GetInstallSourceInfo(packageName).InstallingPackageName;
 
-#pragma warning disable CA1422 // GetInstallSourceInfo is Android 11's
         return packageManager.GetInstallerPackageName(packageName);
-#pragma warning restore CA1422
     }
 
     // The phone's own package installer, whatever its name on that brand: the one that answers Android's
     // install intent, or a system app named for it where the intent resolves to a chooser.
     private static bool IsPhoneInstaller(PackageManager packageManager, string installer)
     {
-#pragma warning disable CA1422 // the typed flags are Android 13's; ACTION_INSTALL_PACKAGE stays the installer's own
+        // ACTION_INSTALL_PACKAGE is deprecated with nothing in its place, and stays the installer's own
         using var intent = new Intent(Intent.ActionInstallPackage)
             .SetDataAndType(AndroidUri.Parse("content://update/update.apk"), ApkMimeType);
         var resolved = packageManager.ResolveActivity(intent, (PackageInfoFlags)0)?.ActivityInfo?.PackageName;
-#pragma warning restore CA1422
         return installer == resolved ||
                (installer.Contains("packageinstaller", StringComparison.OrdinalIgnoreCase) &&
                 IsSystemApp(packageManager, installer));
@@ -482,9 +502,7 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
 
     private static bool IsSystemApp(PackageManager packageManager, string packageName)
     {
-#pragma warning disable CA1422 // the typed flags are Android 13's
         var flags = packageManager.GetApplicationInfo(packageName, (PackageInfoFlags)0).Flags;
-#pragma warning restore CA1422
         return flags.HasFlag(ApplicationInfoFlags.System);
     }
 }

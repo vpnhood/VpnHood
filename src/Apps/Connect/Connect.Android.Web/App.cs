@@ -50,9 +50,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, AndroidWebAppUpdaterProvider.FeedDistribution),
-            // the notice downloads the APK and installs it, rather than opening the site; none over a
+            // the notice downloads the APK and installs it, rather than opening the site; not over a
             // store's install, whose notice keeps the site's link
-            UpdaterProvider = AndroidWebAppUpdaterProvider.TryCreate()
+            UpdaterProvider = AndroidWebAppUpdaterProvider.Create()
         };
         return options;
     }

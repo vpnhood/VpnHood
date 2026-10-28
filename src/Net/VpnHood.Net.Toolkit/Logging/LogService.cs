@@ -39,8 +39,11 @@ public class LogService(string logFilePath) : IDisposable
             _file.Close();
         }
 
-        VhLogger.Instance.LogDebug("LogService has started. Options: {Options}",
-            JsonSerializer.Serialize(options));
+        // the options as JSON only where the line is written: the serializer's first use, by
+        // reflection, is a tenth of a second of a phone's start
+        if (VhLogger.MinLogLevel <= LogLevel.Debug)
+            VhLogger.Instance.LogDebug("LogService has started. Options: {Options}",
+                JsonSerializer.Serialize(options));
     }
 
     public void Stop()

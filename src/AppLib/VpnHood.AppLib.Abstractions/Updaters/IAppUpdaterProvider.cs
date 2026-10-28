@@ -21,7 +21,8 @@ public interface IAppUpdaterProvider
     Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext, CancellationToken cancellationToken);
 
     // The update as it stands, read whenever the notice refreshes: no network. With no release, what an
-    // earlier one left behind goes.
+    // earlier one left behind goes. None where it does not update this copy, whose notice keeps the
+    // feed's link.
     AppUpdateState GetState(AppRelease? feedRelease);
 
     // The person's Update, or the store's screen the check opens.

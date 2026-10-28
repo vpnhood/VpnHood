@@ -103,10 +103,14 @@ public class AppUpdaterService : IDisposable
             if (updater is null)
                 return null;
 
+            // None for a newer release: the updater has nothing of its own to offer for it - an install it
+            // may not update - and the notice keeps the feed's link
             var release = NewerRelease;
             var state = updater.GetState(release);
             _lastUpdateStateError = null;
-            return release is null ? null : state.ToAppDto(release.Version);
+            return release is null || state.Stage == ProviderUpdaters.AppUpdateStage.None
+                ? null
+                : state.ToAppDto(release.Version);
         }
         catch (Exception ex) {
             // read every second by the UI: logged once per error, not once per read

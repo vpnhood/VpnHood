@@ -696,6 +696,21 @@ public class CheckNewVersionTest : TestAppBase
         await Assert.ThrowsExactlyAsync<NotSupportedException>(() => updaterService.StartUpdate(null, TestCt));
     }
 
+    // The same where the app's own updater finds it may not update this copy - the website APK's, at its
+    // first check, over a store's install or another key's: it answers None, and the notice keeps the
+    // feed's link.
+    [TestMethod]
+    public async Task Update_is_not_offered_where_the_apps_own_updater_answers_none()
+    {
+        SetNewRelease(new Version(CurrentAppVersion.Major + 1, 0, 0), DateTime.UtcNow.AddMinutes(-1));
+        var packageUpdater = new TestPackageUpdaterProvider { Stage = ProviderUpdateStage.None };
+        using var updaterService = CreatePackageUpdaterService(packageUpdater);
+        await updaterService.CheckForUpdate(null, force: true, TestCt);
+
+        Assert.IsNull(updaterService.Status.UpdateState);
+        Assert.IsTrue(updaterService.Status.Prompt, "the feed's notice, with its link");
+    }
+
     // No newer version: no update, and the updater is asked about none, which removes what an earlier
     // release left - the one just installed included.
     [TestMethod]

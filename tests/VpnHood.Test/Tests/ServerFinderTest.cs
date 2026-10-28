@@ -1,4 +1,6 @@
-﻿using VpnHood.Core.Client.Abstractions;
+﻿using VpnHood.Core.Client;
+using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Server;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
@@ -128,5 +130,53 @@ public class ServerFinderTest : TestBase
             foreach (var accessManager in accessManagers)
                 accessManager.Dispose();
         }
+    }
+
+    [TestMethod]
+    public async Task Connected_server_is_kept_until_the_client_closes()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var workingFolder = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        var connectedServersFolder = Path.Combine(workingFolder, "connected-servers");
+
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
+            vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
+        await client.WaitForState(ClientState.Connected);
+        var connectedServer = new ConnectedServerFile(connectedServersFolder, token.TokenId).Read();
+        Assert.AreEqual(client.RequiredSession.Config.HostTcpEndPoint, connectedServer?.TcpEndPoint);
+
+        // a close, not a crash: nothing is left for the next connect
+        await client.DisposeAsync();
+        Assert.IsFalse(Directory.Exists(connectedServersFolder));
+    }
+
+    [TestMethod]
+    public async Task Name_that_resolves_to_nothing_connects_through_the_kept_server()
+    {
+        // a name that never resolves (.invalid), as none does through the dead tunnel after a VPN host's crash
+        await using var server = await TestHelper.CreateServer();
+        var serverEndPoint = server.ServerHost.TcpEndPoints.First();
+        var token = TestHelper.CreateAccessToken(server);
+        token.ServerToken.HostName = "kept-server.invalid";
+        token.ServerToken.IsValidHostName = true;
+        token.ServerToken.HostPort = serverEndPoint.Port;
+        token.ServerToken.HostEndPoints = null;
+        var workingFolder = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+
+        // nothing kept: the name alone reaches no server
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
+            vpnAdapter: new TestNullVpnAdapter(), autoConnect: false, workingFolder: workingFolder);
+        await Assert.ThrowsExactlyAsync<EndPointDiscoveryException>(() => client.Connect(TestCt));
+
+        // what a crash leaves: the server its session was on
+        new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), token.TokenId).Write(
+            new VpnEndPoint(serverEndPoint, token.ServerToken.HostName, token.ServerToken.CertificateHash,
+                token.ServerToken.PathBase));
+
+        await using var client2 = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
+            vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
+        await client2.WaitForState(ClientState.Connected);
+        Assert.AreEqual(serverEndPoint, client2.RequiredSession.Config.HostTcpEndPoint);
     }
 }

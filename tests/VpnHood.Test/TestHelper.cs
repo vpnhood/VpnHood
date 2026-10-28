@@ -372,7 +372,8 @@ public class TestHelper : IDisposable
         IVpnAdapter? vpnAdapter = null,
         bool autoConnect = true,
         ProxyOptions? proxyOptions = null,
-        ISocketFactory? socketFactory = null)
+        ISocketFactory? socketFactory = null,
+        string? workingFolder = null)
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
@@ -380,7 +381,7 @@ public class TestHelper : IDisposable
             netFilter: ClientNetFilter,
             proxyConnector: await CreateProxyConnector(clientOptions, proxyOptions),
             new TestTracker { IsEnabled = clientOptions.AllowAnonymousTracker },
-            workingFolder: Path.Combine(WorkingPath, $"Client_{Guid.NewGuid()}"),
+            workingFolder: workingFolder ?? Path.Combine(WorkingPath, $"Client_{Guid.NewGuid()}"),
             clientOptions);
 
         // test starting the client

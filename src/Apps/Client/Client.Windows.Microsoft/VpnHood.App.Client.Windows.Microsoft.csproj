@@ -25,6 +25,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
+		<!-- the Store's own update and its rating dialog -->
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.MicrosoftStore.Core\VpnHood.AppLib.Stores.MicrosoftStore.Core.csproj" />
 		<!-- Windows as this head runs on it: the app and its window in one process, Windows' VPN host
 		     holding the tunnel. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin\VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin.csproj" />

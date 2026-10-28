@@ -102,6 +102,7 @@
     </Project>
     <Project Path="src/AppLib/VpnHood.AppLib.Stores.GooglePlay.Core/VpnHood.AppLib.Stores.GooglePlay.Core.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Stores.GooglePlay/VpnHood.AppLib.Stores.GooglePlay.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Stores.MicrosoftStore.Core/VpnHood.AppLib.Stores.MicrosoftStore.Core.csproj" />
   </Folder>
   <Folder Name="/src/AppUi/Assets/">
     <Project Path="src/AppUi/VpnHood.AppUi.Assets.Classic/VpnHood.AppUi.Assets.Classic.csproj" />

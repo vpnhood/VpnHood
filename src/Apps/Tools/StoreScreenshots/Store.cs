@@ -2,8 +2,8 @@ using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.App.StoreScreenshots;
 
-// Where the UI's pictures, faces and words are read from for a run: the folder _sync-assets.ps1
-// mirrors them into, or the one zip a shipped head carries them in. Named on the command line
+// Where the UI's pictures, faces and words are read from for a run: the asset store's folder, or
+// the one zip a shipped head carries them in. Named on the command line
 // rather than placed by the assets targets, because the caller says which store to draw with -
 // a fork's own look is a different folder, not a different build of this tool.
 internal static class Store

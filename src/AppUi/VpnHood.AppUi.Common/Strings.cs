@@ -8,7 +8,7 @@ using VpnHood.Net.Toolkit.Assets;
 namespace VpnHood.AppUi.Common;
 
 // The UI's words: the locale files of the asset store (locales/<culture>.json - en.json the source
-// a person edits, the rest vhtranslator's), read through the provider the head hands in - a folder
+// a person edits, the rest its translations), read through the provider the head hands in - a folder
 // in process, the app's web host from a browser page - so the words ship once, as files, the way
 // the pictures do, and a brand is a package swap. Strings.g.cs names every key of en.json as a
 // member (_sync-assets.ps1), so a page asks for a string in C# and a key that disappears is a

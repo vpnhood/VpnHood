@@ -38,7 +38,7 @@ store set shows: `--hover` rests the mouse in the middle of the control so named
 its button down there too, and `--patch` lays files over the fixture in order, as a platform's
 `patchFile` is - for a picture that is no store set's, such as the App Review screenshot below.
 
-`--assets` is the UI's asset store: the folder `src/AppUi/VpnHood.AppUi.Assets.Classic/_sync-assets.ps1` mirrors,
+`--assets` is the UI's asset store: its folder, `src/AppUi/VpnHood.AppUi.Assets.Classic/assets`,
 or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words of its own.
 
 ## The files an app owns
@@ -122,5 +122,6 @@ subscription texts — are still JavaScript tools in `vpnhood/VpnHood.AppUi.Spa`
 repos' workflows, and are described by that repo's `e2e/store/README.md`. They have to move here
 too before that repo can be archived.
 
-The asset store is still built from that repo as well (`_sync-assets.ps1` reads its `dist`), until
-the assets become a module of their own.
+The asset store's images, flags and fonts are still built from that repo as well (`_sync-assets.ps1`
+reads its `dist`), until they become a module of their own; its words are written in the store
+already.

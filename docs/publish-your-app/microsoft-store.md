@@ -80,5 +80,11 @@ a PNG.
    content → Content ratings** — Partner Center requires it: **I have already completed the
    questionnaire for this app elsewhere**, the ID, **Search**, then **Save**. Otherwise, answer the
    questionnaire honestly.
-4. **Submission options:** **Don't publish this submission until I select Publish now**, so a
-   submission that passes certification waits for you.
+4. **Packages:** drag in the `.msix`, then **Save**. Validation warns that `networkingVpnProvider`
+   needs approval: expected, as the app's tunnel is a Windows VPN plug-in, which needs it.
+   - **A new package of the same version:** remove the old one and **Save** before you upload it. A
+     draft takes no two packages of one version with different contents ("must be uniquely identified
+     by their full names"), and one marked for removal counts until the page is saved.
+5. **Submission options:** **Don't publish this submission until I select Publish now**, so a
+   submission that passes certification waits for you. The page also asks, required, why the app
+   needs `networkingVpnProvider`.

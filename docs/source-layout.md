@@ -172,7 +172,8 @@ hosts it mounts from `AppUi`. A desktop head mounts one more host than a mobile 
 `.Desktop.WindowsVpnPlugin` instead, over the window's project alone, with no service: the app runs in its window's process, and
 Windows' VPN host holds the tunnel. It has two files more, `Package.appxmanifest`, its package's
 manifest, which `_publish.ps1` stamps, and `_install.ps1`, which installs that package on this
-machine.
+machine; both scripts hand over to `pub/lib`'s `Publish-WinStoreApp.ps1` and `Install-WinStoreApp.ps1`,
+which serve every product's Store head.
 
 ## The product project
 

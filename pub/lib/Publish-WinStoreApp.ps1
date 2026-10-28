@@ -14,10 +14,13 @@ param(
 	# can strand the VPN plug-in (the fork's lesson 14), so a development package's revision is its
 	# build's minute; a Store package's is 0, the only one the Store takes.
 	[Parameter(Mandatory=$false)] [int]$revision = [int](([DateTime]::UtcNow - [DateTime]::new(2026, 1, 1)).TotalMinutes % 65535),
-	[Parameter(Mandatory=$false)] [switch]$store
+	[Parameter(Mandatory=$false)] [switch]$store,
+	# Connect, which embeds its built-in key: a strict publish refuses a build without it (Assert-DefaultAccessKey)
+	[switch]$connect
 )
 
 $ErrorActionPreference = "Stop";
+. "$PSScriptRoot/AppPublishConfig.ps1";
 if ($store -and ($PSBoundParameters.ContainsKey("publisher") -or $PSBoundParameters.ContainsKey("revision"))) {
 	throw "-store takes the publisher Partner Center gave and revision 0.";
 }
@@ -50,8 +53,10 @@ function Get-ProjectProperties([string]$project, [string[]]$names) {
 
 # what the manifest names, from the projects themselves
 $app = Get-ProjectProperties $appProject @("AssemblyName", "VhAppDisplayName", "Version", "ApplicationIcon",
-	"VhAppMsixIdentityName", "VhAppMsixPublisher", "VhAppMsixPublisherDisplayName");
+	"VhAppMsixIdentityName", "VhAppMsixPublisher", "VhAppMsixPublisherDisplayName", "VhAppPackageTitle");
 $vpnHost = Get-ProjectProperties $vpnHostProject @("AssemblyName");
+# an ad-free build's key, the premium one
+Assert-DefaultAccessKey $app.VhAppPackageTitle "microsoft" -Connect:$connect;
 if (-not $app.VhAppMsixIdentityName -or -not $app.VhAppMsixPublisher -or -not $app.VhAppMsixPublisherDisplayName) {
 	throw "The app has no Microsoft Store identity: VhAppMsixIdentityName, VhAppMsixPublisher and VhAppMsixPublisherDisplayName, from its product's Product identity page in Partner Center.";
 }

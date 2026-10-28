@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- the VPN host an MSIX package carries, not a NuGet package -->
+		<Description>The VPN host of VpnHood's Windows VPN plug-in package: the process Windows starts when the app's VPN profile connects</Description>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
+		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+		<!-- The package's manifest names it: its VPN host's Executable and its background tasks' server. -->
+		<AssemblyName>$(VhAppPackageTitle)VpnPlugin</AssemblyName>
+		<!-- no console launcher beside it (VpnHood.AppUi.Hosting.Desktop.WindowsTun.targets) -->
+		<VhAppCommandName />
+		<Platforms>x64</Platforms>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<SelfContained>true</SelfContained>
+		<CsWinRTWindowsMetadata>C:\Windows\System32\WinMetadata</CsWinRTWindowsMetadata>
+		<!-- WinRT.Host.dll loads the component into the default context, beside the copy Main runs: in a context of
+		     its own it brings a second Windows projection, and the task fails on the first Windows object it is
+		     handed (MissingMethodException, IWinRTObject.QueryInterfaceCache). -->
+		<CsWinRTLoadComponentsInDefaultALC>true</CsWinRTLoadComponentsInDefaultALC>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- WinRT.Host.dll beside the executable: the in-process server the package's manifest names. -->
+		<PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.3.1" />
+		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation\VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.csproj" />
+	</ItemGroup>
+</Project>

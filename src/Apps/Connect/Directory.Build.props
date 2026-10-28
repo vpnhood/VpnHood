@@ -12,6 +12,15 @@
     <VhAppName>VpnHood! CONNECT</VhAppName>
     <VhAppPackageTitle>VpnHoodConnect</VhAppPackageTitle>
     <VhAppCommandName>vhconnect</VhAppCommandName>
+    <!-- the Microsoft Store package's identity, which Partner Center gives when the app's name is reserved (the
+         product's Product identity page): the package's name and publisher, and the publisher's name the Store
+         shows. Every package of Connect.Windows.Microsoft carries the name; only the Store's this publisher
+         (_publish.ps1 -store), a development one its certificate's. The publisher and its name are the
+         account's, CLIENT's too; the name is the form Partner Center gave CLIENT's, until VpnHood! CONNECT is
+         reserved and its page says. -->
+    <VhAppMsixIdentityName>OmegaHoodLLC.VpnHoodCONNECT</VhAppMsixIdentityName>
+    <VhAppMsixPublisher>CN=ABC26C70-B589-479C-8660-9346D4C735B0</VhAppMsixPublisher>
+    <VhAppMsixPublisherDisplayName>OmegaHood LLC</VhAppMsixPublisherDisplayName>
     <!-- the AdMob application id the Google Play head's manifest names (AppConstants.AdMobApplicationId) -->
     <VhAdMobApplicationId>ca-app-pub-8662231806304184~1740102860</VhAdMobApplicationId>
     <!-- the Android and iOS icons, as SVGs (VpnHood.AppLib.App.targets) -->

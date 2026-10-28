@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
+		<Description>VpnHood Windows Connect App on the Windows VPN plug-in, from an MSIX package</Description>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
+		<UseWindowsForms>False</UseWindowsForms>
+		<!-- The executable is called by the app's package title (../Directory.Build.props), as the
+		     website build's is; the package's manifest names it. -->
+		<AssemblyName>$(VhAppPackageTitle)</AssemblyName>
+		<!-- No command line yet (docs/todo.md), so no console launcher beside the executable. -->
+		<VhAppCommandName />
+		<ApplicationIcon>..\app.ico</ApplicationIcon>
+		<EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+		<ApplicationManifest>Properties/app.manifest</ApplicationManifest>
+		<!-- The package is x64 and carries its runtime, as its VPN host does. -->
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<SelfContained>true</SelfContained>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<AssemblyVersion></AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- The built-in key, as the website edition's (Connect.Windows.Web): an ad-free build's, the configuration's
+	     own file first, each optional here and gated at a real publish. -->
+	<ItemGroup>
+		<EmbeddedResource Include="$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.$(Configuration).txt"
+			LogicalName="access_key_default.txt"
+			Condition="Exists('$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.$(Configuration).txt')" />
+		<EmbeddedResource Include="$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.txt"
+			LogicalName="access_key_default.txt"
+			Condition="!Exists('$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.$(Configuration).txt') And Exists('$(VhUserDir)\$(VhAppPackageTitle)\access_key_premium.txt')" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Connect\VpnHood.App.Connect.csproj" />
+		<!-- the account: the portal's sign-in and its web checkout -->
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
+		<!-- the Store's own update and its rating dialog -->
+		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.MicrosoftStore.Core\VpnHood.AppLib.Stores.MicrosoftStore.Core.csproj" />
+		<!-- Windows as this head runs on it: the app and its window in one process, Windows' VPN host
+		     holding the tunnel. -->
+		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin\VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin.csproj" />
+		<!-- The UI this head runs, in its own window. -->
+		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Desktop\VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
+		<!-- The UI itself: the pages, the controls, the themes. -->
+		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
+	</ItemGroup>
+
+	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
+	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
+	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way: the same
+	     targets a package reference of VpnHood.AppUi.Presentation.Classic.Avalonia imports; the head
+	     reads it at "assets/web-root.zip". -->
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\buildTransitive\VpnHood.AppUi.Presentation.Classic.Avalonia.targets" />
+</Project>

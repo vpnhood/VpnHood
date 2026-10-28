@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Streams;
@@ -8,9 +7,11 @@ using VpnHood.Net.Toolkit.Utils;
 namespace VpnHood.Net.Toolkit.Assets;
 
 // The entries of a zip, as assets: extracted once into <extractFolderPath>/<version>/ and read from
-// there as files. The version is the first sixteen hex digits of SHA-256 over the zip, so the bytes
-// name the copy and nothing has to travel beside it; the price is one pass over the zip before the
-// first read.
+// there as files. The version is the zip's stamp (ZipStamp), read from the bytes in front of it, so a
+// start reads no more of the zip than that and the whole zip only to extract it. Hashing the zip is
+// a pass over it before the first read - on a phone, inflated from the APK, 60 ms of every start -
+// which only a zip without a stamp pays. Nor named from outside the bytes: a phone's install time
+// unpacks it again at every update, changed or not, and a file's time and size are not reliable.
 //
 // The folder is this provider's, and no other zip may be given it: everything in it but the version
 // in hand is deleted.
@@ -37,21 +38,17 @@ public class ZipAssetProvider(IAsset zip, string extractFolderPath) : IAssetProv
             if (_folder != null)
                 return _folder;
 
-            // Hashed from its own read, going forward and holding nothing: this is the whole of a
-            // start that finds the version already extracted, which is every start but the first
-            // after an update.
-            string version;
-            await using (var zipStream = await zip.OpenReadAsync(cancellationToken).Vhc())
-                version = Convert.ToHexStringLower(
-                    (await SHA256.HashDataAsync(zipStream, cancellationToken).Vhc()).AsSpan(0, 8));
+            // This is the whole of a start that finds the version already extracted, which is every
+            // start but the first after the zip changes. Hex digits, a stamp's or a hash's, so a
+            // folder name.
+            var version = await ZipStamp.ReadAsync(zip, cancellationToken).Vhc();
 
             var folderPath = Path.Combine(extractFolderPath, version);
             if (!IsExtracted(folderPath)) {
-                // Opened again rather than kept from the hash, so nothing is held for the common
-                // path. An archive reads its directory from the end, so this read must rewind: a
-                // placed file does it where it lies, and only a stream that cannot - an Android
-                // asset, an HTTP body - is bought into memory, which ZipArchive would otherwise do
-                // itself, synchronously.
+                // An archive reads its directory from the end, so this read must rewind: a placed
+                // file does it where it lies, and only a stream that cannot - an Android asset, an
+                // HTTP body - is bought into memory, which ZipArchive would otherwise do itself,
+                // synchronously.
                 var zipStream = await zip.OpenReadAsync(cancellationToken).Vhc();
                 await using var seekable = await zipStream.ToMemoryStreamIfNotSeekableAsync(cancellationToken).Vhc();
 
@@ -64,7 +61,7 @@ public class ZipAssetProvider(IAsset zip, string extractFolderPath) : IAssetProv
                 // last, so a folder that has it is a folder that was finished
                 await File.WriteAllTextAsync(Path.Combine(tempPath, MarkerFileName), version, cancellationToken).Vhc();
 
-                // The other one got there first: its copy is this copy, since the name is the bytes.
+                // The other one got there first: its copy is this copy, since the name stands for the bytes.
                 if (IsExtracted(folderPath))
                     VhInvoker.TryInvoke("delete the extra assets copy", LogLevel.Debug,
                         () => Directory.Delete(tempPath, true));

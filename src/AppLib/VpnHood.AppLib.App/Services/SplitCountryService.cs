@@ -26,7 +26,6 @@ public class SplitCountryService(
     IIpRangeLocationProvider? ipRangeLocationProvider,
     IAsset? ipLocationZipAsset)
 {
-    private const string IpLocationChecksumEntryName = "_checksum.txt";
     private string? _ipLocationAssetHash;
     public event EventHandler? StateChanged;
 
@@ -71,32 +70,22 @@ public class SplitCountryService(
             IsBusy = true;
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            if (ipRangeLocationProvider is null || ipLocationZipAsset is null)
+            if (ipLocationZipAsset is null)
                 throw new InvalidOperationException("Could not split by country because the ip-location asset is not provided.");
 
-            // resolve the selected countries
+            // the user's choice: the countries picked, and what to do with them
             IReadOnlyList<string> countryCodes = splitCountryMode is SplitCountryMode.ExcludeMyCountry
                 ? [GetSplitMyCountryCode()]
                 : settingsService.UserSettings.SplitTunneling.Countries;
-
-            // short path: store whichever of (selected, complement) is smaller in the matching set,
-            // so an "everything except one" selection builds a one-country db
-            var availableCodes = await ipRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
-            var (storedCodes, action) = ResolveSplitIpDbSelection(availableCodes, countryCodes,
-                splitCountryMode is SplitCountryMode.IncludeList ? FilterAction.Include : FilterAction.Exclude);
-
-            // an empty include set stores no constraint (tunnel everything) — the opposite of what an
-            // include list with no known country means; fail loud instead of silently ignoring the split
-            if (storedCodes.Length == 0 && action is FilterAction.Include)
-                throw new InvalidOperationException("The split country include list contains no known country.");
+            var action = splitCountryMode is SplitCountryMode.IncludeList ? FilterAction.Include : FilterAction.Exclude;
 
             VhLogger.Instance.LogInformation(
-                "Preparing split-country filter db... Mode: {Mode}, Action: {Action}, Countries: {Countries}",
-                splitCountryMode, action, string.Join(',', storedCodes));
+                "Preparing split-country filter db... Mode: {Mode}, Countries: {Countries}",
+                splitCountryMode, string.Join(',', countryCodes));
 
             var dbBuilder = new SplitCountryDbBuilder(
                 ct => OpenIpLocationZip(ipLocationZipAsset, ct),
-                storedCodes, await GetIpLocationAssetHash(cancellationToken).Vhc(), action);
+                await GetIpLocationAssetHash(cancellationToken).Vhc(), countryCodes, action);
 
             var dbPath = Path.Combine(dbFolder,
                 $"split-country.{VhUtils.GetHexStringSha256(dbBuilder.GetSourceSignature(), 16)}.db");
@@ -162,9 +151,8 @@ public class SplitCountryService(
     }
 
     // Identifies the ip-location asset build so SplitCountryDbBuilder can detect a changed asset: the
-    // zip's own _checksum.txt, stamped when the asset is built. The old fallback hashed the whole zip,
-    // which meant holding all 14 MB of it in memory; the asset is read as a stream now, and an asset
-    // that names no build is a broken asset rather than one to hash around.
+    // zip's stamp, written when the asset is built (ZipStamp), read from the bytes in front of it - not
+    // through a ZipArchive, which on Android would first copy all 15 MB of it into memory.
     private async Task<string> GetIpLocationAssetHash(CancellationToken cancellationToken)
     {
         if (_ipLocationAssetHash != null)
@@ -173,13 +161,7 @@ public class SplitCountryService(
         var assetFile = ipLocationZipAsset
             ?? throw new InvalidOperationException("The ip-location asset is not provided.");
 
-        await using var zip = await OpenIpLocationZip(assetFile, cancellationToken).Vhc();
-        var entry = zip.GetEntry(IpLocationChecksumEntryName)
-            ?? throw new InvalidOperationException(
-                $"The ip-location asset names no build: it has no {IpLocationChecksumEntryName}.");
-
-        using var reader = new StreamReader(await entry.OpenAsync(cancellationToken).Vhc());
-        _ipLocationAssetHash = (await reader.ReadToEndAsync(cancellationToken).Vhc()).Trim();
+        _ipLocationAssetHash = await ZipStamp.ReadAsync(assetFile, cancellationToken).Vhc();
         return _ipLocationAssetHash;
     }
 
@@ -191,13 +173,15 @@ public class SplitCountryService(
     // Filtering.Sqlite infrastructure stays context-agnostic.
     internal class SplitCountryDbBuilder(
         Func<CancellationToken, Task<ZipArchive>> zipArchiveFactory,
-        IReadOnlyCollection<string> countryCodes,
         string assetHash,
+        IReadOnlyList<string> countryCodes,
         FilterAction action)
         : SplitIpDbBuilder
     {
-        // Asset build id + target set + distinct, upper-cased, ordinal-sorted codes. The action IS part
-        // of the signature: the same codes stored as include vs exclude are different db contents.
+        // Asset build id + the user's choice: the action and the distinct, upper-cased, ordinal-sorted
+        // codes picked. The action IS part of the signature: the same codes stored as include vs exclude
+        // are different db contents. Not the set stored: working that out takes every country, the zip
+        // read whole, so it happens only to build, and a connection whose db is built reads nothing.
         public override string GetSourceSignature() =>
             assetHash + "|" + action + "|" + string.Join(',', countryCodes
                 .Select(c => c.ToUpperInvariant())
@@ -208,14 +192,31 @@ public class SplitCountryService(
         {
             // the factory (not an open archive) keeps the zip unopened on the common ensure-up-to-date path
             await using var zip = await zipArchiveFactory(cancellationToken).Vhc();
-            foreach (var countryCode in countryCodes) {
-                var entry = zip.GetEntry($"{countryCode.ToLowerInvariant()}.ips");
-                if (entry is null)
-                    continue; // unknown country code → nothing to add
+
+            // short path: store whichever of (selected, complement) is smaller in the matching set,
+            // so an "everything except one" selection builds a one-country db
+            var availableCodes = zip.Entries
+                .Where(x => Path.GetExtension(x.Name) == ".ips")
+                .Select(x => Path.GetFileNameWithoutExtension(x.Name))
+                .ToArray();
+            var (storedCodes, storedAction) = ResolveSplitIpDbSelection(availableCodes, countryCodes, action);
+
+            // an empty include set stores no constraint (tunnel everything) — the opposite of what an
+            // include list with no known country means; fail loud instead of silently ignoring the split
+            if (storedCodes.Length == 0 && storedAction is FilterAction.Include)
+                throw new InvalidOperationException("The split country include list contains no known country.");
+
+            VhLogger.Instance.LogInformation(
+                "Building split-country filter db... Action: {Action}, Countries: {Countries}",
+                storedAction, string.Join(',', storedCodes));
+
+            foreach (var countryCode in storedCodes) {
+                var entry = zip.GetEntry($"{countryCode.ToLowerInvariant()}.ips")
+                    ?? throw new InvalidDataException($"The ip-location asset has no entry for {countryCode}.");
 
                 await using var stream = await entry.OpenAsync(cancellationToken).Vhc();
                 foreach (var (start, end) in IpRangeOrderedList.DeserializeRaw(stream))
-                    inserter.Insert(action, start, end);
+                    inserter.Insert(storedAction, start, end);
             }
         }
     }

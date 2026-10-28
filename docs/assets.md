@@ -15,9 +15,15 @@ One zip rather than loose files, because packaging is one item per platform: one
 one `BundleResource`, one copy-to-output item — instead of a rule per file, per platform, that
 misses whatever is added later.
 
-The zip carries its own version. `ZipAssetProvider` names the extracted copy after the first
-sixteen hex digits of SHA-256 over the zip itself, so nothing travels beside it to say which build
-it came from, and an unchanged zip is never extracted twice.
+The zip carries its own version, in front of it: a stamp, `VHSTAMP:`, 16 hex digits and a newline -
+the first 16 hex digits of the SHA-256 of the whole file, taken while the digits were still zero.
+Its packing tool writes it (`_zip-assets.ps1`, the page's `_publish.ps1`, `StampedZipArchive` for
+`Ip2LocationDbParser`), the zip right after it in the same file, so the zip's offsets count it and
+every zip tool still opens it. `ZipAssetProvider` names the extracted copy after it (`ZipStamp`), so
+nothing travels beside the zip, a start reads 25 bytes of it - an Android asset can only be read
+forward, and reaching the zip's own directory at its end would mean reading it all - and an
+unchanged zip is never extracted twice. A zip without a stamp, a fork's packed by its own tool, is
+read whole and hashed instead, with a warning in the log.
 
 ## How a zip is placed
 

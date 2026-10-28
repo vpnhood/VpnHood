@@ -44,11 +44,13 @@ This rule is country-specific: the complement is cheap because it means streamin
 
 ## Change detection
 
-`source_signature` = asset hash + target set + the stored selection (distinct, upper-cased,
-ordinal-sorted codes). The asset hash is the zip's `_checksum.txt` (stamped at asset build time),
-falling back to an MD5 of the zip bytes. Ordinary connects hit the signature check and never open the
-zip. The target set IS part of the signature: the same codes stored as include vs exclude are
-different db contents, so a mode flip rebuilds.
+`source_signature` = asset hash + the user's choice: the mode and the codes picked (distinct,
+upper-cased, ordinal-sorted). The asset hash is the zip's stamp (`ZipStamp`, written at asset build
+time), read from the 25 bytes in front of the zip; a zip without one is hashed whole, with a warning.
+Which side is stored, the selection or its complement, is worked out only to build, since it takes
+the zip's list of countries. Ordinary connects hit the signature check and never open the zip. The
+mode IS part of the signature: the same codes as include vs exclude are different db contents, so a
+mode flip rebuilds.
 
 ## Performance (measured)
 

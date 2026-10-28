@@ -1,9 +1,8 @@
 ﻿using System.IO.Compression;
 using System.Net.Sockets;
 using System.Numerics;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
@@ -49,22 +48,16 @@ public static class Ip2LocationDbParser
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
+        // stamped (ZipStamp): what an app and IpLocationSqliteBuilder tell the build by, read from the
+        // bytes in front of it
         await using var outputStream = File.Create(outputZipFile);
-        await using var newArchive = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: true);
+        await using var newArchive = new StampedZipArchive(outputStream);
         foreach (var countryIpRange in countryIpRanges.OrderBy(x => x.Key)) {
             var ipRanges = new IpRangeOrderedList(countryIpRange.Value);
             var entry = newArchive.CreateEntry($"{countryIpRange.Key}.ips", CompressionLevel.NoCompression);
             await using var entryStream = await entry.OpenAsync(cancellationToken).Vhc();
             ipRanges.Serialize(entryStream);
         }
-
-        // add checksum file
-        var checksumEntry = newArchive.CreateEntry("_checksum.txt", CompressionLevel.NoCompression);
-        await using var checksumStream = await checksumEntry.OpenAsync(cancellationToken).Vhc();
-        var checksum = ComputeChecksum(countryIpRanges);
-        await using var writer = new StreamWriter(checksumStream, Encoding.ASCII, leaveOpen: true);
-        await writer.WriteAsync(checksum.AsMemory(), cancellationToken).Vhc();
-        await writer.FlushAsync(cancellationToken).Vhc();
     }
 
     public static async Task BuildLocalIpLocationDb(Stream crvStream, string outputFile,
@@ -123,26 +116,5 @@ public static class Ip2LocationDbParser
         }
 
         return ipGroupIpRanges;
-    }
-
-    private static string ComputeChecksum(Dictionary<string, List<IpRange>> countryIpRanges)
-    {
-        using var md5 = MD5.Create();
-
-        foreach (var country in countryIpRanges.OrderBy(x => x.Key)) {
-            var countryBytes = Encoding.ASCII.GetBytes(country.Key);
-            md5.TransformBlock(countryBytes, 0, countryBytes.Length, null, 0);
-
-            var orderedRanges = new IpRangeOrderedList(country.Value);
-            foreach (var ipRange in orderedRanges) {
-                var firstBytes = ipRange.FirstIpAddress.GetAddressBytes();
-                var lastBytes = ipRange.LastIpAddress.GetAddressBytes();
-                md5.TransformBlock(firstBytes, 0, firstBytes.Length, null, 0);
-                md5.TransformBlock(lastBytes, 0, lastBytes.Length, null, 0);
-            }
-        }
-
-        md5.TransformFinalBlock([], 0, 0);
-        return Convert.ToBase64String(md5.Hash!);
     }
 }

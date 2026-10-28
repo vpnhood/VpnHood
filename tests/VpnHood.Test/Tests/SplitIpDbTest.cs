@@ -31,7 +31,7 @@ public class SplitIpDbTest : TestBase
 
     private static SplitCountryService.SplitCountryDbBuilder CreateCountryBuilder(byte[] zipBytes, string[] countryCodes,
         string assetHash, FilterAction action = FilterAction.Include) =>
-        new(_ => Task.FromResult(new ZipArchive(new MemoryStream(zipBytes))), countryCodes, assetHash, action);
+        new(_ => Task.FromResult(new ZipArchive(new MemoryStream(zipBytes))), assetHash, countryCodes, action);
 
     private static long CountRows(string dbPath, string table)
     {
@@ -73,10 +73,13 @@ public class SplitIpDbTest : TestBase
     [TestMethod]
     public async Task Country_build_creates_ranges_and_meta()
     {
-        // disjoint, non-adjacent ranges so ToOrderedList() does not merge them (predictable counts)
+        // disjoint, non-adjacent ranges so ToOrderedList() does not merge them (predictable counts);
+        // two more countries, so the two picked are not the larger side and are stored as picked
         var zipBytes = CreateIpsZip(new Dictionary<string, IpRange[]> {
             ["US"] = [IpRange.Parse("1.0.0.0 - 1.0.0.255"), IpRange.Parse("3.0.0.0 - 3.0.0.255")],
-            ["TR"] = [IpRange.Parse("5.0.0.0 - 5.0.0.255"), IpRange.Parse("2001:db8:: - 2001:db8::ffff")]
+            ["TR"] = [IpRange.Parse("5.0.0.0 - 5.0.0.255"), IpRange.Parse("2001:db8:: - 2001:db8::ffff")],
+            ["DE"] = [IpRange.Parse("7.0.0.0 - 7.0.0.255")],
+            ["FR"] = [IpRange.Parse("9.0.0.0 - 9.0.0.255")]
         });
 
         var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "split-country.db");
@@ -104,7 +107,9 @@ public class SplitIpDbTest : TestBase
     public async Task Country_build_skips_unknown_codes()
     {
         var zipBytes = CreateIpsZip(new Dictionary<string, IpRange[]> {
-            ["US"] = [IpRange.Parse("1.0.0.0 - 1.0.0.255")]
+            ["US"] = [IpRange.Parse("1.0.0.0 - 1.0.0.255")],
+            ["TR"] = [IpRange.Parse("5.0.0.0 - 5.0.0.255")],
+            ["DE"] = [IpRange.Parse("7.0.0.0 - 7.0.0.255")]
         });
 
         var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "split-country-unknown.db");
@@ -151,6 +156,48 @@ public class SplitIpDbTest : TestBase
         await CreateCountryBuilder(zipBytes, ["US"], "hash-2").EnsureAsync(dbPath, ct);
         Assert.IsNull(ReadMeta(dbPath, "sentinel"), "must rebuild when selection changes");
         Assert.AreEqual("hash-2|Include|US", ReadMeta(dbPath, "source_signature"));
+    }
+
+    // A built db is found by the asset's hash and the user's choice alone: the zip, which is every
+    // country's ranges, is not opened until a db has to be built.
+    [TestMethod]
+    public async Task Country_ensure_opens_no_zip_while_its_db_stands()
+    {
+        var zipBytes = CreateIpsZip(new Dictionary<string, IpRange[]> {
+            ["US"] = [IpRange.Parse("1.0.0.0 - 1.0.0.255")],
+            ["TR"] = [IpRange.Parse("5.0.0.0 - 5.0.0.255")]
+        });
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "split-country-no-zip.db");
+        await CreateCountryBuilder(zipBytes, ["US"], "hash-1").EnsureAsync(dbPath, TestCt);
+
+        SplitCountryService.SplitCountryDbBuilder NoZip(string assetHash) =>
+            new(_ => throw new AssertFailedException("The zip must not be opened."), assetHash, ["us"],
+                FilterAction.Include);
+
+        await NoZip("hash-1").EnsureAsync(dbPath, TestCt);
+        await Assert.ThrowsExactlyAsync<AssertFailedException>(() => NoZip("hash-2").EnsureAsync(dbPath, TestCt));
+    }
+
+    // The set stored is worked out as the db is built, from the countries the zip has: the smaller of
+    // the choice and the rest, so picking all but one stores the one, in the other set.
+    [TestMethod]
+    public async Task Country_build_stores_the_smaller_side()
+    {
+        var zipBytes = CreateIpsZip(new Dictionary<string, IpRange[]> {
+            ["US"] = [IpRange.Parse("1.0.0.0 - 1.0.0.255")],
+            ["TR"] = [IpRange.Parse("5.0.0.0 - 5.0.0.255")],
+            ["DE"] = [IpRange.Parse("7.0.0.0 - 7.0.0.255"), IpRange.Parse("9.0.0.0 - 9.0.0.255")]
+        });
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "split-country-smaller.db");
+        await CreateCountryBuilder(zipBytes, ["US", "TR"], "hash-1").BuildAsync(dbPath, TestCt);
+
+        Assert.AreEqual(0, CountRows(dbPath, "include_v4"));
+        Assert.AreEqual(2, CountRows(dbPath, "exclude_v4"), "DE's two ranges, the side not picked");
+        Assert.AreEqual("hash-1|Include|TR,US", ReadMeta(dbPath, "source_signature"), "named by the choice");
+
+        // an include list with no country the zip has would constrain nothing: refused
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            CreateCountryBuilder(zipBytes, ["XX"], "hash-1").BuildAsync(dbPath, TestCt));
     }
 
     [TestMethod]
@@ -238,16 +285,19 @@ public class SplitIpDbTest : TestBase
         Assert.AreEqual(1, CountRows(dbPath, "include_v4"));
     }
 
+    // one country's ranges in the given set, as they are, for the filter's tests: not through the
+    // country builder, which stores the smaller side of a choice rather than the set asked for
     private async Task<string> BuildUsDbAsync(FilterAction action)
     {
-        var zipBytes = CreateIpsZip(new Dictionary<string, IpRange[]> {
-            ["US"] = [
-                IpRange.Parse("1.0.0.0 - 1.0.0.255"),
-                IpRange.Parse("2001:db8:: - 2001:db8::ffff")
-            ]
-        });
+        var usRanges = new[] {
+            IpRange.Parse("1.0.0.0 - 1.0.0.255"),
+            IpRange.Parse("2001:db8:: - 2001:db8::ffff")
+        }.ToOrderedList();
         var dbPath = Path.Combine(TestHelper.WorkingPath, "filter", "split-country.db");
-        await CreateCountryBuilder(zipBytes, ["US"], "hash-1", action).BuildAsync(dbPath, TestCt);
+        await new IpRangeListDbBuilder(() => $"us|{action}",
+            includesFactory: action is FilterAction.Include ? () => usRanges : null,
+            excludesFactory: action is FilterAction.Exclude ? () => usRanges : null,
+            blocksFactory: action is FilterAction.Block ? () => usRanges : null).BuildAsync(dbPath, TestCt);
         return dbPath;
     }
 

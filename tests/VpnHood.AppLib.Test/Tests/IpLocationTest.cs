@@ -28,9 +28,7 @@ public class IpLocationTest : TestAppBase
         await keepAliveConnection.OpenAsync();
 
         var ipLocationAsset = new Asset(TestAppHelper.AssetProvider, TestAppHelper.IpLocationAssetPath);
-        await using (var zipStream = await ipLocationAsset.OpenReadAsync(TestCt)) {
-            await IpLocationSqliteBuilder.Build(zipStream, keepAliveConnection);
-        }
+        await IpLocationSqliteBuilder.Build(ipLocationAsset, keepAliveConnection, TestCt);
 
         await using var ipLocationSqliteProvider =
             await IpLocationSqliteProvider.Open(keepAliveConnection, leaveOpen: true);

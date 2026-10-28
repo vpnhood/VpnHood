@@ -51,19 +51,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, AndroidWebAppUpdaterProvider.FeedDistribution),
             // the notice downloads the APK and installs it, rather than opening the site; none over a
-            // store's install or a copy another key signed, whose notice keeps the site's link
-            UpdaterProvider = AndroidWebAppUpdaterProvider.TryCreate(ReleaseCertificateSha256)
+            // store's install, whose notice keeps the site's link
+            UpdaterProvider = AndroidWebAppUpdaterProvider.TryCreate()
         };
         return options;
     }
-
-    // The key our GitHub APK is signed with: a copy signed with another is never offered the update.
-    // A Debug build is signed with the machine's own key, so it takes any.
-#if DEBUG
-    private const string? ReleaseCertificateSha256 = null;
-#else
-    private const string ReleaseCertificateSha256 = "efcb803dfcd23d4fea8e353b200d1fddf4b370068db4fbeb69074bc4a64e5f1e";
-#endif
 
     private static IAccountProvider? CreateAppAccountProvider(ConnectAppConfigs appConfigs, AppOptionsContext context)
     {

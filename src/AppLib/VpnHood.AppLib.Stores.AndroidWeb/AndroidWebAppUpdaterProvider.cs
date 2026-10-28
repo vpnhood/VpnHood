@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
@@ -44,16 +43,12 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
 
     /// <summary>
     /// The updater, where this install may take the package. Null where it may not, and the notice keeps
-    /// the feed's link: a store installed the app and keeps it updated, or another key signed this copy.
+    /// the feed's link: a store installed the app and keeps it updated. It checks no key: Android itself
+    /// refuses a package signed with another key than the installed app's.
     /// </summary>
-    /// <param name="signingCertificateSha256">
-    /// The SHA-256 of the certificate the releases are signed with, in hex (colons allowed). Android
-    /// refuses a package signed with another key than the installed app's, so a copy re-signed by someone
-    /// else is never offered the download. Null takes any key: a Debug build, signed with the machine's own.
-    /// </param>
-    public static AndroidWebAppUpdaterProvider? TryCreate(string? signingCertificateSha256)
+    public static AndroidWebAppUpdaterProvider? TryCreate()
     {
-        return CalcIsSupported(signingCertificateSha256) ? new AndroidWebAppUpdaterProvider() : null;
+        return CalcIsSupported() ? new AndroidWebAppUpdaterProvider() : null;
     }
 
     /// <summary>
@@ -434,9 +429,8 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
         };
     }
 
-    // The rules of an install that may take the package: no store installed it, and it is signed with
-    // the releases' key. Either way the feed's link stays.
-    private static bool CalcIsSupported(string? signingCertificateSha256)
+    // An install may take the package unless a store installed it; then the feed's link stays.
+    private static bool CalcIsSupported()
     {
         try {
             var packageManager = Context.PackageManager ??
@@ -451,12 +445,6 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
                 VhLogger.Instance.LogInformation(
                     "A store installed the app and keeps it updated; it does not update itself. Installer: {Installer}",
                     installer);
-                return false;
-            }
-
-            if (signingCertificateSha256 != null && !IsSignedWith(packageManager, packageName, signingCertificateSha256)) {
-                VhLogger.Instance.LogWarning(
-                    "The app is signed with another key than its releases'; it does not update itself.");
                 return false;
             }
 
@@ -499,28 +487,4 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
 #pragma warning restore CA1422
         return flags.HasFlag(ApplicationInfoFlags.System);
     }
-
-    private static bool IsSignedWith(PackageManager packageManager, string packageName, string certificateSha256)
-    {
-        var expected = certificateSha256.Replace(":", string.Empty).Trim();
-        return GetSignatures(packageManager, packageName).Any(x =>
-            string.Equals(Convert.ToHexString(SHA256.HashData(x.ToByteArray() ?? [])), expected,
-                StringComparison.OrdinalIgnoreCase));
-    }
-
-    // Every certificate the app may sign with: the current one, and those a key rotation proved
-#pragma warning disable CA1422 // the typed flags are Android 13's; GET_SIGNATURES is all Android 8 has
-    private static IReadOnlyList<Signature> GetSignatures(PackageManager packageManager, string packageName)
-    {
-        if (OperatingSystem.IsAndroidVersionAtLeast(28)) {
-            var signingInfo = packageManager.GetPackageInfo(packageName, PackageInfoFlags.SigningCertificates)
-                ?.SigningInfo;
-            return signingInfo is null ? []
-                : signingInfo.HasMultipleSigners ? signingInfo.GetApkContentsSigners() ?? []
-                : signingInfo.GetSigningCertificateHistory() ?? [];
-        }
-
-        return packageManager.GetPackageInfo(packageName, PackageInfoFlags.Signatures)?.Signatures?.ToArray() ?? [];
-    }
-#pragma warning restore CA1422
 }

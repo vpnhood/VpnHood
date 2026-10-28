@@ -42,7 +42,17 @@ public class DomainFilteringService : IDisposable
         DomainObserver = new DomainObserver(sniEventId);
     }
 
-    public bool IsEnabled { get; set; }
+    // a session's TCP proxy, which a domain rule needs for a TCP connection's name, follows this (ClientSession)
+    public event EventHandler? IsEnabledChanged;
+
+    public bool IsEnabled {
+        get;
+        set {
+            if (field == value) return;
+            field = value;
+            IsEnabledChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
 
     public PacketSniFilterResult ProcessPacket(IpPacket ipPacket)
     {

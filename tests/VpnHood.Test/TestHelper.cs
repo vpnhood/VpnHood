@@ -373,12 +373,13 @@ public class TestHelper : IDisposable
         bool autoConnect = true,
         ProxyOptions? proxyOptions = null,
         ISocketFactory? socketFactory = null,
-        string? workingFolder = null)
+        string? workingFolder = null,
+        NetFilter? netFilter = null)
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
             socketFactory: socketFactory ?? new TestSocketFactory(),
-            netFilter: ClientNetFilter,
+            netFilter: netFilter ?? ClientNetFilter,
             proxyConnector: await CreateProxyConnector(clientOptions, proxyOptions),
             new TestTracker { IsEnabled = clientOptions.AllowAnonymousTracker },
             workingFolder: workingFolder ?? Path.Combine(WorkingPath, $"Client_{Guid.NewGuid()}"),

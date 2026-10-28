@@ -7,6 +7,7 @@ using VpnHood.Core.Client;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
@@ -1009,6 +1010,38 @@ public class ClientServerTest : TestBase
         await client.WaitForState(ClientState.Connected);
 
         Assert.IsNotEmpty(client.RequiredSession.Info.DnsConfig.DnsServers);
+    }
+
+    [TestMethod]
+    public async Task Domain_rule_added_while_connected_applies_to_the_next_tcp_connection()
+    {
+        // a server that takes TCP packets, and a client with no TCP proxy of its own: only a domain rule asks for one,
+        // which reads a TCP connection's name
+        using var vpnAdapter = new TestUdpServerVpnAdapter();
+        await using var server = await TestHelper.CreateServer(TestHelper.CreateFileAccessManagerOptions(),
+            vpnAdapter: vpnAdapter);
+        var domainFilter = new StaticDomainFilter(null);
+        var netFilter = new NetFilter {
+            IpFilter = TestHelper.ClientNetFilter.IpFilter,
+            DomainFilter = domainFilter,
+            IpMapper = TestHelper.ClientNetFilter.IpMapper
+        };
+
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(TestHelper.CreateAccessToken(server), useTcpProxy: false),
+            netFilter: netFilter);
+        await client.WaitForState(ClientState.Connected);
+        Assert.IsFalse(client.RequiredSession.Status.IsTcpProxy);
+
+        // a rule while connected: the next TCP connections go by the proxy, and the blocked name's is dropped
+        domainFilter.Blocks = [TestHelper.WebServer.MockEps.HttpsUrl1.Host];
+        Assert.IsTrue(client.RequiredSession.Status.IsTcpProxy);
+        Assert.IsTrue(await TestHelper.Test_Https(TestHelper.WebServer.MockEps.HttpsUrl2, throwError: false));
+        Assert.IsFalse(await TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(5), throwError: false));
+
+        // and no proxy once no rule is left
+        domainFilter.Blocks = [];
+        Assert.IsFalse(client.RequiredSession.Status.IsTcpProxy);
     }
 
     // a null adapter that tells when its start is under way

@@ -199,8 +199,9 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _cancellationTokenSource = new CancellationTokenSource();
         _cleanupJob = new Job(Cleanup, nameof(VpnHoodClient));
 
-        // apply config
+        // apply config, and again whenever Split Domains is turned on or off while connected
         UpdateConfig();
+        _domainFilteringService.IsEnabledChanged += DomainFilteringService_IsEnabledChanged;
     }
 
     public async Task Start(CancellationToken cancellationToken)
@@ -403,6 +404,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     }
 
     private void VpnAdapter_PrimaryAdapterIpChanged(object? sender, EventArgs e)
+    {
+        UpdateConfig();
+    }
+
+    private void DomainFilteringService_IsEnabledChanged(object? sender, EventArgs e)
     {
         UpdateConfig();
     }
@@ -787,6 +793,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _tunnel.PacketReceived -= Tunnel_PacketReceived;
         _clientTcpHost.PacketReceived -= ClientTcpHostPacketReceived;
         _proxyManager.PacketReceived -= Proxy_PacketReceived;
+        _domainFilteringService.IsEnabledChanged -= DomainFilteringService_IsEnabledChanged;
 
         PassthroughState.PassthroughForAd = false;
 

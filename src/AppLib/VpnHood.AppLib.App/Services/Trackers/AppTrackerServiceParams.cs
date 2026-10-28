@@ -8,6 +8,7 @@ public class AppTrackerServiceParams
     public required IReadOnlyList<ITrackerFactory> TrackerFactories { get; init; }
     public required bool IsDebugMode { get; init; }
     public required bool IsLicenseAgreementRequired { get; init; }
+    public required bool IsAnonymousTrackerOptInRequired { get; init; }
     public required string ClientId { get; init; }
     public required Version AppVersion { get; init; }
     public required string UserAgent { get; init; }

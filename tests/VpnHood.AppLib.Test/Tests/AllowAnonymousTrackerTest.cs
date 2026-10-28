@@ -158,6 +158,30 @@ public class AllowAnonymousTrackerTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task Where_the_channel_wants_an_opt_in_the_first_run_page_asks_everywhere()
+    {
+        // a device in the US, its terms accepted, on a build whose channel wants the person's own tick (a
+        // Microsoft Store head's): the switch's default on counts for nothing there too
+        AppRegionInfo.CurrentRegion = new RegionInfo("US");
+        RecordingTrackerFactory.Made.Clear();
+        var appOptions = CreateAppOptions();
+        appOptions.IsAnonymousTrackerOptInRequired = true;
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        AcceptTerms(app);
+        Assert.IsTrue(app.State.IsAnonymousTrackerPromptRequired, "the first-run page asks");
+        var trackers = MadeTrackers();
+        Assert.IsNotEmpty(trackers);
+        Assert.IsTrue(trackers.All(x => !x.IsEnabled), "nothing before the answer");
+
+        // the box left unticked, as the first-run page saves it: still nothing, and the page asks no more
+        app.UserSettings.AllowAnonymousTracker = false;
+        app.UserSettings.IsAnonymousTrackerPrompted = true;
+        app.SettingsService.Save();
+        Assert.IsFalse(app.State.IsAnonymousTrackerPromptRequired);
+        Assert.IsTrue(trackers.All(x => !x.IsEnabled), "unticked, nothing");
+    }
+
+    [TestMethod]
     public async Task Switched_off_while_disconnected_a_start_from_the_saved_options_follows()
     {
         await using var server = await TestHelper.CreateServer();

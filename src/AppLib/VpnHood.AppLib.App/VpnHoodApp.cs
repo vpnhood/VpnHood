@@ -206,6 +206,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             TrackerFactories = options.TrackerFactories,
             IsDebugMode = options.IsDebugMode,
             IsLicenseAgreementRequired = options.IsLicenseAgreementRequired,
+            IsAnonymousTrackerOptInRequired = options.IsAnonymousTrackerOptInRequired,
             ClientId = clientId,
             AppVersion = appVersion,
             UserAgent = AppUtils.BuildUserAgent(device.UserAgentInfo, options.PackageTitle, appVersion, includeModel: true)

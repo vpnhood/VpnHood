@@ -170,6 +170,12 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // The user's answer is UserSettings.IsLicenseAccepted, asked once.
     public bool IsLicenseAgreementRequired { get; set; } = true;
 
+    // Whether usage data waits for the person's own tick in every region: the first-run page asks with the box
+    // unticked, as it does by default only where the law wants a yes first (AppTrackerService). A DISTRIBUTION
+    // decision too: the Microsoft Store heads, as its Store Policies 10.5.2 want an opt-in in the app before
+    // personal information goes to a third party, which the usage data's analytics is.
+    public bool IsAnonymousTrackerOptInRequired { get; set; }
+
     // The web host's port, which a paired phone's address and a UI developer's dev server name; two
     // apps on one device need two. Null takes 9090, and 9091 in a Debug build, so a Debug build runs
     // beside the installed app with no settings at all.

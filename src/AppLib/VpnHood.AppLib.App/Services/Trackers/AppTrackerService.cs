@@ -19,7 +19,8 @@ public class AppTrackerService
 {
     // Where the law wants a yes before usage data - the EEA, the UK and Switzerland - as the app's region
     // tells (AppRegionInfo: the country a server last reported, else the device's): the first-run page
-    // asks there, with the box unticked, on every build that reports.
+    // asks there, with the box unticked, on every build that reports; everywhere on a build whose channel
+    // wants an opt-in (AppOptions.IsAnonymousTrackerOptInRequired).
     private static readonly string[] PromptCountryCodes = [
         "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV",
         "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE", // the EU
@@ -28,6 +29,7 @@ public class AppTrackerService
 
     private readonly AppSettingsService _settingsService;
     private readonly bool _isLicenseAgreementRequired;
+    private readonly bool _isOptInRequired;
     private readonly string _clientId;
     private readonly Lock _firstLaunchLock = new();
 
@@ -44,6 +46,7 @@ public class AppTrackerService
     {
         _settingsService = settingsService;
         _isLicenseAgreementRequired = serviceParams.IsLicenseAgreementRequired;
+        _isOptInRequired = serviceParams.IsAnonymousTrackerOptInRequired;
         _clientId = serviceParams.ClientId;
 
         // a Debug build reports nothing, whatever the head lists
@@ -70,7 +73,8 @@ public class AppTrackerService
 
     private bool IsPromptPending =>
         !_settingsService.UserSettings.IsAnonymousTrackerPrompted &&
-        PromptCountryCodes.Contains(AppRegionInfo.CurrentRegion.TwoLetterISORegionName, StringComparer.OrdinalIgnoreCase);
+        (_isOptInRequired ||
+         PromptCountryCodes.Contains(AppRegionInfo.CurrentRegion.TwoLetterISORegionName, StringComparer.OrdinalIgnoreCase));
 
     // the first-run terms where the head asks for them, the answer where the law wants one, then the
     // usage-data switch

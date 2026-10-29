@@ -330,7 +330,6 @@ public class TestHelper : IDisposable
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
             IncludeIpRangesByDevice = TestIps.AllRemoteTestIps.ToIpRanges().ToArray(),
-            SplitLocalNetwork = true,
             Transport = new ClientTransportOptions {
                 TcpConnectTimeout = TimeSpan.FromSeconds(3),
                 MaxPacketChannelCount = 1

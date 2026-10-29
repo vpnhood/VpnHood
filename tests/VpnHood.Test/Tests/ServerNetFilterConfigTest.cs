@@ -66,9 +66,10 @@ public class ServerNetFilterConfigTest : TestBase
     }
 
     [TestMethod]
-    [DataRow(true)]
-    [DataRow(false)]
-    public async Task VpnAdapter_Include_Exclude_LocalNetwork(bool serverAllowLocalNetworks)
+    [DataRow(true, false)]
+    [DataRow(false, false)]
+    [DataRow(true, true)]
+    public async Task VpnAdapter_Include_Exclude_LocalNetwork(bool serverAllowLocalNetworks, bool splitLocalNetwork)
     {
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.NetFilterOptions.IncludeLocalNetwork = serverAllowLocalNetworks;
@@ -82,18 +83,18 @@ public class ServerNetFilterConfigTest : TestBase
         // create client
         var clientOptions = TestHelper.CreateClientOptions(token: token);
         clientOptions.IncludeIpRangesByDevice = [.. IpNetwork.All.ToIpRanges()];
-        clientOptions.SplitLocalNetwork = true;
+        clientOptions.SplitLocalNetwork = splitLocalNetwork;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
-        // client
+        // client: a split local network stays out of the VPN, whatever the server allows
         Assert.AreEqual(serverAllowLocalNetworks, client.RequiredSession.Info.IsLocalNetworkAllowed);
-        Assert.AreEqual(serverAllowLocalNetworks, client.RequiredSession.Config.AdapterOptions.IncludeNetworks.ToIpRanges().Contains(IPAddress.Parse("192.168.0.100")), "LocalNetWorks failed");
+        Assert.AreEqual(serverAllowLocalNetworks && !splitLocalNetwork, client.RequiredSession.Config.AdapterOptions.IncludeNetworks.ToIpRanges().Contains(IPAddress.Parse("192.168.0.100")), "LocalNetWorks failed");
 
         var ipRanges = client.RequiredSession.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
         Assert.IsNotNull(ipRanges);
         Assert.IsFalse(ipRanges.Contains(IPAddress.Parse("230.0.0.110")), "Excludes failed");
-        Assert.IsTrue(ipRanges.Contains(IPAddress.Parse("230.0.0.50")), "Includes failed");
+        Assert.AreEqual(!splitLocalNetwork, ipRanges.Contains(IPAddress.Parse("230.0.0.50")), "Includes failed"); // multicast goes with the split
         Assert.IsFalse(ipRanges.Contains(IPAddress.Parse("230.0.0.240")), "Includes failed");
         Assert.IsFalse(ipRanges.Contains(IPAddress.Parse("230.0.0.254")), "Includes failed");
 

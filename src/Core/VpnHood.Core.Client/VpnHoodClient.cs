@@ -107,7 +107,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             Version = options.Version,
             UserAgent = options.UserAgent,
             ClientId = options.ClientId,
-            IncludeLocalNetwork = options.SplitLocalNetwork,
+            IncludeLocalNetwork = !options.SplitLocalNetwork, // split is out of the VPN, the reverse of include
             SplitDnsMode = options.SplitDnsMode,
             UnroutedIpMode = options.UnroutedIpMode,
             UnsupportedIpV6Mode = options.UnsupportedIpV6Mode,

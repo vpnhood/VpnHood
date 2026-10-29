@@ -37,6 +37,8 @@ public class ClientOptions
 
     // Transport tuning, shared by reference with the app and the session config.
     public ClientTransportOptions Transport { get; set; } = new();
+
+    // The local networks, with multicast and broadcast, kept out of the VPN: their devices are reached directly.
     public bool SplitLocalNetwork { get; set; }
     public SplitDnsMode SplitDnsMode { get; set; }
     public SplitUnsupportedIpMode UnroutedIpMode { get; set; }

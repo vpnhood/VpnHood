@@ -81,6 +81,7 @@
 * Fix: On Linux the installer installs ICU where it is missing, as on Debian 13's cloud image: the app did not start without it #linux
 * Improve: On Linux, the installer and the uninstaller list their options with `-help`, `--help` or `-h`, and take every option with one dash or two: `--noautoupdate` is `-noautoupdate` #linux
 * Fix: On Linux, an install started while the app updates itself waits for the update to finish, so its choices stand; the update could undo them, turning updates back on after `-noautoupdate`. The uninstaller waits too #linux
+* Fix: Split Local Network does what it says: on, local devices such as a printer or a TV are reached directly; off, their traffic stays in the VPN. It did the opposite while Allow Split Tunneling was off, or on a server that carries local addresses
 
 # v8.1.849
 

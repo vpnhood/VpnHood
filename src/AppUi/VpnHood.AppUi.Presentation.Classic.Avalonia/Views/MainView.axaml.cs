@@ -23,11 +23,12 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 // The one page host, and the whole of the navigation: a stack of views, the home view at its
 // bottom. Back - a remote's or a phone's key, which reaches Avalonia as the top level's
 // BackRequested, or Escape and Backspace on a keyboard - closes what is on top: a dialog, the
-// drawer, then the page; on the home view it is left to the host, so Android leaves the app as
-// it should. Every view on the stack takes the input on arrival (FocusDefault), and back on a view
-// where it last was: a remote has no pointer to put focus anywhere, and a keyboard should not need
-// a Tab first. The dialogs, the drawer and the snackbar the web UI's App.vue mounts once beside
-// the router live here too, and a page reaches them through its host.
+// drawer, then the page; on the home view, or a page that holds the app until it is answered
+// (IRootPage), it is left to the host, so Android leaves the app as it should. Every view on the
+// stack takes the input on arrival (FocusDefault), and back on a view where it last was: a remote
+// has no pointer to put focus anywhere, and a keyboard should not need a Tab first. The dialogs,
+// the drawer and the snackbar the web UI's App.vue mounts once beside the router live here too,
+// and a page reaches them through its host.
 public partial class MainView : UserControl
 {
     private static readonly TimeSpan SnackbarLife = TimeSpan.FromSeconds(3);
@@ -124,8 +125,9 @@ public partial class MainView : UserControl
         Show(_pages.Peek(), back: true);
     }
 
-    // False when there is nothing above the home view, so the caller can let the host have it.
-    // A page may hold the leave (ILeaveGuard): an edit that could not be saved says so instead.
+    // False when there is nothing above the home view, or the page on top holds the app
+    // (IRootPage), so the caller can let the host have it. A page may hold the leave
+    // (ILeaveGuard): an edit that could not be saved says so instead.
     public bool GoBack()
     {
         if (_dialogs.Count > 0) {
@@ -140,7 +142,7 @@ public partial class MainView : UserControl
             return true;
         }
 
-        if (_pages.Count <= 1)
+        if (_pages.Count <= 1 || _pages.Peek() is IRootPage)
             return false;
 
         if (_pages.Peek() is ILeaveGuard guard) {
@@ -305,9 +307,14 @@ public partial class MainView : UserControl
     // A keyboard's stand-ins for the Back key, as on the web UI's TV mode - not Backspace in a
     // field, where it deletes. Heard on the top level rather than here: a key with nothing focused
     // (a dialog just closed over a control that is gone) is delivered to the window, above this
-    // view, and Back must work then too.
+    // view, and Back must work then too. Not on Android, whose Back key reaches Avalonia as Escape
+    // besides BackRequested: from Android 16 (target 36) the key's release raises BackRequested
+    // even after its press was handled here, so one press would close a page and then the app.
     private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
     {
+        if (OperatingSystem.IsAndroid())
+            return;
+
         var isTyping = _topLevel?.FocusManager.GetFocusedElement() is TextBox;
         if ((e.Key == Key.Escape || (e.Key == Key.Back && !isTyping)) && GoBack())
             e.Handled = true;

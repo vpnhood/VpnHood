@@ -10,6 +10,8 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 
+// Play shows its review prompt on TVs with Google TV as well as on phones, tablets and ChromeOS
+// (the in-app review guide's device requirements), so a TV asks for a review as a phone does.
 public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUserReviewProvider
 {
     public async Task RequestReview(IUiContext uiContext, CancellationToken cancellationToken)

@@ -10,11 +10,11 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 // Which text is shown is the head's word (PrivacyConsentAssetName): CONNECT's summary describes
 // our servers and their logging, CLIENT's the bring-your-own-key reality, and a fork names its own.
 // Whether it is shown is the head's word too (IsLicenseAgreementRequired) and the person's
-// (IsLicenseAccepted); until they accept, Back goes nowhere - the page holds the app, as the web
-// UI's overlay does. Where the law wants a yes before usage data, the app's word as well
-// (IsAnonymousTrackerPromptRequired): the page then asks it too, with the box unticked, since only
-// the person's own tick counts there.
-public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
+// (IsLicenseAccepted); until they accept, the page holds the app: Back leaves the app (IRootPage),
+// and the page is back at the next start. Where the law wants a yes before usage data, the app's
+// word as well (IsAnonymousTrackerPromptRequired): the page then asks it too, with the box
+// unticked, since only the person's own tick counts there.
+public partial class PrivacyPolicyView : UserControl, IPage, IRootPage
 {
     private readonly MainView _host;
 
@@ -50,11 +50,6 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     public void FocusDefault()
     {
         AcceptButton.LandFocus();
-    }
-
-    public Task<bool> CanLeave()
-    {
-        return Task.FromResult(false);
     }
 
     private async void OnAcceptClick(object? sender, RoutedEventArgs e)

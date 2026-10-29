@@ -127,9 +127,13 @@ public class ServerHost : IAsyncDisposable
     private async Task<ServerStreamConnection?> CreateHttpConnection(IStreamConnection streamConnection,
         Action? onAuthenticated, CancellationToken cancellationToken)
     {
+        // Keep read-ahead across ordinary requests and hand it to the tunnel when a client arrives.
+        // Retain the original transport separately so an unauthenticated reset still reaches its socket.
+        var stream = new HttpReadStream(streamConnection.Stream);
+        var bufferedConnection = new StreamConnectionDecorator(streamConnection, stream);
         while (true) {
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "Waiting for Connection request...");
-            var request = await WebFront.ReadRequest(streamConnection.Stream, cancellationToken).Vhc();
+            var request = await WebFront.ReadRequest(stream, cancellationToken).Vhc();
             if (request == null) {
                 await CloseConnection(streamConnection, reset: false).Vhc();
                 return null;
@@ -137,15 +141,15 @@ public class ServerHost : IAsyncDisposable
 
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", request.RequestLine);
 
-            var clientConnection = await CreateClientConnection(streamConnection, request, onAuthenticated,
+            var clientConnection = await CreateClientConnection(bufferedConnection, request, onAuthenticated,
                 cancellationToken).Vhc();
             if (clientConnection != null)
                 return clientConnection;
 
-            if (await _downloadService.TryServeDownloadAsync(streamConnection, request.RequestLine, cancellationToken).Vhc())
+            if (await _downloadService.TryServeDownloadAsync(bufferedConnection, request.RequestLine, cancellationToken).Vhc())
                 throw new RequestHandledException();
 
-            var next = await WebFront.Unauthorized(streamConnection.Stream, request, cancellationToken).Vhc();
+            var next = await WebFront.Unauthorized(stream, request, cancellationToken).Vhc();
             if (next == WebFrontNext.NextRequest)
                 continue;
 

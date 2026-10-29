@@ -90,7 +90,7 @@ public class Http01ChallengeHandler : IDisposable
         try {
             endPoints = new IPEndPointPair(client.GetLocalEndPoint(), client.GetRemoteEndPoint());
             _unauthenticatedConnections.Add(endPoints.Value, client);
-            var stream = connection.Stream;
+            await using var stream = new HttpReadStream(connection.Stream);
             while (true) {
                 var request = await WebFront.ReadRequest(stream, cancellationToken).Vhc();
                 if (request == null || await TryAnswerChallenge(endPoints.Value.RemoteEndPoint.Address,

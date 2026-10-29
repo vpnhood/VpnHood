@@ -19,7 +19,7 @@ namespace VpnHood.Test.Tests.Servers;
 // the server's answers to whoever is not a client, as Kestrel gives them behind a JWT bearer check: the parity
 // harness of the IP-blocking plan measured them on a real Kestrel, and these keep them from drifting
 [TestClass]
-public class WebFrontTest : TestBase
+public partial class WebFrontTest : TestBase
 {
     [TestMethod]
     public async Task A_request_without_our_headers_gets_kestrels_401_and_the_connection_stays()
@@ -57,7 +57,7 @@ public class WebFrontTest : TestBase
     {
         await using var stream = new TestDuplexStream(Encoding.ASCII.GetBytes($"{head}\r\n\r\n"));
         var request = await ReadRequest(stream);
-        var next = await WebFront.Unauthorized(stream, request, TestCt);
+        var next = await WebFront.Unauthorized(stream.Http, request, TestCt);
 
         Assert.AreEqual(reply, WithoutDate(Encoding.ASCII.GetString(stream.Written)));
         Assert.AreEqual(keepsConnection, next == WebFrontNext.NextRequest);
@@ -147,7 +147,7 @@ public class WebFrontTest : TestBase
     {
         // a TLS record's start and no line end, which a request would wait for
         await using var stream = new TestDuplexStream([0x16, 0x03, 0x01, 0x00, 0x05], blockAtEnd: true);
-        Assert.IsNull(await WebFront.ReadRequest(stream, TestCt));
+        Assert.IsNull(await WebFront.ReadRequest(stream.Http, TestCt));
         StringAssert.StartsWith(Encoding.ASCII.GetString(stream.Written), "HTTP/1.1 400 Bad Request\r\n");
     }
 
@@ -173,7 +173,7 @@ public class WebFrontTest : TestBase
         await using var stream = new TestDuplexStream(
             Encoding.ASCII.GetBytes($"{method} {target} HTTP/1.1\r\nHost: {host}\r\n\r\n"));
         var request = await ReadRequest(stream);
-        Assert.AreEqual(WebFrontNext.NextRequest, await WebFront.RedirectToHttps(stream, request, httpsPort, TestCt));
+        Assert.AreEqual(WebFrontNext.NextRequest, await WebFront.RedirectToHttps(stream.Http, request, httpsPort, TestCt));
 
         var reply = Encoding.ASCII.GetString(stream.Written);
         StringAssert.StartsWith(reply, "HTTP/1.1 307 Temporary Redirect\r\nContent-Length: 0\r\n");
@@ -191,7 +191,7 @@ public class WebFrontTest : TestBase
         await using var stream = new TestDuplexStream(Encoding.ASCII.GetBytes(
             $"POST / HTTP/1.1\r\nHost: x\r\n{framingAndBody}GET /next HTTP/1.1\r\nHost: x\r\n\r\n"));
         var post = await ReadRequest(stream);
-        Assert.AreEqual(WebFrontNext.NextRequest, await WebFront.Unauthorized(stream, post, TestCt));
+        Assert.AreEqual(WebFrontNext.NextRequest, await WebFront.Unauthorized(stream.Http, post, TestCt));
 
         var next = await ReadRequest(stream);
         Assert.AreEqual("/next", next.Target);
@@ -203,7 +203,7 @@ public class WebFrontTest : TestBase
         await using var stream = new TestDuplexStream(
             "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 30000001\r\n\r\n"u8.ToArray(), blockAtEnd: true);
         var request = await ReadRequest(stream);
-        Assert.AreEqual(WebFrontNext.Close, await WebFront.Unauthorized(stream, request, TestCt));
+        Assert.AreEqual(WebFrontNext.Close, await WebFront.Unauthorized(stream.Http, request, TestCt));
     }
 
     // Kestrel drops a body within 5 s and its heartbeat, then resets
@@ -213,7 +213,7 @@ public class WebFrontTest : TestBase
         await using var stream = new TestDuplexStream(
             "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 100\r\n\r\n"u8.ToArray(), blockAtEnd: true);
         var request = await ReadRequest(stream);
-        Assert.AreEqual(WebFrontNext.Reset, await WebFront.Unauthorized(stream, request, TestCt));
+        Assert.AreEqual(WebFrontNext.Reset, await WebFront.Unauthorized(stream.Http, request, TestCt));
     }
 
     [TestMethod]
@@ -290,7 +290,9 @@ public class WebFrontTest : TestBase
     }
 
     [TestMethod]
-    public async Task A_client_s_connections_leave_the_count()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_client_s_connections_leave_the_count(bool pipelineAfterAnonymousRequest)
     {
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -312,11 +314,24 @@ public class WebFrontTest : TestBase
         };
         var body = StreamUtils.ObjectToJsonBuffer(hello);
         var host = $"Host: {token.ServerToken.HostName}\r\n";
-        await stream.WriteAsync(Encoding.ASCII.GetBytes($"POST / HTTP/1.1\r\n{host}" +
-            $"X-ProtocolVersion: 8\r\nX-BinaryStream: None\r\nContent-Length: {body.Length + 2}\r\n\r\n"), TestCt);
-        await VhTestUtil.AssertEqualsWait(1, () => server.UnauthenticatedConnectionCount, cancellationToken: TestCt);
-        await stream.WriteAsync(new byte[] { 1, hello.RequestCode }, TestCt);
-        await stream.WriteAsync(body, TestCt);
+        var header = $"POST / HTTP/1.1\r\n{host}" +
+                     $"X-ProtocolVersion: 8\r\nX-BinaryStream: None\r\nContent-Length: {body.Length + 2}\r\n\r\n";
+        if (pipelineAfterAnonymousRequest) {
+            // The anonymous body, hello headers and hello payload arrive together. The HTTP reader must
+            // hand every prefetched byte to the real client connection after draining the first body.
+            byte[] pipelined = [
+                .. Encoding.ASCII.GetBytes(ChunkedHead + "1\r\nx\r\n0\r\n\r\n" + header),
+                1, hello.RequestCode, .. body.Span
+            ];
+            await stream.WriteAsync(pipelined, TestCt);
+            StringAssert.StartsWith(await ReadReplyHead(stream), "HTTP/1.1 401 ");
+        }
+        else {
+            await stream.WriteAsync(Encoding.ASCII.GetBytes(header), TestCt);
+            await VhTestUtil.AssertEqualsWait(1, () => server.UnauthenticatedConnectionCount, cancellationToken: TestCt);
+            await stream.WriteAsync(new byte[] { 1, hello.RequestCode }, TestCt);
+            await stream.WriteAsync(body, TestCt);
+        }
         StringAssert.StartsWith(await ReadReplyHead(stream), "HTTP/1.1 200 ");
         var response = await StreamUtils.ReadObjectAsync<HelloResponse>(stream, TestCt);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
@@ -390,7 +405,7 @@ public class WebFrontTest : TestBase
             "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n" + body +
             "GET /second HTTP/1.1\r\nHost: x\r\n\r\n"), blockAtEnd: true);
         var request = await ReadRequest(stream);
-        Assert.AreEqual(WebFrontNext.Close, await WebFront.Unauthorized(stream, request, TestCt));
+        Assert.AreEqual(WebFrontNext.Close, await WebFront.Unauthorized(stream.Http, request, TestCt));
     }
 
     [TestMethod]
@@ -406,14 +421,14 @@ public class WebFrontTest : TestBase
             "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n" + body));
         var request = await ReadRequest(stream);
         Assert.AreEqual(accepted ? WebFrontNext.NextRequest : WebFrontNext.Close,
-            await WebFront.Unauthorized(stream, request, TestCt));
+            await WebFront.Unauthorized(stream.Http, request, TestCt));
     }
 
     [TestMethod]
     public async Task Missing_host_is_rejected_by_the_reader()
     {
         await using var stream = new TestDuplexStream("GET / HTTP/1.1\r\n\r\n"u8.ToArray());
-        Assert.IsNull(await WebFront.ReadRequest(stream, TestCt));
+        Assert.IsNull(await WebFront.ReadRequest(stream.Http, TestCt));
         StringAssert.StartsWith(Encoding.ASCII.GetString(stream.Written), "HTTP/1.1 400 ");
     }
 
@@ -441,7 +456,7 @@ public class WebFrontTest : TestBase
             "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n7fffffff\r\nx"u8.ToArray(),
             blockAtEnd: true);
         var request = await ReadRequest(stream);
-        Assert.AreEqual(WebFrontNext.Reset, await WebFront.Unauthorized(stream, request, TestCt));
+        Assert.AreEqual(WebFrontNext.Reset, await WebFront.Unauthorized(stream.Http, request, TestCt));
     }
 
     [TestMethod]
@@ -451,7 +466,7 @@ public class WebFrontTest : TestBase
             blockWrites: true);
         var request = await ReadRequest(stream);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(12));
-        Assert.AreEqual(WebFrontNext.Reset, await WebFront.Unauthorized(stream, request, deadline.Token));
+        Assert.AreEqual(WebFrontNext.Reset, await WebFront.Unauthorized(stream.Http, request, deadline.Token));
     }
 
     [TestMethod]
@@ -476,7 +491,7 @@ public class WebFrontTest : TestBase
     private async Task AssertRead(string request, int rejection)
     {
         await using var stream = new TestDuplexStream(Encoding.Latin1.GetBytes(request));
-        var head = await WebFront.ReadRequest(stream, TestCt);
+        var head = await WebFront.ReadRequest(stream.Http, TestCt);
         if (rejection == 0) {
             Assert.IsNotNull(head, Encoding.ASCII.GetString(stream.Written));
             return;
@@ -488,9 +503,9 @@ public class WebFrontTest : TestBase
         StringAssert.Contains(reply, "\r\nContent-Length: 0\r\nConnection: close\r\n");
     }
 
-    private async Task<HttpRequestHead> ReadRequest(Stream stream)
+    private async Task<HttpRequestHead> ReadRequest(TestDuplexStream stream)
     {
-        return await WebFront.ReadRequest(stream, TestCt) ??
+        return await WebFront.ReadRequest(stream.Http, TestCt) ??
                throw new AssertFailedException("The request was refused.");
     }
 
@@ -539,11 +554,14 @@ public class WebFrontTest : TestBase
 
     // reads the bytes it was given, then ends, or waits as an open connection does; keeps what is written
     private sealed class TestDuplexStream(byte[] input, bool blockAtEnd = false, bool blockWrites = false,
-        bool failWrites = false) : Stream
+        bool failWrites = false, int maxReadSize = int.MaxValue) : Stream
     {
         private readonly MemoryStream _input = new(input);
         private readonly MemoryStream _output = new();
 
+        public HttpReadStream Http => field ??= new HttpReadStream(this);
+        public TaskCompletionSource ReadBlocked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int ReadCount { get; private set; }
         public byte[] Written => _output.ToArray();
         public override bool CanRead => true;
         public override bool CanSeek => false;
@@ -558,9 +576,12 @@ public class WebFrontTest : TestBase
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
             CancellationToken cancellationToken = default)
         {
-            var read = _input.Read(buffer.Span);
-            if (read == 0 && blockAtEnd)
+            ReadCount++;
+            var read = _input.Read(buffer.Span[..Math.Min(buffer.Length, maxReadSize)]);
+            if (read == 0 && blockAtEnd) {
+                ReadBlocked.TrySetResult();
                 await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
             return read;
         }
 

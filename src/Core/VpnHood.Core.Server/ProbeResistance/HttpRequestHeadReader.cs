@@ -1,24 +1,24 @@
-using System.Net;
 using System.Text;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Server.ProbeResistance;
 
 // reads a request's line and headers by Kestrel's rules and limits, which a probe can test one by one: a request
-// Kestrel refuses throws the status it answers. It reads byte by byte, so what follows the headers, a client's body
-// or a pipelined request, stays in the stream
+// Kestrel refuses throws the status it answers. Read-ahead remains in the connection's stream for its next
+// request or for the tunnel if these headers belong to an app.
 internal static class HttpRequestHeadReader
 {
     // Kestrel's limits: the request line counts its line end, the headers theirs and the empty line's
     private const int MaxRequestLineSize = 8192;
     public const int MaxRequestHeadersTotalSize = 32768 + 2;
     public const int MaxRequestHeaderCount = 100;
+    private static readonly UTF8Encoding HeaderEncoding = new(false, throwOnInvalidBytes: true);
 
-    public static async Task<HttpRequestHead> Read(Stream stream, byte firstByte, CancellationToken cancellationToken)
+    public static async Task<HttpRequestHead> Read(HttpReadStream stream, CancellationToken cancellationToken)
     {
-        var reader = new ByteReader(stream, firstByte);
+        var reader = new LineReader(stream);
 
-        var requestLine = await reader.ReadLine(MaxRequestLineSize, 414, cancellationToken).Vhc();
+        var requestLine = await reader.ReadLine(MaxRequestLineSize, 414, cancellationToken, requestLine: true).Vhc();
 
         var (method, target, isHttp10) = ParseRequestLine(requestLine);
         var absoluteAuthority = CheckTarget(method, target);
@@ -61,8 +61,8 @@ internal static class HttpRequestHeadReader
         // the body's framing: chunks if the transfer coding ends with them, else a length of digits alone
         var isChunked = false;
         if (headers.TryGetValue("Transfer-Encoding", out var transferEncoding)) {
-            var codings = transferEncoding.Split(',', StringSplitOptions.TrimEntries);
-            if (!codings[^1].Equals("chunked", StringComparison.OrdinalIgnoreCase))
+            var codings = ReadTokens(transferEncoding);
+            if (codings.Length == 0 || !codings[^1].Equals("chunked", StringComparison.OrdinalIgnoreCase))
                 throw new HttpRequestRejectedException(400);
             isChunked = true;
         }
@@ -76,8 +76,7 @@ internal static class HttpRequestHeadReader
             contentLength = length;
         }
 
-        var connection = headers.GetValueOrDefault("Connection", "")
-            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var connection = ReadTokens(headers.GetValueOrDefault("Connection", ""));
         // Kestrel takes an upgrade before the HTTP/1.0 length rule. HTTP/1.1 without a length has an empty
         // body and gets the normal reply, not 411.
         if (isHttp10 && method is "POST" or "PUT" && contentLength == null && !isChunked &&
@@ -99,11 +98,18 @@ internal static class HttpRequestHeadReader
         };
     }
 
-    public static async Task ReadTrailers(Stream stream, HttpRequestHead request, CancellationToken cancellationToken)
+    private static string[] ReadTokens(string value)
+    {
+        // Kestrel skips spaces and empty elements, not arbitrary whitespace. The header reader trims
+        // outer SP/HTAB; a tab within the list still prevents that token from matching.
+        return value.Split(',').Select(x => x.Trim(' ')).Where(x => x.Length != 0).ToArray();
+    }
+
+    public static async Task ReadTrailers(HttpReadStream stream, HttpRequestHead request, CancellationToken cancellationToken)
     {
         // Trailers share the header budgets and line-ending rules, including bare LF. Chunk framing does not.
         var limit = MaxRequestHeadersTotalSize - request.HeaderSize;
-        var reader = new ByteReader(stream, null);
+        var reader = new LineReader(stream);
         reader.BeginSection(limit);
         var count = request.HeaderCount;
         while (true) {
@@ -172,36 +178,44 @@ internal static class HttpRequestHeadReader
         if (line[0] is (byte)' ' or (byte)'\t' || colon <= 0 || !IsToken(line.AsSpan(0, colon)))
             throw new HttpRequestRejectedException(400);
 
-        // a value takes any byte but NUL, UTF-8 included
+        // Kestrel's default decoder accepts ASCII and valid UTF-8, not arbitrary Latin-1 or replacement
+        // characters for malformed sequences. This applies to trailer fields too.
         var value = line.AsSpan(colon + 1).Trim(" \t"u8);
         if (value.Contains((byte)0))
             throw new HttpRequestRejectedException(400);
 
-        return (Encoding.ASCII.GetString(line, 0, colon), Encoding.Latin1.GetString(value));
+        try {
+            return (Encoding.ASCII.GetString(line, 0, colon), HeaderEncoding.GetString(value));
+        }
+        catch (DecoderFallbackException) {
+            throw new HttpRequestRejectedException(400);
+        }
     }
 
-    // Kestrel follows Http.Sys's host characters and accepts any IP address in brackets, IPv4 included.
-    // An address-family check here would reject Host values that the reference serves; empty is valid too.
+    // Match Kestrel's HttpUtilities.IsHostHeaderValid character checks, not IPAddress.TryParse: brackets
+    // contain at least three hex digits, colons or dots, even when that is not an address. Empty is valid.
     private static bool IsValidAuthority(string authority)
     {
-        var host = authority;
+        if (authority.Length == 0)
+            return true;
         if (authority.StartsWith('[')) {
             var close = authority.IndexOf(']');
-            if (close < 0 || !IPAddress.TryParse(authority[1..close], out _))
+            if (close < 4 || !authority[1..close].All(c => char.IsAsciiHexDigit(c) || c is ':' or '.'))
                 return false;
-            var suffix = authority.AsSpan(close + 1);
-            return suffix.IsEmpty || (suffix[0] == ':' && suffix[1..].IndexOfAnyExceptInRange('0', '9') < 0);
+            return close == authority.Length - 1 || IsValidPort(authority.AsSpan(close + 1));
         }
 
-        var colon = authority.LastIndexOf(':');
-        if (colon >= 0) {
-            if (!authority[(colon + 1)..].All(char.IsAsciiDigit))
-                return false;
-            if (host.Length > 0)
-                host = authority[..colon];
-        }
+        if (authority[0] == ':')
+            return false;
+        for (var i = 0; i < authority.Length; i++)
+            if (!(char.IsAsciiLetterOrDigit(authority[i]) || "!$&'()-._~".Contains(authority[i])))
+                return IsValidPort(authority.AsSpan(i));
+        return true;
+    }
 
-        return host.All(c => char.IsAsciiLetterOrDigit(c) || "!$&'()-._~".Contains(c));
+    private static bool IsValidPort(ReadOnlySpan<char> suffix)
+    {
+        return suffix.Length > 1 && suffix[0] == ':' && suffix[1..].IndexOfAnyExceptInRange('0', '9') < 0;
     }
 
     private static bool IsToken(ReadOnlySpan<byte> span)
@@ -213,12 +227,10 @@ internal static class HttpRequestHeadReader
         return true;
     }
 
-    // one byte at a time, the first already read; a line ends at LF, its CR before it dropped, and a CR elsewhere
-    // is malformed. A section, the headers, has a limit for all its lines together
-    private sealed class ByteReader(Stream stream, byte? firstByte)
+    // A line ends at LF, its preceding CR is dropped, and CR elsewhere is malformed. Scan buffered spans
+    // while retaining the per-line and aggregate header budgets, including their line ends.
+    private sealed class LineReader(HttpReadStream stream)
     {
-        private readonly byte[] _buffer = new byte[1];
-        private bool _hasFirstByte = firstByte.HasValue;
         private int _sectionLength;
         private int _sectionLimit = int.MaxValue;
         public int SectionLength => _sectionLength;
@@ -230,46 +242,35 @@ internal static class HttpRequestHeadReader
         }
 
         public async Task<byte[]> ReadLine(int lineLimit, int overLimitStatus,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, bool requestLine = false)
         {
-            var line = new List<byte>();
-            var lineLength = 0;
+            using var line = new MemoryStream();
             while (true) {
-                var b = await ReadByte(cancellationToken).Vhc();
-                lineLength++;
-                _sectionLength++;
-                if (lineLength > lineLimit || _sectionLength > _sectionLimit)
-                    throw new HttpRequestRejectedException(overLimitStatus);
-
-                if (b == '\n')
-                    break;
-
-                line.Add(b);
-
-                // a TLS record's start, a handshake sent where HTTP was expected, is refused at once, as Kestrel
-                // refuses it, without waiting for a line end
-                if (line is [0x16, 0x03])
+                if (!await stream.EnsureBuffered(1, cancellationToken).Vhc())
+                    throw new EndOfStreamException();
+                var span = stream.BufferedSpan;
+                var end = span.IndexOf((byte)'\n');
+                var count = end < 0 ? span.Length : end + 1;
+                count = Math.Min(count, Math.Min(lineLimit - (int)line.Length, _sectionLimit - _sectionLength) + 1);
+                line.Write(span[..count]);
+                stream.Consume(count);
+                _sectionLength += count;
+                // Only the request line recognizes a TLS handshake early. An incomplete header or trailer
+                // beginning with these bytes still waits for its line end or the appropriate deadline.
+                if (requestLine && line.Length >= 2 && line.GetBuffer()[0] == 0x16 && line.GetBuffer()[1] == 0x03)
                     throw new HttpRequestRejectedException(400);
+                if (line.Length > lineLimit || _sectionLength > _sectionLimit)
+                    throw new HttpRequestRejectedException(overLimitStatus);
+                if (end >= 0)
+                    break;
             }
 
-            if (line.Count > 0 && line[^1] == '\r')
-                line.RemoveAt(line.Count - 1);
-
-            if (line.Contains((byte)'\r'))
+            var result = line.GetBuffer().AsSpan(0, (int)line.Length - 1);
+            if (result.Length > 0 && result[^1] == '\r')
+                result = result[..^1];
+            if (result.Contains((byte)'\r'))
                 throw new HttpRequestRejectedException(400);
-
-            return line.ToArray();
-        }
-
-        private async ValueTask<byte> ReadByte(CancellationToken cancellationToken)
-        {
-            if (_hasFirstByte && firstByte is { } initial) {
-                _hasFirstByte = false;
-                return initial;
-            }
-
-            var read = await stream.ReadAsync(_buffer, cancellationToken).Vhc();
-            return read == 0 ? throw new EndOfStreamException() : _buffer[0];
+            return result.ToArray();
         }
     }
 }

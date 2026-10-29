@@ -17,16 +17,15 @@ internal static class WebFront
 
     // the next request; null once the connection is to close: it ended, sat idle, or sent a request Kestrel refuses,
     // which this has answered
-    public static async Task<HttpRequestHead?> ReadRequest(Stream stream, CancellationToken cancellationToken)
+    public static async Task<HttpRequestHead?> ReadRequest(HttpReadStream stream, CancellationToken cancellationToken)
     {
-        var firstByte = await ReadFirstByte(stream, cancellationToken).Vhc();
-        if (firstByte < 0)
+        if (!await FindRequestStart(stream, cancellationToken).Vhc())
             return null;
 
         using var headersCts = new CancellationTokenSource(Heartbeat(RequestHeadersTimeout));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(headersCts.Token, cancellationToken);
         try {
-            return await HttpRequestHeadReader.Read(stream, (byte)firstByte, linkedCts.Token).Vhc();
+            return await HttpRequestHeadReader.Read(stream, linkedCts.Token).Vhc();
         }
         catch (HttpRequestRejectedException ex) {
             await TryWrite(stream, WebReplies.Rejected(ex.StatusCode, ex.Allow), cancellationToken).Vhc();
@@ -43,20 +42,20 @@ internal static class WebFront
     }
 
     // 401, as a JWT bearer check answers a request without a valid token
-    public static Task<WebFrontNext> Unauthorized(Stream stream, HttpRequestHead request,
+    public static Task<WebFrontNext> Unauthorized(HttpReadStream stream, HttpRequestHead request,
         CancellationToken cancellationToken)
     {
         return Answer(stream, request, WebReplies.Unauthorized(request), cancellationToken);
     }
 
     // 307 to the same URL on HTTPS, as HTTPS redirection answers on port 80
-    public static Task<WebFrontNext> RedirectToHttps(Stream stream, HttpRequestHead request, int httpsPort,
+    public static Task<WebFrontNext> RedirectToHttps(HttpReadStream stream, HttpRequestHead request, int httpsPort,
         CancellationToken cancellationToken)
     {
         return Answer(stream, request, WebReplies.RedirectToHttps(request, httpsPort), cancellationToken);
     }
 
-    private static async Task<WebFrontNext> Answer(Stream stream, HttpRequestHead request, byte[] reply,
+    private static async Task<WebFrontNext> Answer(HttpReadStream stream, HttpRequestHead request, byte[] reply,
         CancellationToken cancellationToken)
     {
         if (!await TryWrite(stream, reply, cancellationToken).Vhc())
@@ -71,7 +70,7 @@ internal static class WebFront
         try {
             return await DrainBody(stream, request, linkedCts.Token).Vhc()
                 ? WebFrontNext.NextRequest
-                : WebFrontNext.Close;
+                : WebFrontNext.Reset;
         }
         catch (Exception ex) when (ex is OperationCanceledException or IOException &&
                                    drainCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
@@ -82,123 +81,44 @@ internal static class WebFront
         }
     }
 
-    private static async Task<bool> DrainBody(Stream stream, HttpRequestHead request,
+    private static async Task<bool> DrainBody(HttpReadStream stream, HttpRequestHead request,
         CancellationToken cancellationToken)
     {
-        var buffer = new byte[4096];
-        if (!request.IsChunked) {
-            await Skip(stream, buffer, request.ContentLength ?? 0, cancellationToken).Vhc();
-            return true;
+        if (request.IsChunked) {
+            var body = new HttpChunkedBody(MaxRequestBodySize);
+            return await body.Drain(stream, request, cancellationToken).Vhc();
         }
 
-        // chunks: a hex size and maybe extensions, the data, a line end; then trailers to an empty line
-        long total = 0;
-        while (true) {
-            var size = await ReadChunkSize(stream, buffer, cancellationToken).Vhc();
-
-            if (size == 0)
-                break;
-
-            // Kestrel applies the limit to bytes received, so an oversized declaration with no data still
-            // waits for the drain deadline. Counting the declaration would close it immediately instead.
-            while (size > 0) {
-                var read = await stream.ReadAsync(buffer.AsMemory(0, Math.Min(size, buffer.Length)),
-                    cancellationToken).Vhc();
-                if (read == 0)
-                    throw new EndOfStreamException();
-                if (read > MaxRequestBodySize - total)
-                    return false;
-                total += read;
-                size -= read;
-            }
-            await ReadChunkLineEnd(stream, buffer, cancellationToken).Vhc();
+        var remaining = request.ContentLength ?? 0;
+        while (remaining > 0) {
+            if (!await stream.EnsureBuffered(1, cancellationToken).Vhc())
+                throw new EndOfStreamException();
+            var count = (int)Math.Min(remaining, stream.BufferedSpan.Length);
+            stream.Consume(count);
+            remaining -= count;
         }
-
-        await HttpRequestHeadReader.ReadTrailers(stream, request, cancellationToken).Vhc();
         return true;
     }
 
-    private static async Task Skip(Stream stream, byte[] buffer, long count, CancellationToken cancellationToken)
-    {
-        while (count > 0) {
-            var read = await stream.ReadAsync(buffer.AsMemory(0, (int)Math.Min(count, buffer.Length)),
-                cancellationToken).Vhc();
-            if (read == 0)
-                throw new EndOfStreamException();
-            count -= read;
-        }
-    }
-
-    private static async Task<int> ReadChunkSize(Stream stream, byte[] buffer,
-        CancellationToken cancellationToken)
-    {
-        uint size = 0;
-        var digits = 0;
-        while (true) {
-            var b = await ReadByte(stream, buffer, cancellationToken).Vhc();
-            var digit = b switch {
-                >= (byte)'0' and <= (byte)'9' => b - '0',
-                >= (byte)'a' and <= (byte)'f' => b - 'a' + 10,
-                >= (byte)'A' and <= (byte)'F' => b - 'A' + 10,
-                _ => -1
-            };
-            if (digit >= 0) {
-                if (++digits > 8)
-                    throw new InvalidDataException("A chunk size has more than eight digits.");
-                size = (size << 4) | (uint)digit;
-                continue;
-            }
-
-            if (digits == 0 || size > int.MaxValue)
-                throw new InvalidDataException("Invalid chunk size.");
-            // Extensions have no size limit in Kestrel. Skip them without retaining their bytes, under the
-            // body's drain deadline, while still requiring the size line's CRLF.
-            if (b == ';') {
-                do {
-                    b = await ReadByte(stream, buffer, cancellationToken).Vhc();
-                    if (b == '\n')
-                        throw new InvalidDataException("A chunk's line must end in CRLF.");
-                } while (b != '\r');
-            }
-            if (b != '\r' || await ReadByte(stream, buffer, cancellationToken).Vhc() != '\n')
-                throw new InvalidDataException("A chunk's line must end in CRLF.");
-            return (int)size;
-        }
-    }
-
-    private static async Task ReadChunkLineEnd(Stream stream, byte[] buffer, CancellationToken cancellationToken)
-    {
-        if (await ReadByte(stream, buffer, cancellationToken).Vhc() != '\r' ||
-            await ReadByte(stream, buffer, cancellationToken).Vhc() != '\n')
-            throw new InvalidDataException("Chunk data must end in CRLF.");
-    }
-
-    private static async ValueTask<byte> ReadByte(Stream stream, byte[] buffer, CancellationToken cancellationToken)
-    {
-        return await stream.ReadAsync(buffer.AsMemory(0, 1), cancellationToken).Vhc() == 0
-            ? throw new EndOfStreamException()
-            : buffer[0];
-    }
-
-    // -1 once the connection ends or sits idle past Kestrel's keep-alive timeout before the first byte
-    private static async Task<int> ReadFirstByte(Stream stream, CancellationToken cancellationToken)
+    // Leading line ends do not start the headers deadline. Skip whole buffered spans under the original
+    // keep-alive deadline; leave the first other byte for the request reader.
+    private static async Task<bool> FindRequestStart(HttpReadStream stream, CancellationToken cancellationToken)
     {
         using var idleCts = new CancellationTokenSource(Heartbeat(KeepAliveTimeout));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(idleCts.Token, cancellationToken);
-        var buffer = new byte[1];
         try {
-            // Leading line ends do not begin a request. Keep the original idle deadline until another byte
-            // arrives; otherwise a peer that sends CRLF alone gets a 408 that Kestrel never sends.
-            while (true) {
-                if (await stream.ReadAsync(buffer, linkedCts.Token).Vhc() == 0)
-                    return -1;
-                if (buffer[0] is not ((byte)'\r' or (byte)'\n'))
-                    return buffer[0];
+            while (await stream.EnsureBuffered(1, linkedCts.Token).Vhc()) {
+                var span = stream.BufferedSpan;
+                var start = span.IndexOfAnyExcept((byte)'\r', (byte)'\n');
+                stream.Consume(start < 0 ? span.Length : start);
+                if (start >= 0)
+                    return true;
             }
+            return false;
         }
         catch (Exception ex) when (ex is OperationCanceledException or IOException &&
                                    idleCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
-            return -1;
+            return false;
         }
     }
 

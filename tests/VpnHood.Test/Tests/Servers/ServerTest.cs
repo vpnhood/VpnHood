@@ -789,9 +789,10 @@ public class ServerTest : TestBase
         Assert.AreEqual(accessManager.AcmeHttp01KeyAuthorization, keyAuthorization);
     }
 
+    // as anything but a challenge: what HTTPS redirection answers, to the server's TLS port
     [TestMethod]
     [DoNotParallelize] // listens on the fixed well-known port 80
-    public async Task Http01Challenge_should_return_NotFound_for_invalid_token()
+    public async Task Http01Challenge_redirects_a_token_it_doesnt_know_to_https()
     {
         // create server
         using var accessManager = TestHelper.CreateAccessManager();
@@ -802,11 +803,12 @@ public class ServerTest : TestBase
         accessManager.ServerConfig.TcpEndPoints = [VhUtils.GetFreeTcpEndPoint(IPAddress.Parse("127.90.91.92"))];
         await using var server = await TestHelper.CreateServer(accessManager);
 
-        using var httpClient = new HttpClient();
-        var url = new Uri(
-            $"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
-        var response = await httpClient.GetAsync(url);
-        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        using var httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
+        var tlsEndPoint = accessManager.ServerConfig.TcpEndPointsValue[0];
+        var path = $"/.well-known/acme-challenge/{Guid.NewGuid()}";
+        var response = await httpClient.GetAsync(new Uri($"http://{tlsEndPoint.Address}:80{path}"), TestCt);
+        Assert.AreEqual(HttpStatusCode.TemporaryRedirect, response.StatusCode);
+        Assert.AreEqual(new Uri($"https://{tlsEndPoint}{path}"), response.Headers.Location);
     }
 
     [TestMethod]

@@ -1,10 +1,9 @@
-using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.Core.Server.ProbeResistance;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
 
@@ -101,7 +100,7 @@ internal class DownloadService(string? downloadsPath)
             sizeMb, VhLogger.Format(streamConnection.RemoteEndPoint));
 
         // Write HTTP response header
-        var response = BuildOkResponse(totalBytes, "application/octet-stream", RandomFileName);
+        var response = WebReplies.Download(totalBytes, "application/octet-stream", RandomFileName);
         await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
         // Write random data in chunks
@@ -140,7 +139,7 @@ internal class DownloadService(string? downloadsPath)
         var contentType = MimeTypeUtils.GetContentType(fileInfo.FullName);
 
         // Write HTTP response header
-        var response = BuildOkResponse(fileInfo.Length, contentType, fileInfo.Name);
+        var response = WebReplies.Download(fileInfo.Length, contentType, fileInfo.Name);
         await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
         // Stream the file content
@@ -157,23 +156,6 @@ internal class DownloadService(string? downloadsPath)
             "Download completed. FileName: {FileName}, RemoteEp: {RemoteEp}",
             fileInfo.FullName, VhLogger.Format(streamConnection.RemoteEndPoint));
 
-    }
-
-    private static ReadOnlyMemory<byte> BuildOkResponse(long contentLength, string contentType, string fileName)
-    {
-        var response = new HttpResponseMessage(HttpStatusCode.OK) {
-            Content = new ByteArrayContent([])
-        };
-        response.Headers.Date = DateTimeOffset.UtcNow;
-        response.Headers.ConnectionClose = true;
-        response.Content.Headers.ContentLength = contentLength;
-        response.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-        response.Content.Headers.ContentDisposition =
-            new ContentDispositionHeaderValue("attachment") {
-                FileName = fileName
-            };
-
-        return HttpResponseBuilder.Build(response);
     }
 
     private static string? ResolveFilePath(string downloadsPath, string urlPath, out string relativePath, out string queryString)

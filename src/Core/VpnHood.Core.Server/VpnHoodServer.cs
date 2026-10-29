@@ -13,6 +13,7 @@ using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
+using VpnHood.Core.Server.ProbeResistance;
 using VpnHood.Core.Server.ReverseProxies;
 using VpnHood.Core.Server.SystemInformation;
 using VpnHood.Core.Server.Utils;
@@ -47,6 +48,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
     private readonly NetFilter _netFilter;
     private readonly ReverseProxyTrust _reverseProxyTrust;
+    private readonly UnauthenticatedConnections _unauthenticatedConnections = new();
+    internal int UnauthenticatedConnectionCount => _unauthenticatedConnections.Count;
     private string? _tcpCongestionControl;
     private bool _isRestarted = true;
     private readonly Job _configureAndSendStatusJob;
@@ -90,7 +93,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
         _http01ChallengeService = new Http01ChallengeService((token, cancellationToken) =>
             AccessManager.Acme_GetHttp01KeyAuthorization(token, cancellationToken),
-            throttleRequests: options.Http01ChallengeThrottling);
+            _unauthenticatedConnections, throttleRequests: options.Http01ChallengeThrottling);
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _configErrorTracker = new ConfigErrorTracker(options.StoragePath, options.ConfigErrorStrikeDuration, options.ConfigErrorRetryInterval);
@@ -102,7 +105,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         _config = options.Config;
         _serverHostDisposeTimeout = options.ServerHostDisposeTimeout;
         _reverseProxyTrust = new ReverseProxyTrust(options.StoragePath, httpMessageHandler: null);
-        ServerHost = new ServerHost(SessionManager, options.DownloadsPath, options.QuicServer, _reverseProxyTrust);
+        ServerHost = new ServerHost(SessionManager, options.DownloadsPath, options.QuicServer, _reverseProxyTrust,
+            _unauthenticatedConnections);
 
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
         // started by Start, its first periodic run an interval after Start's own: a run queued before that sent a
@@ -288,6 +292,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
             // Reconfigure server host
             _reverseProxyTrust.Configure(serverConfig.ReverseProxyProvidersValue, serverConfig.ReverseProxyIpRangesValue);
+            _unauthenticatedConnections.MaxCount = serverConfig.SessionOptions.MaxUnauthenticatedConnectionCountValue;
             _endPointStatusesSent = false;
             var endPointStatuses = await ServerHost.Configure(new ServerHostConfiguration {
                 DnsServers = serverConfig.DnsServersValue,
@@ -305,7 +310,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             // Reconfigure dns challenge
             _http01ChallengeService.Stop();
             if (serverConfig.EnableHttp01ChallengeValue)
-                _http01ChallengeService.Start(serverConfig.TcpEndPointsValue.Select(x => x.Address).Distinct());
+                _http01ChallengeService.Start(serverConfig.TcpEndPointsValue);
 
             // set config status
             _lastConfigCode = serverConfig.ConfigCode;

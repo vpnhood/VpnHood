@@ -7,6 +7,7 @@ using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Exceptions;
 using VpnHood.Core.Server.Listeners;
+using VpnHood.Core.Server.ProbeResistance;
 using VpnHood.Core.Server.ReverseProxies;
 using VpnHood.Core.Server.Utils;
 using VpnHood.Net.Toolkit.Extensions;
@@ -38,6 +39,7 @@ public class ServerHost : IAsyncDisposable
     private readonly AsyncLock _configureLock = new();
     private readonly AsyncLock _disposeLock = new();
     private readonly ReverseProxyTrust _reverseProxyTrust;
+    private readonly UnauthenticatedConnections _unauthenticatedConnections;
     private bool _disposed;
 
     public const int MaxProtocolVersion = 14;
@@ -58,15 +60,17 @@ public class ServerHost : IAsyncDisposable
     public string? DownloadPath => _downloadService.DownloadPath;
 
     internal ServerHost(SessionManager sessionManager, string? downloadsPath, IQuicServer? quicServer,
-        ReverseProxyTrust reverseProxyTrust)
+        ReverseProxyTrust reverseProxyTrust, UnauthenticatedConnections unauthenticatedConnections)
     {
         _sessionManager = sessionManager;
         _reverseProxyTrust = reverseProxyTrust;
+        _unauthenticatedConnections = unauthenticatedConnections;
         _downloadService = new DownloadService(downloadsPath);
         _cleanupConnectionsJob = new Job(CleanupConnections, TimeSpan.FromMinutes(5), nameof(ServerHost));
         UniqueIdFactory.DebugInitId = 5000;
         _tcpListenerHost = new TcpListenerHost(
             sessionManager: _sessionManager,
+            unauthenticatedConnections: unauthenticatedConnections,
             cancellationToken: _cancellationTokenSource.Token,
             processNewConnection: ProcessNewConnection);
         _quicListenerHost = new QuicListenerHost(
@@ -120,106 +124,126 @@ public class ServerHost : IAsyncDisposable
         return version;
     }
 
-    private async Task<ServerStreamConnection> CreateHttpConnection(IStreamConnection streamConnection, CancellationToken cancellationToken)
+    // the connection of the first request a client of ours sends; any other request on it meets the web front, as
+    // does every next one on a connection it keeps. Null once the connection has closed
+    private async Task<ServerStreamConnection?> CreateHttpConnection(IStreamConnection streamConnection,
+        CancellationToken cancellationToken)
     {
-        try {
+        while (true) {
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "Waiting for Connection request...");
-            var headers =
-                await HttpUtils.ParseHeadersAsync(streamConnection.Stream, cancellationToken).Vhc()
-                ?? throw new Exception("Connection has been closed before receiving any request.");
+            var request = await WebFront.ReadRequest(streamConnection.Stream, cancellationToken).Vhc();
+            if (request == null) {
+                await CloseConnection(streamConnection, reset: false).Vhc();
+                return null;
+            }
 
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", string.Join("\n", headers));
-
-            Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
-            bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
-            int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
-            var connectionId = headers.GetValueOrDefault("X-ConnectionId", streamConnection.ConnectionId);
-            var webSocketKey = headers.GetValueOrDefault("Sec-WebSocket-Key", "");
-            var httpRequestLine = headers.GetValueOrDefault(HttpUtils.HttpRequestKey, "");
-            var httpMethod = httpRequestLine.Split(" ").FirstOrDefault();
-            var upgrade = headers.GetValueOrDefault("Upgrade", "");
-            var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
-            var clientIp = _reverseProxyTrust.GetClientIp(streamConnection.RemoteEndPoint.Address, headers);
-
-            // whether or not the proxy may name the client: the UDP and QUIC ports the hello would give lead straight
-            // to the server, past a proxy no list names too
-            var isRevereProxy = !string.IsNullOrEmpty(clientIpByProxy);
+            VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", request.RequestLine);
 
             // Try to serve download file if requested
-            if (await _downloadService.TryServeDownloadAsync(streamConnection, httpRequestLine, cancellationToken).Vhc())
+            if (await _downloadService.TryServeDownloadAsync(streamConnection, request.RequestLine, cancellationToken).Vhc())
                 throw new RequestHandledException(); // Should not reach here, but just in case
 
-            if (upgrade.Equals("websocket", StringComparison.OrdinalIgnoreCase))
-                streamType = TunnelStreamType.WebSocket;
+            var clientConnection = await CreateClientConnection(streamConnection, request, cancellationToken).Vhc();
+            if (clientConnection != null)
+                return clientConnection;
 
-            // check version; Throw unauthorized to prevent fingerprinting
-            if (protocolVersion is < MinProtocolVersion or > MaxProtocolVersion)
-                throw new UnauthorizedAccessException();
+            var next = await WebFront.Unauthorized(streamConnection.Stream, request, cancellationToken).Vhc();
+            if (next == WebFrontNext.NextRequest)
+                continue;
 
-            // a request no client of ours sends gets the same 401 as one without our headers: a 400 would tell a
-            // scan that knows them it is us
-            switch (streamType) {
-                case TunnelStreamType.None:
-                    if (httpMethod != "POST")
-                        throw new UnauthorizedAccessException();
+            await CloseConnection(streamConnection, reset: next == WebFrontNext.Reset).Vhc();
+            return null;
+        }
+    }
 
-                    return new ServerStreamConnection(streamConnection) {
+    // a client's connection for a request with our headers, a protocol we speak and its stream's method; null for
+    // any other, which gets the web front's 401 like a request without our headers: a 400 would tell a scan that
+    // knows them it is us
+    private async Task<ServerStreamConnection?> CreateClientConnection(IStreamConnection streamConnection,
+        HttpRequestHead request, CancellationToken cancellationToken)
+    {
+        var headers = request.Headers;
+        Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
+        bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
+        int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
+        var connectionId = headers.GetValueOrDefault("X-ConnectionId", streamConnection.ConnectionId);
+        var webSocketKey = headers.GetValueOrDefault("Sec-WebSocket-Key", "");
+        var upgrade = headers.GetValueOrDefault("Upgrade", "");
+        var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
+        var clientIp = _reverseProxyTrust.GetClientIp(streamConnection.RemoteEndPoint.Address, headers);
+
+        // whether or not the proxy may name the client: the UDP and QUIC ports the hello would give lead straight
+        // to the server, past a proxy no list names too
+        var isRevereProxy = !string.IsNullOrEmpty(clientIpByProxy);
+
+        if (upgrade.Equals("websocket", StringComparison.OrdinalIgnoreCase))
+            streamType = TunnelStreamType.WebSocket;
+
+        if (protocolVersion is < MinProtocolVersion or > MaxProtocolVersion)
+            return null;
+
+        switch (streamType) {
+            case TunnelStreamType.None:
+                if (request.Method != "POST")
+                    return null;
+
+                return new ServerStreamConnection(streamConnection) {
+                    ClientIp = clientIp,
+                    RequireHttpResponse = true,
+                    IsReverseProxy = isRevereProxy
+                };
+
+            case TunnelStreamType.WebSocketNoHandshake: {
+                    if (request.Method != "POST")
+                        return null;
+
+                    // create WebSocket stream without handshake
+                    var websocketStream = new WebSocketStream(
+                        streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
+                    var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
+                    return new ServerStreamConnection(reusableConnection) {
+                        ConnectionId = connectionId,
                         ClientIp = clientIp,
-                        RequireHttpResponse = true,
+                        RequireHttpResponse = true, // same as simple use WebSocket stream
                         IsReverseProxy = isRevereProxy
                     };
+                }
 
+            case TunnelStreamType.WebSocket: {
+                    if (request.Method != "GET")
+                        return null;
 
-                case TunnelStreamType.WebSocketNoHandshake: {
-                        if (httpMethod != "POST")
-                            throw new UnauthorizedAccessException();
+                    // the 101 goes out unchecked, as an upgrade carries no key before protocol 15. No gate by the
+                    // client's IP: it would refuse a client after an IP change or a restart; the minimum protocol
+                    // turns old clients away instead
+                    var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
+                    await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
-                        // create WebSocket stream without handshake
-                        var websocketStream = new WebSocketStream(
-                            streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
-                        var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
-                        return new ServerStreamConnection(reusableConnection) {
-                            ConnectionId = connectionId,
-                            ClientIp = clientIp,
-                            RequireHttpResponse = true, // same as simple use WebSocket stream
-                            IsReverseProxy = isRevereProxy
-                        };
-                    }
+                    var websocketStream = new WebSocketStream(
+                        streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
+                    var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
+                    return new ServerStreamConnection(reusableConnection) {
+                        ConnectionId = connectionId,
+                        ClientIp = clientIp,
+                        RequireHttpResponse = false, // Upgrade response has been already sent
+                        IsReverseProxy = isRevereProxy
+                    };
+                }
 
-                case TunnelStreamType.WebSocket: {
-                        if (httpMethod != "GET")
-                            throw new UnauthorizedAccessException();
-
-                        // the 101 goes out unchecked, as an upgrade carries no key before protocol 15. No gate by the
-                        // client's IP: it would refuse a client after an IP change or a restart; the minimum protocol
-                        // turns old clients away instead
-                        var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
-                        await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
-
-                        var websocketStream = new WebSocketStream(
-                            streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
-                        var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
-                        return new ServerStreamConnection(reusableConnection) {
-                            ConnectionId = connectionId,
-                            ClientIp = clientIp,
-                            RequireHttpResponse = false, // Upgrade response has been already sent
-                            IsReverseProxy = isRevereProxy
-                        };
-                    }
-
-                case TunnelStreamType.Unknown:
-                default:
-                    throw new UnauthorizedAccessException(); //Unknown BinaryStreamType
-            }
+            case TunnelStreamType.Unknown:
+            default:
+                return null;
         }
-        catch (Exception ex) when (streamConnection.Connected) {
-            //always return BadRequest 
-            var response = ex is UnauthorizedAccessException
-                ? HttpResponseBuilder.Unauthorized()
-                : HttpResponseBuilder.Error(HttpStatusCode.BadRequest);
-            await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
-            throw;
-        }
+    }
+
+    // a reset where the web front gives up on a body that comes too slowly, as Kestrel does; a close otherwise
+    private static async Task CloseConnection(IStreamConnection streamConnection, bool reset)
+    {
+        streamConnection.PreventReuse();
+        if (reset && streamConnection is TcpStreamConnection tcpStreamConnection)
+            tcpStreamConnection.Reset();
+        else
+            await streamConnection.DisposeAsync().Vhc();
     }
 
     private void ReuseConnection(IStreamConnection streamConnection)
@@ -269,6 +293,9 @@ public class ServerHost : IAsyncDisposable
         var clientIp = streamConnection.RemoteEndPoint.Address;
         try {
             var serverConnection = await CreateHttpConnection(streamConnection, cancellationToken).Vhc();
+            if (serverConnection == null)
+                return;
+
             streamConnection = serverConnection;
             clientIp = serverConnection.ClientIp;
 
@@ -277,11 +304,14 @@ public class ServerHost : IAsyncDisposable
                 serverConnection.ConnectionId, VhLogger.Format(serverConnection.RemoteEndPoint),
                 VhLogger.Format(serverConnection.ClientIp));
 
-            var requestVersion = await ReadRequestVersion(serverConnection, cancellationToken).Vhc();
+            // the web front's waits are a web server's; a client's request has the connect timeout for the rest
+            using var timeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
+            using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
+            var requestVersion = await ReadRequestVersion(serverConnection, connectCts.Token).Vhc();
             if (requestVersion < 0)
                 return;
 
-            await ProcessConnection(streamConnection, requestVersion, serverConnection.ClientIp, cancellationToken).Vhc();
+            await ProcessConnection(streamConnection, requestVersion, serverConnection.ClientIp, connectCts.Token).Vhc();
         }
         catch (RequestHandledException) {
             // no need to do anything, just return and let the connection be closed by caller
@@ -298,7 +328,7 @@ public class ServerHost : IAsyncDisposable
                 using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, cancellationToken);
                 // ReSharper disable once AccessToDisposedClosure
                 await VhInvoker.TryInvokeAsync("write the unauthorized response", LogLevel.Debug,
-                    () => streamConnection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), closeCts.Token)).Vhc();
+                    () => streamConnection.Stream.WriteAsync(WebReplies.UnauthorizedThenClose(), closeCts.Token)).Vhc();
             }
 
             streamConnection.PreventReuse();
@@ -458,6 +488,9 @@ public class ServerHost : IAsyncDisposable
         var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
             throw new InvalidOperationException("Session is lost!");
 
+        // the key has been proven
+        _unauthenticatedConnections.Remove(streamConnection.ToEndPointPair());
+
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity. Not at the
         // version check before the key either: every client up to protocol 14 sends its hello as 8
         if (request.ClientInfo == null || protocolVersion < MinClientProtocolVersion)
@@ -556,13 +589,23 @@ public class ServerHost : IAsyncDisposable
         await streamConnection.DisposeAsync(helloResponse, cancellationToken).Vhc();
     }
 
+    // a request's session, which its key proves: the connection then leaves the unauthenticated ones
+    private async Task<Session> GetSession(RequestBase request, IStreamConnection streamConnection,
+        CancellationToken cancellationToken)
+    {
+        var endPoints = streamConnection.ToEndPointPair();
+        var session = await _sessionManager.GetSession(request, endPoints, cancellationToken).Vhc();
+        _unauthenticatedConnections.Remove(endPoints);
+        return session;
+    }
+
     private async Task ProcessRewardedAdRequest(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Request, "Reading the RewardedAd request...");
         var request = await ReadRequest<RewardedAdRequest>(streamConnection, cancellationToken).Vhc();
         using var scope = CreateLogScope(streamConnection, request);
 
-        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        var session = await GetSession(request, streamConnection, cancellationToken).Vhc();
         await session.ProcessRewardedAdRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
@@ -574,7 +617,7 @@ public class ServerHost : IAsyncDisposable
         using var scope = CreateLogScope(streamConnection, request);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        var session = await GetSession(request, streamConnection, cancellationToken).Vhc();
 
         // processing request
         await session.ProcessSessionStatusRequest(request, streamConnection, cancellationToken).Vhc();
@@ -588,7 +631,7 @@ public class ServerHost : IAsyncDisposable
             "Process ServerCheck and return unauthorized for the request...");
 
         // write unauthorized response
-        await streamConnection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).Vhc();
+        await streamConnection.Stream.WriteAsync(WebReplies.UnauthorizedThenClose(), cancellationToken).Vhc();
         streamConnection.PreventReuse();
         await streamConnection.DisposeAsync().Vhc();
     }
@@ -600,7 +643,7 @@ public class ServerHost : IAsyncDisposable
         using var scope = CreateLogScope(streamConnection, request);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        var session = await GetSession(request, streamConnection, cancellationToken).Vhc();
 
         // Dispose client stream
         await streamConnection.DisposeAsync(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken).Vhc();
@@ -615,7 +658,7 @@ public class ServerHost : IAsyncDisposable
         var request = await ReadRequest<UdpPacketRequest>(streamConnection, cancellationToken).Vhc();
         using var scope = CreateLogScope(streamConnection, request);
 
-        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        var session = await GetSession(request, streamConnection, cancellationToken).Vhc();
         await session.ProcessUdpPacketRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
@@ -626,7 +669,7 @@ public class ServerHost : IAsyncDisposable
         using var scope = CreateLogScope(streamConnection, request);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        var session = await GetSession(request, streamConnection, cancellationToken).Vhc();
         await session.ProcessTcpPacketChannelRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
@@ -637,7 +680,7 @@ public class ServerHost : IAsyncDisposable
         using var scope = CreateLogScope(streamConnection, request);
 
         // find session
-        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        var session = await GetSession(request, streamConnection, cancellationToken).Vhc();
         await session.ProcessTcpProxyRequest(request, streamConnection, cancellationToken).Vhc();
     }
 

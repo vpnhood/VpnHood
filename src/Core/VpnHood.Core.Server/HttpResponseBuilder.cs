@@ -1,9 +1,6 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
-using VpnHood.Core.Common.Exceptions;
-using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling.WebSockets;
 
 namespace VpnHood.Core.Server;
@@ -33,12 +30,6 @@ internal static class HttpResponseBuilder
         return Encoding.UTF8.GetBytes(responseBuilder.ToString());
     }
 
-    public static ReadOnlyMemory<byte> Ok()
-    {
-        var response = new HttpResponseMessage(HttpStatusCode.OK);
-        return Build(response);
-    }
-
     public static ReadOnlyMemory<byte> Ok(int contentLength)
     {
         var response = new HttpResponseMessage(HttpStatusCode.OK);
@@ -63,45 +54,10 @@ internal static class HttpResponseBuilder
         return Build(response);
     }
 
-    public static ReadOnlyMemory<byte> Error(HttpStatusCode? httpStatusCode = HttpStatusCode.InternalServerError,
-        string? message = null, bool connectionClose = true)
-    {
-        var response = new HttpResponseMessage(httpStatusCode ?? HttpStatusCode.InternalServerError);
-        response.Headers.ConnectionClose = connectionClose;
-        if (!string.IsNullOrEmpty(message))
-            response.Content = new StringContent(message, Encoding.UTF8, MediaTypeNames.Text.Plain);
-        return Build(response);
-    }
-
-    public static ReadOnlyMemory<byte> Unauthorized()
-    {
-        var response = new HttpResponseMessage(HttpStatusCode.Unauthorized);
-        response.Headers.ConnectionClose = true;
-        response.Headers.WwwAuthenticate.Add(new AuthenticationHeaderValue("Bearer"));
-        return Build(response);
-    }
-
     public static ReadOnlyMemory<byte> ServiceUnavailable()
     {
         var response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
         response.Headers.ConnectionClose = true;
         return Build(response);
-    }
-
-    public static ReadOnlyMemory<byte> BadRequest(string? message)
-    {
-        return Error(HttpStatusCode.BadRequest, message);
-    }
-
-    public static ReadOnlyMemory<byte> Error(Exception ex)
-    {
-        return ex switch {
-            HttpRequestException httpRequestException => Error(httpRequestException.StatusCode, ex.Message),
-            KeyNotFoundException => Error(HttpStatusCode.NotFound, ex.Message),
-            UnauthorizedAccessException => Unauthorized(),
-            MaintenanceException => ServiceUnavailable(),
-            ApiException { StatusCode: (int)HttpStatusCode.NotFound } => Error(HttpStatusCode.NotFound, ex.Message),
-            _ => Error(HttpStatusCode.InternalServerError, ex.Message)
-        };
     }
 }

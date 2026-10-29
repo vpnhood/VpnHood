@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access;
+using VpnHood.Core.Server.ProbeResistance;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -18,6 +19,7 @@ namespace VpnHood.Core.Server.Listeners;
 
 internal class TcpListenerHost(
     SessionManager sessionManager,
+    UnauthenticatedConnections unauthenticatedConnections,
     CancellationToken cancellationToken,
     Func<IStreamConnection, CancellationToken, Task> processNewConnection)
     : IAsyncDisposable
@@ -144,9 +146,13 @@ internal class TcpListenerHost(
         VhLogger.Instance.LogInformation("TCP Listener has been stopped. LocalEp: {LocalEp}", VhLogger.Format(localEp));
     }
 
+    // the connection counts as unauthenticated from here until a session takes it or it ends
     private async Task TryProcessTcpClient(TcpClient tcpClient, CancellationToken ct)
     {
+        IPEndPointPair? endPoints = null;
         try {
+            endPoints = new IPEndPointPair(tcpClient.GetLocalEndPoint(), tcpClient.GetRemoteEndPoint());
+            unauthenticatedConnections.Add(endPoints.Value, tcpClient);
             await ProcessTcpClient(tcpClient, ct).Vhc();
         }
         catch (Exception ex) {
@@ -156,14 +162,22 @@ internal class TcpListenerHost(
 
             tcpClient.Dispose();
         }
+        finally {
+            if (endPoints != null)
+                unauthenticatedConnections.Remove(endPoints.Value);
+        }
     }
 
+    // the TLS handshake has a web server's timeout; past it, the server's web front times its own waits as a web
+    // server does, and a client's request gets the connect timeout
     private async Task ProcessTcpClient(TcpClient tcpClient, CancellationToken ct)
     {
-        using var timeoutCts = new CancellationTokenSource(sessionManager.SessionOptions.TcpConnectTimeoutValue);
-        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, ct);
-        var connection = await CreateConnection(tcpClient, connectCts.Token).Vhc();
-        await processNewConnection(connection, connectCts.Token).Vhc();
+        IStreamConnection connection;
+        using (var timeoutCts = new CancellationTokenSource(WebFront.HandshakeTimeout))
+        using (var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, ct))
+            connection = await CreateConnection(tcpClient, connectCts.Token).Vhc();
+
+        await processNewConnection(connection, ct).Vhc();
     }
 
     private async Task<IStreamConnection> CreateConnection(TcpClient tcpClient, CancellationToken ct)

@@ -48,6 +48,10 @@ public class SessionOptions
     // raises the server's own minimum protocol; an older client is told to update once it has proven its key
     public int? MinClientProtocolVersion { get; set; }
 
+    // the server's connections that haven't proven a key yet, its port 80's included; above it, the address that
+    // holds the most loses its oldest
+    public int? MaxUnauthenticatedConnectionCount { get; set; }
+
     [JsonIgnore]
     public TimeSpan TimeoutValue => Timeout ?? TimeSpan.FromMinutes(30);
 
@@ -101,6 +105,11 @@ public class SessionOptions
     [JsonIgnore]
     public int MaxTcpConnectsPerSecondValue => MaxTcpConnectsPerSecond ?? 200;
 
+    // an estimate: a client's connection proves its key within about a second, so the count stays near the
+    // server's new connections a second, and a cap well above that leaves a mass reconnect alone
+    [JsonIgnore]
+    public int MaxUnauthenticatedConnectionCountValue => MaxUnauthenticatedConnectionCount ?? 1000;
+
     [JsonIgnore]
     public bool AllowTcpProxyValue => AllowTcpProxy ?? true;
 
@@ -141,6 +150,8 @@ public class SessionOptions
         if (obj.AllowQuicPacket != null) AllowQuicPacket = obj.AllowQuicPacket;
         if (obj.AllowUdpPacket != null) AllowUdpPacket = obj.AllowUdpPacket;
         if (obj.MinClientProtocolVersion != null) MinClientProtocolVersion = obj.MinClientProtocolVersion;
+        if (obj.MaxUnauthenticatedConnectionCount != null)
+            MaxUnauthenticatedConnectionCount = obj.MaxUnauthenticatedConnectionCount;
     }
 
     public void ApplyDefaults()
@@ -171,5 +182,6 @@ public class SessionOptions
         AllowQuicPacket = AllowQuicPacketValue;
         AllowUdpPacket = AllowUdpPacketValue;
         MinClientProtocolVersion = MinClientProtocolVersion; //no default: the server's own minimum holds
+        MaxUnauthenticatedConnectionCount = MaxUnauthenticatedConnectionCountValue;
     }
 }

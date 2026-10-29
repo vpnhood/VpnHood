@@ -68,6 +68,20 @@ public sealed class TcpStreamConnection : IStreamConnection
         return $"{ConnectionId}:{ConnectionName}:{role}";
     }
 
+    // a close with a reset rather than a FIN, as a server closes that gives up on its peer. The socket closes on its
+    // own first: the client's and the stream's close would shut it down, which sends a FIN whatever its linger
+    public void Reset()
+    {
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
+        _tcpClient.Client.LingerState = new LingerOption(true, 0);
+        _tcpClient.Client.Dispose();
+        Stream.Dispose();
+        _tcpClient.Dispose();
+        VhTypeTracker.Record($"TcpStreamConnection.{ConnectionName}.disposed");
+    }
+
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

@@ -416,7 +416,6 @@ public partial class MainView : UserControl
 
             case ErrorMessage.Page { Target: ErrorPage.PrivateDns }:
                 Navigate(FeaturePages.PrivateDnsError(this));
-                await VhApp.Api.App.ClearLastError(CancellationToken.None);
                 return;
 
             case ErrorMessage.Dialog dialog:

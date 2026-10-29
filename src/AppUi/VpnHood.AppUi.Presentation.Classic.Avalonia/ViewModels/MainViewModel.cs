@@ -406,9 +406,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (host == null)
             return;
 
+        // cleared from the app as it is shown: however its dialog closes - a button, Back, the app closing -
+        // it does not come back at the next start
         if (state.LastError != null && state.LastError.Message != _shownErrorMessage) {
             _shownErrorMessage = state.LastError.Message;
-            _ = host.ShowErrorMessage(ErrorMessages.For(state.LastError, AppErrors.Context));
+            var message = ErrorMessages.For(state.LastError, AppErrors.Context);
+            VhApp.Api.App.ClearLastError(CancellationToken.None).Forget("Could not clear the error shown.");
+            _ = host.ShowErrorMessage(message);
         }
         else if (state.LastError == null) {
             _shownErrorMessage = null;

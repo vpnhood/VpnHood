@@ -36,20 +36,10 @@ public partial class ErrorDialog : DialogBase
         CloseButton.LandFocus();
     }
 
-    private async Task CloseAndClear()
+    // the app's error was cleared as it was shown (MainViewModel.RefreshPrompts), so a button only closes
+    private void OnCloseClick(object? sender, RoutedEventArgs e)
     {
-        await VhApp.Api.App.ClearLastError(CancellationToken.None);
         Close();
-    }
-
-    private async void OnCloseClick(object? sender, RoutedEventArgs e)
-    {
-        try {
-            await CloseAndClear();
-        }
-        catch (Exception ex) {
-            await this.ReportError(ex);
-        }
     }
 
     // the automatic location, then a connect on it (ErrorDialog.changeLocationToAuto)
@@ -58,7 +48,7 @@ public partial class ErrorDialog : DialogBase
         try {
             if (VhApp.VpnProfileId is not { } profileId)
                 return;
-            await CloseAndClear();
+            Close();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: false, ConnectPlanId.Normal));
         }
         catch (Exception ex) {
@@ -71,7 +61,7 @@ public partial class ErrorDialog : DialogBase
         try {
             if (VhApp.VpnProfileId is not { } profileId)
                 return;
-            await CloseAndClear();
+            Close();
             await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: true, ConnectPlanId.PremiumByTrial));
         }
         catch (Exception ex) {
@@ -82,7 +72,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnDiagnoseClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await CloseAndClear();
+            Close();
             await _host.ViewModel.Diagnose();
         }
         catch (Exception ex) {
@@ -93,7 +83,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnReportClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await CloseAndClear();
+            Close();
             _host.Navigate(new LogView());
         }
         catch (Exception ex) {
@@ -104,7 +94,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnRestoreClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await CloseAndClear();
+            Close();
             _host.Replace(new PurchaseSubscriptionView(_host, null));
         }
         catch (Exception ex) {
@@ -115,7 +105,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnChangeCodeClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await CloseAndClear();
+            Close();
             await _host.ShowDialog(new PremiumCodeDialog(_host));
         }
         catch (Exception ex) {
@@ -126,7 +116,7 @@ public partial class ErrorDialog : DialogBase
     private async void OnLearnMoreClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await CloseAndClear();
+            Close();
             _host.Replace(new LearnMoreView(_host));
         }
         catch (Exception ex) {

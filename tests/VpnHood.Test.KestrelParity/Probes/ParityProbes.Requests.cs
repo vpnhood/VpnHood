@@ -4,12 +4,14 @@ namespace VpnHood.Test.KestrelParity.Probes;
 
 internal static partial class ParityProbes
 {
+    private const string JsonBody = "{\"status\":\"ok\"}";
+
     // what browsers and scanners send: ordinary requests, kept connections and pipelined ones
     private static IReadOnlyList<Probe> Requests() => [
         Tls("get-root-browser", t => Browser(t, "GET", "/")),
         Tls("head-root", t => Simple(t, "HEAD", "/")),
-        Tls("post-body", t => Simple(t, "POST", "/api/data", "Content-Type: application/json\r\nContent-Length: 16\r\n") +
-                              "{\"status\":\"ok\"}"),
+        Tls("post-body", t => Simple(t, "POST", "/api/data",
+            $"Content-Type: application/json\r\nContent-Length: {JsonBody.Length}\r\n") + JsonBody),
         Tls("robots", t => Simple(t, "GET", "/robots.txt")),
         Tls("favicon", t => Simple(t, "GET", "/favicon.ico")),
         Tls("get-close", t => Simple(t, "GET", "/", "Connection: close\r\n")),

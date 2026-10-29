@@ -16,39 +16,47 @@ internal static class ProbeRunner
     {
         var results = new List<ProbeResult>();
         var concurrent = probes.Where(x => x.Kind != ProbeKind.Bulk).Select(async probe => {
-            var logs = await Task.WhenAll(
+            var runs = await Task.WhenAll(
                 Run(probe, reference, progressPath, cancellationToken),
                 Run(probe, ours, progressPath, cancellationToken));
-            return new ProbeResult(probe.Name, probe.Kind, logs[0], logs[1]);
+            return Result(probe, runs[0], runs[1]);
         });
         results.AddRange(await Task.WhenAll(concurrent));
 
         foreach (var probe in probes.Where(x => x.Kind == ProbeKind.Bulk)) {
-            var referenceLog = await Run(probe, reference, progressPath, cancellationToken);
-            var ourLog = await Run(probe, ours, progressPath, cancellationToken);
-            results.Add(new ProbeResult(probe.Name, probe.Kind, referenceLog, ourLog));
+            var referenceRun = await Run(probe, reference, progressPath, cancellationToken);
+            var ourRun = await Run(probe, ours, progressPath, cancellationToken);
+            results.Add(Result(probe, referenceRun, ourRun));
         }
 
         return results;
     }
 
-    private static async Task<string> Run(Probe probe, ProbeTarget target, string progressPath,
+    private static ProbeResult Result(Probe probe, (string Log, bool Failed) reference, (string Log, bool Failed) ours)
+    {
+        return new ProbeResult(probe.Name, probe.Kind, reference.Log, ours.Log, reference.Failed || ours.Failed);
+    }
+
+    private static async Task<(string Log, bool Failed)> Run(Probe probe, ProbeTarget target, string progressPath,
         CancellationToken cancellationToken)
     {
         NoteProgress(progressPath, $"Started {target.Name} {probe.Name}.");
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(ProbeTimeout);
         var log = new StringBuilder();
+        var failed = false;
         try {
             await probe.Run(target, log, timeoutCts.Token);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested) {
-            // a probe that breaks breaks for both servers alike, so its error is part of what is compared
+            // a probe that throws or runs out its time measured nothing, even when both servers got the same error:
+            // the report shows why, and the test fails
             log.AppendLine($"! {ProbeConnection.Describe(ex)}");
+            failed = true;
         }
 
         NoteProgress(progressPath, $"Finished {target.Name} {probe.Name}.");
-        return log.ToString();
+        return (log.ToString(), failed);
     }
 
     private static void NoteProgress(string progressPath, string message)

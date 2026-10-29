@@ -9,10 +9,13 @@ namespace VpnHood.Test.KestrelParity.Servers;
 // handler, on loopback. That handler always takes port 80, which another program on this machine must not hold.
 internal sealed class OurServer : IAsyncDisposable
 {
+    // fixed in the handler's code
+    private static readonly IPEndPoint Http01EndPoint = new(IPAddress.Loopback, 80);
+
     private readonly VpnHoodServer _server;
 
     public IPEndPoint TlsEndPoint { get; }
-    public IPEndPoint HttpEndPoint { get; } = new(IPAddress.Loopback, 80);
+    public IPEndPoint HttpEndPoint => Http01EndPoint;
 
     // the certificate's name, which each TLS probe sends as its SNI to both servers
     public string HostName { get; }
@@ -30,6 +33,12 @@ internal sealed class OurServer : IAsyncDisposable
 
     public static async Task<OurServer> Start(string storagePath, CancellationToken cancellationToken)
     {
+        // Where the handler can't take port 80 it logs and goes on without it, and every "-http" probe would measure
+        // whatever holds the port: free before the start and taken after it, the port is ours.
+        if (!IsFree(Http01EndPoint))
+            throw new InvalidOperationException(
+                $"{Http01EndPoint} is in use; the parity tests need it for our server's HTTP-01 handler.");
+
         var tlsEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         var accessManager = new FileAccessManager(storagePath, new FileAccessManagerOptions {
             PublicEndPoints = [tlsEndPoint],
@@ -41,17 +50,31 @@ internal sealed class OurServer : IAsyncDisposable
             EnableHttp01Challenge = true
         });
 
-        var accessToken = accessManager.AccessTokenService.Create(tokenName: "parity", maxClientCount: 1);
-        var hostName = accessManager.GetToken(accessToken).ServerToken.HostName;
-        var certificatePath = Path.Combine(accessManager.CertsFolderPath, "default.pfx");
-
+        // the server owns the access manager from here, and disposes it with itself
         var server = new VpnHoodServer(accessManager, new ServerOptions {
             StoragePath = Path.Combine(storagePath, "server"),
             PublicIpDiscovery = false,
             AutoDisposeAccessManager = true
         });
-        await server.Start(cancellationToken);
-        return new OurServer(server, tlsEndPoint, hostName, certificatePath);
+        try {
+            var accessToken = accessManager.AccessTokenService.Create(tokenName: "parity", maxClientCount: 1);
+            var hostName = accessManager.GetToken(accessToken).ServerToken.HostName;
+            var certificatePath = Path.Combine(accessManager.CertsFolderPath, "default.pfx");
+            await server.Start(cancellationToken);
+            if (IsFree(Http01EndPoint))
+                throw new InvalidOperationException($"Our server did not take {Http01EndPoint}.");
+
+            return new OurServer(server, tlsEndPoint, hostName, certificatePath);
+        }
+        catch {
+            await server.DisposeAsync();
+            throw;
+        }
+    }
+
+    private static bool IsFree(IPEndPoint endPoint)
+    {
+        return VhUtils.GetFreeTcpEndPoint(endPoint.Address, endPoint.Port).Port == endPoint.Port;
     }
 
     public ValueTask DisposeAsync()

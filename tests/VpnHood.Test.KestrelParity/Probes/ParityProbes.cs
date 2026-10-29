@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Text;
@@ -14,6 +15,11 @@ internal static partial class ParityProbes
     private static readonly TimeSpan EndWait = TimeSpan.FromSeconds(3);
     private const string ChunkedHead = "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n";
     private const string Second = "GET /second HTTP/1.1\r\nHost: x\r\n\r\n";
+
+    // A probe's ClientHello, captured once and replayed to both servers, by the probe's name: each capture has a
+    // random and a key share of its own. Both targets present one name, the certificate's, so the SNI of whichever
+    // comes first holds for the other.
+    private static readonly ConcurrentDictionary<string, Lazy<Task<byte[]>>> CapturedHellos = new();
 
     public static IReadOnlyList<Probe> All { get; } = Requests()
         .Concat(RequestLines())
@@ -52,10 +58,10 @@ internal static partial class ParityProbes
 
     // one request, its reply, then whether the connection stays and how it ends
     private static async Task Shot(ProbeTarget target, StringBuilder log, byte[] request, bool tls, TimeSpan endWait,
-        CancellationToken cancellationToken, bool bufferWrites = false)
+        CancellationToken cancellationToken, bool bufferWrites = false, bool timeReplies = false)
     {
         await using var connection = await ProbeConnection.Open(tls ? target.Tls : target.Http, tls, target.Sni, log,
-            cancellationToken, bufferWrites: bufferWrites);
+            cancellationToken, bufferWrites: bufferWrites, timeReplies: timeReplies);
         await connection.Send(request, ProbeConnection.Escape(Encoding.Latin1.GetString(request)), cancellationToken);
         await connection.Read(Quiet, Wait, cancellationToken);
         await connection.WaitEnd(endWait, cancellationToken);
@@ -85,13 +91,14 @@ internal static partial class ParityProbes
         yield return Http($"{name}-http", request, kind, endWaitSeconds);
     }
 
-    // a request too long for one write: encrypted as a whole first, and a probe of its own on each port
+    // a request too long for one write: encrypted as a whole first, and a probe of its own on each port. Its replies
+    // say when they came, as a drain that slows shows only there; it runs alone, so their time is the server's
     private static IEnumerable<Probe> BothBulk(string name, Func<string> request, int endWaitSeconds)
     {
         foreach (var tls in new[] { true, false })
             yield return new Probe($"{name}-{(tls ? "tls" : "http")}", ProbeKind.Bulk, (target, log, cancellationToken) =>
                 Shot(target, log, Latin1(request()), tls, TimeSpan.FromSeconds(endWaitSeconds), cancellationToken,
-                    bufferWrites: true));
+                    bufferWrites: true, timeReplies: true));
     }
 
     // Requests that a long tail follows: with that tail still on its way, Windows may report either a close or a
@@ -115,7 +122,9 @@ internal static partial class ParityProbes
             });
     }
 
-    // the parts with their pauses, on each port as "-tls" and "-http", then the reply and how the connection ends
+    // The parts with their pauses, on each port as "-tls" and "-http", then the reply and how the connection ends.
+    // What came before the last part shows before it, so a reply to a request not yet whole tells; only there, as
+    // a reply the parts before it draw may still be on its way at a shorter pause.
     private static IEnumerable<Probe> BothPieces(string name, IReadOnlyList<(string Text, int DelayMs)> parts,
         ProbeKind kind = ProbeKind.Quick, int endWaitSeconds = 9)
     {
@@ -123,9 +132,11 @@ internal static partial class ParityProbes
             yield return new Probe($"{name}-{(tls ? "tls" : "http")}", kind, async (target, log, cancellationToken) => {
                 await using var connection = await ProbeConnection.Open(tls ? target.Tls : target.Http, tls,
                     target.Sni, log, cancellationToken);
-                foreach (var (text, delayMs) in parts) {
-                    await connection.Send(text, cancellationToken);
-                    await Task.Delay(delayMs, cancellationToken);
+                for (var i = 0; i < parts.Count; i++) {
+                    if (i == parts.Count - 1)
+                        await connection.Read(TimeSpan.Zero, TimeSpan.Zero, cancellationToken);
+                    await connection.Send(parts[i].Text, cancellationToken);
+                    await Task.Delay(parts[i].DelayMs, cancellationToken);
                 }
                 await connection.Read(Quiet, Wait, cancellationToken);
                 await connection.WaitEnd(TimeSpan.FromSeconds(endWaitSeconds), cancellationToken);
@@ -136,11 +147,16 @@ internal static partial class ParityProbes
     private static IReadOnlyList<(string Text, int DelayMs)> OneByOne(string text, int delayMs) =>
         text.Select(x => (x.ToString(), delayMs)).ToArray();
 
-    private static async Task Hello(ProbeTarget target, StringBuilder log, string? sni,
-        IReadOnlyList<SslApplicationProtocol>? alpn, SslProtocols protocols, CancellationToken cancellationToken)
+    private static Probe Hello(string name, Func<ProbeTarget, string?> sni, IReadOnlyList<SslApplicationProtocol>? alpn,
+        SslProtocols protocols)
     {
-        var clientHello = await TlsHandshake.CaptureClientHello(sni, alpn, protocols, cancellationToken);
-        log.AppendLine($"> ClientHello {protocols} sni={sni ?? "-"} alpn={(alpn == null ? "-" : string.Join(",", alpn))}");
-        log.AppendLine("< " + await TlsHandshake.Replay(target.Tls, clientHello, cancellationToken));
+        return new Probe(name, ProbeKind.Quick, async (target, log, cancellationToken) => {
+            var capture = CapturedHellos.GetOrAdd(name, _ => new Lazy<Task<byte[]>>(() =>
+                TlsHandshake.CaptureClientHello(sni(target), alpn, protocols, CancellationToken.None)));
+            var clientHello = await capture.Value.WaitAsync(cancellationToken);
+            log.AppendLine($"> ClientHello {protocols} sni={sni(target) ?? "-"} " +
+                           $"alpn={(alpn == null ? "-" : string.Join(",", alpn))}");
+            log.AppendLine("< " + await TlsHandshake.Replay(target.Tls, clientHello, cancellationToken));
+        });
     }
 }

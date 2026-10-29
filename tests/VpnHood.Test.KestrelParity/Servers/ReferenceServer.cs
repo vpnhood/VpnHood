@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -22,8 +23,10 @@ internal sealed class ReferenceServer : IAsyncDisposable
     public IPEndPoint TlsEndPoint { get; }
     public IPEndPoint HttpEndPoint { get; }
 
-    // the ASP.NET Core the replies come from; the probes' results hold for this version
-    public static string Version => typeof(KestrelServerOptions).Assembly.GetName().Version?.ToString() ?? "unknown";
+    // the ASP.NET Core build the replies come from, by its product version, as the assembly's is 11.0.0.0 for every
+    // build of 11.0; the probes' results hold for this build
+    public static string Version => typeof(KestrelServerOptions).Assembly
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
 
     private ReferenceServer(WebApplication app, IPEndPoint tlsEndPoint, IPEndPoint httpEndPoint)
     {
@@ -66,14 +69,26 @@ internal sealed class ReferenceServer : IAsyncDisposable
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapGet("/api/status", () => "ok");
-        await app.StartAsync(cancellationToken);
+        try {
+            await app.StartAsync(cancellationToken);
+        }
+        catch {
+            await app.DisposeAsync();
+            throw;
+        }
+
         return new ReferenceServer(app, tlsEndPoint, httpEndPoint);
     }
 
     public async ValueTask DisposeAsync()
     {
+        // the app goes even when it doesn't stop in time
         using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await _app.StopAsync(stopCts.Token);
-        await _app.DisposeAsync();
+        try {
+            await _app.StopAsync(stopCts.Token);
+        }
+        finally {
+            await _app.DisposeAsync();
+        }
     }
 }

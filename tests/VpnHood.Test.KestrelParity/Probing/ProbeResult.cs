@@ -2,13 +2,13 @@ using System.Text.RegularExpressions;
 
 namespace VpnHood.Test.KestrelParity.Probing;
 
-// what each server's answer to one probe looked like
-internal sealed partial record ProbeResult(string Name, ProbeKind Kind, string Reference, string Ours)
+// what each server's answer to one probe looked like; Failed when the probe threw on either, so measured nothing
+internal sealed partial record ProbeResult(string Name, ProbeKind Kind, string Reference, string Ours, bool Failed)
 {
     // A timing within a second counts as the same: Kestrel's timeouts fire on a one-second heartbeat, so a wait of
-    // 5 s or more moves by that much between its own runs, and a bulk probe's times are how fast each side drains
-    // megabytes on this machine, which moves as much. How long a socket stayed open is the probe's own observation
-    // time, not the server's, and it varies with scheduling when hundreds of probes run.
+    // 5 s or more, on either side, moves by that much between its own runs, and a bulk probe's times are how fast
+    // each side drains megabytes on this machine, which moves as much. How long a socket stayed open is the probe's
+    // own observation time, not the server's, and it varies with scheduling when hundreds of probes run.
     public bool IsSame
     {
         get {
@@ -22,7 +22,7 @@ internal sealed partial record ProbeResult(string Name, ProbeKind Kind, string R
             return referenceTimes.Length == ourTimes.Length &&
                    AfterRegex().Replace(reference, "after #s") == AfterRegex().Replace(ours, "after #s") &&
                    referenceTimes.Zip(ourTimes).All(x => x.First == x.Second ||
-                                                         ((x.First >= 5 || Kind == ProbeKind.Bulk) &&
+                                                         ((Math.Max(x.First, x.Second) >= 5 || Kind == ProbeKind.Bulk) &&
                                                           Math.Abs(x.First - x.Second) <= 1));
         }
     }

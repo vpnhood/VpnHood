@@ -11,28 +11,37 @@ namespace VpnHood.Test.KestrelParity.Probing;
 // its structure (versions, cipher, extensions, record sizes), with the random values left out.
 internal static class TlsHandshake
 {
+    // a capture is shared by both servers' runs, so it ends on its own rather than with either run
+    private static readonly TimeSpan CaptureTimeout = TimeSpan.FromSeconds(10);
+
+    // A handshake that fails before its hello, as one asking for a TLS version this machine lacks, ends the capture
+    // with its error rather than leaving it waiting. Resumption is off, so the hello can't offer a session another
+    // probe's connection left in this process's cache, which one server would resume and the other not.
     public static async Task<byte[]> CaptureClientHello(string? sni, IReadOnlyList<SslApplicationProtocol>? alpn,
         SslProtocols protocols, CancellationToken cancellationToken)
     {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(CaptureTimeout);
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
-        var acceptTask = listener.AcceptTcpClientAsync(cancellationToken);
+        var acceptTask = listener.AcceptTcpClientAsync(timeoutCts.Token);
         using var client = new TcpClient();
-        await client.ConnectAsync((IPEndPoint)listener.LocalEndpoint, cancellationToken);
+        await client.ConnectAsync((IPEndPoint)listener.LocalEndpoint, timeoutCts.Token);
         using var server = await acceptTask;
         await using var sslStream = new SslStream(client.GetStream());
         var authTask = sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
             TargetHost = sni ?? "",
             ApplicationProtocols = alpn?.ToList(),
             EnabledSslProtocols = protocols,
+            AllowTlsResume = false,
             RemoteCertificateValidationCallback = (_, _, _, _) => true
-        }, cancellationToken);
+        }, timeoutCts.Token);
 
-        var stream = server.GetStream();
-        var header = new byte[5];
-        await stream.ReadExactlyAsync(header, cancellationToken);
-        var body = new byte[(header[3] << 8) | header[4]];
-        await stream.ReadExactlyAsync(body, cancellationToken);
+        // nothing answers the handshake, so it ends first only by failing
+        var readTask = ReadRecord(server.GetStream(), timeoutCts.Token);
+        if (await Task.WhenAny(readTask, authTask) == authTask)
+            await authTask;
+        var hello = await readTask;
         server.Close();
         try {
             await authTask;
@@ -41,6 +50,15 @@ internal static class TlsHandshake
             // the listener closes once it has the hello, so the handshake can only fail
         }
 
+        return hello;
+    }
+
+    private static async Task<byte[]> ReadRecord(Stream stream, CancellationToken cancellationToken)
+    {
+        var header = new byte[5];
+        await stream.ReadExactlyAsync(header, cancellationToken);
+        var body = new byte[(header[3] << 8) | header[4]];
+        await stream.ReadExactlyAsync(body, cancellationToken);
         return [.. header, .. body];
     }
 
@@ -109,10 +127,17 @@ internal static class TlsHandshake
                     parts.Add($"Rec{type}({length})");
                     break;
             }
+
+            // a record cut short says how much of it came, so a truncated answer can't pass for a whole one
+            if (body.Length < length)
+                parts[^1] += $"[{body.Length} of {length}]";
         }
 
-        if (i < data.Length && parts.Count == 0)
-            parts.Add($"raw({data.Length}): {ProbeConnection.Escape(Encoding.Latin1.GetString(data))}");
+        // what is too short for a record's header: the whole answer, or what came after its last record
+        if (i < data.Length)
+            parts.Add(parts.Count == 0
+                ? $"raw({data.Length}): {ProbeConnection.Escape(Encoding.Latin1.GetString(data))}"
+                : $"+{data.Length - i} bytes");
 
         return parts.Count == 0 ? "nothing" : string.Join(" ", parts);
     }
@@ -126,15 +151,18 @@ internal static class TlsHandshake
             var length = (body[i + 1] << 16) | (body[i + 2] << 8) | body[i + 3];
             var msg = body.Slice(i + 4, Math.Min(length, body.Length - i - 4));
             i += 4 + length;
-            parts.Add(msgType switch {
-                2 => DescribeServerHello(msg),
-                4 => $"NewSessionTicket({length})",
-                11 => $"Certificate({length})",
-                12 => $"ServerKeyExchange({length})",
-                13 => $"CertificateRequest({length})",
-                14 => "ServerHelloDone",
-                _ => $"Msg{msgType}({length})"
-            });
+            // a message cut short is only counted, as a ServerHello is read field by field
+            parts.Add(msg.Length < length
+                ? $"Msg{msgType}({length})[{msg.Length} of {length}]"
+                : msgType switch {
+                    2 => DescribeServerHello(msg),
+                    4 => $"NewSessionTicket({length})",
+                    11 => $"Certificate({length})",
+                    12 => $"ServerKeyExchange({length})",
+                    13 => $"CertificateRequest({length})",
+                    14 => "ServerHelloDone",
+                    _ => $"Msg{msgType}({length})"
+                });
         }
 
         return string.Join(" ", parts);

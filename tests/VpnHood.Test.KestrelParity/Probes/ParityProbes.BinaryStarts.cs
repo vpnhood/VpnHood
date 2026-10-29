@@ -95,7 +95,8 @@ internal static partial class ParityProbes
         .. Both("h2-request-line-no-lf", "PRI * HTTP/2.0"),
         .. Both("pri-http11", "PRI * HTTP/1.1\r\n\r\n"),
 
-        // a TLS record's start without a zero byte: Kestrel waits for a line end, then its 408
+        // a TLS record's start without a zero byte: Kestrel waits for a line end and, without one, answers 408 when
+        // its header timeout fires
         .. Both("tls-start", "\u0016\u0003", ProbeKind.Slow, endWaitSeconds: 40),
         .. Both("tls-start-after-blank-line", "\r\n\u0016\u0003", ProbeKind.Slow, endWaitSeconds: 40),
         .. Both("tls-start-second-request", Get("x") + "\u0016\u0003", ProbeKind.Slow, endWaitSeconds: 40),

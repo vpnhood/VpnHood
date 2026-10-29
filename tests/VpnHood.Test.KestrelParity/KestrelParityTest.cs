@@ -23,21 +23,22 @@ public class KestrelParityTest
     // error, and a POST waits for the body that holds the key
     private const string UntilProtocol15 = "a v14 request with our headers is taken as a client's before any key";
     private const string TlsStart = "ours refuses a request line that starts with 16 03 at once; Kestrel waits for " +
-                                    "its line end, then answers 408";
+                                    "a line end and, without one, answers 408 when its header timeout fires";
     private const string ZeroByte = "Kestrel refuses a request line at once when a zero byte comes before its line " +
                                     "end; ours waits for the line end";
     private const string Http2Preface = "on the plain port Kestrel answers HTTP/2's preface, as a connection's first " +
                                         "bytes, with a GOAWAY; ours with 505";
 
-    // probes whose answers differ today, each with why; one that comes to match leaves the list
-    private static readonly IReadOnlyDictionary<string, string> KnownDifferences = CreateKnownDifferences();
+    // probes whose answers differ today, each with why and what ours answers; one that comes to match leaves the list
+    private static readonly IReadOnlyDictionary<string, KnownDifference> KnownDifferences = CreateKnownDifferences();
 
-    private static Dictionary<string, string> CreateKnownDifferences()
+    private static Dictionary<string, KnownDifference> CreateKnownDifferences()
     {
-        var known = new Dictionary<string, string> {
-            ["vh-upgrade-v14"] = UntilProtocol15,
-            ["vh-post-v14-fake-session"] = UntilProtocol15,
-            ["vh-post-v14-no-body"] = UntilProtocol15
+        var known = new Dictionary<string, KnownDifference> {
+            ["vh-upgrade-v14"] = new(UntilProtocol15, @"HTTP/1\.1 101 Switching Protocols.*\n= open"),
+            ["vh-post-v14-fake-session"] = new(UntilProtocol15,
+                @"HTTP/1\.1 200 OK.*""ErrorCode"":""AccessError"".*\n= closed after 0s"),
+            ["vh-post-v14-no-body"] = new(UntilProtocol15, @"HTTP/1\.1 401 Unauthorized.*\n= closed after (29|30|31)s")
         };
 
         string[] tlsStart = [
@@ -49,21 +50,22 @@ public class KestrelParityTest
             "zero-in-method", "zero-in-target", "zero-after-version", "zero-after-blank-line", "zero-second-request"
         ];
         foreach (var name in tlsStart)
-            AddBothPorts(known, name, TlsStart);
+            AddBothPorts(known, name, new KnownDifference(TlsStart, @"HTTP/1\.1 400 Bad Request.*\n= closed after 0s"));
         foreach (var name in zeroByte)
-            AddBothPorts(known, name, ZeroByte);
+            AddBothPorts(known, name, new KnownDifference(ZeroByte, @"\n= open after \d+s\s*$"));
         foreach (var name in new[] {
                      "h2-preface", "h2-preface-settings", "h2-preface-no-final-crlf", "h2-preface-wrong-magic",
                      "h2-request-line", "h2-request-line-blank", "h2-request-line-host"
                  })
-            known.Add($"{name}-http", Http2Preface);
+            known.Add($"{name}-http",
+                new KnownDifference(Http2Preface, @"HTTP/1\.1 505 HTTP Version Not Supported.*\n= closed after 0s"));
         return known;
     }
 
-    private static void AddBothPorts(Dictionary<string, string> known, string name, string why)
+    private static void AddBothPorts(Dictionary<string, KnownDifference> known, string name, KnownDifference difference)
     {
-        known.Add($"{name}-tls", why);
-        known.Add($"{name}-http", why);
+        known.Add($"{name}-tls", difference);
+        known.Add($"{name}-http", difference);
     }
 
     public required TestContext TestContext { get; set; }
@@ -83,15 +85,32 @@ public class KestrelParityTest
             testContext.CancellationToken);
     }
 
+    // each step runs whatever the one before it did, so a reference that won't stop can't keep our server on port 80
+    // or leave the storage folder; their failures are thrown together
     [ClassCleanup]
     public static async Task ClassCleanup()
     {
-        if (_referenceServer != null)
-            await _referenceServer.DisposeAsync();
-        if (_ourServer != null)
-            await _ourServer.DisposeAsync();
+        var errors = new List<Exception>();
+        foreach (var server in new IAsyncDisposable?[] { _referenceServer, _ourServer }) {
+            try {
+                if (server != null)
+                    await server.DisposeAsync();
+            }
+            catch (Exception ex) {
+                errors.Add(ex);
+            }
+        }
+
         _certificate?.Dispose();
-        Directory.Delete(StoragePath, recursive: true);
+        try {
+            Directory.Delete(StoragePath, recursive: true);
+        }
+        catch (Exception ex) {
+            errors.Add(ex);
+        }
+
+        if (errors.Count > 0)
+            throw new AggregateException(errors);
     }
 
     [TestMethod]
@@ -124,9 +143,15 @@ public class KestrelParityTest
         await File.WriteAllTextAsync(reportPath, Report(results), TestContext.CancellationToken);
         TestContext.WriteLine($"Kestrel {ReferenceServer.Version}; report: {reportPath}");
 
+        var failed = results.Where(x => x.Failed).Select(x => x.Name).ToArray();
         var unexpected = results.Where(x => !x.IsSame && !KnownDifferences.ContainsKey(x.Name)).Select(x => x.Name).ToArray();
+        var drifted = results.Where(x => !x.IsSame && KnownDifferences.TryGetValue(x.Name, out var known) &&
+                                         !known.OursMatches(x.Ours)).Select(x => x.Name).ToArray();
         var matching = results.Where(x => x.IsSame && KnownDifferences.ContainsKey(x.Name)).Select(x => x.Name).ToArray();
+        Assert.IsEmpty(failed, $"Probes that failed to run, so measured nothing: {string.Join(", ", failed)}. See {reportPath}.");
         Assert.IsEmpty(unexpected, $"Answered otherwise than Kestrel: {string.Join(", ", unexpected)}. See {reportPath}.");
+        Assert.IsEmpty(drifted, $"Known differences where ours answers otherwise than listed: {string.Join(", ", drifted)}. " +
+                                $"See {reportPath}.");
         Assert.IsEmpty(matching, $"Known differences that now match, to leave the list: {string.Join(", ", matching)}.");
     }
 
@@ -147,8 +172,7 @@ public class KestrelParityTest
                 continue;
             }
 
-            var known = KnownDifferences.TryGetValue(result.Name, out var why) ? $" (known: {why})" : "";
-            report.AppendLine($"DIFF  {result.Name}{known}");
+            report.AppendLine($"DIFF  {result.Name}{KnownNote(result)}");
             report.AppendLine("  ref:");
             report.Append(Indent(result.Reference, "    "));
             report.AppendLine("  ours:");
@@ -157,6 +181,16 @@ public class KestrelParityTest
 
         report.AppendLine($"{results.Count(x => !x.IsSame)} of {results.Count} differ");
         return report.ToString();
+    }
+
+    private static string KnownNote(ProbeResult result)
+    {
+        if (!KnownDifferences.TryGetValue(result.Name, out var known))
+            return "";
+
+        return known.OursMatches(result.Ours)
+            ? $" (known: {known.Why})"
+            : $" (known, but ours no longer answers as listed, {known.Ours}: {known.Why})";
     }
 
     private static string Indent(string text, string prefix)

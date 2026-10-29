@@ -3,7 +3,6 @@ using System.Threading.Channels;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Manager;
-using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Test.Device;
 
 namespace VpnHood.Test.Tests;
@@ -119,16 +118,9 @@ public class VpnServiceManagerTest : TestBase
 
             // no error with no session to take it. Dropping QUIC is the setting to watch: the test server
             // carries TCP only by the proxy, which drops it
-            await manager.Reconfigure(new ClientReconfigureParams {
-                DropQuic = dropQuic,
-                DropUdp = clientOptions.DropUdp,
-                UseTcpProxy = clientOptions.UseTcpProxy,
-                AllowAnonymousTracker = clientOptions.AllowAnonymousTracker,
-                ChannelProtocol = clientOptions.ChannelProtocol,
-                UnroutedIpMode = clientOptions.UnroutedIpMode,
-                UnsupportedIpV6Mode = clientOptions.UnsupportedIpV6Mode,
-                ProxyOptions = new ProxyOptions()
-            }, TestCt);
+            var reconfiguredOptions = TestHelper.CreateClientOptions(token);
+            reconfiguredOptions.DropQuic = dropQuic;
+            await manager.Reconfigure(new VpnServiceOptions { ClientOptions = reconfiguredOptions }, TestCt);
             adapterRelease.TrySetResult();
             await startTask;
         }

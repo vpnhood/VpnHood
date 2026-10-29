@@ -14,7 +14,7 @@
 * Fix: On Linux each log line appears in the journal once, and whole #linux
 * Fix: With "Share anonymous usage data" off, the app no longer reports each start, nor the VPN each connection and its usage, and turning it off while connected stops the VPN's reports at once #android
 * Fix: Where the app asks you to accept its terms at first run, it sends no usage data before you accept them #android #windows #linux
-* Fix: A VPN started without opening the app - always-on, the quick-settings tile, or the system restarting it - follows your latest settings, "Share anonymous usage data" among them #android
+* Fix: A VPN started without opening the app - always-on, the quick-settings tile, the phone's VPN settings, or the system restarting it - follows your latest settings, "Share anonymous usage data" among them, and the server and location you chose, never a server you removed #android #ios
 * Fix: Where Google Play works only through the VPN, its update now comes once you connect - after Play has had 3 days to update the app by itself - and an update you started and left comes back when you return to the app #android #store
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
 * Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts #android

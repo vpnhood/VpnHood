@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -7,56 +8,69 @@ using VpnHood.Net.Toolkit.Utils;
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 // The options a VPN service runs with, saved in its config folder. The app writes them at each connect
-// and puts each reconfigure into them; the service reads them at each start, including one the app does
-// not make - always-on, the quick-settings tile, the system restarting the service - which then runs
-// with the settings of the last connect and every reconfigure after it.
+// and makes them again at each change of its settings or servers; the service reads them at each start,
+// including one the app does not make - always-on, the quick-settings tile, the system's VPN settings,
+// the system restarting the service - which then runs with what the app shows.
 public class VpnServiceOptionsFile(string configFolder)
 {
+    // the VPN service reads them at its start, in a process of its own, while the app may be writing them
+    private static readonly TimeSpan SharingTimeout = TimeSpan.FromSeconds(2);
     private readonly AsyncLock _writeLock = new();
 
     public string FilePath { get; } = Path.Combine(configFolder, ClientOptions.VpnConfigFileName);
     public bool Exists => File.Exists(FilePath);
 
-    public VpnServiceOptions Read()
+    public VpnServiceOptions Read(CancellationToken cancellationToken)
     {
-        return JsonUtils.DeserializeFile<VpnServiceOptions>(FilePath);
+        return FileUtils.WaitOutSharing(() => JsonUtils.DeserializeFile<VpnServiceOptions>(FilePath), SharingTimeout,
+            cancellationToken);
     }
 
     // null when there is none, or it cannot be read, which it logs
-    public VpnServiceOptions? TryRead()
+    public VpnServiceOptions? TryRead(CancellationToken cancellationToken)
     {
-        return JsonUtils.TryDeserializeFile<VpnServiceOptions>(FilePath, logger: VhLogger.Instance);
+        if (!Exists)
+            return null;
+
+        try {
+            return Read(cancellationToken);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested) {
+            VhLogger.Instance.LogError(ex, "Could not read the VPN service options. FilePath: {FilePath}", FilePath);
+            return null;
+        }
     }
 
     public async Task Write(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         using var scopeLock = await _writeLock.LockAsync(cancellationToken).Vhc();
-        await WriteFile(serviceOptions, cancellationToken).Vhc();
+        WriteFile(serviceOptions, cancellationToken);
     }
 
-    // The settings a reconfigure carries, as ApiController applies them to a running session; nothing
-    // without a file.
-    public async Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
+    // Options made again from the app's settings, connected or not; nothing without a file, which only a
+    // connect makes. What only a connect knows - its plan, and whether always-on made it - these options
+    // take from the saved ones, read under the lock a connect's write takes, so one in between is kept.
+    public async Task Update(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         using var scopeLock = await _writeLock.LockAsync(cancellationToken).Vhc();
         if (!Exists)
             return;
 
-        var serviceOptions = Read();
-        var clientOptions = serviceOptions.ClientOptions;
-        clientOptions.UseTcpProxy = reconfigureParams.UseTcpProxy;
-        clientOptions.DropUdp = reconfigureParams.DropUdp;
-        clientOptions.DropQuic = reconfigureParams.DropQuic;
-        clientOptions.ChannelProtocol = reconfigureParams.ChannelProtocol;
-        clientOptions.UnroutedIpMode = reconfigureParams.UnroutedIpMode;
-        clientOptions.UnsupportedIpV6Mode = reconfigureParams.UnsupportedIpV6Mode;
-        clientOptions.AllowAnonymousTracker = reconfigureParams.AllowAnonymousTracker;
-        serviceOptions.ProxyOptions = reconfigureParams.ProxyOptions;
-        await WriteFile(serviceOptions, cancellationToken).Vhc();
+        var savedClientOptions = Read(cancellationToken).ClientOptions;
+        serviceOptions.ClientOptions.PlanId = savedClientOptions.PlanId;
+        serviceOptions.ClientOptions.IsAlwaysOn = savedClientOptions.IsAlwaysOn;
+        WriteFile(serviceOptions, cancellationToken);
     }
 
-    private Task WriteFile(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
+    public async Task Delete(CancellationToken cancellationToken)
     {
-        return File.WriteAllTextAsync(FilePath, JsonSerializer.Serialize(serviceOptions), cancellationToken);
+        using var scopeLock = await _writeLock.LockAsync(cancellationToken).Vhc();
+        FileUtils.WaitOutSharing(() => File.Delete(FilePath), SharingTimeout, cancellationToken);
+    }
+
+    private void WriteFile(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
+    {
+        var json = JsonSerializer.Serialize(serviceOptions);
+        FileUtils.WaitOutSharing(() => File.WriteAllText(FilePath, json), SharingTimeout, cancellationToken);
     }
 }

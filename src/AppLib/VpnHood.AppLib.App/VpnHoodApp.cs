@@ -84,6 +84,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isConnecting;
     private int _connectNumber; // the latest connect's: an older one, which it cancelled, leaves the app to it
     private bool _isReconfiguredWhileConnecting; // after the connect read the settings: its start writes those over it
+    private readonly AsyncLock _reconfigureLock = new();
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
     private readonly AppWebHostManager _webHostManager;
@@ -186,8 +187,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // The split text-file settings live outside UserSettings, so their session business wires
         // here — the counterpart of ApplySettings for a UserSettings save. The via-app/domain lists
         // feed the split dbs and live-apply through a reconfigure; the via-device lists shape the vpn
-        // adapter (applied at connect only), so a change just flags the running session for a reconnect.
-        settingsService.SplitIpViaDeviceSettings.Changed += (_, _) => SetReconnectRequired();
+        // adapter (applied at connect only), so a change flags the running session for a reconnect, and
+        // the reconfigure takes it into the saved options.
+        settingsService.SplitIpViaDeviceSettings.Changed += (_, _) => {
+            SetReconnectRequired();
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a device split-IP change",
+                LogLevel.Warning, () => ReconfigureVpnService(CancellationToken.None));
+        };
         settingsService.SplitIpViaAppSettings.Changed += (_, _) =>
             _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a split-IP change", LogLevel.Warning,
                 () => ReconfigureVpnService(CancellationToken.None));
@@ -339,6 +345,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             intents: new IntentsApi(this),
             proxyEndPoints: new ProxyEndPointsApi(this));
 
+        // a location chosen, a server added or removed, its key or code renewed: the saved options follow
+        VpnProfileService.Changed += (_, _) =>
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a VPN profile change", LogLevel.Warning,
+                () => ReconfigureVpnService(CancellationToken.None));
+
         // Apply settings but no error on startup
         ApplySettings();
 
@@ -476,33 +487,33 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // Live-apply reconfigurable settings to the running session, including the split filters: the dbs
     // are rebuilt (or reused) under signature-versioned names, published through the folder manifests,
     // and the service swaps its gates to them without disconnecting. Connected or not, the saved options
-    // take the settings too, for a start without the app. Triggered by a UserSettings save
-    // (ApplySettings), by the split text-file settings' change events (wired in the ctor), and by a
-    // connect, again, for one that came while it connected.
+    // are made again from the current settings and server, for a start without the app; with no server
+    // chosen they go, so no such start reaches a server the app no longer has. Triggered by a UserSettings
+    // save (ApplySettings), by the split text-file settings' and the VPN profiles' change events (wired
+    // in the ctor), and by a connect, again, for one that came while it connected. One at a time, each
+    // made from the settings as its turn finds them, so the last one written has the latest.
     public async Task ReconfigureVpnService(CancellationToken cancellationToken)
     {
         _isReconfiguredWhileConnecting = true;
+        using var scopeLock = await _reconfigureLock.LockAsync(cancellationToken).Vhc();
 
         // publish the current db set BEFORE signaling a running session: it reads the manifests, not the
-        // request; while disconnected, the next connect publishes them
-        if (ConnectionInfo.IsStarted())
-            await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
+        // request; a start without the app reads them too
+        await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
 
-        var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
-        var reconfigureParams = new ClientReconfigureParams {
-            ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
-            DropQuic = UserSettings.DropQuic,
-            UseTcpProxy = UserSettings.UseTcpProxy,
-            AllowAnonymousTracker = Services.TrackerService.IsVpnServiceTrackerAllowed,
-            DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-            UnroutedIpMode = splitTunneling.UnroutedIpMode,
-            UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
-            ProxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc()
-        };
+        var vpnProfileId = UserSettings.VpnProfileId ?? Guid.Empty;
+        var vpnProfile = VpnProfileService.FindById(vpnProfileId);
+        var profileInfo = VpnProfileService.FindInfo(vpnProfileId);
+        if (vpnProfile is null || profileInfo is null) {
+            await _vpnServiceManager.ClearConfiguration(cancellationToken).Vhc();
+            return;
+        }
 
-        // the split db manifests are already on disk (the app writes them before calling this),
-        // so the request only signals; the service's filter chains re-read the manifests
-        await _vpnServiceManager.Reconfigure(reconfigureParams, cancellationToken).Vhc();
+        // the split db manifests are already on disk, so the request only signals; the service's filter
+        // chains re-read the manifests
+        var serviceOptions = await CreateServiceOptions(profileInfo, vpnProfile.Token,
+            profileInfo.SelectedLocationInfo?.ServerLocation, vpnProfile.AccessCode).Vhc();
+        await _vpnServiceManager.Reconfigure(serviceOptions, cancellationToken).Vhc();
     }
 
     private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
@@ -1003,6 +1014,93 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
+    // The options a VPN service runs with, made from the current settings for a server: the app's own
+    // connect starts the service with them, and each reconfigure makes them again for the saved ones a
+    // start without the app runs with. What only a connect knows - its plan, and whether always-on made
+    // it - the connect sets itself.
+    private async Task<VpnServiceOptions> CreateServiceOptions(VpnProfileInfo profileInfo, Token token,
+        string? serverLocation, string? accessCode)
+    {
+        // all split decisions act on the effective copy: the super toggle and the premium plan
+        // are both resolved here, once, for everything below
+        var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
+
+        // calculate vpnAdapterIpRanges
+        var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
+        if (splitTunneling.UseIpViaDevice) {
+            vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
+                IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpViaDeviceSettings.Includes));
+            vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
+                IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpViaDeviceSettings.Excludes));
+        }
+
+        // use default DNS servers if not premium account
+        var dnsServers =
+            UserSettings.DnsMode is DnsMode.AdapterDns &&
+            !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) &&
+            IsPremiumFeatureAllowed(AppFeature.CustomDns)
+                ? UserSettings.DnsServers
+                : null;
+
+        // create clientOptions
+        var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
+        var isTrackerAllowed = Services.TrackerService.IsVpnServiceTrackerAllowed;
+        var clientOptions = new ClientOptions {
+            AdapterName = Config.AdapterName,
+            AppId = Features.AppId,
+            ClientId = Features.ClientId,
+            AccessKey = token.ToAccessKey(),
+            Transport = Config.Transport,
+            SplitLocalNetwork = splitTunneling.UseLocalNetwork,
+            SplitDnsMode = splitTunneling.DnsMode,
+            UnroutedIpMode = splitTunneling.UnroutedIpMode,
+            UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
+            IncludeIpRangesByDevice = [.. vpnAdapterIpRanges],
+            UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
+            UseTcpProxy = UserSettings.UseTcpProxy,
+            DropQuic = UserSettings.DropQuic,
+            DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
+            ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
+            ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
+            AccessCode = accessCode,
+            AllowAnonymousTracker = isTrackerAllowed,
+            AllowEndPointTracker = isTrackerAllowed && Config.AllowEndPointTracker,
+            AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
+            ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude ? [.. splitTunneling.Apps] : null,
+            IncludeApps = splitTunneling.AppMode == SplitAppMode.Include ? [.. splitTunneling.Apps] : null,
+            DnsServers = dnsServers,
+            LogServiceOptions = GetLogOptions(),
+            TrackerFactoryInfos = Services.TrackerService.TrackerFactoryInfos,
+            TrackerUserAgent = Services.TrackerService.UserAgent,
+            TrackerClientVersion = Features.Version,
+            UserAgent = _userAgent,
+            EndPointStrategy = Features.AllowEndPointStrategy
+                ? UserSettings.EndPointStrategy.ToEngine()
+                : Core.Common.Tokens.EndPointStrategy.Auto,
+            DebugData1 = UserSettings.DebugData1,
+            DebugData2 = UserSettings.DebugData2,
+            // A profile is the person's own only where keys are added. A single-profile app's may
+            // come from another provider, so it names none: the system's VPN dialog, the tile and the
+            // notification show the app's name instead.
+            SessionName = Features.IsAddAccessKeySupported ? profileInfo.VpnProfileName : null,
+            CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
+            AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
+            UserReview = Settings.UserReview
+        };
+
+        // what the VpnService must resolve into services itself; the client only gets ClientOptions
+        // (the split filter dbs travel through the folder manifests, not here)
+        return new VpnServiceOptions {
+            ClientOptions = clientOptions,
+            ProxyOptions = proxyOptions,
+            Localization = new VpnServiceLocalization {
+                Manage = Resources.Strings.Manage,
+                Disconnect = Resources.Strings.Disconnect,
+                ClientStates = Resources.GetClientStateTexts()
+            }
+        };
+    }
+
     private async Task ConnectInternal2(IUiContext? uiContext, Token token, string? serverLocation,
         Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
         bool isAlwaysOn, CancellationToken cancellationToken)
@@ -1016,93 +1114,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // the settings are read from here on: a reconfigure meanwhile is sent again once connected
             _isReconfiguredWhileConnecting = false;
-
-            // all split decisions act on the effective copy: the super toggle and the premium plan
-            // are both resolved here, once, for everything below
-            var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
             StateHelper.LogPlanDroppedFeatures(UserSettings, this);
-
-            // calculate vpnAdapterIpRanges
-            var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
-            if (splitTunneling.UseIpViaDevice) {
-                vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
-                    IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpViaDeviceSettings.Includes));
-                vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
-                    IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpViaDeviceSettings.Excludes));
-            }
-
-            // use default DNS servers if not premium account
-            var dnsServers =
-                UserSettings.DnsMode is DnsMode.AdapterDns &&
-                !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) &&
-                IsPremiumFeatureAllowed(AppFeature.CustomDns)
-                    ? UserSettings.DnsServers
-                    : null;
 
             // split filters: build or reuse the on-disk dbs and publish them through the folder
             // manifests the VpnService reads; the manifest write also sweeps superseded files (free
             // here — the previous session fully released them at TryStop)
             await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
 
-            // create clientOptions
-            var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
-            var isTrackerAllowed = Services.TrackerService.IsVpnServiceTrackerAllowed;
-            var clientOptions = new ClientOptions {
-                AdapterName = Config.AdapterName,
-                AppId = Features.AppId,
-                ClientId = Features.ClientId,
-                AccessKey = token.ToAccessKey(),
-                Transport = Config.Transport,
-                SplitLocalNetwork = splitTunneling.UseLocalNetwork,
-                SplitDnsMode = splitTunneling.DnsMode,
-                UnroutedIpMode = splitTunneling.UnroutedIpMode,
-                UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
-                IncludeIpRangesByDevice = [.. vpnAdapterIpRanges],
-                UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
-                UseTcpProxy = UserSettings.UseTcpProxy,
-                DropQuic = UserSettings.DropQuic,
-                DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
-                ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
-                PlanId = planId.ToEngine(),
-                AccessCode = accessCode,
-                AllowAnonymousTracker = isTrackerAllowed,
-                AllowEndPointTracker = isTrackerAllowed && Config.AllowEndPointTracker,
-                AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
-                ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude ? [.. splitTunneling.Apps] : null,
-                IncludeApps = splitTunneling.AppMode == SplitAppMode.Include ? [.. splitTunneling.Apps] : null,
-                DnsServers = dnsServers,
-                LogServiceOptions = GetLogOptions(),
-                TrackerFactoryInfos = Services.TrackerService.TrackerFactoryInfos,
-                TrackerUserAgent = Services.TrackerService.UserAgent,
-                TrackerClientVersion = Features.Version,
-                UserAgent = _userAgent,
-                EndPointStrategy = Features.AllowEndPointStrategy
-                    ? UserSettings.EndPointStrategy.ToEngine()
-                    : Core.Common.Tokens.EndPointStrategy.Auto,
-                DebugData1 = UserSettings.DebugData1,
-                DebugData2 = UserSettings.DebugData2,
-                // A profile is the person's own only where keys are added. A single-profile app's may
-                // come from another provider, so it names none: the system's VPN dialog, the tile and the
-                // notification show the app's name instead.
-                SessionName = Features.IsAddAccessKeySupported ? profileInfo.VpnProfileName : null,
-                CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
-                AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
-                IsAlwaysOn = isAlwaysOn,
-                UserReview = Settings.UserReview
-            };
-
-            // what the VpnService must resolve into services itself; the client only gets ClientOptions
-            // (the split filter dbs travel through the folder manifests, not here)
-            var serviceOptions = new VpnServiceOptions {
-                ClientOptions = clientOptions,
-                ProxyOptions = proxyOptions,
-                Localization = new VpnServiceLocalization {
-                    Manage = Resources.Strings.Manage,
-                    Disconnect = Resources.Strings.Disconnect,
-                    ClientStates = Resources.GetClientStateTexts()
-                }
-            };
+            var serviceOptions = await CreateServiceOptions(profileInfo, token, serverLocation, accessCode).Vhc();
+            serviceOptions.ClientOptions.PlanId = planId.ToEngine();
+            serviceOptions.ClientOptions.IsAlwaysOn = isAlwaysOn;
 
             VhLogger.Instance.LogDebug(
                 "Launching VpnService ... DiagnoseMode: {DiagnoseMode}, AutoDiagnose: {AutoDiagnose}",

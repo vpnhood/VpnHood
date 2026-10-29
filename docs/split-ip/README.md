@@ -115,10 +115,13 @@ immutable; what changes is which files are current:
 4. Flows already decided keep their verdict (open connections, the QUIC flow cache until its
    timeout); new lookups see the new rules.
 
-Triggers: any UserSettings save while connected (country mode/selection, via-app and domain toggles),
-and the split text-file settings (`SplitIpViaAppSettings.Set` / `SplitDomainSettings.Set` raise change
-events that `VpnHoodApp` answers with a reconfigure — the files are outside UserSettings). The
-device-level splits (`SplitTunneling.UseIpViaDevice`, `SplitTunneling.UseLocalNetwork`, per-app split) still require a
+Triggers: any UserSettings save (country mode/selection, via-app and domain toggles), the split text-file
+settings (`SplitIpViaAppSettings.Set` / `SplitDomainSettings.Set` / `SplitIpViaDeviceSettings.Set` raise
+change events that `VpnHoodApp` answers with a reconfigure — the files are outside UserSettings), and the
+VPN profiles' changes (a location chosen, a server removed). Connected or not, a reconfigure publishes the
+dbs and makes the saved options (`vpn.config`) again, so a start without the app (always-on, the tile, the
+system's VPN settings) runs with what the app shows. The device-level splits
+(`SplitTunneling.UseIpViaDevice`, `SplitTunneling.UseLocalNetwork`, per-app split) still require a
 reconnect — they configure the OS adapter — so a change while connected only flags the session
 (`AppState.IsReconnectRequired`) and the UI offers a reconnect.
 

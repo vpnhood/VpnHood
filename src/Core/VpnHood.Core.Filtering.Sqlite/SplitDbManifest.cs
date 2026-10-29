@@ -17,15 +17,20 @@ public static class SplitDbManifest
     public const string DomainFiltersFolderName = "domain-filters";
     private const string ManifestFileName = "manifest.json";
 
+    // the service reads it as it starts while the app may be replacing it: the read and the rename that
+    // meet each wait the other out
+    private static readonly TimeSpan SharingTimeout = TimeSpan.FromSeconds(2);
+
     // Absolute db paths in gate order; a missing manifest means "no splits configured" — fail-closed:
     // no gates means everything tunnels, nothing leaks around. A corrupt manifest throws (fail loud).
-    public static string[] Read(string folderPath)
+    public static string[] Read(string folderPath, CancellationToken cancellationToken)
     {
         var manifestPath = Path.Combine(folderPath, ManifestFileName);
         if (!File.Exists(manifestPath))
             return [];
 
-        var data = JsonSerializer.Deserialize<ManifestData>(File.ReadAllText(manifestPath))
+        var json = FileUtils.WaitOutSharing(() => File.ReadAllText(manifestPath), SharingTimeout, cancellationToken);
+        var data = JsonSerializer.Deserialize<ManifestData>(json)
                    ?? throw new InvalidDataException($"Could not deserialize {manifestPath}.");
         return data.DbFiles.Select(fileName => Path.Combine(folderPath, fileName)).ToArray();
     }
@@ -33,7 +38,7 @@ public static class SplitDbManifest
     // Publish the current db set (atomic temp+rename, so a concurrent Read never sees a torn file),
     // then sweep superseded db-family files. Every path must live inside folderPath: the manifest
     // names files, not locations, so a Read from either process resolves against its own folder view.
-    public static void Write(string folderPath, string[] dbPaths)
+    public static void Write(string folderPath, string[] dbPaths, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(folderPath);
         var dbFileNames = dbPaths.Select(dbPath => GetFileNameInFolder(folderPath, dbPath)).ToArray();
@@ -41,7 +46,8 @@ public static class SplitDbManifest
         var manifestPath = Path.Combine(folderPath, ManifestFileName);
         var tempPath = manifestPath + ".tmp";
         File.WriteAllText(tempPath, JsonSerializer.Serialize(new ManifestData { DbFiles = dbFileNames }));
-        File.Move(tempPath, manifestPath, overwrite: true);
+        FileUtils.WaitOutSharing(() => File.Move(tempPath, manifestPath, overwrite: true), SharingTimeout,
+            cancellationToken);
 
         // *.db* also catches sqlite side files (-wal/-shm) and orphaned build temps; the prefix match
         // keeps the side files of every listed db

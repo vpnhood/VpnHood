@@ -53,7 +53,7 @@ public sealed class SqliteIpFilterChain : IIpFilter
             next.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
 
         // construction is not a change: build the initial gates directly — no swap, no Changed, no log
-        _dbPaths = SplitDbManifest.Read(dbFolder);
+        _dbPaths = SplitDbManifest.Read(dbFolder, CancellationToken.None);
         _gates = BuildGates(_dbPaths);
     }
 
@@ -78,7 +78,7 @@ public sealed class SqliteIpFilterChain : IIpFilter
     public void Reconfigure()
     {
         lock (_reconfigureLock) {
-            var dbPaths = SplitDbManifest.Read(_dbFolder);
+            var dbPaths = SplitDbManifest.Read(_dbFolder, CancellationToken.None);
             if (!dbPaths.SequenceEqual(_dbPaths)) {
                 VhLogger.Instance.LogInformation(
                     "SqliteIpFilterChain is swapping its split-ip gates. OldCount: {OldCount}, NewCount: {NewCount}",

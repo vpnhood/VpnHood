@@ -7,6 +7,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
+using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
@@ -123,6 +124,13 @@ public class VpnServiceManager : IDisposable
     /// </summary>
     public bool IsConfigured => _serviceOptionsFile.Exists;
 
+    // No server to start with: a start without the app then fails, as before the first connect, rather
+    // than reach a server the app no longer has.
+    public Task ClearConfiguration(CancellationToken cancellationToken)
+    {
+        return _serviceOptionsFile.Delete(cancellationToken);
+    }
+
     /// <summary>
     /// Start the VPN service from its last persisted configuration without touching it — the same
     /// bootstrap always-on uses. Check IsConfigured before calling.
@@ -133,7 +141,7 @@ public class VpnServiceManager : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         // load the last configuration and start the service
-        var serviceOptions = _serviceOptionsFile.TryRead();
+        var serviceOptions = _serviceOptionsFile.TryRead(cancellationToken);
         return serviceOptions != null 
             ? Start(uiContext, serviceOptions, cancellationToken)
             : throw new InvalidOperationException("There is no previous VPN configuration to start from.");
@@ -426,12 +434,24 @@ public class VpnServiceManager : IDisposable
     public bool IsReconfiguring { get; private set; }
 
     // The saved options, connected or not, which a later start without the app runs with; then a
-    // running session, at once.
-    public async Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
+    // running session, at once, with the part it takes live.
+    public async Task Reconfigure(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
-        await _serviceOptionsFile.Reconfigure(reconfigureParams, cancellationToken).Vhc();
+        await _serviceOptionsFile.Update(serviceOptions, cancellationToken).Vhc();
         if (!IsStarted)
             return;
+
+        var clientOptions = serviceOptions.ClientOptions;
+        var reconfigureParams = new ClientReconfigureParams {
+            DropQuic = clientOptions.DropQuic,
+            DropUdp = clientOptions.DropUdp,
+            UseTcpProxy = clientOptions.UseTcpProxy,
+            AllowAnonymousTracker = clientOptions.AllowAnonymousTracker,
+            ChannelProtocol = clientOptions.ChannelProtocol,
+            UnroutedIpMode = clientOptions.UnroutedIpMode,
+            UnsupportedIpV6Mode = clientOptions.UnsupportedIpV6Mode,
+            ProxyOptions = serviceOptions.ProxyOptions ?? new ProxyOptions()
+        };
 
         IsReconfiguring = true;
         try {

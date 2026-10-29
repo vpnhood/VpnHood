@@ -182,7 +182,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             // reconfigure kept from before, as the app writes each there before it sends it
             await Reconfigurer.Reset(cancellationToken).Vhc();
 
-            var serviceOptions = Context.ServiceOptionsFile.Read();
+            var serviceOptions = Context.ServiceOptionsFile.Read(cancellationToken);
             var clientOptions = serviceOptions.ClientOptions;
             _logService?.Start(clientOptions.LogServiceOptions);
 

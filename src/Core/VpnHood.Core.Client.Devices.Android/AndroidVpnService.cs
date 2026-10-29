@@ -203,7 +203,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
             // The words and the session's name of the app's last connect, which its options file keeps,
             // as the notification comes before the host reads them: English before any connect, and the
             // app's name where the app names no session.
-            var serviceOptions = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead();
+            var serviceOptions = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead(CancellationToken.None);
             var notification = new AndroidVpnNotification(this,
                 serviceOptions?.Localization ?? new VpnServiceLocalization(),
                 serviceOptions?.ClientOptions.SessionName ?? AndroidUtils.GetAppName(this));

@@ -26,6 +26,40 @@ public static class FileUtils
         }
     }
 
+    // A file two processes share - one writes it while the other may be reading it - fails the access that meets
+    // the other's for that moment only, so the access is tried again up to the timeout; a missing file fails
+    // at once. Synchronous, for callers that cannot await - a constructor, a lock; the token ends the wait.
+    public static T WaitOutSharing<T>(Func<T> access, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        // don't use fast date time, it's not accurate enough
+        var startTime = DateTime.UtcNow;
+        while (true) {
+            try {
+                return access();
+            }
+            catch (Exception ex) when (IsSharingConflict(ex) && DateTime.UtcNow - startTime < timeout) {
+                cancellationToken.WaitHandle.WaitOne(50);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+        }
+    }
+
+    public static void WaitOutSharing(Action access, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        WaitOutSharing(() => {
+            access();
+            return true;
+        }, timeout, cancellationToken);
+    }
+
+    // an open that meets the other's sharing, or a replace over a file the other has open, which Windows refuses
+    // as access denied whatever its sharing; not a missing file
+    private static bool IsSharingConflict(Exception ex)
+    {
+        return ex is UnauthorizedAccessException ||
+               ex is IOException and not FileNotFoundException and not DirectoryNotFoundException;
+    }
+
     public static async Task WriteAllTextRetryAsync(string filePath, string content, TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {

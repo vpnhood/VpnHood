@@ -9,4 +9,5 @@ internal class ServerStreamConnection(IStreamConnection streamConnection)
     // it may be different from RemoteEndPoint.Address due to proxying
     public required IPAddress ClientIp { get; init; }
     public bool IsReverseProxy { get; init; }
+    public Action? OnAuthenticated { get; init; }
 }

@@ -71,8 +71,8 @@ internal static class WebReplies
     {
         var host = HostWithoutPort(request.Headers.GetValueOrDefault("Host", ""));
         var port = httpsPort == 443 ? "" : $":{httpsPort.ToString(CultureInfo.InvariantCulture)}";
-        var (path, query) = PathAndQuery(request.Target);
-        path = ToUriComponent(RemoveDotSegments(DecodePath(path)));
+        var (_, query) = PathAndQuery(request.Target);
+        var path = ToUriComponent(RequestPath(request.Target));
         return $"https://{host}{port}{(path.Length == 0 ? "/" : path)}{query}";
     }
 
@@ -101,6 +101,8 @@ internal static class WebReplies
         var question = target.IndexOf('?');
         return question < 0 ? (target, "") : (target[..question], target[question..]);
     }
+
+    public static string RequestPath(string target) => RemoveDotSegments(DecodePath(PathAndQuery(target).Path));
 
     // Kestrel's: every escape decoded but an escaped slash, and an escaped UTF-8 sequence only when it is valid;
     // anything else stays as sent
@@ -149,22 +151,33 @@ internal static class WebReplies
     private static string RemoveDotSegments(string input)
     {
         var output = new StringBuilder(input.Length);
-        while (input.Length > 0) {
-            if (input.StartsWith("../", StringComparison.Ordinal)) input = input[3..];
-            else if (input.StartsWith("./", StringComparison.Ordinal)) input = input[2..];
-            else if (input.StartsWith("/./", StringComparison.Ordinal)) input = input[2..];
-            else if (input == "/.") input = "/";
-            else if (input.StartsWith("/../", StringComparison.Ordinal) || input == "/..") {
-                input = "/" + input[Math.Min(4, input.Length)..];
-                var lastSlash = output.ToString().LastIndexOf('/');
-                output.Length = Math.Max(lastSlash, 0);
+        var index = 0;
+        while (index < input.Length) {
+            var remaining = input.AsSpan(index);
+            if (remaining.StartsWith("../", StringComparison.Ordinal)) index += 3;
+            else if (remaining.StartsWith("./", StringComparison.Ordinal)) index += 2;
+            else if (remaining.StartsWith("/./", StringComparison.Ordinal)) index += 2;
+            else if (remaining.SequenceEqual("/.")) {
+                output.Append('/');
+                break;
             }
-            else if (input is "." or "..") input = "";
+            else if (remaining.StartsWith("/../", StringComparison.Ordinal) || remaining.SequenceEqual("/..")) {
+                var lastSlash = output.Length - 1;
+                while (lastSlash >= 0 && output[lastSlash] != '/')
+                    lastSlash--;
+                output.Length = Math.Max(lastSlash, 0);
+                if (remaining.Length == 3) {
+                    output.Append('/');
+                    break;
+                }
+                index += 3;
+            }
+            else if (remaining.SequenceEqual(".") || remaining.SequenceEqual("..")) break;
             else {
-                var next = input.IndexOf('/', 1);
+                var next = input.IndexOf('/', index + 1);
                 if (next < 0) next = input.Length;
-                output.Append(input, 0, next);
-                input = input[next..];
+                output.Append(input, index, next - index);
+                index = next;
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -13,6 +14,7 @@ namespace VpnHood.Core.Tunneling.Connections;
 public sealed class TcpStreamConnection : IStreamConnection
 {
     private readonly TcpClient _tcpClient;
+    private readonly Socket _socket;
     private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
 
@@ -20,6 +22,10 @@ public sealed class TcpStreamConnection : IStreamConnection
         string connectionName, bool isServer, string? connectionId = null)
     {
         _tcpClient = tcpClient;
+        // The cap can dispose the client and clear Client while this connection is still finishing a request.
+        _socket = tcpClient.Client ?? throw new ObjectDisposedException(nameof(tcpClient));
+        LocalEndPoint = _socket.GetLocalEndPoint();
+        RemoteEndPoint = _socket.GetRemoteEndPoint();
         ConnectionName = connectionName;
         IsServer = isServer;
         Stream = tcpClient.GetStream();
@@ -41,8 +47,8 @@ public sealed class TcpStreamConnection : IStreamConnection
     public bool IsServer { get; }
     public bool Connected => VhUtils.IsTcpClientHealthy(_tcpClient);
     public Stream Stream { get; }
-    public IPEndPoint LocalEndPoint => _tcpClient.GetLocalEndPoint();
-    public IPEndPoint RemoteEndPoint => _tcpClient.GetRemoteEndPoint();
+    public IPEndPoint LocalEndPoint { get; }
+    public IPEndPoint RemoteEndPoint { get; }
     public bool RequireHttpResponse { get; set; }
 
     // reuse lives in the ReusableStreamConnection above
@@ -68,6 +74,32 @@ public sealed class TcpStreamConnection : IStreamConnection
         return $"{ConnectionId}:{ConnectionName}:{role}";
     }
 
+    // Closing with unread data can discard an already-written reply. Read what has arrived, as a web server's
+    // input pipe does, with both a byte and time bound so a sender cannot prolong the close.
+    public void DrainArrived()
+    {
+        try {
+            var buffer = new byte[4096];
+            var started = Stopwatch.GetTimestamp();
+            for (var total = 0; total < 1024 * 1024 &&
+                                  Stopwatch.GetElapsedTime(started) < TimeSpan.FromMilliseconds(100) &&
+                                  _socket.Poll(10_000, SelectMode.SelectRead);) {
+                var read = _socket.Receive(buffer);
+                if (read == 0)
+                    break;
+                total += read;
+            }
+        }
+        catch (ObjectDisposedException) {
+            // The cap may close the socket during this drain.
+        }
+        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.ConnectionAborted or
+                                            SocketError.ConnectionReset or SocketError.OperationAborted or
+                                            SocketError.NotConnected or SocketError.Shutdown or SocketError.NotSocket) {
+            // The peer has already ended the connection.
+        }
+    }
+
     // a close with a reset rather than a FIN, as a server closes that gives up on its peer. The socket closes on its
     // own first: the client's and the stream's close would shut it down, which sends a FIN whatever its linger
     public void Reset()
@@ -75,11 +107,35 @@ public sealed class TcpStreamConnection : IStreamConnection
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        _tcpClient.Client.LingerState = new LingerOption(true, 0);
-        _tcpClient.Client.Dispose();
-        Stream.Dispose();
-        _tcpClient.Dispose();
-        VhTypeTracker.Record($"TcpStreamConnection.{ConnectionName}.disposed");
+        try {
+            _socket.LingerState = new LingerOption(true, 0);
+        }
+        catch (ObjectDisposedException) {
+            // Eviction may already have disposed the TcpClient and cleared its Client property.
+        }
+        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.OperationAborted or SocketError.NotSocket or
+                                            SocketError.NotConnected) {
+            // Eviction can also close the native handle while linger is being set.
+        }
+        finally {
+            _socket.Dispose();
+            DisposeStream();
+        }
+    }
+
+    private void DisposeStream()
+    {
+        try {
+            Stream.Dispose();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not close the connection stream. ConnectionId: {ConnectionId}",
+                ConnectionId);
+        }
+        finally {
+            _tcpClient.Dispose();
+            VhTypeTracker.Record($"TcpStreamConnection.{ConnectionName}.disposed");
+        }
     }
 
     public void Dispose()
@@ -87,9 +143,7 @@ public sealed class TcpStreamConnection : IStreamConnection
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        Stream.Dispose();
-        _tcpClient.Dispose();
-        VhTypeTracker.Record($"TcpStreamConnection.{ConnectionName}.disposed");
+        DisposeStream();
 
         VhLogger.Instance.LogTrace(GeneralEventId.Stream,
             "Connection has been disposed. ConnectionId: {ConnectionId}",

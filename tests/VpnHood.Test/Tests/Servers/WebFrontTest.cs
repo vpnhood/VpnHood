@@ -4,6 +4,12 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Client;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Tunneling.Connections;
+using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Net.Toolkit.Streams;
+using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.Server.ProbeResistance;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
@@ -228,7 +234,7 @@ public class WebFrontTest : TestBase
         var connections = new UnauthenticatedConnections { MaxCount = 1 };
         var proven = new TestConnection();
         connections.Add(EndPoints("10.0.0.1", 1), proven);
-        connections.Remove(EndPoints("10.0.0.1", 1));
+        connections.Remove(EndPoints("10.0.0.1", 1), proven);
         connections.Add(EndPoints("10.0.0.1", 2), new TestConnection());
 
         Assert.IsFalse(proven.IsDisposed);
@@ -239,34 +245,188 @@ public class WebFrontTest : TestBase
     public async Task The_cap_closes_the_server_s_oldest_connection_of_the_busiest_address()
     {
         using var accessManager = TestHelper.CreateAccessManager();
-        accessManager.ServerConfig.SessionOptions.MaxUnauthenticatedConnectionCount = 2;
+        accessManager.ServerConfig.SessionOptions.MaxUnauthenticatedConnectionCount = 3;
         await using var server = await TestHelper.CreateServer(accessManager);
         var serverEndPoint = server.ServerHost.TcpEndPoints.First();
 
         // TCP alone: the TLS handshake would wait 10 s for a hello, so a sooner close is the cap's
-        using var oldest = new TcpClient();
-        await oldest.ConnectAsync(serverEndPoint, TestCt);
+        using var other = new TcpClient(new IPEndPoint(IPAddress.Parse("127.0.0.2"), 0));
+        await other.ConnectAsync(serverEndPoint, TestCt);
         await VhTestUtil.AssertEqualsWait(1, () => server.UnauthenticatedConnectionCount, cancellationToken: TestCt);
+        using var oldest = new TcpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        await oldest.ConnectAsync(serverEndPoint, TestCt);
+        await VhTestUtil.AssertEqualsWait(2, () => server.UnauthenticatedConnectionCount, cancellationToken: TestCt);
         using var newer = new TcpClient();
         await newer.ConnectAsync(serverEndPoint, TestCt);
-        await VhTestUtil.AssertEqualsWait(2, () => server.UnauthenticatedConnectionCount, cancellationToken: TestCt);
+        await VhTestUtil.AssertEqualsWait(3, () => server.UnauthenticatedConnectionCount, cancellationToken: TestCt);
         using var newest = new TcpClient();
         await newest.ConnectAsync(serverEndPoint, TestCt);
 
         using var readCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var read = await oldest.GetStream().ReadAsync(new byte[1], readCts.Token);
         Assert.AreEqual(0, read);
-        Assert.AreEqual(2, server.UnauthenticatedConnectionCount);
+        Assert.AreEqual(3, server.UnauthenticatedConnectionCount);
+        Assert.IsFalse(other.Client.Poll(0, SelectMode.SelectRead));
+        Assert.IsFalse(newer.Client.Poll(0, SelectMode.SelectRead));
     }
 
     [TestMethod]
-    public async Task A_client_s_connections_leave_the_count()
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task A_client_s_connections_leave_the_count(bool includeHost)
     {
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server));
+        var token = TestHelper.CreateAccessToken(server);
+        using var tcpClient = new TcpClient();
+        await using var stream = await ConnectTls(tcpClient, token);
+        var clientInfo = new ClientInfo {
+            ClientId = Guid.NewGuid().ToString(),
+            ClientVersion = "1.0.0",
+            MinProtocolVersion = VpnHoodClientConfig.MinProtocolVersion,
+            MaxProtocolVersion = VpnHoodClientConfig.MaxProtocolVersion,
+            UserAgent = "Test"
+        };
+        var hello = new HelloRequest {
+            RequestId = UniqueIdFactory.Create(),
+            EncryptedClientId = VhUtils.EncryptClientId(clientInfo.ClientId, token.Secret),
+            ClientInfo = clientInfo,
+            TokenId = token.TokenId
+        };
+        var body = StreamUtils.ObjectToJsonBuffer(hello);
+        var host = includeHost ? $"Host: {token.ServerToken.HostName}\r\n" : "";
+        await stream.WriteAsync(Encoding.ASCII.GetBytes($"POST / HTTP/1.1\r\n{host}" +
+            $"X-ProtocolVersion: 8\r\nX-BinaryStream: None\r\nContent-Length: {body.Length + 2}\r\n\r\n"), TestCt);
+        await VhTestUtil.AssertEqualsWait(1, () => server.UnauthenticatedConnectionCount, cancellationToken: TestCt);
+        await stream.WriteAsync(new byte[] { 1, hello.RequestCode }, TestCt);
+        await stream.WriteAsync(body, TestCt);
+        StringAssert.StartsWith(await ReadReplyHead(stream), "HTTP/1.1 200 ");
+        var response = await StreamUtils.ReadObjectAsync<HelloResponse>(stream, TestCt);
+        Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         await VhTestUtil.AssertEqualsWait(0, () => server.UnauthenticatedConnectionCount, cancellationToken: TestCt);
+    }
+
+    [TestMethod]
+    public void A_stale_removal_cannot_remove_a_replacement_connection()
+    {
+        var connections = new UnauthenticatedConnections();
+        var endPoints = EndPoints("10.0.0.1", 1);
+        var old = new TestConnection();
+        var replacement = new TestConnection();
+        connections.Add(endPoints, old);
+        connections.Add(endPoints, replacement);
+        connections.Remove(endPoints, old);
+        Assert.IsTrue(old.IsDisposed);
+        Assert.AreEqual(1, connections.Count);
+        Assert.IsFalse(replacement.IsDisposed);
+        connections.Remove(endPoints, replacement);
+        Assert.AreEqual(0, connections.Count);
+    }
+
+    [TestMethod]
+    public void Lowering_the_cap_trims_existing_connections_from_the_busiest_address()
+    {
+        var connections = new UnauthenticatedConnections { MaxCount = 4 };
+        var other = new TestConnection();
+        var oldest = new TestConnection();
+        var newer = new TestConnection();
+        var newest = new TestConnection();
+        connections.Add(EndPoints("10.0.0.2", 1), other);
+        connections.Add(EndPoints("10.0.0.1", 1), oldest);
+        connections.Add(EndPoints("10.0.0.1", 2), newer);
+        connections.Add(EndPoints("10.0.0.1", 3), newest);
+        connections.MaxCount = 2;
+        Assert.AreEqual(2, connections.Count);
+        Assert.IsTrue(oldest.IsDisposed && newer.IsDisposed);
+        Assert.IsFalse(other.IsDisposed || newest.IsDisposed);
+    }
+
+    [TestMethod]
+    public async Task Reset_releases_the_stream_after_the_cap_disposes_the_tcp_client()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        using var client = new TcpClient();
+        await client.ConnectAsync((IPEndPoint)listener.LocalEndpoint, TestCt);
+        using var accepted = await listener.AcceptTcpClientAsync(TestCt);
+        using var stream = new MemoryStream();
+        using var connection = new TcpStreamConnection(accepted, stream, "test", isServer: true);
+        accepted.Dispose();
+        connection.Reset();
+        Assert.IsFalse(stream.CanRead);
+    }
+
+    [TestMethod]
+    [DataRow("1\nx\r\n0\r\n\r\n")]
+    [DataRow("1\r\r\nx\r\n0\r\n\r\n")]
+    [DataRow(" 1\r\nx\r\n0\r\n\r\n")]
+    [DataRow("1 \r\nx\r\n0\r\n\r\n")]
+    [DataRow("1\r\nx\n0\r\n\r\n")]
+    [DataRow("0\r\nno-colon\r\n\r\n")]
+    [DataRow("1\r\nx\r\n7fffffffffffffff\r\n")]
+    public async Task Malformed_chunks_close_before_a_pipelined_request(string body)
+    {
+        await using var stream = new TestDuplexStream(Encoding.ASCII.GetBytes(
+            "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n" + body +
+            "GET /second HTTP/1.1\r\nHost: x\r\n\r\n"), blockAtEnd: true);
+        var request = await ReadRequest(stream);
+        Assert.AreEqual(WebFrontNext.Close, await WebFront.Unauthorized(stream, request, TestCt));
+    }
+
+    [TestMethod]
+    [DataRow(98, 7, true)]
+    [DataRow(99, 7, false)]
+    [DataRow(1, 32729, true)]
+    [DataRow(1, 32730, false)]
+    public async Task Trailers_share_the_initial_headers_count_and_size_limits(int count, int lineSize, bool accepted)
+    {
+        var line = "X-T: " + new string('v', lineSize - 7) + "\r\n";
+        var body = "0\r\n" + string.Concat(Enumerable.Repeat(line, count)) + "\r\n";
+        await using var stream = new TestDuplexStream(Encoding.ASCII.GetBytes(
+            "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n" + body));
+        var request = await ReadRequest(stream);
+        Assert.AreEqual(accepted ? WebFrontNext.NextRequest : WebFrontNext.Close,
+            await WebFront.Unauthorized(stream, request, TestCt));
+    }
+
+    [TestMethod]
+    public async Task Missing_host_is_rejected_only_after_client_classification()
+    {
+        await using var stream = new TestDuplexStream("GET / HTTP/1.1\r\n\r\n"u8.ToArray());
+        var request = await ReadRequest(stream);
+        Assert.IsTrue(request.IsHostMissing);
+        Assert.AreEqual(WebFrontNext.Close, await WebFront.Unauthorized(stream, request, TestCt));
+        StringAssert.StartsWith(Encoding.ASCII.GetString(stream.Written), "HTTP/1.1 400 ");
+    }
+
+    [TestMethod]
+    public async Task A_stalled_reply_write_has_a_deadline()
+    {
+        await using var stream = new TestDuplexStream("GET / HTTP/1.1\r\nHost: x\r\n\r\n"u8.ToArray(),
+            blockWrites: true);
+        var request = await ReadRequest(stream);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+        Assert.AreEqual(WebFrontNext.Reset, await WebFront.Unauthorized(stream, request, deadline.Token));
+    }
+
+    [TestMethod]
+    public async Task Resource_errors_while_writing_a_reply_are_not_swallowed()
+    {
+        await using var stream = new TestDuplexStream([], failWrites: true);
+        await Assert.ThrowsExactlyAsync<OutOfMemoryException>(() => WebFront.TryWrite(stream, "reply"u8.ToArray(), TestCt));
+    }
+
+    [TestMethod]
+    public async Task A_redirect_with_thousands_of_segments_has_bounded_allocations()
+    {
+        var path = string.Concat(Enumerable.Repeat("/a", 3900));
+        await using var stream = new TestDuplexStream(Encoding.ASCII.GetBytes($"GET {path} HTTP/1.1\r\nHost: x\r\n\r\n"));
+        var request = await ReadRequest(stream);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var reply = WebReplies.RedirectToHttps(request, 443);
+        Assert.IsLessThan(512_000L, GC.GetAllocatedBytesForCurrentThread() - before);
+        StringAssert.Contains(Encoding.ASCII.GetString(reply), $"Location: https://x{path}\r\n");
     }
 
     private async Task AssertRead(string request, int rejection)
@@ -334,7 +494,8 @@ public class WebFrontTest : TestBase
     }
 
     // reads the bytes it was given, then ends, or waits as an open connection does; keeps what is written
-    private sealed class TestDuplexStream(byte[] input, bool blockAtEnd = false) : Stream
+    private sealed class TestDuplexStream(byte[] input, bool blockAtEnd = false, bool blockWrites = false,
+        bool failWrites = false) : Stream
     {
         private readonly MemoryStream _input = new(input);
         private readonly MemoryStream _output = new();
@@ -367,10 +528,13 @@ public class WebFrontTest : TestBase
 
         public override int Read(byte[] buffer, int offset, int count) => _input.Read(buffer, offset, count);
 
-        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
+            if (failWrites)
+                throw new OutOfMemoryException("Test resource error.");
+            if (blockWrites)
+                await Task.Delay(Timeout.Infinite, cancellationToken);
             _output.Write(buffer.Span);
-            return ValueTask.CompletedTask;
         }
 
         public override void Write(byte[] buffer, int offset, int count) => _output.Write(buffer, offset, count);

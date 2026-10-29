@@ -1,12 +1,13 @@
 using System.Globalization;
+using System.Net.Sockets;
 using System.Text;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Server.ProbeResistance;
 
-// the server's face to anyone who is not a client: ASP.NET Core's Kestrel behind a JWT bearer check, 401 on every
-// path, and HTTPS redirection on port 80, with Kestrel's parsing, limits, timeouts and keep-alive, so a scan finds
-// such a service and nothing that sets this server apart. The parity harness of the IP-blocking plan compares them
+// the server's HTTP face to anyone who is not a client: ASP.NET Core's Kestrel behind a JWT bearer check, and HTTPS
+// redirection on port 80, with Kestrel's parsing, limits, timeouts and keep-alive. Recognized client requests switch
+// to their protocol after the headers; the parity harness of the IP-blocking plan compares ordinary requests
 internal static class WebFront
 {
     // Kestrel's defaults; its TLS handshake has its own timeout, which no heartbeat rounds
@@ -34,7 +35,8 @@ internal static class WebFront
             await TryWrite(stream, WebReplies.Rejected(ex.StatusCode, ex.Allow), cancellationToken).Vhc();
             return null;
         }
-        catch (Exception) when (headersCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+        catch (Exception ex) when (ex is OperationCanceledException or IOException &&
+                                   headersCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
             await TryWrite(stream, WebReplies.Rejected(408, null), cancellationToken).Vhc();
             return null;
         }
@@ -60,8 +62,13 @@ internal static class WebFront
     private static async Task<WebFrontNext> Answer(Stream stream, HttpRequestHead request, byte[] reply,
         CancellationToken cancellationToken)
     {
-        await stream.WriteAsync(reply, cancellationToken).Vhc();
-        await stream.FlushAsync(cancellationToken).Vhc();
+        if (request.IsHostMissing) {
+            await TryWrite(stream, WebReplies.Rejected(400, null), cancellationToken).Vhc();
+            return WebFrontNext.Close;
+        }
+
+        if (!await TryWrite(stream, reply, cancellationToken).Vhc())
+            return WebFrontNext.Reset;
         if (!request.KeepAlive || request.ContentLength > MaxRequestBodySize)
             return WebFrontNext.Close;
 
@@ -74,10 +81,11 @@ internal static class WebFront
                 ? WebFrontNext.NextRequest
                 : WebFrontNext.Close;
         }
-        catch (Exception) when (drainCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+        catch (Exception ex) when (ex is OperationCanceledException or IOException &&
+                                   drainCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
             return WebFrontNext.Reset;
         }
-        catch (Exception ex) when (ex is EndOfStreamException or InvalidDataException) {
+        catch (Exception ex) when (ex is EndOfStreamException or InvalidDataException or HttpRequestRejectedException) {
             return WebFrontNext.Close;
         }
     }
@@ -94,7 +102,7 @@ internal static class WebFront
         // chunks: a hex size and maybe extensions, the data, a line end; then trailers to an empty line
         long total = 0;
         while (true) {
-            var sizeText = (await ReadLine(stream, buffer, cancellationToken).Vhc()).Split(';')[0].Trim();
+            var sizeText = (await ReadLine(stream, buffer, MaxChunkLineSize, cancellationToken).Vhc()).Split(';')[0];
             if (sizeText.Length == 0 || !long.TryParse(sizeText, NumberStyles.AllowHexSpecifier,
                     CultureInfo.InvariantCulture, out var size) || size < 0)
                 return false;
@@ -102,16 +110,27 @@ internal static class WebFront
             if (size == 0)
                 break;
 
-            total += size;
-            if (total > MaxRequestBodySize)
+            if (size > MaxRequestBodySize - total)
                 return false;
+            total += size;
 
             await Skip(stream, buffer, size, cancellationToken).Vhc();
-            if ((await ReadLine(stream, buffer, cancellationToken).Vhc()).Length != 0)
+            if ((await ReadLine(stream, buffer, 2, cancellationToken).Vhc()).Length != 0)
                 return false;
         }
 
-        while ((await ReadLine(stream, buffer, cancellationToken).Vhc()).Length != 0) {
+        // Kestrel shares these budgets between the original headers and the trailers.
+        var headerCount = request.HeaderCount;
+        var headerSize = request.HeaderSize;
+        while (true) {
+            var line = await ReadLine(stream, buffer,
+                HttpRequestHeadReader.MaxRequestHeadersTotalSize - headerSize, cancellationToken).Vhc();
+            headerSize += line.Length + 2;
+            if (line.Length == 0)
+                break;
+            if (++headerCount > HttpRequestHeadReader.MaxRequestHeaderCount)
+                return false;
+            HttpRequestHeadReader.ParseHeader(Encoding.Latin1.GetBytes(line));
         }
 
         return true;
@@ -128,18 +147,26 @@ internal static class WebFront
         }
     }
 
-    private static async Task<string> ReadLine(Stream stream, byte[] buffer, CancellationToken cancellationToken)
+    private static async Task<string> ReadLine(Stream stream, byte[] buffer, int limit,
+        CancellationToken cancellationToken)
     {
         var line = new StringBuilder();
         while (true) {
             if (await stream.ReadAsync(buffer.AsMemory(0, 1), cancellationToken).Vhc() == 0)
                 throw new EndOfStreamException();
 
-            if (buffer[0] == '\n')
-                return line.ToString().TrimEnd('\r');
-
-            if (line.Length >= MaxChunkLineSize)
+            if (line.Length + 2 > limit)
                 throw new InvalidDataException("A chunk's line is too long.");
+
+            if (buffer[0] == '\r') {
+                if (await stream.ReadAsync(buffer.AsMemory(0, 1), cancellationToken).Vhc() == 0)
+                    throw new EndOfStreamException();
+                if (buffer[0] != '\n')
+                    throw new InvalidDataException("A chunk's line must end in CRLF.");
+                return line.ToString();
+            }
+            if (buffer[0] == '\n')
+                throw new InvalidDataException("A chunk's line must end in CRLF.");
 
             line.Append((char)buffer[0]);
         }
@@ -154,7 +181,8 @@ internal static class WebFront
         try {
             return await stream.ReadAsync(buffer, linkedCts.Token).Vhc() == 0 ? -1 : buffer[0];
         }
-        catch (Exception) when (idleCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+        catch (Exception ex) when (ex is OperationCanceledException or IOException &&
+                                   idleCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
             return -1;
         }
     }
@@ -168,14 +196,31 @@ internal static class WebFront
         return TimeSpan.FromMilliseconds(at - now);
     }
 
-    private static async Task TryWrite(Stream stream, byte[] reply, CancellationToken cancellationToken)
+    // A stalled reader must not hold a connection indefinitely. Kestrel allows five seconds of grace and
+    // 240 bytes per second for its response; its heartbeat bounds the wait for each reply here.
+    public static async Task<bool> TryWrite(Stream stream, ReadOnlyMemory<byte> reply, CancellationToken cancellationToken)
     {
+        using var writeCts = new CancellationTokenSource(Heartbeat(TimeSpan.FromSeconds(5 + reply.Length / 240.0)));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(writeCts.Token, cancellationToken);
         try {
-            await stream.WriteAsync(reply, cancellationToken).Vhc();
-            await stream.FlushAsync(cancellationToken).Vhc();
+            await stream.WriteAsync(reply, linkedCts.Token).Vhc();
+            await stream.FlushAsync(linkedCts.Token).Vhc();
+            return true;
         }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested) {
-            // the connection is going anyway
+        catch (Exception ex) when (ex is OperationCanceledException or IOException &&
+                                   writeCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
+            return false;
+        }
+        catch (Exception ex) when (IsDisconnect(ex)) {
+            return false;
         }
     }
+
+    public static bool IsDisconnect(Exception exception) => exception switch {
+        ObjectDisposedException or EndOfStreamException => true,
+        SocketException ex => ex.SocketErrorCode is SocketError.ConnectionAborted or SocketError.ConnectionReset or
+            SocketError.Shutdown or SocketError.NotConnected or SocketError.OperationAborted,
+        IOException { InnerException: { } inner } => IsDisconnect(inner),
+        _ => false
+    };
 }

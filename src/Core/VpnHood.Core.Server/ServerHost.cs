@@ -39,7 +39,6 @@ public class ServerHost : IAsyncDisposable
     private readonly AsyncLock _configureLock = new();
     private readonly AsyncLock _disposeLock = new();
     private readonly ReverseProxyTrust _reverseProxyTrust;
-    private readonly UnauthenticatedConnections _unauthenticatedConnections;
     private bool _disposed;
 
     public const int MaxProtocolVersion = 14;
@@ -64,7 +63,6 @@ public class ServerHost : IAsyncDisposable
     {
         _sessionManager = sessionManager;
         _reverseProxyTrust = reverseProxyTrust;
-        _unauthenticatedConnections = unauthenticatedConnections;
         _downloadService = new DownloadService(downloadsPath);
         _cleanupConnectionsJob = new Job(CleanupConnections, TimeSpan.FromMinutes(5), nameof(ServerHost));
         UniqueIdFactory.DebugInitId = 5000;
@@ -127,7 +125,7 @@ public class ServerHost : IAsyncDisposable
     // the connection of the first request a client of ours sends; any other request on it meets the web front, as
     // does every next one on a connection it keeps. Null once the connection has closed
     private async Task<ServerStreamConnection?> CreateHttpConnection(IStreamConnection streamConnection,
-        CancellationToken cancellationToken)
+        Action? onAuthenticated, CancellationToken cancellationToken)
     {
         while (true) {
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "Waiting for Connection request...");
@@ -139,13 +137,14 @@ public class ServerHost : IAsyncDisposable
 
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", request.RequestLine);
 
-            // Try to serve download file if requested
-            if (await _downloadService.TryServeDownloadAsync(streamConnection, request.RequestLine, cancellationToken).Vhc())
-                throw new RequestHandledException(); // Should not reach here, but just in case
-
-            var clientConnection = await CreateClientConnection(streamConnection, request, cancellationToken).Vhc();
+            var clientConnection = await CreateClientConnection(streamConnection, request, onAuthenticated,
+                cancellationToken).Vhc();
             if (clientConnection != null)
                 return clientConnection;
+
+            if (!request.IsHostMissing &&
+                await _downloadService.TryServeDownloadAsync(streamConnection, request.RequestLine, cancellationToken).Vhc())
+                throw new RequestHandledException();
 
             var next = await WebFront.Unauthorized(streamConnection.Stream, request, cancellationToken).Vhc();
             if (next == WebFrontNext.NextRequest)
@@ -160,7 +159,7 @@ public class ServerHost : IAsyncDisposable
     // any other, which gets the web front's 401 like a request without our headers: a 400 would tell a scan that
     // knows them it is us
     private async Task<ServerStreamConnection?> CreateClientConnection(IStreamConnection streamConnection,
-        HttpRequestHead request, CancellationToken cancellationToken)
+        HttpRequestHead request, Action? onAuthenticated, CancellationToken cancellationToken)
     {
         var headers = request.Headers;
         Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
@@ -188,6 +187,7 @@ public class ServerHost : IAsyncDisposable
                     return null;
 
                 return new ServerStreamConnection(streamConnection) {
+                    OnAuthenticated = onAuthenticated,
                     ClientIp = clientIp,
                     RequireHttpResponse = true,
                     IsReverseProxy = isRevereProxy
@@ -202,6 +202,7 @@ public class ServerHost : IAsyncDisposable
                         streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
                     var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
                     return new ServerStreamConnection(reusableConnection) {
+                        OnAuthenticated = onAuthenticated,
                         ConnectionId = connectionId,
                         ClientIp = clientIp,
                         RequireHttpResponse = true, // same as simple use WebSocket stream
@@ -223,6 +224,7 @@ public class ServerHost : IAsyncDisposable
                         streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
                     var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
                     return new ServerStreamConnection(reusableConnection) {
+                        OnAuthenticated = onAuthenticated,
                         ConnectionId = connectionId,
                         ClientIp = clientIp,
                         RequireHttpResponse = false, // Upgrade response has been already sent
@@ -242,8 +244,11 @@ public class ServerHost : IAsyncDisposable
         streamConnection.PreventReuse();
         if (reset && streamConnection is TcpStreamConnection tcpStreamConnection)
             tcpStreamConnection.Reset();
-        else
+        else {
+            if (streamConnection is TcpStreamConnection tcpConnection)
+                tcpConnection.DrainArrived();
             await streamConnection.DisposeAsync().Vhc();
+        }
     }
 
     private void ReuseConnection(IStreamConnection streamConnection)
@@ -288,11 +293,15 @@ public class ServerHost : IAsyncDisposable
         }
     }
 
-    private async Task ProcessNewConnection(IStreamConnection streamConnection, CancellationToken cancellationToken)
+    private Task ProcessNewConnection(IStreamConnection streamConnection, CancellationToken cancellationToken) =>
+        ProcessNewConnection(streamConnection, null, cancellationToken);
+
+    private async Task ProcessNewConnection(IStreamConnection streamConnection, Action? onAuthenticated,
+        CancellationToken cancellationToken)
     {
         var clientIp = streamConnection.RemoteEndPoint.Address;
         try {
-            var serverConnection = await CreateHttpConnection(streamConnection, cancellationToken).Vhc();
+            var serverConnection = await CreateHttpConnection(streamConnection, onAuthenticated, cancellationToken).Vhc();
             if (serverConnection == null)
                 return;
 
@@ -489,7 +498,8 @@ public class ServerHost : IAsyncDisposable
             throw new InvalidOperationException("Session is lost!");
 
         // the key has been proven
-        _unauthenticatedConnections.Remove(streamConnection.ToEndPointPair());
+        if (streamConnection is ServerStreamConnection serverConnection)
+            serverConnection.OnAuthenticated?.Invoke();
 
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity. Not at the
         // version check before the key either: every client up to protocol 14 sends its hello as 8
@@ -595,7 +605,8 @@ public class ServerHost : IAsyncDisposable
     {
         var endPoints = streamConnection.ToEndPointPair();
         var session = await _sessionManager.GetSession(request, endPoints, cancellationToken).Vhc();
-        _unauthenticatedConnections.Remove(endPoints);
+        if (streamConnection is ServerStreamConnection serverConnection)
+            serverConnection.OnAuthenticated?.Invoke();
         return session;
     }
 

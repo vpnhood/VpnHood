@@ -21,7 +21,7 @@ internal class TcpListenerHost(
     SessionManager sessionManager,
     UnauthenticatedConnections unauthenticatedConnections,
     CancellationToken cancellationToken,
-    Func<IStreamConnection, CancellationToken, Task> processNewConnection)
+    Func<IStreamConnection, Action, CancellationToken, Task> processNewConnection)
     : IAsyncDisposable
 {
     private readonly List<TcpListenerEntry> _listeners = [];
@@ -164,7 +164,7 @@ internal class TcpListenerHost(
         }
         finally {
             if (endPoints != null)
-                unauthenticatedConnections.Remove(endPoints.Value);
+                unauthenticatedConnections.Remove(endPoints.Value, tcpClient);
         }
     }
 
@@ -177,7 +177,8 @@ internal class TcpListenerHost(
         using (var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, ct))
             connection = await CreateConnection(tcpClient, connectCts.Token).Vhc();
 
-        await processNewConnection(connection, ct).Vhc();
+        var endPoints = connection.ToEndPointPair();
+        await processNewConnection(connection, () => unauthenticatedConnections.Remove(endPoints, tcpClient), ct).Vhc();
     }
 
     private async Task<IStreamConnection> CreateConnection(TcpClient tcpClient, CancellationToken ct)

@@ -11,18 +11,14 @@ internal static class HttpRequestHeadReader
 {
     // Kestrel's limits: the request line counts its line end, the headers theirs and the empty line's
     private const int MaxRequestLineSize = 8192;
-    private const int MaxRequestHeadersTotalSize = 32768 + 2;
-    private const int MaxRequestHeaderCount = 100;
+    public const int MaxRequestHeadersTotalSize = 32768 + 2;
+    public const int MaxRequestHeaderCount = 100;
 
     public static async Task<HttpRequestHead> Read(Stream stream, byte firstByte, CancellationToken cancellationToken)
     {
         var reader = new ByteReader(stream, firstByte);
 
-        // empty lines before a request line are skipped, as Kestrel skips them
-        byte[] requestLine;
-        do {
-            requestLine = await reader.ReadLine(MaxRequestLineSize, 414, cancellationToken).Vhc();
-        } while (requestLine.Length == 0);
+        var requestLine = await reader.ReadLine(MaxRequestLineSize, 414, true, cancellationToken).Vhc();
 
         var (method, target, isHttp10) = ParseRequestLine(requestLine);
         var absoluteAuthority = CheckTarget(method, target);
@@ -33,7 +29,7 @@ internal static class HttpRequestHeadReader
         var contentLengthCount = 0;
         reader.BeginSection(MaxRequestHeadersTotalSize);
         while (true) {
-            var line = await reader.ReadLine(MaxRequestHeadersTotalSize, 431, cancellationToken).Vhc();
+            var line = await reader.ReadLine(MaxRequestHeadersTotalSize, 431, false, cancellationToken).Vhc();
             if (line.Length == 0)
                 break;
 
@@ -48,10 +44,19 @@ internal static class HttpRequestHeadReader
 
         // a host: one with HTTP/1.1, and the target's own with an absolute target
         var host = headers.GetValueOrDefault("Host");
-        if (hostCount > 1 || (hostCount == 0 && !isHttp10) || (host != null && !IsValidAuthority(host)))
+        // Compatibility (2026-10): apps before v7.1.725 omit Host; defer its absence until client classification.
+        if (hostCount > 1 || (host != null && !IsValidAuthority(host)))
             throw new HttpRequestRejectedException(400);
 
-        if (absoluteAuthority != null && !absoluteAuthority.Equals(host, StringComparison.OrdinalIgnoreCase))
+        if (host != null && absoluteAuthority != null) {
+            var matches = host.Equals(absoluteAuthority.Authority, StringComparison.Ordinal) ||
+                          (absoluteAuthority.IsDefaultPort && host.Equals(
+                              $"{absoluteAuthority.Authority}:{absoluteAuthority.Port}", StringComparison.Ordinal));
+            if (!matches)
+                throw new HttpRequestRejectedException(400);
+        }
+        if (host != null && method == "CONNECT" && target[0] != '/' && absoluteAuthority == null &&
+            !host.Equals(target, StringComparison.Ordinal))
             throw new HttpRequestRejectedException(400);
 
         // the body's framing: chunks if the transfer coding ends with them, else a length of digits alone
@@ -72,17 +77,22 @@ internal static class HttpRequestHeadReader
             contentLength = length;
         }
 
+        if (isHttp10 && method is "POST" or "PUT" && contentLength == null && !isChunked)
+            throw new HttpRequestRejectedException(400);
+
         var connection = headers.GetValueOrDefault("Connection", "")
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var keepAlive = isHttp10
-            ? connection.Contains("keep-alive", StringComparer.OrdinalIgnoreCase)
-            : !connection.Contains("close", StringComparer.OrdinalIgnoreCase);
+        var keepAlive = !connection.Contains("close", StringComparer.OrdinalIgnoreCase) &&
+                        (!isHttp10 || connection.Contains("keep-alive", StringComparer.OrdinalIgnoreCase));
 
         return new HttpRequestHead {
             Method = method,
             Target = target,
             IsHttp10 = isHttp10,
+            IsHostMissing = hostCount == 0 && !isHttp10,
             Headers = headers,
+            HeaderCount = headerCount,
+            HeaderSize = reader.SectionLength,
             ContentLength = isChunked ? null : contentLength,
             IsChunked = isChunked,
             KeepAlive = keepAlive && method != "CONNECT" && !(isChunked && contentLength != null)
@@ -115,7 +125,7 @@ internal static class HttpRequestHeadReader
     }
 
     // the target's form, by its method; an absolute target's authority, which the Host header must repeat
-    private static string? CheckTarget(string method, string target)
+    private static Uri? CheckTarget(string method, string target)
     {
         if (target[0] == '/')
             return null;
@@ -125,22 +135,20 @@ internal static class HttpRequestHeadReader
 
         if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             target.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) {
-            if (!Uri.TryCreate(target, UriKind.Absolute, out _))
+            if (!Uri.TryCreate(target, UriKind.Absolute, out var uri))
                 throw new HttpRequestRejectedException(400);
 
-            var authorityStart = target.IndexOf("//", StringComparison.Ordinal) + 2;
-            var authorityEnd = target.IndexOfAny(['/', '?', '#'], authorityStart);
-            return authorityEnd < 0 ? target[authorityStart..] : target[authorityStart..authorityEnd];
+            return uri;
         }
 
         // anything else is an authority, which only CONNECT takes
-        if (!IsValidAuthority(target))
+        if (!target.All(c => char.IsAsciiLetterOrDigit(c) || "-._~!$&'()*+,;=:%[]".Contains(c)))
             throw new HttpRequestRejectedException(400);
 
         return method == "CONNECT" ? null : throw new HttpRequestRejectedException(405, "CONNECT");
     }
 
-    private static (string Name, string Value) ParseHeader(byte[] line)
+    public static (string Name, string Value) ParseHeader(byte[] line)
     {
         // a folded line, a missing name and anything but a token before the colon are malformed
         var colon = Array.IndexOf(line, (byte)':');
@@ -163,10 +171,8 @@ internal static class HttpRequestHeadReader
             var close = authority.IndexOf(']');
             if (close < 0 || !IPAddress.TryParse(authority[1..close], out _))
                 return false;
-            host = "";
-            authority = authority[(close + 1)..];
-            if (authority.Length > 0 && authority[0] != ':')
-                return false;
+            var suffix = authority.AsSpan(close + 1);
+            return suffix.IsEmpty || (suffix[0] == ':' && suffix[1..].IndexOfAnyExceptInRange('0', '9') < 0);
         }
 
         var colon = authority.LastIndexOf(':');
@@ -197,6 +203,7 @@ internal static class HttpRequestHeadReader
         private bool _hasFirstByte = true;
         private int _sectionLength;
         private int _sectionLimit = int.MaxValue;
+        public int SectionLength => _sectionLength;
 
         public void BeginSection(int limit)
         {
@@ -204,12 +211,15 @@ internal static class HttpRequestHeadReader
             _sectionLimit = limit;
         }
 
-        public async Task<byte[]> ReadLine(int lineLimit, int overLimitStatus, CancellationToken cancellationToken)
+        public async Task<byte[]> ReadLine(int lineLimit, int overLimitStatus, bool skipLeadingLineEnds,
+            CancellationToken cancellationToken)
         {
             var line = new List<byte>();
             var lineLength = 0;
             while (true) {
                 var b = await ReadByte(cancellationToken).Vhc();
+                if (skipLeadingLineEnds && lineLength == 0 && b is (byte)'\r' or (byte)'\n')
+                    continue;
                 lineLength++;
                 _sectionLength++;
                 if (lineLength > lineLimit || _sectionLength > _sectionLimit)

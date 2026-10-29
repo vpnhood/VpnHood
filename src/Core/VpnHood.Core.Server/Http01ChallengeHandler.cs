@@ -8,6 +8,7 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Connections;
 using static VpnHood.Core.Server.Http01ChallengeHandler;
 
 namespace VpnHood.Core.Server;
@@ -42,20 +43,40 @@ public class Http01ChallengeHandler : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (IsStarted) throw new InvalidOperationException("The HTTP-01 Challenge Service has already been started.");
 
-        IsStarted = true;
         var ipEndPoint = new IPEndPoint(_ipAddress, 80);
         VhLogger.Instance.LogInformation("HTTP-01 Challenge Listener starting on {EndPoint}", VhLogger.FormatId(ipEndPoint));
 
         _tcpListener = new TcpListener(ipEndPoint);
         _tcpListener.Start();
+        IsStarted = true;
         _ = AcceptTcpClient(_tcpListener, _cancellationTokenSource.Token);
     }
 
     private async Task AcceptTcpClient(TcpListener tcpListener, CancellationToken cancellationToken)
     {
+        var errorCount = 0;
         while (IsStarted && !cancellationToken.IsCancellationRequested) {
-            var client = await tcpListener.AcceptTcpClientAsync(cancellationToken).Vhc();
-            _ = HandleRequest(client, cancellationToken);
+            try {
+                var client = await tcpListener.AcceptTcpClientAsync(cancellationToken).Vhc();
+                _ = HandleRequest(client, cancellationToken);
+                errorCount = 0;
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or SocketException or ObjectDisposedException &&
+                                       (!IsStarted || cancellationToken.IsCancellationRequested)) {
+                break;
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(GeneralEventId.AcmeChallenge, ex,
+                    "Could not accept a connection on port 80. ErrorCount: {ErrorCount}", ++errorCount);
+                if (errorCount <= 200)
+                    continue;
+                try {
+                    await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken).Vhc();
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                    break;
+                }
+            }
         }
     }
 
@@ -63,15 +84,17 @@ public class Http01ChallengeHandler : IDisposable
     // serves HTTPS alone and keeps port 80 for its certificate
     private async Task HandleRequest(TcpClient client, CancellationToken cancellationToken)
     {
+        using var connection = new TcpStreamConnection(client, connectionName: "http01", isServer: true);
         var reset = false;
         IPEndPointPair? endPoints = null;
         try {
             endPoints = new IPEndPointPair(client.GetLocalEndPoint(), client.GetRemoteEndPoint());
             _unauthenticatedConnections.Add(endPoints.Value, client);
-            var stream = client.GetStream();
+            var stream = connection.Stream;
             while (true) {
                 var request = await WebFront.ReadRequest(stream, cancellationToken).Vhc();
-                if (request == null || await TryAnswerChallenge(client, stream, request, cancellationToken).Vhc())
+                if (request == null || await TryAnswerChallenge(endPoints.Value.RemoteEndPoint.Address,
+                        stream, request, cancellationToken).Vhc())
                     break;
 
                 var next = await WebFront.RedirectToHttps(stream, request, _httpsPort, cancellationToken).Vhc();
@@ -85,49 +108,35 @@ public class Http01ChallengeHandler : IDisposable
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             // service is stopping
         }
-        catch (Exception ex) {
+        catch (Exception ex) when (WebFront.IsDisconnect(ex)) {
             VhLogger.Instance.LogDebug(GeneralEventId.AcmeChallenge, ex, "Could not process a request on port 80.");
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(GeneralEventId.AcmeChallenge, ex, "Could not process a request on port 80.");
         }
         finally {
             if (endPoints != null)
-                _unauthenticatedConnections.Remove(endPoints.Value);
+                _unauthenticatedConnections.Remove(endPoints.Value, client);
 
-            // a reset closes the socket on its own: the client's close would shut it down, which sends a FIN
-            if (reset) {
-                client.Client.LingerState = new LingerOption(true, 0);
-                client.Client.Dispose();
-            }
+            if (reset)
+                connection.Reset();
             else
-                DrainArrived(client);
-            client.Dispose();
-        }
-    }
-
-    // a socket closed with unread data resets its connection, where a web server, which reads ahead, ends its own
-    // with a FIN: what has already arrived is read first
-    private static void DrainArrived(TcpClient client)
-    {
-        try {
-            var buffer = new byte[4096];
-            for (var total = 0; client.Available > 0 && total < 1024 * 1024;)
-                total += client.Client.Receive(buffer);
-        }
-        catch (Exception) {
-            // the connection is going anyway
+                connection.DrainArrived();
         }
     }
 
     // the key authorization for a token the access manager knows; any other token gets the redirect, as does a
     // lookup while the same address has one going, which keeps a flood off the access manager
-    private async Task<bool> TryAnswerChallenge(TcpClient client, Stream stream, HttpRequestHead request,
+    private async Task<bool> TryAnswerChallenge(IPAddress remoteAddress, Stream stream, HttpRequestHead request,
         CancellationToken cancellationToken)
     {
         const string basePath = "/.well-known/acme-challenge/";
-        if (request.Method != "GET" || !request.Target.StartsWith(basePath, StringComparison.Ordinal))
+        var path = WebReplies.RequestPath(request.Target);
+        if (request.IsHostMissing || request.Method != "GET" || !path.StartsWith(basePath, StringComparison.Ordinal))
             return false;
 
         using var lockResult = ThrottleRequests
-            ? await AsyncLock.LockAsync(IPAddressUtil.GetDosKey(client.Client.GetRemoteEndPoint().Address),
+            ? await AsyncLock.LockAsync(IPAddressUtil.GetDosKey(remoteAddress),
                 TimeSpan.Zero, cancellationToken).Vhc()
             : null;
         if (lockResult is { Succeeded: false })
@@ -135,7 +144,7 @@ public class Http01ChallengeHandler : IDisposable
 
         string keyAuthorization;
         try {
-            keyAuthorization = await _keyAuthorizationFunc(request.Target[basePath.Length..], cancellationToken).Vhc();
+            keyAuthorization = await _keyAuthorizationFunc(path[basePath.Length..], cancellationToken).Vhc();
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested) {
             var logLevel = ex is KeyNotFoundException or ApiException { StatusCode: (int)HttpStatusCode.NotFound }
@@ -149,8 +158,8 @@ public class Http01ChallengeHandler : IDisposable
         if (string.IsNullOrEmpty(keyAuthorization))
             return false;
 
-        await stream.WriteAsync(HttpResponseBuilder.Http01(keyAuthorization), cancellationToken).Vhc();
-        await stream.FlushAsync(cancellationToken).Vhc();
+        if (!await WebFront.TryWrite(stream, HttpResponseBuilder.Http01(keyAuthorization), cancellationToken).Vhc())
+            return true;
         VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "HTTP-01 challenge response sent.");
         return true;
     }
@@ -161,8 +170,8 @@ public class Http01ChallengeHandler : IDisposable
             return;
 
         IsStarted = false;
-        VhInvoker.TryInvoke("stop the HTTP-01 listener", LogLevel.Warning, () => _tcpListener?.Stop());
         _cancellationTokenSource.TryCancel();
+        VhInvoker.TryInvoke("stop the HTTP-01 listener", LogLevel.Warning, () => _tcpListener?.Stop());
         _cancellationTokenSource.Dispose();
     }
 }

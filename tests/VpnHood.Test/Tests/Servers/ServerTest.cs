@@ -768,7 +768,10 @@ public class ServerTest : TestBase
 
     [TestMethod]
     [DoNotParallelize] // listens on the fixed well-known port 80
-    public async Task AcmeHttp01Challenge()
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, true)]
+    public async Task AcmeHttp01Challenge(bool absoluteForm, bool query)
     {
         VhLogger.IsAnonymousMode = true;
 
@@ -783,10 +786,17 @@ public class ServerTest : TestBase
 
         // server should listen to port 80 for HTTP-01 challenge
         using var httpClient = new HttpClient();
-        var url = new Uri(
-            $"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{accessManager.AcmeHttp01KeyToken}");
-        var keyAuthorization = await httpClient.GetStringAsync(url);
-        Assert.AreEqual(accessManager.AcmeHttp01KeyAuthorization, keyAuthorization);
+        var address = accessManager.ServerConfig.TcpEndPointsValue[0].Address;
+        var path = $"/.well-known/acme-challenge/{accessManager.AcmeHttp01KeyToken}" + (query ? "?x=1" : "");
+        var target = absoluteForm ? $"http://{address}{path}" : path;
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(address, 80, TestCt);
+        var stream = tcpClient.GetStream();
+        await stream.WriteAsync(Encoding.ASCII.GetBytes($"GET {target} HTTP/1.1\r\nHost: {address}\r\n\r\n"), TestCt);
+        using var reader = new StreamReader(stream);
+        var response = await reader.ReadToEndAsync(TestCt);
+        StringAssert.StartsWith(response, "HTTP/1.1 200 ");
+        StringAssert.EndsWith(response, accessManager.AcmeHttp01KeyAuthorization);
     }
 
     // as anything but a challenge: what HTTPS redirection answers, to the server's TLS port

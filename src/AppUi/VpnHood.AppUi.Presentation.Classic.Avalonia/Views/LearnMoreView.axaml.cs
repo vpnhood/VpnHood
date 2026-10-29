@@ -4,6 +4,7 @@ using Avalonia.Controls.Documents;
 using Avalonia.Media;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
@@ -28,7 +29,7 @@ public partial class LearnMoreView : UserControl, IPage
 
     public void FocusDefault()
     {
-        Header.FocusBack();
+        Scroller.LandFocus();
     }
 
     private void AddSection(string title, string text)

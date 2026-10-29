@@ -1624,4 +1624,18 @@
   <Style Selector="Button.collapsed-row:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
   </Style>
+  <!-- a box of text a remote scrolls (ArrowKeyScroll) among a page's controls (the first-run terms):
+       a ScrollViewer has no border to light, so its ring is a focus adorner, which shows only while
+       a remote or a keyboard has the focus; drawn just outside the box, where the scrolled text never
+       passes under it, so unclipped - the adorner layer clips to the box itself by default, which
+       hides the whole ring -->
+  <Style Selector="ScrollViewer.text-box">
+    <Setter Property="controls:ArrowKeyScroll.IsEnabled" Value="True" />
+    <Setter Property="FocusAdorner">
+      <FocusAdornerTemplate>
+        <Border AdornerLayer.IsClipEnabled="False" BorderThickness="3" BorderBrush="{StaticResource AppFocusBrush}"
+                CornerRadius="12" Margin="-6" />
+      </FocusAdornerTemplate>
+    </Setter>
+  </Style>
 </Styles>

@@ -11,14 +11,9 @@
     <Border DockPanel.Dock="Top" Classes="divider" />
     <StackPanel DockPanel.Dock="Bottom" Spacing="0">
       <Border Classes="divider" Opacity="0.6" />
-      <controls:SettingsToggleItem x:Name="TrackerItem" Margin="0,16,0,0" IsVisible="False" />
-      <Button x:Name="AcceptButton" Classes="pill btn3 block" Margin="0,16,0,0" Click="OnAcceptClick"
-              Content="{Binding AcceptAndContinue, Source={x:Static res:Strings.Current}}" />
-    </StackPanel>
-    <!-- a box between the title and Accept rather than the page's scroller: it keeps to the inset -->
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,8" Padding="0">
-      <StackPanel MaxWidth="720" Spacing="12" Margin="8,0">
-        <TextBlock x:Name="DocumentText" Classes="body-medium disabled" TextWrapping="Wrap" />
+      <!-- the notice and the documents it names, in the summary's column: beside Accept however long
+           the summary runs, so a remote reaches them -->
+      <StackPanel MaxWidth="720" Spacing="12" Margin="8,16,8,0">
         <TextBlock Classes="body-medium" TextWrapping="Wrap" Text="{Binding AcceptLicenseNotice, Source={x:Static res:Strings.Current}}" />
         <Button x:Name="TermsButton" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnTermsClick" IsVisible="False">
           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -33,6 +28,14 @@
           </StackPanel>
         </Button>
       </StackPanel>
+      <controls:SettingsToggleItem x:Name="TrackerItem" Margin="0,16,0,0" IsVisible="False" />
+      <Button x:Name="AcceptButton" Classes="pill btn3 block" Margin="0,16,0,0" Click="OnAcceptClick"
+              Content="{Binding AcceptAndContinue, Source={x:Static res:Strings.Current}}" />
+    </StackPanel>
+    <!-- a box between the title and Accept rather than the page's scroller: it keeps to the inset.
+         A remote scrolls it too (text-box) -->
+    <ScrollViewer Classes="text-box" HorizontalScrollBarVisibility="Disabled" Margin="0,8" Padding="0">
+      <TextBlock x:Name="DocumentText" Classes="body-medium disabled" TextWrapping="Wrap" MaxWidth="720" Margin="8,0" />
     </ScrollViewer>
   </DockPanel>
 </UserControl>

@@ -6,8 +6,11 @@
   <!-- The web UI's learn-more/free-servers-disruptions: the book, then the questions with their
        answers, a rule between them, and the four bullets at the end. -->
   <DockPanel Classes="page">
-    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding LearnMore, Source={x:Static res:Strings.Current}}" />
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <controls:PageHeader DockPanel.Dock="Top" Title="{Binding LearnMore, Source={x:Static res:Strings.Current}}" />
+    <!-- nothing in the text takes the focus, and a TV shows no back button: the scroller takes it, so
+         a remote moves the text (ArrowKeyScroll); no ring, as the text is the whole page -->
+    <ScrollViewer x:Name="Scroller" HorizontalScrollBarVisibility="Disabled" FocusAdorner="{x:Null}"
+                  controls:ArrowKeyScroll.IsEnabled="True">
       <StackPanel MaxWidth="720" Spacing="8">
         <TextBlock Classes="mdi" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,24" Text="{x:Static res:Mdi.BookOpenPageVariantOutline}" />
         <StackPanel x:Name="Sections" Spacing="8" />

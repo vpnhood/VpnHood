@@ -43,25 +43,25 @@ public sealed class AsyncLock
 
     public bool IsLocked => _semaphoreSlimEx.CurrentCount == 0;
 
-    public async Task<ILockAsyncResult> LockAsync(CancellationToken cancellationToken = default)
+    public async Task<ILockAsyncResult> LockAsync(CancellationToken cancellationToken)
     {
         await _semaphoreSlimEx.WaitAsync(cancellationToken).Vhc();
         return new SemaphoreLock(_semaphoreSlimEx, true, null);
     }
 
-    public async Task<ILockAsyncResult> LockAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
+    public async Task<ILockAsyncResult> LockAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
         var succeeded = await _semaphoreSlimEx.WaitAsync(timeout, cancellationToken).Vhc();
         return new SemaphoreLock(_semaphoreSlimEx, succeeded, null);
     }
 
-    public static Task<ILockAsyncResult> LockAsync(string name, CancellationToken cancellationToken = default)
+    public static Task<ILockAsyncResult> LockAsync(string name, CancellationToken cancellationToken)
     {
         return LockAsync(name, Timeout.InfiniteTimeSpan, cancellationToken);
     }
 
 
-    public static async Task<ILockAsyncResult> LockAsync(string name, TimeSpan timeout, CancellationToken cancellationToken = default)
+    public static async Task<ILockAsyncResult> LockAsync(string name, TimeSpan timeout, CancellationToken cancellationToken)
     {
         SemaphoreSlimEx semaphoreSlim;
         lock (SemaphoreSlims) {

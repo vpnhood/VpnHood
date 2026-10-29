@@ -138,7 +138,7 @@ public class AppApiClientTest : TestAppBase
 
         Directory.CreateDirectory(updater.UpdatesPath);
         await File.WriteAllTextAsync(Path.Combine(updater.UpdatesPath, "2.0.0-setup.exe"), "setup", TestCt);
-        var install = updater.InstallDownloadedUpdate();
+        var install = updater.InstallDownloadedUpdate(TestCt);
         var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
             api.App.Connect(null, null, ConnectPlanId.Normal, CancellationToken.None));
         Assert.AreEqual(new AppUpdatingException().Message, exception.Message);

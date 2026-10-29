@@ -25,7 +25,7 @@ public partial class SettingsView : UserControl, IPage
         base.OnAttachedToVisualTree(e);
         Fill();
         if (AutomaticUpdatesItem.IsVisible)
-            _ = LoadAutomaticUpdates();
+            _ = LoadAutomaticUpdates(CancellationToken.None);
     }
 
     private void Fill()
@@ -111,11 +111,11 @@ public partial class SettingsView : UserControl, IPage
 
     // The platform's switch, a desktop's timer or task, read at every arrival: its installer and its own tools
     // turn it too. Held until read, so a press never answers a state the row did not show.
-    private async Task LoadAutomaticUpdates()
+    private async Task LoadAutomaticUpdates(CancellationToken cancellationToken)
     {
         AutomaticUpdatesItem.IsDisabled = true;
         try {
-            AutomaticUpdatesItem.IsOn = await VhApp.Api.App.GetAutomaticUpdate(CancellationToken.None);
+            AutomaticUpdatesItem.IsOn = await VhApp.Api.App.GetAutomaticUpdate(cancellationToken);
             AutomaticUpdatesItem.IsDisabled = false;
         }
         catch (Exception ex) {

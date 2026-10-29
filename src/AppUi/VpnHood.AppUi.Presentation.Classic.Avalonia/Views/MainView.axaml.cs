@@ -81,13 +81,13 @@ public partial class MainView : UserControl
         // the account, once, for a build that has one (App.vue's onMounted); the pages that change
         // it read it again themselves
         if (features.IsAccountSupported)
-            _ = LoadAccount();
+            _ = LoadAccount(CancellationToken.None);
     }
 
-    private async Task LoadAccount()
+    private async Task LoadAccount(CancellationToken cancellationToken)
     {
         try {
-            await VhApp.LoadAccount(false, CancellationToken.None);
+            await VhApp.LoadAccount(false, cancellationToken);
             ViewModel.Refresh();
         }
         catch (Exception ex) {
@@ -146,7 +146,7 @@ public partial class MainView : UserControl
             return false;
 
         if (_pages.Peek() is ILeaveGuard guard) {
-            _ = LeaveGuarded(guard);
+            _ = LeaveGuarded(guard, CancellationToken.None);
             return true;
         }
 
@@ -154,9 +154,9 @@ public partial class MainView : UserControl
         return true;
     }
 
-    private async Task LeaveGuarded(ILeaveGuard guard)
+    private async Task LeaveGuarded(ILeaveGuard guard, CancellationToken cancellationToken)
     {
-        if (await guard.CanLeave())
+        if (await guard.CanLeave(cancellationToken))
             PopPage();
     }
 
@@ -562,7 +562,7 @@ public partial class MainView : UserControl
     {
         try {
             if (VhApp.State.UpdaterStatus?.PublishInfo?.GooglePlayUrl is { } url)
-                await OpenLink(url, Strings.Current.UpdateFromGooglePlay);
+                await OpenLink(url, Strings.Current.UpdateFromGooglePlay, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -573,7 +573,7 @@ public partial class MainView : UserControl
     {
         try {
             if (VhApp.State.UpdaterStatus?.PublishInfo?.InstallationPageUrl is { } url)
-                await OpenLink(url, Strings.Current.UpdateFromDirectLink);
+                await OpenLink(url, Strings.Current.UpdateFromDirectLink, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -614,7 +614,7 @@ public partial class MainView : UserControl
     private async void OnReconnectClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await ViewModel.Reconnect();
+            await ViewModel.Reconnect(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -624,7 +624,7 @@ public partial class MainView : UserControl
     private async void OnReconnectDismissClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await ViewModel.ClearReconnectRequired();
+            await ViewModel.ClearReconnectRequired(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -702,7 +702,7 @@ public partial class MainView : UserControl
     // The web UI's onExternalLinkClick: a TV is not guaranteed a browser, so there the link
     // becomes a code to scan; anywhere else the device's browser opens it, through the host's shell
     // where it names one (a sandboxed app's, AvaloniaUiHosting.Shell), else through Avalonia's launcher.
-    public async Task OpenLink(Uri url, string title)
+    public async Task OpenLink(Uri url, string title, CancellationToken cancellationToken)
     {
         if (VhApp.IsTvUi) {
             await ShowDialog(new OpenOnPhoneDialog(url, title));
@@ -710,7 +710,7 @@ public partial class MainView : UserControl
         }
 
         var isOpened = AvaloniaUiHosting.Shell is { } shell
-            ? await shell.OpenLink(url, CancellationToken.None)
+            ? await shell.OpenLink(url, cancellationToken)
             : _topLevel?.Launcher is { } launcher && await launcher.LaunchUriAsync(url);
         if (!isOpened)
             await ShowDialog(new OpenOnPhoneDialog(url, title));

@@ -8,7 +8,8 @@ namespace VpnHood.AppUi.Hosting.WebView;
 public static class WebViewTheme
 {
     private static readonly Lazy<Task<ThemeColors>> InProcessColors = new(() =>
-        ThemeColors.LoadAsync(VpnHoodApp.Instance.UiAssetProvider, VpnHoodApp.Instance.Features.UiTheme));
+        ThemeColors.LoadAsync(VpnHoodApp.Instance.UiAssetProvider, VpnHoodApp.Instance.Features.UiTheme,
+            CancellationToken.None));
 
     public static Task<ThemeColors> Colors => InProcessColors.Value;
 }

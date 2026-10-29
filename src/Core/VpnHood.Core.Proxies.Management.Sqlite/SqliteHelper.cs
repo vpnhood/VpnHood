@@ -21,20 +21,21 @@ internal static class SqliteHelper
     }
 
     public static async Task ExecuteAsync(SqliteConnection connection, string sql,
-        params (string Name, object Value)[] parameters)
+        CancellationToken cancellationToken, params (string Name, object Value)[] parameters)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
         foreach (var (name, value) in parameters)
             command.Parameters.AddWithValue(name, value);
-        await command.ExecuteNonQueryAsync().Vhc();
+        await command.ExecuteNonQueryAsync(cancellationToken).Vhc();
     }
 
-    public static async Task<object?> ExecuteScalarAsync(SqliteConnection connection, string sql)
+    public static async Task<object?> ExecuteScalarAsync(SqliteConnection connection, string sql,
+        CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
-        return await command.ExecuteScalarAsync().Vhc();
+        return await command.ExecuteScalarAsync(cancellationToken).Vhc();
     }
 
     public static string? GetNullableString(SqliteDataReader reader, string column)

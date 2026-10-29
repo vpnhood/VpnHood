@@ -40,7 +40,7 @@ public class WindowsServiceSetup(
     public async Task<int> Install(CancellationToken cancellationToken)
     {
         if (FindUnsafeFolder() is { } reason) {
-            await Console.Error.WriteLineAsync(reason).Vhc();
+            await Console.Error.WriteLineAsync(reason.AsMemory(), cancellationToken).Vhc();
             return UnsafeFolderExitCode;
         }
 

@@ -15,7 +15,7 @@ internal sealed class ProxyEndPointsApi(VpnHoodApp app) : IProxyEndPointsApi
 
     public Task ResetStates(CancellationToken cancellationToken)
     {
-        return ProxyEndPointService.ResetStates();
+        return ProxyEndPointService.ResetStates(cancellationToken);
     }
 
     public Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken)
@@ -41,13 +41,13 @@ internal sealed class ProxyEndPointsApi(VpnHoodApp app) : IProxyEndPointsApi
             includeUnknown: includeUnknown,
             includeDisabled: includeDisabled,
             recordIndex: recordIndex,
-            recordCount: recordCount);
+            recordCount: recordCount,
+            cancellationToken: cancellationToken);
     }
 
     public Task<AppProxyEndPointInfo> Get(string proxyEndPointId, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
-        return ProxyEndPointService.Get(proxyEndPointId);
+        return ProxyEndPointService.Get(proxyEndPointId, cancellationToken);
     }
 
     public Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults, CancellationToken cancellationToken)
@@ -64,17 +64,17 @@ internal sealed class ProxyEndPointsApi(VpnHoodApp app) : IProxyEndPointsApi
 
     public Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
-        return ProxyEndPointService.Update(proxyEndPointId, proxyEndPoint);
+        return ProxyEndPointService.Update(proxyEndPointId, proxyEndPoint, cancellationToken);
     }
 
     public Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
-        return ProxyEndPointService.Add(proxyEndPoint);
+        return ProxyEndPointService.Add(proxyEndPoint, cancellationToken);
     }
 
     public Task Delete(string proxyEndPointId, CancellationToken cancellationToken)
     {
-        return ProxyEndPointService.Delete(proxyEndPointId);
+        return ProxyEndPointService.Delete(proxyEndPointId, cancellationToken);
     }
 
     public Task DeleteAll(
@@ -89,17 +89,17 @@ internal sealed class ProxyEndPointsApi(VpnHoodApp app) : IProxyEndPointsApi
             DeleteFailed = deleteFailed,
             DeleteUnknown = deleteUnknown,
             DeleteDisabled = deleteDisabled
-        });
+        }, cancellationToken);
     }
 
     public Task Import(string content, CancellationToken cancellationToken)
     {
-        return ProxyEndPointService.Import(content);
+        return ProxyEndPointService.Import(content, cancellationToken);
     }
 
     public Task DisableAllFailed(CancellationToken cancellationToken)
     {
-        return ProxyEndPointService.DisableAllFailed();
+        return ProxyEndPointService.DisableAllFailed(cancellationToken);
     }
 
     public Task ReloadUrl(CancellationToken cancellationToken)

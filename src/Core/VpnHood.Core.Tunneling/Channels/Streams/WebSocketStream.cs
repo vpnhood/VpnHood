@@ -130,7 +130,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         }
     }
 
-    public async ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public async ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
@@ -402,7 +402,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     public override async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end, as its close of the logical stream writes to the source
-        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (IsDisposed)
             return;
 

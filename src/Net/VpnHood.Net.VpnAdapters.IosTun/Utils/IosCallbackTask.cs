@@ -9,7 +9,7 @@ public static class IosCallbackTask
 {
     public static Task WaitAsync(
         Action<Action<NSError?>> nativeCall,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             return Task.FromCanceled(cancellationToken);

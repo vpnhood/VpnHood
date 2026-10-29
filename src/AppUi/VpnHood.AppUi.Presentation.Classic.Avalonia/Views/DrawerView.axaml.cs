@@ -113,7 +113,7 @@ public partial class DrawerView : UserControl
                 return;
             }
 
-            await _host.ViewModel.SignIn();
+            await _host.ViewModel.SignIn(onPurchase: false, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -130,7 +130,7 @@ public partial class DrawerView : UserControl
     {
         try {
             _host.CloseDrawer();
-            await _host.ViewModel.Diagnose();
+            await _host.ViewModel.Diagnose(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -144,7 +144,7 @@ public partial class DrawerView : UserControl
             UpdateIcon.Classes.Add("spinner");
             UpdateItem.IsEnabled = false;
             try {
-                await _host.ViewModel.CheckForUpdate();
+                await _host.ViewModel.CheckForUpdate(CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);
@@ -162,7 +162,7 @@ public partial class DrawerView : UserControl
     {
         try {
             if (VhApp.Features.Links.WhatsNew is { } url)
-                await Open(url.AbsoluteUri, Strings.Current.WhatsNew);
+                await Open(url.AbsoluteUri, Strings.Current.WhatsNew, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -173,7 +173,7 @@ public partial class DrawerView : UserControl
     {
         try {
             if (VhApp.Features.Links.Feedback is { } url)
-                await Open(url.AbsoluteUri, Strings.Current.SendFeedback);
+                await Open(url.AbsoluteUri, Strings.Current.SendFeedback, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -184,7 +184,7 @@ public partial class DrawerView : UserControl
     {
         try {
             if (VhApp.Features.Links.PersonalServer is { } url)
-                await Open(url.AbsoluteUri, Strings.Current.CreatePersonalServer);
+                await Open(url.AbsoluteUri, Strings.Current.CreatePersonalServer, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -195,7 +195,7 @@ public partial class DrawerView : UserControl
     {
         try {
             if (VhApp.Features.Links.Website is { } url)
-                await Open(url.AbsoluteUri, GetWebsiteLabel(url));
+                await Open(url.AbsoluteUri, GetWebsiteLabel(url), CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -206,7 +206,7 @@ public partial class DrawerView : UserControl
     {
         try {
             if (VhApp.Features.Links.PrivacyPolicy is { } url)
-                await Open(url.AbsoluteUri, Strings.Current.PrivacyPolicy);
+                await Open(url.AbsoluteUri, Strings.Current.PrivacyPolicy, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -217,7 +217,7 @@ public partial class DrawerView : UserControl
     {
         try {
             if (VhApp.Features.Links.LinkedIn is { } url)
-                await Open(url.AbsoluteUri, "LinkedIn");
+                await Open(url.AbsoluteUri, "LinkedIn", CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -228,7 +228,7 @@ public partial class DrawerView : UserControl
     {
         try {
             if (VhApp.Features.Links.Instagram is { } url)
-                await Open(url.AbsoluteUri, "Instagram");
+                await Open(url.AbsoluteUri, "Instagram", CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -239,7 +239,7 @@ public partial class DrawerView : UserControl
     {
         try {
             if (VhApp.Features.Links.X is { } url)
-                await Open(url.AbsoluteUri, "X");
+                await Open(url.AbsoluteUri, "X", CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -249,16 +249,16 @@ public partial class DrawerView : UserControl
     private async void OnPoweredByClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Open(EngineUrl, Strings.Current.VpnhoodEngine);
+            await Open(EngineUrl, Strings.Current.VpnhoodEngine, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
         }
     }
 
-    private async Task Open(string url, string title)
+    private async Task Open(string url, string title, CancellationToken cancellationToken)
     {
         _host.CloseDrawer();
-        await _host.OpenLink(new Uri(url), title);
+        await _host.OpenLink(new Uri(url), title, cancellationToken);
     }
 }

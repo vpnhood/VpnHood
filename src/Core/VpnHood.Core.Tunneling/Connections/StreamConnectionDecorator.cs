@@ -43,7 +43,7 @@ public class StreamConnectionDecorator(IStreamConnection streamConnection, Strea
     {
         // a second close waits for the first one's end. No early return after it: the inner connection's async
         // close, which a quick close may have started without waiting, ends before this one does
-        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (stream != null)
             await stream.DisposeAsync().Vhc();
 

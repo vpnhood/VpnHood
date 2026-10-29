@@ -117,7 +117,7 @@ public class AccessTest : TestBase
         // check: client must disconnect at hello on traffic overflow
         // ----------
         await using var client2 = await TestHelper.CreateClient(accessToken, autoConnect: false);
-        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => client2.Connect());
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => client2.Connect(TestCt));
         Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.GetSessionErrorCode());
         Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, ex.SessionResponse.ErrorCode);
     }

@@ -53,7 +53,7 @@ public static class AvaloniaUiHosting
             "The head has named no AppOptions.UiZipAssets, and this UI reads its pictures and its words from them.");
 
         await TUi.PrepareContentAsync(assets, cancellationToken).ConfigureAwait(false);
-        ThemeColors = await ThemeColors.LoadAsync(assets, VhApp.Features.UiTheme).ConfigureAwait(false);
+        ThemeColors = await ThemeColors.LoadAsync(assets, VhApp.Features.UiTheme, cancellationToken).ConfigureAwait(false);
         await VhApp.Configure(TUi.AvailableCultures, cancellationToken).ConfigureAwait(false);
     }
 }

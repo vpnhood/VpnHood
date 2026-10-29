@@ -47,7 +47,7 @@ public partial class LocationsView : UserControl, IPage
         if (e.Key is Key.Enter or Key.Space) {
             e.Handled = true;
             if (row.DataContext is LocationItem location)
-                _ = Choose(location);
+                _ = Choose(location, CancellationToken.None);
             return;
         }
 
@@ -114,7 +114,7 @@ public partial class LocationsView : UserControl, IPage
     private void OnTapped(object? sender, TappedEventArgs e)
     {
         if (RowOf(e.Source) is { } location)
-            _ = Choose(location);
+            _ = Choose(location, CancellationToken.None);
     }
 
     // A server's row: it opens on its locations, unless it has a single one - then there is nothing
@@ -130,7 +130,7 @@ public partial class LocationsView : UserControl, IPage
         }
 
         _host.GoBack();
-        _ = _viewModel.ConnectToProfile(profile.VpnProfileId);
+        _ = _viewModel.ConnectToProfile(profile.VpnProfileId, CancellationToken.None);
     }
 
     // A vh: key is a long base64 blob no remote can type, so a TV sends the person to their phone
@@ -197,7 +197,7 @@ public partial class LocationsView : UserControl, IPage
                 await VhApp.Api.VpnProfiles.Update(profile.VpnProfileId, new VpnProfileUpdateParams {
                     VpnProfileName = new Patch<string?>(name)
                 }, CancellationToken.None);
-                await _viewModel.ReloadInfo();
+                await _viewModel.ReloadInfo(CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);
@@ -215,7 +215,7 @@ public partial class LocationsView : UserControl, IPage
             if (ProfileOf(sender) is not { } profile)
                 return;
             _host.GoBack();
-            await _viewModel.ConnectWithProfile(profile.VpnProfileId, isDiagnose: true);
+            await _viewModel.ConnectWithProfile(profile.VpnProfileId, isDiagnose: true, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -229,7 +229,7 @@ public partial class LocationsView : UserControl, IPage
             if (ProfileOf(sender) is not { } profile || VhApp.FindVpnProfileInfo(profile.VpnProfileId) is not { } info)
                 return;
             if (await _host.ShowDialog(new CustomEndpointDialog(_host, info)))
-                await _viewModel.ReloadInfo();
+                await _viewModel.ReloadInfo(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -255,7 +255,7 @@ public partial class LocationsView : UserControl, IPage
                 return;
             try {
                 await VhApp.Api.VpnProfiles.Delete(profile.VpnProfileId, CancellationToken.None);
-                await _viewModel.ReloadInfo();
+                await _viewModel.ReloadInfo(CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);
@@ -266,12 +266,12 @@ public partial class LocationsView : UserControl, IPage
         }
     }
 
-    private async Task Choose(LocationItem location)
+    private async Task Choose(LocationItem location, CancellationToken cancellationToken)
     {
         _host.GoBack();
         // already there: the web UI says so in a snackbar and does not reconnect
         if (_viewModel.IsConnected && location.IsActive)
             return;
-        await _viewModel.ConnectTo(location);
+        await _viewModel.ConnectTo(location, cancellationToken);
     }
 }

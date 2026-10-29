@@ -13,7 +13,7 @@ public class MissedUpdateRetryTest : TestAppBase
         var updater = CreateUpdater();
         await File.WriteAllTextAsync(updater.MissedPath, "", TestCt);
 
-        await updater.RetryMissedUpdate();
+        await updater.RetryMissedUpdate(TestCt);
         Assert.AreEqual(1, updater.RunCalls);
     }
 
@@ -22,7 +22,7 @@ public class MissedUpdateRetryTest : TestAppBase
     {
         var updater = CreateUpdater();
 
-        await updater.RetryMissedUpdate();
+        await updater.RetryMissedUpdate(TestCt);
         Assert.AreEqual(0, updater.RunCalls);
     }
 
@@ -33,7 +33,7 @@ public class MissedUpdateRetryTest : TestAppBase
         await File.WriteAllTextAsync(updater.MissedPath, "", TestCt);
         updater.IsOn = false;
 
-        await updater.RetryMissedUpdate();
+        await updater.RetryMissedUpdate(TestCt);
         Assert.AreEqual(0, updater.RunCalls);
     }
 
@@ -45,7 +45,7 @@ public class MissedUpdateRetryTest : TestAppBase
         await File.WriteAllTextAsync(updater.MissedPath, "", TestCt);
         updater.RunError = new InvalidOperationException("No systemctl.");
 
-        await updater.RetryMissedUpdate();
+        await updater.RetryMissedUpdate(TestCt);
         Assert.AreEqual(1, updater.RunCalls);
     }
 

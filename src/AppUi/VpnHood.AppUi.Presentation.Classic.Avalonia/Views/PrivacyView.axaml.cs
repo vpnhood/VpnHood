@@ -66,7 +66,7 @@ public partial class PrivacyView : UserControl, IPage
     {
         try {
             if (VhApp.Features.Links.PrivacyPolicy is { } url)
-                await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
+                await _host.OpenLink(url, Strings.Current.PrivacyPolicy, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

@@ -16,7 +16,7 @@ public interface IVpnServiceHandler
     /// </summary>
     VpnHoodClientFactory CreateClientFactory();
 
-    void ShowNotification(ConnectionInfo connectionInfo);
+    void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken);
     void StopNotification();
     void StopSelf();
 }

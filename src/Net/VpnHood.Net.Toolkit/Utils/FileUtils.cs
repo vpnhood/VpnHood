@@ -61,7 +61,7 @@ public static class FileUtils
     }
 
     public static async Task WriteAllTextRetryAsync(string filePath, string content, TimeSpan timeout,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         // don't use fast date time, it's not accurate enough
         var startTime = DateTime.UtcNow;
@@ -77,7 +77,7 @@ public static class FileUtils
     }
 
     public static async Task<string> ReadAllTextAsync(string filePath, TimeSpan timeout,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         // don't use fast date time, it's not accurate enough
         var startTime = DateTime.UtcNow;

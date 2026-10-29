@@ -75,10 +75,10 @@ public sealed class SqliteIpFilterChain : IIpFilter
         }
     }
 
-    public void Reconfigure()
+    public void Reconfigure(CancellationToken cancellationToken)
     {
         lock (_reconfigureLock) {
-            var dbPaths = SplitDbManifest.Read(_dbFolder, CancellationToken.None);
+            var dbPaths = SplitDbManifest.Read(_dbFolder, cancellationToken);
             if (!dbPaths.SequenceEqual(_dbPaths)) {
                 VhLogger.Instance.LogInformation(
                     "SqliteIpFilterChain is swapping its split-ip gates. OldCount: {OldCount}, NewCount: {NewCount}",
@@ -106,7 +106,7 @@ public sealed class SqliteIpFilterChain : IIpFilter
         }
 
         // the command rolls DOWN the pipe
-        _next?.Reconfigure();
+        _next?.Reconfigure(cancellationToken);
     }
 
     // no Changed on teardown: the whole pipe is going away, nothing is left to invalidate.

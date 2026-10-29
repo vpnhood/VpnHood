@@ -10,7 +10,7 @@ namespace VpnHood.App.StoreScreenshots;
 // face rather than whatever face the machine happens to have.
 internal static class FrameCommand
 {
-    public static int Run(IReadOnlyList<string> args)
+    public static int Run(IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
         FrameOptions options;
         try {
@@ -22,7 +22,7 @@ internal static class FrameCommand
         }
 
         try {
-            ClassicAvaloniaApp.PrepareContentAsync(Store.Open(options.AssetsPath), CancellationToken.None)
+            ClassicAvaloniaApp.PrepareContentAsync(Store.Open(options.AssetsPath), cancellationToken)
                 .GetAwaiter().GetResult();
             AppBuilder.Configure<FrameApp>()
                 .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })

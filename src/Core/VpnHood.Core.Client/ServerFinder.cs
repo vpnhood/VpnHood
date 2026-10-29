@@ -143,12 +143,12 @@ public class ServerFinder(
             _hostEndPointStatuses.Count(x => x.Available == false),
             _hostEndPointStatuses.Count(x => x.Available == null));
 
-        _ = TryTrackEndPointsAvailability([], _hostEndPointStatuses).Vhc();
+        _ = TryTrackEndPointsAvailability([], _hostEndPointStatuses, CancellationToken.None).Vhc();
         if (res != null)
             return res;
 
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
-            isIpV6Supported: IncludeIpV6, hasRedirected: false));
+            isIpV6Supported: IncludeIpV6, hasRedirected: false), CancellationToken.None);
 
         // throw specific exception for proxy server issues
         if (proxyConnector is { IsEnabled: true, Status.IsAnySucceeded: false })
@@ -186,12 +186,12 @@ public class ServerFinder(
             VhLogger.Format(res?.TcpEndPoint));
 
         // track new endpoints availability 
-        _ = TryTrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).Vhc();
+        _ = TryTrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses, CancellationToken.None).Vhc();
         if (res != null)
             return res;
 
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
-            isIpV6Supported: IncludeIpV6, hasRedirected: true));
+            isIpV6Supported: IncludeIpV6, hasRedirected: true), CancellationToken.None);
 
         // throw specific exception for proxy server issues
         if (proxyConnector is { IsEnabled: true, Status.IsAnySucceeded: false })
@@ -201,7 +201,8 @@ public class ServerFinder(
         throw UnreachableServerLocationException.Create(ServerLocation);
     }
 
-    private Task TryTrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)
+    private Task TryTrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses,
+        CancellationToken cancellationToken)
     {
         // find new discovered statuses
         var changesStatus = newStatuses
@@ -220,7 +221,7 @@ public class ServerFinder(
             changesStatus.Select(x => $"{VhLogger.Format(x.VpnEndPoint.TcpEndPoint)} => {x.Available}"));
         VhLogger.Instance.LogInformation(GeneralEventId.Request, "HostEndPoints: {EndPoints}", endPointReport);
 
-        return tracker?.TryTrack(trackEvents) ?? Task.CompletedTask;
+        return tracker?.TryTrack(trackEvents, cancellationToken) ?? Task.CompletedTask;
     }
 
     private async Task<HostStatus[]> VerifyHostsStatus(HostStatus[] hostStatuses, bool byOrder,

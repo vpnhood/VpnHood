@@ -165,7 +165,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             Parameters = new Dictionary<string, object?> {
                 { "access_manager", AccessManager.GetType().Name }
             }
-        });
+        }, CancellationToken.None);
 
         // Configure
         State = ServerState.Waiting;
@@ -218,7 +218,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 Version = ServerVersion,
                 PrivateIpAddresses = [.. privateIpAddresses],
                 PublicIpAddresses = [.. publicIpAddresses],
-                Status = await GetStatus().Vhc(),
+                Status = await GetStatus(cancellationToken).Vhc(),
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,
                 OsVersion = Environment.OSVersion.ToString(),
@@ -230,7 +230,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 FreeQuicPortV6 = freeQuicPortV6,
                 IsRestarted = _isRestarted,
                 NetworkInterfaceNames = _netConfigurationService != null
-                    ? await _netConfigurationService.GetNetworkInterfaceNames().Vhc()
+                    ? await _netConfigurationService.GetNetworkInterfaceNames(cancellationToken).Vhc()
                     : null
             };
 
@@ -273,21 +273,22 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             if (_netConfigurationService != null) {
                 foreach (var ipEndPoint in serverConfig.TcpEndPointsValue)
                     await _netConfigurationService
-                        .AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpsToNetwork).Vhc();
+                        .AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpsToNetwork, cancellationToken)
+                        .Vhc();
             }
 
             // Set TcpCongestionControl
             if (_netConfigurationService != null && !string.IsNullOrEmpty(serverConfig.TcpCongestionControlValue)) {
-                await _netConfigurationService.SetTcpCongestionControl(serverConfig.TcpCongestionControlValue)
-                    .Vhc();
+                await _netConfigurationService
+                    .SetTcpCongestionControl(serverConfig.TcpCongestionControlValue, cancellationToken).Vhc();
             }
 
             _tcpCongestionControl = _netConfigurationService != null
-                ? await _netConfigurationService.GetTcpCongestionControl().Vhc()
+                ? await _netConfigurationService.GetTcpCongestionControl(cancellationToken).Vhc()
                 : null;
 
             if (_swapMemoryProvider != null) {
-                await ConfigureSwapMemory(serverConfig.SwapMemorySizeMb).Vhc();
+                await ConfigureSwapMemory(serverConfig.SwapMemorySizeMb, cancellationToken).Vhc();
             }
 
             // Reconfigure server host
@@ -302,7 +303,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 Certificates =
                     serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null)).ToArray(),
                 UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue
-            }).Vhc();
+            }, cancellationToken).Vhc();
 
             //empty array means no error, null means not reported
             _endPointStatuses = endPointStatuses;
@@ -330,7 +331,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         catch (NoWorkingEndPointException ex) {
             State = ServerState.BadConfig;
             _lastConfigException = ex;
-            SessionManager.Tracker?.TryTrackError(ex, "Bad Configuration!", "Configure");
+            SessionManager.Tracker?.TryTrackError(ex, "Bad Configuration!", "Configure", CancellationToken.None);
             VhLogger.Instance.LogError(ex, "Bad Configuration.");
             _configErrorTracker.RecordError(ex);
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
@@ -346,7 +347,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         catch (Exception ex) {
             State = ServerState.Waiting;
             _lastConfigException = ex;
-            SessionManager.Tracker?.TryTrackError(ex, "Could not configure server!", "Configure");
+            SessionManager.Tracker?.TryTrackError(ex, "Could not configure server!", "Configure", CancellationToken.None);
             _configErrorTracker.RecordError(ex);
             VhLogger.Instance.LogError(ex,
                 "Could not configure server! Retrying after {TotalSeconds} seconds.",
@@ -356,26 +357,29 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         }
     }
 
-    private async Task<SwapMemoryInfo?> TryGetSwapMemoryInfo()
+    private async Task<SwapMemoryInfo?> TryGetSwapMemoryInfo(CancellationToken cancellationToken)
     {
         if (_swapMemoryProvider == null)
             return null;
 
         try {
-            return await _swapMemoryProvider.GetInfo().Vhc();
+            return await _swapMemoryProvider.GetInfo(cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch {
             return null;
         }
     }
 
-    private async Task ConfigureSwapMemory(long? sizeMb)
+    private async Task ConfigureSwapMemory(long? sizeMb, CancellationToken cancellationToken)
     {
         if (_swapMemoryProvider == null)
             throw new InvalidOperationException("SwapMemoryProvider is not available.");
 
         try {
-            var info = await _swapMemoryProvider.GetInfo().Vhc();
+            var info = await _swapMemoryProvider.GetInfo(cancellationToken).Vhc();
             var size = sizeMb * VhUtils.Megabytes ?? 0;
             var otherSize = info.TotalSize - info.AppSize;
             var newAppSize = Math.Max(0, size - otherSize);
@@ -390,7 +394,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 return;
             }
 
-            await _swapMemoryProvider.SetAppSwapMemorySize(newAppSize).Vhc();
+            await _swapMemoryProvider.SetAppSwapMemorySize(newAppSize, cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not configure swap file.");
@@ -550,9 +557,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         return endPointStatuses.Any(x => x is { Protocol: ChannelProtocol.Tcp, Error: null });
     }
 
-    public async Task<ServerStatus> GetStatus()
+    public async Task<ServerStatus> GetStatus(CancellationToken cancellationToken)
     {
-        var swapMemoryInfo = await TryGetSwapMemoryInfo().Vhc();
+        var swapMemoryInfo = await TryGetSwapMemoryInfo(cancellationToken).Vhc();
         var systemInfo = _systemInfoProvider.GetSystemInfo();
         var serverStatus = new ServerStatus {
             SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
@@ -579,7 +586,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private async Task SendStatusToAccessManager(bool allowConfigure, CancellationToken cancellationToken)
     {
         try {
-            var status = await GetStatus().Vhc();
+            var status = await GetStatus(cancellationToken).Vhc();
             VhLogger.Instance.LogDebug("Sending status to Access... ConfigCode: {ConfigCode}", status.ConfigCode);
             var res = await SessionManager.SendStatus(status, cancellationToken).Vhc();
 
@@ -644,7 +651,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     {
         // a second close waits for the first one's end. No early return after it: after a quick close, the steps below
         // only wait for what is already ending
-        using var lockResult = await _disposeLock.LockAsync().Vhc();
+        using var lockResult = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
 
         // its log scope ends before the quick close, which opens its own
         using (VhLogger.Instance.BeginScope("Server")) {

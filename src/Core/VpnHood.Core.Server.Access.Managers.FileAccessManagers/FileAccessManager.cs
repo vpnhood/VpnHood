@@ -66,19 +66,19 @@ public class FileAccessManager : IAccessManager
             .ToArray();
 
         // get server token
-        _serverToken = GetAndUpdateServerToken();
+        _serverToken = GetAndUpdateServerToken(CancellationToken.None);
     }
 
     public void ClearCache()
     {
-        _serverToken = GetAndUpdateServerToken();
+        _serverToken = GetAndUpdateServerToken(CancellationToken.None);
     }
 
-    private ServerToken GetAndUpdateServerToken() => GetAndUpdateServerToken(ServerConfig, DefaultCert,
-        Path.Combine(StoragePath, "server-token", "enc-server-token"));
+    private ServerToken GetAndUpdateServerToken(CancellationToken cancellationToken) => GetAndUpdateServerToken(
+        ServerConfig, DefaultCert, Path.Combine(StoragePath, "server-token", "enc-server-token"), cancellationToken);
 
     private ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate,
-        string encServerTokenFilePath)
+        string encServerTokenFilePath, CancellationToken cancellationToken)
     {
         // PublicEndPoints
         var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
@@ -87,7 +87,7 @@ public class FileAccessManager : IAccessManager
             throw new Exception("PublicEndPoints has not been configured properly.");
 
 
-        var serverLocation = LoadServerLocation(CancellationToken.None).Result;
+        var serverLocation = LoadServerLocation(cancellationToken).Result;
         var serverToken = new ServerToken {
             CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
             HostPort = serverConfig.HostPort ?? publicEndPoints.FirstOrDefault()?.Port ?? 443,

@@ -14,38 +14,42 @@ public class TestProxyEndPointStore(IProxyEndPointStore store) : IProxyEndPointS
 
     public void ReleaseUpdates() => _updatesReleased.TrySetResult();
 
-    public async Task UpdateStatuses(IReadOnlyList<ProxyEndPointInfo> infos)
+    public async Task UpdateStatuses(IReadOnlyList<ProxyEndPointInfo> infos, CancellationToken cancellationToken)
     {
         if (FailUpdates)
             throw new IOException("Test: the store could not be written.");
 
         if (HoldUpdates) {
             Interlocked.Increment(ref HeldUpdateCount);
-            await _updatesReleased.Task;
+            await _updatesReleased.Task.WaitAsync(cancellationToken);
         }
 
-        await store.UpdateStatuses(infos);
+        await store.UpdateStatuses(infos, cancellationToken);
     }
 
-    public Task<IReadOnlyList<ProxyEndPointRecord>> List() => store.List();
-    public Task<ProxyEndPointRecord?> Get(string id) => store.Get(id);
-    public Task<int> Count() => store.Count();
-    public Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options) => store.List(options);
+    public Task<IReadOnlyList<ProxyEndPointRecord>> List(CancellationToken cancellationToken) => store.List(cancellationToken);
+    public Task<ProxyEndPointRecord?> Get(string id, CancellationToken cancellationToken) => store.Get(id, cancellationToken);
+    public Task<int> Count(CancellationToken cancellationToken) => store.Count(cancellationToken);
+    public Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options, CancellationToken cancellationToken) =>
+        store.List(options, cancellationToken);
 
-    public Task Upsert(IReadOnlyList<ProxyEndPointRecord> records, bool keepExistingStatus = true,
-        bool keepExistingEnabled = false) => store.Upsert(records, keepExistingStatus, keepExistingEnabled);
+    public Task Upsert(IReadOnlyList<ProxyEndPointRecord> records, bool keepExistingStatus,
+        bool keepExistingEnabled, CancellationToken cancellationToken) => store.Upsert(records, keepExistingStatus, keepExistingEnabled, cancellationToken);
 
-    public Task Delete(IReadOnlyList<string> ids) => store.Delete(ids);
-    public Task DeleteAll(DeleteAllOptions options) => store.DeleteAll(options);
-    public Task DisableAllFailed() => store.DisableAllFailed();
-    public Task SetCountryCode(string id, string? countryCode) => store.SetCountryCode(id, countryCode);
-    public Task ResetStatuses() => store.ResetStatuses();
+    public Task Delete(IReadOnlyList<string> ids, CancellationToken cancellationToken) => store.Delete(ids, cancellationToken);
+    public Task DeleteAll(DeleteAllOptions options, CancellationToken cancellationToken) => store.DeleteAll(options, cancellationToken);
+    public Task DisableAllFailed(CancellationToken cancellationToken) => store.DisableAllFailed(cancellationToken);
+    public Task SetCountryCode(string id, string? countryCode, CancellationToken cancellationToken) =>
+        store.SetCountryCode(id, countryCode, cancellationToken);
+    public Task ResetStatuses(CancellationToken cancellationToken) => store.ResetStatuses(cancellationToken);
 
     public Task Merge(IReadOnlyList<ProxyEndPoint> newEndPoints, int? maxItemCount, int? maxPenalty,
-        bool removeDuplicateIps) => store.Merge(newEndPoints, maxItemCount, maxPenalty, removeDuplicateIps);
+        bool removeDuplicateIps, CancellationToken cancellationToken) =>
+        store.Merge(newEndPoints, maxItemCount, maxPenalty, removeDuplicateIps, cancellationToken);
 
-    public Task<long> GetQueuePosition() => store.GetQueuePosition();
-    public Task SetQueuePosition(long queuePosition) => store.SetQueuePosition(queuePosition);
+    public Task<long> GetQueuePosition(CancellationToken cancellationToken) => store.GetQueuePosition(cancellationToken);
+    public Task SetQueuePosition(long queuePosition, CancellationToken cancellationToken) =>
+        store.SetQueuePosition(queuePosition, cancellationToken);
 
     public void Dispose()
     {

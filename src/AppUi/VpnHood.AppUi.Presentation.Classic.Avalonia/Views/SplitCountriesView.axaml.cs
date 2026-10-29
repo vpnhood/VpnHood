@@ -44,18 +44,18 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         List.IsVisible = IsListMode;
         List.IsDisabled = !isEnabled;
         if (IsListMode && !_isListLoaded)
-            _ = LoadCountries();
+            _ = LoadCountries(CancellationToken.None);
     }
 
     // The countries the split database knows, the excluded ones OFF. The smaller group comes first,
     // so the exceptions are in view whichever way the list leans (split-countries.vue).
-    private async Task LoadCountries()
+    private async Task LoadCountries(CancellationToken cancellationToken)
     {
         _isListLoaded = true;
         List.IsLoading = true;
         try {
             var excluded = Split.Countries;
-            var countryCodes = await VhApp.Api.App.GetSupportedSplitCountries(CancellationToken.None);
+            var countryCodes = await VhApp.Api.App.GetSupportedSplitCountries(cancellationToken);
             // the flags together: at once from a folder, in one round from a web server
             var mapped = await Task.WhenAll(countryCodes.Select(async countryCode => new FilterItem {
                 Id = countryCode,
@@ -110,7 +110,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         Show();
     }
 
-    public async Task<bool> CanLeave()
+    public async Task<bool> CanLeave(CancellationToken cancellationToken)
     {
         if (IsListMode && Split.Countries.Count >= AppText.AllCountriesCount) {
             await _host.ShowError(Strings.Current.AllCountriesExcludedErrorMsg);
@@ -118,7 +118,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
         }
 
         try {
-            await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
+            await VhApp.SaveUserSettings(VhApp.UserSettings, cancellationToken);
             _host.ViewModel.Refresh();
             return true;
         }

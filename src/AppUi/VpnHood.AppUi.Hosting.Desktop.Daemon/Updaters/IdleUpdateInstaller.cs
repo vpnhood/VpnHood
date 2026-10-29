@@ -76,7 +76,8 @@ public sealed class IdleUpdateInstaller : IDisposable
             _hasBeenInUse = false;
         }
 
-        await _updater.InstallDownloadedUpdate().Vhc();
+        // a run of its own from here: the wait's token source is gone, and an install runs to its end
+        await _updater.InstallDownloadedUpdate(CancellationToken.None).Vhc();
     }
 
     // under the lock

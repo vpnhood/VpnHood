@@ -19,7 +19,8 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Browser;
 // type argument, so the UI it does not name is not in the bundle. The page's Main is one line.
 public static class AvaloniaBrowserHost
 {
-    public static async Task RunAsync<TUi>(string[] args) where TUi : Application, IAvaloniaUi, new()
+    public static async Task RunAsync<TUi>(string[] args, CancellationToken cancellationToken)
+        where TUi : Application, IAvaloniaUi, new()
     {
         // main.js passes the page's address; the API and the assets are relative to its origin
         var pageUrl = new Uri(args.Length > 0 ? args[0] : "http://localhost:9090/");
@@ -28,7 +29,7 @@ public static class AvaloniaBrowserHost
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         await AvaloniaUiHosting.StartAsync<TUi>(VpnHoodApiHttpFactory.Create(http),
-            new HttpAssetProvider(http, "assets/"), CancellationToken.None);
+            new HttpAssetProvider(http, "assets/"), cancellationToken);
         await AppBuilder.Configure<TUi>().StartBrowserAppAsync("out");
     }
 }

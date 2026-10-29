@@ -308,7 +308,7 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end
-        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (IsDisposed || IsDisposing)
             return;
 

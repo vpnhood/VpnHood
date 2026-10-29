@@ -25,9 +25,10 @@ public sealed class IosMessageListener : IMessageListener
 
     // Invoked by IosVpnService.HandleAppMessage for each incoming app message. Never throws and
     // always invokes the completion handler, or the app-side RPC would hang until its timeout.
-    public async Task ProcessAppMessage(NSData? messageData, Action<NSData>? completionHandler)
+    public async Task ProcessAppMessage(NSData? messageData, Action<NSData>? completionHandler,
+        CancellationToken cancellationToken)
     {
-        using var responseData = await TryGetResponse(messageData).Vhc();
+        using var responseData = await TryGetResponse(messageData, cancellationToken).Vhc();
 
         // the ObjC completion block accepts nil even though the binding's Action<NSData> does not
         try { completionHandler?.Invoke(responseData!); } catch { /* ignore */ }
@@ -35,14 +36,14 @@ public sealed class IosMessageListener : IMessageListener
 
     // Returns the handler's response, or null when the message cannot be dispatched (host not
     // started yet, empty message) or the handler fails — nil tells the app the service is unreachable.
-    private async Task<NSData?> TryGetResponse(NSData? messageData)
+    private async Task<NSData?> TryGetResponse(NSData? messageData, CancellationToken cancellationToken)
     {
         try {
             var handler = _messageHandler;
             if (handler == null || messageData == null)
                 return null;
 
-            var responseBytes = await handler(messageData.ToArray(), CancellationToken.None).Vhc();
+            var responseBytes = await handler(messageData.ToArray(), cancellationToken).Vhc();
             return NSData.FromArray(responseBytes.ToArray());
         }
         catch (Exception ex) {

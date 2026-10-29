@@ -69,7 +69,7 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         // the dialog's "Open log", which opens the app web server's log.txt in a browser tab; this
         // head has no browser, so the log is a page of its own
         try {
-            await Save();
+            await Save(CancellationToken.None);
             _host.Navigate(new LogView());
         }
         catch (Exception ex) {
@@ -82,18 +82,18 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
     // when nothing differs - and the page is shown again when the log page above it is closed.
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        Save().Forget("Could not save the debug settings.");
+        Save(CancellationToken.None).Forget("Could not save the debug settings.");
         base.OnDetachedFromVisualTree(e);
     }
 
     public void Dispose()
     {
-        Save().Forget("Could not save the debug settings.");
+        Save(CancellationToken.None).Forget("Could not save the debug settings.");
     }
 
     // Saving applies the settings, so it happens only when something differs: a debug command takes
     // effect at the next launch, but the save itself reaches the running app.
-    private async Task Save()
+    private async Task Save(CancellationToken cancellationToken)
     {
         var commands = _commands.Where(x => x.IsOn).Select(x => x.Command).Concat(_unknown);
         var debugData1 = string.Join(' ', commands);
@@ -107,6 +107,6 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
 
         settings.DebugData1 = newData1;
         settings.DebugData2 = newData2;
-        await VhApp.SaveUserSettings(settings, CancellationToken.None);
+        await VhApp.SaveUserSettings(settings, cancellationToken);
     }
 }

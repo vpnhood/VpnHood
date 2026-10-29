@@ -22,15 +22,19 @@ public class ThemeColors
     public VhColor? ProgressBarColor { get; init; }
 
     // For a start: the theme's colours, or - no store, no such theme, a store that could not be read -
-    // an error in the log and the built-in look, not a dead app. Never faulted, so whatever waits on it
-    // needs no catch.
-    public static async Task<ThemeColors> LoadAsync(IAssetProvider? assets, string theme)
+    // an error in the log and the built-in look, not a dead app. Never faulted but by a cancel, so whatever
+    // waits on it needs no catch.
+    public static async Task<ThemeColors> LoadAsync(IAssetProvider? assets, string theme,
+        CancellationToken cancellationToken)
     {
         if (assets is null)
             return new ThemeColors();
 
         try {
-            return await ReadAsync(assets, theme, CancellationToken.None).ConfigureAwait(false);
+            return await ReadAsync(assets, theme, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not read the theme's colours from the UI's store.");

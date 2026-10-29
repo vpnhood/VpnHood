@@ -44,7 +44,7 @@ public partial class CustomEndpointDialog : DialogBase
         try {
             if (e.Key != Key.Enter) return;
             e.Handled = true;
-            await Save();
+            await Save(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -59,7 +59,7 @@ public partial class CustomEndpointDialog : DialogBase
     private async void OnSaveClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Save();
+            await Save(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -67,7 +67,7 @@ public partial class CustomEndpointDialog : DialogBase
     }
 
     // the app judges the address; one it refuses is said so under the field, and the dialog stays
-    private async Task Save()
+    private async Task Save(CancellationToken cancellationToken)
     {
         _ = _host;
         var value = EndpointBox.Text?.Trim();
@@ -75,7 +75,7 @@ public partial class CustomEndpointDialog : DialogBase
             await VhApp.Api.VpnProfiles.Update(_vpnProfileId, new VpnProfileUpdateParams {
                 CustomServerEndpoints = new Patch<string[]?>(string.IsNullOrEmpty(value) ? null : [value]),
                 IsCustomServerEndpointsEnabled = new Patch<bool>(EnabledSwitch.IsChecked == true)
-            }, CancellationToken.None);
+            }, cancellationToken);
             Close(true);
         }
         catch (Exception ex) {

@@ -79,7 +79,8 @@ public class ServerHost : IAsyncDisposable
         _udpListenerHost = new UdpListenerHost(_sessionManager);
     }
 
-    internal async Task<ServerHostEndPointStatus[]> Configure(ServerHostConfiguration configuration)
+    internal async Task<ServerHostEndPointStatus[]> Configure(ServerHostConfiguration configuration,
+        CancellationToken cancellationToken)
     {
         if (VhUtils.IsNullOrEmpty(configuration.Certificates))
             throw new ArgumentNullException(nameof(configuration.Certificates), "No certificate has been configured.");
@@ -89,7 +90,7 @@ public class ServerHost : IAsyncDisposable
 
         // wait for last configure to finish; a close that began meanwhile has closed the listeners, so this one is
         // refused
-        using var lockResult = await _configureLock.LockAsync().Vhc();
+        using var lockResult = await _configureLock.LockAsync(cancellationToken).Vhc();
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         // reconfigure
@@ -719,13 +720,13 @@ public class ServerHost : IAsyncDisposable
     // second close waits for the first one's end
     public async ValueTask DisposeAsync()
     {
-        using var lockResult = await _disposeLock.LockAsync().Vhc();
+        using var lockResult = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         // a configuration under way ends first, uncancelled, so the listeners it adds are closed below; one that
         // comes after finds the close begun
-        using (await _configureLock.LockAsync().Vhc()) {
+        using (await _configureLock.LockAsync(CancellationToken.None).Vhc()) {
             // cancel all running tasks
             VhLogger.Instance.LogDebug("Stopping ServerHost...");
             await _cancellationTokenSource.TryCancelAsync().Vhc();

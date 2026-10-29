@@ -74,7 +74,8 @@ public class IpLocationTest : TestAppBase
         var ip2LocationToken = (await File.ReadAllTextAsync(userSecretFile)).Trim();
         ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);
 
-        await Ip2LocationDbParser.UpdateLocalDb(ipLocationFile, ip2LocationToken, forIpRange: true);
+        await Ip2LocationDbParser.UpdateLocalDb(ipLocationFile, ip2LocationToken, forIpRange: true, interval: null,
+            TestCt);
 
         // commit project and sync
         try {

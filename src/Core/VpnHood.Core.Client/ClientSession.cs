@@ -702,7 +702,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        using var lockScope = await _disposeLock.LockAsync().Vhc();
+        using var lockScope = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (_disposed)
             return;
 

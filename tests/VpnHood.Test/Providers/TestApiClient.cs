@@ -7,6 +7,6 @@ public class TestApiClient(HttpClient httpClient) : ApiClientBase(httpClient)
 {
     public Task<string> Get(CancellationToken cancellationToken)
     {
-        return HttpGetAsync<string>("test", cancellationToken: cancellationToken);
+        return HttpGetAsync<string>("test", parameters: null, cancellationToken);
     }
 }

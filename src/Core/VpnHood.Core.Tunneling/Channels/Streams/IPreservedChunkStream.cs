@@ -3,5 +3,5 @@
 public interface IPreservedChunkStream
 {
     int PreserveWriteBufferLength { get; }
-    ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken = default);
+    ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken);
 }

@@ -210,7 +210,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             helloRequest.RequestId, isRecovery: false);
 
         // Anonymous Report to GA
-        _ = TryTrackNewSession(helloRequest.ClientInfo);
+        _ = TryTrackNewSession(helloRequest.ClientInfo, CancellationToken.None);
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
             "New session has been created. SessionId: {SessionId}", VhLogger.FormatSessionId(session.SessionId));
@@ -234,7 +234,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             Sessions.Sum(x => x.Value.TcpChannelCount), Sessions.Sum(x => x.Value.UdpConnectionCount));
     }
 
-    private Task<bool> TryTrackNewSession(ClientInfo clientInfo)
+    private Task<bool> TryTrackNewSession(ClientInfo clientInfo, CancellationToken cancellationToken)
     {
         if (Tracker == null)
             return Task.FromResult(false);
@@ -251,7 +251,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
                     { TrackParameterNames.PageLocation, $"server_version/{serverVersion}" }
                 }
             }
-        ]);
+        ], cancellationToken);
     }
 
     public async Task RecoverSessions(CancellationToken cancellationToken)
@@ -611,7 +611,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     {
         // a second close waits for the first one's end. One after a quick close returns, unlike the server's and the
         // client's: that close leaves nothing running, and the steps below must not run after it
-        using var lockResult = await _disposeLock.LockAsync().Vhc();
+        using var lockResult = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (Interlocked.Exchange(ref _disposing, true))
             return;
 

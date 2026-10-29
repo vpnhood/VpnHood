@@ -121,7 +121,7 @@ internal class AppCompositeAdService
 
                     // track the error
                     if (_tracker != null)
-                        await _tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildLoadAdFailed(
+                        await _tracker.TryTrack(AppTrackerBuilder.BuildLoadAdFailed(
                                 adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode,
                                 isPreload: isPreload),
                             cancellationToken).Vhc();

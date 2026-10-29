@@ -22,7 +22,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, IRootPage
     {
         _host = host;
         InitializeComponent();
-        _ = LoadDocument(VhApp.Features.PrivacyConsentAssetName);
+        _ = LoadDocument(VhApp.Features.PrivacyConsentAssetName, CancellationToken.None);
         TermsButton.IsVisible = VhApp.Features.Links.TermsOfUse != null;
         PrivacyButton.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
         TrackerItem.Title = Strings.Current.AllowAnonymousTracker;
@@ -34,10 +34,10 @@ public partial class PrivacyPolicyView : UserControl, IPage, IRootPage
     // The document as the store hands it over - in the app's language, with the product's own
     // names already in it - rendered to the markup RichText draws. Read through the store's
     // provider, which may be a web server, so it lands after the page shows.
-    private async Task LoadDocument(string name)
+    private async Task LoadDocument(string name, CancellationToken cancellationToken)
     {
         try {
-            var markdown = await AppAssets.LoadDocumentAsync(name, CancellationToken.None);
+            var markdown = await AppAssets.LoadDocumentAsync(name, cancellationToken);
             var (title, markup) = Markdown.Render(markdown);
             TitleText.Text = title;
             RichText.Apply(DocumentText, markup);
@@ -74,7 +74,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, IRootPage
     {
         try {
             if (VhApp.Features.Links.TermsOfUse is { } url)
-                await _host.OpenLink(url, Strings.Current.TermsOfUse);
+                await _host.OpenLink(url, Strings.Current.TermsOfUse, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -85,7 +85,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, IRootPage
     {
         try {
             if (VhApp.Features.Links.PrivacyPolicy is { } url)
-                await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
+                await _host.OpenLink(url, Strings.Current.PrivacyPolicy, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

@@ -41,7 +41,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         LinksRow.IsVisible = TermsLink.IsVisible || PrivacyLink.IsVisible;
         if (VhApp.IsTvUi)
             AddHandler(KeyDownEvent, OnTvKeyDown);
-        _ = LoadOptions();
+        _ = LoadOptions(CancellationToken.None);
     }
 
     // On a TV nothing takes the focus while the catalog loads: the carousel's arrows take none there.
@@ -72,13 +72,13 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
     // The catalog comes from the portal and nothing stands in for it: a failed load is only
     // recoverable by loading again, which the store-unavailable card offers.
-    private async Task LoadOptions()
+    private async Task LoadOptions(CancellationToken cancellationToken)
     {
         LoadingPanel.IsVisible = true;
         OptionsPanel.IsVisible = false;
         try {
             var profileId = _vpnProfileId ?? VhApp.VpnProfileId ?? throw new InvalidOperationException("VPN profile id is required.");
-            _options = await VhApp.Api.VpnProfiles.GetPurchaseOptions(profileId, CancellationToken.None);
+            _options = await VhApp.Api.VpnProfiles.GetPurchaseOptions(profileId, cancellationToken);
             ShowOptions(_options);
         }
         catch (Exception ex) {
@@ -239,7 +239,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
             try {
                 if (VhApp.Account == null) {
-                    await _host.ViewModel.SignIn(onPurchase: true);
+                    await _host.ViewModel.SignIn(onPurchase: true, CancellationToken.None);
                     if (IsAccountServed()) {
                         _host.Replace(new AccountView(_host));
                         await _host.ShowError(Strings.Current.HaveActiveSubscription);
@@ -249,9 +249,9 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
                 // a plan sold on the web: its page, opened as any link is - a QR code for the phone on a TV
                 if (plan.CheckoutUrl is { } checkoutUrl)
-                    await _host.OpenLink(checkoutUrl, Strings.Current.PurchaseViaWeb);
+                    await _host.OpenLink(checkoutUrl, Strings.Current.PurchaseViaWeb, CancellationToken.None);
                 else
-                    await Purchase(new PurchaseParams { PlanToken = plan.PlanToken });
+                    await Purchase(new PurchaseParams { PlanToken = plan.PlanToken }, CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);
@@ -262,16 +262,16 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         }
     }
 
-    private async Task Purchase(PurchaseParams purchaseParams)
+    private async Task Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
         if (!VhApp.Features.IsBillingSupported)
             throw new InvalidOperationException("Billing service is not available.");
         var pending = new PendingDialog();
         _ = _host.ShowDialog(pending);
         try {
-            await VhApp.Api.Billing.Purchase(purchaseParams, CancellationToken.None);
-            await VhApp.LoadAccount(false, CancellationToken.None);
-            await _host.ViewModel.ReloadInfo();
+            await VhApp.Api.Billing.Purchase(purchaseParams, cancellationToken);
+            await VhApp.LoadAccount(false, cancellationToken);
+            await _host.ViewModel.ReloadInfo(cancellationToken);
             pending.Close();
 
             // Congratulate only what the refreshed account confirms: the store can answer with a
@@ -302,21 +302,21 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
                 if (VhApp.Account == null)
                     return;
             }
-            await Restore();
+            await Restore(CancellationToken.None);
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);
         }
     }
 
-    private async Task Restore()
+    private async Task Restore(CancellationToken cancellationToken)
     {
         var pending = new PendingDialog();
         _ = _host.ShowDialog(pending);
         try {
             if (VhApp.Account == null) {
                 try {
-                    await _host.ViewModel.SignIn(onPurchase: true);
+                    await _host.ViewModel.SignIn(onPurchase: true, cancellationToken);
                 }
                 catch (Exception ex) when (ex.ToApiError().TypeName == "NoCredentialException") {
                     throw new Exception(Strings.Current.GooglePlayLoginNoCredentialError);
@@ -326,9 +326,9 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
             // a build with no store has nothing to ask; signing in and reading the account is the
             // whole of the restore there
             var restored = VhApp.Features.IsBillingSupported
-                && await VhApp.Api.Billing.RestorePurchase(CancellationToken.None);
-            await VhApp.LoadAccount(false, CancellationToken.None);
-            await _host.ViewModel.ReloadInfo();
+                && await VhApp.Api.Billing.RestorePurchase(cancellationToken);
+            await VhApp.LoadAccount(false, cancellationToken);
+            await _host.ViewModel.ReloadInfo(cancellationToken);
 
             // "am I premium again?" is the question, and the refreshed account the only witness;
             // the wait is over before the answer is shown
@@ -351,7 +351,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     private async void OnRetryClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await LoadOptions();
+            await LoadOptions(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -373,7 +373,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     {
         try {
             if (_options?.PurchaseUrl is { } url)
-                await _host.OpenLink(url, Strings.Current.PurchaseViaWeb);
+                await _host.OpenLink(url, Strings.Current.PurchaseViaWeb, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -394,7 +394,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     {
         try {
             if (VhApp.Features.Links.TermsOfUse is { } url)
-                await _host.OpenLink(url, Strings.Current.TermsOfUse);
+                await _host.OpenLink(url, Strings.Current.TermsOfUse, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -405,7 +405,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     {
         try {
             if (VhApp.Features.Links.PrivacyPolicy is { } url)
-                await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
+                await _host.OpenLink(url, Strings.Current.PrivacyPolicy, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

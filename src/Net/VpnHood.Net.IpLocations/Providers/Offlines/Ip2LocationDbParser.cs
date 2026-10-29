@@ -11,8 +11,8 @@ namespace VpnHood.Net.IpLocations.Providers.Offlines;
 
 public static class Ip2LocationDbParser
 {
-    public static async Task UpdateLocalDb(string filePath, string apiKey, bool forIpRange, TimeSpan? interval = null,
-        CancellationToken cancellationToken = default)
+    public static async Task UpdateLocalDb(string filePath, string apiKey, bool forIpRange, TimeSpan? interval,
+        CancellationToken cancellationToken)
     {
         interval ??= TimeSpan.FromDays(7);
         if (File.GetLastWriteTimeUtc(filePath) > DateTime.UtcNow - interval)

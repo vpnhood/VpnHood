@@ -31,13 +31,13 @@ public sealed class MissedUpdateRetrier : IDisposable
         var isConnected = _app.ConnectionState == AppConnectionState.Connected;
         var wasConnected = Interlocked.Exchange(ref _isConnected, isConnected ? 1 : 0) == 1;
         if (isConnected && !wasConnected && Interlocked.Exchange(ref _isRetrying, 1) == 0)
-            _ = Retry();
+            _ = Retry(CancellationToken.None);
     }
 
-    private async Task Retry()
+    private async Task Retry(CancellationToken cancellationToken)
     {
         try {
-            await _updater.RetryMissedUpdate().Vhc();
+            await _updater.RetryMissedUpdate(cancellationToken).Vhc();
         }
         finally {
             Volatile.Write(ref _isRetrying, 0);

@@ -55,14 +55,23 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     close may go through `TryDisposeAsync`, ours or not. A close handles its own failures where they
     arise, so a sync `Dispose` of our own types must not throw (CA1065), and its caller wraps it in
     neither a `TryDispose` nor a `finally`.
+16. A token is passed down, never dropped: a method that waits, or calls one that takes a token,
+    takes a required `CancellationToken` as its last parameter and passes it on. `CancellationToken.None`
+    is written only at a chain's head - a callback the system or the UI makes without one, an entry
+    point, a fire-and-forget start, a constructor, a close - or where the work must outlive its
+    caller's cancel, which a comment there says; inside the method when that is the method's own
+    promise (a stop that waits for a restart, a write a cut would leave truncated). A method's own
+    limit is a linked token (`CreateLinkedTokenSource`, `CancelAfter`) when its end is a cancel, and a
+    `TimeSpan` beside the token when its end is an error of its own (`FileUtils.WaitOutSharing`
+    rethrows the last sharing error).
 
 ## Design
 
-16. The access-manager protocol needs to be compatible one way only: the access manager is updated
+17. The access-manager protocol needs to be compatible one way only: the access manager is updated
     first, so a new server may count on it, but the access manager keeps supporting old servers.
-17. The access manager is under heavy load: rather a cost on the server than more requests to it.
+18. The access manager is under heavy load: rather a cost on the server than more requests to it.
     After an outage, the waiting requests are merged, never queued up to bombard it.
-18. The service opens no UI and no links; the UI does, as on iOS.
-19. A Debug build's name must stand out.
-20. An updater runs apart from what it updates, as a standalone script: an app that fails to run
+19. The service opens no UI and no links; the UI does, as on iOS.
+20. A Debug build's name must stand out.
+21. An updater runs apart from what it updates, as a standalone script: an app that fails to run
     must still get the release that fixes it.

@@ -169,7 +169,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // fires, so every App<->Extension RPC (status refresh, disconnect) times out — which shows up
         // as a permanent "Connecting" state and broken disconnect/reconnect. The listener processes
         // asynchronously and invokes the completion handler from the continuation.
-        _ = _messageListener.ProcessAppMessage(messageData, completionHandler);
+        _ = _messageListener.ProcessAppMessage(messageData, completionHandler, CancellationToken.None);
     }
 
     public override void StopTunnel(NEProviderStopReason reason, Action completionHandler)
@@ -233,7 +233,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         }, CompleteStartTunnel);
     }
 
-    public void ShowNotification(ConnectionInfo connectionInfo)
+    public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
         // iOS does not support foreground notifications and does not need to show one.
     }

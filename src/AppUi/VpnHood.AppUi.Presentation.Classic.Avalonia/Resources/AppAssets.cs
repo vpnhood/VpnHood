@@ -60,18 +60,20 @@ public static class AppAssets
     // there is no file for, so a binding shows nothing rather than a broken image.
     public static Task<Bitmap?> LoadBitmapAsync(string assetPath)
     {
-        return Bitmaps.GetOrAdd(assetPath, LoadBitmap);
+        // one load, cached for every caller: no caller's cancel may end it
+        return Bitmaps.GetOrAdd(assetPath, path => LoadBitmap(path, CancellationToken.None));
     }
 
-    private static async Task<Bitmap?> LoadBitmap(string assetPath)
+    private static async Task<Bitmap?> LoadBitmap(string assetPath, CancellationToken cancellationToken)
     {
-        var stream = await Assets.TryOpenReadAsync(assetPath, CancellationToken.None).ConfigureAwait(false);
+        var stream = await Assets.TryOpenReadAsync(assetPath, cancellationToken).ConfigureAwait(false);
         if (stream == null)
             return null;
 
         // the decoder reads a picture's header and then its body, so it must be able to rewind: a
         // file does it where it lies, and only one fetched over HTTP is bought into memory
-        await using var seekable = await stream.ToMemoryStreamIfNotSeekableAsync(CancellationToken.None).ConfigureAwait(false);
+        await using var seekable = await stream.ToMemoryStreamIfNotSeekableAsync(cancellationToken)
+            .ConfigureAwait(false);
         return new Bitmap(seekable);
     }
 

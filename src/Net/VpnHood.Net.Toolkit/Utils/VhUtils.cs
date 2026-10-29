@@ -123,24 +123,24 @@ public static class VhUtils
             return [.. collection];
     }
 
-    public static Task<T> RunTask<T>(Task<T> task, CancellationToken cancellationToken = default)
+    public static Task<T> RunTask<T>(Task<T> task, CancellationToken cancellationToken)
     {
         return RunTask(task, TimeSpan.Zero, cancellationToken);
     }
 
     public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         await RunTask((Task)task, timeout, cancellationToken).Vhc();
         return await task.Vhc();
     }
 
-    public static Task RunTask(Task task, CancellationToken cancellationToken = default)
+    public static Task RunTask(Task task, CancellationToken cancellationToken)
     {
         return RunTask(task, TimeSpan.Zero, cancellationToken);
     }
 
-    public static async Task RunTask(Task task, TimeSpan timeout, CancellationToken cancellationToken = default)
+    public static async Task RunTask(Task task, TimeSpan timeout, CancellationToken cancellationToken)
     {
         if (timeout == TimeSpan.Zero)
             timeout = Timeout.InfiniteTimeSpan;

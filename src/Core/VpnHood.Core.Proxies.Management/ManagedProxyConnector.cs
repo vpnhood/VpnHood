@@ -73,18 +73,17 @@ public class ManagedProxyConnector : IProxyConnector
     public static async Task<ManagedProxyConnector> Create(
         ProxyOptions proxyOptions,
         IProxyEndPointStore store,
-        TimeSpan? serverCheckTimeout = null,
-        CancellationToken cancellationToken = default)
+        TimeSpan? serverCheckTimeout,
+        CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
         var connector = new ManagedProxyConnector(proxyOptions, store, serverCheckTimeout);
 
         if (proxyOptions.ResetStates)
             await VhInvoker.TryInvokeAsync("reset the proxy endpoints' statuses", LogLevel.Warning,
-                store.ResetStatuses).Vhc();
+                () => store.ResetStatuses(cancellationToken)).Vhc();
 
         // load the working set from the shared store; the store list is authoritative
-        await connector.ReloadEntries().Vhc();
+        await connector.ReloadEntries(cancellationToken).Vhc();
 
         // Start auto-update if configured
         connector.RestartAutoUpdate();
@@ -113,36 +112,36 @@ public class ManagedProxyConnector : IProxyConnector
     public IReadOnlyList<ProxyEndPointInfo> GetEndPointInfos() =>
         _proxyEndPointEntries.Select(x => x.Info).ToArray();
 
-    private async Task<ProxyEndPointEntry[]> LoadEntries()
+    private async Task<ProxyEndPointEntry[]> LoadEntries(CancellationToken cancellationToken)
     {
-        var records = await _store.List().Vhc();
+        var records = await _store.List(cancellationToken).Vhc();
         return records
             .Select(x => new ProxyEndPointEntry(x.ToInfo()))
             .ToArray();
     }
 
-    private async Task ReloadEntries()
+    private async Task ReloadEntries(CancellationToken cancellationToken)
     {
         // dropping the old entries also drops their dirty flags
-        _proxyEndPointEntries = await LoadEntries().Vhc();
-        _queuePosition = await _store.GetQueuePosition().Vhc();
+        _proxyEndPointEntries = await LoadEntries(cancellationToken).Vhc();
+        _queuePosition = await _store.GetQueuePosition(cancellationToken).Vhc();
         IsEnabled = _proxyEndPointEntries.Length > 0;
     }
 
-    public async Task UpdateOptions(ProxyOptions proxyOptions)
+    public async Task UpdateOptions(ProxyOptions proxyOptions, CancellationToken cancellationToken)
     {
         _verifyTls = proxyOptions.VerifyTls;
 
         if (proxyOptions.ResetStates) {
             // discard in-memory statuses instead of flushing them back over the app's reset
             await VhInvoker.TryInvokeAsync("reset the proxy endpoints' statuses", LogLevel.Warning,
-                _store.ResetStatuses).Vhc();
+                () => _store.ResetStatuses(cancellationToken)).Vhc();
         }
         else {
-            await Flush().Vhc();
+            await Flush(cancellationToken).Vhc();
         }
 
-        await ReloadEntries().Vhc();
+        await ReloadEntries(cancellationToken).Vhc();
 
         // the job again, with its download at once, only for a new url or interval: an app sends the options
         // at every settings save
@@ -155,17 +154,17 @@ public class ManagedProxyConnector : IProxyConnector
 
     private ValueTask FlushJob(CancellationToken cancellationToken)
     {
-        return new ValueTask(Flush());
+        return new ValueTask(Flush(cancellationToken));
     }
 
-    public async Task Flush()
+    public async Task Flush(CancellationToken cancellationToken)
     {
         var dirtyEntries = _proxyEndPointEntries.Where(x => x.IsDirty).ToArray();
         if (dirtyEntries.Length == 0)
             return;
 
-        await _store.UpdateStatuses(dirtyEntries.Select(x => x.Info).ToArray()).Vhc();
-        await _store.SetQueuePosition(_queuePosition).Vhc();
+        await _store.UpdateStatuses(dirtyEntries.Select(x => x.Info).ToArray(), cancellationToken).Vhc();
+        await _store.SetQueuePosition(_queuePosition, cancellationToken).Vhc();
         foreach (var entry in dirtyEntries)
             entry.IsDirty = false;
     }
@@ -210,10 +209,10 @@ public class ManagedProxyConnector : IProxyConnector
             }
 
             // merge into the shared store and reload the working set with preserved statuses
-            await Flush().Vhc();
+            await Flush(cancellationToken).Vhc();
             await _store.Merge(newEndPoints, _autoUpdateOptions.MaxItemCount, _autoUpdateOptions.MaxPenalty,
-                _autoUpdateOptions.RemoveDuplicateIps).Vhc();
-            await ReloadEntries().Vhc();
+                _autoUpdateOptions.RemoveDuplicateIps, cancellationToken).Vhc();
+            await ReloadEntries(cancellationToken).Vhc();
 
             VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}",
                 _proxyEndPointEntries.Length);
@@ -362,7 +361,9 @@ public class ManagedProxyConnector : IProxyConnector
         }
         finally {
             _progressMonitor = null;
-            await Flush().Vhc();
+
+            // what it recorded is kept, a cancelled check's too: not under its token
+            await Flush(CancellationToken.None).Vhc();
         }
     }
 
@@ -550,7 +551,7 @@ public class ManagedProxyConnector : IProxyConnector
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end, as its flush may still be under way
-        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
@@ -559,7 +560,7 @@ public class ManagedProxyConnector : IProxyConnector
 
         // persist pending statuses to the shared store; a failed flush must not keep the store open
         try {
-            await Flush().Vhc();
+            await Flush(CancellationToken.None).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not save the proxy endpoint statuses.");

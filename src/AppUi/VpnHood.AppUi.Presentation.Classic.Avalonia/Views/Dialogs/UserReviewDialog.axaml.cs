@@ -56,7 +56,7 @@ public partial class UserReviewDialog : DialogBase
         try {
             if (!TextStep.IsVisible)
                 _rate = 0;
-            await Submit(null);
+            await Submit(null, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -71,7 +71,7 @@ public partial class UserReviewDialog : DialogBase
                 Actions.IsVisible = false;
                 ThanksStep.IsVisible = true;
                 await Task.Delay(1500);
-                await Submit(null);
+                await Submit(null, CancellationToken.None);
                 return;
             }
 
@@ -90,21 +90,22 @@ public partial class UserReviewDialog : DialogBase
     private async void OnSendClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Submit(ReviewBox.Text);
+            await Submit(ReviewBox.Text, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
         }
     }
 
-    private async Task Submit(string? text)
+    private async Task Submit(string? text, CancellationToken cancellationToken)
     {
         Close();
         try {
-            await VhApp.Api.App.SetUserReview(new AppUserReview { Rating = _rate, ReviewText = text ?? "" }, CancellationToken.None);
+            await VhApp.Api.App.SetUserReview(new AppUserReview { Rating = _rate, ReviewText = text ?? "" },
+                cancellationToken);
             // the store's own prompt, for a happy face
             if (_rate == 3 && VhApp.Intents.IsUserReviewSupported)
-                await VhApp.Api.Intents.RequestUserReview(CancellationToken.None);
+                await VhApp.Api.Intents.RequestUserReview(cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not submit the user review.");

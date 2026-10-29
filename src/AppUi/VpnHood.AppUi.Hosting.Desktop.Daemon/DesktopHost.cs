@@ -29,7 +29,7 @@ public static class DesktopHost
     public static int Run(string[] args, DesktopInitParams initParams, IDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();
-        var run = Task.Run(() => RunAsync(args, initParams, platform, mainThread));
+        var run = Task.Run(() => RunAsync(args, initParams, platform, mainThread, CancellationToken.None));
 
         // A signal's forced end completes the run without waiting for its command (the parser's
         // ProcessTerminationTimeout), and a UI that did not close when its command was cancelled
@@ -45,7 +45,7 @@ public static class DesktopHost
     }
 
     private static async Task<int> RunAsync(string[] args, DesktopInitParams initParams, IDesktopPlatform platform,
-        MainThreadQueue mainThread)
+        MainThreadQueue mainThread, CancellationToken cancellationToken)
     {
         if (args.Length == 0)
             args = platform.Paths.IsStartedAsCommand ? ["--help"] : ["ui"];
@@ -83,7 +83,7 @@ public static class DesktopHost
         };
 
         var parseResult = rootCommand.Parse(args);
-        return await parseResult.InvokeAsync(invocationConfiguration, CancellationToken.None).Vhc();
+        return await parseResult.InvokeAsync(invocationConfiguration, cancellationToken).Vhc();
     }
 
     // The daemon's run where a signal stops it (IDesktopPlatform.HostDaemon): the parser cancels its

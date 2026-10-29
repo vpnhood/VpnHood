@@ -23,13 +23,13 @@ public static class InProcessDesktopHost
     public static int Run(string[] args, DesktopInitParams initParams, IInProcessDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();
-        var run = Task.Run(() => RunAsync(args, initParams, platform, mainThread));
+        var run = Task.Run(() => RunAsync(args, initParams, platform, mainThread, CancellationToken.None));
         mainThread.RunUntil(run);
         return run.GetAwaiter().GetResult();
     }
 
     private static async Task<int> RunAsync(string[] args, DesktopInitParams initParams,
-        IInProcessDesktopPlatform platform, MainThreadQueue mainThread)
+        IInProcessDesktopPlatform platform, MainThreadQueue mainThread, CancellationToken cancellationToken)
     {
         try {
             // read before the window is looked for, which a second launch hands them to, as the service's
@@ -40,7 +40,7 @@ public static class InProcessDesktopHost
             var accessKeyInput = parseResult.GetValue(accessKeyOption);
             var isQuickLaunch = parseResult.GetValue(quickLaunchOption);
             var accessKey = accessKeyInput == null ? null : await DesktopUiWindow.TryReadAccessKey(platform.Paths,
-                initParams, mainThread, accessKeyInput, CancellationToken.None).Vhc();
+                initParams, mainThread, accessKeyInput, cancellationToken).Vhc();
             if (accessKeyInput != null && accessKey == null)
                 return 1;
 
@@ -56,14 +56,14 @@ public static class InProcessDesktopHost
             try {
                 await using var app = platform.CreateApp();
                 await RunWindow(platform.Paths, platform.PeerCheck, initParams, mainThread, platform.UseTray,
-                    platform.Shell, startHidden: false, accessKey, isQuickLaunch, CancellationToken.None).Vhc();
+                    platform.Shell, startHidden: false, accessKey, isQuickLaunch, cancellationToken).Vhc();
                 return 0;
             }
             catch (Exception ex) {
                 // in the window's place: a person who clicked an icon has nowhere else to read it
                 VhLogger.Instance.LogError(ex, "{InstanceName} could not run.", platform.Paths.InstanceName);
                 await DesktopUiWindow.RunMessage(platform.Paths, initParams, mainThread, DesktopUiMessageKind.Failure,
-                    ex.Message, CancellationToken.None).Vhc();
+                    ex.Message, cancellationToken).Vhc();
                 return 1;
             }
         }

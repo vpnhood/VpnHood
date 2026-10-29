@@ -87,7 +87,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
 
     public Task<SessionResponseEx[]> Session_GetAll(CancellationToken cancellationToken)
     {
-        return HttpGetAsync<SessionResponseEx[]>("sessions", cancellationToken: cancellationToken);
+        return HttpGetAsync<SessionResponseEx[]>("sessions", parameters: null, cancellationToken);
     }
 
     public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,

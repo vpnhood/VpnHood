@@ -166,7 +166,7 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     public VpnHoodClientFactory CreateClientFactory() => new();
 
     // Windows shows the VPN's state itself.
-    public void ShowNotification(ConnectionInfo connectionInfo)
+    public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
     }
 

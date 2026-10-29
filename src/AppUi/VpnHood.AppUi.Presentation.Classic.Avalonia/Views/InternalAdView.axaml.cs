@@ -33,7 +33,7 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
 
     // the page holds the leave until the ad has run, as the web UI's route guard does - a debug
     // build is let out
-    public Task<bool> CanLeave()
+    public Task<bool> CanLeave(CancellationToken cancellationToken)
     {
         return Task.FromResult(_isDismissed || _remaining <= 0 || VhApp.Features.IsDebugMode);
     }
@@ -58,7 +58,7 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
     private async void OnCloseClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Dismiss(learnMore: false);
+            await Dismiss(learnMore: false, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -68,20 +68,21 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
     private async void OnLearnMoreClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Dismiss(learnMore: true);
+            await Dismiss(learnMore: true, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
         }
     }
 
-    private async Task Dismiss(bool learnMore)
+    private async Task Dismiss(bool learnMore, CancellationToken cancellationToken)
     {
         if (_remaining > 0 && !VhApp.Features.IsDebugMode)
             return;
 
         _isDismissed = true;
-        await VhApp.Api.App.InternalAdDismiss(learnMore ? ShowAdResult.Clicked : ShowAdResult.Closed, CancellationToken.None);
+        await VhApp.Api.App.InternalAdDismiss(learnMore ? ShowAdResult.Clicked : ShowAdResult.Closed,
+            cancellationToken);
         if (learnMore)
             _host.Replace(new PurchaseSubscriptionView(_host, null));
         else

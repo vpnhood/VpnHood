@@ -4,5 +4,5 @@
 // onBeforeRouteLeave returning false).
 public interface ILeaveGuard
 {
-    Task<bool> CanLeave();
+    Task<bool> CanLeave(CancellationToken cancellationToken);
 }

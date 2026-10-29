@@ -56,14 +56,14 @@ public class AppProxyEndPointService(
         if (_hasCustomEndPointsCache is null ||
             FastDateTime.UtcNow - _hasCustomEndPointsCacheTime > HasCustomEndPointsCacheTimeout)
             _ = VhInvoker.TryInvokeAsync("refresh whether custom proxy endpoints exist", LogLevel.Warning,
-                RefreshHasCustomEndPoints);
+                () => RefreshHasCustomEndPoints(CancellationToken.None));
 
         return _hasCustomEndPointsCache ?? false;
     }
 
-    private async Task<bool> RefreshHasCustomEndPoints()
+    private async Task<bool> RefreshHasCustomEndPoints(CancellationToken cancellationToken)
     {
-        _hasCustomEndPointsCache = await Store.Count().Vhc() > 0;
+        _hasCustomEndPointsCache = await Store.Count(cancellationToken).Vhc() > 0;
         _hasCustomEndPointsCacheTime = FastDateTime.UtcNow;
         return _hasCustomEndPointsCache.Value;
     }
@@ -112,13 +112,14 @@ public class AppProxyEndPointService(
     }
 
     public async Task<ListResult<AppProxyEndPointInfo>> ListProxies(
-        string? search = null,
-        bool includeSucceeded = true,
-        bool includeFailed = true,
-        bool includeUnknown = true,
-        bool includeDisabled = true,
-        int? recordIndex = null,
-        int? recordCount = null)
+        string? search,
+        bool includeSucceeded,
+        bool includeFailed,
+        bool includeUnknown,
+        bool includeDisabled,
+        int? recordIndex,
+        int? recordCount,
+        CancellationToken cancellationToken)
     {
         // filtering, ordering and paging run inside the store; only the requested page is loaded
         var result = await Store.List(new ProxyEndPointStoreListParams {
@@ -129,7 +130,7 @@ public class AppProxyEndPointService(
             IncludeDisabled = includeDisabled,
             RecordIndex = recordIndex ?? 0,
             RecordCount = recordCount ?? int.MaxValue
-        }).Vhc();
+        }, cancellationToken).Vhc();
 
         return new ListResult<AppProxyEndPointInfo> {
             Items = result.Items.Select(ToAppInfo).ToArray(),
@@ -137,34 +138,35 @@ public class AppProxyEndPointService(
         };
     }
 
-    public async Task<AppProxyEndPointInfo> Get(string id)
+    public async Task<AppProxyEndPointInfo> Get(string id, CancellationToken cancellationToken)
     {
-        var record = await Store.Get(id).Vhc() ??
+        var record = await Store.Get(id, cancellationToken).Vhc() ??
                      throw new KeyNotFoundException($"ProxyEndPoint not found. Id: {id}");
         return ToAppInfo(record);
     }
 
-    public async Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint)
+    public async Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
         var endPoint = ProxyEndPointParser.Normalize(proxyEndPoint.ToEngine());
 
         // adding an existing endpoint updates it and keeps its status
-        await Store.Upsert([new ProxyEndPointRecord { EndPoint = endPoint }]).Vhc();
-        await RefreshHasCustomEndPoints().Vhc();
+        await Store.Upsert([new ProxyEndPointRecord { EndPoint = endPoint }], keepExistingStatus: true,
+            keepExistingEnabled: false, cancellationToken).Vhc();
+        await RefreshHasCustomEndPoints(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
 
-        return await Get(endPoint.Id).Vhc();
+        return await Get(endPoint.Id, cancellationToken).Vhc();
     }
 
-    public async Task<AppProxyEndPointInfo> Update(string id, ProxyEndPoint proxyEndPoint)
+    public async Task<AppProxyEndPointInfo> Update(string id, ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
         var endPoint = ProxyEndPointParser.Normalize(proxyEndPoint.ToEngine());
-        var oldRecord = await Store.Get(id).Vhc() ??
+        var oldRecord = await Store.Get(id, cancellationToken).Vhc() ??
                         throw new KeyNotFoundException($"ProxyEndPoint not found. Id: {id}");
 
         // keep the status even when the natural key (and so the id) changed
         if (endPoint.Id != id)
-            await Store.Delete([id]).Vhc();
+            await Store.Delete([id], cancellationToken).Vhc();
 
         await Store.Upsert([
             new ProxyEndPointRecord {
@@ -172,33 +174,33 @@ public class AppProxyEndPointService(
                 Status = oldRecord.Status,
                 CountryCode = oldRecord.CountryCode
             }
-        ], keepExistingStatus: false).Vhc();
+        ], keepExistingStatus: false, keepExistingEnabled: false, cancellationToken).Vhc();
 
         settingsService.Save(); // fire changes
-        return await Get(endPoint.Id).Vhc();
+        return await Get(endPoint.Id, cancellationToken).Vhc();
     }
 
-    public async Task Delete(string proxyEndPointId)
+    public async Task Delete(string proxyEndPointId, CancellationToken cancellationToken)
     {
-        await Store.Delete([proxyEndPointId]).Vhc();
-        await RefreshHasCustomEndPoints().Vhc();
+        await Store.Delete([proxyEndPointId], cancellationToken).Vhc();
+        await RefreshHasCustomEndPoints(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
     }
 
-    public async Task DeleteAll(DeleteAllOptions? options = null)
+    public async Task DeleteAll(DeleteAllOptions? options, CancellationToken cancellationToken)
     {
-        await Store.DeleteAll(options ?? new DeleteAllOptions()).Vhc();
-        await RefreshHasCustomEndPoints().Vhc();
+        await Store.DeleteAll(options ?? new DeleteAllOptions(), cancellationToken).Vhc();
+        await RefreshHasCustomEndPoints(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
     }
 
-    public async Task DisableAllFailed()
+    public async Task DisableAllFailed(CancellationToken cancellationToken)
     {
-        await Store.DisableAllFailed().Vhc();
+        await Store.DisableAllFailed(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
     }
 
-    public async Task Import(string content)
+    public async Task Import(string content, CancellationToken cancellationToken)
     {
         // parse new endpoints
         var newProxyEndPoints = ProxyEndPointParser
@@ -209,9 +211,9 @@ public class AppProxyEndPointService(
         // merge into the shared store with the standard priority rules
         var autoUpdateOptions = ProxySettings.AutoUpdateOptions;
         await Store.Merge(newProxyEndPoints, autoUpdateOptions.MaxItemCount, autoUpdateOptions.MaxPenalty,
-            autoUpdateOptions.RemoveDuplicateIps).Vhc();
+            autoUpdateOptions.RemoveDuplicateIps, cancellationToken).Vhc();
 
-        await RefreshHasCustomEndPoints().Vhc();
+        await RefreshHasCustomEndPoints(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
     }
 
@@ -221,12 +223,12 @@ public class AppProxyEndPointService(
         // ReSharper disable once ShortLivedHttpClient
         using var httpClient = new HttpClient();
         var content = await httpClient.GetStringAsync(ProxySettings.AutoUpdateOptions.Url, cancellationToken).Vhc();
-        await Import(content).Vhc();
+        await Import(content, cancellationToken).Vhc();
     }
 
-    public async Task ResetStates()
+    public async Task ResetStates(CancellationToken cancellationToken)
     {
-        await Store.ResetStatuses().Vhc();
+        await Store.ResetStatuses(cancellationToken).Vhc();
 
         // make the next GetProxyOptions tell a live core to discard its in-memory statuses
         // instead of flushing them back over the reset
@@ -250,11 +252,11 @@ public class AppProxyEndPointService(
         foreach (var proxyEndPointInfo in proxyEndPointInfos) {
             var countryCode = hostCountries.GetValueOrDefault(proxyEndPointInfo.EndPoint.Host);
             if (countryCode != null)
-                await Store.SetCountryCode(proxyEndPointInfo.EndPoint.Id, countryCode).Vhc();
+                await Store.SetCountryCode(proxyEndPointInfo.EndPoint.Id, countryCode, cancellationToken).Vhc();
         }
     }
 
-    public async Task<ProxyOptions> GetProxyOptions()
+    public async Task<ProxyOptions> GetProxyOptions(CancellationToken cancellationToken)
     {
         var resetStates = _pendingResetStates;
         _pendingResetStates = false;
@@ -262,7 +264,7 @@ public class AppProxyEndPointService(
         // this decides Managed vs None for a real connection, so read fresh from the store.
         // an auto-update url counts even with an empty store; the core downloads the initial list
         var hasCustomEndPoints = ProxySettings.Mode is AppProxyMode.Manual &&
-                                 (await RefreshHasCustomEndPoints().Vhc() ||
+                                 (await RefreshHasCustomEndPoints(cancellationToken).Vhc() ||
                                   ProxySettings.AutoUpdateOptions.Url != null);
 
         var mode = ProxySettings.Mode switch {

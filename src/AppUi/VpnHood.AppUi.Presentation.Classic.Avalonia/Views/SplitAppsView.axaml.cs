@@ -22,18 +22,18 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         _host = host;
         InitializeComponent();
         List.IsLoading = true;
-        _ = Load();
+        _ = Load(CancellationToken.None);
     }
 
     private static SplitTunnelingSettings Split => VhApp.UserSettings.SplitTunneling;
 
     // the icons come as PNG bytes; decoding a few hundred of them is off the UI thread
-    private async Task Load()
+    private async Task Load(CancellationToken cancellationToken)
     {
         try {
             var mode = Split.AppMode;
             var selected = Split.Apps;
-            var installed = await VhApp.Api.App.GetInstalledApps(CancellationToken.None);
+            var installed = await VhApp.Api.App.GetInstalledApps(cancellationToken);
 
             var items = await Task.Run(() => installed.Select(app => new FilterItem {
                 Id = app.AppId,
@@ -42,7 +42,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
                 IsSelected = mode == SplitAppMode.All
                              || (mode == SplitAppMode.Include && selected.Contains(app.AppId))
                              || (mode == SplitAppMode.Exclude && !selected.Contains(app.AppId))
-            }).ToList());
+            }).ToList(), cancellationToken);
 
             items.Add(new FilterItem {
                 Id = FutureAppsId,
@@ -122,7 +122,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         }
     }
 
-    public async Task<bool> CanLeave()
+    public async Task<bool> CanLeave(CancellationToken cancellationToken)
     {
         if (IsSaveRejected) {
             await _host.ShowError(Strings.Current.AllAppsExcludedErrorMsg);
@@ -130,7 +130,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         }
 
         try {
-            await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
+            await VhApp.SaveUserSettings(VhApp.UserSettings, cancellationToken);
             return true;
         }
         catch (Exception ex) {

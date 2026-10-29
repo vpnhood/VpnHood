@@ -24,7 +24,7 @@ public class DesktopUpdateInstallTest : TestAppBase
         await AddDownload(updater);
 
         // the installer under way, on a download the updater left: the notice and status say installing too
-        var install = updater.InstallDownloadedUpdate();
+        var install = updater.InstallDownloadedUpdate(TestCt);
         Assert.AreEqual(AppConnectionState.Updating, app.State.ConnectionState);
         var release = new AppRelease {
             Version = new Version(2, 0, 0), PackageUrl = new Uri("https://localhost/setup.exe")
@@ -33,7 +33,7 @@ public class DesktopUpdateInstallTest : TestAppBase
         Assert.IsFalse(app.State.CanConnect);
         Assert.IsFalse(app.State.CanDisconnect);
         await Assert.ThrowsExactlyAsync<AppUpdatingException>(() =>
-            app.Connect(uiContext: null, cancellationToken: TestCt));
+            app.Connect(uiContext: null, connectOptions: null, TestCt));
 
         // one that ends without installing leaves the app idle again, and the refusal no last error
         updater.InstallerEnd.SetResult("The installed version is up to date.");

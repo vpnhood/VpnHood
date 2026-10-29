@@ -54,7 +54,7 @@ public static class VhApp
 
         // the words again when the language changes
         if (!IsConfigured)
-            Strings.Current.PropertyChanged += (_, _) => _ = SendWords();
+            Strings.Current.PropertyChanged += (_, _) => _ = SendWords(CancellationToken.None);
         IsConfigured = true;
     }
 
@@ -70,13 +70,13 @@ public static class VhApp
     }
 
     // Once per language: configuring the app applies its settings again, which reconfigures a session.
-    private static async Task SendWords()
+    private static async Task SendWords(CancellationToken cancellationToken)
     {
         if (Strings.Current.CultureName == _sentCultureName)
             return;
 
         try {
-            await Api.App.Configure(CreateConfigParams(), CancellationToken.None).ConfigureAwait(false);
+            await Api.App.Configure(CreateConfigParams(), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not give the app the words of the UI's language.");

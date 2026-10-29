@@ -13,10 +13,10 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
     public required int SessionCount { get; set; } = 1;
     public bool? IsMobile { get; init; }
 
-    public async Task TryTrack(Ga4TagEvent ga4Event, ILogger logger)
+    public async Task TryTrack(Ga4TagEvent ga4Event, ILogger logger, CancellationToken cancellationToken)
     {
         try {
-            await Track(ga4Event, CancellationToken.None).Vhc();
+            await Track(ga4Event, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             logger.LogDebug(ex, "Failed to track GA4 Tag Event: {EventName}", ga4Event.EventName);

@@ -369,7 +369,7 @@ public class VpnServiceManager : IDisposable
     public async Task<bool> TryStop(TimeSpan? timeout = null)
     {
         // Initialize cll this method, so it must be finished to make sure the service is not interrupted
-        using var scopeLock = await _stopLock.LockAsync().Vhc();
+        using var scopeLock = await _stopLock.LockAsync(CancellationToken.None).Vhc();
 
         // stop the service. Disconnecting does NOT count as stopped: the client is still closing its
         // session and releasing its resources (filter dbs, adapter) until it reaches a terminal state

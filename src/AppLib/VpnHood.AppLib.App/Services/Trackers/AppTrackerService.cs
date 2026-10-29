@@ -93,13 +93,13 @@ public class AppTrackerService
         var wasEnabled = Tracker.IsEnabled;
         Tracker.IsEnabled = IsAllowed;
         if (Tracker.IsEnabled && !wasEnabled)
-            _ = Task.Run(TrackFirstLaunch);
+            _ = Task.Run(() => TrackFirstLaunch(CancellationToken.None));
     }
 
     // The first launch, with the locale-based country, once and only while the tracker is on. The flag is
     // taken before the send, so the start and a switch turning on cannot both send it; a send that fails
     // is not tried again.
-    public async Task TrackFirstLaunch()
+    public async Task TrackFirstLaunch(CancellationToken cancellationToken)
     {
         lock (_firstLaunchLock) {
             if (_settingsService.Settings.IsStartupTrackerSent || !Tracker.IsEnabled)
@@ -111,7 +111,10 @@ public class AppTrackerService
         try {
             _settingsService.Save();
             var countryCode = AppRegionInfo.CurrentRegion.Name;
-            await Tracker.Track(AppTrackerBuilder.BuildFirstLaunch(_clientId, countryCode), CancellationToken.None).Vhc();
+            await Tracker.Track(AppTrackerBuilder.BuildFirstLaunch(_clientId, countryCode), cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the first launch.");

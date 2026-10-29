@@ -89,7 +89,7 @@ public static class ProxyEndPointUpdater
     public static async Task<ProxyEndPoint[]> LoadFromUrlAsync(
         HttpClient httpClient,
         Uri url,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         var content = await httpClient.GetStringAsync(url, cancellationToken).Vhc();
         var proxyEndPoints = ProxyEndPointParser

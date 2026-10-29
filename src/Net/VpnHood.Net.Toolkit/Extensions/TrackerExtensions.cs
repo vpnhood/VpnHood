@@ -8,13 +8,7 @@ public static class TrackerExtensions
 {
     extension(ITracker tracker)
     {
-        public Task<bool> TryTrack(TrackEvent trackEvent)
-        {
-            return tracker.TryTrackWithCancellation(trackEvent, CancellationToken.None);
-        }
-
-        public async Task<bool> TryTrackWithCancellation(TrackEvent trackEvent,
-            CancellationToken cancellationToken)
+        public async Task<bool> TryTrack(TrackEvent trackEvent, CancellationToken cancellationToken)
         {
             try {
                 await tracker.Track(trackEvent, cancellationToken).Vhc();
@@ -26,10 +20,10 @@ public static class TrackerExtensions
             }
         }
 
-        public async Task<bool> TryTrack(IEnumerable<TrackEvent> trackEvents)
+        public async Task<bool> TryTrack(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken)
         {
             try {
-                await tracker.Track(trackEvents).Vhc();
+                await tracker.Track(trackEvents, cancellationToken).Vhc();
                 return true;
             }
             catch (Exception ex) {
@@ -39,7 +33,7 @@ public static class TrackerExtensions
         }
 
         public Task<bool> TryTrackError(Exception exception, string? message, string action,
-            LogLevel logLevel = LogLevel.Error, TimeSpan? elapsed = null)
+            CancellationToken cancellationToken, LogLevel logLevel = LogLevel.Error, TimeSpan? elapsed = null)
         {
             message = string.IsNullOrEmpty(message)
                 ? exception.Message : message + ", " + exception.Message;
@@ -64,12 +58,13 @@ public static class TrackerExtensions
             if (elapsed != null)
                 trackEvent.Parameters.Add("elapsed_seconds", (int)elapsed.Value.TotalSeconds);
 
-            return tracker.TryTrack([trackEvent]);
+            return tracker.TryTrack([trackEvent], cancellationToken);
         }
 
-        public Task<bool> TryTrackWarningAsync(Exception exception, string? message, string action)
+        public Task<bool> TryTrackWarningAsync(Exception exception, string? message, string action,
+            CancellationToken cancellationToken)
         {
-            return tracker.TryTrackError(exception, message, action, LogLevel.Warning);
+            return tracker.TryTrackError(exception, message, action, cancellationToken, LogLevel.Warning);
         }
     }
 }

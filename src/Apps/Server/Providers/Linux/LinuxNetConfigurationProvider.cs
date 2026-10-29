@@ -11,20 +11,20 @@ namespace VpnHood.App.Server.Providers.Linux;
 // add & remove ip address for linux server
 public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationProvider
 {
-    public async Task<string> GetTcpCongestionControl()
+    public async Task<string> GetTcpCongestionControl(CancellationToken cancellationToken)
     {
-        var active = await ExecuteCommandAsync("sysctl net.ipv4.tcp_congestion_control").Vhc();
+        var active = await ExecuteCommandAsync("sysctl net.ipv4.tcp_congestion_control", cancellationToken).Vhc();
         return active.Split('=').Last().Trim();
     }
 
-    public async Task SetTcpCongestionControl(string value)
+    public async Task SetTcpCongestionControl(string value, CancellationToken cancellationToken)
     {
         // the access manager's value goes into root's commands, so a kernel algorithm's name only
         if (!Regex.IsMatch(value, @"\A[a-z0-9_]{1,16}\z"))
             throw new ArgumentException($"Invalid TCP congestion control name. Value: {value}", nameof(value));
 
         // Check if the value is already set
-        if (await GetTcpCongestionControl().Vhc() == value)
+        if (await GetTcpCongestionControl(cancellationToken).Vhc() == value)
             return;
 
         // a container's kernel settings are its host's: its /proc/sys is read-only, and it has no modprobe
@@ -38,16 +38,16 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
         logger.LogInformation("Updating TcpCongestionControl to {value}...", value);
 
         // a module only for one the kernel lacks: reno is built in and has none
-        if (!await IsTcpCongestionControlAvailable(value).Vhc()) {
-            await ExecuteCommandAsync($"modprobe tcp_{value}").Vhc();
-            if (!await IsTcpCongestionControlAvailable(value).Vhc())
+        if (!await IsTcpCongestionControlAvailable(value, cancellationToken).Vhc()) {
+            await ExecuteCommandAsync($"modprobe tcp_{value}", cancellationToken).Vhc();
+            if (!await IsTcpCongestionControlAvailable(value, cancellationToken).Vhc())
                 throw new InvalidOperationException($"{value} is not available.");
         }
 
         // ReSharper disable StringLiteralTypo
         // Set new config
-        await ExecuteCommandAsync("sysctl -w net.core.default_qdisc=fq").Vhc();
-        await ExecuteCommandAsync($"sysctl -w net.ipv4.tcp_congestion_control={value}").Vhc();
+        await ExecuteCommandAsync("sysctl -w net.core.default_qdisc=fq", cancellationToken).Vhc();
+        await ExecuteCommandAsync($"sysctl -w net.ipv4.tcp_congestion_control={value}", cancellationToken).Vhc();
         // ReSharper restore StringLiteralTypo
     }
 
@@ -62,9 +62,10 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
             .LastOrDefault();
     }
 
-    private static async Task<bool> IsTcpCongestionControlAvailable(string value)
+    private static async Task<bool> IsTcpCongestionControlAvailable(string value, CancellationToken cancellationToken)
     {
-        var available = await ExecuteCommandAsync("sysctl net.ipv4.tcp_available_congestion_control").Vhc();
+        var available = await ExecuteCommandAsync("sysctl net.ipv4.tcp_available_congestion_control", cancellationToken)
+            .Vhc();
         return available.Split('=').Last().Split([' ', '\n'], StringSplitOptions.RemoveEmptyEntries).Contains(value);
     }
 
@@ -78,10 +79,10 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
             throw new InvalidOperationException($"Invalid network interface name. InterfaceName: {interfaceName}");
     }
 
-    public async Task<string[]> GetInterfaceNames()
+    public async Task<string[]> GetInterfaceNames(CancellationToken cancellationToken)
     {
         const string command = "ip link show | grep '^[0-9]' | awk '{print $2}' | sed 's/://'";
-        var output = await ExecuteCommandAsync(command).Vhc();
+        var output = await ExecuteCommandAsync(command, cancellationToken).Vhc();
         var names = output
             .Split([' ', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Where(x => !x.Equals("lo", StringComparison.OrdinalIgnoreCase))
@@ -90,13 +91,13 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
         return names;
     }
 
-    public Task AddIpAddress(IPAddress ipAddress, string interfaceName)
+    public Task AddIpAddress(IPAddress ipAddress, string interfaceName, CancellationToken cancellationToken)
     {
         ValidateInterfaceName(interfaceName);
 
         var subnet = ipAddress.IsV4() ? 32 : 128;
         var command = $"ip addr add {ipAddress}/{subnet} dev {interfaceName}";
-        return ExecuteCommandAsync(command);
+        return ExecuteCommandAsync(command, cancellationToken);
     }
 
     public void RemoveIpAddress(IPAddress ipAddress, string interfaceName)
@@ -108,14 +109,14 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
         OsUtils.ExecuteShellCommand(command);
     }
 
-    public async Task<bool> IpAddressExists(IPAddress ipAddress)
+    public async Task<bool> IpAddressExists(IPAddress ipAddress, CancellationToken cancellationToken)
     {
         const string command = "ip addr show";
-        var output = await ExecuteCommandAsync(command).Vhc();
+        var output = await ExecuteCommandAsync(command, cancellationToken).Vhc();
         return output.Contains($" {ipAddress}/");
     }
 
-    private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken = default)
+    private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken)
     {
         return OsUtils.ExecuteShellCommandAsync(command, cancellationToken);
     }

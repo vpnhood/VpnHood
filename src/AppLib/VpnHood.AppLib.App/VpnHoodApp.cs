@@ -370,7 +370,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         MigrateLegacyTempFolder();
 #pragma warning restore CS0618 // Type or member is obsolete
 
-        await Services.TrackerService.TrackFirstLaunch().Vhc();
+        await Services.TrackerService.TrackFirstLaunch(CancellationToken.None).Vhc();
 
         await _webHostManager.StartAlwaysOn(CancellationToken.None).Vhc();
 
@@ -512,7 +512,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // the split db manifests are already on disk, so the request only signals; the service's filter
         // chains re-read the manifests
         var serviceOptions = await CreateServiceOptions(profileInfo, vpnProfile.Token,
-            profileInfo.SelectedLocationInfo?.ServerLocation, vpnProfile.AccessCode).Vhc();
+            profileInfo.SelectedLocationInfo?.ServerLocation, vpnProfile.AccessCode, cancellationToken).Vhc();
         await _vpnServiceManager.Reconfigure(serviceOptions, cancellationToken).Vhc();
     }
 
@@ -838,8 +838,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return logOptions;
     }
 
-    public async Task<bool> TryConnect(IUiContext? uiContext, ConnectOptions? connectOptions = null,
-        CancellationToken cancellationToken = default)
+    public async Task<bool> TryConnect(IUiContext? uiContext, ConnectOptions? connectOptions,
+        CancellationToken cancellationToken)
     {
         try {
             await Connect(uiContext, connectOptions, cancellationToken).Vhc();
@@ -852,8 +852,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     /// <param name="uiContext">The caller's window, which asks the person for the VPN permission and
     /// for notifications; null when it has none, and then a missing permission fails and nothing is asked.</param>
-    public async Task Connect(IUiContext? uiContext, ConnectOptions? connectOptions = null,
-        CancellationToken cancellationToken = default)
+    public async Task Connect(IUiContext? uiContext, ConnectOptions? connectOptions,
+        CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew(); // a failed connect's report tells how long it ran
         connectOptions ??= new ConnectOptions();
@@ -884,7 +884,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // Create a connect cancellation token. A disconnect still running, which the app shows as idle, ends
             // first, or it would cancel this connect or stop its VPN service
-            using (await _disconnectLock.LockAsync().Vhc()) {
+            using (await _disconnectLock.LockAsync(cancellationToken).Vhc()) {
                 _connectCts = new CancellationTokenSource();
                 _isConnecting = true; //must be after checking IsIdle
             }
@@ -1019,7 +1019,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // start without the app runs with. What only a connect knows - its plan, and whether always-on made
     // it - the connect sets itself.
     private async Task<VpnServiceOptions> CreateServiceOptions(VpnProfileInfo profileInfo, Token token,
-        string? serverLocation, string? accessCode)
+        string? serverLocation, string? accessCode, CancellationToken cancellationToken)
     {
         // all split decisions act on the effective copy: the super toggle and the premium plan
         // are both resolved here, once, for everything below
@@ -1043,7 +1043,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 : null;
 
         // create clientOptions
-        var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
+        var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions(cancellationToken).Vhc();
         var isTrackerAllowed = Services.TrackerService.IsVpnServiceTrackerAllowed;
         var clientOptions = new ClientOptions {
             AdapterName = Config.AdapterName,
@@ -1121,7 +1121,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // here — the previous session fully released them at TryStop)
             await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
 
-            var serviceOptions = await CreateServiceOptions(profileInfo, token, serverLocation, accessCode).Vhc();
+            var serviceOptions = await CreateServiceOptions(profileInfo, token, serverLocation, accessCode,
+                cancellationToken).Vhc();
             serviceOptions.ClientOptions.PlanId = planId.ToEngine();
             serviceOptions.ClientOptions.IsAlwaysOn = isAlwaysOn;
 
@@ -1400,7 +1401,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         };
 
         _ = Services.TrackerService.Tracker.TryTrack(
-            AppTrackerBuilder.BuildUserReview(rating, reviewText));
+            AppTrackerBuilder.BuildUserReview(rating, reviewText), CancellationToken.None);
     }
 
     private void VpnService_StateChanged(object? sender, EventArgs e)
@@ -1441,8 +1442,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task TryShowAd()
     {
-        // lock session
-        using var scopeLock = await _showAdLock.LockAsync(timeout: TimeSpan.Zero).Vhc();
+        // lock session: only tried, never waited for, so no token
+        using var scopeLock = await _showAdLock.LockAsync(timeout: TimeSpan.Zero, CancellationToken.None).Vhc();
         if (!scopeLock.Succeeded || AdManager.IsShowing)
             return; // already showing ad
 
@@ -1501,7 +1502,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AsyncLock _disconnectLock = new();
     private async Task DisconnectCore(int? connectNumber)
     {
-        using var scopeLock = await _disconnectLock.LockAsync().Vhc();
+        using var scopeLock = await _disconnectLock.LockAsync(CancellationToken.None).Vhc();
         if (_isDisconnecting)
             return; // already disconnecting
 
@@ -1687,7 +1688,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // a second close waits for the first one's end. One after a quick close returns: that close leaves
         // nothing running
-        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (_disposed)
             return;
 

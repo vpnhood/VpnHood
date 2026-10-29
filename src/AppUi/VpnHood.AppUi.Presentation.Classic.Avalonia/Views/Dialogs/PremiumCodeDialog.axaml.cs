@@ -38,7 +38,7 @@ public partial class PremiumCodeDialog : DialogBase
             if (e.Key != Key.Enter || !ActivateButton.IsEnabled)
                 return;
             e.Handled = true;
-            await Activate();
+            await Activate(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -48,7 +48,7 @@ public partial class PremiumCodeDialog : DialogBase
     private async void OnActivateClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Activate();
+            await Activate(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -63,7 +63,7 @@ public partial class PremiumCodeDialog : DialogBase
     // The profile write is the ONE door (keyring plan §7): it makes the code work here at once, and
     // when somebody is signed in the app hands it to the account by itself. Against a live
     // subscription the code is saved and queued, not used, and this says so.
-    private async Task Activate()
+    private async Task Activate(CancellationToken cancellationToken)
     {
         var code = CodeBox.Text?.Trim() ?? "";
         var profileId = VhApp.State.VpnProfile?.VpnProfileId;
@@ -75,7 +75,7 @@ public partial class PremiumCodeDialog : DialogBase
         try {
             await VhApp.Api.VpnProfiles.Update(profileId.Value, new VpnProfileUpdateParams {
                 AccessCode = new Patch<string?>(code)
-            }, CancellationToken.None);
+            }, cancellationToken);
         }
         catch (Exception) {
             LiveText.Say(ErrorText, Strings.Current.InvalidPremiumCodeNumbersMsg);
@@ -84,8 +84,8 @@ public partial class PremiumCodeDialog : DialogBase
 
         if (VhApp.IsPremiumByAccount) {
             Close(true);
-            await VhApp.LoadAccount(true, CancellationToken.None);
-            await _host.ViewModel.ReloadInfo();
+            await VhApp.LoadAccount(true, cancellationToken);
+            await _host.ViewModel.ReloadInfo(cancellationToken);
             _host.ShowSnackbar(Strings.Current.PremiumCodeSavedForLaterMsg);
             return;
         }
@@ -95,7 +95,9 @@ public partial class PremiumCodeDialog : DialogBase
         var pending = new PendingDialog();
         _ = _host.ShowDialog(pending);
         try {
-            await _host.ViewModel.ConnectWith(new ConnectRequest(profileId.Value, null, IsPremium: true, ConnectPlanId.Normal, GoToHome: false));
+            await _host.ViewModel.ConnectWith(
+                new ConnectRequest(profileId.Value, null, IsPremium: true, ConnectPlanId.Normal, GoToHome: false),
+                cancellationToken);
             pending.Close();
             if (VhApp.IsConnected() && VhApp.IsPremiumUser)
                 await _host.ShowDialog(new PremiumCodeCompleteDialog(_host));

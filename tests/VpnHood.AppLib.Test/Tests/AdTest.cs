@@ -105,7 +105,7 @@ public class AdTest : TestAppBase
         await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(() => app.Connect(uiContext: null, new ConnectOptions {
             VpnProfileId = vpnProfile.VpnProfileId,
             PlanId = ConnectPlanId.PremiumByRewardedAd
-        }));
+        }, TestCt));
 
         await app.WaitForState(AppConnectionState.None);
     }

@@ -38,7 +38,7 @@ public partial class PromoteView : UserControl, IPage
         // the picture of the case, and over it the operator's own promotion when the app holds one
         AppImage.SetSource(PromoImage, AppAssets.ImagePath(isPremiumLocation ? "premium-servers.webp" : "free-to-premium-servers.webp"));
         if (VhApp.State.PromotionExists)
-            _ = LoadPromotionImage();
+            _ = LoadPromotionImage(CancellationToken.None);
 
         var isFree = !isPremiumLocation && options?.Normal != null;
         var isFreeByAd = !isPremiumLocation && options?.NormalByRewardedAd != null;
@@ -52,10 +52,10 @@ public partial class PromoteView : UserControl, IPage
 
         if (options?.PremiumByRewardedAd is { } adMinutes)
             PremiumRows.Children.Add(new PromoteRow(Mdi.PlayBoxLockOpenOutline, s.WatchRewardedAd, s.WatchRewardedAdDesc(adMinutes), s.Connect,
-                () => Connect(ConnectPlanId.PremiumByRewardedAd)));
+                () => Connect(ConnectPlanId.PremiumByRewardedAd, CancellationToken.None)));
         if (options?.PremiumByTrial is { } trialMinutes)
             PremiumRows.Children.Add(new PromoteRow(Mdi.TimerLockOpenOutline, s.TryPremium, s.TryPremiumDesc(trialMinutes), s.Connect,
-                () => Connect(ConnectPlanId.PremiumByTrial)));
+                () => Connect(ConnectPlanId.PremiumByTrial, CancellationToken.None)));
         if (options?.PremiumByPurchase == true || options?.PremiumByCode == true)
             PremiumRows.Children.Add(new PromoteRow(Mdi.CrownCircleOutline, s.GoPremium, s.GoPremiumDesc, s.Upgrade, () => {
                 _host.Navigate(new PurchaseSubscriptionView(_host, vpnProfileId));
@@ -65,10 +65,10 @@ public partial class PromoteView : UserControl, IPage
 
     // The promotion comes through the API, as everything does; the picture of the case shows
     // until it arrives, and stays if it never does.
-    private async Task LoadPromotionImage()
+    private async Task LoadPromotionImage(CancellationToken cancellationToken)
     {
         try {
-            var bytes = await VhApp.Api.App.PromotionImage(CancellationToken.None);
+            var bytes = await VhApp.Api.App.PromotionImage(cancellationToken);
             // the case's picture, if still on its way, must not land over the promotion
             AppImage.SetSource(PromoImage, null);
             PromoImage.Source = new Bitmap(new MemoryStream(bytes));
@@ -88,15 +88,16 @@ public partial class PromoteView : UserControl, IPage
 
     // The connect itself, never the asking: this page IS the asking, so going back through
     // ConnectWith would send the person to a fresh copy of this page instead of a server.
-    private async Task Connect(ConnectPlanId planId)
+    private async Task Connect(ConnectPlanId planId, CancellationToken cancellationToken)
     {
-        await _host.ViewModel.Connect(new ConnectRequest(_vpnProfileId, _serverLocation, _isPremiumLocation, planId));
+        await _host.ViewModel.Connect(new ConnectRequest(_vpnProfileId, _serverLocation, _isPremiumLocation, planId),
+            cancellationToken);
     }
 
     private async void OnFreeClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Connect(ConnectPlanId.Normal);
+            await Connect(ConnectPlanId.Normal, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -106,7 +107,7 @@ public partial class PromoteView : UserControl, IPage
     private async void OnFreeAdClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Connect(ConnectPlanId.NormalByRewardedAd);
+            await Connect(ConnectPlanId.NormalByRewardedAd, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

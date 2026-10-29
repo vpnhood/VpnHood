@@ -101,7 +101,7 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
         return Task.CompletedTask;
     }
 
-    public Task UpdateOptions(ProxyOptions proxyOptions)
+    public Task UpdateOptions(ProxyOptions proxyOptions, CancellationToken cancellationToken)
     {
         if (proxyOptions.ProxyEndPoint != null)
             _proxyEndPoint = proxyOptions.ProxyEndPoint;
@@ -109,7 +109,7 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
         return Task.CompletedTask;
     }
 
-    public Task Flush()
+    public Task Flush(CancellationToken cancellationToken)
     {
         // nothing is persisted
         return Task.CompletedTask;

@@ -28,7 +28,8 @@ public partial class PairingView : UserControl, IPage, IDisposable
     {
         _host = host;
         InitializeComponent();
-        _timer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => _ = Refresh());
+        _timer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background,
+            (_, _) => _ = Refresh(CancellationToken.None));
         RemoteAccessDescText.Text = Strings.Current.RemoteAccessDesc(VhApp.Features.AppName);
         AddressText.Text = Strings.Current.RemoteAccessStarting;
         HintText.Text = hint;
@@ -43,7 +44,7 @@ public partial class PairingView : UserControl, IPage, IDisposable
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        _ = Start();
+        _ = Start(CancellationToken.None);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -52,10 +53,10 @@ public partial class PairingView : UserControl, IPage, IDisposable
         base.OnDetachedFromVisualTree(e);
     }
 
-    private async Task Start()
+    private async Task Start(CancellationToken cancellationToken)
     {
         try {
-            var state = await VhApp.Api.App.StartRemoteAccess(CancellationToken.None);
+            var state = await VhApp.Api.App.StartRemoteAccess(cancellationToken);
             Apply(state);
             _timer.Start();
         }
@@ -65,12 +66,12 @@ public partial class PairingView : UserControl, IPage, IDisposable
         }
     }
 
-    private async Task Refresh()
+    private async Task Refresh(CancellationToken cancellationToken)
     {
         if (_disposed)
             return;
         try {
-            Apply(await VhApp.Api.App.GetRemoteAccess(CancellationToken.None));
+            Apply(await VhApp.Api.App.GetRemoteAccess(cancellationToken));
             _isRefreshFailing = false;
         }
         catch (Exception ex) {

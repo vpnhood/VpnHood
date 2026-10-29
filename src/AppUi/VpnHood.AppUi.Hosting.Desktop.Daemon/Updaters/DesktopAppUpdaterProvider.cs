@@ -100,10 +100,10 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     /// automatic updates are on. An install stops this service; else this logs why there was none. Not beside the
     /// notice's own Install or Update.
     /// </summary>
-    public async Task InstallDownloadedUpdate()
+    public async Task InstallDownloadedUpdate(CancellationToken cancellationToken)
     {
         try {
-            if (FindDownload() is not { } packagePath || !await IsAutomaticUpdateOn(CancellationToken.None).Vhc())
+            if (FindDownload() is not { } packagePath || !await IsAutomaticUpdateOn(cancellationToken).Vhc())
                 return;
 
             lock (_stateLock) {
@@ -139,14 +139,14 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     /// its package - a filtered network may let it through only in the tunnel - is made again now, while automatic
     /// updates are on. What it downloads waits for the disconnect, as any download made while the VPN is in use.
     /// </summary>
-    public async Task RetryMissedUpdate()
+    public async Task RetryMissedUpdate(CancellationToken cancellationToken)
     {
         try {
-            if (!File.Exists(_missedPath) || !await IsAutomaticUpdateOn(CancellationToken.None).Vhc())
+            if (!File.Exists(_missedPath) || !await IsAutomaticUpdateOn(cancellationToken).Vhc())
                 return;
 
             VhLogger.Instance.LogInformation("Running the updater again: its last run could not reach the server.");
-            await RunUpdater(CancellationToken.None).Vhc();
+            await RunUpdater(cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not run the updater again.");

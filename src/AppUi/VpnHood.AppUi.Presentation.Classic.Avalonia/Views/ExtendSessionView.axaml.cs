@@ -22,7 +22,8 @@ public partial class ExtendSessionView : UserControl, IPage
         var options = state.VpnProfile?.SelectedLocationInfo?.Options;
         if (state.SessionStatus?.CanExtendByRewardedAd == true)
             Rows.Children.Add(new PromoteRow(Mdi.PlayBoxLockOpenOutline, s.WatchRewardedAd,
-                s.ExtendByRewardedAdDesc(options?.PremiumByRewardedAd ?? 0), s.ShowAd, ShowRewardedAd));
+                s.ExtendByRewardedAdDesc(options?.PremiumByRewardedAd ?? 0), s.ShowAd,
+                () => ShowRewardedAd(CancellationToken.None)));
         if (options?.PremiumByPurchase == true || options?.PremiumByCode == true)
             Rows.Children.Add(new PromoteRow(Mdi.CrownCircleOutline, s.GoPremium, s.GoPremiumDesc, s.Upgrade, () => {
                 _host.Navigate(new PurchaseSubscriptionView(_host, null));
@@ -37,10 +38,10 @@ public partial class ExtendSessionView : UserControl, IPage
     }
 
     // the ad, then the word that the session grew, back on the home
-    private async Task ShowRewardedAd()
+    private async Task ShowRewardedAd(CancellationToken cancellationToken)
     {
         using (_host.Loading(Strings.Current.ExtendByRewardedAdNote))
-            await VhApp.Api.App.ExtendByRewardedAd(CancellationToken.None);
+            await VhApp.Api.App.ExtendByRewardedAd(cancellationToken);
         _host.ShowSnackbar(Strings.Current.ExtendByRewardedAdConfirmMsg, SnackbarKind.Active);
         _host.GoHome();
     }

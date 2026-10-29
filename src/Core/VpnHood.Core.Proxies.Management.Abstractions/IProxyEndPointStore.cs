@@ -8,35 +8,35 @@ namespace VpnHood.Core.Proxies.Management.Abstractions;
 /// </summary>
 public interface IProxyEndPointStore : IDisposable
 {
-    Task<IReadOnlyList<ProxyEndPointRecord>> List();
-    Task<ProxyEndPointRecord?> Get(string id);
-    Task<int> Count();
+    Task<IReadOnlyList<ProxyEndPointRecord>> List(CancellationToken cancellationToken);
+    Task<ProxyEndPointRecord?> Get(string id, CancellationToken cancellationToken);
+    Task<int> Count(CancellationToken cancellationToken);
 
     /// <summary>Filter, order (enabled desc, quality asc) and page inside the store, so callers
     /// never need to load the whole table.</summary>
-    Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options);
+    Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options, CancellationToken cancellationToken);
 
     /// <summary>Insert or update endpoints by id. Endpoint fields always overwrite;
     /// status columns are preserved on conflict when <paramref name="keepExistingStatus"/> is set,
     /// and is_enabled is preserved when <paramref name="keepExistingEnabled"/> is set.</summary>
-    Task Upsert(IReadOnlyList<ProxyEndPointRecord> records, bool keepExistingStatus = true,
-        bool keepExistingEnabled = false);
+    Task Upsert(IReadOnlyList<ProxyEndPointRecord> records, bool keepExistingStatus, bool keepExistingEnabled,
+        CancellationToken cancellationToken);
 
     /// <summary>Update status and is_enabled of existing rows by id. Never inserts, so it can not
     /// resurrect rows deleted by the other process.</summary>
-    Task UpdateStatuses(IReadOnlyList<ProxyEndPointInfo> infos);
+    Task UpdateStatuses(IReadOnlyList<ProxyEndPointInfo> infos, CancellationToken cancellationToken);
 
-    Task Delete(IReadOnlyList<string> ids);
-    Task DeleteAll(DeleteAllOptions options);
-    Task DisableAllFailed();
-    Task SetCountryCode(string id, string? countryCode);
-    Task ResetStatuses();
+    Task Delete(IReadOnlyList<string> ids, CancellationToken cancellationToken);
+    Task DeleteAll(DeleteAllOptions options, CancellationToken cancellationToken);
+    Task DisableAllFailed(CancellationToken cancellationToken);
+    Task SetCountryCode(string id, string? countryCode, CancellationToken cancellationToken);
+    Task ResetStatuses(CancellationToken cancellationToken);
 
     /// <summary>Merge a new endpoint list into the store using the standard priority rules
     /// (see ProxyEndPointUpdater.Merge): upsert survivors, delete pruned rows, single transaction.</summary>
     Task Merge(IReadOnlyList<ProxyEndPoint> newEndPoints, int? maxItemCount, int? maxPenalty,
-        bool removeDuplicateIps);
+        bool removeDuplicateIps, CancellationToken cancellationToken);
 
-    Task<long> GetQueuePosition();
-    Task SetQueuePosition(long queuePosition);
+    Task<long> GetQueuePosition(CancellationToken cancellationToken);
+    Task SetQueuePosition(long queuePosition, CancellationToken cancellationToken);
 }

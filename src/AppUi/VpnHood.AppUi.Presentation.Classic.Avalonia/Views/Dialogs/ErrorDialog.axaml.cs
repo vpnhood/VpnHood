@@ -49,7 +49,8 @@ public partial class ErrorDialog : DialogBase
             if (VhApp.VpnProfileId is not { } profileId)
                 return;
             Close();
-            await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: false, ConnectPlanId.Normal));
+            await _host.ViewModel.ConnectWith(
+                new ConnectRequest(profileId, null, IsPremium: false, ConnectPlanId.Normal), CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -62,7 +63,9 @@ public partial class ErrorDialog : DialogBase
             if (VhApp.VpnProfileId is not { } profileId)
                 return;
             Close();
-            await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: true, ConnectPlanId.PremiumByTrial));
+            await _host.ViewModel.ConnectWith(
+                new ConnectRequest(profileId, null, IsPremium: true, ConnectPlanId.PremiumByTrial),
+                CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -73,7 +76,7 @@ public partial class ErrorDialog : DialogBase
     {
         try {
             Close();
-            await _host.ViewModel.Diagnose();
+            await _host.ViewModel.Diagnose(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

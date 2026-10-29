@@ -15,7 +15,7 @@ public interface IDomainFilter : IDisposable
     // external configuration (e.g. the sqlite gate chain and its db paths) re-reads it and swaps its own
     // parts, raising Changed if verdicts may differ. A stage with nothing to re-read simply forwards;
     // a leaf does nothing. The caller never knows which stage reacted.
-    void Reconfigure();
+    void Reconfigure(CancellationToken cancellationToken);
 
     // True while this pipe can never return a non-Default verdict — no rules anywhere down the chain
     // (wrapping stages aggregate: own rules AND next). Lets the endpoint skip work that only exists to

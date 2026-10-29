@@ -13,10 +13,13 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
     private readonly Lock _closeLock = new();
     private bool _disposed;
 
-    public async Task<string[]?> GetNetworkInterfaceNames()
+    public async Task<string[]?> GetNetworkInterfaceNames(CancellationToken cancellationToken)
     {
         try {
-            return await netConfigurationProvider.GetInterfaceNames().Vhc();
+            return await netConfigurationProvider.GetInterfaceNames(cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not find the default network interface name.");
@@ -24,7 +27,7 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         }
     }
 
-    public async Task AddIpAddress(IPAddress ipAddress, string? interfaceName)
+    public async Task AddIpAddress(IPAddress ipAddress, string? interfaceName, CancellationToken cancellationToken)
     {
         // a listener on any address needs none added, so no interface is looked up for it: a
         // container has no tool to find one
@@ -33,9 +36,11 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
 
         try {
             // find default interface name
-            if (interfaceName == "*" || string.IsNullOrEmpty(interfaceName))
-                interfaceName = (await netConfigurationProvider.GetInterfaceNames().Vhc()).FirstOrDefault() ??
+            if (interfaceName == "*" || string.IsNullOrEmpty(interfaceName)) {
+                var interfaceNames = await netConfigurationProvider.GetInterfaceNames(cancellationToken).Vhc();
+                interfaceName = interfaceNames.FirstOrDefault() ??
                                 throw new Exception("Could not find the default network interface name.");
+            }
 
             // remove already added ip address if it belongs to different interface
             if (_ipAddresses.TryGetValue(ipAddress, out var oldInterfaceName)) {
@@ -46,17 +51,22 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
             }
 
             // add new ip address if it does not exist in the system
-            if (await netConfigurationProvider.IpAddressExists(ipAddress).Vhc())
+            if (await netConfigurationProvider.IpAddressExists(ipAddress, cancellationToken).Vhc())
                 return;
 
             VhLogger.Instance.LogInformation("Adding IP address to system. IP: {IP}, InterfaceName: {interfaceName}",
                 ipAddress, interfaceName);
 
-            await netConfigurationProvider.AddIpAddress(ipAddress, interfaceName).Vhc();
+            // not under the token: a cancel ends only the wait for the command, which still adds the address, and an
+            // address added but not tracked would stay on the system
+            await netConfigurationProvider.AddIpAddress(ipAddress, interfaceName, CancellationToken.None).Vhc();
 
             // removed at once if a close came meanwhile: it removed only what it found
             if (!TrackIpAddress(ipAddress, interfaceName))
                 RemoveIpAddress(ipAddress);
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex,
@@ -95,10 +105,13 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         }
     }
 
-    public async Task<string?> GetTcpCongestionControl()
+    public async Task<string?> GetTcpCongestionControl(CancellationToken cancellationToken)
     {
         try {
-            return await netConfigurationProvider.GetTcpCongestionControl().Vhc();
+            return await netConfigurationProvider.GetTcpCongestionControl(cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not read TCP congestion control.");
@@ -106,14 +119,17 @@ public class NetConfigurationService(INetConfigurationProvider netConfigurationP
         }
     }
 
-    public async Task SetTcpCongestionControl(string value)
+    public async Task SetTcpCongestionControl(string value, CancellationToken cancellationToken)
     {
         try {
-            var tcpCongestionControl = await GetTcpCongestionControl().Vhc();
+            var tcpCongestionControl = await GetTcpCongestionControl(cancellationToken).Vhc();
             if (value == tcpCongestionControl || value == "*" || tcpCongestionControl == null)
                 return;
 
-            await netConfigurationProvider.SetTcpCongestionControl(value).Vhc();
+            await netConfigurationProvider.SetTcpCongestionControl(value, cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not set TCP congestion control.");

@@ -8,7 +8,7 @@ public static class StreamExtensions
     extension(Stream stream)
     {
         public async Task<string> ReadStringAtMostAsync(int maxByteCount,
-            Encoding encoding, CancellationToken cancellationToken = default)
+            Encoding encoding, CancellationToken cancellationToken)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             if (!stream.CanRead) throw new InvalidOperationException("Stream must be readable.");

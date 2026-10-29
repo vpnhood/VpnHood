@@ -39,7 +39,7 @@ public class CachedDomainFilter : IDomainFilter
     }
 
     // nothing external to re-read here; invalidation comes back up via Changed if a stage below swaps
-    public void Reconfigure() => _nextFilter?.Reconfigure();
+    public void Reconfigure(CancellationToken cancellationToken) => _nextFilter?.Reconfigure(cancellationToken);
 
     // a cache holds no rules of its own
     public bool IsEmpty => _nextFilter?.IsEmpty ?? true;

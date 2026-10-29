@@ -62,7 +62,7 @@ public partial class HomeView : UserControl, IPage
     private async void OnConnectClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await _viewModel.ToggleConnect();
+            await _viewModel.ToggleConnect(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -150,7 +150,7 @@ public partial class HomeView : UserControl, IPage
             }
 
             try {
-                await _viewModel.SignIn();
+                await _viewModel.SignIn(onPurchase: false, CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);

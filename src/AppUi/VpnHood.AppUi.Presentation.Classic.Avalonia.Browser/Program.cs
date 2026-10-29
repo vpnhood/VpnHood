@@ -9,7 +9,7 @@ internal static class Program
 {
     private static Task Main(string[] args)
     {
-        return AvaloniaBrowserHost.RunAsync<ClassicAvaloniaApp>(args);
+        return AvaloniaBrowserHost.RunAsync<ClassicAvaloniaApp>(args, CancellationToken.None);
     }
 
     // Avalonia's designer and previewer look for this by name.

@@ -830,7 +830,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     // error, its reads just stop, and its routes and DNS servers go with it, so the host's traffic leaves
     // outside the tunnel while the session shows connected: these events are the one signal of it. Under
     // the restart lock, so no restart runs between the look and the stop. An event during a start is
-    // dropped here, and the start looks once at its end. Never throws.
+    // dropped here, and the start looks once at its end. Never throws, and takes no token: it only tries
+    // the lock, never waits for it.
     private async Task CheckAdapterInterface()
     {
         if (!CheckAdapterInterfaceAfterNetworkChanged || !IsStarted || !_keepStarted || _isStarting ||

@@ -118,7 +118,7 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
 
     // An unfinished Custom entry never holds the page: nothing is saved until here, so an invalid
     // form is dropped with a word, and the mode saved before the radio moved stays in force.
-    public async Task<bool> CanLeave()
+    public async Task<bool> CanLeave(CancellationToken cancellationToken)
     {
         if (_mode == DnsMode.AdapterDns && !Validate()) {
             _host.ShowSnackbar(Strings.Current.CustomDnsDiscarded, SnackbarKind.Warning);
@@ -133,7 +133,7 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
                 .Where(x => !string.IsNullOrEmpty(x))
                 .Select(x => IPAddress.Parse(x ?? ""))
                 .ToArray();
-            await VhApp.SaveUserSettings(settings, CancellationToken.None);
+            await VhApp.SaveUserSettings(settings, cancellationToken);
             _host.ViewModel.Refresh();
             return true;
         }

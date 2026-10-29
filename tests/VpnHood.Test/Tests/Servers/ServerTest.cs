@@ -68,13 +68,12 @@ public class ServerTest : TestBase
         await using var server =
             await TestHelper.CreateServer(accessManager, netConfigurationProvider: netConfigurationProvider);
 
-        CollectionAssert.AreEqual(await netConfigurationProvider.GetInterfaceNames(),
-            accessManager.LastServerInfo?.NetworkInterfaceNames);
+        var interfaceNames = await netConfigurationProvider.GetInterfaceNames(TestCt);
+        CollectionAssert.AreEqual(interfaceNames, accessManager.LastServerInfo?.NetworkInterfaceNames);
         Assert.HasCount(1, netConfigurationProvider.IpAddresses);
         Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Key,
             accessManager.ServerConfig.TcpEndPointsValue.First().Address);
-        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Value,
-            (await netConfigurationProvider.GetInterfaceNames()).First());
+        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Value, interfaceNames.First());
 
         await server.DisposeAsync();
         Assert.IsEmpty(netConfigurationProvider.IpAddresses);
@@ -226,7 +225,7 @@ public class ServerTest : TestBase
         };
 
         // a configuration under way, held in its listen
-        var configure = server.ServerHost.Configure(configuration);
+        var configure = server.ServerHost.Configure(configuration, TestCt);
         await VhTestUtil.AssertEqualsWait(1, () => quicServer.ListenHold.HeldCount,
             "The configuration should be listening.", cancellationToken: TestCt);
 
@@ -236,7 +235,7 @@ public class ServerTest : TestBase
         await Task.WhenAll(configure, close).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
         Assert.AreEqual(1, Volatile.Read(ref quicServer.HeldCloseCount));
 
-        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => server.ServerHost.Configure(configuration));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => server.ServerHost.Configure(configuration, TestCt));
     }
 
     [TestMethod]
@@ -280,7 +279,7 @@ public class ServerTest : TestBase
         var netConfigurationService = new NetConfigurationService(netConfigurationProvider);
 
         // an add under way, held at the provider, when the close runs
-        var add = netConfigurationService.AddIpAddress(IPAddress.Parse("10.10.0.1"), "eth0");
+        var add = netConfigurationService.AddIpAddress(IPAddress.Parse("10.10.0.1"), "eth0", TestCt);
         await VhTestUtil.AssertEqualsWait(1, () => netConfigurationProvider.AddHold.HeldCount,
             "The add should be under way.", cancellationToken: TestCt);
         netConfigurationService.Dispose();

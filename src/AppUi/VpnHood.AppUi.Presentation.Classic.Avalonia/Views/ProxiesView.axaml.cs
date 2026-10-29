@@ -39,7 +39,8 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
         _host = host;
         InitializeComponent();
         var s = Strings.Current;
-        _refreshTimer = new DispatcherTimer(AutoRefreshPeriod, DispatcherPriority.Background, (_, _) => _ = LoadProxies(showLoading: false));
+        _refreshTimer = new DispatcherTimer(AutoRefreshPeriod, DispatcherPriority.Background,
+            (_, _) => _ = LoadProxies(showLoading: false, CancellationToken.None));
 
         // the mode
         foreach (var (mode, title) in new[] { (AppProxyMode.NoProxy, s.NoProxy), (AppProxyMode.Device, s.System), (AppProxyMode.Manual, s.Manual) })
@@ -141,10 +142,10 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
         DevicePanel.IsVisible = mode == AppProxyMode.Device;
         ManualPanel.IsVisible = mode == AppProxyMode.Manual;
         if (mode == AppProxyMode.Device)
-            _ = ShowDeviceProxy();
+            _ = ShowDeviceProxy(CancellationToken.None);
         if (mode == AppProxyMode.Manual) {
             LoadAutoUpdateSettings();
-            _ = LoadProxies(showLoading: true);
+            _ = LoadProxies(showLoading: true, CancellationToken.None);
             StartPeriodicRefresh();
         }
         else {
@@ -177,11 +178,11 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     }
 
     // DeviceProxy.vue: the device's proxy, read once on arrival
-    private async Task ShowDeviceProxy()
+    private async Task ShowDeviceProxy(CancellationToken cancellationToken)
     {
         try {
             DeviceList.Children.Clear();
-            var proxy = await VhApp.Api.ProxyEndPoints.GetDevice(CancellationToken.None);
+            var proxy = await VhApp.Api.ProxyEndPoints.GetDevice(cancellationToken);
             NoDeviceProxy.IsVisible = proxy == null;
             if (proxy != null)
                 DeviceList.Children.Add(new ProxyListItem(proxy, isLast: true));
@@ -230,7 +231,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
                 return;
             UrlBox.Text = null;
             ProxySettings.AutoUpdateOptions.Interval = null;
-            await SaveAutoUpdateSettings();
+            await SaveAutoUpdateSettings(CancellationToken.None);
             ShowInterval();
         }
         catch (Exception ex) {
@@ -248,7 +249,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
         try {
             if (!HasUrl || UrlBox.Text == _oldUrl || _isReloadingUrl)
                 return;
-            await ReloadFromUrl();
+            await ReloadFromUrl(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -258,32 +259,32 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     private async void OnReloadClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await ReloadFromUrl();
+            await ReloadFromUrl(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
         }
     }
 
-    private async Task SaveAutoUpdateSettings()
+    private async Task SaveAutoUpdateSettings(CancellationToken cancellationToken)
     {
         var settings = VhApp.UserSettings;
         var text = UrlBox.Text?.Trim();
         settings.ProxySettings.AutoUpdateOptions.Url = string.IsNullOrEmpty(text) ? null : new Uri(text);
-        await VhApp.SaveUserSettings(settings, CancellationToken.None);
+        await VhApp.SaveUserSettings(settings, cancellationToken);
     }
 
-    private async Task ReloadFromUrl()
+    private async Task ReloadFromUrl(CancellationToken cancellationToken)
     {
         _isReloadingUrl = true;
         ReloadIcon.Classes.Set("spinner", true);
         ShowUrlState();
         try {
-            await SaveAutoUpdateSettings();
-            await VhApp.Api.ProxyEndPoints.ReloadUrl(CancellationToken.None);
+            await SaveAutoUpdateSettings(cancellationToken);
+            await VhApp.Api.ProxyEndPoints.ReloadUrl(cancellationToken);
             _oldUrl = UrlBox.Text;
             _page = 1;
-            await LoadProxies(showLoading: true);
+            await LoadProxies(showLoading: true, cancellationToken);
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);
@@ -299,7 +300,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     {
         try {
             ProxySettings.AutoUpdateOptions.Interval = interval;
-            await SaveAutoUpdateSettings();
+            await SaveAutoUpdateSettings(CancellationToken.None);
             ShowInterval();
         }
         catch (Exception ex) {
@@ -309,7 +310,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
 
     // ---- SavedProxies ----
 
-    private async Task LoadProxies(bool showLoading)
+    private async Task LoadProxies(bool showLoading, CancellationToken cancellationToken)
     {
         if (_disposed)
             return;
@@ -329,7 +330,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
                 includeDisabled: filter is null or "disabled",
                 recordIndex: (_page - 1) * ItemsPerPage,
                 recordCount: ItemsPerPage,
-                cancellationToken: CancellationToken.None);
+                cancellationToken: cancellationToken);
             _proxies = result.Items;
             _totalCount = result.TotalCount;
             ShowProxies();
@@ -393,10 +394,10 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
         FilterButton.IsEnabled = !isDisabled;
     }
 
-    private async Task RefreshList()
+    private async Task RefreshList(CancellationToken cancellationToken)
     {
         _page = 1;
-        await LoadProxies(showLoading: true);
+        await LoadProxies(showLoading: true, cancellationToken);
     }
 
     // a menu action, with its question first when it destroys something
@@ -408,7 +409,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
             _isBusy = true;
             UpdateButtons();
             await action();
-            await RefreshList();
+            await RefreshList(CancellationToken.None);
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);
@@ -449,7 +450,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     {
         try {
             _filter = filter;
-            await RefreshList();
+            await RefreshList(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -460,7 +461,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     {
         try {
             if (await _host.ShowDialog(new ProxyEditDialog(_host, ProxySheetKind.Add, null)))
-                await RefreshList();
+                await RefreshList(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -471,7 +472,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     {
         try {
             if (await _host.ShowDialog(new ProxyEditDialog(_host, ProxySheetKind.AddList, null)))
-                await RefreshList();
+                await RefreshList(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -484,7 +485,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
             if (sender is not ProxyListItem item)
                 return;
             if (await _host.ShowDialog(new ProxyEditDialog(_host, ProxySheetKind.Edit, item.Proxy)))
-                await RefreshList();
+                await RefreshList(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -494,7 +495,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     private async void OnFirstPageClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await GoToPage(1);
+            await GoToPage(1, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -503,7 +504,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     private async void OnPrevPageClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await GoToPage(_page - 1);
+            await GoToPage(_page - 1, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -512,7 +513,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     private async void OnNextPageClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await GoToPage(_page + 1);
+            await GoToPage(_page + 1, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -521,17 +522,17 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     private async void OnLastPageClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await GoToPage((_totalCount + ItemsPerPage - 1) / ItemsPerPage);
+            await GoToPage((_totalCount + ItemsPerPage - 1) / ItemsPerPage, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
         }
     }
 
-    private async Task GoToPage(int page)
+    private async Task GoToPage(int page, CancellationToken cancellationToken)
     {
         _page = Math.Max(1, page);
-        await LoadProxies(showLoading: true);
+        await LoadProxies(showLoading: true, cancellationToken);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

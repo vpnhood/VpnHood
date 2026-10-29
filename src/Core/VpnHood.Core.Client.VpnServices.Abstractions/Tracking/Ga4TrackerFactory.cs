@@ -31,7 +31,7 @@ public class Ga4TrackerFactory : ITrackerFactory
 
         // use ITracker extension methods
         ITracker tracker = ga4TagTracker;
-        _ = tracker.TryTrack(new TrackEvent { EventName = TrackEventNames.SessionStart });
+        _ = tracker.TryTrack(new TrackEvent { EventName = TrackEventNames.SessionStart }, CancellationToken.None);
 
         return tracker;
     }

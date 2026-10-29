@@ -76,10 +76,10 @@ public sealed class SqliteDomainFilterChain : IDomainFilter
         return _next?.Process(domain) ?? FilterAction.Default;
     }
 
-    public void Reconfigure()
+    public void Reconfigure(CancellationToken cancellationToken)
     {
         lock (_reconfigureLock) {
-            var dbPaths = SplitDbManifest.Read(_dbFolder, CancellationToken.None);
+            var dbPaths = SplitDbManifest.Read(_dbFolder, cancellationToken);
             if (!dbPaths.SequenceEqual(_dbPaths)) {
                 VhLogger.Instance.LogInformation(
                     "SqliteDomainFilterChain is swapping its split-domain gates. OldCount: {OldCount}, NewCount: {NewCount}",
@@ -107,7 +107,7 @@ public sealed class SqliteDomainFilterChain : IDomainFilter
         }
 
         // the command rolls DOWN the pipe
-        _next?.Reconfigure();
+        _next?.Reconfigure(cancellationToken);
     }
 
     // no Changed on teardown: the whole pipe is going away, nothing is left to invalidate.

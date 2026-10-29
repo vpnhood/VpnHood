@@ -27,8 +27,8 @@ public interface IProxyConnector : IAsyncDisposable
 
     void RecordFailed(TcpClient tcpClient, Exception ex);
     Task CheckServers(ISocketFactory socketFactory, CancellationToken cancellationToken);
-    Task UpdateOptions(ProxyOptions proxyOptions);
+    Task UpdateOptions(ProxyOptions proxyOptions, CancellationToken cancellationToken);
 
     /// <summary>Persist any pending state (no-op for non-persistent implementations).</summary>
-    Task Flush();
+    Task Flush(CancellationToken cancellationToken);
 }

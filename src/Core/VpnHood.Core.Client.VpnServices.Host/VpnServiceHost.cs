@@ -108,7 +108,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         if (client.State is not ClientState.Disposed) {
             // the info as the client has it now: the write above may wait for its lock, and until it is
             // done the context's info is the one before
-            _vpnServiceHandler.ShowNotification(CreateConnectionInfo(client, _disconnectException));
+            _vpnServiceHandler.ShowNotification(CreateConnectionInfo(client, _disconnectException),
+                CancellationToken.None);
             return;
         }
 
@@ -199,7 +200,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
                 cancellationToken).Vhc();
 
             // show notification as soon as possible
-            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo);
+            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo, cancellationToken);
 
             // sni is sensitive, must be explicitly enabled
             clientOptions.ForceLogSni |=
@@ -265,14 +266,14 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 
             // show notification.
             await UpdateConnectionInfo(client, cancellationToken).Vhc();
-            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo);
+            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo, cancellationToken);
 
             // let connect in the background
             // ignore cancellation because it will be cancelled by disconnect or dispose
             await client.Connect(cancellationToken).Vhc();
 
             // a reconfigure that came while the session was not up
-            await Reconfigurer.ApplyMissed(client).Vhc();
+            await Reconfigurer.ApplyMissed(client, cancellationToken).Vhc();
         }
         catch (Exception ex) when (Client is null) {
             // no client, so no adapter is up: the tunnel goes back
@@ -304,7 +305,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
     {
         // flush pending proxy statuses so the app process sees fresh data in the shared endpoint store
         if (client.ProxyConnector != null)
-            await client.ProxyConnector.Flush().Vhc();
+            await client.ProxyConnector.Flush(cancellationToken).Vhc();
 
         // nothing from a client that is no longer the current one. The session before the client check: one begun in
         // between has detached this client already

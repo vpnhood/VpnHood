@@ -352,7 +352,8 @@ public class TestHelper : IDisposable
             ProxyMode.Managed => await ManagedProxyConnector.Create(
                 proxyOptions: proxyOptions,
                 store: new ProxyEndPointStore(Path.Combine(WorkingPath, "ClientCore", "proxies", "proxies.db")),
-                serverCheckTimeout: clientOptions.Transport.ServerQueryTimeout),
+                serverCheckTimeout: clientOptions.Transport.ServerQueryTimeout,
+                cancellationToken: CancellationToken.None),
             _ => null
         };
     }
@@ -386,7 +387,7 @@ public class TestHelper : IDisposable
 
         // test starting the client
         if (autoConnect)
-            await client.Connect();
+            await client.Connect(CancellationToken.None);
 
         return client;
     }

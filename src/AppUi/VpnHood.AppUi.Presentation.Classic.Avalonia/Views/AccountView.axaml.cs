@@ -34,13 +34,13 @@ public partial class AccountView : UserControl, IPage
         InitializeComponent();
         Fill();
         // THE refresh: the app never polls the account; opening this page is the person asking
-        _ = Refresh();
+        _ = Refresh(CancellationToken.None);
     }
 
-    private async Task Refresh()
+    private async Task Refresh(CancellationToken cancellationToken)
     {
         try {
-            await VhApp.LoadAccount(true, CancellationToken.None);
+            await VhApp.LoadAccount(true, cancellationToken);
             _host.ViewModel.Refresh();
             Fill();
         }
@@ -175,7 +175,7 @@ public partial class AccountView : UserControl, IPage
         AutomationProperties.SetName(eye, s.ShowCode);
         eye.Click += async (_, _) => {
             try {
-                await ToggleReveal(eye);
+                await ToggleReveal(eye, CancellationToken.None);
             }
             catch (Exception ex) {
                 await this.ReportError(ex);
@@ -191,7 +191,7 @@ public partial class AccountView : UserControl, IPage
         AutomationProperties.SetName(copy, s.CopyCode);
         copy.Click += async (_, _) => {
             try {
-                await CopyCode(copy);
+                await CopyCode(copy, CancellationToken.None);
             }
             catch (Exception ex) {
                 await this.ReportError(ex);
@@ -205,7 +205,7 @@ public partial class AccountView : UserControl, IPage
     }
 
     // fetched on demand, never on arrival: the raw code leaves the app only when asked for
-    private async Task<string?> LoadPremiumCode()
+    private async Task<string?> LoadPremiumCode(CancellationToken cancellationToken)
     {
         if (_premiumCode != null)
             return _premiumCode;
@@ -216,15 +216,15 @@ public partial class AccountView : UserControl, IPage
             return null;
         }
 
-        var code = await VhApp.Api.VpnProfiles.GetAccessCode(profileId.Value, CancellationToken.None);
+        var code = await VhApp.Api.VpnProfiles.GetAccessCode(profileId.Value, cancellationToken);
         _premiumCode = string.IsNullOrEmpty(code) ? Strings.Current.CouldNotGetPremiumCode : Format.CodeGroups(code);
         return _premiumCode;
     }
 
-    private async Task ToggleReveal(Button eye)
+    private async Task ToggleReveal(Button eye, CancellationToken cancellationToken)
     {
         if (!_isCodeRevealed)
-            await LoadPremiumCode();
+            await LoadPremiumCode(cancellationToken);
         _isCodeRevealed = !_isCodeRevealed;
         if (_codeText != null)
             _codeText.Text = _isCodeRevealed ? _premiumCode ?? MaskedCode : MaskedCode;
@@ -233,9 +233,9 @@ public partial class AccountView : UserControl, IPage
         AutomationProperties.SetName(eye, _isCodeRevealed ? Strings.Current.HideCode : Strings.Current.ShowCode);
     }
 
-    private async Task CopyCode(Button copy)
+    private async Task CopyCode(Button copy, CancellationToken cancellationToken)
     {
-        var code = await LoadPremiumCode();
+        var code = await LoadPremiumCode(cancellationToken);
         if (code == null)
             return;
         // through the host's shell where it names one (a sandboxed app's, AvaloniaUiHosting.Shell)
@@ -249,7 +249,7 @@ public partial class AccountView : UserControl, IPage
             return;
         glyph.Text = Mdi.Check;
         glyph.Classes.Set("active", true);
-        await Task.Delay(2000);
+        await Task.Delay(2000, cancellationToken);
         glyph.Text = Mdi.ContentCopy;
         glyph.Classes.Set("active", false);
     }
@@ -284,7 +284,7 @@ public partial class AccountView : UserControl, IPage
     private async void OnSignOutClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await _host.ViewModel.SignOut();
+            await _host.ViewModel.SignOut(CancellationToken.None);
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);
@@ -309,7 +309,7 @@ public partial class AccountView : UserControl, IPage
             if (!await _host.Confirm(Strings.Current.ConfirmRemovePremiumCode, Strings.Current.ConfirmRemovePremiumCodeDesc))
                 return;
             _host.GoHome();
-            await _host.ViewModel.RemovePremiumCode();
+            await _host.ViewModel.RemovePremiumCode(CancellationToken.None);
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);
@@ -353,7 +353,7 @@ public partial class AccountView : UserControl, IPage
         try {
             if (!await _host.ShowDialog(new DeleteAccountDialog()))
                 return;
-            await _host.ViewModel.DeleteAccount();
+            await _host.ViewModel.DeleteAccount(CancellationToken.None);
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);

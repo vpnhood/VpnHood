@@ -44,7 +44,7 @@ internal class ClientSessionBuilder(
 {
     public async Task<ClientSession> Build(
         CancellationToken disposeCancellationToken,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         using var linkedCts =
             CancellationTokenSource.CreateLinkedTokenSource(disposeCancellationToken, cancellationToken);
@@ -285,7 +285,7 @@ internal class ClientSessionBuilder(
                     };
 
                     _ = ga4Tracking.TryTrack(new Ga4TagEvent { EventName = TrackEventNames.SessionStart },
-                        VhLogger.Instance);
+                        VhLogger.Instance, CancellationToken.None);
                 }
 
                 if (tracker != null) {
@@ -295,7 +295,7 @@ internal class ClientSessionBuilder(
                             isIpV6Supported: vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
                             hasRedirected: !allowRedirect,
                             endPoint: connectorService.VpnEndPoint.TcpEndPoint,
-                            adNetworkName: null));
+                            adNetworkName: null), CancellationToken.None);
                 }
             }
 

@@ -38,9 +38,9 @@ internal static class Program
         // is being retired.
         switch (args.FirstOrDefault()) {
             case "generate":
-                return GenerateCommand.Run(args.Skip(1).ToArray());
+                return GenerateCommand.Run(args.Skip(1).ToArray(), CancellationToken.None);
             case "frame":
-                return FrameCommand.Run(args.Skip(1).ToArray());
+                return FrameCommand.Run(args.Skip(1).ToArray(), CancellationToken.None);
             case "shot":
                 args = args.Skip(1).ToArray();
                 break;
@@ -58,7 +58,7 @@ internal static class Program
         // what goes wrong before the UI is up is reported the way the shot itself would be: one
         // line on stderr, exit 1 - the engine relays it under the shot's name
         try {
-            return Run(args, options);
+            return Run(args, options, CancellationToken.None);
         }
         catch (Exception ex) {
             Console.Error.WriteLine($"FAILED    {ex.Message}");
@@ -66,7 +66,7 @@ internal static class Program
         }
     }
 
-    private static int Run(string[] args, ShotOptions options)
+    private static int Run(string[] args, ShotOptions options, CancellationToken cancellationToken)
     {
         var log = new CapturingLogger();
         VhLogger.AddProvider(log);
@@ -82,7 +82,7 @@ internal static class Program
 
         // The UI's start, as every host runs it before Avalonia starts: the API, the content out of
         // the store, the languages the UI has words for.
-        AvaloniaUiHosting.StartAsync<ClassicAvaloniaApp>(api, Store.Open(options.AssetsPath), CancellationToken.None)
+        AvaloniaUiHosting.StartAsync<ClassicAvaloniaApp>(api, Store.Open(options.AssetsPath), cancellationToken)
             .GetAwaiter().GetResult();
 
         // Strings falls back to the language alone and then to English for a culture the store has

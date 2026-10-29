@@ -2,6 +2,6 @@
 
 public interface ISwapMemoryProvider
 {
-    Task<SwapMemoryInfo> GetInfo();
-    Task SetAppSwapMemorySize(long size);
+    Task<SwapMemoryInfo> GetInfo(CancellationToken cancellationToken);
+    Task SetAppSwapMemorySize(long size, CancellationToken cancellationToken);
 }

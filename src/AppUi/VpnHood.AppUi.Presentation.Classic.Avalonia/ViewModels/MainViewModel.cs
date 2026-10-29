@@ -158,40 +158,41 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public MainViewModel()
     {
-        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => Tick());
+        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background,
+            (_, _) => Tick(CancellationToken.None));
         _timer.Start();
         Refresh();
     }
 
     // The clock's beat: one read at a time, as over HTTP a read can outlast the beat.
-    private void Tick()
+    private void Tick(CancellationToken cancellationToken)
     {
         if (_stateRead.IsCompleted)
-            _stateRead = ReadState();
+            _stateRead = ReadState(cancellationToken);
     }
 
     // An action's last step: the state after the action. A read the clock began before the action
     // ended answers with the state before it, so it is waited out and the state read once more - a
     // page that decides on the state, as the premium code's congratulation does, must see the action.
-    public async Task Reload()
+    public async Task Reload(CancellationToken cancellationToken)
     {
         while (!_stateRead.IsCompleted)
             await _stateRead;
 
-        _stateRead = ReadState();
+        _stateRead = ReadState(cancellationToken);
         await _stateRead;
     }
 
     // The state, read again from the app and shown. A read that fails is logged and tried again at the
     // next beat: a warning once per outage, the beat's repeats as debug - a service that is down would
     // be one a second in the system log.
-    private async Task ReadState()
+    private async Task ReadState(CancellationToken cancellationToken)
     {
         if (_disposed)
             return;
 
         try {
-            await VhApp.ReloadState(CancellationToken.None);
+            await VhApp.ReloadState(cancellationToken);
             _isStateReadFailing = false;
             if (!_disposed)
                 Refresh();
@@ -205,9 +206,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The configuration - the features, the settings, the profiles - read again after an action
     // that moved it, then shown.
-    public async Task ReloadInfo()
+    public async Task ReloadInfo(CancellationToken cancellationToken)
     {
-        await VhApp.ReloadInfo(CancellationToken.None);
+        await VhApp.ReloadInfo(cancellationToken);
         Refresh();
     }
 
@@ -223,15 +224,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // app switched to is fetched first, and the page refreshed again when the words are here;
         // in process that is at once.
         if (Strings.Current.CultureName != AppCulture.Name && _cultureSwitch?.IsCompleted != false)
-            _cultureSwitch = SwitchCulture(AppCulture);
+            _cultureSwitch = SwitchCulture(AppCulture, CancellationToken.None);
 
         Refresh(cultureChanged: false);
     }
 
-    private async Task SwitchCulture(CultureInfo culture)
+    private async Task SwitchCulture(CultureInfo culture, CancellationToken cancellationToken)
     {
         try {
-            if (await Strings.Current.SetCultureAsync(culture, CancellationToken.None) && !_disposed)
+            if (await Strings.Current.SetCultureAsync(culture, cancellationToken) && !_disposed)
                 Refresh(cultureChanged: true);
         }
         catch (Exception ex) {
@@ -478,10 +479,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The drawer's "Check for update": the person asked, so the check always answers, and an update's
     // notice shows even after Later. An update the store has shows in the store's own screen.
-    public async Task CheckForUpdate()
+    public async Task CheckForUpdate(CancellationToken cancellationToken)
     {
         _isUpdatePostponed = false;
-        var result = await VhApp.Api.App.VersionCheck(CancellationToken.None);
+        var result = await VhApp.Api.App.VersionCheck(cancellationToken);
         if (result == VersionCheckResult.Latest)
             Host?.ShowSnackbar(Strings.Current.VersionIsLatest);
         else if (result == VersionCheckResult.Failed)
@@ -651,7 +652,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // Connect, or disconnect: the one button's two meanings, decided by the app's own flags, as the
     // web UI's onConnectButtonClick decides them - with its guard against a double press.
-    public async Task ToggleConnect()
+    public async Task ToggleConnect(CancellationToken cancellationToken)
     {
         if (_lastConnectPress >= Environment.TickCount64 - 1000)
             return;
@@ -659,48 +660,48 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         var state = VhApp.State;
         if (state.CanDisconnect) {
-            await Disconnect();
+            await Disconnect(cancellationToken);
             return;
         }
         if (state.CanConnect)
-            await ConnectWithCurrentProfile();
+            await ConnectWithCurrentProfile(isDiagnose: false, cancellationToken);
     }
 
     // Quick Launch - the Windows Store edition's entry of its own in Start: the button's connect, with the chosen
     // server, decided on a fresh state; nothing when the app is connected or on its way.
-    public async Task QuickLaunch()
+    public async Task QuickLaunch(CancellationToken cancellationToken)
     {
-        await Reload();
+        await Reload(cancellationToken);
         if (VhApp.State.CanConnect)
-            await ConnectWithCurrentProfile();
+            await ConnectWithCurrentProfile(isDiagnose: false, cancellationToken);
     }
 
-    public async Task Disconnect()
+    public async Task Disconnect(CancellationToken cancellationToken)
     {
         try {
-            await VhApp.Api.App.Disconnect(CancellationToken.None);
+            await VhApp.Api.App.Disconnect(cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not disconnect.");
         }
         finally {
-            await Reload();
+            await Reload(cancellationToken);
         }
     }
 
     // ConnectManager.connectWithCurrentProfile: no server chosen yet opens the servers page
-    public async Task ConnectWithCurrentProfile(bool isDiagnose = false)
+    public async Task ConnectWithCurrentProfile(bool isDiagnose, CancellationToken cancellationToken)
     {
         if (VhApp.VpnProfileId is not { } profileId) {
             Host?.Navigate(new LocationsView(this, Host));
             return;
         }
-        await ConnectWithProfile(profileId, isDiagnose);
+        await ConnectWithProfile(profileId, isDiagnose, cancellationToken);
     }
 
     // ConnectManager.connectWithProfile: the server's own choice of location and side, a premium
     // person always on the premium side of the automatic choice
-    public async Task ConnectWithProfile(Guid vpnProfileId, bool isDiagnose = false)
+    public async Task ConnectWithProfile(Guid vpnProfileId, bool isDiagnose, CancellationToken cancellationToken)
     {
         var info = VhApp.FindVpnProfileInfo(vpnProfileId);
         var selected = info?.SelectedLocationInfo;
@@ -712,23 +713,24 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             serverLocation = null;
         }
 
-        await ConnectWith(new ConnectRequest(vpnProfileId, serverLocation, isPremium, ConnectPlanId.Normal, isDiagnose));
+        await ConnectWith(new ConnectRequest(vpnProfileId, serverLocation, isPremium, ConnectPlanId.Normal, isDiagnose),
+            cancellationToken);
     }
 
     // ConnectManager.connectWithLocation: the promote page first when the location asks to be
     // asked, and the connect only when it does not.
-    public async Task ConnectWith(ConnectRequest request)
+    public async Task ConnectWith(ConnectRequest request, CancellationToken cancellationToken)
     {
         if (request is { ServerLocation: not null, IsDiagnose: false } && ShowPromoteIfNeeded(request))
             return;
 
-        await Connect(request);
+        await Connect(request, cancellationToken);
     }
 
     // The connect itself, with nobody asked anything, and the profile's choice written. The promote
     // page calls THIS and not ConnectWith: the person standing on that page has just answered the
     // question, so asking it again would put the same page in front of them for ever.
-    public async Task Connect(ConnectRequest request)
+    public async Task Connect(ConnectRequest request, CancellationToken cancellationToken)
     {
         if (request.GoToHome)
             Host?.GoHome();
@@ -736,8 +738,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         try {
             var api = VhApp.Api;
             var connect = request.IsDiagnose
-                ? api.App.Diagnose(request.VpnProfileId, request.ServerLocation, request.PlanId, CancellationToken.None)
-                : api.App.Connect(request.VpnProfileId, request.ServerLocation, request.PlanId, CancellationToken.None);
+                ? api.App.Diagnose(request.VpnProfileId, request.ServerLocation, request.PlanId, cancellationToken)
+                : api.App.Connect(request.VpnProfileId, request.ServerLocation, request.PlanId, cancellationToken);
 
             // the profile's choice, while the connect runs. No settings save: the app's connect makes the
             // profile the one it is set to, and a save would send the settings to a VPN service still making
@@ -745,7 +747,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             await api.VpnProfiles.Update(request.VpnProfileId, new VpnProfileUpdateParams {
                 IsPremiumLocationSelected = new Patch<bool>(request.IsPremium),
                 SelectedLocation = new Patch<string?>(request.ServerLocation)
-            }, CancellationToken.None);
+            }, cancellationToken);
 
             await connect;
         }
@@ -753,7 +755,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             VhLogger.Instance.LogError(ex, "Could not connect.");
         }
         finally {
-            await Reload();
+            await Reload(cancellationToken);
         }
     }
 
@@ -773,58 +775,60 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // a location chosen in the list (LocationListItem.internalConnect)
-    public async Task ConnectTo(LocationItem location)
+    public async Task ConnectTo(LocationItem location, CancellationToken cancellationToken)
     {
-        await ConnectWith(new ConnectRequest(location.VpnProfileId, location.ServerLocation, location.IsPremiumGroup, ConnectPlanId.Normal));
+        await ConnectWith(new ConnectRequest(location.VpnProfileId, location.ServerLocation, location.IsPremiumGroup,
+            ConnectPlanId.Normal), cancellationToken);
     }
 
     // a server chosen in the list, or one just added by its key
-    public async Task ConnectToProfile(Guid vpnProfileId)
+    public async Task ConnectToProfile(Guid vpnProfileId, CancellationToken cancellationToken)
     {
-        await ConnectWithProfile(vpnProfileId);
+        await ConnectWithProfile(vpnProfileId, isDiagnose: false, cancellationToken);
     }
 
-    public async Task Diagnose()
+    public async Task Diagnose(CancellationToken cancellationToken)
     {
         try {
-            await VhApp.Api.App.Diagnose(VhApp.UserSettings.VpnProfileId, null, ConnectPlanId.Normal, CancellationToken.None);
+            await VhApp.Api.App.Diagnose(VhApp.UserSettings.VpnProfileId, null, ConnectPlanId.Normal,
+                cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "The diagnosis failed.");
         }
         finally {
-            await Reload();
+            await Reload(cancellationToken);
         }
     }
 
     // ReconnectRequiredAlert: a fresh session on the same server
-    public async Task Reconnect()
+    public async Task Reconnect(CancellationToken cancellationToken)
     {
-        await Disconnect();
-        await ConnectWithCurrentProfile();
+        await Disconnect(cancellationToken);
+        await ConnectWithCurrentProfile(isDiagnose: false, cancellationToken);
     }
 
-    public async Task ClearReconnectRequired()
+    public async Task ClearReconnectRequired(CancellationToken cancellationToken)
     {
-        await VhApp.Api.App.ClearReconnectRequired(CancellationToken.None);
+        await VhApp.Api.App.ClearReconnectRequired(cancellationToken);
         IsReconnectRequired = false;
     }
 
     // A server the person typed the key of. The key is the app's to judge: an unreadable one throws,
     // and the page that called this says so (INVALID_ACCESS_KEY_FORMAT), as the web UI's dialog does.
-    public async Task<Guid> AddAccessKey(string accessKey)
+    public async Task<Guid> AddAccessKey(string accessKey, CancellationToken cancellationToken)
     {
-        var profile = await VhApp.Api.VpnProfiles.AddByAccessKey(accessKey, CancellationToken.None);
-        await ReloadInfo();
+        var profile = await VhApp.Api.VpnProfiles.AddByAccessKey(accessKey, cancellationToken);
+        await ReloadInfo(cancellationToken);
         return profile.VpnProfileId;
     }
 
     // A key the OS opened the app with - its file, mailed on by an admin - as Android's activity imports one: its
     // server becomes the chosen one, and the snackbar says it was added or updated, or that the key could not be read.
-    public async Task ImportAccessKey(string accessKey)
+    public async Task ImportAccessKey(string accessKey, CancellationToken cancellationToken)
     {
         try {
-            await AddAndChooseAccessKey(accessKey);
+            await AddAndChooseAccessKey(accessKey, cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not import the access key the app was opened with.");
@@ -833,12 +837,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // The same for the file itself, as iOS hands it over: one it cannot read is said as a key it cannot.
-    public async Task ImportAccessKeyFile(IStorageFile file)
+    public async Task ImportAccessKeyFile(IStorageFile file, CancellationToken cancellationToken)
     {
         try {
             await using var stream = await file.OpenReadAsync();
             using var reader = new StreamReader(stream);
-            await AddAndChooseAccessKey(await reader.ReadToEndAsync());
+            await AddAndChooseAccessKey(await reader.ReadToEndAsync(cancellationToken), cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not import the access key file the app was opened with.");
@@ -847,7 +851,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // A head that takes no keys says so of the file: it holds nothing a key could be added to.
-    private async Task AddAndChooseAccessKey(string accessKey)
+    private async Task AddAndChooseAccessKey(string accessKey, CancellationToken cancellationToken)
     {
         if (!CanAddServer) {
             Host?.ShowSnackbar(Strings.Current.MsgUnsupportedContent, SnackbarKind.Warning);
@@ -856,13 +860,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         // the profiles before the add, which a configuration read during it would already show
         var knownIds = VhApp.VpnProfileInfos.Select(x => x.VpnProfileId).ToArray();
-        var profile = await VhApp.Api.VpnProfiles.AddByAccessKey(accessKey.Trim(), CancellationToken.None);
+        var profile = await VhApp.Api.VpnProfiles.AddByAccessKey(accessKey.Trim(), cancellationToken);
         var isNew = !knownIds.Contains(profile.VpnProfileId);
 
         var userSettings = VhApp.UserSettings;
         userSettings.VpnProfileId = profile.VpnProfileId;
-        await VhApp.SaveUserSettings(userSettings, CancellationToken.None);
-        await ReloadInfo();
+        await VhApp.SaveUserSettings(userSettings, cancellationToken);
+        await ReloadInfo(cancellationToken);
 
         var message = isNew ? Strings.Current.MsgAccessKeyAdded : Strings.Current.MsgAccessKeyUpdated;
         Host?.ShowSnackbar(string.Format(CultureInfo.CurrentCulture, message, profile.VpnProfileName));
@@ -888,7 +892,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The store's sign-in. Its sheet is the device's own; the loading dialog covers the wait.
     // Cancelled silently, unless a purchase was waiting on it.
-    public async Task SignIn(bool onPurchase = false)
+    public async Task SignIn(bool onPurchase, CancellationToken cancellationToken)
     {
         var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
         if (!VhApp.Features.IsAccountSupported)
@@ -897,8 +901,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         using var loading = host.Loading();
         try {
-            await VhApp.Api.Account.SignIn(new SignInOptions { ProviderId = providerId }, CancellationToken.None);
-            await AfterSignedIn(onPurchase);
+            await VhApp.Api.Account.SignIn(new SignInOptions { ProviderId = providerId }, cancellationToken);
+            await AfterSignedIn(onPurchase, cancellationToken);
         }
         catch (Exception ex) {
             // the failure's own name, whether it was thrown here or reported over the API
@@ -917,61 +921,62 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // the portal's own email and password; a second factor comes back as a challenge
-    public async Task<SignInResult> SignInWithPassword(string email, string password)
+    public async Task<SignInResult> SignInWithPassword(string email, string password,
+        CancellationToken cancellationToken)
     {
         var result = await VhApp.Api.Account.SignIn(
-            new SignInOptions { ProviderId = "password", UserName = email, Password = password }, CancellationToken.None);
+            new SignInOptions { ProviderId = "password", UserName = email, Password = password }, cancellationToken);
         if (result.State == SignInState.SignedIn)
-            await AfterSignedIn(false);
+            await AfterSignedIn(false, cancellationToken);
         return result;
     }
 
-    public async Task<SignInResult> CompleteSignInChallenge(string code)
+    public async Task<SignInResult> CompleteSignInChallenge(string code, CancellationToken cancellationToken)
     {
         var result = await VhApp.Api.Account.SignIn(
-            new SignInOptions { ProviderId = "password", TwoFactorCode = code }, CancellationToken.None);
+            new SignInOptions { ProviderId = "password", TwoFactorCode = code }, cancellationToken);
         if (result.State == SignInState.SignedIn)
-            await AfterSignedIn(false);
+            await AfterSignedIn(false, cancellationToken);
         return result;
     }
 
-    private async Task AfterSignedIn(bool onPurchase)
+    private async Task AfterSignedIn(bool onPurchase, CancellationToken cancellationToken)
     {
-        await VhApp.LoadAccount(false, CancellationToken.None);
-        await ReloadInfo();
+        await VhApp.LoadAccount(false, cancellationToken);
+        await ReloadInfo(cancellationToken);
         // sign-in is otherwise silent; a purchase confirms itself
         if (!onPurchase && VhApp.Account?.Email is { } email)
             Host?.ShowSnackbar(Strings.Current.SignedInAsX(email));
     }
 
-    public async Task SignOut()
+    public async Task SignOut(CancellationToken cancellationToken)
     {
         var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
         if (!await host.Confirm(Strings.Current.ConfirmSignOutTitle, Strings.Current.ConfirmSignOutDesc))
             return;
 
         using var loading = host.Loading();
-        await VhApp.Api.Account.SignOut(CancellationToken.None);
-        await VhApp.LoadAccount(false, CancellationToken.None);
-        await ReloadInfo();
+        await VhApp.Api.Account.SignOut(cancellationToken);
+        await VhApp.LoadAccount(false, cancellationToken);
+        await ReloadInfo(cancellationToken);
         host.GoHome();
     }
 
     // Permanent, and confirmed by the caller; the tunnel goes with a premium the account paid for.
-    public async Task DeleteAccount()
+    public async Task DeleteAccount(CancellationToken cancellationToken)
     {
         var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
         using var loading = host.Loading();
-        await VhApp.Api.Account.Delete(CancellationToken.None);
+        await VhApp.Api.Account.Delete(cancellationToken);
         if (IsConnected)
-            await VhApp.Api.App.Disconnect(CancellationToken.None);
-        await VhApp.LoadAccount(false, CancellationToken.None);
-        await ReloadInfo();
+            await VhApp.Api.App.Disconnect(cancellationToken);
+        await VhApp.LoadAccount(false, cancellationToken);
+        await ReloadInfo(cancellationToken);
         host.GoHome();
     }
 
     // signed out only (keyring plan §7): the device's copy is the only one there is
-    public async Task RemovePremiumCode()
+    public async Task RemovePremiumCode(CancellationToken cancellationToken)
     {
         var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
         var profile = VhApp.State.VpnProfile ?? throw new InvalidOperationException("Could not find the profile in the state for remove premium code.");
@@ -980,11 +985,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         using var loading = host.Loading();
         if (IsConnected)
-            await VhApp.Api.App.Disconnect(CancellationToken.None);
+            await VhApp.Api.App.Disconnect(cancellationToken);
         await VhApp.Api.VpnProfiles.Update(profile.VpnProfileId, new VpnProfileUpdateParams {
             AccessCode = new Patch<string?>(null)
-        }, CancellationToken.None);
-        await ReloadInfo();
+        }, cancellationToken);
+        await ReloadInfo(cancellationToken);
     }
 
     private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)

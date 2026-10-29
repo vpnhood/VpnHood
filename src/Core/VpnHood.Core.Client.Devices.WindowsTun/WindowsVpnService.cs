@@ -67,7 +67,7 @@ public class WindowsVpnService : IVpnServiceHandler, IDisposable
         return vpnAdapter;
     }
 
-    public void ShowNotification(ConnectionInfo connectionInfo)
+    public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
     }
 

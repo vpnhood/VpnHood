@@ -68,7 +68,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         // continuing would let the system kill the process ten seconds later with
         // ForegroundServiceDidNotStartInTimeException, and returning Sticky would restart it into the
         // same failure.
-        if (!TryShowNotification(VpnServiceHost.DefaultConnectionInfo)) {
+        if (!TryShowNotification(VpnServiceHost.DefaultConnectionInfo, CancellationToken.None)) {
             StopSelf(startId);
             return StartCommandResult.NotSticky;
         }
@@ -170,19 +170,19 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         });
     }
 
-    public void ShowNotification(ConnectionInfo connectionInfo)
+    public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
-        TryShowNotification(connectionInfo);
+        TryShowNotification(connectionInfo, cancellationToken);
     }
 
     // Promotes the service to the foreground on first use, then keeps the notification in step with
     // the connection state. Returns false when the system refused the promotion. One at a time with
     // StopNotification: start commands come on the main thread and the host's calls on its own, and a
     // notification stopped in between would be updated after its disposal.
-    private bool TryShowNotification(ConnectionInfo connectionInfo)
+    private bool TryShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
         lock (_notificationLock) {
-            var notification = _notification ?? TryStartForeground();
+            var notification = _notification ?? TryStartForeground(cancellationToken);
             if (notification == null)
                 return false;
 
@@ -195,21 +195,25 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     // the system has accepted the promotion, so a failed attempt (the builder, Build() and
     // StartForeground can all throw) leaves nothing behind and the next start command retries.
     // Reports the failure instead of throwing: a throw from OnStartCommand leaves no returned mode
-    // and Android would restart the service into a back-off crash loop.
-    private AndroidVpnNotification? TryStartForeground()
+    // and Android would restart the service into a back-off crash loop. A cancel goes on: only the
+    // host's calls bring a token that can be cancelled.
+    private AndroidVpnNotification? TryStartForeground(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Create and show the notification for the VPN service.");
         try {
             // The words and the session's name of the app's last connect, which its options file keeps,
             // as the notification comes before the host reads them: English before any connect, and the
             // app's name where the app names no session.
-            var serviceOptions = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead(CancellationToken.None);
+            var serviceOptions = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead(cancellationToken);
             var notification = new AndroidVpnNotification(this,
                 serviceOptions?.Localization ?? new VpnServiceLocalization(),
                 serviceOptions?.ClientOptions.SessionName ?? AndroidUtils.GetAppName(this));
             StartForeground(AndroidVpnNotification.NotificationId, notification.Build());
             _notification = notification;
             return notification;
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not promote the VPN service to the foreground.");

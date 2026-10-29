@@ -54,13 +54,13 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
         }
         ConfigureInput(Input);
         ShowGate();
-        _ = LoadLists();
+        _ = LoadLists(CancellationToken.None);
     }
 
-    private async Task LoadLists()
+    private async Task LoadLists(CancellationToken cancellationToken)
     {
         try {
-            _saved = await Load(CancellationToken.None);
+            _saved = await Load(cancellationToken);
             Input.Excludes = _saved.Excludes;
             Input.Includes = _saved.Includes;
             Input.Blocks = _saved.Blocks;
@@ -115,14 +115,14 @@ public abstract partial class SplitListView : UserControl, IPage, ILeaveGuard
 
     // Saved on the way out, and only when something changed. A list the app refuses keeps the page
     // open with the reason and offers to revert it.
-    public async Task<bool> CanLeave()
+    public async Task<bool> CanLeave(CancellationToken cancellationToken)
     {
         if (!IsDirty)
             return true;
 
         try {
-            await Save(Input.Excludes, Input.Includes, Input.Blocks, CancellationToken.None);
-            await VhApp.SaveUserSettings(Settings, CancellationToken.None);
+            await Save(Input.Excludes, Input.Includes, Input.Blocks, cancellationToken);
+            await VhApp.SaveUserSettings(Settings, cancellationToken);
             _host.ViewModel.Refresh();
             return true;
         }

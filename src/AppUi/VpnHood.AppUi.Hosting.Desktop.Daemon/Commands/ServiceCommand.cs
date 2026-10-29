@@ -53,7 +53,8 @@ internal static class ServiceCommand
     {
         try {
             if (!platform.IsAdministrator()) {
-                await Console.Error.WriteLineAsync(platform.AdministratorsOnlyMessage).Vhc();
+                await Console.Error.WriteLineAsync(platform.AdministratorsOnlyMessage.AsMemory(), cancellationToken)
+                    .Vhc();
                 return 1;
             }
 

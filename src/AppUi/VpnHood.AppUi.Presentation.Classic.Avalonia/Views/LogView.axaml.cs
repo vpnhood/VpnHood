@@ -15,7 +15,7 @@ public partial class LogView : UserControl, IPage
     public LogView()
     {
         InitializeComponent();
-        _ = Load();
+        _ = Load(CancellationToken.None);
     }
 
     // The page takes the focus itself, so the keys below reach it: the log has no control to aim
@@ -49,10 +49,10 @@ public partial class LogView : UserControl, IPage
         base.OnKeyDown(e);
     }
 
-    private async Task Load()
+    private async Task Load(CancellationToken cancellationToken)
     {
         try {
-            LogText.Text = await VhApp.Api.App.Log(CancellationToken.None);
+            LogText.Text = await VhApp.Api.App.Log(cancellationToken);
 
             // the last lines are the ones being looked for, and they exist only once it is laid out
             Dispatcher.UIThread.Post(Scroller.ScrollToEnd, DispatcherPriority.Loaded);

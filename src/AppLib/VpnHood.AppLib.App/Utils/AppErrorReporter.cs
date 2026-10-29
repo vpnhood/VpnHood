@@ -30,7 +30,7 @@ internal sealed class AppErrorReporter(ITracker tracker)
 
     private void Report(Exception ex, string? message, string action, LogLevel logLevel, TimeSpan? elapsed)
     {
-        _ = tracker.TryTrackError(ex, message, action, logLevel, elapsed);
+        _ = tracker.TryTrackError(ex, message, action, CancellationToken.None, logLevel, elapsed);
         VhLogger.Instance.Log(logLevel, ex, message);
     }
 }

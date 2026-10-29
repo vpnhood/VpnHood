@@ -8,10 +8,10 @@ public class NetFilter : IDisposable
 
     // rolls the Reconfigure command down both filter pipes; the stages that own external
     // configuration react, everything else forwards (see IIpFilter.Reconfigure)
-    public void Reconfigure()
+    public void Reconfigure(CancellationToken cancellationToken)
     {
-        IpFilter?.Reconfigure();
-        DomainFilter?.Reconfigure();
+        IpFilter?.Reconfigure(cancellationToken);
+        DomainFilter?.Reconfigure(cancellationToken);
     }
 
     public void Dispose()

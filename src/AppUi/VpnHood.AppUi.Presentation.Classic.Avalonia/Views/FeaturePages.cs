@@ -88,7 +88,7 @@ public static class FeaturePages
                 Kind = FeaturePageKind.Switch,
                 SwitchTitle = S.AlwaysOn,
                 IsSwitchOn = VhApp.UserSettings.AlwaysOn,
-                SwitchAction = SetAlwaysOn,
+                SwitchAction = isOn => SetAlwaysOn(isOn, CancellationToken.None),
                 IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn)
             });
         }
@@ -105,11 +105,11 @@ public static class FeaturePages
         });
     }
 
-    private static async Task SetAlwaysOn(bool isOn)
+    private static async Task SetAlwaysOn(bool isOn, CancellationToken cancellationToken)
     {
         var settings = VhApp.UserSettings;
         settings.AlwaysOn = isOn;
-        await VhApp.SaveUserSettings(settings, CancellationToken.None);
+        await VhApp.SaveUserSettings(settings, cancellationToken);
     }
 
     public static FeaturePageView PrivateDns(MainView host)

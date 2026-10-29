@@ -52,7 +52,7 @@ internal static class ServiceLog
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested) {
                 if (isAnswering)
-                    await Console.Error.WriteLineAsync(ex.Message).Vhc();
+                    await Console.Error.WriteLineAsync(ex.Message.AsMemory(), cancellationToken).Vhc();
 
                 isAnswering = false;
             }

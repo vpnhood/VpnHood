@@ -45,7 +45,7 @@ internal static class AdMobConsent
             if (_gatherTask is null or { IsFaulted: true } or { IsCanceled: true } ||
                 (!_gatherTask.IsCompleted && _gatherActivity?.IsDestroyed == true)) {
                 _gatherActivity = activity;
-                _gatherTask = GatherCore(activity);
+                _gatherTask = GatherCore(activity, CancellationToken.None);
             }
 
             return _gatherTask.WaitAsync(cancellationToken);
@@ -106,9 +106,9 @@ internal static class AdMobConsent
         await updateListener.Task.WaitAsync(InfoUpdateTimeout).Vhc();
     }
 
-    private static async Task GatherCore(Activity activity)
+    private static async Task GatherCore(Activity activity, CancellationToken cancellationToken)
     {
-        await Update(activity, CancellationToken.None).Vhc();
+        await Update(activity, cancellationToken).Vhc();
 
         // the SDK shows the form only where one is due and not answered yet
         var dismissedListener = new FormDismissedListener();

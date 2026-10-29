@@ -29,7 +29,7 @@ public class SqliteFilterChainTest : TestBase
         public event EventHandler? Changed { add { } remove { } } // verdicts never change
         public bool IsEmpty => true; // never decides (always Default)
         public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint) => FilterAction.Default;
-        public void Reconfigure() => ReconfigureCount++;
+        public void Reconfigure(CancellationToken cancellationToken) => ReconfigureCount++;
         public void Dispose() => IsDisposed = true;
     }
 
@@ -40,7 +40,7 @@ public class SqliteFilterChainTest : TestBase
         public event EventHandler? Changed { add { } remove { } } // verdicts never change
         public bool IsEmpty => true; // never decides (always Default)
         public FilterAction Process(string? domain) => FilterAction.Default;
-        public void Reconfigure() => ReconfigureCount++;
+        public void Reconfigure(CancellationToken cancellationToken) => ReconfigureCount++;
         public void Dispose() => IsDisposed = true;
     }
 
@@ -76,7 +76,7 @@ public class SqliteFilterChainTest : TestBase
         // delete the old db — this chain still holds it open), then the reconfigure signal arrives
         var newDbPath = await BuildIpDb(folder, "ip-swap.2.db", "2.0.0.2");
         SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure();
+        chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, chain.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
         Assert.AreEqual(FilterAction.Block, chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")));
@@ -97,7 +97,7 @@ public class SqliteFilterChainTest : TestBase
         var changedCount = 0;
         chain.Changed += (_, _) => changedCount++;
 
-        chain.Reconfigure();
+        chain.Reconfigure(TestCt);
         Assert.AreEqual(0, changedCount, "unchanged paths must not swap (no cache invalidation storm)");
         Assert.IsTrue(File.Exists(dbPath));
         Assert.AreEqual(FilterAction.Block, chain.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
@@ -117,7 +117,7 @@ public class SqliteFilterChainTest : TestBase
 
         var newDbPath = await BuildDomainDb(folder, "domain-swap.2.db", "new.com");
         SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure();
+        chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, chain.Process("old.com"));
         Assert.AreEqual(FilterAction.Block, chain.Process("new.com"));
@@ -138,7 +138,7 @@ public class SqliteFilterChainTest : TestBase
         chain.Dispose();
         var newDbPath = await BuildIpDb(folder, "ip-closed.2.db", "2.0.0.2");
         SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure();
+        chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")),
             "a closed chain must take no new gates");
@@ -157,7 +157,7 @@ public class SqliteFilterChainTest : TestBase
         chain.Dispose();
         var newDbPath = await BuildDomainDb(folder, "domain-closed.2.db", "new.com");
         SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure();
+        chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, chain.Process("new.com"), "a closed chain must take no new gates");
         File.Delete(newDbPath); // nor leave the new db open
@@ -232,7 +232,7 @@ public class SqliteFilterChainTest : TestBase
 
         var rulesDbPath = await BuildDomainDb(folder, "rules.1.db", "example.com");
         SplitDbManifest.Write(folder, [emptyDbPath, rulesDbPath], TestCt);
-        chain.Reconfigure();
+        chain.Reconfigure(TestCt);
         Assert.IsFalse(cached.IsEmpty, "rules appeared: the endpoint re-checking on Changed must see them");
         Assert.AreEqual(1, changedCount, "the swap must announce itself so the endpoint knows to re-check");
     }
@@ -253,7 +253,7 @@ public class SqliteFilterChainTest : TestBase
 
         var newDbPath = await BuildDomainDb(folder, "domain-cache.2.db", "other.com");
         SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure();
+        chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, cached.Process("example.com"),
             "the cache must invalidate itself on the rolled-up change event");
@@ -299,7 +299,7 @@ public class SqliteFilterChainTest : TestBase
             var dbPath = Path.Combine(folder, $"stress.{i}.db");
             File.Copy(templatePath, dbPath);
             SplitDbManifest.Write(folder, [dbPath], TestCt);
-            filter.Reconfigure();
+            filter.Reconfigure(TestCt);
         }
 
         await stopCts.CancelAsync();

@@ -8,6 +8,13 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class ProxyEndPointStoreTest : TestBase
 {
+    // the store's upsert with its usual flags, under the test's token
+    private Task Upsert(IProxyEndPointStore store, IReadOnlyList<ProxyEndPointRecord> records,
+        bool keepExistingStatus = true, bool keepExistingEnabled = false)
+    {
+        return store.Upsert(records, keepExistingStatus, keepExistingEnabled, TestCt);
+    }
+
     private string NewDbPath([System.Runtime.CompilerServices.CallerMemberName] string name = "") =>
         Path.Combine(TestHelper.WorkingPath, "proxies", $"{name}.db");
 
@@ -42,11 +49,11 @@ public class ProxyEndPointStoreTest : TestBase
             QueuePosition = 42
         };
 
-        await store.Upsert([
+        await Upsert(store, [
             new ProxyEndPointRecord { EndPoint = endPoint, Status = status, CountryCode = "US" }
         ], keepExistingStatus: false);
 
-        var record = await store.Get(endPoint.Id);
+        var record = await store.Get(endPoint.Id, TestCt);
         Assert.IsNotNull(record);
         Assert.AreEqual(endPoint.Id, record.EndPoint.Id);
         Assert.AreEqual(ProxyProtocol.Https, record.EndPoint.Protocol);
@@ -72,7 +79,7 @@ public class ProxyEndPointStoreTest : TestBase
         using var store = new ProxyEndPointStore(NewDbPath());
         var endPoint = CreateEndPoint(1);
 
-        await store.Upsert([
+        await Upsert(store, [
             new ProxyEndPointRecord {
                 EndPoint = endPoint,
                 Status = new ProxyEndPointStatus { SucceededCount = 9, Penalty = 2 }
@@ -86,9 +93,9 @@ public class ProxyEndPointStoreTest : TestBase
             Port = endPoint.Port,
             Username = "newUser"
         };
-        await store.Upsert([new ProxyEndPointRecord { EndPoint = updated }]);
+        await Upsert(store, [new ProxyEndPointRecord { EndPoint = updated }]);
 
-        var record = await store.Get(endPoint.Id);
+        var record = await store.Get(endPoint.Id, TestCt);
         Assert.IsNotNull(record);
         Assert.AreEqual("newUser", record.EndPoint.Username);
         Assert.AreEqual(9, record.Status.SucceededCount);
@@ -101,14 +108,14 @@ public class ProxyEndPointStoreTest : TestBase
         using var store = new ProxyEndPointStore(NewDbPath());
         var endPoint = CreateEndPoint(1);
         endPoint.IsEnabled = false;
-        await store.Upsert([new ProxyEndPointRecord { EndPoint = endPoint }]);
+        await Upsert(store, [new ProxyEndPointRecord { EndPoint = endPoint }]);
 
         var enabledAgain = CreateEndPoint(1); // same natural key, IsEnabled=true
-        await store.Upsert([new ProxyEndPointRecord { EndPoint = enabledAgain }], keepExistingEnabled: true);
-        Assert.IsFalse((await store.Get(endPoint.Id))!.EndPoint.IsEnabled);
+        await Upsert(store, [new ProxyEndPointRecord { EndPoint = enabledAgain }], keepExistingEnabled: true);
+        Assert.IsFalse((await store.Get(endPoint.Id, TestCt))!.EndPoint.IsEnabled);
 
-        await store.Upsert([new ProxyEndPointRecord { EndPoint = enabledAgain }]);
-        Assert.IsTrue((await store.Get(endPoint.Id))!.EndPoint.IsEnabled);
+        await Upsert(store, [new ProxyEndPointRecord { EndPoint = enabledAgain }]);
+        Assert.IsTrue((await store.Get(endPoint.Id, TestCt))!.EndPoint.IsEnabled);
     }
 
     [TestMethod]
@@ -117,21 +124,21 @@ public class ProxyEndPointStoreTest : TestBase
         using var store = new ProxyEndPointStore(NewDbPath());
         var endPoint1 = CreateEndPoint(1);
         var endPoint2 = CreateEndPoint(2);
-        await store.Upsert([
+        await Upsert(store, [
             new ProxyEndPointRecord { EndPoint = endPoint1 },
             new ProxyEndPointRecord { EndPoint = endPoint2 }
         ]);
 
         // delete one row, then update statuses of both (as the core flush would)
-        await store.Delete([endPoint1.Id]);
+        await store.Delete([endPoint1.Id], TestCt);
         await store.UpdateStatuses([
             new ProxyEndPointInfo { EndPoint = endPoint1, Status = new ProxyEndPointStatus { SucceededCount = 1 } },
             new ProxyEndPointInfo { EndPoint = endPoint2, Status = new ProxyEndPointStatus { SucceededCount = 2 } }
-        ]);
+        ], TestCt);
 
-        Assert.IsNull(await store.Get(endPoint1.Id));
-        Assert.AreEqual(2, (await store.Get(endPoint2.Id))!.Status.SucceededCount);
-        Assert.AreEqual(1, await store.Count());
+        Assert.IsNull(await store.Get(endPoint1.Id, TestCt));
+        Assert.AreEqual(2, (await store.Get(endPoint2.Id, TestCt))!.Status.SucceededCount);
+        Assert.AreEqual(1, await store.Count(TestCt));
     }
 
     [TestMethod]
@@ -145,7 +152,7 @@ public class ProxyEndPointStoreTest : TestBase
         var disabled = CreateEndPoint(4);
         disabled.IsEnabled = false;
 
-        await store.Upsert([
+        await Upsert(store, [
             new ProxyEndPointRecord {
                 EndPoint = succeeded,
                 Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
@@ -165,16 +172,16 @@ public class ProxyEndPointStoreTest : TestBase
             DeleteFailed = true,
             DeleteUnknown = false,
             DeleteDisabled = false
-        });
+        }, TestCt);
 
-        Assert.IsNotNull(await store.Get(succeeded.Id));
-        Assert.IsNull(await store.Get(failed.Id));
-        Assert.IsNotNull(await store.Get(unknown.Id));
-        Assert.IsNotNull(await store.Get(disabled.Id));
+        Assert.IsNotNull(await store.Get(succeeded.Id, TestCt));
+        Assert.IsNull(await store.Get(failed.Id, TestCt));
+        Assert.IsNotNull(await store.Get(unknown.Id, TestCt));
+        Assert.IsNotNull(await store.Get(disabled.Id, TestCt));
 
         // delete everything
-        await store.DeleteAll(new DeleteAllOptions());
-        Assert.AreEqual(0, await store.Count());
+        await store.DeleteAll(new DeleteAllOptions(), TestCt);
+        Assert.AreEqual(0, await store.Count(TestCt));
     }
 
     [TestMethod]
@@ -185,7 +192,7 @@ public class ProxyEndPointStoreTest : TestBase
         var failed = CreateEndPoint(2);
         var unknown = CreateEndPoint(3);
 
-        await store.Upsert([
+        await Upsert(store, [
             new ProxyEndPointRecord {
                 EndPoint = succeeded,
                 Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
@@ -197,11 +204,11 @@ public class ProxyEndPointStoreTest : TestBase
             new ProxyEndPointRecord { EndPoint = unknown }
         ], keepExistingStatus: false);
 
-        await store.DisableAllFailed();
+        await store.DisableAllFailed(TestCt);
 
-        Assert.IsTrue((await store.Get(succeeded.Id))!.EndPoint.IsEnabled);
-        Assert.IsFalse((await store.Get(failed.Id))!.EndPoint.IsEnabled);
-        Assert.IsTrue((await store.Get(unknown.Id))!.EndPoint.IsEnabled);
+        Assert.IsTrue((await store.Get(succeeded.Id, TestCt))!.EndPoint.IsEnabled);
+        Assert.IsFalse((await store.Get(failed.Id, TestCt))!.EndPoint.IsEnabled);
+        Assert.IsTrue((await store.Get(unknown.Id, TestCt))!.EndPoint.IsEnabled);
     }
 
     [TestMethod]
@@ -209,7 +216,7 @@ public class ProxyEndPointStoreTest : TestBase
     {
         using var store = new ProxyEndPointStore(NewDbPath());
         var endPoint = CreateEndPoint(1);
-        await store.Upsert([
+        await Upsert(store, [
             new ProxyEndPointRecord {
                 EndPoint = endPoint,
                 Status = new ProxyEndPointStatus {
@@ -219,11 +226,11 @@ public class ProxyEndPointStoreTest : TestBase
                 }
             }
         ], keepExistingStatus: false);
-        await store.SetQueuePosition(123);
+        await store.SetQueuePosition(123, TestCt);
 
-        await store.ResetStatuses();
+        await store.ResetStatuses(TestCt);
 
-        var record = await store.Get(endPoint.Id);
+        var record = await store.Get(endPoint.Id, TestCt);
         Assert.IsNotNull(record);
         Assert.AreEqual(0, record.Status.Penalty);
         Assert.AreEqual(0, record.Status.SucceededCount);
@@ -232,16 +239,16 @@ public class ProxyEndPointStoreTest : TestBase
         Assert.IsNull(record.Status.LastSucceeded);
         Assert.IsNull(record.Status.ErrorMessage);
         Assert.AreEqual(0, record.Status.QueuePosition);
-        Assert.AreEqual(0, await store.GetQueuePosition());
+        Assert.AreEqual(0, await store.GetQueuePosition(TestCt));
     }
 
     [TestMethod]
     public async Task QueuePosition_meta_roundtrip()
     {
         using var store = new ProxyEndPointStore(NewDbPath());
-        Assert.AreEqual(0, await store.GetQueuePosition());
-        await store.SetQueuePosition(1234567890123);
-        Assert.AreEqual(1234567890123, await store.GetQueuePosition());
+        Assert.AreEqual(0, await store.GetQueuePosition(TestCt));
+        await store.SetQueuePosition(1234567890123, TestCt);
+        Assert.AreEqual(1234567890123, await store.GetQueuePosition(TestCt));
     }
 
     [TestMethod]
@@ -253,7 +260,7 @@ public class ProxyEndPointStoreTest : TestBase
         var goodUsed = CreateEndPoint(1);
         // a bad endpoint above max penalty
         var bad = CreateEndPoint(2);
-        await store.Upsert([
+        await Upsert(store, [
             new ProxyEndPointRecord {
                 EndPoint = goodUsed,
                 Status = new ProxyEndPointStatus { SucceededCount = 3, LastSucceeded = DateTime.UtcNow, Penalty = 1 }
@@ -268,19 +275,19 @@ public class ProxyEndPointStoreTest : TestBase
         // duplicate as a list slot before the cap is applied, so cap 4 admits both new endpoints
         // while the bad row still falls off the end.
         var newEndPoints = new[] { CreateEndPoint(1), CreateEndPoint(3), CreateEndPoint(4) };
-        await store.Merge(newEndPoints, maxItemCount: 4, maxPenalty: 50, removeDuplicateIps: false);
+        await store.Merge(newEndPoints, maxItemCount: 4, maxPenalty: 50, removeDuplicateIps: false, cancellationToken: TestCt);
 
-        var records = await store.List();
+        var records = await store.List(TestCt);
         Assert.HasCount(3, records);
 
         // used-good comes first in the merge priority, then new ones; the bad one is pruned by the cap
-        Assert.IsNotNull(await store.Get(goodUsed.Id));
-        Assert.IsNotNull(await store.Get(CreateEndPoint(3).Id));
-        Assert.IsNotNull(await store.Get(CreateEndPoint(4).Id));
-        Assert.IsNull(await store.Get(bad.Id));
+        Assert.IsNotNull(await store.Get(goodUsed.Id, TestCt));
+        Assert.IsNotNull(await store.Get(CreateEndPoint(3).Id, TestCt));
+        Assert.IsNotNull(await store.Get(CreateEndPoint(4).Id, TestCt));
+        Assert.IsNull(await store.Get(bad.Id, TestCt));
 
         // the surviving used endpoint keeps its status
-        Assert.AreEqual(3, (await store.Get(goodUsed.Id))!.Status.SucceededCount);
+        Assert.AreEqual(3, (await store.Get(goodUsed.Id, TestCt))!.Status.SucceededCount);
     }
 
     [TestMethod]
@@ -294,7 +301,7 @@ public class ProxyEndPointStoreTest : TestBase
         var disabled = CreateEndPoint(4);
         disabled.IsEnabled = false;
 
-        await store.Upsert([
+        await Upsert(store, [
             new ProxyEndPointRecord {
                 EndPoint = succeeded,
                 Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow },
@@ -309,30 +316,30 @@ public class ProxyEndPointStoreTest : TestBase
         ], keepExistingStatus: false);
 
         // category filters
-        var result = await store.List(new ProxyEndPointStoreListParams { IncludeFailed = false, IncludeUnknown = false });
+        var result = await store.List(new ProxyEndPointStoreListParams { IncludeFailed = false, IncludeUnknown = false }, TestCt);
         Assert.AreEqual(1, result.TotalCount);
         Assert.AreEqual(succeeded.Id, result.Items.Single().EndPoint.Id);
 
         // disabled exclusion (the disabled endpoint is unused, so it matches the unknown category)
-        result = await store.List(new ProxyEndPointStoreListParams { IncludeDisabled = false });
+        result = await store.List(new ProxyEndPointStoreListParams { IncludeDisabled = false }, TestCt);
         Assert.IsFalse(result.Items.Any(x => x.EndPoint.Id == disabled.Id));
 
         // search by host and by country code, case-insensitive
-        result = await store.List(new ProxyEndPointStoreListParams { Search = "PROXY1" });
+        result = await store.List(new ProxyEndPointStoreListParams { Search = "PROXY1" }, TestCt);
         Assert.AreEqual(succeeded.Id, result.Items.Single().EndPoint.Id);
-        result = await store.List(new ProxyEndPointStoreListParams { Search = "us" });
+        result = await store.List(new ProxyEndPointStoreListParams { Search = "us" }, TestCt);
         Assert.AreEqual(succeeded.Id, result.Items.Single().EndPoint.Id);
 
         // ordering: enabled first (disabled last), then quality ascending
         // quality: unknown=0, succeeded/excellent=1, failed(penalty 200, no success)=6
-        result = await store.List(new ProxyEndPointStoreListParams());
+        result = await store.List(new ProxyEndPointStoreListParams(), TestCt);
         Assert.AreEqual(4, result.TotalCount);
         CollectionAssert.AreEqual(
             new[] { unknown.Id, succeeded.Id, failed.Id, disabled.Id },
             result.Items.Select(x => x.EndPoint.Id).ToArray());
 
         // paging returns only the requested slice but reports the full count
-        result = await store.List(new ProxyEndPointStoreListParams { RecordIndex = 1, RecordCount = 2 });
+        result = await store.List(new ProxyEndPointStoreListParams { RecordIndex = 1, RecordCount = 2 }, TestCt);
         Assert.AreEqual(4, result.TotalCount);
         CollectionAssert.AreEqual(
             new[] { succeeded.Id, failed.Id },
@@ -346,8 +353,8 @@ public class ProxyEndPointStoreTest : TestBase
 
         // valid db first
         using (var store = new ProxyEndPointStore(dbPath)) {
-            await store.Upsert([new ProxyEndPointRecord { EndPoint = CreateEndPoint(1) }]);
-            Assert.AreEqual(1, await store.Count());
+            await Upsert(store, [new ProxyEndPointRecord { EndPoint = CreateEndPoint(1) }]);
+            Assert.AreEqual(1, await store.Count(TestCt));
         }
 
         // corrupt the file
@@ -355,9 +362,9 @@ public class ProxyEndPointStoreTest : TestBase
 
         // a new store must recreate it empty instead of failing (legacy data is disposable)
         using (var store = new ProxyEndPointStore(dbPath)) {
-            Assert.AreEqual(0, await store.Count());
-            await store.Upsert([new ProxyEndPointRecord { EndPoint = CreateEndPoint(2) }]);
-            Assert.AreEqual(1, await store.Count());
+            Assert.AreEqual(0, await store.Count(TestCt));
+            await Upsert(store, [new ProxyEndPointRecord { EndPoint = CreateEndPoint(2) }]);
+            Assert.AreEqual(1, await store.Count(TestCt));
         }
     }
 
@@ -369,7 +376,7 @@ public class ProxyEndPointStoreTest : TestBase
         using var store2 = new ProxyEndPointStore(dbPath);
 
         var endPoints = Enumerable.Range(0, 50).Select(i => CreateEndPoint(i)).ToArray();
-        await store1.Upsert(endPoints.Select(x => new ProxyEndPointRecord { EndPoint = x }).ToArray());
+        await Upsert(store1, endPoints.Select(x => new ProxyEndPointRecord { EndPoint = x }).ToArray());
 
         // one instance hammers status updates (core flush) while the other does CRUD (app)
         var statusTask = Task.Run(async () => {
@@ -379,21 +386,21 @@ public class ProxyEndPointStoreTest : TestBase
                         EndPoint = x,
                         Status = new ProxyEndPointStatus { SucceededCount = round + 1 }
                     })
-                    .ToArray());
+                    .ToArray(), TestCt);
             }
         });
 
         var crudTask = Task.Run(async () => {
             for (var i = 0; i < 20; i++) {
-                await store2.Upsert([new ProxyEndPointRecord { EndPoint = CreateEndPoint(1000 + i) }]);
-                _ = await store2.List();
-                await store2.Delete([CreateEndPoint(1000 + i).Id]);
+                await Upsert(store2, [new ProxyEndPointRecord { EndPoint = CreateEndPoint(1000 + i) }]);
+                _ = await store2.List(TestCt);
+                await store2.Delete([CreateEndPoint(1000 + i).Id], TestCt);
             }
         });
 
         await Task.WhenAll(statusTask, crudTask);
 
-        Assert.AreEqual(50, await store1.Count());
-        Assert.IsTrue((await store2.List()).All(x => x.Status.SucceededCount == 20));
+        Assert.AreEqual(50, await store1.Count(TestCt));
+        Assert.IsTrue((await store2.List(TestCt)).All(x => x.Status.SucceededCount == 20));
     }
 }

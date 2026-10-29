@@ -122,20 +122,20 @@ public partial class SignInDialog : DialogBase
         PasswordError.IsVisible = false;
         CodeError.IsVisible = false;
         if (step == PasswordStep)
-            _ = ShowForgotWhenAvailable();
+            _ = ShowForgotWhenAvailable(CancellationToken.None);
         FocusDefault();
     }
 
     // The one place the account website appears: asked once, when the password form first shows,
     // and offered only when it names its page and a browser - or a TV's phone - can open it.
-    private async Task ShowForgotWhenAvailable()
+    private async Task ShowForgotWhenAvailable(CancellationToken cancellationToken)
     {
         if (_isPasswordResetAsked || !MainView.IsExternalLinkUsable)
             return;
 
         _isPasswordResetAsked = true;
         try {
-            _passwordResetUrl = await VhApp.Api.Account.GetPasswordResetUrl(CancellationToken.None);
+            _passwordResetUrl = await VhApp.Api.Account.GetPasswordResetUrl(cancellationToken);
             ForgotButton.IsVisible = _passwordResetUrl != null;
         }
         catch (Exception ex) {
@@ -149,7 +149,7 @@ public partial class SignInDialog : DialogBase
         try {
             Close();
             try {
-                await _host.ViewModel.SignIn();
+                await _host.ViewModel.SignIn(onPurchase: false, CancellationToken.None);
             }
             catch (Exception ex) {
                 await _host.ProcessError(ex);
@@ -193,7 +193,7 @@ public partial class SignInDialog : DialogBase
         try {
             if (e.Key != Key.Enter || !SubmitPasswordButton.IsEnabled) return;
             e.Handled = true;
-            await SubmitPassword();
+            await SubmitPassword(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -205,7 +205,7 @@ public partial class SignInDialog : DialogBase
         try {
             if (e.Key != Key.Enter || !SubmitCodeButton.IsEnabled) return;
             e.Handled = true;
-            await SubmitChallenge();
+            await SubmitChallenge(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -215,7 +215,7 @@ public partial class SignInDialog : DialogBase
     private async void OnSubmitPasswordClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await SubmitPassword();
+            await SubmitPassword(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -225,7 +225,7 @@ public partial class SignInDialog : DialogBase
     private async void OnSubmitCodeClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await SubmitChallenge();
+            await SubmitChallenge(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -236,19 +236,20 @@ public partial class SignInDialog : DialogBase
     {
         try {
             if (_passwordResetUrl is { } url)
-                await _host.OpenLink(url, Strings.Current.ForgotPassword);
+                await _host.OpenLink(url, Strings.Current.ForgotPassword, CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
         }
     }
 
-    private async Task SubmitPassword()
+    private async Task SubmitPassword(CancellationToken cancellationToken)
     {
         _isWorking = true;
         SubmitPasswordButton.IsEnabled = false;
         try {
-            var result = await _host.ViewModel.SignInWithPassword(EmailBox.Text?.Trim() ?? "", PasswordBox.Text ?? "");
+            var result = await _host.ViewModel.SignInWithPassword(EmailBox.Text?.Trim() ?? "", PasswordBox.Text ?? "",
+                cancellationToken);
             if (result.State != SignInState.SignedIn) {
                 // the password is right; nothing is signed in until the second factor answers
                 CodeBox.Text = "";
@@ -267,12 +268,12 @@ public partial class SignInDialog : DialogBase
         }
     }
 
-    private async Task SubmitChallenge()
+    private async Task SubmitChallenge(CancellationToken cancellationToken)
     {
         _isWorking = true;
         SubmitCodeButton.IsEnabled = false;
         try {
-            var result = await _host.ViewModel.CompleteSignInChallenge(CodeBox.Text?.Trim() ?? "");
+            var result = await _host.ViewModel.CompleteSignInChallenge(CodeBox.Text?.Trim() ?? "", cancellationToken);
             if (result.NewBackupCode is { } backupCode) {
                 // the backup code was spent and rotated - the only time the new one is shown
                 BackupCodeText.Text = backupCode;

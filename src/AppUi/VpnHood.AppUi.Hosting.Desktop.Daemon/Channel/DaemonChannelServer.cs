@@ -181,7 +181,7 @@ internal sealed class DaemonChannelServer : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end
-        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         lock (_lock) {
             if (_disposed)
                 return;

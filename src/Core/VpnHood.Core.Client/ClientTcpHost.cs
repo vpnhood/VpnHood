@@ -138,7 +138,7 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         {
             // a second close waits for the first one's end. One after a quick close returns: that close leaves
             // nothing running
-            using var scopeLock = await _disposeLock.LockAsync().Vhc();
+            using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
             if (_disposed)
                 return;
 

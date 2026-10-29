@@ -363,7 +363,7 @@ public class ProxyChannel : IProxyChannel
     {
         // a second close waits for the first one's end. One after a quick close returns: that close has closed the
         // connections
-        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (!TryStop())
             return;
 

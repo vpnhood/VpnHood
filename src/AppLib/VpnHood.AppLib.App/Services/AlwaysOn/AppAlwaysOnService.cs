@@ -85,7 +85,7 @@ internal sealed class AppAlwaysOnService : IDisposable
         }
 
         VhLogger.Instance.LogInformation("Always on connects at the start.");
-        _ = Connect();
+        _ = Connect(CancellationToken.None);
     }
 
     // A connect begins, a person's or always on's own, with the profile it was given or the current one; the
@@ -224,7 +224,7 @@ internal sealed class AppAlwaysOnService : IDisposable
         }
 
         // off the caller's thread: a settings save may be under way on it
-        _ = Task.Run(Connect);
+        _ = Task.Run(() => Connect(CancellationToken.None));
     }
 
     // Under the lock. A stop by an error tries once more under another plan: a key or a code bought, typed or
@@ -253,7 +253,7 @@ internal sealed class AppAlwaysOnService : IDisposable
         if (!IsTriedAgain(error, sessionWasUp)) {
             Stop(error, plan: isRevoke ? null : _connectPlan);
             if (ResumeAfterPlanChange())
-                _ = Task.Run(Connect);
+                _ = Task.Run(() => Connect(CancellationToken.None));
             return;
         }
 
@@ -347,15 +347,16 @@ internal sealed class AppAlwaysOnService : IDisposable
         if (cancellationToken.IsCancellationRequested)
             return;
 
-        await Connect().Vhc();
+        // a connect of its own, not under the retry's token, which its BeginConnect cancels
+        await Connect(CancellationToken.None).Vhc();
     }
 
     // Always on's own connect, with the current profile and no window to ask anyone anything. EndConnect
     // has sorted how it ended, and the app has logged it.
-    private async Task Connect()
+    private async Task Connect(CancellationToken cancellationToken)
     {
         try {
-            await _app.Connect(uiContext: null, new ConnectOptions { IsAlwaysOn = true }, CancellationToken.None).Vhc();
+            await _app.Connect(uiContext: null, new ConnectOptions { IsAlwaysOn = true }, cancellationToken).Vhc();
         }
         catch (Exception) {
             // sorted

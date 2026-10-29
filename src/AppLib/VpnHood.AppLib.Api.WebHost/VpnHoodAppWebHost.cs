@@ -619,7 +619,7 @@ public class VpnHoodAppWebHost : IAppWebHost
         // provider takes 404 as "no such asset", which is how it asks for a fallback.
         if (localPath.StartsWith(AssetsPrefix, StringComparison.OrdinalIgnoreCase)) {
             await using var asset = _uiAssetProvider != null
-                ? await _uiAssetProvider.TryOpenReadAsync(localPath[AssetsPrefix.Length..], CancellationToken.None).Vhc()
+                ? await _uiAssetProvider.TryOpenReadAsync(localPath[AssetsPrefix.Length..], context.Token).Vhc()
                 : null;
             if (asset == null) {
                 context.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -633,14 +633,14 @@ public class VpnHoodAppWebHost : IAppWebHost
 
         // The page's own file, for this device and a paired one alike; any other path is
         // the UI's to route, and gets index.html.
-        await using var file = await _webRoot.TryOpenReadAsync(localPath, CancellationToken.None).Vhc();
+        await using var file = await _webRoot.TryOpenReadAsync(localPath, context.Token).Vhc();
         if (file != null) {
             await Send(context, localPath, file, IsFingerprinted(localPath)).Vhc();
             return;
         }
 
         // the page as published holds its files compressed, as name.gz (_publish.ps1)
-        await using var compressed = await _webRoot.TryOpenReadAsync(localPath + ".gz", CancellationToken.None).Vhc();
+        await using var compressed = await _webRoot.TryOpenReadAsync(localPath + ".gz", context.Token).Vhc();
         if (compressed != null) {
             await SendCompressed(context, localPath, compressed, IsFingerprinted(localPath)).Vhc();
             return;
@@ -648,7 +648,7 @@ public class VpnHoodAppWebHost : IAppWebHost
 
         // the charset said here too: a page without its own meta would garble a non-ASCII app name
         context.Response.ContentType = "text/html; charset=utf-8";
-        await context.Response.Send(_indexHtml ?? await ReadIndexHtml(CancellationToken.None).Vhc()).Vhc();
+        await context.Response.Send(_indexHtml ?? await ReadIndexHtml(context.Token).Vhc()).Vhc();
     }
 
     private static async Task Send(HttpContextBase context, string name, Stream stream, bool isFingerprinted)

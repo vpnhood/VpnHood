@@ -13,7 +13,7 @@ namespace VpnHood.App.StoreScreenshots;
 // they finish in, so a run of eight at once writes the same bytes as a run of one.
 internal static partial class GenerateCommand
 {
-    public static int Run(IReadOnlyList<string> args)
+    public static int Run(IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
         GenerateOptions options;
         try {
@@ -25,7 +25,7 @@ internal static partial class GenerateCommand
         }
 
         try {
-            RunAsync(options, CancellationToken.None).GetAwaiter().GetResult();
+            RunAsync(options, cancellationToken).GetAwaiter().GetResult();
             return 0;
         }
         catch (Exception ex) {

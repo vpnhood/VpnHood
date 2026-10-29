@@ -91,17 +91,17 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
 
     public override Task ImportAccessKey(string accessKey)
     {
-        return MainViewModel.ImportAccessKey(accessKey);
+        return MainViewModel.ImportAccessKey(accessKey, CancellationToken.None);
     }
 
     public override Task ImportAccessKeyFile(IStorageFile file)
     {
-        return MainViewModel.ImportAccessKeyFile(file);
+        return MainViewModel.ImportAccessKeyFile(file, CancellationToken.None);
     }
 
     public override Task QuickLaunch()
     {
-        return MainViewModel.QuickLaunch();
+        return MainViewModel.QuickLaunch(CancellationToken.None);
     }
 
     private MainViewModel MainViewModel => _mainView?.ViewModel ??

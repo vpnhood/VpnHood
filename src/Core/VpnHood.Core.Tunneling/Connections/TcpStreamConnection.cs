@@ -158,7 +158,7 @@ public sealed class TcpStreamConnection : IStreamConnection
     {
         // a second close waits for the first one's end. One after a quick close returns: that close leaves nothing
         // running. A quick close that comes meanwhile closes the socket, which ends the stream's close below
-        using var scopeLock = await _disposeLock.LockAsync().Vhc();
+        using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
         if (_disposed)
             return;
 

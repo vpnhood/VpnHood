@@ -15,9 +15,9 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
     private const string SwapFilePath = "/vpnhood.swap";
 
-    public async Task<SwapMemoryInfo> GetInfo()
+    public async Task<SwapMemoryInfo> GetInfo(CancellationToken cancellationToken)
     {
-        var swapFiles = await ListCurrentSwapFiles().Vhc();
+        var swapFiles = await ListCurrentSwapFiles(cancellationToken).Vhc();
         return new SwapMemoryInfo {
             TotalSize = swapFiles.Sum(x => x.Size),
             TotalUsed = swapFiles.Sum(x => x.Used),
@@ -26,7 +26,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
         };
     }
 
-    public async Task SetAppSwapMemorySize(long size)
+    public async Task SetAppSwapMemorySize(long size, CancellationToken cancellationToken)
     {
         logger.LogInformation("Configuring swap file. File: {SwapFilePath}, Size: {Size}.", SwapFilePath,
             VhUtils.FormatBytes(size));
@@ -37,9 +37,12 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
             // it may raise exception if the swap file is not active
             try {
-                var swapFiles = await ListCurrentSwapFiles().Vhc();
+                var swapFiles = await ListCurrentSwapFiles(cancellationToken).Vhc();
                 if (swapFiles.Any(x => x.FilePath == SwapFilePath))
-                    await ExecuteCommandAsync($"swapoff {SwapFilePath}").Vhc();
+                    await ExecuteCommandAsync($"swapoff {SwapFilePath}", cancellationToken).Vhc();
+            }
+            catch (OperationCanceledException) {
+                throw;
             }
             catch (Exception ex) {
                 logger.LogWarning(ex, "Failed to disable the current swap file.");
@@ -57,19 +60,19 @@ public class LinuxSwapMemoryProvider(ILogger logger)
 
         // Create a new swap file with the specified size
         logger.LogInformation("Creating a new swap file.");
-        await ExecuteCommandAsync($"fallocate -l {size} {SwapFilePath}").Vhc();
+        await ExecuteCommandAsync($"fallocate -l {size} {SwapFilePath}", cancellationToken).Vhc();
 
         // Set the correct permissions for the new swap file
         logger.LogInformation("Setting the correct permissions for the new swap file.");
-        await ExecuteCommandAsync($"chmod 600 /{SwapFilePath}").Vhc();
+        await ExecuteCommandAsync($"chmod 600 /{SwapFilePath}", cancellationToken).Vhc();
 
         // Format the file as swap space
         logger.LogInformation("Formatting the file as swap space.");
-        await ExecuteCommandAsync($"mkswap {SwapFilePath}").Vhc();
+        await ExecuteCommandAsync($"mkswap {SwapFilePath}", cancellationToken).Vhc();
 
         // Enable the swap file
         logger.LogInformation("Enabling the swap file.");
-        await ExecuteCommandAsync($"swapon {SwapFilePath}").Vhc();
+        await ExecuteCommandAsync($"swapon {SwapFilePath}", cancellationToken).Vhc();
 
         // Let ignore the following and activate the swap file everytime after reboot
         // Ensure the swap file is listed in /etc/fstab for persistence after reboot
@@ -98,12 +101,12 @@ public class LinuxSwapMemoryProvider(ILogger logger)
         };
     }
 
-    private static async Task<List<SwapFile>> ListCurrentSwapFiles()
+    private static async Task<List<SwapFile>> ListCurrentSwapFiles(CancellationToken cancellationToken)
     {
         var swapFiles = new List<SwapFile>();
 
         // ReSharper disable StringLiteralTypo
-        var output = await ExecuteCommandAsync("swapon --show --bytes").Vhc();
+        var output = await ExecuteCommandAsync("swapon --show --bytes", cancellationToken).Vhc();
         var lines = output.Split(['\n'], StringSplitOptions.RemoveEmptyEntries);
 
         // Skip the header row and parse the lines
@@ -118,7 +121,7 @@ public class LinuxSwapMemoryProvider(ILogger logger)
         return swapFiles;
     }
 
-    private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken = default)
+    private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken)
     {
         return OsUtils.ExecuteShellCommandAsync(command, cancellationToken);
     }

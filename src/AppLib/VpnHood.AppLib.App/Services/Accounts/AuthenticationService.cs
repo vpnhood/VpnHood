@@ -54,19 +54,19 @@ public class AuthenticationService(
         // credentials on every sign-in), and it is skipped only when a store subscription is
         // already known — a code-served account still asks, because the home store's subscription
         // outranks the code (lifecycle §8).
-        _ = TrySilentRestore(uiContext);
+        _ = TrySilentRestore(uiContext, CancellationToken.None);
         return result;
     }
 
-    private async Task TrySilentRestore(IUiContext? uiContext)
+    private async Task TrySilentRestore(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         try {
             var billingService = accountService.BillingService;
             if (billingService is null ||
-                await accountService.HasSubscription(useCache: true, CancellationToken.None).Vhc())
+                await accountService.HasSubscription(useCache: true, cancellationToken).Vhc())
                 return;
 
-            await billingService.RestorePurchase(uiContext, CancellationToken.None).Vhc();
+            await billingService.RestorePurchase(uiContext, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(ex, "The silent post-sign-in store query restored nothing.");

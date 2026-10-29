@@ -26,40 +26,40 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
 
     // Open the per-operation connection. Callers must hold _lock. The first call also creates the
     // folder and verifies/creates the schema (see EnsureDb).
-    private async Task<SqliteConnection> OpenDb()
+    private async Task<SqliteConnection> OpenDb(CancellationToken cancellationToken)
     {
-        await EnsureDb().Vhc();
-        return await OpenConnection().Vhc();
+        await EnsureDb(cancellationToken).Vhc();
+        return await OpenConnection(cancellationToken).Vhc();
     }
 
-    private async Task<SqliteConnection> OpenConnection()
+    private async Task<SqliteConnection> OpenConnection(CancellationToken cancellationToken)
     {
         SqliteHelper.EnsureInitialized();
         var connection = new SqliteConnection($"Data Source={dbPath};Pooling=False;Default Timeout=5");
-        await connection.OpenAsync().Vhc();
-        await SqliteHelper.ExecuteAsync(connection, "PRAGMA busy_timeout=5000;").Vhc();
+        await connection.OpenAsync(cancellationToken).Vhc();
+        await SqliteHelper.ExecuteAsync(connection, "PRAGMA busy_timeout=5000;", cancellationToken).Vhc();
         return connection;
     }
 
     // one-time (per store instance): create the folder and verify/create the schema; an unusable
     // or foreign db is deleted and recreated empty (legacy data is disposable). Callers hold _lock.
-    private async Task EnsureDb()
+    private async Task EnsureDb(CancellationToken cancellationToken)
     {
         if (_schemaVerified)
             return;
 
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
         try {
-            await using var connection = await OpenConnection().Vhc();
-            await EnsureSchema(connection).Vhc();
+            await using var connection = await OpenConnection(cancellationToken).Vhc();
+            await EnsureSchema(connection, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex,
                 "Could not open the proxy endpoint db. Recreating... DbPath: {DbPath}", dbPath);
             Recreate();
 
-            await using var connection = await OpenConnection().Vhc();
-            await EnsureSchema(connection).Vhc();
+            await using var connection = await OpenConnection(cancellationToken).Vhc();
+            await EnsureSchema(connection, cancellationToken).Vhc();
         }
 
         _schemaVerified = true;
@@ -75,16 +75,16 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         }
     }
 
-    private static async Task EnsureSchema(SqliteConnection connection)
+    private static async Task EnsureSchema(SqliteConnection connection, CancellationToken cancellationToken)
     {
-        await SqliteHelper.ExecuteAsync(connection, $"PRAGMA journal_mode={JournalMode};").Vhc();
+        await SqliteHelper.ExecuteAsync(connection, $"PRAGMA journal_mode={JournalMode};", cancellationToken).Vhc();
 
         // verify schema version; an empty db has no meta table yet
         var hasMeta = await SqliteHelper.ExecuteScalarAsync(connection,
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='meta'").Vhc() is long and > 0;
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='meta'", cancellationToken).Vhc() is long and > 0;
         if (hasMeta) {
             var version = await SqliteHelper.ExecuteScalarAsync(connection,
-                "SELECT value FROM meta WHERE key='schema_version'").Vhc() as string;
+                "SELECT value FROM meta WHERE key='schema_version'", cancellationToken).Vhc() as string;
             if (version == SchemaVersion.ToString())
                 return; // schema is current
             throw new SqliteException($"Unsupported proxy endpoint db schema version: {version}.", 26 /*SQLITE_NOTADB*/);
@@ -111,28 +111,28 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
                 queue_position  INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-            """).Vhc();
+            """, cancellationToken).Vhc();
         await SqliteHelper.ExecuteAsync(connection,
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', @version)",
-            ("@version", SchemaVersion.ToString())).Vhc();
+            cancellationToken, ("@version", SchemaVersion.ToString())).Vhc();
     }
 
-    public async Task<ProxyEndPointRecord?> Get(string id)
+    public async Task<ProxyEndPointRecord?> Get(string id, CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM endpoints WHERE id=@id";
         command.Parameters.AddWithValue("@id", id);
-        await using var reader = await command.ExecuteReaderAsync().Vhc();
-        return await reader.ReadAsync().Vhc() ? ReadRecord(reader) : null;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).Vhc();
+        return await reader.ReadAsync(cancellationToken).Vhc() ? ReadRecord(reader) : null;
     }
 
-    public async Task<int> Count()
+    public async Task<int> Count(CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
-        return Convert.ToInt32(await SqliteHelper.ExecuteScalarAsync(connection, "SELECT COUNT(*) FROM endpoints").Vhc());
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
+        return Convert.ToInt32(await SqliteHelper.ExecuteScalarAsync(connection, "SELECT COUNT(*) FROM endpoints", cancellationToken).Vhc());
     }
 
     // mirrors ProxyEndPointStatus.Quality so ordering happens in SQL
@@ -149,26 +149,28 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         END
         """;
 
-    public async Task<IReadOnlyList<ProxyEndPointRecord>> List()
+    public async Task<IReadOnlyList<ProxyEndPointRecord>> List(CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
-        return await ReadAll(connection).Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
+        return await ReadAll(connection, cancellationToken).Vhc();
     }
 
     // shared by List/Merge/DeleteAll; the caller holds _lock and owns the connection
-    private static async Task<List<ProxyEndPointRecord>> ReadAll(SqliteConnection connection)
+    private static async Task<List<ProxyEndPointRecord>> ReadAll(SqliteConnection connection,
+        CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM endpoints";
-        await using var reader = await command.ExecuteReaderAsync().Vhc();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).Vhc();
         var records = new List<ProxyEndPointRecord>();
-        while (await reader.ReadAsync().Vhc())
+        while (await reader.ReadAsync(cancellationToken).Vhc())
             records.Add(ReadRecord(reader));
         return records;
     }
 
-    public async Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options)
+    public async Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options,
+        CancellationToken cancellationToken)
     {
         // build the WHERE clause; filtering, ordering and paging all run inside SQLite so only
         // the requested page is materialized
@@ -205,14 +207,14 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
 
         var where = string.Join(" AND ", conditions);
 
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
 
         await using var countCommand = connection.CreateCommand();
         countCommand.CommandText = $"SELECT COUNT(*) FROM endpoints WHERE {where}";
         foreach (var (name, value) in parameters)
             countCommand.Parameters.AddWithValue(name, value);
-        var totalCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync().Vhc());
+        var totalCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync(cancellationToken).Vhc());
 
         await using var command = connection.CreateCommand();
         command.CommandText =
@@ -226,9 +228,9 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         command.Parameters.AddWithValue("@recordCount", options.RecordCount);
         command.Parameters.AddWithValue("@recordIndex", options.RecordIndex);
 
-        await using var reader = await command.ExecuteReaderAsync().Vhc();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).Vhc();
         var records = new List<ProxyEndPointRecord>();
-        while (await reader.ReadAsync().Vhc())
+        while (await reader.ReadAsync(cancellationToken).Vhc())
             records.Add(ReadRecord(reader));
 
         return new ListResult<ProxyEndPointRecord> {
@@ -237,22 +239,22 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         };
     }
 
-    public async Task Upsert(IReadOnlyList<ProxyEndPointRecord> records, bool keepExistingStatus = true,
-        bool keepExistingEnabled = false)
+    public async Task Upsert(IReadOnlyList<ProxyEndPointRecord> records, bool keepExistingStatus,
+        bool keepExistingEnabled, CancellationToken cancellationToken)
     {
         if (records.Count == 0)
             return;
 
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
         foreach (var record in records)
-            await UpsertCore(connection, transaction, record, keepExistingStatus, keepExistingEnabled).Vhc();
-        await transaction.CommitAsync().Vhc();
+            await UpsertCore(connection, transaction, record, keepExistingStatus, keepExistingEnabled, cancellationToken).Vhc();
+        await transaction.CommitAsync(cancellationToken).Vhc();
     }
 
     private static async Task UpsertCore(SqliteConnection connection, SqliteTransaction transaction,
-        ProxyEndPointRecord record, bool keepExistingStatus, bool keepExistingEnabled)
+        ProxyEndPointRecord record, bool keepExistingStatus, bool keepExistingEnabled, CancellationToken cancellationToken)
     {
         var statusUpdate = keepExistingStatus
             ? ""
@@ -293,17 +295,17 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         command.Parameters.AddWithValue("@isEnabled", endPoint.IsEnabled ? 1 : 0);
         command.Parameters.AddWithValue("@countryCode", (object?)record.CountryCode ?? DBNull.Value);
         AddStatusParameters(command, status);
-        await command.ExecuteNonQueryAsync().Vhc();
+        await command.ExecuteNonQueryAsync(cancellationToken).Vhc();
     }
 
-    public async Task UpdateStatuses(IReadOnlyList<ProxyEndPointInfo> infos)
+    public async Task UpdateStatuses(IReadOnlyList<ProxyEndPointInfo> infos, CancellationToken cancellationToken)
     {
         if (infos.Count == 0)
             return;
 
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
         foreach (var info in infos) {
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
@@ -318,44 +320,44 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             command.Parameters.AddWithValue("@id", info.EndPoint.Id);
             command.Parameters.AddWithValue("@isEnabled", info.EndPoint.IsEnabled ? 1 : 0);
             AddStatusParameters(command, info.Status);
-            await command.ExecuteNonQueryAsync().Vhc();
+            await command.ExecuteNonQueryAsync(cancellationToken).Vhc();
         }
 
-        await transaction.CommitAsync().Vhc();
+        await transaction.CommitAsync(cancellationToken).Vhc();
     }
 
-    public async Task Delete(IReadOnlyList<string> ids)
+    public async Task Delete(IReadOnlyList<string> ids, CancellationToken cancellationToken)
     {
         if (ids.Count == 0)
             return;
 
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync().Vhc();
-        await DeleteCore(connection, transaction, ids).Vhc();
-        await transaction.CommitAsync().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
+        await DeleteCore(connection, transaction, ids, cancellationToken).Vhc();
+        await transaction.CommitAsync(cancellationToken).Vhc();
     }
 
     // shared by Delete/DeleteAll/Merge; the caller holds _lock and owns the transaction
     private static async Task DeleteCore(SqliteConnection connection, SqliteTransaction transaction,
-        IReadOnlyList<string> ids)
+        IReadOnlyList<string> ids, CancellationToken cancellationToken)
     {
         foreach (var id in ids) {
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = "DELETE FROM endpoints WHERE id=@id";
             command.Parameters.AddWithValue("@id", id);
-            await command.ExecuteNonQueryAsync().Vhc();
+            await command.ExecuteNonQueryAsync(cancellationToken).Vhc();
         }
     }
 
-    public async Task DeleteAll(DeleteAllOptions options)
+    public async Task DeleteAll(DeleteAllOptions options, CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
 
         // keep the exact category semantics of the old app-side filter chain
-        var allRecords = await ReadAll(connection).Vhc();
+        var allRecords = await ReadAll(connection, cancellationToken).Vhc();
         var keep = allRecords.AsEnumerable();
 
         if (options.DeleteSucceeded)
@@ -376,15 +378,15 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             .Where(id => !keepIds.Contains(id))
             .ToArray();
 
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync().Vhc();
-        await DeleteCore(connection, transaction, deleteIds).Vhc();
-        await transaction.CommitAsync().Vhc();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
+        await DeleteCore(connection, transaction, deleteIds, cancellationToken).Vhc();
+        await transaction.CommitAsync(cancellationToken).Vhc();
     }
 
-    public async Task DisableAllFailed()
+    public async Task DisableAllFailed(CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
 
         // HasUsed && !IsLastUsedSucceeded
         await SqliteHelper.ExecuteAsync(connection,
@@ -392,39 +394,39 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             UPDATE endpoints SET is_enabled=0
             WHERE (succeeded_count > 0 OR failed_count > 0)
               AND (last_succeeded IS NULL OR (last_failed IS NOT NULL AND last_succeeded <= last_failed))
-            """).Vhc();
+            """, cancellationToken).Vhc();
     }
 
-    public async Task SetCountryCode(string id, string? countryCode)
+    public async Task SetCountryCode(string id, string? countryCode, CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
         await SqliteHelper.ExecuteAsync(connection,
             "UPDATE endpoints SET country_code=@countryCode WHERE id=@id",
-            ("@countryCode", (object?)countryCode ?? DBNull.Value), ("@id", id)).Vhc();
+            cancellationToken, ("@countryCode", (object?)countryCode ?? DBNull.Value), ("@id", id)).Vhc();
     }
 
-    public async Task ResetStatuses()
+    public async Task ResetStatuses(CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
         await SqliteHelper.ExecuteAsync(connection,
             """
             UPDATE endpoints SET penalty=0, succeeded_count=0, failed_count=0, latency_ms=NULL,
                 last_succeeded=NULL, last_failed=NULL, error_message=NULL, queue_position=0
-            """).Vhc();
+            """, cancellationToken).Vhc();
         await SqliteHelper.ExecuteAsync(connection,
-            "INSERT OR REPLACE INTO meta (key, value) VALUES ('queue_position', '0')").Vhc();
+            "INSERT OR REPLACE INTO meta (key, value) VALUES ('queue_position', '0')", cancellationToken).Vhc();
     }
 
     public async Task Merge(IReadOnlyList<ProxyEndPoint> newEndPoints, int? maxItemCount, int? maxPenalty,
-        bool removeDuplicateIps)
+        bool removeDuplicateIps, CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
 
         // the standard priority merge works on the full current list; ~1000 rows max
-        var currentRecords = await ReadAll(connection).Vhc();
+        var currentRecords = await ReadAll(connection, cancellationToken).Vhc();
         var currentInfos = currentRecords.Select(x => x.ToInfo()).ToArray();
         var mergedEndPoints = ProxyEndPointUpdater.Merge(
             currentInfos, newEndPoints as ProxyEndPoint[] ?? [.. newEndPoints],
@@ -440,33 +442,34 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             .Select(x => new ProxyEndPointRecord { EndPoint = x })
             .ToArray();
 
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync().Vhc();
-        await DeleteCore(connection, transaction, prunedIds).Vhc();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
+        await DeleteCore(connection, transaction, prunedIds, cancellationToken).Vhc();
 
         // existing rows keep their status and enabled state; new rows start fresh
         foreach (var record in records)
-            await UpsertCore(connection, transaction, record, keepExistingStatus: true, keepExistingEnabled: true).Vhc();
+            await UpsertCore(connection, transaction, record, keepExistingStatus: true, keepExistingEnabled: true,
+                cancellationToken).Vhc();
 
-        await transaction.CommitAsync().Vhc();
+        await transaction.CommitAsync(cancellationToken).Vhc();
     }
 
-    public async Task<long> GetQueuePosition()
+    public async Task<long> GetQueuePosition(CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
         return await SqliteHelper.ExecuteScalarAsync(connection,
-            "SELECT value FROM meta WHERE key='queue_position'").Vhc() is string value
+            "SELECT value FROM meta WHERE key='queue_position'", cancellationToken).Vhc() is string value
             ? long.Parse(value)
             : 0L;
     }
 
-    public async Task SetQueuePosition(long queuePosition)
+    public async Task SetQueuePosition(long queuePosition, CancellationToken cancellationToken)
     {
-        using var scope = await _lock.LockAsync().Vhc();
-        await using var connection = await OpenDb().Vhc();
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        await using var connection = await OpenDb(cancellationToken).Vhc();
         await SqliteHelper.ExecuteAsync(connection,
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('queue_position', @value)",
-            ("@value", queuePosition.ToString())).Vhc();
+            cancellationToken, ("@value", queuePosition.ToString())).Vhc();
     }
 
     private static void AddStatusParameters(SqliteCommand command, ProxyEndPointStatus status)

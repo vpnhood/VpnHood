@@ -35,7 +35,10 @@ public class VpnServiceOptionsFile(string configFolder)
         try {
             return Read(cancellationToken);
         }
-        catch (Exception ex) when (!cancellationToken.IsCancellationRequested) {
+        catch (OperationCanceledException) {
+            throw;
+        }
+        catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not read the VPN service options. FilePath: {FilePath}", FilePath);
             return null;
         }

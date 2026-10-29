@@ -60,7 +60,7 @@ public class StaticIpFilter : IIpFilter
     }
 
     // this stage's own sets are program state, not external configuration; just forward the command
-    public void Reconfigure() => _nextFilter?.Reconfigure();
+    public void Reconfigure(CancellationToken cancellationToken) => _nextFilter?.Reconfigure(cancellationToken);
 
     public bool IsEmpty =>
         BlockedRanges.Count == 0 &&

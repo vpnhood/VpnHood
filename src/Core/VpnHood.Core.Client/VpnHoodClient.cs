@@ -209,7 +209,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }, CancellationToken.None);
     }
 
-    public async Task Connect(CancellationToken cancellationToken = default)
+    public async Task Connect(CancellationToken cancellationToken)
     {
         try {
             await Connect2(cancellationToken).Vhc();
@@ -229,7 +229,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    public async Task Connect2(CancellationToken cancellationToken = default)
+    public async Task Connect2(CancellationToken cancellationToken)
     {
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
@@ -297,7 +297,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // a second close waits for the first one's end - a disconnect during connect, say, where the failed connect
         // closes too; the adapter's Disposed handler, raised in that release, only starts one. No early return after
         // it: the steps below join what a quick close left running
-        using var lockResult = await _disposeLock.LockAsync().Vhc();
+        using var lockResult = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
 
         // only the first close logs its start
         if (!Interlocked.Exchange(ref _disposing, true))

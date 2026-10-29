@@ -30,7 +30,7 @@ public partial class AddServerView : UserControl, IPage
         // Enter in the field adds, as it would submit that dialog's form
         if (e.Key == Key.Enter && KeyBox.IsFocused) {
             e.Handled = true;
-            _ = Add();
+            _ = Add(CancellationToken.None);
             return;
         }
 
@@ -40,7 +40,7 @@ public partial class AddServerView : UserControl, IPage
     private async void OnAddClick(object? sender, RoutedEventArgs e)
     {
         try {
-            await Add();
+            await Add(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -54,16 +54,16 @@ public partial class AddServerView : UserControl, IPage
 
     // The key is the app's to judge: whatever it refuses is an unreadable key, and the page says so
     // in the web UI's own words rather than the exception's.
-    private async Task Add()
+    private async Task Add(CancellationToken cancellationToken)
     {
         var accessKey = KeyBox.Text?.Trim();
         if (string.IsNullOrEmpty(accessKey))
             return;
 
         try {
-            var vpnProfileId = await _viewModel.AddAccessKey(accessKey);
+            var vpnProfileId = await _viewModel.AddAccessKey(accessKey, cancellationToken);
             _host.GoBack();
-            _ = _viewModel.ConnectToProfile(vpnProfileId);
+            _ = _viewModel.ConnectToProfile(vpnProfileId, CancellationToken.None);
         }
         catch {
             LiveText.Say(ErrorText, Strings.Current.InvalidAccessKeyFormat);

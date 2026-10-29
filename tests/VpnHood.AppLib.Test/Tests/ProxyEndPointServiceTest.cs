@@ -6,6 +6,8 @@ using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.App.Utils;
+using VpnHood.AppLib.App.Services.Proxies;
+using VpnHood.Net.Toolkit.Generics;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Proxies.HttpProxyServers;
@@ -24,6 +26,13 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class ProxyEndPointServiceTest : TestAppBase
 {
+    // every endpoint, as the proxy page lists them, under the test's token
+    private Task<ListResult<AppProxyEndPointInfo>> ListProxies(AppProxyEndPointService proxyEndPointService)
+    {
+        return proxyEndPointService.ListProxies(search: null, includeSucceeded: true, includeFailed: true,
+            includeUnknown: true, includeDisabled: true, recordIndex: null, recordCount: null, TestCt);
+    }
+
     [TestMethod]
     public async Task List()
     {
@@ -44,12 +53,12 @@ public class ProxyEndPointServiceTest : TestAppBase
             Protocol = ProxyProtocol.Http,
             Host = httpProxyServer.ListenerEndPoint.Address.ToString(),
             Port = httpProxyServer.ListenerEndPoint.Port
-        });
+        }, TestCt);
 
-        await dom.App.Connect(AppUiContext.Context);
+        await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
         await dom.App.WaitForState(AppConnectionState.Connected);
 
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), endPointInfos[0].EndPoint.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, endPointInfos[0].EndPoint.Port);
@@ -76,15 +85,15 @@ public class ProxyEndPointServiceTest : TestAppBase
             Protocol = ProxyProtocol.Http,
             Host = httpProxyServer.ListenerEndPoint.Address.ToString(),
             Port = httpProxyServer.ListenerEndPoint.Port
-        });
+        }, TestCt);
 
-        await dom.App.Connect(AppUiContext.Context);
+        await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
         await dom.App.WaitForState(AppConnectionState.Connected);
         await TestHelper.Test_Https();
 
         // make sure new status is fetched from core
         await dom.App.ForceUpdateState(TestCt);
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), endPointInfos[0].EndPoint.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, endPointInfos[0].EndPoint.Port);
@@ -94,7 +103,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         // disconnect 
         await dom.App.Disconnect();
         await dom.App.ForceUpdateState(TestCt);
-        endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), endPointInfos[0].EndPoint.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, endPointInfos[0].EndPoint.Port);
@@ -102,10 +111,10 @@ public class ProxyEndPointServiceTest : TestAppBase
         lastSucceededCount = endPointInfos[0].Status.SucceededCount;
 
         // reconnect and make sure status is restored
-        await dom.App.Connect(AppUiContext.Context);
+        await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
         await dom.App.WaitForState(AppConnectionState.Connected);
         await dom.App.ForceUpdateState(TestCt);
-        endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), endPointInfos[0].EndPoint.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, endPointInfos[0].EndPoint.Port);
@@ -117,9 +126,9 @@ public class ProxyEndPointServiceTest : TestAppBase
         await dom.App.ForceUpdateState(TestCt);
 
         // clear status
-        await dom.App.Services.ProxyEndPointService.ResetStates();
+        await dom.App.Services.ProxyEndPointService.ResetStates(TestCt);
         await dom.App.ForceUpdateState(TestCt);
-        endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), endPointInfos[0].EndPoint.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, endPointInfos[0].EndPoint.Port);
@@ -145,7 +154,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         };
         var added = new List<AppProxyEndPointInfo>();
         foreach (var proxyEndPoint in endpoints)
-            added.Add(await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint));
+            added.Add(await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint, TestCt));
 
         // update endpoint[2]
         var newNode = new ProxyEndPoint {
@@ -153,8 +162,8 @@ public class ProxyEndPointServiceTest : TestAppBase
             Host = $"proxy{1000}.example.com",
             Port = 1080
         };
-        var updatedNode = await dom.App.Services.ProxyEndPointService.Update(added[2].EndPoint.Id, newNode);
-        var updatedNodes = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var updatedNode = await dom.App.Services.ProxyEndPointService.Update(added[2].EndPoint.Id, newNode, TestCt);
+        var updatedNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(10, updatedNodes);
         Assert.HasCount(0, updatedNodes.Where(x => x.EndPoint.Id == added[2].EndPoint.Id));
         Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == updatedNode.EndPoint.Id).EndPoint.Url,
@@ -184,10 +193,10 @@ public class ProxyEndPointServiceTest : TestAppBase
         };
         var added = new List<AppProxyEndPointInfo>();
         foreach (var proxyEndPoint in endpoints)
-            added.Add(await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint));
+            added.Add(await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint, TestCt));
 
         // check that duplicate is removed
-        var updatedNodes = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var updatedNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(10, updatedNodes);
         Assert.HasCount(1, updatedNodes.Where(n => n.EndPoint.Id == added[0].EndPoint.Id));
     }
@@ -210,10 +219,10 @@ public class ProxyEndPointServiceTest : TestAppBase
         };
         var added = new List<AppProxyEndPointInfo>();
         foreach (var proxyEndPoint in endpoints)
-            added.Add(await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint));
+            added.Add(await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint, TestCt));
 
         // Get
-        var proxyEndPointInfo = await dom.App.Services.ProxyEndPointService.Get(added.First().EndPoint.Id);
+        var proxyEndPointInfo = await dom.App.Services.ProxyEndPointService.Get(added.First().EndPoint.Id, TestCt);
         Assert.AreEqual(added.First().EndPoint.Id, proxyEndPointInfo.EndPoint.Id);
         Assert.AreEqual(endpoints.First().Host, proxyEndPointInfo.EndPoint.Host);
 
@@ -223,14 +232,14 @@ public class ProxyEndPointServiceTest : TestAppBase
             Host = $"proxy{1000}.example.com",
             Port = 1080
         };
-        var newNodeInfo = await dom.App.Services.ProxyEndPointService.Add(newNode);
-        var updatedNodes = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var newNodeInfo = await dom.App.Services.ProxyEndPointService.Add(newNode, TestCt);
+        var updatedNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(11, updatedNodes);
         Assert.HasCount(1, updatedNodes.Where(x => x.EndPoint.Id == newNodeInfo.EndPoint.Id).ToArray());
 
         // add same but should be duplicated
-        await dom.App.Services.ProxyEndPointService.Add(newNode);
-        updatedNodes = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        await dom.App.Services.ProxyEndPointService.Add(newNode, TestCt);
+        updatedNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(11, updatedNodes);
         Assert.HasCount(1, updatedNodes.Where(x => x.EndPoint.Id == newNodeInfo.EndPoint.Id).ToArray());
 
@@ -240,21 +249,21 @@ public class ProxyEndPointServiceTest : TestAppBase
             Host = $"proxy{2000}.example.com",
             Port = 2080
         };
-        newNodeInfo = await dom.App.Services.ProxyEndPointService.Update(added[2].EndPoint.Id, newNode);
-        updatedNodes = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        newNodeInfo = await dom.App.Services.ProxyEndPointService.Update(added[2].EndPoint.Id, newNode, TestCt);
+        updatedNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(11, updatedNodes);
         Assert.HasCount(0, updatedNodes.Where(x => x.EndPoint.Id == added[2].EndPoint.Id));
         Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == newNodeInfo.EndPoint.Id).EndPoint.Url,
             newNodeInfo.EndPoint.Url);
 
         // check infos
-        var updatedAppNodes = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var updatedAppNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(11, updatedAppNodes);
         Assert.HasCount(1, updatedAppNodes.Where(x => x.EndPoint.Id == newNodeInfo.EndPoint.Id));
 
         // delete endpoint[5]
-        await dom.App.Services.ProxyEndPointService.Delete(added[5].EndPoint.Id);
-        updatedAppNodes = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        await dom.App.Services.ProxyEndPointService.Delete(added[5].EndPoint.Id, TestCt);
+        updatedAppNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(10, updatedAppNodes);
         Assert.HasCount(0, updatedAppNodes.Where(x => x.EndPoint.Id == added[5].EndPoint.Id));
     }
@@ -288,14 +297,14 @@ public class ProxyEndPointServiceTest : TestAppBase
         // set proxy options to use device proxy; it travels as a single inline proxy, not via the store
         dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.Device;
         Assert.IsTrue(dom.App.State.IsProxyEndPointActive);
-        var proxyOptions = await dom.App.Services.ProxyEndPointService.GetProxyOptions();
+        var proxyOptions = await dom.App.Services.ProxyEndPointService.GetProxyOptions(TestCt);
         Assert.AreEqual(ProxyMode.Simple, proxyOptions.Mode);
         Assert.AreEqual(deviceProxy.EndPoint.Id, proxyOptions.ProxyEndPoint?.Id);
 
         // disable proxy
         dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.NoProxy;
         Assert.IsFalse(dom.App.State.IsProxyEndPointActive);
-        proxyOptions = await dom.App.Services.ProxyEndPointService.GetProxyOptions();
+        proxyOptions = await dom.App.Services.ProxyEndPointService.GetProxyOptions(TestCt);
         Assert.AreEqual(ProxyMode.None, proxyOptions.Mode);
         Assert.IsNull(proxyOptions.ProxyEndPoint);
     }
@@ -321,15 +330,15 @@ public class ProxyEndPointServiceTest : TestAppBase
             Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
             Protocol = ProxyProtocol.Socks5
         };
-        await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint);
+        await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint, TestCt);
 
         // connect
-        await dom.App.Connect(AppUiContext.Context);
+        await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
         await TestHelper.Test_Https();
 
         // get info
         await dom.App.ForceUpdateState(TestCt);
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.IsGreaterThan(0, endPointInfos[0].Status.SucceededCount);
     }
 
@@ -353,23 +362,23 @@ public class ProxyEndPointServiceTest : TestAppBase
             Port = socks5ProxyServer.ListenerEndPoint.Port,
             Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
             Protocol = ProxyProtocol.Socks5
-        })).EndPoint;
+        }, TestCt)).EndPoint;
         var extraProxy = (await dom.App.Services.ProxyEndPointService.Add(new ProxyEndPoint {
             Port = 1, // unreachable
             Host = "127.0.0.1",
             Protocol = ProxyProtocol.Socks5
-        })).EndPoint;
+        }, TestCt)).EndPoint;
 
         // connect
-        await dom.App.Connect(AppUiContext.Context);
+        await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
         await dom.App.WaitForState(AppConnectionState.Connected);
 
         // delete the extra endpoint while the core session is live, then force a core status flush;
         // the flush is UPDATE-only and must not bring the deleted row back
-        await dom.App.Services.ProxyEndPointService.Delete(extraProxy.Id);
+        await dom.App.Services.ProxyEndPointService.Delete(extraProxy.Id, TestCt);
         await dom.App.ForceUpdateState(TestCt);
 
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(workingProxy.Id, endPointInfos[0].EndPoint.Id);
     }
@@ -389,14 +398,14 @@ public class ProxyEndPointServiceTest : TestAppBase
             Host = "localhost",
             Protocol = ProxyProtocol.Socks5
         };
-        await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint);
+        await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint, TestCt);
 
         // connect
-        await Assert.ThrowsAsync<UnreachableProxyServerException>(() => dom.App.Connect(AppUiContext.Context));
+        await Assert.ThrowsAsync<UnreachableProxyServerException>(() => dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt));
 
         // get info
         await dom.App.ForceUpdateState(TestCt);
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.AreEqual(0, endPointInfos[0].Status.SucceededCount);
         Assert.IsGreaterThan(0, endPointInfos[0].Status.FailedCount);
     }
@@ -421,17 +430,17 @@ public class ProxyEndPointServiceTest : TestAppBase
         }
 
         foreach (var proxyEndPoint in endpoints)
-            await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint);
+            await dom.App.Services.ProxyEndPointService.Add(proxyEndPoint, TestCt);
 
         // verify endpoints are added
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(10, endPointInfos);
 
         // delete all endpoints
-        await dom.App.Services.ProxyEndPointService.DeleteAll();
+        await dom.App.Services.ProxyEndPointService.DeleteAll(null, TestCt);
 
         // verify all endpoints are deleted
-        endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(0, endPointInfos);
 
         // verify proxy is not active after deletion
@@ -449,10 +458,10 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         // import a single proxy
         var proxyText = "socks5://proxy.example.com:1080";
-        await dom.App.Services.ProxyEndPointService.Import(proxyText);
+        await dom.App.Services.ProxyEndPointService.Import(proxyText, TestCt);
 
         // verify proxy is imported
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual("proxy.example.com", endPointInfos[0].EndPoint.Host);
         Assert.AreEqual(1080, endPointInfos[0].EndPoint.Port);
@@ -474,10 +483,10 @@ public class ProxyEndPointServiceTest : TestAppBase
             http://proxy2.example.com:8080
             socks5://user:pass@proxy3.example.com:1081
             http://proxy4.example.com:3128";
-        await dom.App.Services.ProxyEndPointService.Import(proxyText);
+        await dom.App.Services.ProxyEndPointService.Import(proxyText, TestCt);
 
         // verify all proxies are imported
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(4, endPointInfos);
 
         // verify first proxy
@@ -521,10 +530,10 @@ public class ProxyEndPointServiceTest : TestAppBase
             Protocol = ProxyProtocol.Http,
             Host = "existing.example.com",
             Port = 8080
-        });
+        }, TestCt);
 
         // verify existing proxy
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
 
         // import new proxies
@@ -532,10 +541,10 @@ public class ProxyEndPointServiceTest : TestAppBase
             socks5://proxy1.example.com:1080
             http://proxy2.example.com:8080
          ";
-        await dom.App.Services.ProxyEndPointService.Import(proxyText);
+        await dom.App.Services.ProxyEndPointService.Import(proxyText, TestCt);
 
         // verify both existing and imported proxies
-        endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(3, endPointInfos);
         Assert.HasCount(1, endPointInfos.Where(n => n.EndPoint.Host == "existing.example.com"));
         Assert.HasCount(1, endPointInfos.Where(n => n.EndPoint.Host == "proxy1.example.com"));
@@ -553,18 +562,18 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         // import proxies
         var proxyText = "socks5://proxy.example.com:1080";
-        await dom.App.Services.ProxyEndPointService.Import(proxyText);
+        await dom.App.Services.ProxyEndPointService.Import(proxyText, TestCt);
 
         // verify proxy is imported
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
         var firstNodeId = endPointInfos[0].EndPoint.Id;
 
         // import the same proxy again
-        await dom.App.Services.ProxyEndPointService.Import(proxyText);
+        await dom.App.Services.ProxyEndPointService.Import(proxyText, TestCt);
 
         // verify no duplicate is created
-        endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(firstNodeId, endPointInfos[0].EndPoint.Id);
     }
@@ -602,14 +611,14 @@ public class ProxyEndPointServiceTest : TestAppBase
         };
 
         // connect
-        await dom.App.Connect(AppUiContext.Context);
+        await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
 
         // the core downloads and merges the list in the background; wait until it lands in the db
         await VhTestUtil.AssertEqualsWait(2, async () =>
-            (await dom.App.Services.ProxyEndPointService.ListProxies()).TotalCount);
+            (await ListProxies(dom.App.Services.ProxyEndPointService)).TotalCount);
 
         // check is proxies are added
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(2, endPointInfos);
         Assert.HasCount(1,
             endPointInfos.Where(n => n.EndPoint.Protocol == ProxyProtocol.Socks5 && n.EndPoint.Port == socks5Ep.Port));
@@ -651,7 +660,7 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         // check is proxies are added
         await dom.App.Services.ProxyEndPointService.ReloadUrl(TestCt);
-        var endPointInfos = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
+        var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(2, endPointInfos);
         Assert.HasCount(1,
             endPointInfos.Where(n => n.EndPoint.Protocol == ProxyProtocol.Socks5 && n.EndPoint.Port == socks5Ep.Port));

@@ -29,7 +29,8 @@ internal static class UpdateCommand
         var appVersion = info.Features.Version;
         var checkResult = await api.App.VersionCheck(cancellationToken).Vhc();
         if (checkResult == VersionCheckResult.Failed) {
-            await Console.Error.WriteLineAsync("Could not check for an update; see the service's log.").Vhc();
+            await Console.Error.WriteLineAsync("Could not check for an update; see the service's log.".AsMemory(),
+                cancellationToken).Vhc();
             return 1;
         }
 
@@ -42,15 +43,16 @@ internal static class UpdateCommand
         // the feed's newer version, which this install does not take itself
         if (status.UpdateState is not { } update) {
             await Console.Error.WriteLineAsync(
-                $"This install does not update itself. Get {status.PublishInfo?.Version} at: " +
-                $"{status.PublishInfo?.InstallationPageUrl}").Vhc();
+                ($"This install does not update itself. Get {status.PublishInfo?.Version} at: " +
+                 $"{status.PublishInfo?.InstallationPageUrl}").AsMemory(), cancellationToken).Vhc();
             return 1;
         }
 
         var version = update.Version;
         if (update.Stage is not AppUpdateStage.Installing) {
             if (await Download(api, update, cancellationToken).Vhc() is { } downloadError) {
-                await Console.Error.WriteLineAsync($"Updating to {version} failed: {downloadError}").Vhc();
+                await Console.Error.WriteLineAsync($"Updating to {version} failed: {downloadError}".AsMemory(),
+                    cancellationToken).Vhc();
                 return 1;
             }
 

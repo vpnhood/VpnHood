@@ -97,7 +97,7 @@ public static class AvaloniaDesktopHost
             hiddenSize = window.ClientSize;
             window.Hide();
             if (!isToTray)
-                _ = EndOnceDisconnected(api, window, lifetime);
+                _ = EndOnceDisconnected(api, window, lifetime, CancellationToken.None);
         };
 
         // Avalonia 12 on X11 draws the frame itself, and the window manager (KWin and Mutter alike) maps
@@ -151,17 +151,17 @@ public static class AvaloniaDesktopHost
     // A window hidden while the app's VPN is up: the run ends once the VPN is down - at once, if it was down
     // already - unless a launch shows the window again first. Read as the tray reads the app's state.
     private static async Task EndOnceDisconnected(VpnHoodApi api, Window window,
-        ClassicDesktopStyleApplicationLifetime lifetime)
+        ClassicDesktopStyleApplicationLifetime lifetime, CancellationToken cancellationToken)
     {
         try {
             while (!window.IsVisible) {
-                var state = await api.App.GetState(CancellationToken.None);
+                var state = await api.App.GetState(cancellationToken);
                 if (!state.CanDisconnect) {
                     lifetime.Shutdown();
                     return;
                 }
 
-                await Task.Delay(HiddenStateInterval);
+                await Task.Delay(HiddenStateInterval, cancellationToken);
             }
         }
         catch (Exception ex) {
@@ -229,7 +229,7 @@ public static class AvaloniaDesktopHost
     // The words in the device's language: loading them leaves English. Null where the content cannot
     // be loaded - a broken store, fonts that cannot be read, a cache that cannot be written - and the
     // message is the host's English: it is the last word a person gets, and must not fail with what
-    // it reports.
+    // it reports, so nothing cancels it.
     private static Strings? TryLoadStrings<TUi>(IAssetProvider assets)
         where TUi : IAvaloniaUi
     {

@@ -119,7 +119,7 @@ public sealed class SqliteDomainFilter : IDomainFilter
     }
 
     // this gate's own db is immutable (a new db means a new gate); just forward the command
-    public void Reconfigure() => _next?.Reconfigure();
+    public void Reconfigure(CancellationToken cancellationToken) => _next?.Reconfigure(cancellationToken);
 
     public void Dispose()
     {

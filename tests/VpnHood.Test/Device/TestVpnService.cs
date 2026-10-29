@@ -60,7 +60,7 @@ public class TestVpnService
         return new TestClientFactory(_netFilter);
     }
 
-    public void ShowNotification(ConnectionInfo connectionInfo)
+    public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("Show notification called with connection info: {@ConnectionInfo}", connectionInfo);
     }

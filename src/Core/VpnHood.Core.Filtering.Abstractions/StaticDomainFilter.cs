@@ -125,7 +125,7 @@ public class StaticDomainFilter : IDomainFilter
     }
 
     // this stage's own lists are program state, not external configuration; just forward the command
-    public void Reconfigure() => _nextFilter?.Reconfigure();
+    public void Reconfigure(CancellationToken cancellationToken) => _nextFilter?.Reconfigure(cancellationToken);
 
     public void Dispose()
     {

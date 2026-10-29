@@ -16,12 +16,12 @@ public class TestSwapMemoryProvider : ISwapMemoryProvider
         TotalUsed = OtherUsed + AppUsed
     };
 
-    public Task<SwapMemoryInfo> GetInfo()
+    public Task<SwapMemoryInfo> GetInfo(CancellationToken cancellationToken)
     {
         return Task.FromResult(Info);
     }
 
-    public Task SetAppSwapMemorySize(long size)
+    public Task SetAppSwapMemorySize(long size, CancellationToken cancellationToken)
     {
         AppSize = size;
         return Task.CompletedTask;

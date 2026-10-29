@@ -16,8 +16,8 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Test.Tests.Servers;
 
-// the server's answers to whoever is not a client, as Kestrel gives them behind a JWT bearer check: the parity
-// harness of the IP-blocking plan measured them on a real Kestrel, and these keep them from drifting
+// the server's answers to whoever is not a client, as Kestrel gives them behind a JWT bearer check:
+// VpnHood.Test.KestrelParity measures them against a real Kestrel, and these pin each rule without one
 [TestClass]
 public partial class WebFrontTest : TestBase
 {

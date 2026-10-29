@@ -5,7 +5,8 @@ namespace VpnHood.Core.Server.ProbeResistance;
 
 // the server's HTTP face to anyone who is not a client: ASP.NET Core's Kestrel behind a JWT bearer check, and HTTPS
 // redirection on port 80, with Kestrel's parsing, limits, timeouts and keep-alive. Recognized client requests switch
-// to their protocol after the headers; the parity harness of the IP-blocking plan compares ordinary requests
+// to their protocol after the headers; tests/VpnHood.Test.KestrelParity compares ordinary requests with a real
+// Kestrel's answers, probe by probe
 internal static class WebFront
 {
     // Kestrel's defaults; its TLS handshake has its own timeout, which no heartbeat rounds

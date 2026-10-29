@@ -265,5 +265,6 @@
     <Project Path="tests/VpnHood.AppUi.SmokeTest/VpnHood.AppUi.SmokeTest.csproj" />
     <Project Path="tests/VpnHood.Net.TcpStack.Test/VpnHood.Net.TcpStack.Test.csproj" />
     <Project Path="tests/VpnHood.Test/VpnHood.Test.csproj" />
+    <Project Path="tests/VpnHood.Test.KestrelParity/VpnHood.Test.KestrelParity.csproj" />
   </Folder>
 </Solution>

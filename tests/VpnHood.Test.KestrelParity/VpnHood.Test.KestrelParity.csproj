@@ -1,0 +1,20 @@
+<Project Sdk="MSTest.Sdk/4.4.1">
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<IsPackable>false</IsPackable>
+		<UseVSTest>true</UseVSTest>
+		<MicrosoftNETTestSdkVersion>18.10.1</MicrosoftNETTestSdkVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The reference runs in this process: Kestrel behind a JWT bearer check. Its version is what the
+		     replies were measured on; another ASP.NET Core may answer some probes differently. -->
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0-rc.3.26522.148" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
+		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Server.Access.Managers.FileAccessManagers\VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
+	</ItemGroup>
+</Project>

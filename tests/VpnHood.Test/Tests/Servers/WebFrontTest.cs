@@ -101,6 +101,14 @@ public class WebFrontTest : TestBase
     [DataRow("GET * HTTP/1.1", 405)] // only OPTIONS takes an asterisk
     [DataRow("GET a HTTP/1.1", 405)] // only CONNECT takes an authority
     [DataRow("GET ftp://x/ HTTP/1.1", 400)]
+    [DataRow("GET HTTP://x/ HTTP/1.1", 400)]
+    [DataRow("GET Http://x/ HTTP/1.1", 400)]
+    [DataRow("GET a@b HTTP/1.1", 405)]
+    [DataRow("GET a_b HTTP/1.1", 400)]
+    [DataRow("GET a~b HTTP/1.1", 400)]
+    [DataRow("GET a=b HTTP/1.1", 400)]
+    [DataRow("GET a!b HTTP/1.1", 400)]
+    [DataRow("GET a%41 HTTP/1.1", 400)]
     [DataRow("GET http://other/ HTTP/1.1", 400)] // its host is not the Host header's
     [DataRow("get /a|b{c}^d HTTP/1.1", 0)]
     public async Task A_request_line_follows_kestrels_rules(string requestLine, int rejection)
@@ -111,6 +119,14 @@ public class WebFrontTest : TestBase
     [TestMethod]
     [DataRow("Host: a b", 400)]
     [DataRow("Host: a:x", 400)]
+    [DataRow("Host: a*b", 400)]
+    [DataRow("Host: a+b", 400)]
+    [DataRow("Host: a%41", 400)]
+    [DataRow("Host: a,b", 400)]
+    [DataRow("Host: a;b", 400)]
+    [DataRow("Host: a=b", 400)]
+    [DataRow("Host: a_b", 0)]
+    [DataRow("Host: [1.2.3.4]", 0)]
     [DataRow("Host: a\r\nHost: b", 400)]
     [DataRow("Host : x", 400)]
     [DataRow("Host: x\r\nX-A: a\r\n folded", 400)]
@@ -167,6 +183,9 @@ public class WebFrontTest : TestBase
     [TestMethod]
     [DataRow("Content-Length: 5\r\n\r\nhello")]
     [DataRow("Transfer-Encoding: chunked\r\n\r\n5;a=b\r\nhello\r\n0\r\nX-T: v\r\n\r\n")]
+    [DataRow("Transfer-Encoding: chunked\r\n\r\n0\r\nX-T: v\n\r\n")]
+    [DataRow("Transfer-Encoding: chunked\r\n\r\n0\r\n\n")]
+    [DataRow("Transfer-Encoding: chunked\r\n\r\n0\r\nX-T: v\r\n\n")]
     public async Task A_body_is_dropped_before_the_next_request(string framingAndBody)
     {
         await using var stream = new TestDuplexStream(Encoding.ASCII.GetBytes(
@@ -271,9 +290,7 @@ public class WebFrontTest : TestBase
     }
 
     [TestMethod]
-    [DataRow(true)]
-    [DataRow(false)]
-    public async Task A_client_s_connections_leave_the_count(bool includeHost)
+    public async Task A_client_s_connections_leave_the_count()
     {
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -294,7 +311,7 @@ public class WebFrontTest : TestBase
             TokenId = token.TokenId
         };
         var body = StreamUtils.ObjectToJsonBuffer(hello);
-        var host = includeHost ? $"Host: {token.ServerToken.HostName}\r\n" : "";
+        var host = $"Host: {token.ServerToken.HostName}\r\n";
         await stream.WriteAsync(Encoding.ASCII.GetBytes($"POST / HTTP/1.1\r\n{host}" +
             $"X-ProtocolVersion: 8\r\nX-BinaryStream: None\r\nContent-Length: {body.Length + 2}\r\n\r\n"), TestCt);
         await VhTestUtil.AssertEqualsWait(1, () => server.UnauthenticatedConnectionCount, cancellationToken: TestCt);
@@ -365,6 +382,8 @@ public class WebFrontTest : TestBase
     [DataRow("1\r\nx\n0\r\n\r\n")]
     [DataRow("0\r\nno-colon\r\n\r\n")]
     [DataRow("1\r\nx\r\n7fffffffffffffff\r\n")]
+    [DataRow("0000000001\r\nx\r\n0\r\n\r\n")]
+    [DataRow("80000000\r\n")]
     public async Task Malformed_chunks_close_before_a_pipelined_request(string body)
     {
         await using var stream = new TestDuplexStream(Encoding.ASCII.GetBytes(
@@ -391,13 +410,38 @@ public class WebFrontTest : TestBase
     }
 
     [TestMethod]
-    public async Task Missing_host_is_rejected_only_after_client_classification()
+    public async Task Missing_host_is_rejected_by_the_reader()
     {
         await using var stream = new TestDuplexStream("GET / HTTP/1.1\r\n\r\n"u8.ToArray());
-        var request = await ReadRequest(stream);
-        Assert.IsTrue(request.IsHostMissing);
-        Assert.AreEqual(WebFrontNext.Close, await WebFront.Unauthorized(stream, request, TestCt));
+        Assert.IsNull(await WebFront.ReadRequest(stream, TestCt));
         StringAssert.StartsWith(Encoding.ASCII.GetString(stream.Written), "HTTP/1.1 400 ");
+    }
+
+    [TestMethod]
+    [DataRow("POST")]
+    [DataRow("PUT")]
+    public async Task Http10_upgrade_is_accepted_before_the_length_rule(string method)
+    {
+        await AssertRead($"{method} / HTTP/1.0\r\nHost: x\r\nConnection: upgrade\r\n\r\n", 0);
+        await AssertRead($"{method} / HTTP/1.0\r\nHost: x\r\n\r\n", 400);
+        await AssertRead($"{method} / HTTP/1.1\r\nHost: x\r\n\r\n", 0);
+    }
+
+    [TestMethod]
+    public async Task Chunk_extensions_are_skipped_without_a_line_size_limit()
+    {
+        await A_body_is_dropped_before_the_next_request(
+            "Transfer-Encoding: chunked\r\n\r\n1;" + new string('a', 5000) + "\r\nx\r\n0\r\n\r\n");
+    }
+
+    [TestMethod]
+    public async Task An_oversized_chunk_declaration_waits_for_its_data()
+    {
+        await using var stream = new TestDuplexStream(
+            "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n7fffffff\r\nx"u8.ToArray(),
+            blockAtEnd: true);
+        var request = await ReadRequest(stream);
+        Assert.AreEqual(WebFrontNext.Reset, await WebFront.Unauthorized(stream, request, TestCt));
     }
 
     [TestMethod]

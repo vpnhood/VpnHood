@@ -121,7 +121,7 @@ public class Http01ChallengeHandler : IDisposable
             if (reset)
                 connection.Reset();
             else
-                connection.DrainArrived();
+                await connection.DrainArrived(CancellationToken.None).Vhc();
         }
     }
 
@@ -132,7 +132,7 @@ public class Http01ChallengeHandler : IDisposable
     {
         const string basePath = "/.well-known/acme-challenge/";
         var path = WebReplies.RequestPath(request.Target);
-        if (request.IsHostMissing || request.Method != "GET" || !path.StartsWith(basePath, StringComparison.Ordinal))
+        if (request.Method != "GET" || !path.StartsWith(basePath, StringComparison.Ordinal))
             return false;
 
         using var lockResult = ThrottleRequests

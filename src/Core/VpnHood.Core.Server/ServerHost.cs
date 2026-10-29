@@ -142,8 +142,7 @@ public class ServerHost : IAsyncDisposable
             if (clientConnection != null)
                 return clientConnection;
 
-            if (!request.IsHostMissing &&
-                await _downloadService.TryServeDownloadAsync(streamConnection, request.RequestLine, cancellationToken).Vhc())
+            if (await _downloadService.TryServeDownloadAsync(streamConnection, request.RequestLine, cancellationToken).Vhc())
                 throw new RequestHandledException();
 
             var next = await WebFront.Unauthorized(streamConnection.Stream, request, cancellationToken).Vhc();
@@ -246,7 +245,7 @@ public class ServerHost : IAsyncDisposable
             tcpStreamConnection.Reset();
         else {
             if (streamConnection is TcpStreamConnection tcpConnection)
-                tcpConnection.DrainArrived();
+                await tcpConnection.DrainArrived(CancellationToken.None).Vhc();
             await streamConnection.DisposeAsync().Vhc();
         }
     }

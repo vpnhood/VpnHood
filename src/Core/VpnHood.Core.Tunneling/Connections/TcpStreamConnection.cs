@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -76,19 +75,24 @@ public sealed class TcpStreamConnection : IStreamConnection
 
     // Closing with unread data can discard an already-written reply. Read what has arrived, as a web server's
     // input pipe does, with both a byte and time bound so a sender cannot prolong the close.
-    public void DrainArrived()
+    public async Task DrainArrived(CancellationToken cancellationToken)
     {
+        using var totalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        totalCts.CancelAfter(TimeSpan.FromMilliseconds(100));
+        using var idleCts = CancellationTokenSource.CreateLinkedTokenSource(totalCts.Token);
         try {
             var buffer = new byte[4096];
-            var started = Stopwatch.GetTimestamp();
-            for (var total = 0; total < 1024 * 1024 &&
-                                  Stopwatch.GetElapsedTime(started) < TimeSpan.FromMilliseconds(100) &&
-                                  _socket.Poll(10_000, SelectMode.SelectRead);) {
-                var read = _socket.Receive(buffer);
+            for (var total = 0; total < 1024 * 1024;) {
+                idleCts.CancelAfter(TimeSpan.FromMilliseconds(10));
+                var read = await _socket.ReceiveAsync(buffer.AsMemory(0, Math.Min(buffer.Length, 1024 * 1024 - total)),
+                    SocketFlags.None, idleCts.Token).Vhc();
                 if (read == 0)
                     break;
                 total += read;
             }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+            // A quiet socket or the overall close deadline ends the drain without holding a pool thread.
         }
         catch (ObjectDisposedException) {
             // The cap may close the socket during this drain.

@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Net.Sockets;
-using System.Text;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Server.ProbeResistance;
@@ -16,7 +14,6 @@ internal static class WebFront
     private static readonly TimeSpan RequestHeadersTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan RequestBodyDrainTimeout = TimeSpan.FromSeconds(5);
     private const long MaxRequestBodySize = 30_000_000;
-    private const int MaxChunkLineSize = 4096;
 
     // the next request; null once the connection is to close: it ended, sat idle, or sent a request Kestrel refuses,
     // which this has answered
@@ -62,11 +59,6 @@ internal static class WebFront
     private static async Task<WebFrontNext> Answer(Stream stream, HttpRequestHead request, byte[] reply,
         CancellationToken cancellationToken)
     {
-        if (request.IsHostMissing) {
-            await TryWrite(stream, WebReplies.Rejected(400, null), cancellationToken).Vhc();
-            return WebFrontNext.Close;
-        }
-
         if (!await TryWrite(stream, reply, cancellationToken).Vhc())
             return WebFrontNext.Reset;
         if (!request.KeepAlive || request.ContentLength > MaxRequestBodySize)
@@ -102,37 +94,27 @@ internal static class WebFront
         // chunks: a hex size and maybe extensions, the data, a line end; then trailers to an empty line
         long total = 0;
         while (true) {
-            var sizeText = (await ReadLine(stream, buffer, MaxChunkLineSize, cancellationToken).Vhc()).Split(';')[0];
-            if (sizeText.Length == 0 || !long.TryParse(sizeText, NumberStyles.AllowHexSpecifier,
-                    CultureInfo.InvariantCulture, out var size) || size < 0)
-                return false;
+            var size = await ReadChunkSize(stream, buffer, cancellationToken).Vhc();
 
             if (size == 0)
                 break;
 
-            if (size > MaxRequestBodySize - total)
-                return false;
-            total += size;
-
-            await Skip(stream, buffer, size, cancellationToken).Vhc();
-            if ((await ReadLine(stream, buffer, 2, cancellationToken).Vhc()).Length != 0)
-                return false;
+            // Kestrel applies the limit to bytes received, so an oversized declaration with no data still
+            // waits for the drain deadline. Counting the declaration would close it immediately instead.
+            while (size > 0) {
+                var read = await stream.ReadAsync(buffer.AsMemory(0, Math.Min(size, buffer.Length)),
+                    cancellationToken).Vhc();
+                if (read == 0)
+                    throw new EndOfStreamException();
+                if (read > MaxRequestBodySize - total)
+                    return false;
+                total += read;
+                size -= read;
+            }
+            await ReadChunkLineEnd(stream, buffer, cancellationToken).Vhc();
         }
 
-        // Kestrel shares these budgets between the original headers and the trailers.
-        var headerCount = request.HeaderCount;
-        var headerSize = request.HeaderSize;
-        while (true) {
-            var line = await ReadLine(stream, buffer,
-                HttpRequestHeadReader.MaxRequestHeadersTotalSize - headerSize, cancellationToken).Vhc();
-            headerSize += line.Length + 2;
-            if (line.Length == 0)
-                break;
-            if (++headerCount > HttpRequestHeadReader.MaxRequestHeaderCount)
-                return false;
-            HttpRequestHeadReader.ParseHeader(Encoding.Latin1.GetBytes(line));
-        }
-
+        await HttpRequestHeadReader.ReadTrailers(stream, request, cancellationToken).Vhc();
         return true;
     }
 
@@ -147,29 +129,55 @@ internal static class WebFront
         }
     }
 
-    private static async Task<string> ReadLine(Stream stream, byte[] buffer, int limit,
+    private static async Task<int> ReadChunkSize(Stream stream, byte[] buffer,
         CancellationToken cancellationToken)
     {
-        var line = new StringBuilder();
+        uint size = 0;
+        var digits = 0;
         while (true) {
-            if (await stream.ReadAsync(buffer.AsMemory(0, 1), cancellationToken).Vhc() == 0)
-                throw new EndOfStreamException();
-
-            if (line.Length + 2 > limit)
-                throw new InvalidDataException("A chunk's line is too long.");
-
-            if (buffer[0] == '\r') {
-                if (await stream.ReadAsync(buffer.AsMemory(0, 1), cancellationToken).Vhc() == 0)
-                    throw new EndOfStreamException();
-                if (buffer[0] != '\n')
-                    throw new InvalidDataException("A chunk's line must end in CRLF.");
-                return line.ToString();
+            var b = await ReadByte(stream, buffer, cancellationToken).Vhc();
+            var digit = b switch {
+                >= (byte)'0' and <= (byte)'9' => b - '0',
+                >= (byte)'a' and <= (byte)'f' => b - 'a' + 10,
+                >= (byte)'A' and <= (byte)'F' => b - 'A' + 10,
+                _ => -1
+            };
+            if (digit >= 0) {
+                if (++digits > 8)
+                    throw new InvalidDataException("A chunk size has more than eight digits.");
+                size = (size << 4) | (uint)digit;
+                continue;
             }
-            if (buffer[0] == '\n')
-                throw new InvalidDataException("A chunk's line must end in CRLF.");
 
-            line.Append((char)buffer[0]);
+            if (digits == 0 || size > int.MaxValue)
+                throw new InvalidDataException("Invalid chunk size.");
+            // Extensions have no size limit in Kestrel. Skip them without retaining their bytes, under the
+            // body's drain deadline, while still requiring the size line's CRLF.
+            if (b == ';') {
+                do {
+                    b = await ReadByte(stream, buffer, cancellationToken).Vhc();
+                    if (b == '\n')
+                        throw new InvalidDataException("A chunk's line must end in CRLF.");
+                } while (b != '\r');
+            }
+            if (b != '\r' || await ReadByte(stream, buffer, cancellationToken).Vhc() != '\n')
+                throw new InvalidDataException("A chunk's line must end in CRLF.");
+            return (int)size;
         }
+    }
+
+    private static async Task ReadChunkLineEnd(Stream stream, byte[] buffer, CancellationToken cancellationToken)
+    {
+        if (await ReadByte(stream, buffer, cancellationToken).Vhc() != '\r' ||
+            await ReadByte(stream, buffer, cancellationToken).Vhc() != '\n')
+            throw new InvalidDataException("Chunk data must end in CRLF.");
+    }
+
+    private static async ValueTask<byte> ReadByte(Stream stream, byte[] buffer, CancellationToken cancellationToken)
+    {
+        return await stream.ReadAsync(buffer.AsMemory(0, 1), cancellationToken).Vhc() == 0
+            ? throw new EndOfStreamException()
+            : buffer[0];
     }
 
     // -1 once the connection ends or sits idle past Kestrel's keep-alive timeout before the first byte
@@ -179,7 +187,14 @@ internal static class WebFront
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(idleCts.Token, cancellationToken);
         var buffer = new byte[1];
         try {
-            return await stream.ReadAsync(buffer, linkedCts.Token).Vhc() == 0 ? -1 : buffer[0];
+            // Leading line ends do not begin a request. Keep the original idle deadline until another byte
+            // arrives; otherwise a peer that sends CRLF alone gets a 408 that Kestrel never sends.
+            while (true) {
+                if (await stream.ReadAsync(buffer, linkedCts.Token).Vhc() == 0)
+                    return -1;
+                if (buffer[0] is not ((byte)'\r' or (byte)'\n'))
+                    return buffer[0];
+            }
         }
         catch (Exception ex) when (ex is OperationCanceledException or IOException &&
                                    idleCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {

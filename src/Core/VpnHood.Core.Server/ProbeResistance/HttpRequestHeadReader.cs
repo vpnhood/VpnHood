@@ -18,7 +18,7 @@ internal static class HttpRequestHeadReader
     {
         var reader = new ByteReader(stream, firstByte);
 
-        var requestLine = await reader.ReadLine(MaxRequestLineSize, 414, true, cancellationToken).Vhc();
+        var requestLine = await reader.ReadLine(MaxRequestLineSize, 414, cancellationToken).Vhc();
 
         var (method, target, isHttp10) = ParseRequestLine(requestLine);
         var absoluteAuthority = CheckTarget(method, target);
@@ -29,7 +29,7 @@ internal static class HttpRequestHeadReader
         var contentLengthCount = 0;
         reader.BeginSection(MaxRequestHeadersTotalSize);
         while (true) {
-            var line = await reader.ReadLine(MaxRequestHeadersTotalSize, 431, false, cancellationToken).Vhc();
+            var line = await reader.ReadLine(MaxRequestHeadersTotalSize, 431, cancellationToken).Vhc();
             if (line.Length == 0)
                 break;
 
@@ -44,8 +44,7 @@ internal static class HttpRequestHeadReader
 
         // a host: one with HTTP/1.1, and the target's own with an absolute target
         var host = headers.GetValueOrDefault("Host");
-        // Compatibility (2026-10): apps before v7.1.725 omit Host; defer its absence until client classification.
-        if (hostCount > 1 || (host != null && !IsValidAuthority(host)))
+        if (hostCount > 1 || (hostCount == 0 && !isHttp10) || (host != null && !IsValidAuthority(host)))
             throw new HttpRequestRejectedException(400);
 
         if (host != null && absoluteAuthority != null) {
@@ -77,11 +76,13 @@ internal static class HttpRequestHeadReader
             contentLength = length;
         }
 
-        if (isHttp10 && method is "POST" or "PUT" && contentLength == null && !isChunked)
-            throw new HttpRequestRejectedException(400);
-
         var connection = headers.GetValueOrDefault("Connection", "")
             .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        // Kestrel takes an upgrade before the HTTP/1.0 length rule. HTTP/1.1 without a length has an empty
+        // body and gets the normal reply, not 411.
+        if (isHttp10 && method is "POST" or "PUT" && contentLength == null && !isChunked &&
+            !connection.Contains("upgrade", StringComparer.OrdinalIgnoreCase))
+            throw new HttpRequestRejectedException(400);
         var keepAlive = !connection.Contains("close", StringComparer.OrdinalIgnoreCase) &&
                         (!isHttp10 || connection.Contains("keep-alive", StringComparer.OrdinalIgnoreCase));
 
@@ -89,7 +90,6 @@ internal static class HttpRequestHeadReader
             Method = method,
             Target = target,
             IsHttp10 = isHttp10,
-            IsHostMissing = hostCount == 0 && !isHttp10,
             Headers = headers,
             HeaderCount = headerCount,
             HeaderSize = reader.SectionLength,
@@ -97,6 +97,23 @@ internal static class HttpRequestHeadReader
             IsChunked = isChunked,
             KeepAlive = keepAlive && method != "CONNECT" && !(isChunked && contentLength != null)
         };
+    }
+
+    public static async Task ReadTrailers(Stream stream, HttpRequestHead request, CancellationToken cancellationToken)
+    {
+        // Trailers share the header budgets and line-ending rules, including bare LF. Chunk framing does not.
+        var limit = MaxRequestHeadersTotalSize - request.HeaderSize;
+        var reader = new ByteReader(stream, null);
+        reader.BeginSection(limit);
+        var count = request.HeaderCount;
+        while (true) {
+            var line = await reader.ReadLine(limit, 431, cancellationToken).Vhc();
+            if (line.Length == 0)
+                return;
+            if (++count > MaxRequestHeaderCount)
+                throw new HttpRequestRejectedException(431);
+            ParseHeader(line);
+        }
     }
 
     private static (string Method, string Target, bool IsHttp10) ParseRequestLine(byte[] line)
@@ -133,8 +150,8 @@ internal static class HttpRequestHeadReader
         if (target == "*")
             return method == "OPTIONS" ? null : throw new HttpRequestRejectedException(405, "OPTIONS");
 
-        if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-            target.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) {
+        if (target.StartsWith("http://", StringComparison.Ordinal) ||
+            target.StartsWith("https://", StringComparison.Ordinal)) {
             if (!Uri.TryCreate(target, UriKind.Absolute, out var uri))
                 throw new HttpRequestRejectedException(400);
 
@@ -142,7 +159,7 @@ internal static class HttpRequestHeadReader
         }
 
         // anything else is an authority, which only CONNECT takes
-        if (!target.All(c => char.IsAsciiLetterOrDigit(c) || "-._~!$&'()*+,;=:%[]".Contains(c)))
+        if (!target.All(c => char.IsAsciiLetterOrDigit(c) || ":.-[]@".Contains(c)))
             throw new HttpRequestRejectedException(400);
 
         return method == "CONNECT" ? null : throw new HttpRequestRejectedException(405, "CONNECT");
@@ -163,7 +180,8 @@ internal static class HttpRequestHeadReader
         return (Encoding.ASCII.GetString(line, 0, colon), Encoding.Latin1.GetString(value));
     }
 
-    // host[:port], the host a name of URI characters or a bracketed IPv6 address; empty is valid
+    // Kestrel follows Http.Sys's host characters and accepts any IP address in brackets, IPv4 included.
+    // An address-family check here would reject Host values that the reference serves; empty is valid too.
     private static bool IsValidAuthority(string authority)
     {
         var host = authority;
@@ -183,7 +201,7 @@ internal static class HttpRequestHeadReader
                 host = authority[..colon];
         }
 
-        return host.All(c => char.IsAsciiLetterOrDigit(c) || "-._~!$&'()*+,;=%".Contains(c));
+        return host.All(c => char.IsAsciiLetterOrDigit(c) || "!$&'()-._~".Contains(c));
     }
 
     private static bool IsToken(ReadOnlySpan<byte> span)
@@ -197,10 +215,10 @@ internal static class HttpRequestHeadReader
 
     // one byte at a time, the first already read; a line ends at LF, its CR before it dropped, and a CR elsewhere
     // is malformed. A section, the headers, has a limit for all its lines together
-    private sealed class ByteReader(Stream stream, byte firstByte)
+    private sealed class ByteReader(Stream stream, byte? firstByte)
     {
         private readonly byte[] _buffer = new byte[1];
-        private bool _hasFirstByte = true;
+        private bool _hasFirstByte = firstByte.HasValue;
         private int _sectionLength;
         private int _sectionLimit = int.MaxValue;
         public int SectionLength => _sectionLength;
@@ -211,15 +229,13 @@ internal static class HttpRequestHeadReader
             _sectionLimit = limit;
         }
 
-        public async Task<byte[]> ReadLine(int lineLimit, int overLimitStatus, bool skipLeadingLineEnds,
+        public async Task<byte[]> ReadLine(int lineLimit, int overLimitStatus,
             CancellationToken cancellationToken)
         {
             var line = new List<byte>();
             var lineLength = 0;
             while (true) {
                 var b = await ReadByte(cancellationToken).Vhc();
-                if (skipLeadingLineEnds && lineLength == 0 && b is (byte)'\r' or (byte)'\n')
-                    continue;
                 lineLength++;
                 _sectionLength++;
                 if (lineLength > lineLimit || _sectionLength > _sectionLimit)
@@ -247,9 +263,9 @@ internal static class HttpRequestHeadReader
 
         private async ValueTask<byte> ReadByte(CancellationToken cancellationToken)
         {
-            if (_hasFirstByte) {
+            if (_hasFirstByte && firstByte is { } initial) {
                 _hasFirstByte = false;
-                return firstByte;
+                return initial;
             }
 
             var read = await stream.ReadAsync(_buffer, cancellationToken).Vhc();

@@ -6,7 +6,6 @@ internal sealed class HttpRequestHead
     public required string Method { get; init; }
     public required string Target { get; init; } // as sent
     public required bool IsHttp10 { get; init; }
-    public required bool IsHostMissing { get; init; }
 
     // a repeated header's values joined with commas, as ASP.NET Core joins them
     public required IReadOnlyDictionary<string, string> Headers { get; init; }

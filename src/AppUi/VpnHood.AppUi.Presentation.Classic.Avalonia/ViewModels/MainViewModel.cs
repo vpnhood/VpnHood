@@ -440,10 +440,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             _isUpdatePostponed = false;
         _lastUpdateStage = updateStage;
 
-        if (state.UpdaterStatus?.Prompt == true && !_isUpdatePostponed && !host.IsUpdateNoticeShown)
+        // held while the consent page holds the app, which the notice would cover: it shows at the first
+        // refresh after Accept
+        var isConsentPending = IsConsentPending(state);
+        if (state.UpdaterStatus?.Prompt == true && !_isUpdatePostponed && !host.IsUpdateNoticeShown &&
+            !isConsentPending)
             host.ShowUpdateNotice(state.UpdaterStatus);
-        // the update done or gone, as when a desktop's service comes back on the new version
-        else if (host.IsUpdateNoticeShown && state.UpdaterStatus?.Prompt != true)
+        // the update done or gone, as when a desktop's service comes back on the new version, or the
+        // usage-data question come up while the app runs
+        else if (host.IsUpdateNoticeShown && (state.UpdaterStatus?.Prompt != true || isConsentPending))
             host.HideUpdateNotice();
         else if (host.IsUpdateNoticeShown)
             host.RefreshUpdateState(state.UpdaterStatus?.UpdateState);
@@ -464,6 +469,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             if (host.CurrentPage is not PrivacyPolicyView)
                 host.Navigate(new PrivacyPolicyView(host));
         }
+    }
+
+    // Whether the consent page holds the app (PrivacyPolicyView): the terms, where the build asks for
+    // them and the person has not accepted them, or the usage-data question where the law wants a yes
+    // first.
+    public static bool IsConsentPending(AppState state)
+    {
+        return (VhApp.Features.IsLicenseAgreementRequired && !VhApp.UserSettings.IsLicenseAccepted) ||
+               state.IsAnonymousTrackerPromptRequired;
     }
 
     public void IgnoreSuppressNotice()

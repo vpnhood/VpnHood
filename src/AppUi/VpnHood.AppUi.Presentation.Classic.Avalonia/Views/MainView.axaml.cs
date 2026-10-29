@@ -75,8 +75,7 @@ public partial class MainView : UserControl
         // isShowPrivacyPolicyDialog), and the usage-data question where the law wants a yes first,
         // on a build that skips the terms too and for a person who accepted them before
         var features = VhApp.Features;
-        if ((features.IsLicenseAgreementRequired && !VhApp.UserSettings.IsLicenseAccepted) ||
-            VhApp.State.IsAnonymousTrackerPromptRequired)
+        if (MainViewModel.IsConsentPending(VhApp.State))
             Navigate(new PrivacyPolicyView(this));
         // the account, once, for a build that has one (App.vue's onMounted); the pages that change
         // it read it again themselves

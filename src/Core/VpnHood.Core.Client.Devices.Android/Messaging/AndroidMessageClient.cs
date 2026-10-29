@@ -134,6 +134,11 @@ public sealed class AndroidMessageClient : IMessageClient
             binderTask = _binderTcs.Task;
         }
 
+        // a service Android no longer lists never answers the bind; one it lists, running or about to restart, gets
+        // the bind's time
+        if (!binderTask.IsCompleted && !AndroidVpnServiceEnd.IsListed())
+            throw AndroidVpnServiceEnd.ToException();
+
         try {
             return await binderTask.WaitAsync(BindTimeout, cancellationToken).Vhc();
         }

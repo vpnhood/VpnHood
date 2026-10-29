@@ -360,14 +360,15 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
         _failedMessage = message;
     }
 
-    // https only, as the package replaces the app. A Debug build also takes a loopback http address:
-    // the emulator's test feed, reached through adb reverse.
+    // https only, as the package replaces the app. The app's Debug build, which Android marks
+    // debuggable, also takes a loopback http address: the emulator's test feed, reached through adb
+    // reverse. Not #if DEBUG: that is this library's build, Release in every app that takes it from NuGet.
     private static bool IsAllowedPackageUrl(Uri packageUrl)
     {
-#if DEBUG
-        if (packageUrl.Scheme == Uri.UriSchemeHttp && packageUrl.IsLoopback)
+        if (packageUrl.Scheme == Uri.UriSchemeHttp && packageUrl.IsLoopback &&
+            Context.ApplicationInfo?.Flags.HasFlag(ApplicationInfoFlags.Debuggable) == true)
             return true;
-#endif
+
         return packageUrl.Scheme == Uri.UriSchemeHttps;
     }
 

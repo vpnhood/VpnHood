@@ -33,6 +33,9 @@ public sealed class VpnPluginBridge : IVpnPlugIn
 
     public void Disconnect(VpnChannel channel) => _service.Disconnect(channel);
 
+    // the VPN task's run, after Windows' callback
+    internal void WaitForDisconnect() => _service.WaitForDisconnect();
+
     public void Encapsulate(VpnChannel channel, VpnPacketBufferList packets, VpnPacketBufferList encapsulatedPackets) =>
         _service.Encapsulate(channel, packets, encapsulatedPackets);
 

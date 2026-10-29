@@ -20,7 +20,7 @@ namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 // it forwards here. One per VPN host process, which the bridge keeps.
 public sealed class WindowsVpnPluginService : IVpnServiceHandler
 {
-    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(60);
+    internal static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(15);
     // a connect Windows makes soon after: again within 5 s after a restart, within 2.6 s after an app's switch
     private static readonly TimeSpan SessionWaitTimeout = TimeSpan.FromSeconds(15);
@@ -31,6 +31,7 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     private VpnChannel? _connectedChannel; // the connection Windows holds, until its Disconnect
     private volatile WindowsVpnPluginAdapter? _adapter;
     private volatile TaskCompletionSource<WindowsVpnPluginAdapter> _adapterTcs = NewAdapterTcs();
+    private volatile Task _disconnectTask = Task.CompletedTask; // the session's close a Disconnect started
     private int _terminationRequested;
     private int _connectCount; // Windows' connects so far: a released host's wait tells by it whether one has come
 
@@ -93,11 +94,33 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     {
         VhLogger.Instance.LogInformation("Windows asked the VPN plug-in to disconnect.");
         Volatile.Write(ref _connectedChannel, null);
-        TryDisconnect();
 
-        // Windows holds the connection until its plug-in stops the channel, as Microsoft's VPN sample does here: RAS
-        // ended it 15 s after the plug-in's Disconnect otherwise.
+        // Windows ends its connection once this returns with the channel stopped (RAS ends it 15 s on otherwise), and
+        // a sleep that came while this waited for the session's close froze that end half-way: the dial at the wake
+        // then hung in Windows for good. So the adapter and the channel stop now, the adapter first so no packet meets
+        // a stopped channel, and the close - a bye that waits on the network - runs on under the VPN task's deferral.
+        StopAdapter(_adapter);
         StopChannel(channel);
+
+        VpnServiceHost? host;
+        lock (_hostLock)
+            host = _host;
+
+        if (host is not null)
+            _disconnectTask = host.TryDisconnect();
+    }
+
+    // The VPN task's run, after Windows' callback: Windows suspends this process between VPN events, so a session's
+    // close that Disconnect started ends first. Bounded, so a hung close never holds the run for good.
+    public void WaitForDisconnect()
+    {
+        try {
+            if (!_disconnectTask.Wait(DisconnectTimeout))
+                VhLogger.Instance.LogWarning("The disconnect did not finish in time; returning to Windows.");
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "The Windows VPN plug-in could not disconnect.");
+        }
     }
 
     public void Encapsulate(VpnChannel channel, VpnPacketBufferList packets, VpnPacketBufferList encapsulatedPackets)
@@ -286,6 +309,20 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not stop the Windows VPN channel.");
+        }
+    }
+
+    // The session's close stops its adapter too, later, and finds it stopped.
+    private static void StopAdapter(WindowsVpnPluginAdapter? adapter)
+    {
+        try {
+            adapter?.Stop();
+        }
+        catch (ObjectDisposedException) {
+            // gone with its session already, so stopped
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not stop the VPN adapter.");
         }
     }
 

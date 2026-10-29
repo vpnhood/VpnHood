@@ -19,6 +19,10 @@ public sealed class VpnBackgroundTask : IBackgroundTask
             // VPN sample does. A deferral held for the VPN's lifetime ends in ExecutionTimeExceeded and
             // reinitializes the connection.
             VpnChannel.ProcessEventAsync(bridge, taskInstance.TriggerDetails);
+
+            // Windows ends its connection once Disconnect returns, not once this run does: the session's close that
+            // Disconnect started ends under this deferral
+            bridge.WaitForDisconnect();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "The VPN background task failed.");

@@ -30,6 +30,10 @@ public sealed class WindowsVpnPluginDevice : IDevice
     // it; the entry is in the package's own phonebook (AddProfile), a file in the app's LocalState.
     private const int InterfaceMetric = 1;
     private const string PhonebookFileName = "rasphone.pbk";
+
+    // Windows' dial has no limit of its own: after a hibernate took its teardown half-way, one stopped at "link
+    // established" for good. Past the plug-in's own wait for its session, the dial fails instead.
+    private static readonly TimeSpan DialTimeout = WindowsVpnPluginService.ConnectTimeout + TimeSpan.FromSeconds(30);
     private readonly string _profileName;
 
     // profileName: the profile's name in Windows' VPN settings and quick settings, the app's name
@@ -98,12 +102,33 @@ public sealed class WindowsVpnPluginDevice : IDevice
         SetInterfaceMetric();
 
         // A connect the VPN host took up ends in its status file, whose reason the manager reports - the server's
-        // refusal, say - rather than Windows' bare status; one it never reached is Windows' own failure.
+        // refusal, say - rather than Windows' bare status; one it never reached is Windows' own failure. Its
+        // AlreadyConnected, for a profile that read disconnected above, is Windows' VPN service stuck on a connection
+        // it lost - as after a hibernate took its teardown half-way - which nothing the app calls ends.
         var statusFilePath = Path.Combine(VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         var connectTime = DateTime.UtcNow;
-        var status = await agent.ConnectProfileAsync(profile).AsTask(cancellationToken).Vhc();
+        var status = await DialProfile(agent, profile, cancellationToken).Vhc();
         if (status != VpnManagementErrorStatus.Ok && File.GetLastWriteTimeUtc(statusFilePath) < connectTime)
-            throw new InvalidOperationException($"Windows could not connect the VPN profile. Status: {status}");
+            throw new InvalidOperationException(status == VpnManagementErrorStatus.AlreadyConnected
+                ? "Windows' VPN service is stuck on an earlier connection and refuses a new one. " +
+                  "Restarting the computer clears it."
+                : $"Windows could not connect the VPN profile. Status: {status}");
+    }
+
+    // The dial's operation may ignore the cancel asked of it, so the wait ends by itself.
+    private static async Task<VpnManagementErrorStatus> DialProfile(VpnManagementAgent agent, VpnPlugInProfile profile,
+        CancellationToken cancellationToken)
+    {
+        using var dialCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        try {
+            return await agent.ConnectProfileAsync(profile).AsTask(dialCts.Token)
+                .WaitAsync(DialTimeout, cancellationToken).Vhc();
+        }
+        catch (TimeoutException) {
+            dialCts.Cancel();
+            throw new TimeoutException(
+                $"Windows did not finish dialing the VPN profile in {DialTimeout.TotalSeconds} seconds.");
+        }
     }
 
     private async Task WaitForDisconnected(VpnManagementAgent agent, CancellationToken cancellationToken)

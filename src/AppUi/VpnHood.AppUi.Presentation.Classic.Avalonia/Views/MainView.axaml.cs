@@ -437,7 +437,18 @@ public partial class MainView : UserControl
     // a wait the app is in: shown until the scope is disposed
     public IDisposable Loading(string? message = null)
     {
-        var dialog = new LoadingDialog(message);
+        return ShowLoading(new LoadingDialog(message));
+    }
+
+    // a wait for what the device's own screen shows - a store's sign-in, an ad - which a browser
+    // driving a TV says to finish there (LoadingDialog)
+    public IDisposable LoadingOnDevice(string? message = null)
+    {
+        return ShowLoading(new LoadingDialog(message, isOnDevice: true));
+    }
+
+    private IDisposable ShowLoading(LoadingDialog dialog)
+    {
         _ = ShowDialog(dialog);
         return new LoadingScope(dialog);
     }

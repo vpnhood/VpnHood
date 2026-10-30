@@ -6,7 +6,8 @@
   <!-- The web UI's PendingDialog: the order is with the store; nothing to press until it answers. -->
   <Border Classes="dialog" MaxWidth="360">
     <StackPanel Spacing="12">
-      <TextBlock Classes="dialog-text" Text="{Binding WaitingToCompleteOrderProcess, Source={x:Static res:Strings.Current}}" />
+      <TextBlock x:Name="TitleText" Classes="dialog-title" IsVisible="False" />
+      <TextBlock x:Name="MessageText" Classes="dialog-text" Text="{Binding WaitingToCompleteOrderProcess, Source={x:Static res:Strings.Current}}" />
       <ProgressBar IsIndeterminate="True" />
     </StackPanel>
   </Border>

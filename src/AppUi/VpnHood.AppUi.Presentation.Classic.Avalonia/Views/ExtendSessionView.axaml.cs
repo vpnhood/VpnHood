@@ -40,7 +40,7 @@ public partial class ExtendSessionView : UserControl, IPage
     // the ad, then the word that the session grew, back on the home
     private async Task ShowRewardedAd(CancellationToken cancellationToken)
     {
-        using (_host.Loading(Strings.Current.ExtendByRewardedAdNote))
+        using (_host.LoadingOnDevice(Strings.Current.ExtendByRewardedAdNote))
             await VhApp.Api.App.ExtendByRewardedAd(cancellationToken);
         _host.ShowSnackbar(Strings.Current.ExtendByRewardedAdConfirmMsg, SnackbarKind.Active);
         _host.GoHome();

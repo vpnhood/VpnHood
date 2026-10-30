@@ -76,6 +76,7 @@ public class IosDevice : IDevice
     public string OsInfo { get; } = $"{UIDevice.CurrentDevice.SystemName}: {UIDevice.CurrentDevice.Model}, iOS: {UIDevice.CurrentDevice.SystemVersion}";
     public DeviceUserAgentInfo UserAgentInfo { get; } = CreateUserAgentInfo();
     public bool IsTv => false;
+    public bool IsWaitingForVpnPermission => false; // RequestVpnService asks nothing here
     public DeviceMemInfo? MemInfo => null;
     public static bool IsVpnServiceProcess => true; // iOS always runs in the VPN service process.
 

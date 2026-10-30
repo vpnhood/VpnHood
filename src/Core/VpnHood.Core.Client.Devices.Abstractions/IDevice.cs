@@ -25,6 +25,10 @@ public interface IDevice : IDisposable
     DeviceUserAgentInfo UserAgentInfo { get; }
     DeviceMemInfo? MemInfo { get; }
     IReadOnlyList<DeviceAppInfo> InstalledApps { get; }
+
+    // True while RequestVpnService waits on the OS's own prompt for the person's yes, so a UI elsewhere
+    // - a browser driving a TV - can say where the connect waits.
+    bool IsWaitingForVpnPermission { get; }
     Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken);
     Task StartVpnService(CancellationToken cancellationToken);
     IMessageClient CreateMessageClient();

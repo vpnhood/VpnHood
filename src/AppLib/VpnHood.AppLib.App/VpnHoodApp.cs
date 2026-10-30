@@ -674,6 +674,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (_isDisconnecting)
                 return AppConnectionState.None;
 
+            // the start waits on the person, at the OS's prompt on the device's own screen
+            if (clientState == ClientState.Initializing && _device.IsWaitingForVpnPermission)
+                return AppConnectionState.WaitingForVpnPermission;
+
             if (clientState == ClientState.Initializing ||
                 Services.SplitCountryService.IsBusy ||
                 Services.SplitIpViaAppService.IsBusy)

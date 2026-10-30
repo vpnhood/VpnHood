@@ -47,6 +47,7 @@ public sealed class WindowsVpnPluginDevice : IDevice
     public string VpnServiceConfigFolder { get; }
     public string VpnServiceDataFolder => VpnServiceConfigFolder; // nothing backs up a desktop app's data
     public bool IsTv => false;
+    public bool IsWaitingForVpnPermission => false; // RequestVpnService only makes the profile
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsBindProcessToVpnSupported => false;

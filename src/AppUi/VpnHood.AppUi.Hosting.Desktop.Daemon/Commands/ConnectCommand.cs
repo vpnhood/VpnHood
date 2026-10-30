@@ -101,6 +101,7 @@ internal static class ConnectCommand
     {
         return connectionState
             is AppConnectionState.Initializing
+            or AppConnectionState.WaitingForVpnPermission
             or AppConnectionState.Waiting
             or AppConnectionState.Diagnosing
             or AppConnectionState.ValidatingProxies

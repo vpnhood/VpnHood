@@ -21,6 +21,7 @@ public class AndroidDevice : IDevice
 {
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private const int RequestVpnPermissionId = 20100;
+    private volatile bool _isWaitingForVpnPermission;
 
     // the app list renders the icons at 30 css pixels, so this keeps them crisp on high density
     // screens while bounding the encoded payload, as the list may contain hundreds of apps
@@ -40,6 +41,7 @@ public class AndroidDevice : IDevice
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
     public string VpnServiceDataFolder => AndroidVpnService.VpnServiceDataFolder;
     public bool IsTv => AndroidUtils.IsTv();
+    public bool IsWaitingForVpnPermission => _isWaitingForVpnPermission;
 
     public static AndroidDevice Create()
     {
@@ -137,6 +139,7 @@ public class AndroidDevice : IDevice
         activityEvent.ActivityResultEvent += Activity_OnActivityResult;
         try {
             VhLogger.Instance.LogDebug("Requesting user consent...");
+            _isWaitingForVpnPermission = true;
             activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
             await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(userIntentTimeout, cancellationToken))
                 .Vhc();
@@ -148,6 +151,7 @@ public class AndroidDevice : IDevice
                 throw new UserCanceledException("VPN permission has been rejected.");
         }
         finally {
+            _isWaitingForVpnPermission = false;
             activityEvent.ActivityResultEvent -= Activity_OnActivityResult;
         }
     }

@@ -147,6 +147,7 @@ public sealed partial class Strings : INotifyPropertyChanged
         return connectionState switch {
             AppConnectionState.None => Disconnected,
             AppConnectionState.Initializing => Initializing,
+            AppConnectionState.WaitingForVpnPermission => Initializing, // the OS's own prompt covers the app
             AppConnectionState.Waiting => Waiting,
             AppConnectionState.Diagnosing => Diagnosing,
             AppConnectionState.ValidatingProxies => ValidatingProxies,

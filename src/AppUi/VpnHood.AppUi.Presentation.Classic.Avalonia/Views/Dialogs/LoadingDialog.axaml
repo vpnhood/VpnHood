@@ -8,6 +8,7 @@
   <Border Classes="dialog" MaxWidth="320">
     <StackPanel Spacing="10" HorizontalAlignment="Center">
       <TextBlock Classes="spinner" FontSize="30" Text="{x:Static res:Mdi.Loading}" HorizontalAlignment="Center" />
+      <TextBlock x:Name="TitleText" Classes="dialog-title" TextAlignment="Center" IsVisible="False" />
       <TextBlock x:Name="MessageText" Classes="dialog-text" TextAlignment="Center" Text="{Binding PleaseWait, Source={x:Static res:Strings.Current}}" />
     </StackPanel>
   </Border>

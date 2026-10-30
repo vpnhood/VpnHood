@@ -160,6 +160,10 @@ public static class VhApp
     // asks the same two questions. A phone driving a TV gets the phone's layout.
     public static bool IsTvUi => Features.IsTv && !IsRemote;
 
+    // A browser driving a TV: what the TV's own screen asks - a store's sheet, Android's VPN prompt,
+    // an ad - is answered there, so a wait for it says to go on there.
+    public static bool IsTvRemote => Features.IsTv && IsRemote;
+
     // One built-in profile, called "location", against a list of servers the user adds keys for:
     // the list is fixed exactly when no key can be added. The web UI's isSingleProfileMode.
     public static bool IsSingleProfileMode => !Features.IsAddAccessKeySupported;

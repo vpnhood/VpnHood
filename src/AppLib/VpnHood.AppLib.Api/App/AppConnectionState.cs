@@ -7,6 +7,9 @@ public enum AppConnectionState
 {
     None,
     Initializing,
+
+    // the OS asks the person to allow the VPN, on the device's own screen (Android, at a first connect)
+    WaitingForVpnPermission,
     Waiting,
     WaitingForAd,
     Diagnosing,

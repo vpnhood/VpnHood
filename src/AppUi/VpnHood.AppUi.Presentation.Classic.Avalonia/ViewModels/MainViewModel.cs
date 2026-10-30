@@ -265,7 +265,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             AppConnectionState.Disconnecting => "disconnecting",
             _ => "connecting"
         };
-        StateText = Strings.Current.ConnectionStateText(connectionState);
+        // a browser driving a TV: what waits on the TV's own screen is answered there
+        StateText = VhApp.IsTvRemote && connectionState is AppConnectionState.WaitingForVpnPermission or AppConnectionState.WaitingForAd
+            ? Strings.Current.ContinueOnTvTitle
+            : Strings.Current.ConnectionStateText(connectionState);
         UsageText = IsConnected ? BandwidthUsage(state) : "";
         StateGlyph = connectionState switch {
             AppConnectionState.Connected => !state.CanDiagnose ? Mdi.Stethoscope : UsageText.Length > 0 ? "" : Mdi.Check,
@@ -286,7 +289,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ConnectButtonText = state.IsDiagnosing
             ? Strings.Current.StopDiagnosing
             : connectionState switch {
-                AppConnectionState.Initializing => Strings.Current.Cancel,
+                AppConnectionState.Initializing or AppConnectionState.WaitingForVpnPermission => Strings.Current.Cancel,
                 AppConnectionState.Disconnecting => Strings.Current.Disconnecting,
                 AppConnectionState.Diagnosing => Strings.Current.StopDiagnosing,
                 AppConnectionState.None => Strings.Current.Connect,
@@ -913,7 +916,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             throw new InvalidOperationException("Account service is not available.");
         var providerId = VhApp.PrimaryProviderId ?? throw new InvalidOperationException("This build reports no sign-in method.");
 
-        using var loading = host.Loading();
+        using var loading = host.LoadingOnDevice();
         try {
             await VhApp.Api.Account.SignIn(new SignInOptions { ProviderId = providerId }, cancellationToken);
             await AfterSignedIn(onPurchase, cancellationToken);

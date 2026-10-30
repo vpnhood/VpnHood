@@ -22,6 +22,7 @@ public class LinuxDevice(string storageFolder) : IDevice
     public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsAlwaysOnSupported => true;
     public bool IsTv => false;
+    public bool IsWaitingForVpnPermission => false;
 
     public DeviceMemInfo MemInfo {
         get {

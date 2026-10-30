@@ -22,51 +22,15 @@ public class KestrelParityTest
     // before protocol 15 a request with our headers carries no key: an upgrade gets its 101, a made-up session our
     // error, and a POST waits for the body that holds the key
     private const string UntilProtocol15 = "a v14 request with our headers is taken as a client's before any key";
-    private const string TlsStart = "ours refuses a request line that starts with 16 03 at once; Kestrel waits for " +
-                                    "a line end and, without one, answers 408 when its header timeout fires";
-    private const string ZeroByte = "Kestrel refuses a request line at once when a zero byte comes before its line " +
-                                    "end; ours waits for the line end";
-    private const string Http2Preface = "on the plain port Kestrel answers HTTP/2's preface, as a connection's first " +
-                                        "bytes, with a GOAWAY; ours with 505";
 
     // probes whose answers differ today, each with why and what ours answers; one that comes to match leaves the list
-    private static readonly IReadOnlyDictionary<string, KnownDifference> KnownDifferences = CreateKnownDifferences();
-
-    private static Dictionary<string, KnownDifference> CreateKnownDifferences()
-    {
-        var known = new Dictionary<string, KnownDifference> {
+    private static readonly IReadOnlyDictionary<string, KnownDifference> KnownDifferences =
+        new Dictionary<string, KnownDifference> {
             ["vh-upgrade-v14"] = new(UntilProtocol15, @"HTTP/1\.1 101 Switching Protocols.*\n= open"),
             ["vh-post-v14-fake-session"] = new(UntilProtocol15,
                 @"HTTP/1\.1 200 OK.*""ErrorCode"":""AccessError"".*\n= closed after 0s"),
             ["vh-post-v14-no-body"] = new(UntilProtocol15, @"HTTP/1\.1 401 Unauthorized.*\n= closed after (29|30|31)s")
         };
-
-        string[] tlsStart = [
-            "record-prefix-2", "record-prefix-3", "tls-start", "tls-start-after-blank-line", "tls-start-second-request",
-            "tls-start-split", "tls-start-after-request", "tls-start-after-blank-line-packet", "tls-start-third-byte-later"
-        ];
-        string[] zeroByte = [
-            "record-version-2", "record-application-data", "rdp", "smb", "zero-alone", "zero-three", "zero-after-g",
-            "zero-in-method", "zero-in-target", "zero-after-version", "zero-after-blank-line", "zero-second-request"
-        ];
-        foreach (var name in tlsStart)
-            AddBothPorts(known, name, new KnownDifference(TlsStart, @"HTTP/1\.1 400 Bad Request.*\n= closed after 0s"));
-        foreach (var name in zeroByte)
-            AddBothPorts(known, name, new KnownDifference(ZeroByte, @"\n= open after \d+s\s*$"));
-        foreach (var name in new[] {
-                     "h2-preface", "h2-preface-settings", "h2-preface-no-final-crlf", "h2-preface-wrong-magic",
-                     "h2-request-line", "h2-request-line-blank", "h2-request-line-host"
-                 })
-            known.Add($"{name}-http",
-                new KnownDifference(Http2Preface, @"HTTP/1\.1 505 HTTP Version Not Supported.*\n= closed after 0s"));
-        return known;
-    }
-
-    private static void AddBothPorts(Dictionary<string, KnownDifference> known, string name, KnownDifference difference)
-    {
-        known.Add($"{name}-tls", difference);
-        known.Add($"{name}-http", difference);
-    }
 
     public required TestContext TestContext { get; set; }
 

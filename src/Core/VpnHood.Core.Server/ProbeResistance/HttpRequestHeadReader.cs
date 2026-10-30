@@ -14,11 +14,15 @@ internal static class HttpRequestHeadReader
     public const int MaxRequestHeaderCount = 100;
     private static readonly UTF8Encoding HeaderEncoding = new(false, throwOnInvalidBytes: true);
 
-    public static async Task<HttpRequestHead> Read(HttpReadStream stream, CancellationToken cancellationToken)
+    public static async Task<HttpRequestHead> Read(HttpReadStream stream, CancellationToken cancellationToken,
+        bool allowHttp2Preface = false, bool hasLeadingLineEnds = false)
     {
         var reader = new LineReader(stream);
 
-        var requestLine = await reader.ReadLine(MaxRequestLineSize, 414, cancellationToken, requestLine: true).Vhc();
+        var requestLine = await reader.ReadLine(MaxRequestLineSize, 414, cancellationToken, requestLine: true,
+            hasLeadingLineEnds: hasLeadingLineEnds).Vhc();
+        if (allowHttp2Preface && reader.IsHttp2Preface)
+            throw new Http2PrefaceException();
 
         var (method, target, isHttp10) = ParseRequestLine(requestLine);
         var absoluteAuthority = CheckTarget(method, target);
@@ -234,6 +238,7 @@ internal static class HttpRequestHeadReader
         private int _sectionLength;
         private int _sectionLimit = int.MaxValue;
         public int SectionLength => _sectionLength;
+        public bool IsHttp2Preface { get; private set; }
 
         public void BeginSection(int limit)
         {
@@ -242,9 +247,10 @@ internal static class HttpRequestHeadReader
         }
 
         public async Task<byte[]> ReadLine(int lineLimit, int overLimitStatus,
-            CancellationToken cancellationToken, bool requestLine = false)
+            CancellationToken cancellationToken, bool requestLine = false, bool hasLeadingLineEnds = false)
         {
             using var line = new MemoryStream();
+            var prefacePossible = !hasLeadingLineEnds;
             while (true) {
                 if (!await stream.EnsureBuffered(1, cancellationToken).Vhc())
                     throw new EndOfStreamException();
@@ -252,20 +258,29 @@ internal static class HttpRequestHeadReader
                 var end = span.IndexOf((byte)'\n');
                 var count = end < 0 ? span.Length : end + 1;
                 count = Math.Min(count, Math.Min(lineLimit - (int)line.Length, _sectionLimit - _sectionLength) + 1);
+                // Kestrel rejects a zero byte on the request line before waiting for its end, on every
+                // request. TLS's leading 16 03 alone is not special; headers and trailers wait for LF.
+                // The request-line limit bounds Kestrel's scan: a zero in byte 8193 must not turn
+                // an overlong line's 414 into 400.
+                if (requestLine && span[..Math.Min(count, lineLimit - (int)line.Length)].Contains((byte)0))
+                    throw new HttpRequestRejectedException(400);
                 line.Write(span[..count]);
                 stream.Consume(count);
                 _sectionLength += count;
-                // Only the request line recognizes a TLS handshake early. An incomplete header or trailer
-                // beginning with these bytes still waits for its line end or the appropriate deadline.
-                if (requestLine && line.Length >= 2 && line.GetBuffer()[0] == 0x16 && line.GetBuffer()[1] == 0x03)
-                    throw new HttpRequestRejectedException(400);
                 if (line.Length > lineLimit || _sectionLength > _sectionLimit)
                     throw new HttpRequestRejectedException(overLimitStatus);
                 if (end >= 0)
                     break;
+                if (requestLine && line.Length == lineLimit)
+                    throw new HttpRequestRejectedException(overLimitStatus);
+                // Kestrel consumes skipped blank lines when an incomplete request needs another read.
+                // Its later HTTP/2 check then sees only the retained request line.
+                prefacePossible = true;
             }
 
-            var result = line.GetBuffer().AsSpan(0, (int)line.Length - 1);
+            var rawLine = line.GetBuffer().AsSpan(0, (int)line.Length);
+            IsHttp2Preface = requestLine && prefacePossible && rawLine.SequenceEqual("PRI * HTTP/2.0\r\n"u8);
+            var result = rawLine[..^1];
             if (result.Length > 0 && result[^1] == '\r')
                 result = result[..^1];
             if (result.Contains((byte)'\r'))

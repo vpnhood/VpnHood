@@ -145,7 +145,7 @@ public partial class WebFrontTest : TestBase
     [TestMethod]
     public async Task A_tls_handshake_where_http_is_expected_gets_400_at_once()
     {
-        // a TLS record's start and no line end, which a request would wait for
+        // The zero byte in the record length triggers rejection, not the leading 16 03.
         await using var stream = new TestDuplexStream([0x16, 0x03, 0x01, 0x00, 0x05], blockAtEnd: true);
         Assert.IsNull(await WebFront.ReadRequest(stream.Http, TestCt));
         StringAssert.StartsWith(Encoding.ASCII.GetString(stream.Written), "HTTP/1.1 400 Bad Request\r\n");
@@ -558,8 +558,9 @@ public partial class WebFrontTest : TestBase
     {
         private readonly MemoryStream _input = new(input);
         private readonly MemoryStream _output = new();
+        private HttpReadStream? _http;
 
-        public HttpReadStream Http => field ??= new HttpReadStream(this);
+        public HttpReadStream Http => _http ??= new HttpReadStream(this);
         public TaskCompletionSource ReadBlocked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int ReadCount { get; private set; }
         public byte[] Written => _output.ToArray();
@@ -611,5 +612,15 @@ public partial class WebFrontTest : TestBase
 
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) {
+                _http?.Dispose();
+                _input.Dispose();
+                _output.Dispose();
+            }
+            base.Dispose(disposing);
+        }
     }
 }

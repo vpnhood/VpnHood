@@ -132,30 +132,42 @@ public class ServerHost : IAsyncDisposable
         // Retain the original transport separately so an unauthenticated reset still reaches its socket.
         var stream = new HttpReadStream(streamConnection.Stream);
         var bufferedConnection = new StreamConnectionDecorator(streamConnection, stream);
-        while (true) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, "Waiting for Connection request...");
-            var request = await WebFront.ReadRequest(stream, cancellationToken).Vhc();
-            if (request == null) {
-                await CloseConnection(streamConnection, reset: false).Vhc();
+        var handedOff = false;
+        try {
+            while (true) {
+                VhLogger.Instance.LogDebug(GeneralEventId.Request, "Waiting for Connection request...");
+                var request = await WebFront.ReadRequest(stream, cancellationToken).Vhc();
+                if (request == null) {
+                    await CloseConnection(streamConnection, reset: false).Vhc();
+                    return null;
+                }
+
+                VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", request.RequestLine);
+
+                var clientConnection = await CreateClientConnection(bufferedConnection, request, onAuthenticated,
+                    cancellationToken).Vhc();
+                if (clientConnection != null) {
+                    stream.CompleteHttp();
+                    handedOff = true;
+                    return clientConnection;
+                }
+
+                if (await _downloadService.TryServeDownloadAsync(bufferedConnection, request.RequestLine, cancellationToken).Vhc())
+                    throw new RequestHandledException();
+
+                var next = await WebFront.Unauthorized(stream, request, cancellationToken).Vhc();
+                if (next == WebFrontNext.NextRequest)
+                    continue;
+
+                await CloseConnection(streamConnection, reset: next == WebFrontNext.Reset).Vhc();
                 return null;
             }
-
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", request.RequestLine);
-
-            var clientConnection = await CreateClientConnection(bufferedConnection, request, onAuthenticated,
-                cancellationToken).Vhc();
-            if (clientConnection != null)
-                return clientConnection;
-
-            if (await _downloadService.TryServeDownloadAsync(bufferedConnection, request.RequestLine, cancellationToken).Vhc())
-                throw new RequestHandledException();
-
-            var next = await WebFront.Unauthorized(stream, request, cancellationToken).Vhc();
-            if (next == WebFrontNext.NextRequest)
-                continue;
-
-            await CloseConnection(streamConnection, reset: next == WebFrontNext.Reset).Vhc();
-            return null;
+        }
+        finally {
+            // The tunnel owns the wrapper after handoff. Every other exit returns its pooled buffer,
+            // including a download, cancellation or malformed request; the transport keeps its owner.
+            if (!handedOff)
+                await stream.DisposeAsync().Vhc();
         }
     }
 

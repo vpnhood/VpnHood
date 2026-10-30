@@ -74,12 +74,25 @@ internal static partial class ParityProbes
         .. Both("zero-after-version", "GET / HTTP/1.1\u0000"),
         .. Both("zero-after-blank-line", "\r\n\u0000"),
         .. Both("zero-second-request", Get("x") + "G\u0000"),
+        .. Both("zero-line-limit-inside", new string('A', 8191) + "\u0000"),
+        .. Both("zero-line-limit-first-beyond", new string('A', 8192) + "\u0000"),
+        .. Both("zero-line-limit-beyond", new string('A', 8193) + "\u0000"),
+        .. Both("zero-line-limit-no-lf", new string('A', 8192)),
         .. Both("zero-header-start", "GET / HTTP/1.1\r\nHost: x\r\n\u0000"),
         .. Both("zero-in-header-name", "GET / HTTP/1.1\r\nHost: x\r\nX-\u0000"),
         .. Both("zero-in-header-value", "GET / HTTP/1.1\r\nHost: x\r\nX-A: \u0000"),
         .. Both("zero-in-trailer", ChunkedHead + "0\r\nX-T: \u0000"),
+        .. BothPieces("zero-after-g-split", [("G", 300), ("\u0000", 0)], endWaitSeconds: 3),
+        .. BothPieces("zero-in-target-split", [("GET /", 300), ("\u0000", 0)], endWaitSeconds: 3),
+        .. BothPieces("zero-after-blank-line-split", [("\r\n", 300), ("\u0000", 0)], endWaitSeconds: 3),
+        .. BothPieces("zero-second-request-split", [(Get("x"), 500), ("G\u0000", 0)], endWaitSeconds: 3),
+        .. BothPieces("zero-in-header-value-split", [("GET / HTTP/1.1\r\nHost: x\r\nX-A: ", 300), ("\u0000", 0)],
+            endWaitSeconds: 3),
+        .. BothPieces("zero-in-trailer-split", [(ChunkedHead + "0\r\nX-T: ", 500), ("\u0000", 0)],
+            endWaitSeconds: 3),
 
-        // HTTP/2's preface: Kestrel answers it with a GOAWAY only as a connection's first bytes on a plain port
+        // HTTP/2's preface on the plain port's first request. Leading blank lines can be consumed by an earlier
+        // read, so the same bytes arriving together or separately can change whether Kestrel sends GOAWAY.
         .. Both("h2-preface", Preface),
         .. Both("h2-preface-settings", Preface + "\u0000\u0000\u0000\u0004\u0000\u0000\u0000\u0000\u0000"),
         .. Both("h2-preface-no-final-crlf", "PRI * HTTP/2.0\r\n\r\nSM\r\n"),
@@ -94,6 +107,19 @@ internal static partial class ParityProbes
         .. Both("h2-request-line-lowercase", "pri * HTTP/2.0\r\n"),
         .. Both("h2-request-line-no-lf", "PRI * HTTP/2.0"),
         .. Both("pri-http11", "PRI * HTTP/1.1\r\n\r\n"),
+        .. BothPieces("h2-request-line-bytewise", OneByOne("PRI * HTTP/2.0\r\n", 10), endWaitSeconds: 3),
+        .. BothPieces("h2-request-line-split-crlf", [("PRI * HTTP/2.0\r", 300), ("\n", 0)], endWaitSeconds: 3),
+        .. BothPieces("h2-preface-after-blank-line-split", [("\r\n", 300), (Preface, 0)], endWaitSeconds: 3),
+        .. BothPieces("h2-preface-after-split-blank-line", [("\r", 300), ("\n" + Preface, 0)], endWaitSeconds: 3),
+        .. BothPieces("h2-preface-after-blank-line-partial", [("\r\n", 300), ("PRI * HTTP/2.0\r", 300), ("\n", 0)],
+            endWaitSeconds: 3),
+        .. BothPieces("h2-preface-with-blank-line-partial", [("\r\nPRI * ", 300), ("HTTP/2.0\r\n", 0)],
+            endWaitSeconds: 3),
+        .. BothPieces("h2-preface-with-blank-line-split-crlf", [("\r\nPRI * HTTP/2.0\r", 300), ("\n", 0)],
+            endWaitSeconds: 3),
+        .. BothPieces("h2-preface-after-separate-blank-lines", [("\r\n", 300), ("\r\n", 300), (Preface, 0)],
+            endWaitSeconds: 3),
+        .. BothPieces("h2-preface-after-request-split", [(Get("x"), 500), (Preface, 0)], endWaitSeconds: 3),
 
         // a TLS record's start without a zero byte: Kestrel waits for a line end and, without one, answers 408 when
         // its header timeout fires

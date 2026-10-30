@@ -15,18 +15,29 @@ internal static class WebFront
     private static readonly TimeSpan RequestHeadersTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan RequestBodyDrainTimeout = TimeSpan.FromSeconds(5);
     private const long MaxRequestBodySize = 30_000_000;
+    // HTTP/2 GOAWAY: last stream 0, HTTP_1_1_REQUIRED (0x0d). Kestrel emits this only for the exact
+    // preface in the first plaintext request, even if no bytes after its first CRLF arrive. Leading
+    // blank lines block detection unless already consumed by an earlier read (see FindRequestStart).
+    private static readonly byte[] Http11Required = [0, 0, 8, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13];
 
     // the next request; null once the connection is to close: it ended, sat idle, or sent a request Kestrel refuses,
     // which this has answered
-    public static async Task<HttpRequestHead?> ReadRequest(HttpReadStream stream, CancellationToken cancellationToken)
+    public static async Task<HttpRequestHead?> ReadRequest(HttpReadStream stream, CancellationToken cancellationToken,
+        bool allowHttp2Preface = false)
     {
-        if (!await FindRequestStart(stream, cancellationToken).Vhc())
+        var start = await FindRequestStart(stream, cancellationToken).Vhc();
+        if (start < 0)
             return null;
 
         using var headersCts = new CancellationTokenSource(Heartbeat(RequestHeadersTimeout));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(headersCts.Token, cancellationToken);
         try {
-            return await HttpRequestHeadReader.Read(stream, linkedCts.Token).Vhc();
+            return await HttpRequestHeadReader.Read(stream, linkedCts.Token,
+                allowHttp2Preface: allowHttp2Preface, hasLeadingLineEnds: start > 0).Vhc();
+        }
+        catch (Http2PrefaceException) {
+            await TryWrite(stream, Http11Required, cancellationToken).Vhc();
+            return null;
         }
         catch (HttpRequestRejectedException ex) {
             await TryWrite(stream, WebReplies.Rejected(ex.StatusCode, ex.Allow), cancellationToken).Vhc();
@@ -102,8 +113,10 @@ internal static class WebFront
     }
 
     // Leading line ends do not start the headers deadline. Skip whole buffered spans under the original
-    // keep-alive deadline; leave the first other byte for the request reader.
-    private static async Task<bool> FindRequestStart(HttpReadStream stream, CancellationToken cancellationToken)
+    // keep-alive deadline; leave the first other byte for the request reader. Return -1 at close, or its
+    // offset in the last buffer. Kestrel's HTTP/2 check sees leading blank lines in that buffer, but not
+    // blank lines already consumed from earlier reads.
+    private static async Task<int> FindRequestStart(HttpReadStream stream, CancellationToken cancellationToken)
     {
         using var idleCts = new CancellationTokenSource(Heartbeat(KeepAliveTimeout));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(idleCts.Token, cancellationToken);
@@ -113,13 +126,13 @@ internal static class WebFront
                 var start = span.IndexOfAnyExcept((byte)'\r', (byte)'\n');
                 stream.Consume(start < 0 ? span.Length : start);
                 if (start >= 0)
-                    return true;
+                    return start;
             }
-            return false;
+            return -1;
         }
         catch (Exception ex) when (ex is OperationCanceledException or IOException &&
                                    idleCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested) {
-            return false;
+            return -1;
         }
     }
 

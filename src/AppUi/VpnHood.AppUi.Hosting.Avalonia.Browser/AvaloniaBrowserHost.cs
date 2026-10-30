@@ -30,6 +30,7 @@ public static class AvaloniaBrowserHost
 
         await AvaloniaUiHosting.StartAsync<TUi>(VpnHoodApiHttpFactory.Create(http),
             new HttpAssetProvider(http, "assets/"), cancellationToken);
+        await BrowserTextInput.RegisterAsync(cancellationToken);
         await AppBuilder.Configure<TUi>().StartBrowserAppAsync("out");
     }
 }

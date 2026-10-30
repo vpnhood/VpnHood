@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+             xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.AddServerView">
   <!-- The web UI's AddServerDialog as a page: the key field and what it is for. Shown only where a
        key can be typed - a TV sends the person to their phone instead (LocationsView). Adding
@@ -12,7 +13,8 @@
 
     <StackPanel MaxWidth="720" Spacing="14" VerticalAlignment="Top">
       <TextBlock Classes="body-small disabled" Text="{Binding AddAccessKeySubtitle, Source={x:Static res:Strings.Current}}" />
-      <TextBox x:Name="KeyBox" AutomationProperties.Name="{Binding AddAccessKeyTitle, Source={x:Static res:Strings.Current}}" PlaceholderText="vh:" AcceptsReturn="False" FlowDirection="LeftToRight" />
+      <TextBox x:Name="KeyBox" AutomationProperties.Name="{Binding AddAccessKeyTitle, Source={x:Static res:Strings.Current}}" PlaceholderText="vh:" AcceptsReturn="False" FlowDirection="LeftToRight"
+               hosting:NativeTextInput.IsPreferred="True" />
       <TextBlock x:Name="ErrorText" AutomationProperties.LiveSetting="Assertive" Classes="body-small error" IsVisible="False" TextWrapping="Wrap" />
       <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" Margin="0,6,0,0">
         <Button x:Name="AddButton" Classes="action" Content="{Binding Add, Source={x:Static res:Strings.Current}}" Click="OnAddClick" />

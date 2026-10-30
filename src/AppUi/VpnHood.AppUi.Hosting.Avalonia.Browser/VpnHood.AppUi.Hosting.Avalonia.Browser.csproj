@@ -2,10 +2,16 @@
 	<PropertyGroup>
 		<TargetFramework>net10.0-browser</TargetFramework>
 		<Description>Runs any VpnHood Avalonia UI as a browser page: the app's web host serves it to a paired device, and the page dials the app's API over HTTP. Names no UI; a page project names one (AvaloniaBrowserHost.RunAsync) and imports build/*.props for the WebAssembly settings.</Description>
+		<!-- [JSImport]'s generated marshalling is unsafe code (BrowserTextInputInterop). -->
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia.Browser" Version="12.1.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="BrowserTextInput.js" LogicalName="VhBrowserTextInput.js" />
 	</ItemGroup>
 
 	<ItemGroup>

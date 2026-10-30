@@ -2,6 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.PremiumCodeDialog">
   <!-- The web UI's PremiumByCode sheet: the code, in the shape it comes in, and Activate. -->
   <Border Classes="dialog" MaxWidth="480">
@@ -16,7 +17,8 @@
           <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding ActivePremiumKeyExpirationNotice, Source={x:Static res:Strings.Current}}" />
         </StackPanel>
       </Border>
-      <TextBox x:Name="CodeBox" AutomationProperties.Name="{Binding EnterPremiumCode, Source={x:Static res:Strings.Current}}" Classes="outlined" PlaceholderText="XXXX-XXXX-XXXX-XXXX-XXXX" TextChanged="OnCodeChanged" KeyDown="OnCodeKeyDown" FlowDirection="LeftToRight" />
+      <TextBox x:Name="CodeBox" AutomationProperties.Name="{Binding EnterPremiumCode, Source={x:Static res:Strings.Current}}" Classes="outlined" PlaceholderText="XXXX-XXXX-XXXX-XXXX-XXXX" TextChanged="OnCodeChanged" KeyDown="OnCodeKeyDown" FlowDirection="LeftToRight"
+               hosting:NativeTextInput.IsPreferred="True" />
       <TextBlock x:Name="ErrorText" AutomationProperties.LiveSetting="Assertive" Classes="body-small error-text" TextWrapping="Wrap" IsVisible="False" />
       <Button x:Name="ActivateButton" Classes="pill block" Background="{StaticResource ActivateCodeBtnBrush}" Foreground="{StaticResource OnActivateCodeBtnBrush}" IsEnabled="False" Click="OnActivateClick"
               Content="{Binding Activate, Source={x:Static res:Strings.Current}}" />

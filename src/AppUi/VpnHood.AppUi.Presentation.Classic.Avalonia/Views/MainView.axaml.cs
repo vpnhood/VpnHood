@@ -441,10 +441,18 @@ public partial class MainView : UserControl
     }
 
     // a wait for what the device's own screen shows - a store's sign-in, an ad - which a browser
-    // driving a TV says to finish there (LoadingDialog)
+    // driving a TV says to finish there
     public IDisposable LoadingOnDevice(string? message = null)
     {
-        return ShowLoading(new LoadingDialog(message, isOnDevice: true));
+        return ShowLoading(VhApp.IsTvRemote
+            ? new LoadingDialog(Strings.Current.ContinueOnTvDesc, Strings.Current.ContinueOnTvTitle)
+            : new LoadingDialog(message));
+    }
+
+    // a browser driving a TV that no longer answers it, over everything until it does (MainViewModel)
+    public IDisposable TvUnreachable()
+    {
+        return ShowLoading(new LoadingDialog(Strings.Current.TvUnreachableDesc, Strings.Current.TvUnreachableTitle));
     }
 
     private IDisposable ShowLoading(LoadingDialog dialog)

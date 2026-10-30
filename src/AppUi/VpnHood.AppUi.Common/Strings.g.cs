@@ -1963,6 +1963,12 @@ public sealed partial class Strings
     /// <summary>Finish this step on the TV screen. This page carries on by itself when it is done.</summary>
     public string ContinueOnTvDesc => Get("CONTINUE_ON_TV_DESC");
 
+    /// <summary>Can't reach your TV</summary>
+    public string TvUnreachableTitle => Get("TV_UNREACHABLE_TITLE");
+
+    /// <summary>On the TV, open Settings to show Remote Access again, and keep this device on the TV's network. This page carries on ...</summary>
+    public string TvUnreachableDesc => Get("TV_UNREACHABLE_DESC");
+
     /// <summary>Sign in on your phone</summary>
     public string SignInOnYourPhone => Get("SIGN_IN_ON_YOUR_PHONE");
 

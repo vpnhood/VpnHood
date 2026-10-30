@@ -1,21 +1,18 @@
-﻿using VpnHood.AppUi.Common;
-
-namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
+﻿namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 
 public partial class LoadingDialog : DialogBase
 {
-    // A wait for what the device's own screen shows (isOnDevice) is answered on the TV when this UI
-    // is the browser driving it, so it says that instead of its message.
-    public LoadingDialog(string? message = null, bool isOnDevice = false)
+    // "Please wait", or the host's words for what the wait is: a message, and a title over it for one
+    // the person has a part in (MainView)
+    public LoadingDialog(string? message = null, string? title = null)
     {
         InitializeComponent();
-        if (isOnDevice && VhApp.IsTvRemote) {
-            TitleText.Text = Strings.Current.ContinueOnTvTitle;
-            TitleText.IsVisible = true;
-            MessageText.Text = Strings.Current.ContinueOnTvDesc;
-        }
-        else if (message != null)
+        if (message != null)
             MessageText.Text = message;
+        if (title != null) {
+            TitleText.Text = title;
+            TitleText.IsVisible = true;
+        }
     }
 
     // a wait is the app's, not the person's to end

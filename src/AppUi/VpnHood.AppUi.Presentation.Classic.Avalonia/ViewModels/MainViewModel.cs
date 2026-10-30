@@ -34,9 +34,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan FiveMinutes = TimeSpan.FromSeconds(299);
     private static readonly TimeSpan FifteenMinutes = TimeSpan.FromSeconds(899);
 
+    // A read given up on, so the next beat asks again: over HTTP, a request to a peer that went away
+    // waits for the client's own limit, minutes, and the clock reads one at a time.
+    private static readonly TimeSpan StateReadTimeout = TimeSpan.FromSeconds(5);
+
     private readonly DispatcherTimer _timer;
     private Task _stateRead = Task.CompletedTask;
-    private bool _isStateReadFailing;
+    private int _failedStateReads;
+    private IDisposable? _tvUnreachableNotice;
     private bool _disposed;
     private string? _shownErrorMessage;
     private DateTime? _ignoredSuppressTime;
@@ -192,15 +197,38 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         try {
-            await VhApp.ReloadState(cancellationToken);
-            _isStateReadFailing = false;
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(StateReadTimeout);
+            await VhApp.ReloadState(timeoutCts.Token);
+            _failedStateReads = 0;
+            RefreshTvReach();
             if (!_disposed)
                 Refresh();
         }
         catch (Exception ex) {
-            VhLogger.Instance.Log(_isStateReadFailing ? LogLevel.Debug : LogLevel.Warning, ex,
+            VhLogger.Instance.Log(_failedStateReads > 0 ? LogLevel.Debug : LogLevel.Warning, ex,
                 "Could not read the app's state.");
-            _isStateReadFailing = true;
+            _failedStateReads++;
+            RefreshTvReach();
+        }
+    }
+
+    // A browser driving a TV hears from it only by asking, and when the asking fails - Done or Back on
+    // the TV's Remote Access screen, the TV asleep or off the network, its app started again under a new
+    // pairing - every button here does nothing. So the page says so, over everything, once two reads in
+    // a row have failed (one is a blip), and carries on when a read gets through: the pairing lasts as
+    // long as the app runs, so the screen opened again is all it takes.
+    private void RefreshTvReach()
+    {
+        if (_disposed)
+            return;
+
+        var isUnreachable = VhApp.IsTvRemote && _failedStateReads >= 2;
+        if (isUnreachable && _tvUnreachableNotice == null)
+            _tvUnreachableNotice = Host?.TvUnreachable();
+        else if (!isUnreachable && _tvUnreachableNotice != null) {
+            _tvUnreachableNotice.Dispose();
+            _tvUnreachableNotice = null;
         }
     }
 

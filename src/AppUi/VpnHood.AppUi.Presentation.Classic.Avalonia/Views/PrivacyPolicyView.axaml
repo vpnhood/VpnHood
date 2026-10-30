@@ -13,7 +13,7 @@
       <Border Classes="divider" Opacity="0.6" />
       <!-- the notice and the documents it names, in the summary's column: beside Accept however long
            the summary runs, so a remote reaches them -->
-      <StackPanel MaxWidth="720" Spacing="12" Margin="8,16,8,0">
+      <StackPanel x:Name="NoticePanel" MaxWidth="720" Spacing="12" Margin="8,16,8,0">
         <TextBlock Classes="body-medium" TextWrapping="Wrap" Text="{Binding AcceptLicenseNotice, Source={x:Static res:Strings.Current}}" />
         <Button x:Name="TermsButton" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnTermsClick" IsVisible="False">
           <StackPanel Orientation="Horizontal" Spacing="6">

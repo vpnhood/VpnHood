@@ -25,6 +25,9 @@ public partial class PrivacyPolicyView : UserControl, IPage, IRootPage
         _ = LoadDocument(VhApp.Features.PrivacyConsentAssetName, CancellationToken.None);
         TermsButton.IsVisible = VhApp.Features.Links.TermsOfUse != null;
         PrivacyButton.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
+        // the notice ends in the documents it names: with neither, it would end in a colon, and Accept
+        // takes the summary alone
+        NoticePanel.IsVisible = TermsButton.IsVisible || PrivacyButton.IsVisible;
         TrackerItem.Title = Strings.Current.AllowAnonymousTracker;
         TrackerItem.Description = Strings.Current.AllowAnonymousTrackerDesc;
         TrackerItem.IsOn = false;

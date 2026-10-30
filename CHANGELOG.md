@@ -85,6 +85,7 @@
 * Fix: On Linux, an install started while the app updates itself waits for the update to finish, so its choices stand; the update could undo them, turning updates back on after `-noautoupdate`. The uninstaller waits too #linux
 * Fix: Split Local Network does what it says: on, local devices such as a printer or a TV are reached directly; off, their traffic stays in the VPN. It did the opposite while Allow Split Tunneling was off, or on a server that carries local addresses
 * Fix: On Android, Cancel on the system's VPN connection request now stops connecting, instead of showing the request again #android
+* Fix: On Android, the VPN connects when your split by IP addresses on the device leaves out a range that ends just before 127.0.0.0, such as 126.0.0.0/8; it failed with "Bad address" #android
 
 # v8.1.849
 

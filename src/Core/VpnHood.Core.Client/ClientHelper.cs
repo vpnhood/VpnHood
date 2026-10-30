@@ -197,7 +197,8 @@ internal static class ClientHelper
     // capture), so its resolvers are unioned back AFTER the policy and the exclusions where nothing
     // can strip them, while an out-of-tunnel plan leaves the set untouched — its resolvers stay
     // outside on purpose. The host address is excluded LAST: the tunnel is built over it, and routing
-    // it inside itself would loop, even when the user points DNS at the server.
+    // it inside itself would loop, even when the user points DNS at the server; a loopback a route would
+    // start in, with it.
     public static IpRangeOrderedList BuildIncludeIpRangesByDevice(
         IpRangeOrderedList clientIncludeIpRanges,
         IpRangeOrderedList serverIncludeIpRanges,
@@ -235,6 +236,15 @@ internal static class ClientHelper
 
         // exclude server even if VpnAdapter can protect socket, because we can not protect MS-QUIC sockets
         includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
+
+        // Android refuses a route that starts at a loopback address ("Bad address"), which a split leaves
+        // where its edge falls inside the loopback - a server at 127.0.0.1, or a via-device list that ends at
+        // 126.255.255.255. Only then is that loopback taken out: a route that covers it whole, as 0.0.0.0/0,
+        // stays, as the OS keeps loopback local whatever the routes say, and cutting it out would only add
+        // routes.
+        foreach (var loopbackNetwork in IpNetwork.LoopbackNetworks)
+            if (includeIpRanges.ToIpNetworks().Any(x => loopbackNetwork.Contains(x.Prefix)))
+                includeIpRanges = includeIpRanges.Exclude(loopbackNetwork.ToIpRange());
 
         return includeIpRanges; //sort and unify
     }

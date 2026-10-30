@@ -12,7 +12,7 @@ internal sealed class MsQuicListener(QuicListener listener) : IQuicListener
     public async ValueTask<IQuicConnection> AcceptConnectionAsync(CancellationToken cancellationToken)
     {
         var connection = await listener.AcceptConnectionAsync(cancellationToken).Vhc();
-        return new MsQuicConnection(connection);
+        return new MsQuicServerConnection(connection);
     }
 
     public ValueTask DisposeAsync()

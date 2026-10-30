@@ -4,6 +4,8 @@ using System.Security.Cryptography.X509Certificates;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Core.Server.Access;
+using VpnHood.Core.Server.Listeners.Http3;
+using VpnHood.Core.Server.ProbeResistance;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -16,6 +18,7 @@ namespace VpnHood.Core.Server.Listeners;
 internal class QuicListenerHost(
     IQuicServer? quicServer,
     SessionManager sessionManager,
+    UnauthenticatedConnections unauthenticatedConnections,
     CancellationToken cancellationToken,
     Func<IStreamConnection, CancellationToken, Task> processNewConnection)
     : IAsyncDisposable
@@ -28,7 +31,7 @@ internal class QuicListenerHost(
     // only report listeners that are still running; a listener whose task has finished
     // (e.g. stopped due to an unrecoverable error) must not be advertised in the Hello response
     public IReadOnlyList<IPEndPoint> EndPoints =>
-        _listeners.Where(x => !x.ListenerTask.IsCompleted).Select(x => x.Listener.LocalEndPoint).ToArray();
+        _listeners.Where(x => x.IsListening).Select(x => x.Listener.LocalEndPoint).ToArray();
 
     public async Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
         IReadOnlyList<IPEndPoint> ipEndPoints,
@@ -40,7 +43,8 @@ internal class QuicListenerHost(
 
         // stop listeners that are no longer in the list
         foreach (var entry in _listeners
-                     .Where(x => !ipEndPoints.Any(ep => ep.Equals(x.Listener.LocalEndPoint))).ToArray()) {
+                     .Where(x => !x.IsListening ||
+                                 !ipEndPoints.Any(ep => ep.Equals(x.Listener.LocalEndPoint))).ToArray()) {
             VhLogger.Instance.LogInformation("Stop listening on QuicEndPoint: {QuicEndPoint}",
                 VhLogger.Format(entry.Listener.LocalEndPoint));
             await entry.DisposeAsync().Vhc();
@@ -71,13 +75,16 @@ internal class QuicListenerHost(
 
                 var listenerOptions = new QuicListenerOptions {
                     ListenEndPoint = ipEndPoint,
-                    IdleTimeout = sessionManager.SessionOptions.ChannelIdleTimeoutValue,
+                    // HTTP/3 owns idle and request deadlines; native expiry must not end a busy tunnel.
+                    IdleTimeout = Timeout.InfiniteTimeSpan,
+                    DefaultStreamErrorCode = Http3Protocol.InternalError,
+                    DefaultCloseErrorCode = Http3Protocol.NoError,
                     ServerCertificateSelector = SelectCertificate
                 };
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 var listener = await quicServer.ListenAsync(listenerOptions, cancellationToken).Vhc();
-                var task = ListenTask(listener, cts.Token);
-                _listeners.Add(new QuicListenerEntry(listener, task, cts));
+                var entry = new QuicListenerEntry(listener, cancellationToken);
+                entry.ListenerTask = ListenTask(entry, entry.Token);
+                _listeners.Add(entry);
                 endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Quic, EndPoint = ipEndPoint });
             }
             catch (Exception ex) {
@@ -91,8 +98,6 @@ internal class QuicListenerHost(
             }
         }
 
-        // remove listeners whose task already finished (e.g. stopped due to unexpected error)
-        _listeners.RemoveAll(x => x.ListenerTask.IsCompleted);
         return endPointStatuses;
     }
 
@@ -105,89 +110,90 @@ internal class QuicListenerHost(
         return certificate.Certificate;
     }
 
-    private async Task ListenTask(IQuicListener listener, CancellationToken ct)
+    private async Task ListenTask(QuicListenerEntry entry, CancellationToken cancellationToken)
     {
+        var listener = entry.Listener;
         var localEp = listener.LocalEndPoint;
         var errorCounter = 0;
         const int maxErrorCount = 200;
 
-        while (!ct.IsCancellationRequested) {
-            try {
-                var quicConnection = await listener.AcceptConnectionAsync(ct).Vhc();
-                _ = AcceptStreams(quicConnection, ct);
+        try {
+            while (!cancellationToken.IsCancellationRequested) {
+                try {
+                    var quicConnection = await listener.AcceptConnectionAsync(cancellationToken).Vhc();
+                    entry.TrackConnection(AcceptStreams(quicConnection, cancellationToken));
 
-                // a successful accept proves the listener is healthy; reset the counter so that only
-                // sustained (unrecoverable) failures trip the stop, not isolated per-connection errors
-                errorCounter = 0;
-            }
-            catch (OperationCanceledException) {
-                break;
-            }
-            catch (ObjectDisposedException) {
-                break;
-            }
-            catch (Exception ex) {
-                if (ct.IsCancellationRequested)
+                    // A successful accept proves the listener is healthy; isolated handshake failures
+                    // must not accumulate into a persistent-listener failure.
+                    errorCounter = 0;
+                }
+                catch (OperationCanceledException) {
                     break;
+                }
+                catch (ObjectDisposedException) {
+                    break;
+                }
+                catch (Exception ex) {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
 
-                VhLogger.Instance.LogError(GeneralEventId.Request, ex,
-                    "ServerHost could not AcceptQuicConnection. LocalEndPint: {LocalEndPint}, ErrorCounter: {ErrorCounter}",
-                    localEp, errorCounter);
+                    VhLogger.Instance.LogError(GeneralEventId.Request, ex,
+                        "ServerHost could not AcceptQuicConnection. LocalEndPoint: {LocalEndPoint}, ErrorCounter: {ErrorCounter}",
+                        localEp, errorCounter);
 
-                // We cannot tell a per-connection fault from permanent damage (IP change, socket unbound)
-                // by exception type: msquic collapses them into a generic QuicException/SocketException, and
-                // .NET already drops failed handshakes internally. Persistence is the reliable signal instead:
-                // a transient error is cleared by the next successful accept (errorCounter reset above), while
-                // permanent damage keeps throwing. The short delay below stops a broken listener from
-                // hot-spinning and makes maxErrorCount a meaningful time window rather than a microsecond burst.
-                errorCounter++;
-                if (errorCounter > maxErrorCount) {
-                    VhLogger.Instance.LogError(ex,
-                        "Too many unexpected errors in QUIC AcceptConnectionAsync. Waiting 60 seconds...");
-                    await Task.Delay(TimeSpan.FromSeconds(60), ct).Vhc();
+                    // MsQuic can report handshake faults and damaged listeners with the same exception.
+                    // Back off repeated failures instead of hot-spinning while the host reconfigures.
+                    if (++errorCounter > maxErrorCount) {
+                        VhLogger.Instance.LogError(ex,
+                            "Too many unexpected errors in QUIC AcceptConnectionAsync. Waiting 60 seconds...");
+                        await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken).Vhc();
+                    }
                 }
             }
         }
-
-        VhLogger.Instance.LogInformation("QUIC Listener has been stopped. LocalEp: {LocalEp}", VhLogger.Format(localEp));
+        catch (OperationCanceledException) {
+            // Cancellation during the failure backoff also follows the same cleanup path.
+        }
+        finally {
+            // Stop advertising immediately, even if a connection is still finishing its bounded close.
+            // An unexpectedly ended accept loop cancels its children without waiting for reconfiguration.
+            var closeListener = entry.CloseListener().AsTask();
+            try {
+                await Task.WhenAll(closeListener, entry.WaitForConnections()).Vhc();
+            }
+            finally {
+                entry.ReleaseCancellation();
+            }
+            VhLogger.Instance.LogInformation("QUIC Listener has been stopped. LocalEp: {LocalEp}",
+                VhLogger.Format(localEp));
+        }
     }
 
-    private async Task AcceptStreams(IQuicConnection quicConnection, CancellationToken ct)
+    private async Task AcceptStreams(IQuicConnection quicConnection, CancellationToken cancellationToken)
     {
-        var remoteEp = quicConnection.RemoteEndPoint;
-
+        var ownedByFront = false;
         try {
-            while (!ct.IsCancellationRequested) {
-                var stream = await quicConnection.AcceptInboundStreamAsync(ct).Vhc();
-                _ = TryProcessStream(quicConnection, stream, ct);
-            }
+            if (quicConnection is not IQuicServerConnection serverConnection)
+                throw new NotSupportedException("The QUIC provider must expose server stream control for HTTP/3.");
+            var front = new Http3ConnectionFront(serverConnection, sessionManager, unauthenticatedConnections,
+                processNewConnection);
+            ownedByFront = true;
+            await front.Run(cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            // Listener shutdown owns cancellation.
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
                 "QUIC connection has been closed. RemoteEp: {RemoteEp}",
-                VhLogger.Format(remoteEp));
+                VhLogger.Format(quicConnection.RemoteEndPoint));
         }
         finally {
-            try { await quicConnection.DisposeAsync().Vhc(); }
-            catch { /* ignore */ }
+            // The front owns the connection through its complete async close. Unsupported providers
+            // have not transferred ownership and must still be released here.
+            if (!ownedByFront)
+                await quicConnection.TryDisposeAsync(Http3Protocol.CloseTimeout).Vhc();
         }
-    }
-
-    private async Task TryProcessStream(IQuicConnection quicConnection, Stream stream, CancellationToken ct)
-    {
-        var connection = new QuicStreamConnection(stream,
-            localEndPoint: quicConnection.LocalEndPoint,
-            remoteEndPoint: quicConnection.RemoteEndPoint,
-            connectionName: "tunnel",
-            isServer: true);
-
-        var serverConnection = new ServerStreamConnection(connection) {
-            ClientIp = quicConnection.RemoteEndPoint.Address
-        };
-
-        using var timeoutCts = new CancellationTokenSource(sessionManager.SessionOptions.TcpConnectTimeoutValue);
-        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, ct);
-        await processNewConnection(serverConnection, connectCts.Token).Vhc();
     }
 
     public async ValueTask DisposeAsync()
@@ -202,22 +208,73 @@ internal class QuicListenerHost(
         _listeners.Clear();
     }
 
-    private sealed class QuicListenerEntry(IQuicListener listener, Task listenerTask, CancellationTokenSource cts)
-        : IAsyncDisposable
+    private sealed class QuicListenerEntry : IAsyncDisposable
     {
-        public IQuicListener Listener => listener;
-        public Task ListenerTask => listenerTask;
+        private readonly CancellationTokenSource _cancellation;
+        private readonly HashSet<Task> _connections = [];
+        private readonly AsyncLock _listenerCloseLock = new();
+        private readonly AsyncLock _disposeLock = new();
+        private bool _listenerClosed;
+        private bool _disposed;
+        private volatile bool _isListening = true;
+
+        public QuicListenerEntry(IQuicListener listener, CancellationToken cancellationToken)
+        {
+            Listener = listener;
+            _cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            Token = _cancellation.Token;
+        }
+
+        public IQuicListener Listener { get; }
+        public CancellationToken Token { get; }
+        public Task ListenerTask { get; set; } = Task.CompletedTask;
+        public bool IsListening => _isListening;
+
+        public void TrackConnection(Task task)
+        {
+            lock (_connections)
+                _connections.Add(task);
+
+            // Remove completed tasks even when no later client connects to this listener.
+            _ = task.ContinueWith(static (completed, state) => {
+                var entry = (QuicListenerEntry)state!;
+                lock (entry._connections)
+                    entry._connections.Remove(completed);
+                if (completed.Exception is { } error)
+                    VhLogger.Instance.LogError(error, "Error in closing a QUIC connection.");
+            }, this, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        }
+
+        public Task WaitForConnections()
+        {
+            // Called only after acceptance has ended, so the snapshot cannot miss a new connection.
+            lock (_connections)
+                return Task.WhenAll(_connections);
+        }
+
+        public void ReleaseCancellation() => _cancellation.Dispose();
+
+        public async ValueTask CloseListener()
+        {
+            _isListening = false;
+            using var scopeLock = await _listenerCloseLock.LockAsync(CancellationToken.None).Vhc();
+            if (Interlocked.Exchange(ref _listenerClosed, true))
+                return;
+            await _cancellation.TryCancelAsync().Vhc();
+            await Listener.TryDisposeAsync().Vhc();
+        }
 
         public async ValueTask DisposeAsync()
         {
-            await cts.TryCancelAsync().Vhc();
-            await Listener.TryDisposeAsync().Vhc();
-            try { await listenerTask.Vhc(); }
+            using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
+            if (Interlocked.Exchange(ref _disposed, true))
+                return;
+            await CloseListener().Vhc();
+            try { await ListenerTask.Vhc(); }
             catch (OperationCanceledException) { /* ours, cancelled above */ }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in stopping QuicListener.");
             }
-            cts.Dispose();
         }
     }
 }

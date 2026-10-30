@@ -61,10 +61,12 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
         using var timeoutCts = new CancellationTokenSource(ConnectorService.RequestTimeout);
         using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(
             timeoutCts.Token, cancellationToken, _cancellationTokenSource.Token);
+        var freshQuicAttempt = false;
 
         // callback to reset timeout on each proxy attempt
         // ReSharper disable once AccessToDisposedClosure
-        void OnAttempt() => timeoutCts.CancelAfter(ConnectorService.RequestTimeout);
+        Action onAttempt = () => timeoutCts.CancelAfter(ConnectorService.RequestTimeout);
+        Action onQuicAttempt = () => freshQuicAttempt = true;
 
         try {
             var eventId = GetRequestEventId(request);
@@ -84,7 +86,7 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
             // ReSharper disable once AccessToDisposedClosure
             var isTcpPacketChannel = request.RequestCode == (byte)RequestCode.TcpPacketChannel;
             var ret = await SendRequestWithClockCorrection<T>(payload, request.RequestId, isTcpPacketChannel,
-                OnAttempt, requestCts.Token).Vhc();
+                onAttempt, onQuicAttempt, requestCts.Token).Vhc();
 
             // the server ends a connection after its reply, but for a channel request's, which carries the channel:
             // ending the logical stream would only wait for the server's close
@@ -102,31 +104,53 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
         // WHICH stage timed out - TCP connect, TLS handshake, or waiting for the response - and that
         // distinction is what separates an IP-level blackhole from SNI filtering when a whole region
         // reports "no reachable server".
-        catch (Exception ex) when (timeoutCts.IsCancellationRequested) {
-            throw new TimeoutException(
-                $"Could not send the {(RequestCode)request.RequestCode} request in the given time.", ex);
+        catch (OperationCanceledException ex) {
+            RecordQuicFailure(ex, freshQuicAttempt, cancellationToken);
+            if (timeoutCts.IsCancellationRequested)
+                throw RequestTimeout(request, ex);
+            throw;
+        }
+        catch (Exception ex) {
+            RecordQuicFailure(ex, freshQuicAttempt, cancellationToken);
+            if (timeoutCts.IsCancellationRequested)
+                throw RequestTimeout(request, ex);
+            throw;
         }
     }
 
+    private void RecordQuicFailure(Exception exception, bool freshQuicAttempt, CancellationToken callerCancellationToken)
+    {
+        // A normal session error or a 401 with Date already has its own handling. Caller cancellation is not
+        // evidence of a broken proof; an internal request timeout is, and must not be swallowed with it.
+        if (freshQuicAttempt && !callerCancellationToken.IsCancellationRequested &&
+            !_cancellationTokenSource.IsCancellationRequested &&
+            exception is not (SessionException or RequestAuthorizationException))
+            ConnectorService.RequireQuicRequestRecovery();
+    }
+
+    private static TimeoutException RequestTimeout(ClientRequest request, Exception exception) => new(
+        $"Could not send the {(RequestCode)request.RequestCode} request in the given time.", exception);
+
     private async Task<ConnectorRequestResult<T>> SendRequestWithClockCorrection<T>(ReadOnlyMemory<byte> request,
-        string requestId, bool isTcpPacketChannel, Action onAttempt, CancellationToken cancellationToken)
+        string requestId, bool isTcpPacketChannel, Action onAttempt, Action onQuicAttempt,
+        CancellationToken cancellationToken)
         where T : SessionResponse
     {
         var clockCorrectionVersion = requestSigner.ClockCorrectionVersion;
         try {
-            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt, cancellationToken).Vhc();
+            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt, onQuicAttempt, cancellationToken).Vhc();
         }
         catch (RequestAuthorizationException ex) {
             if (!requestSigner.TryCorrectClock(ex.ServerTime, clockCorrectionVersion))
                 throw;
             // Both POST and the upgrade arrive here. A second 401 escapes this catch, so a bad
             // farm key cannot create an authentication retry loop or a protocol downgrade.
-            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt, cancellationToken).Vhc();
+            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt, onQuicAttempt, cancellationToken).Vhc();
         }
     }
 
     private async Task<ConnectorRequestResult<T>> SendRequest<T>(ReadOnlyMemory<byte> request, string requestId,
-        bool isTcpPacketChannel, Action onAttempt, CancellationToken cancellationToken)
+        bool isTcpPacketChannel, Action onAttempt, Action onQuicAttempt, CancellationToken cancellationToken)
         where T : SessionResponse
     {
         // A packet channel must be created with its packet-channel kernel buffer before the TCP
@@ -169,7 +193,7 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
 
         // create a new connection
         var connection = await ConnectorService.GetConnectionToServer(
-            requestId + ":tunnel", request.Length, isTcpPacketChannel, onAttempt, cancellationToken).Vhc();
+            requestId + ":tunnel", request.Length, isTcpPacketChannel, onAttempt, onQuicAttempt, cancellationToken).Vhc();
 
         // send request
         try {

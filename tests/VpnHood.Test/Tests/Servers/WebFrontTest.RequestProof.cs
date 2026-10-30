@@ -8,6 +8,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.ProbeResistance;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Net.Toolkit.Streams;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -82,7 +83,9 @@ public partial class WebFrontTest
     [TestMethod]
     [DataRow(15, 15, false)]
     [DataRow(15, 14, false)]
+    [DataRow(15, 8, false)]
     [DataRow(14, 14, true)]
+    [DataRow(8, 8, true)]
     public async Task Protocol15_hello_omits_the_farm_secret_even_for_an_older_binary_session(
         int httpVersion, int binaryVersion, bool sendsSecret)
     {
@@ -126,6 +129,13 @@ public partial class WebFrontTest
             CollectionAssert.AreEqual(token.ServerToken.Secret, helloResponse.ServerSecret);
         else
             Assert.IsNull(helloResponse.ServerSecret);
+
+        // The h3 front requires the HTTP-15 proof even when TCP still accepts older clients. Those clients
+        // must not be offered a QUIC port they cannot use; an older binary session alone does not exclude it.
+        if (MsQuicServer.IsSupported)
+            Assert.HasCount(1, server.ServerHost.QuicEndPoints, "A QUIC listener is required for the positive control.");
+        var expectedQuicPort = httpVersion >= 15 ? server.ServerHost.QuicEndPoints.SingleOrDefault()?.Port : null;
+        Assert.AreEqual(expectedQuicPort, helloResponse.QuicPort);
     }
 
     [TestMethod]

@@ -74,6 +74,7 @@ public class ServerHost : IAsyncDisposable
         _quicListenerHost = new QuicListenerHost(
             quicServer: quicServer,
             sessionManager: _sessionManager,
+            unauthenticatedConnections: unauthenticatedConnections,
             cancellationToken: _cancellationTokenSource.Token,
             processNewConnection: ProcessNewConnection);
         _udpListenerHost = new UdpListenerHost(_sessionManager);
@@ -580,7 +581,10 @@ public class ServerHost : IAsyncDisposable
                 ? null : _sessionManager.ServerSecret,
             // Compatibility (2026-10): a client below the legacy UDP's protocol gets none; drop with the legacy UDP
             UdpPort = protocolVersion >= UdpDatagram.MinLegacyProtocolVersion ? udpPort : null,
-            QuicPort = quicPort,
+            // Compatibility (2026-10): legacy HTTP clients have no proof for the protected h3 endpoint.
+            // Their TCP path remains available until the configured minimum excludes them.
+            QuicPort = streamConnection is ServerStreamConnection { HttpProtocolVersion: >= 15 }
+                ? quicPort : null,
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ProtocolVersion = sessionResponseEx.ProtocolVersion,

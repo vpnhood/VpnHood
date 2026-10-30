@@ -30,12 +30,14 @@ public sealed class MsQuicServer : IQuicServer
     private static ValueTask<QuicServerConnectionOptions> ConnectionOptionsCallback(QuicListenerOptions options)
     {
         var serverOptions = new QuicServerConnectionOptions {
-            DefaultStreamErrorCode = 0,
-            DefaultCloseErrorCode = 0,
+            DefaultStreamErrorCode = options.DefaultStreamErrorCode,
+            DefaultCloseErrorCode = options.DefaultCloseErrorCode,
+            MaxInboundBidirectionalStreams = options.MaxInboundBidirectionalStreams,
+            MaxInboundUnidirectionalStreams = options.MaxInboundUnidirectionalStreams,
             IdleTimeout = options.IdleTimeout,
             ServerAuthenticationOptions = new SslServerAuthenticationOptions {
                 ServerCertificateSelectionCallback = (_, hostName) => options.ServerCertificateSelector(hostName),
-                ApplicationProtocols = [SslApplicationProtocol.Http3], // just to look normal, we use HTTP 1.1 actually
+                ApplicationProtocols = [SslApplicationProtocol.Http3],
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                 ClientCertificateRequired = false,
                 EncryptionPolicy = EncryptionPolicy.RequireEncryption,

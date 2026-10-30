@@ -35,6 +35,8 @@ public sealed class AndroidQuicClient : IQuicClient
             await state.Connected.Task.Vhc();
         }
         catch {
+            // Peer streams can arrive before ConnectAsync transfers their ownership to a connection.
+            state.CloseInboundStreams();
             CloseHandles(conn, config, gch);
             throw;
         }

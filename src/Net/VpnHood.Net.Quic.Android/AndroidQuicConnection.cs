@@ -73,7 +73,10 @@ internal sealed class AndroidQuicConnection : IQuicConnection
 
                 case QUIC_CONNECTION_EVENT_TYPE.PEER_STREAM_STARTED:
                     var stream = AndroidQuicStream.FromInbound(evt->PEER_STREAM_STARTED.Stream);
-                    state.InboundStreams.Writer.TryWrite(stream);
+                    // Setup cancellation or connection disposal may have completed the queue already.
+                    // The new wrapper owns the native handle even when nobody can accept it.
+                    if (!state.InboundStreams.Writer.TryWrite(stream))
+                        stream.Discard();
                     break;
 
                 case QUIC_CONNECTION_EVENT_TYPE.SHUTDOWN_INITIATED_BY_TRANSPORT:
@@ -166,10 +169,7 @@ internal sealed class AndroidQuicConnection : IQuicConnection
         if (Interlocked.Exchange(ref _disposed, true))
             return ValueTask.CompletedTask;
 
-        _state.InboundStreams.Writer.TryComplete();
-        while (_state.InboundStreams.Reader.TryRead(out var stream)) {
-            try { stream.Dispose(); } catch { /* ignore */ }
-        }
+        _state.CloseInboundStreams();
         if (_connection != null) {
             try { MsQuicApi.Table->ConnectionShutdown(_connection, QUIC_CONNECTION_SHUTDOWN_FLAGS.NONE, 0); } catch { /* ignore */ }
             MsQuicApi.Table->ConnectionClose(_connection); // blocks until callbacks drained

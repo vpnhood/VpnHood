@@ -119,7 +119,14 @@ public sealed class IosQuicClient(
                 options.RemoteEndPoint, inboundStreams);
         }
         catch {
+            // The server's control stream can arrive before setup is canceled. No connection wrapper
+            // owns these queued native streams yet, so release them before closing the group.
             inboundStreams.Writer.TryComplete();
+            while (inboundStreams.Reader.TryRead(out var pending)) {
+                pending.TryCancel();
+                VhInvoker.TryInvoke("dispose an unaccepted QUIC stream", LogLevel.Debug, pending.Dispose);
+            }
+
             connectionGroup.TrySetStateChangedHandler(null);
             connectionGroup.TrySetNewConnectionHandler(null);
             connectionGroup.TryCancel();

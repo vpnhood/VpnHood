@@ -9,7 +9,7 @@ namespace VpnHood.Core.Server.ProbeResistance;
 internal sealed class UnauthenticatedConnections
 {
     private readonly Lock _lock = new();
-    private readonly Dictionary<IPEndPointPair, Entry> _entries = [];
+    private readonly Dictionary<object, Entry> _entries = [];
     private readonly Dictionary<string, LinkedList<Entry>> _byAddress = [];
 
     private int _maxCount = 1000;
@@ -39,15 +39,19 @@ internal sealed class UnauthenticatedConnections
     }
 
     // a new connection; the cap may then close one, this one included
-    public void Add(IPEndPointPair endPoints, IDisposable connection)
+    public void Add(IPEndPointPair endPoints, IDisposable connection) => Add(endPoints, endPoints, connection);
+
+    // TCP keeps its endpoint key and replacement behavior. QUIC uses a connection identity: distinct
+    // connection IDs can share a UDP tuple, and the same numeric tuple may also belong to TCP.
+    public void Add(IPEndPointPair endPoints, object identity, IDisposable connection)
     {
         Entry? evicted = null;
         Entry? replaced = null;
         lock (_lock) {
-            if (_entries.TryGetValue(endPoints, out var existing)) {
+            if (_entries.TryGetValue(identity, out var existing)) {
                 if (ReferenceEquals(existing.Connection, connection))
                     return;
-                _entries.Remove(endPoints);
+                _entries.Remove(identity);
                 RemoveFromAddress(existing);
                 replaced = existing;
             }
@@ -58,9 +62,9 @@ internal sealed class UnauthenticatedConnections
                 _byAddress.Add(addressKey, addressEntries);
             }
 
-            var entry = new Entry(endPoints, addressKey, connection);
+            var entry = new Entry(identity, addressKey, connection);
             entry.Node = addressEntries.AddLast(entry);
-            _entries.Add(endPoints, entry);
+            _entries.Add(identity, entry);
             if (_entries.Count > Math.Max(_maxCount, 1))
                 evicted = RemoveOldestOfBusiest();
         }
@@ -70,12 +74,14 @@ internal sealed class UnauthenticatedConnections
     }
 
     // a connection that proved its key, or ended
-    public void Remove(IPEndPointPair endPoints, IDisposable connection)
+    public void Remove(IPEndPointPair endPoints, IDisposable connection) => Remove((object)endPoints, connection);
+
+    public void Remove(object identity, IDisposable connection)
     {
         lock (_lock) {
-            if (!_entries.TryGetValue(endPoints, out var entry) || !ReferenceEquals(entry.Connection, connection))
+            if (!_entries.TryGetValue(identity, out var entry) || !ReferenceEquals(entry.Connection, connection))
                 return;
-            _entries.Remove(endPoints);
+            _entries.Remove(identity);
             RemoveFromAddress(entry);
         }
     }
@@ -85,7 +91,7 @@ internal sealed class UnauthenticatedConnections
         var busiest = _byAddress.Values.MaxBy(x => x.Count) ??
                       throw new InvalidOperationException("There is no connection to close.");
         var oldest = busiest.First?.Value ?? throw new InvalidOperationException("An address has no connection.");
-        _entries.Remove(oldest.EndPoints);
+        _entries.Remove(oldest.Identity);
         RemoveFromAddress(oldest);
         return oldest;
     }
@@ -100,9 +106,9 @@ internal sealed class UnauthenticatedConnections
             _byAddress.Remove(entry.AddressKey);
     }
 
-    private sealed class Entry(IPEndPointPair endPoints, string addressKey, IDisposable connection)
+    private sealed class Entry(object identity, string addressKey, IDisposable connection)
     {
-        public IPEndPointPair EndPoints => endPoints;
+        public object Identity => identity;
         public string AddressKey => addressKey;
         public IDisposable Connection => connection;
         public LinkedListNode<Entry>? Node { get; set; }

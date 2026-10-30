@@ -3,9 +3,11 @@ using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using Microsoft.Quic;
 using VpnHood.Net.Quic.Android.Interop;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 using static Microsoft.Quic.MsQuic;
 
 namespace VpnHood.Net.Quic.Android;
@@ -22,9 +24,14 @@ internal sealed class AndroidQuicStream : Stream
     private GCHandle _gch;
     private readonly Pipe _recvPipe = new(new PipeOptions(useSynchronizationContext: false));
     private readonly ConcurrentDictionary<IntPtr, TaskCompletionSource> _pendingSends = new();
+    private readonly TaskCompletionSource? _inboundShutdown;
     private bool _disposed;
 
-    private AndroidQuicStream() { }
+    private AndroidQuicStream(bool isInbound = false)
+    {
+        if (isInbound)
+            _inboundShutdown = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
 
     /// <summary>Opens a new client-initiated bidirectional stream on the given connection.</summary>
     public static unsafe AndroidQuicStream OpenOutbound(QUIC_HANDLE* connection)
@@ -48,12 +55,39 @@ internal sealed class AndroidQuicStream : Stream
     /// <summary>Adopts a peer-initiated stream handle (sets our callback on it).</summary>
     public static unsafe AndroidQuicStream FromInbound(QUIC_HANDLE* handle)
     {
-        var stream = new AndroidQuicStream { _stream = handle };
+        var stream = new AndroidQuicStream(isInbound: true) { _stream = handle };
         stream._gch = GCHandle.Alloc(stream);
         MsQuicApi.Table->SetCallbackHandler(handle,
             (delegate* unmanaged[Cdecl]<QUIC_HANDLE*, void*, QUIC_STREAM_EVENT*, int>)&StreamCallback,
             (void*)GCHandle.ToIntPtr(stream._gch));
         return stream;
+    }
+
+    // Only the inbound queue calls this, before ownership passes to an accepting caller. Its atomic
+    // disposal guard also prevents a second cleanup from closing the same native handle.
+    public unsafe void Discard()
+    {
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
+        try {
+            if (!_inboundShutdown!.Task.IsCompleted) {
+                // MsQuic requires both abort flags with IMMEDIATE, even for a receive-only stream.
+                // This does not wait for the peer, but SHUTDOWN_COMPLETE must precede StreamClose.
+                ThrowIfFailure(MsQuicApi.Table->StreamShutdown(_stream,
+                    QUIC_STREAM_SHUTDOWN_FLAGS.ABORT_SEND | QUIC_STREAM_SHUTDOWN_FLAGS.ABORT_RECEIVE |
+                    QUIC_STREAM_SHUTDOWN_FLAGS.IMMEDIATE, 0));
+            }
+        }
+        catch (Exception ex) {
+            // The queue is closed only during connection shutdown. Its close will complete the
+            // stream shutdown as well if MsQuic could not allocate this separate abort operation.
+            VhLogger.Instance.LogDebug(ex, "Could not abort an unaccepted QUIC stream.");
+        }
+
+        // Always leave the native callback before closing. The shutdown event may already have
+        // arrived, so relying on an incomplete await alone would not keep StreamClose off that thread.
+        _ = Task.Run(CloseDiscardedStream);
     }
 
     public override bool CanRead => true;
@@ -188,6 +222,36 @@ internal sealed class AndroidQuicStream : Stream
         catch {
             return QUIC_STATUS_SUCCESS;
         }
+        finally {
+            if (evt->Type == QUIC_STREAM_EVENT_TYPE.SHUTDOWN_COMPLETE)
+                self._inboundShutdown?.TrySetResult();
+        }
+    }
+
+    private async Task CloseDiscardedStream()
+    {
+        // Cleanup outlives setup cancellation. After IMMEDIATE, this wait is for native shutdown,
+        // not a network acknowledgement; retaining the GCHandle keeps the final callback valid.
+        await _inboundShutdown!.Task.Vhc();
+        try {
+            CloseResources();
+            base.Dispose(true);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(ex, "Could not close an unaccepted QUIC stream.");
+        }
+    }
+
+    private unsafe void CloseResources()
+    {
+        if (_stream != null) {
+            MsQuicApi.Table->StreamClose(_stream); // blocks until callbacks drained
+            _stream = null;
+        }
+        try { _recvPipe.Writer.Complete(); } catch { /* ignore */ }
+        try { _recvPipe.Reader.Complete(); } catch { /* ignore */ }
+        FailPendingSends();
+        if (_gch.IsAllocated) _gch.Free();
     }
 
     protected override unsafe void Dispose(bool disposing)
@@ -197,13 +261,8 @@ internal sealed class AndroidQuicStream : Stream
 
         if (_stream != null) {
             try { MsQuicApi.Table->StreamShutdown(_stream, QUIC_STREAM_SHUTDOWN_FLAGS.GRACEFUL, 0); } catch { /* ignore */ }
-            MsQuicApi.Table->StreamClose(_stream); // blocks until callbacks drained
-            _stream = null;
         }
-        try { _recvPipe.Writer.Complete(); } catch { /* ignore */ }
-        try { _recvPipe.Reader.Complete(); } catch { /* ignore */ }
-        FailPendingSends();
-        if (_gch.IsAllocated) _gch.Free();
+        CloseResources();
         base.Dispose(disposing);
     }
 }

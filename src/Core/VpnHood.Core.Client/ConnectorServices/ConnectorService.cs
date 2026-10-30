@@ -45,6 +45,7 @@ internal class ConnectorService : IAsyncDisposable
     private readonly ConcurrentQueue<IdleConnectionItem> _idleConnectionItems = new();
     private readonly TcpStreamConnectionFactory _tcpConnectionFactory;
     private readonly ClientRequestSigner _requestSigner;
+    private readonly QuicRequestRecovery _quicRequestRecovery;
     private readonly QuicStreamConnectionFactory? _quicConnectionFactory; // null when the socket factory has no QUIC support
     private TimeSpan _idleConnectionTimeout;
     private readonly Job _cleanupJob;
@@ -89,6 +90,7 @@ internal class ConnectorService : IAsyncDisposable
             options.VpnEndPoint,
             UserCertificateValidationCallback,
             options.TcpPacketChannelKernelBufferSize);
+        _quicRequestRecovery = new QuicRequestRecovery(_tcpConnectionFactory, requestSigner, options.VpnEndPoint);
 
         _quicConnectionFactory = options.SocketFactory.IsQuicSupported
             ? new QuicStreamConnectionFactory(
@@ -252,12 +254,20 @@ internal class ConnectorService : IAsyncDisposable
     // fault, and the server finder alone checks more endpoints at once than the gate admits
     private static readonly TimeSpan LongConnectWaitTime = TimeSpan.FromMilliseconds(500);
 
-    public async Task<IStreamConnection> GetConnectionToServer(
+    public Task<IStreamConnection> GetConnectionToServer(
         string streamId, int contentLength, bool isTcpPacketChannel, Action? onConnectAttempt,
+        CancellationToken cancellationToken) => GetConnectionToServer(streamId, contentLength, isTcpPacketChannel,
+            onConnectAttempt, onQuicAttempt: null, cancellationToken);
+
+    public void RequireQuicRequestRecovery() => _quicRequestRecovery.RequireRecovery();
+
+    public async Task<IStreamConnection> GetConnectionToServer(
+        string streamId, int contentLength, bool isTcpPacketChannel, Action? onConnectAttempt, Action? onQuicAttempt,
         CancellationToken cancellationToken)
     {
         // Create raw stream connection from appropriate factory
-        if (UseQuic && _quicConnectionFactory == null)
+        var useQuic = UseQuic;
+        if (useQuic && _quicConnectionFactory == null)
             throw new InvalidOperationException("QUIC is not supported by the current socket factory.");
 
         var waitStartTime = Stopwatch.GetTimestamp();
@@ -280,7 +290,13 @@ internal class ConnectorService : IAsyncDisposable
             // this also keeps a finite channel lifespan meaningful
             var reuseCallback = AllowChannelReuse && !isTcpPacketChannel ? CreateReuseCallback() : null;
 
-            var rawConnection = UseQuic
+            if (useQuic) {
+                await _quicRequestRecovery.Recover(streamId, cancellationToken).Vhc();
+                // The sender records the actual attempt, not a mutable UseQuic value observed later.
+                // A failed TLS recovery has made no QUIC attempt and leaves its own pending flag intact.
+                onQuicAttempt?.Invoke();
+            }
+            var rawConnection = useQuic
                 ? await _quicConnectionFactory!.CreateConnection(streamId, cancellationToken).Vhc()
                 : await _tcpConnectionFactory.CreateConnection(
                     streamId, isTcpPacketChannel, onConnectAttempt, cancellationToken).Vhc();

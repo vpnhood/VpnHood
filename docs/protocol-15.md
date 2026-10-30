@@ -2,8 +2,9 @@
 
 Protocol 15 proves possession of the farm secret before the server classifies a tunnel request,
 reads its body, or accepts a WebSocket upgrade. TCP and QUIC use the same
-`ClientRequestAuthenticator` gate. Rejected proofs return through the ordinary web front;
-authentication failures add no error details to its 401 response.
+`ClientRequestAuthenticator` proof check. Rejected TCP proofs return through the ordinary web front;
+authentication failures add no error details to its 401 response. On QUIC, rejected input goes through
+the HTTP/3 front. It never receives a plaintext HTTP/1 authentication response.
 
 ## Proof and lifetime
 
@@ -62,6 +63,43 @@ can negotiate a binary session version from 8 through 15 with an access manager.
 HTTP requests still use 15. The hello omits the standalone `ServerSecret` field whenever its HTTP
 version is 15, including when the binary session is older. Legacy HTTP clients still receive it.
 
+## QUIC admission and HTTP/3
+
+`Listeners/Http3` owns the anonymous HTTP/3 endpoint: frame handling, bounded static/literal/Huffman
+QPACK decoding, request validation and response encoding. It uses the existing QUIC provider and adds
+no production framework or package dependency. Kestrel is only the differential-test reference.
+
+Anonymous streams use a pooled 4 KB reader. HEADERS are decoded incrementally instead of allocating
+their declared size; QPACK strings grow only as bytes arrive, within fixed limits, and no dynamic table is kept.
+After headers, at most 64 KB of already available input is inspected before the final response stops
+further reads. This also bounds a continuous sequence of empty DATA frames. Pending reads retain their
+own buffer until cancellation is observed, so returning a temporary decode buffer cannot race native I/O.
+
+Existing clients still send HTTP/1.1 headers and custom tunnel framing inside QUIC. A separate admission
+gate captures at most 4096 bytes and verifies a protocol-15 proof before handing that stream to the
+existing tunnel. Every new stream must prove itself, even on a connection with an authenticated stream.
+The prefix buffer returns after replay; normal tunnel traffic performs no HTTP/3 parsing or proof work.
+QUIC always requires HTTP protocol 15. Older HTTP clients receive no QUIC port and use TCP during rollout;
+an HTTP-15 client negotiating an older binary session can still use QUIC.
+
+Unauthenticated QUIC connections share the server's global/address connection budget with TCP, using
+separate connection identities because multiple QUIC connections can share one UDP endpoint tuple.
+The first valid proof releases that connection's budget entry, without bypassing later stream checks.
+Active tunnels remain tracked until their owner disposes them, so HTTP idle expiry does not cut them off.
+
+A later proof clock error cannot expose a custom HTTP/1 Date response on QUIC. After a failed fresh QUIC
+request, the next fresh request first obtains a Date through the existing certificate-validated TLS path.
+Concurrent recoveries share one successful check; cancellation leaves recovery pending. The failed
+application request is not replayed, and application traffic stays on QUIC.
+
+Android and iOS keep their native providers and wire format. The server's control-stream open is
+independent of incoming stream acceptance, including clients with zero incoming unidirectional credit.
+Incoming native streams are released if mobile connection setup fails or its queue closes.
+
+Automatic Alt-Svc advertisement remains off while this endpoint does not replace the entire HTTPS
+origin, including downloads. Moving the actual tunnel to standard HTTP/3 through Cloudflare or other
+web frontends is separate future work; proxy support must be verified for the chosen tunnel method.
+
 ## Scope and remaining deployment checks
 
 Omitting `ServerSecret` removes a redundant secret from the ordinary hello; it does **not** promise
@@ -76,5 +114,10 @@ route. Before deployment, verify Authorization and Host forwarding on the actual
 valid request and a correctly signed expired request, and confirm the latter gets the ordinary
 401. Never put proofs or access keys in URLs or deployment logs.
 
-HTTP/3 behavior, initial stream padding, platform measurements, published packages and the
-end-user wiki rollout remain separate plan stages. This change does not enable them.
+HTTP/3 behavior is checked against the installed reference version, including malformed probes; this
+does not promise complete undetectability. One measured scheduling difference remains: after client
+GOAWAY drains its last active request, Kestrel RC3 needs another accept event to observe completion;
+this front closes promptly. The drain probe explicitly wakes the reference before checking its close.
+Native Android/iOS device interoperability and memory
+measurements remain release checks. Initial stream padding, published packages and the end-user wiki
+rollout remain separate plan stages.

@@ -49,6 +49,8 @@ public partial class MainView : UserControl
     private IInputElement? _focusBeforeOverlay;
     private IPage? _pageAwaitingFocus;
     private Thickness _systemBars;
+    private Version? _updateNoticeVersion;
+    private VersionStatus _updateNoticeVersionStatus;
 
     public MainViewModel ViewModel { get; } = new();
 
@@ -516,6 +518,8 @@ public partial class MainView : UserControl
         var publish = status.PublishInfo;
         if (publish == null)
             return;
+        _updateNoticeVersion = publish.Version;
+        _updateNoticeVersionStatus = status.VersionStatus;
         var isDeprecated = status.VersionStatus == VersionStatus.Deprecated;
         UpdateNotice.Classes.Set("update-warning", isDeprecated);
         UpdateNotice.Classes.Set("update-alert", !isDeprecated);
@@ -534,9 +538,22 @@ public partial class MainView : UserControl
         UpdateNotice.IsVisible = true;
     }
 
-    // The update the app downloads and installs itself, read again every second while the notice shows:
-    // Update, its progress, then Install - which closes the app, and the VPN with it.
-    public void RefreshUpdateState(AppUpdateState? updateState)
+    // Read every second while the notice shows. A release other than the one it names - found by a check
+    // the person asked for while the notice still named the last, or the daily one - shows it anew, as
+    // its Update now fetches that release; else only the update's own state moves, and the person's
+    // "no access to Google Play" choice stays.
+    public void RefreshUpdateNotice(AppUpdaterStatus status)
+    {
+        if (status.PublishInfo is { } publish &&
+            (publish.Version != _updateNoticeVersion || status.VersionStatus != _updateNoticeVersionStatus))
+            ShowUpdateNotice(status);
+        else
+            RefreshUpdateState(status.UpdateState);
+    }
+
+    // The update the app downloads and installs itself: Update, its progress, then Install - which
+    // closes the app, and the VPN with it.
+    private void RefreshUpdateState(AppUpdateState? updateState)
     {
         var stage = updateState?.Stage;
         UpdateDownloadButton.IsVisible = stage is AppUpdateStage.Available or AppUpdateStage.Failed;

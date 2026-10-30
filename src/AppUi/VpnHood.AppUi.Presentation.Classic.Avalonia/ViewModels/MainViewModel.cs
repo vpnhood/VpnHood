@@ -484,8 +484,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // usage-data question come up while the app runs
         else if (host.IsUpdateNoticeShown && (state.UpdaterStatus?.Prompt != true || isConsentPending))
             host.HideUpdateNotice();
-        else if (host.IsUpdateNoticeShown)
-            host.RefreshUpdateState(state.UpdaterStatus?.UpdateState);
+        else if (host.IsUpdateNoticeShown && state.UpdaterStatus != null)
+            host.RefreshUpdateNotice(state.UpdaterStatus);
 
         if (IsConnected && state.SessionInfo?.SuppressedTo == SessionSuppressType.Other &&
             _ignoredSuppressTime != state.ConnectRequestTime && !host.IsSnackbarShown)

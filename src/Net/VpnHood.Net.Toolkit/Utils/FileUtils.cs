@@ -28,26 +28,26 @@ public static class FileUtils
 
     // A file two processes share - one writes it while the other may be reading it - fails the access that meets
     // the other's for that moment only, so the access is tried again up to the timeout; a missing file fails
-    // at once. Synchronous, for callers that cannot await - a constructor, a lock; the token ends the wait.
-    public static T WaitOutSharing<T>(Func<T> access, TimeSpan timeout, CancellationToken cancellationToken)
+    // at once. The token ends the wait between tries.
+    public static async Task<T> WaitOutSharingAsync<T>(Func<Task<T>> access, TimeSpan timeout,
+        CancellationToken cancellationToken)
     {
         // don't use fast date time, it's not accurate enough
         var startTime = DateTime.UtcNow;
         while (true) {
             try {
-                return access();
+                return await access().Vhc();
             }
             catch (Exception ex) when (IsSharingConflict(ex) && DateTime.UtcNow - startTime < timeout) {
-                cancellationToken.WaitHandle.WaitOne(50);
-                cancellationToken.ThrowIfCancellationRequested();
+                await Task.Delay(50, cancellationToken).Vhc();
             }
         }
     }
 
-    public static void WaitOutSharing(Action access, TimeSpan timeout, CancellationToken cancellationToken)
+    public static Task WaitOutSharingAsync(Func<Task> access, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        WaitOutSharing(() => {
-            access();
+        return WaitOutSharingAsync(async () => {
+            await access().Vhc();
             return true;
         }, timeout, cancellationToken);
     }

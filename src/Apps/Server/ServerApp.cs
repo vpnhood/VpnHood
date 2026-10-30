@@ -174,7 +174,7 @@ public class ServerApp : IDisposable
         var accessManagerFolder = Path.Combine(storageFolderPath, "access");
         VhLogger.Instance.LogInformation("Using FileAccessManager. AccessFolder: {AccessManagerFolder}",
             accessManagerFolder);
-        var ret = new FileAccessManager(accessManagerFolder, options);
+        var ret = await FileAccessManager.Create(accessManagerFolder, options, cancellationToken).Vhc();
         return ret;
     }
 

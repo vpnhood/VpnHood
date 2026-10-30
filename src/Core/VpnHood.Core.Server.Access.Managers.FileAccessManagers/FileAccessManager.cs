@@ -19,6 +19,7 @@ namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 
 public class FileAccessManager : IAccessManager
 {
+    private const string ServerLocationFileName = "server_location";
     private ServerToken _serverToken;
     public FileAccessManagerOptions ServerConfig { get; }
     public string StoragePath { get; }
@@ -29,6 +30,15 @@ public class FileAccessManager : IAccessManager
     public ServerStatus? ServerStatus { get; private set; }
     public ServerInfo? ServerInfo { get; private set; }
     public AccessTokenService AccessTokenService { get; }
+
+    // A manager whose server token carries the server's location: the network is asked for it here, once, when the
+    // settings allow; the constructor only reads what was found, and goes without it otherwise.
+    public static async Task<FileAccessManager> Create(string storagePath, FileAccessManagerOptions options,
+        CancellationToken cancellationToken)
+    {
+        await FindServerLocation(storagePath, options, cancellationToken).Vhc();
+        return new FileAccessManager(storagePath, options);
+    }
 
     public FileAccessManager(string storagePath, FileAccessManagerOptions options)
     {
@@ -66,19 +76,19 @@ public class FileAccessManager : IAccessManager
             .ToArray();
 
         // get server token
-        _serverToken = GetAndUpdateServerToken(CancellationToken.None);
+        _serverToken = GetAndUpdateServerToken();
     }
 
     public void ClearCache()
     {
-        _serverToken = GetAndUpdateServerToken(CancellationToken.None);
+        _serverToken = GetAndUpdateServerToken();
     }
 
-    private ServerToken GetAndUpdateServerToken(CancellationToken cancellationToken) => GetAndUpdateServerToken(
-        ServerConfig, DefaultCert, Path.Combine(StoragePath, "server-token", "enc-server-token"), cancellationToken);
+    private ServerToken GetAndUpdateServerToken() => GetAndUpdateServerToken(ServerConfig, DefaultCert,
+        Path.Combine(StoragePath, "server-token", "enc-server-token"));
 
     private ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate,
-        string encServerTokenFilePath, CancellationToken cancellationToken)
+        string encServerTokenFilePath)
     {
         // PublicEndPoints
         var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
@@ -87,7 +97,8 @@ public class FileAccessManager : IAccessManager
             throw new Exception("PublicEndPoints has not been configured properly.");
 
 
-        var serverLocation = LoadServerLocation(cancellationToken).Result;
+        var serverLocation = TryToReadFile(Path.Combine(StoragePath, ServerLocationFileName));
+        VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
         var serverToken = new ServerToken {
             CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
             HostPort = serverConfig.HostPort ?? publicEndPoints.FirstOrDefault()?.Port ?? 443,
@@ -130,36 +141,40 @@ public class FileAccessManager : IAccessManager
         return Convert.FromBase64String(secretBase64);
     }
 
-    private async Task<string?> LoadServerLocation(CancellationToken cancellationToken)
+    // the server's location from the network, once: kept in the storage, where the server token reads it
+    private static async Task FindServerLocation(string storagePath, FileAccessManagerOptions options,
+        CancellationToken cancellationToken)
     {
+        var serverLocationFile = Path.Combine(storagePath, ServerLocationFileName);
+        if (!options.UseExternalLocationService || !string.IsNullOrEmpty(TryToReadFile(serverLocationFile)))
+            return;
+
         try {
-            var serverCountryFile = Path.Combine(StoragePath, "server_location");
-            var serverLocation = TryToReadFile(serverCountryFile);
-            if (string.IsNullOrEmpty(serverLocation) && ServerConfig.UseExternalLocationService) {
-                using var cancellationTokenSource = new CancellationTokenSource(5000);
-                using var httpClient = new HttpClient();
-                const string userAgent = "VpnHood-File-AccessManager";
-                var ipLocationProvider = new CompositeCurrentIpLocationProvider(VhLogger.Instance,
-                [
-                    new CloudflareLocationProvider(httpClient, userAgent),
-                    new IpLocationIoProvider(httpClient, userAgent, apiKey: null),
-                    new IpApiCoLocationProvider(httpClient, userAgent)
-                ]);
+            // a limit of its own: the token goes without a location rather than the start waiting for one
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+            using var httpClient = new HttpClient();
+            const string userAgent = "VpnHood-File-AccessManager";
+            var ipLocationProvider = new CompositeCurrentIpLocationProvider(VhLogger.Instance,
+            [
+                new CloudflareLocationProvider(httpClient, userAgent),
+                new IpLocationIoProvider(httpClient, userAgent, apiKey: null),
+                new IpApiCoLocationProvider(httpClient, userAgent)
+            ]);
 
-                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationToken)
-                    .Vhc();
-                serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName,
-                    ipLocation.CityName);
-                await File.WriteAllTextAsync(serverCountryFile, serverLocation, cancellationToken)
-                    .Vhc();
-            }
+            var ipLocation = await ipLocationProvider.GetCurrentLocation(timeoutCts.Token).Vhc();
+            var serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName,
+                ipLocation.CityName);
 
-            VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
-            return serverLocation;
+            // not under the token: a cut write would keep a part of the location
+            Directory.CreateDirectory(storagePath);
+            await File.WriteAllTextAsync(serverLocationFile, serverLocation, CancellationToken.None).Vhc();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not read server location.");
-            return null;
+            VhLogger.Instance.LogWarning(ex, "Could not find the server location.");
         }
     }
 

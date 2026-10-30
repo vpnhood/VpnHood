@@ -32,10 +32,11 @@ public class SplitDbPublisherService(
             await splitCountryService.EnsureSplitIpDb(ipDbFolder, cancellationToken).Vhc(),
             await splitIpViaAppService.EnsureSplitIpDb(ipDbFolder, cancellationToken).Vhc()
         ];
-        SplitDbManifest.Write(ipDbFolder, ipDbPaths.OfType<string>().ToArray(), cancellationToken);
+        await SplitDbManifest.Write(ipDbFolder, ipDbPaths.OfType<string>().ToArray(), cancellationToken).Vhc();
 
         var domainDbFolder = Path.Combine(vpnServiceConfigFolder, SplitDbManifest.DomainFiltersFolderName);
         var domainDbPath = await splitDomainService.EnsureSplitDomainDb(domainDbFolder, cancellationToken).Vhc();
-        SplitDbManifest.Write(domainDbFolder, domainDbPath != null ? [domainDbPath] : [], cancellationToken);
+        await SplitDbManifest.Write(domainDbFolder, domainDbPath != null ? [domainDbPath] : [], cancellationToken)
+            .Vhc();
     }
 }

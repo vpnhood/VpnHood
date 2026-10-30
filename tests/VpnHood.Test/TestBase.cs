@@ -40,4 +40,11 @@ public abstract class TestBase
         return VhTestUtil.AssertEqualsWait(
             expectedValue, valueFactory, message, timeout, noTimeoutOnDebugger, TestCt);
     }
+
+    protected Task AssertEqualsWait<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory,
+        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
+    {
+        return VhTestUtil.AssertEqualsWait(
+            expectedValue, valueFactory, message, timeout, noTimeoutOnDebugger, TestCt);
+    }
 }

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
@@ -19,7 +20,7 @@ public sealed class SqliteIpFilterChain : IIpFilter
     private readonly bool _autoDisposeNextFilter;
     // lookups run concurrently (read); a swap drains them before disposing the old gates (write)
     private readonly ReaderWriterLockSlim _swapLock = new();
-    private readonly Lock _reconfigureLock = new();
+    private readonly AsyncLock _reconfigureLock = new();
     private IIpFilter? _gates;
     private string[] _dbPaths;
     private bool _disposed; // set with the close's swap, under the write lock
@@ -42,7 +43,15 @@ public sealed class SqliteIpFilterChain : IIpFilter
         }
     }
 
-    public SqliteIpFilterChain(IIpFilter? next, string dbFolder, bool autoDisposeNextFilter = true)
+    // the chain of the dbs its folder's manifest lists now, which it reads first
+    public static async Task<SqliteIpFilterChain> Create(IIpFilter? next, string dbFolder,
+        bool autoDisposeNextFilter, CancellationToken cancellationToken)
+    {
+        var dbPaths = await SplitDbManifest.Read(dbFolder, cancellationToken).Vhc();
+        return new SqliteIpFilterChain(next, dbFolder, dbPaths, autoDisposeNextFilter);
+    }
+
+    private SqliteIpFilterChain(IIpFilter? next, string dbFolder, string[] dbPaths, bool autoDisposeNextFilter)
     {
         _next = next;
         _dbFolder = dbFolder;
@@ -53,7 +62,7 @@ public sealed class SqliteIpFilterChain : IIpFilter
             next.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
 
         // construction is not a change: build the initial gates directly — no swap, no Changed, no log
-        _dbPaths = SplitDbManifest.Read(dbFolder, CancellationToken.None);
+        _dbPaths = dbPaths;
         _gates = BuildGates(_dbPaths);
     }
 
@@ -75,38 +84,48 @@ public sealed class SqliteIpFilterChain : IIpFilter
         }
     }
 
-    public void Reconfigure(CancellationToken cancellationToken)
+    public async Task Reconfigure(CancellationToken cancellationToken)
     {
-        lock (_reconfigureLock) {
-            var dbPaths = SplitDbManifest.Read(_dbFolder, cancellationToken);
-            if (!dbPaths.SequenceEqual(_dbPaths)) {
-                VhLogger.Instance.LogInformation(
-                    "SqliteIpFilterChain is swapping its split-ip gates. OldCount: {OldCount}, NewCount: {NewCount}",
-                    _dbPaths.Length, dbPaths.Length);
-
-                // build first (a failure keeps the current gates published), swap, then dispose the
-                // drained old gates OUTSIDE the write lock so lookups on the new gates resume at once
-                var newGates = BuildGates(dbPaths);
-                if (!TrySwap(newGates, close: false, out var oldGates)) {
-                    // the chain closed meanwhile: the new gates close with it, and nothing else follows
-                    newGates?.Dispose();
-                    return;
-                }
-
-                oldGates?.Dispose();
-
-                // delete exactly the files this stage just closed — this process held them open, so
-                // nobody else could; files it never opened are the naming-scheme owner's business
-                foreach (var supersededPath in _dbPaths.Except(dbPaths))
-                    VhUtils.TryDeleteFile(supersededPath);
-
-                _dbPaths = dbPaths;
-                Changed?.Invoke(this, EventArgs.Empty);
-            }
-        }
+        // the chain closed meanwhile: nothing else follows
+        if (!await SwapGates(cancellationToken).Vhc())
+            return;
 
         // the command rolls DOWN the pipe
-        _next?.Reconfigure(cancellationToken);
+        if (_next != null)
+            await _next.Reconfigure(cancellationToken).Vhc();
+    }
+
+    // the gates of the manifest's dbs, swapped in when its paths changed; false once the chain is closed
+    private async Task<bool> SwapGates(CancellationToken cancellationToken)
+    {
+        using var scopeLock = await _reconfigureLock.LockAsync(cancellationToken).Vhc();
+        var dbPaths = await SplitDbManifest.Read(_dbFolder, cancellationToken).Vhc();
+        if (dbPaths.SequenceEqual(_dbPaths))
+            return true;
+
+        VhLogger.Instance.LogInformation(
+            "SqliteIpFilterChain is swapping its split-ip gates. OldCount: {OldCount}, NewCount: {NewCount}",
+            _dbPaths.Length, dbPaths.Length);
+
+        // build first (a failure keeps the current gates published), swap, then dispose the
+        // drained old gates OUTSIDE the write lock so lookups on the new gates resume at once
+        var newGates = BuildGates(dbPaths);
+        if (!TrySwap(newGates, close: false, out var oldGates)) {
+            // the new gates close with the chain
+            newGates?.Dispose();
+            return false;
+        }
+
+        oldGates?.Dispose();
+
+        // delete exactly the files this stage just closed — this process held them open, so
+        // nobody else could; files it never opened are the naming-scheme owner's business
+        foreach (var supersededPath in _dbPaths.Except(dbPaths))
+            VhUtils.TryDeleteFile(supersededPath);
+
+        _dbPaths = dbPaths;
+        Changed?.Invoke(this, EventArgs.Empty);
+        return true;
     }
 
     // no Changed on teardown: the whole pipe is going away, nothing is left to invalidate.

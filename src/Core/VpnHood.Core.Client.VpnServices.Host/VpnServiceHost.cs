@@ -183,7 +183,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             // reconfigure kept from before, as the app writes each there before it sends it
             await Reconfigurer.Reset(cancellationToken).Vhc();
 
-            var serviceOptions = Context.ServiceOptionsFile.Read(cancellationToken);
+            var serviceOptions = await Context.ServiceOptionsFile.Read(cancellationToken).Vhc();
             var clientOptions = serviceOptions.ClientOptions;
             _logService?.Start(clientOptions.LogServiceOptions);
 
@@ -244,18 +244,11 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             // manifests when the Reconfigure command rolls down them, so a live filter update needs no
             // wiring here and the client stays blind to the swap (its caches self-invalidate via the
             // rolled-up change event)
-            var netFilter = new NetFilter {
-                IpFilter = clientFactory.CreateIpFilter(clientParams),
-                DomainFilter = clientFactory.CreateDomainFilter(clientParams),
-                IpMapper = clientFactory.CreateIpMapper(clientParams)
-            };
-
             try {
-                Client = await clientFactory.Create(clientParams, netFilter, cancellationToken).Vhc();
+                Client = await CreateClient(clientFactory, clientParams, cancellationToken).Vhc();
             }
             catch {
-                // the client owns the adapter and the filters only once constructed
-                netFilter.Dispose();
+                // the client owns the adapter only once constructed
                 vpnAdapter.Dispose();
                 throw;
             }
@@ -291,6 +284,38 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
                 VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
 
             _ = Client?.DisposeAsync();
+        }
+    }
+
+    // the client and its filter pipes, which it owns once made; till then a failure closes them here, as they hold
+    // their split dbs open
+    private static async Task<VpnHoodClient> CreateClient(VpnHoodClientFactory clientFactory,
+        VpnHoodClientParams clientParams, CancellationToken cancellationToken)
+    {
+        var netFilter = await CreateNetFilter(clientFactory, clientParams, cancellationToken).Vhc();
+        try {
+            return await clientFactory.Create(clientParams, netFilter, cancellationToken).Vhc();
+        }
+        catch {
+            netFilter.Dispose();
+            throw;
+        }
+    }
+
+    private static async Task<NetFilter> CreateNetFilter(VpnHoodClientFactory clientFactory,
+        VpnHoodClientParams clientParams, CancellationToken cancellationToken)
+    {
+        var ipFilter = await clientFactory.CreateIpFilter(clientParams, cancellationToken).Vhc();
+        try {
+            return new NetFilter {
+                IpFilter = ipFilter,
+                DomainFilter = await clientFactory.CreateDomainFilter(clientParams, cancellationToken).Vhc(),
+                IpMapper = clientFactory.CreateIpMapper(clientParams)
+            };
+        }
+        catch {
+            ipFilter.Dispose();
+            throw;
         }
     }
 

@@ -130,7 +130,8 @@ public sealed class SqliteIpFilter : IIpFilter
     }
 
     // this gate's own db is immutable (a new db means a new gate); just forward the command
-    public void Reconfigure(CancellationToken cancellationToken) => _next?.Reconfigure(cancellationToken);
+    public Task Reconfigure(CancellationToken cancellationToken) =>
+        _next?.Reconfigure(cancellationToken) ?? Task.CompletedTask;
 
     // all sets empty and nothing below ⇒ the pipe can never decide
     public bool IsEmpty => !(_hasIncludes || _hasExcludes || _hasBlocks) && (_next?.IsEmpty ?? true);

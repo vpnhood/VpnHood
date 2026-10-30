@@ -200,7 +200,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
         app.UserSettings.AllowAnonymousTracker = false;
         app.SettingsService.Save();
         var serviceOptionsFile = new VpnServiceOptionsFile(device.VpnServiceConfigFolder);
-        await AssertEqualsWait(false, () => serviceOptionsFile.TryRead(TestCt)?.ClientOptions.AllowAnonymousTracker,
+        await AssertEqualsWait(false, async () => (await serviceOptionsFile.TryRead(TestCt))?.ClientOptions.AllowAnonymousTracker,
             "the saved options follow the reconfigure");
 
         // a start from them without the app, as always-on, the tile or the system makes
@@ -253,7 +253,8 @@ public class AllowAnonymousTrackerTest : TestAppBase
         await app.WaitForState(AppConnectionState.Connected);
 
         // so the access manager's own hit stays off too, and it is told off
-        var clientOptions = new VpnServiceOptionsFile(device.VpnServiceConfigFolder).Read(TestCt).ClientOptions;
+        var savedOptions = await new VpnServiceOptionsFile(device.VpnServiceConfigFolder).Read(TestCt);
+        var clientOptions = savedOptions.ClientOptions;
         Assert.IsFalse(clientOptions.AllowAnonymousTracker);
         Assert.IsFalse(clientOptions.AllowEndPointTracker);
         Assert.IsEmpty(clientOptions.TrackerFactoryInfos);

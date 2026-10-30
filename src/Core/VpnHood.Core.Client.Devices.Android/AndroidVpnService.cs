@@ -203,8 +203,10 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         try {
             // The words and the session's name of the app's last connect, which its options file keeps,
             // as the notification comes before the host reads them: English before any connect, and the
-            // app's name where the app names no session.
-            var serviceOptions = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead(cancellationToken);
+            // app's name where the app names no session. Blocked on: OnStartCommand must have the promotion's
+            // answer before it returns.
+            var serviceOptions = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead(cancellationToken)
+                .GetAwaiter().GetResult();
             var notification = new AndroidVpnNotification(this,
                 serviceOptions?.Localization ?? new VpnServiceLocalization(),
                 serviceOptions?.ClientOptions.SessionName ?? AndroidUtils.GetAppName(this));

@@ -52,16 +52,20 @@ public class VpnHoodClientFactory
     // manifest (the app rewrites it before signaling a reconfigure), so when the Reconfigure command
     // rolls down the pipe the stage finds the current signature-versioned dbs there and swaps its own
     // gates — no db path ever travels through vpn.config or the reconfigure request.
-    public IIpFilter CreateIpFilter(VpnHoodClientParams clientParams)
+    public async Task<IIpFilter> CreateIpFilter(VpnHoodClientParams clientParams,
+        CancellationToken cancellationToken)
     {
-        return new SqliteIpFilterChain(CreateInnerIpFilter(clientParams),
-            Path.Combine(clientParams.ConfigFolder, SplitDbManifest.IpFiltersFolderName));
+        return await SqliteIpFilterChain.Create(CreateInnerIpFilter(clientParams),
+            Path.Combine(clientParams.ConfigFolder, SplitDbManifest.IpFiltersFolderName),
+            autoDisposeNextFilter: true, cancellationToken).Vhc();
     }
 
-    public IDomainFilter CreateDomainFilter(VpnHoodClientParams clientParams)
+    public async Task<IDomainFilter> CreateDomainFilter(VpnHoodClientParams clientParams,
+        CancellationToken cancellationToken)
     {
-        return new SqliteDomainFilterChain(CreateInnerDomainFilter(clientParams),
-            Path.Combine(clientParams.ConfigFolder, SplitDbManifest.DomainFiltersFolderName));
+        return await SqliteDomainFilterChain.Create(CreateInnerDomainFilter(clientParams),
+            Path.Combine(clientParams.ConfigFolder, SplitDbManifest.DomainFiltersFolderName),
+            autoDisposeNextFilter: true, cancellationToken).Vhc();
     }
 
     // External proxies. Simple mode is the lightweight path (no store); Managed mode uses the shared SQLite

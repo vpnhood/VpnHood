@@ -20,20 +20,21 @@ public class VpnServiceOptionsFile(string configFolder)
     public string FilePath { get; } = Path.Combine(configFolder, ClientOptions.VpnConfigFileName);
     public bool Exists => File.Exists(FilePath);
 
-    public VpnServiceOptions Read(CancellationToken cancellationToken)
+    public async Task<VpnServiceOptions> Read(CancellationToken cancellationToken)
     {
-        return FileUtils.WaitOutSharing(() => JsonUtils.DeserializeFile<VpnServiceOptions>(FilePath), SharingTimeout,
-            cancellationToken);
+        var json = await FileUtils.WaitOutSharingAsync(() => File.ReadAllTextAsync(FilePath, cancellationToken),
+            SharingTimeout, cancellationToken).Vhc();
+        return JsonUtils.Deserialize<VpnServiceOptions>(json);
     }
 
     // null when there is none, or it cannot be read, which it logs
-    public VpnServiceOptions? TryRead(CancellationToken cancellationToken)
+    public async Task<VpnServiceOptions?> TryRead(CancellationToken cancellationToken)
     {
         if (!Exists)
             return null;
 
         try {
-            return Read(cancellationToken);
+            return await Read(cancellationToken).Vhc();
         }
         catch (OperationCanceledException) {
             throw;
@@ -47,7 +48,7 @@ public class VpnServiceOptionsFile(string configFolder)
     public async Task Write(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         using var scopeLock = await _writeLock.LockAsync(cancellationToken).Vhc();
-        WriteFile(serviceOptions, cancellationToken);
+        await WriteFile(serviceOptions, cancellationToken).Vhc();
     }
 
     // Options made again from the app's settings, connected or not; nothing without a file, which only a
@@ -59,21 +60,26 @@ public class VpnServiceOptionsFile(string configFolder)
         if (!Exists)
             return;
 
-        var savedClientOptions = Read(cancellationToken).ClientOptions;
-        serviceOptions.ClientOptions.PlanId = savedClientOptions.PlanId;
-        serviceOptions.ClientOptions.IsAlwaysOn = savedClientOptions.IsAlwaysOn;
-        WriteFile(serviceOptions, cancellationToken);
+        var savedOptions = await Read(cancellationToken).Vhc();
+        serviceOptions.ClientOptions.PlanId = savedOptions.ClientOptions.PlanId;
+        serviceOptions.ClientOptions.IsAlwaysOn = savedOptions.ClientOptions.IsAlwaysOn;
+        await WriteFile(serviceOptions, cancellationToken).Vhc();
     }
 
     public async Task Delete(CancellationToken cancellationToken)
     {
         using var scopeLock = await _writeLock.LockAsync(cancellationToken).Vhc();
-        FileUtils.WaitOutSharing(() => File.Delete(FilePath), SharingTimeout, cancellationToken);
+        await FileUtils.WaitOutSharingAsync(() => {
+            File.Delete(FilePath);
+            return Task.CompletedTask;
+        }, SharingTimeout, cancellationToken).Vhc();
     }
 
-    private void WriteFile(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
+    // the token ends the wait between tries, not a write under way: a cut one would leave the file in part
+    private async Task WriteFile(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(serviceOptions);
-        FileUtils.WaitOutSharing(() => File.WriteAllText(FilePath, json), SharingTimeout, cancellationToken);
+        await FileUtils.WaitOutSharingAsync(() => File.WriteAllTextAsync(FilePath, json, CancellationToken.None),
+            SharingTimeout, cancellationToken).Vhc();
     }
 }

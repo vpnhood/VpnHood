@@ -27,7 +27,7 @@ public class SavedOptionsTest : TestAppBase
         app.UserSettings.SplitTunneling.UseLocalNetwork = useLocalNetwork;
         app.SettingsService.Save();
         await AssertEqualsWait(useLocalNetwork,
-            () => serviceOptionsFile.TryRead(TestCt)?.ClientOptions.SplitLocalNetwork,
+            async () => (await serviceOptionsFile.TryRead(TestCt))?.ClientOptions.SplitLocalNetwork,
             "the saved options take Split Local Network");
 
         // a split list of its own file, which only flags a running session for a reconnect
@@ -36,7 +36,7 @@ public class SavedOptionsTest : TestAppBase
             Excludes = ""
         });
         await AssertEqualsWait("10.20.30.0-10.20.30.255",
-            () => string.Join(",", serviceOptionsFile.TryRead(TestCt)?.ClientOptions.IncludeIpRangesByDevice ?? []),
+            async () => string.Join(",", (await serviceOptionsFile.TryRead(TestCt))?.ClientOptions.IncludeIpRangesByDevice ?? []),
             "the saved options take the device's split IPs");
     }
 
@@ -53,7 +53,7 @@ public class SavedOptionsTest : TestAppBase
         // a location chosen in the server's list
         var vpnProfileId = app.UserSettings.VpnProfileId ?? throw new InvalidOperationException("No server chosen.");
         app.VpnProfileService.Update(vpnProfileId, new VpnProfileUpdateParams { SelectedLocation = "FR/Paris" });
-        await AssertEqualsWait("FR/Paris", () => serviceOptionsFile.TryRead(TestCt)?.ClientOptions.ServerLocation,
+        await AssertEqualsWait("FR/Paris", async () => (await serviceOptionsFile.TryRead(TestCt))?.ClientOptions.ServerLocation,
             "the saved options take the location");
 
         // another server chosen
@@ -62,7 +62,7 @@ public class SavedOptionsTest : TestAppBase
         app.UserSettings.VpnProfileId = otherProfile.VpnProfileId;
         app.SettingsService.Save();
         await AssertEqualsWait(otherToken.ToAccessKey(),
-            () => serviceOptionsFile.TryRead(TestCt)?.ClientOptions.AccessKey,
+            async () => (await serviceOptionsFile.TryRead(TestCt))?.ClientOptions.AccessKey,
             "the saved options take the server");
     }
 

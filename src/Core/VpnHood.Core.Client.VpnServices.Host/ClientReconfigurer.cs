@@ -67,7 +67,7 @@ internal class ClientReconfigurer(VpnServiceHost vpnServiceHost)
 
         // live-swap the split filter gates to the current folder manifests (rewritten by the app before
         // this request); no-op when the db paths did not change
-        client.NetFilter.Reconfigure(cancellationToken);
+        await client.NetFilter.Reconfigure(cancellationToken).Vhc();
 
         if (client.ProxyConnector != null)
             await client.ProxyConnector.UpdateOptions(reconfigureParams.ProxyOptions, cancellationToken).Vhc();

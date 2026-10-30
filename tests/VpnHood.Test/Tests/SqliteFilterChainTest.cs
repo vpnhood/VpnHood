@@ -29,7 +29,11 @@ public class SqliteFilterChainTest : TestBase
         public event EventHandler? Changed { add { } remove { } } // verdicts never change
         public bool IsEmpty => true; // never decides (always Default)
         public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint) => FilterAction.Default;
-        public void Reconfigure(CancellationToken cancellationToken) => ReconfigureCount++;
+        public Task Reconfigure(CancellationToken cancellationToken)
+        {
+            ReconfigureCount++;
+            return Task.CompletedTask;
+        }
         public void Dispose() => IsDisposed = true;
     }
 
@@ -40,7 +44,11 @@ public class SqliteFilterChainTest : TestBase
         public event EventHandler? Changed { add { } remove { } } // verdicts never change
         public bool IsEmpty => true; // never decides (always Default)
         public FilterAction Process(string? domain) => FilterAction.Default;
-        public void Reconfigure(CancellationToken cancellationToken) => ReconfigureCount++;
+        public Task Reconfigure(CancellationToken cancellationToken)
+        {
+            ReconfigureCount++;
+            return Task.CompletedTask;
+        }
         public void Dispose() => IsDisposed = true;
     }
 
@@ -64,10 +72,10 @@ public class SqliteFilterChainTest : TestBase
     {
         var folder = CreateDbFolder("ip-swap");
         var oldDbPath = await BuildIpDb(folder, "ip-swap.1.db", "1.0.0.1");
-        SplitDbManifest.Write(folder, [oldDbPath], TestCt);
+        await SplitDbManifest.Write(folder, [oldDbPath], TestCt);
 
         var inner = new StubIpFilter();
-        using var chain = new SqliteIpFilterChain(inner, folder);
+        using var chain = await SqliteIpFilterChain.Create(inner, folder, autoDisposeNextFilter: true, TestCt);
 
         Assert.AreEqual(FilterAction.Block, chain.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
         Assert.AreEqual(0, inner.ReconfigureCount, "construction is not a change: no command, no event");
@@ -75,8 +83,8 @@ public class SqliteFilterChainTest : TestBase
         // the real versioned flow: a new file appears, the manifest flips to it (its sweep cannot
         // delete the old db — this chain still holds it open), then the reconfigure signal arrives
         var newDbPath = await BuildIpDb(folder, "ip-swap.2.db", "2.0.0.2");
-        SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure(TestCt);
+        await SplitDbManifest.Write(folder, [newDbPath], TestCt);
+        await chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, chain.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
         Assert.AreEqual(FilterAction.Block, chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")));
@@ -91,13 +99,13 @@ public class SqliteFilterChainTest : TestBase
     {
         var folder = CreateDbFolder("ip-noop");
         var dbPath = await BuildIpDb(folder, "ip-noop.1.db", "1.0.0.1");
-        SplitDbManifest.Write(folder, [dbPath], TestCt);
-        using var chain = new SqliteIpFilterChain(next: null, folder);
+        await SplitDbManifest.Write(folder, [dbPath], TestCt);
+        using var chain = await SqliteIpFilterChain.Create(next: null, folder, autoDisposeNextFilter: true, TestCt);
 
         var changedCount = 0;
         chain.Changed += (_, _) => changedCount++;
 
-        chain.Reconfigure(TestCt);
+        await chain.Reconfigure(TestCt);
         Assert.AreEqual(0, changedCount, "unchanged paths must not swap (no cache invalidation storm)");
         Assert.IsTrue(File.Exists(dbPath));
         Assert.AreEqual(FilterAction.Block, chain.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
@@ -108,16 +116,16 @@ public class SqliteFilterChainTest : TestBase
     {
         var folder = CreateDbFolder("domain-swap");
         var oldDbPath = await BuildDomainDb(folder, "domain-swap.1.db", "old.com");
-        SplitDbManifest.Write(folder, [oldDbPath], TestCt);
+        await SplitDbManifest.Write(folder, [oldDbPath], TestCt);
 
         var inner = new StubDomainFilter();
-        using var chain = new SqliteDomainFilterChain(inner, folder);
+        using var chain = await SqliteDomainFilterChain.Create(inner, folder, autoDisposeNextFilter: true, TestCt);
 
         Assert.AreEqual(FilterAction.Block, chain.Process("old.com"));
 
         var newDbPath = await BuildDomainDb(folder, "domain-swap.2.db", "new.com");
-        SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure(TestCt);
+        await SplitDbManifest.Write(folder, [newDbPath], TestCt);
+        await chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, chain.Process("old.com"));
         Assert.AreEqual(FilterAction.Block, chain.Process("new.com"));
@@ -131,14 +139,14 @@ public class SqliteFilterChainTest : TestBase
     {
         var folder = CreateDbFolder("ip-closed");
         var oldDbPath = await BuildIpDb(folder, "ip-closed.1.db", "1.0.0.1");
-        SplitDbManifest.Write(folder, [oldDbPath], TestCt);
-        var chain = new SqliteIpFilterChain(next: null, folder);
+        await SplitDbManifest.Write(folder, [oldDbPath], TestCt);
+        var chain = await SqliteIpFilterChain.Create(next: null, folder, autoDisposeNextFilter: true, TestCt);
 
         // a reconfigure whose swap comes after the close, as one under way when the client closes
         chain.Dispose();
         var newDbPath = await BuildIpDb(folder, "ip-closed.2.db", "2.0.0.2");
-        SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure(TestCt);
+        await SplitDbManifest.Write(folder, [newDbPath], TestCt);
+        await chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")),
             "a closed chain must take no new gates");
@@ -150,14 +158,14 @@ public class SqliteFilterChainTest : TestBase
     {
         var folder = CreateDbFolder("domain-closed");
         var oldDbPath = await BuildDomainDb(folder, "domain-closed.1.db", "old.com");
-        SplitDbManifest.Write(folder, [oldDbPath], TestCt);
-        var chain = new SqliteDomainFilterChain(next: null, folder);
+        await SplitDbManifest.Write(folder, [oldDbPath], TestCt);
+        var chain = await SqliteDomainFilterChain.Create(next: null, folder, autoDisposeNextFilter: true, TestCt);
 
         // a reconfigure whose swap comes after the close, as one under way when the client closes
         chain.Dispose();
         var newDbPath = await BuildDomainDb(folder, "domain-closed.2.db", "new.com");
-        SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure(TestCt);
+        await SplitDbManifest.Write(folder, [newDbPath], TestCt);
+        await chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, chain.Process("new.com"), "a closed chain must take no new gates");
         File.Delete(newDbPath); // nor leave the new db open
@@ -171,26 +179,26 @@ public class SqliteFilterChainTest : TestBase
         // a missing manifest means "no splits configured" — never inferred from files lying in the folder
         var strayDbPath = Path.Combine(folder, "stray.db");
         await new DomainListDbBuilder(() => "stray", blocksFactory: () => ["stray.com"]).BuildAsync(strayDbPath, TestCt);
-        Assert.AreEqual(0, SplitDbManifest.Read(folder, TestCt).Length, "presence on disk must not be policy");
+        Assert.IsEmpty(await SplitDbManifest.Read(folder, TestCt), "presence on disk must not be policy");
 
         // publish one db: Read resolves it, the unlisted stray gets swept, non-db files survive
         var notesPath = Path.Combine(folder, "notes.txt");
         await File.WriteAllTextAsync(notesPath, "keep me", TestCt);
         var dbPath = Path.Combine(folder, "split-domain.1.db");
         await new DomainListDbBuilder(() => "sig-1", blocksFactory: () => ["a.com"]).BuildAsync(dbPath, TestCt);
-        SplitDbManifest.Write(folder, [dbPath], TestCt);
+        await SplitDbManifest.Write(folder, [dbPath], TestCt);
 
-        CollectionAssert.AreEqual(new[] { dbPath }, SplitDbManifest.Read(folder, TestCt));
+        CollectionAssert.AreEqual(new[] { dbPath }, await SplitDbManifest.Read(folder, TestCt));
         Assert.IsFalse(File.Exists(strayDbPath), "an unlisted db-family file is superseded and swept");
         Assert.IsTrue(File.Exists(notesPath), "the sweep must only ever touch db-family files");
 
         // publishing an empty set is the OFF switch: same flow, empty case
-        SplitDbManifest.Write(folder, [], TestCt);
-        Assert.AreEqual(0, SplitDbManifest.Read(folder, TestCt).Length);
+        await SplitDbManifest.Write(folder, [], TestCt);
+        Assert.IsEmpty(await SplitDbManifest.Read(folder, TestCt));
         Assert.IsFalse(File.Exists(dbPath));
 
         // a db outside the folder must be rejected: the manifest names files, not locations
-        Assert.ThrowsExactly<ArgumentException>(() =>
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
             SplitDbManifest.Write(folder, [Path.Combine(TestHelper.WorkingPath, "elsewhere.db")], TestCt));
     }
 
@@ -201,7 +209,7 @@ public class SqliteFilterChainTest : TestBase
     {
         var folder = CreateDbFolder("manifest-shared");
         var oldDbPath = await BuildDomainDb(folder, "shared.1.db", "old.com");
-        SplitDbManifest.Write(folder, [oldDbPath], TestCt);
+        await SplitDbManifest.Write(folder, [oldDbPath], TestCt);
 
         var newDbPath = await BuildDomainDb(folder, "shared.2.db", "new.com");
         var reader = new FileStream(Path.Combine(folder, "manifest.json"), FileMode.Open, FileAccess.Read,
@@ -210,7 +218,7 @@ public class SqliteFilterChainTest : TestBase
         await Task.Delay(150, TestCt);
         await reader.DisposeAsync();
         await writeTask;
-        CollectionAssert.AreEqual(new[] { newDbPath }, SplitDbManifest.Read(folder, TestCt));
+        CollectionAssert.AreEqual(new[] { newDbPath }, await SplitDbManifest.Read(folder, TestCt));
     }
 
     [TestMethod]
@@ -221,9 +229,9 @@ public class SqliteFilterChainTest : TestBase
         var folder = CreateDbFolder("is-empty");
         var emptyDbPath = Path.Combine(folder, "empty.1.db");
         await new DomainListDbBuilder(() => "empty").BuildAsync(emptyDbPath, TestCt);
-        SplitDbManifest.Write(folder, [emptyDbPath], TestCt);
+        await SplitDbManifest.Write(folder, [emptyDbPath], TestCt);
 
-        var chain = new SqliteDomainFilterChain(next: null, folder);
+        var chain = await SqliteDomainFilterChain.Create(next: null, folder, autoDisposeNextFilter: true, TestCt);
         using var cached = new CachedDomainFilter(chain, TimeSpan.FromMinutes(60));
         Assert.IsTrue(cached.IsEmpty, "a gate whose sets are all empty holds no rules");
 
@@ -231,8 +239,8 @@ public class SqliteFilterChainTest : TestBase
         cached.Changed += (_, _) => changedCount++;
 
         var rulesDbPath = await BuildDomainDb(folder, "rules.1.db", "example.com");
-        SplitDbManifest.Write(folder, [emptyDbPath, rulesDbPath], TestCt);
-        chain.Reconfigure(TestCt);
+        await SplitDbManifest.Write(folder, [emptyDbPath, rulesDbPath], TestCt);
+        await chain.Reconfigure(TestCt);
         Assert.IsFalse(cached.IsEmpty, "rules appeared: the endpoint re-checking on Changed must see them");
         Assert.AreEqual(1, changedCount, "the swap must announce itself so the endpoint knows to re-check");
     }
@@ -244,16 +252,16 @@ public class SqliteFilterChainTest : TestBase
         // with no external ClearCache call anywhere
         var folder = CreateDbFolder("domain-cache");
         var oldDbPath = await BuildDomainDb(folder, "domain-cache.1.db", "example.com");
-        SplitDbManifest.Write(folder, [oldDbPath], TestCt);
+        await SplitDbManifest.Write(folder, [oldDbPath], TestCt);
 
-        var chain = new SqliteDomainFilterChain(next: null, folder);
+        var chain = await SqliteDomainFilterChain.Create(next: null, folder, autoDisposeNextFilter: true, TestCt);
         using var cached = new CachedDomainFilter(chain, TimeSpan.FromMinutes(60));
 
         Assert.AreEqual(FilterAction.Block, cached.Process("example.com"));
 
         var newDbPath = await BuildDomainDb(folder, "domain-cache.2.db", "other.com");
-        SplitDbManifest.Write(folder, [newDbPath], TestCt);
-        chain.Reconfigure(TestCt);
+        await SplitDbManifest.Write(folder, [newDbPath], TestCt);
+        await chain.Reconfigure(TestCt);
 
         Assert.AreEqual(FilterAction.Default, cached.Process("example.com"),
             "the cache must invalidate itself on the rolled-up change event");
@@ -272,7 +280,7 @@ public class SqliteFilterChainTest : TestBase
         await new DomainListDbBuilder(() => "stress", blocksFactory: () => ["stress.com"])
             .BuildAsync(templatePath, TestCt);
 
-        using var filter = new SqliteDomainFilterChain(next: null, folder);
+        using var filter = await SqliteDomainFilterChain.Create(next: null, folder, autoDisposeNextFilter: true, TestCt);
 
         using var stopCts = new CancellationTokenSource();
         Exception? firstError = null;
@@ -298,8 +306,8 @@ public class SqliteFilterChainTest : TestBase
         for (var i = 0; i < 40 && firstError == null; i++) {
             var dbPath = Path.Combine(folder, $"stress.{i}.db");
             File.Copy(templatePath, dbPath);
-            SplitDbManifest.Write(folder, [dbPath], TestCt);
-            filter.Reconfigure(TestCt);
+            await SplitDbManifest.Write(folder, [dbPath], TestCt);
+            await filter.Reconfigure(TestCt);
         }
 
         await stopCts.CancelAsync();

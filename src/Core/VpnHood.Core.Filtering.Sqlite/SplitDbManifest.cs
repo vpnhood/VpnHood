@@ -1,4 +1,5 @@
 using System.Text.Json;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Filtering.Sqlite;
@@ -23,13 +24,14 @@ public static class SplitDbManifest
 
     // Absolute db paths in gate order; a missing manifest means "no splits configured" — fail-closed:
     // no gates means everything tunnels, nothing leaks around. A corrupt manifest throws (fail loud).
-    public static string[] Read(string folderPath, CancellationToken cancellationToken)
+    public static async Task<string[]> Read(string folderPath, CancellationToken cancellationToken)
     {
         var manifestPath = Path.Combine(folderPath, ManifestFileName);
         if (!File.Exists(manifestPath))
             return [];
 
-        var json = FileUtils.WaitOutSharing(() => File.ReadAllText(manifestPath), SharingTimeout, cancellationToken);
+        var json = await FileUtils.WaitOutSharingAsync(() => File.ReadAllTextAsync(manifestPath, cancellationToken),
+            SharingTimeout, cancellationToken).Vhc();
         var data = JsonSerializer.Deserialize<ManifestData>(json)
                    ?? throw new InvalidDataException($"Could not deserialize {manifestPath}.");
         return data.DbFiles.Select(fileName => Path.Combine(folderPath, fileName)).ToArray();
@@ -38,16 +40,19 @@ public static class SplitDbManifest
     // Publish the current db set (atomic temp+rename, so a concurrent Read never sees a torn file),
     // then sweep superseded db-family files. Every path must live inside folderPath: the manifest
     // names files, not locations, so a Read from either process resolves against its own folder view.
-    public static void Write(string folderPath, string[] dbPaths, CancellationToken cancellationToken)
+    public static async Task Write(string folderPath, string[] dbPaths, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(folderPath);
         var dbFileNames = dbPaths.Select(dbPath => GetFileNameInFolder(folderPath, dbPath)).ToArray();
 
         var manifestPath = Path.Combine(folderPath, ManifestFileName);
         var tempPath = manifestPath + ".tmp";
-        File.WriteAllText(tempPath, JsonSerializer.Serialize(new ManifestData { DbFiles = dbFileNames }));
-        FileUtils.WaitOutSharing(() => File.Move(tempPath, manifestPath, overwrite: true), SharingTimeout,
-            cancellationToken);
+        await File.WriteAllTextAsync(tempPath, JsonSerializer.Serialize(new ManifestData { DbFiles = dbFileNames }),
+            cancellationToken).Vhc();
+        await FileUtils.WaitOutSharingAsync(() => {
+            File.Move(tempPath, manifestPath, overwrite: true);
+            return Task.CompletedTask;
+        }, SharingTimeout, cancellationToken).Vhc();
 
         // *.db* also catches sqlite side files (-wal/-shm) and orphaned build temps; the prefix match
         // keeps the side files of every listed db

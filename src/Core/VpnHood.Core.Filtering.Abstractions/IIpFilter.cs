@@ -16,8 +16,8 @@ public interface IIpFilter : IDisposable
     // DOWN the pipe — every wrapping stage forwards it to its inner filter — and a stage that owns
     // external configuration (e.g. the sqlite gate chain and its db paths) re-reads it and swaps its own
     // parts, raising Changed if verdicts may differ. A stage with nothing to re-read simply forwards;
-    // a leaf does nothing. The caller never knows which stage reacted.
-    void Reconfigure(CancellationToken cancellationToken);
+    // a leaf does nothing. The caller never knows which stage reacted. A task, as a stage may read a file.
+    Task Reconfigure(CancellationToken cancellationToken);
 
     // True while this pipe can never return a non-Default verdict — no rules anywhere down the chain
     // (wrapping stages aggregate: own rules AND next). Re-check whenever Changed fires.

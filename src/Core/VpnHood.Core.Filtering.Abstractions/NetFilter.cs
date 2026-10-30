@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Core.Filtering.Abstractions;
+﻿using VpnHood.Net.Toolkit.Extensions;
+
+namespace VpnHood.Core.Filtering.Abstractions;
 
 public class NetFilter : IDisposable
 {
@@ -8,10 +10,13 @@ public class NetFilter : IDisposable
 
     // rolls the Reconfigure command down both filter pipes; the stages that own external
     // configuration react, everything else forwards (see IIpFilter.Reconfigure)
-    public void Reconfigure(CancellationToken cancellationToken)
+    public async Task Reconfigure(CancellationToken cancellationToken)
     {
-        IpFilter?.Reconfigure(cancellationToken);
-        DomainFilter?.Reconfigure(cancellationToken);
+        if (IpFilter != null)
+            await IpFilter.Reconfigure(cancellationToken).Vhc();
+
+        if (DomainFilter != null)
+            await DomainFilter.Reconfigure(cancellationToken).Vhc();
     }
 
     public void Dispose()

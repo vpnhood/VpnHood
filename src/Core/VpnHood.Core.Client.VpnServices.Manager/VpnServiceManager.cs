@@ -136,15 +136,14 @@ public class VpnServiceManager : IDisposable
     /// bootstrap always-on uses. Check IsConfigured before calling.
     /// </summary>
     /// <param name="uiContext">The caller's window, as Start takes it.</param>
-    public Task StartFromLastConfig(IUiContext? uiContext, CancellationToken cancellationToken)
+    public async Task StartFromLastConfig(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         // load the last configuration and start the service
-        var serviceOptions = _serviceOptionsFile.TryRead(cancellationToken);
-        return serviceOptions != null 
-            ? Start(uiContext, serviceOptions, cancellationToken)
-            : throw new InvalidOperationException("There is no previous VPN configuration to start from.");
+        var serviceOptions = await _serviceOptionsFile.TryRead(cancellationToken).Vhc() ??
+                             throw new InvalidOperationException("There is no previous VPN configuration to start from.");
+        await Start(uiContext, serviceOptions, cancellationToken).Vhc();
     }
 
 

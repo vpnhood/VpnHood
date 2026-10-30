@@ -272,7 +272,7 @@ public class SplitDomainDbTest : TestBase
         public event EventHandler? Changed { add { } remove { } } // verdicts never change
         public bool IsEmpty => false; // always has a verdict
         public FilterAction Process(string? domain) => action;
-        public void Reconfigure(CancellationToken cancellationToken) { } // nothing external to re-read
+        public Task Reconfigure(CancellationToken cancellationToken) => Task.CompletedTask; // nothing to re-read
         public void Dispose() { }
     }
 

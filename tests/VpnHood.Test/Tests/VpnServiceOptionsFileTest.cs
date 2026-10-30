@@ -27,7 +27,8 @@ public class VpnServiceOptionsFileTest : TestBase
             }
         }, TestCt);
 
-        var clientOptions = serviceOptionsFile.Read(TestCt).ClientOptions;
+        var savedOptions = await serviceOptionsFile.Read(TestCt);
+        var clientOptions = savedOptions.ClientOptions;
         Assert.AreEqual("another", clientOptions.AccessKey);
         Assert.IsTrue(clientOptions.SplitLocalNetwork);
         Assert.AreEqual(ConnectPlanId.PremiumByTrial, clientOptions.PlanId);
@@ -68,7 +69,8 @@ public class VpnServiceOptionsFileTest : TestBase
         await Task.Delay(150, TestCt);
         await holder.DisposeAsync();
         await updateTask;
-        Assert.AreEqual("another", serviceOptionsFile.Read(TestCt).ClientOptions.AccessKey);
+        var savedOptions = await serviceOptionsFile.Read(TestCt);
+        Assert.AreEqual("another", savedOptions.ClientOptions.AccessKey);
     }
 
     // a cancel ends the wait for the other process at once, rather than at the timeout
@@ -84,7 +86,7 @@ public class VpnServiceOptionsFileTest : TestBase
             FileShare.None);
         using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
         var readTask = Task.Run(() => serviceOptionsFile.Read(cancellationTokenSource.Token), TestCt);
-        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => readTask);
+        await Assert.ThrowsAsync<OperationCanceledException>(() => readTask);
     }
 
     private VpnServiceOptionsFile CreateServiceOptionsFile()

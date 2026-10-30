@@ -155,7 +155,7 @@ public class SessionTest : TestBase
     {
         public List<int> Ports { get; } = [];
         public event EventHandler? Changed { add { } remove { } }
-        public void Reconfigure(CancellationToken cancellationToken) { }
+        public Task Reconfigure(CancellationToken cancellationToken) => Task.CompletedTask;
         public bool IsEmpty => false;
 
         public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)

@@ -27,7 +27,7 @@ public class SplitUnsupportedIpModeTest : TestBase
     {
         public event EventHandler? Changed { add { } remove { } }
         public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint) => action;
-        public void Reconfigure(CancellationToken cancellationToken) { }
+        public Task Reconfigure(CancellationToken cancellationToken) => Task.CompletedTask;
         public bool IsEmpty => false;
         public void Dispose() { }
     }

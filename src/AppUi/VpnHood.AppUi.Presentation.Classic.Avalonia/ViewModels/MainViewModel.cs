@@ -163,7 +163,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public MainViewModel()
     {
-        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background,
+        // Normal, not Background, which runs only when the UI thread is idle: an animation that keeps it
+        // busy - the circle turning while connecting, on a phone with two of the app's screens open -
+        // would starve the read that tells it to stop, and the page would freeze on that state
+        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Normal,
             (_, _) => Tick(CancellationToken.None));
         _timer.Start();
         Refresh();

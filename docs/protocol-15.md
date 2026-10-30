@@ -19,18 +19,22 @@ The signing key is 32 bytes derived using HKDF-SHA256, empty salt, and UTF-8 inf
 uses it. The Kestrel reference derives the same signing key, and a valid-token positive control
 ensures expired-token tests actually reach lifetime validation.
 
-The client derives the key once per connector and caches a proof for four minutes measured by
-`Environment.TickCount64`, so a wall-clock change cannot postpone refresh. The server
-derives its key when configuration changes. Signing and verification happen when HTTP streams
-open; established packet and stream data do no proof work. There is no replay-token database.
+`ClientRequestSigner` derives the client key once and caches a proof for four minutes measured by
+`Environment.TickCount64`, so a wall-clock change cannot postpone refresh. The sender and connector
+receive the same signer through their constructors. The connector selects the proof after connection
+setup and TLS, immediately before writing the HTTP head, so connection waits cannot age it before
+selection. Reused connections do not sign a proof. The server derives its key when configuration
+changes. Established packet and stream data do no proof work. There is no replay-token database.
 A captured proof can be reused within its lifetime; anyone holding an access key can mint proofs.
 
-A 401's Date header corrects the connector's clock whenever it differs from the corrected clock
+A 401's Date header corrects the signer's clock whenever it differs from the corrected clock
 by more than the 30-second tolerance, including after another device-clock change. There is no
 offset cap: the Date comes from the verified TLS peer. Each request retries at most once, with
-the original cancellation deadline. A request whose proof predates another request's correction
-also gets that one retry, without applying its potentially stale Date. The proof and its correction
-number are captured together; authorization exceptions retain the number, never the proof.
+the original cancellation deadline. `RequestSender` records the signer's correction number before
+the attempt. If another request corrects the clock meanwhile, a 401 permits that one retry without
+applying its potentially stale Date. A correction before the proof is selected can permit an
+unnecessary retry, still within the one-retry limit. Authorization exceptions carry only the server's
+Date; no correction number crosses the transport, and the signing key stays in the signer.
 The operating-system clock never changes, and a 401 never downgrades the HTTP protocol. Other
 HTTP headers and any binary body remain available to callers of `HttpUtils.ReadResponse`.
 

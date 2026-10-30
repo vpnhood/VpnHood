@@ -21,8 +21,8 @@ namespace VpnHood.Core.Client;
 /// Sends binary protocol requests to the VPN server over streams provided by <see cref="ConnectorService"/>.
 /// </summary>
 /// <remarks>
-/// <see cref="RequestSender"/> is the sole owner of its <see cref="ConnectorService"/>: it creates one
-/// from the supplied <see cref="ConnectorServiceOptions"/> and disposes it when it is itself disposed.
+/// <see cref="RequestSender"/> receives its connector and request signer through its constructor.
+/// It is the sole owner of its <see cref="ConnectorService"/> and disposes it when it is itself disposed.
 /// Callers that need to configure transport details (e.g. QUIC endpoint, connection reuse) access the
 /// service via <see cref="ConnectorService"/>. Statistics are exposed through <see cref="ConnectorService.Stat"/>.
 /// <para>
@@ -37,7 +37,7 @@ namespace VpnHood.Core.Client;
 /// included: a reused stream skips the WebSocket upgrade's round trip and a stream open, which costs native
 /// memory on iOS and counts toward its QUIC connection's lifetime stream limit.
 /// </remarks>
-internal class RequestSender(ConnectorService connectorService) : IAsyncDisposable
+internal class RequestSender(ConnectorService connectorService, ClientRequestSigner requestSigner) : IAsyncDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly AsyncLock _disposeLock = new();
@@ -112,11 +112,12 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
         string requestId, bool isTcpPacketChannel, Action onAttempt, CancellationToken cancellationToken)
         where T : SessionResponse
     {
+        var clockCorrectionVersion = requestSigner.ClockCorrectionVersion;
         try {
             return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt, cancellationToken).Vhc();
         }
         catch (RequestAuthorizationException ex) {
-            if (!ConnectorService.TryCorrectClock(ex.ServerTime, ex.ClockCorrectionVersion))
+            if (!requestSigner.TryCorrectClock(ex.ServerTime, clockCorrectionVersion))
                 throw;
             // Both POST and the upgrade arrive here. A second 401 escapes this catch, so a bad
             // farm key cannot create an authentication retry loop or a protocol downgrade.
@@ -167,7 +168,7 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
         }
 
         // create a new connection
-        var (connection, clockCorrectionVersion) = await ConnectorService.GetConnectionToServer(
+        var connection = await ConnectorService.GetConnectionToServer(
             requestId + ":tunnel", request.Length, isTcpPacketChannel, onAttempt, cancellationToken).Vhc();
 
         // send request
@@ -181,7 +182,7 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
                 connection.RequireHttpResponse = false;
                 using var responseMessage = await HttpUtils.ReadResponse(connection.Stream, cancellationToken).Vhc();
                 if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
-                    throw new RequestAuthorizationException(responseMessage.Headers.Date, clockCorrectionVersion);
+                    throw new RequestAuthorizationException(responseMessage.Headers.Date);
 
                 if (responseMessage.StatusCode == HttpStatusCode.ServiceUnavailable)
                     throw new MaintenanceException();

@@ -37,11 +37,11 @@ public class MaintenanceTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
 
-        await using var connectorService = CreateConnectorService(server, token, useWebSocket, useQuic);
+        var requestSigner = CreateRequestSigner(token);
+        await using var connectorService = CreateConnectorService(server, token, useWebSocket, useQuic, requestSigner);
         var payload = BuildHelloPayload(token);
-        var result = await connectorService.GetConnectionToServer("maintenance-test", payload.Length,
+        await using var connection = await connectorService.GetConnectionToServer("maintenance-test", payload.Length,
             isTcpPacketChannel: false, onConnectAttempt: null, TestCt);
-        await using var connection = result.Connection;
         await connection.Stream.WriteAsync(payload, TestCt);
         await connection.Stream.FlushAsync(TestCt);
 
@@ -107,8 +107,9 @@ public class MaintenanceTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
 
+        var requestSigner = CreateRequestSigner(token);
         await using var requestSender =
-            new RequestSender(CreateConnectorService(server, token, useWebSocket, useQuic));
+            new RequestSender(CreateConnectorService(server, token, useWebSocket, useQuic, requestSigner), requestSigner);
         await Assert.ThrowsExactlyAsync<MaintenanceException>(() =>
             requestSender.SendRequest<HelloResponse>(CreateHelloRequest(token), TestCt));
     }
@@ -156,7 +157,7 @@ public class MaintenanceTest : TestBase
     }
 
     private ConnectorService CreateConnectorService(VpnHoodServer server, Token token, bool useWebSocket,
-        bool useQuic)
+        bool useQuic, ClientRequestSigner requestSigner)
     {
         if (useQuic && (!QuicListener.IsSupported || !QuicConnection.IsSupported))
             Assert.Inconclusive("QUIC is not supported on this platform.");
@@ -166,15 +167,16 @@ public class MaintenanceTest : TestBase
             Assert.Inconclusive("No QUIC endpoint found on server.");
 
         var serverToken = token.ServerToken;
+        var serverEndPoint = serverToken.HostEndPoints?.FirstOrDefault() ??
+                             throw new InvalidOperationException("The token has no server endpoint.");
         var connectorService = new ConnectorService(new ConnectorServiceOptions {
-            ServerSecret = serverToken.Secret!,
             SocketFactory = TestHelper.CreateTestSocketFactory(),
             ProxyConnector = null,
-            VpnEndPoint = new VpnEndPoint(serverToken.HostEndPoints!.First(), serverToken.HostName,
+            VpnEndPoint = new VpnEndPoint(serverEndPoint, serverToken.HostName,
                 serverToken.CertificateHash, serverToken.PathBase),
             RequestTimeout = TimeSpan.FromSeconds(10),
             AllowChannelReuse = false
-        });
+        }, requestSigner);
 
         connectorService.Init(
             channelIdleTimeout: TimeSpan.FromSeconds(30),
@@ -185,6 +187,10 @@ public class MaintenanceTest : TestBase
 
         return connectorService;
     }
+
+    private static ClientRequestSigner CreateRequestSigner(Token token) => new(
+        token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret."),
+        token.ServerToken.HostName);
 
     private static HelloRequest CreateHelloRequest(Token token)
     {

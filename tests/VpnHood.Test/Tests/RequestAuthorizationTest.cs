@@ -33,8 +33,9 @@ public class RequestAuthorizationTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var secret = RandomNumberGenerator.GetBytes(16);
+        var signer = new ClientRequestSigner(secret, "localhost");
         await using var sender = new RequestSender(CreateConnector((IPEndPoint)listener.LocalEndpoint,
-            certificate, secret, useWebSocket));
+            certificate, signer, useWebSocket), signer);
         var request = new ServerCheckRequest { RequestId = "clock-correction" };
         var proof = new RequestProof(secret);
         var previousTime = DateTimeOffset.UtcNow;
@@ -60,7 +61,7 @@ public class RequestAuthorizationTest : TestBase
             Assert.IsFalse(proof.Verify(receivedTokens[0], "localhost", 15, serverTime));
             Assert.IsTrue(proof.Verify(receivedTokens[1], "localhost", 15, serverTime));
             clockCorrectionVersion++;
-            Assert.IsFalse(sender.ConnectorService.TryCorrectClock(serverTime, clockCorrectionVersion));
+            Assert.IsFalse(signer.TryCorrectClock(serverTime, clockCorrectionVersion));
             previousTime = serverTime;
         }
     }
@@ -74,8 +75,9 @@ public class RequestAuthorizationTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var secret = RandomNumberGenerator.GetBytes(16);
+        var signer = new ClientRequestSigner(secret, "localhost");
         await using var sender = new RequestSender(CreateConnector((IPEndPoint)listener.LocalEndpoint,
-            certificate, secret, useWebSocket));
+            certificate, signer, useWebSocket), signer);
         var originalTime = DateTimeOffset.UtcNow;
         var serverTime = originalTime.AddHours(2);
         var receivedTokens = new List<string>();
@@ -95,33 +97,35 @@ public class RequestAuthorizationTest : TestBase
         }
         foreach (var token in receivedTokens.Skip(2))
             Assert.IsTrue(proof.Verify(token, "localhost", 15, serverTime));
-        Assert.IsFalse(sender.ConnectorService.TryCorrectClock(serverTime, 1));
+        Assert.IsFalse(signer.TryCorrectClock(serverTime, 1));
     }
 
     [TestMethod]
-    [DataRow(0, false)]
-    [DataRow(20, false)]
-    [DataRow(-20, false)]
-    [DataRow(172800, true)]
-    [DataRow(-172800, true)]
-    [DataRow(7200, true)]
-    public async Task Clock_correction_requires_a_meaningful_offset_without_a_cap(int seconds, bool accepted)
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Post_and_upgrade_select_the_proof_after_tls_connects(bool useWebSocket)
     {
         using var certificate = CertificateUtil.CreateSelfSigned();
-        await using var connector = CreateConnector(new IPEndPoint(IPAddress.Loopback, 443), certificate,
-            new byte[16], useWebSocket: false);
-        var serverTime = DateTimeOffset.UtcNow.AddSeconds(seconds);
-        Assert.IsFalse(connector.TryCorrectClock(null, 0));
-        Assert.AreEqual(accepted, connector.TryCorrectClock(serverTime, 0));
-        var clockCorrectionVersion = accepted ? 1L : 0;
-        Assert.IsFalse(connector.TryCorrectClock(serverTime, clockCorrectionVersion));
-        Assert.IsTrue(connector.TryCorrectClock(serverTime.AddHours(1), clockCorrectionVersion));
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var secret = RandomNumberGenerator.GetBytes(16);
+        var signer = new ClientRequestSigner(secret, "localhost");
+        await using var sender = new RequestSender(CreateConnector((IPEndPoint)listener.LocalEndpoint,
+            certificate, signer, useWebSocket), signer);
+        var originalTime = DateTimeOffset.UtcNow;
+        var serverTime = originalTime.AddHours(2);
+        using var deadlineCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        deadlineCts.CancelAfter(TimeSpan.FromSeconds(15));
+        var requestTask = SendSuccessfulRequest(sender, "proof-after-tls", deadlineCts.Token);
+        var serverTask = ReplyAfterClockChangeDuringTls(listener, certificate, signer, serverTime,
+            useWebSocket, deadlineCts.Token);
 
-        // A late rejection can retry the current proof, but cannot overwrite a newer correction.
-        Assert.IsTrue(connector.TryCorrectClock(serverTime.AddDays(-10), clockCorrectionVersion));
-        Assert.IsTrue(connector.TryCorrectClock(null, clockCorrectionVersion));
-        Assert.IsFalse(connector.TryCorrectClock(serverTime.AddHours(1), clockCorrectionVersion + 1));
-        Assert.IsTrue(connector.TryCorrectClock(serverTime, clockCorrectionVersion + 1));
+        await Task.WhenAll(requestTask, serverTask);
+        var receivedToken = await serverTask;
+        var proof = new RequestProof(secret);
+        Assert.IsTrue(proof.Verify(receivedToken, "localhost", 15, serverTime));
+        Assert.IsFalse(proof.Verify(receivedToken, "localhost", 15, originalTime));
+        Assert.AreEqual(1L, signer.ClockCorrectionVersion);
     }
 
     [TestMethod]
@@ -170,16 +174,15 @@ public class RequestAuthorizationTest : TestBase
     };
 
     private static ConnectorService CreateConnector(IPEndPoint endPoint, X509Certificate2 certificate,
-        byte[] secret, bool useWebSocket)
+        ClientRequestSigner signer, bool useWebSocket)
     {
         var connector = new ConnectorService(new ConnectorServiceOptions {
             VpnEndPoint = new VpnEndPoint(endPoint, "localhost", certificate.GetCertHash(), null),
-            ServerSecret = secret,
             ProxyConnector = null,
             SocketFactory = new TestSocketFactory(),
             RequestTimeout = TimeSpan.FromSeconds(10),
             AllowChannelReuse = false
-        });
+        }, signer);
         connector.Init(TimeSpan.FromSeconds(30), useWebSocket, TimeSpan.FromSeconds(10), false, null);
         return connector;
     }
@@ -242,6 +245,20 @@ public class RequestAuthorizationTest : TestBase
         var secondRetryHeaders = await ReadRequest(secondRetryTls, certificate, useWebSocket, cancellationToken);
         tokens.Add(secondRetryHeaders["Authorization"][7..]);
         await ReplySuccess(secondRetryTls, secondRetryHeaders, useWebSocket, cancellationToken);
+    }
+
+    private static async Task<string> ReplyAfterClockChangeDuringTls(TcpListener listener,
+        X509Certificate2 certificate, ClientRequestSigner signer, DateTimeOffset serverTime,
+        bool useWebSocket, CancellationToken cancellationToken)
+    {
+        using var client = await listener.AcceptTcpClientAsync(cancellationToken);
+        // Peek leaves ClientHello intact while proving the client is waiting for TLS authentication.
+        Assert.AreEqual(1, await client.Client.ReceiveAsync(new byte[1], SocketFlags.Peek, cancellationToken));
+        Assert.IsTrue(signer.TryCorrectClock(serverTime, 0));
+        await using var tls = new SslStream(client.GetStream());
+        var headers = await ReadRequest(tls, certificate, useWebSocket, cancellationToken);
+        await ReplySuccess(tls, headers, useWebSocket, cancellationToken);
+        return headers["Authorization"][7..];
     }
 
     private static async Task<IReadOnlyDictionary<string, string>> ReadRequest(SslStream tls,

@@ -419,15 +419,14 @@ public class ServerFinder(
     {
         var connectorService = new ConnectorServiceOptions {
             VpnEndPoint = vpnEndPoint,
-            ServerSecret = GetServerSecret(vpnEndPoint),
             ProxyConnector = proxyConnector,
             SocketFactory = socketFactory,
             RequestTimeout = serverQueryTimeout,
             AllowChannelReuse = false
         };
 
-        var requestSender = 
-            new RequestSender(new ConnectorService(connectorService));
+        var requestSigner = new ClientRequestSigner(GetServerSecret(vpnEndPoint), vpnEndPoint.HostName);
+        var requestSender = new RequestSender(new ConnectorService(connectorService, requestSigner), requestSigner);
 
         requestSender.ConnectorService.Init(
             channelIdleTimeout: TimeSpan.Zero,

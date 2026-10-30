@@ -457,7 +457,7 @@ public class AlwaysOnTest : TestAppBase
 
         ApiError[] stopping = [
             new UnauthorizedAccessException().ToApiError(),
-            new RequestAuthorizationException(DateTimeOffset.UtcNow, 0).ToApiError(),
+            new RequestAuthorizationException(DateTimeOffset.UtcNow).ToApiError(),
             new SessionException(SessionErrorCode.SessionSuppressedBy).ToApiError(),
             new InvalidOperationException().ToApiError()
         ];

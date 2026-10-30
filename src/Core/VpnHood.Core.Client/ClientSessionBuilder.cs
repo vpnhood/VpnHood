@@ -97,17 +97,17 @@ internal class ClientSessionBuilder(
                 VhLogger.Format(vpnEndPoint.TcpEndPoint));
             setState(ClientState.Connecting);
 
+            var requestSigner = new ClientRequestSigner(serverFinder.GetServerSecret(vpnEndPoint), vpnEndPoint.HostName);
             var connectorService = new ConnectorService(
                 new ConnectorServiceOptions {
                     ProxyConnector = proxyConnector,
                     SocketFactory = socketFactory,
                     VpnEndPoint = vpnEndPoint,
-                    ServerSecret = serverFinder.GetServerSecret(vpnEndPoint),
                     RequestTimeout = config.Transport.TcpConnectTimeout,
                     AllowChannelReuse = false,
                     TcpPacketChannelKernelBufferSize = config.Transport.TcpPacketChannelKernelBufferSize
-                });
-            requestSender = new RequestSender(connectorService);
+                }, requestSigner);
+            requestSender = new RequestSender(connectorService, requestSigner);
 
             var clientInfo = new ClientInfo {
                 ClientId = config.ClientId,

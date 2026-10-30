@@ -1,0 +1,51 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppUi.Common"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.TvLinkPicture"
+             HorizontalAlignment="Center">
+  <!-- A browser driving a TV, drawn: this device, a dotted line, the TV. The line flows toward the TV
+       while the step is the TV's to finish; when the TV no longer answers (.broken) it stands still
+       in the warning colour, cut by a cross, and the TV fades. Glyphs of the icon font and a line,
+       so it takes no image from the assets folder. -->
+  <UserControl.Styles>
+    <Style Selector="TextBlock.device">
+      <Setter Property="Foreground" Value="{StaticResource TonalIconBtnBrush}" />
+    </Style>
+    <Style Selector="Line#Link">
+      <Setter Property="Stroke" Value="{StaticResource TonalIconBtnBrush}" />
+    </Style>
+    <Style Selector="Grid#RootGrid:not(.broken) Line#Link">
+      <Style.Animations>
+        <Animation Duration="0:0:0.8" IterationCount="INFINITE">
+          <KeyFrame Cue="0%"><Setter Property="StrokeDashOffset" Value="0" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="StrokeDashOffset" Value="-2.01" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="Grid#RootGrid.broken Line#Link">
+      <Setter Property="Stroke" Value="{StaticResource WarningBrush}" />
+    </Style>
+    <Style Selector="Grid#RootGrid.broken TextBlock#Tv">
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+    <!-- shown by style only: a value set on the element would beat .broken's -->
+    <Style Selector="Border#BreakMark">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="Grid#RootGrid.broken Border#BreakMark">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </UserControl.Styles>
+  <Grid x:Name="RootGrid" ColumnDefinitions="Auto,Auto,Auto">
+    <TextBlock Classes="mdi device" FontSize="40" Text="{x:Static res:Mdi.Cellphone}" />
+    <Panel Grid.Column="1" Width="72" Margin="4,0" VerticalAlignment="Center">
+      <Line x:Name="Link" StartPoint="0,0" EndPoint="72,0" StrokeThickness="4" StrokeDashArray="0.01,2"
+            StrokeLineCap="Round" VerticalAlignment="Center" />
+      <Border x:Name="BreakMark" Background="{StaticResource GeneralDialogBrush}" CornerRadius="16" Padding="2"
+              HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock Classes="mdi" FontSize="26" Foreground="{StaticResource WarningBrush}" Text="{x:Static res:Mdi.CloseCircle}" />
+      </Border>
+    </Panel>
+    <TextBlock x:Name="Tv" Grid.Column="2" Classes="mdi device" FontSize="64" Text="{x:Static res:Mdi.Television}" />
+  </Grid>
+</UserControl>

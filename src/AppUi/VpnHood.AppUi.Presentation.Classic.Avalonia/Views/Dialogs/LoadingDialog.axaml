@@ -6,8 +6,9 @@
   <!-- The web UI's LoadingDialog: a spinner and "Please wait", with no way out until the work that
        raised it is done. -->
   <Border Classes="dialog" MaxWidth="320">
-    <StackPanel Spacing="10" HorizontalAlignment="Center">
-      <TextBlock Classes="spinner" FontSize="30" Text="{x:Static res:Mdi.Loading}" HorizontalAlignment="Center" />
+    <StackPanel x:Name="Body" Spacing="10" HorizontalAlignment="Center">
+      <TextBlock x:Name="Spinner" Classes="spinner" FontSize="30" Text="{x:Static res:Mdi.Loading}" HorizontalAlignment="Center" />
+      <ContentControl x:Name="PictureHost" HorizontalAlignment="Center" Margin="0,4,0,6" IsVisible="False" />
       <TextBlock x:Name="TitleText" Classes="dialog-title" TextAlignment="Center" IsVisible="False" />
       <TextBlock x:Name="MessageText" Classes="dialog-text" TextAlignment="Center" Text="{Binding PleaseWait, Source={x:Static res:Strings.Current}}" />
     </StackPanel>

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Animation;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
@@ -445,14 +446,15 @@ public partial class MainView : UserControl
     public IDisposable LoadingOnDevice(string? message = null)
     {
         return ShowLoading(VhApp.IsTvRemote
-            ? new LoadingDialog(Strings.Current.ContinueOnTvDesc, Strings.Current.ContinueOnTvTitle)
+            ? new LoadingDialog(Strings.Current.ContinueOnTvDesc, Strings.Current.ContinueOnTvTitle, new TvLinkPicture())
             : new LoadingDialog(message));
     }
 
     // a browser driving a TV that no longer answers it, over everything until it does (MainViewModel)
     public IDisposable TvUnreachable()
     {
-        return ShowLoading(new LoadingDialog(Strings.Current.TvUnreachableDesc, Strings.Current.TvUnreachableTitle));
+        return ShowLoading(new LoadingDialog(Strings.Current.TvUnreachableDesc, Strings.Current.TvUnreachableTitle,
+            new TvLinkPicture { IsBroken = true }));
     }
 
     private IDisposable ShowLoading(LoadingDialog dialog)

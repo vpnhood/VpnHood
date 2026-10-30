@@ -12,14 +12,16 @@
                          Title="{Binding AddAccessKeyTitle, Source={x:Static res:Strings.Current}}" />
 
     <StackPanel MaxWidth="720" Spacing="14" VerticalAlignment="Top">
+      <controls:ServerKeyPicture Margin="0,10,0,6" />
       <TextBlock Classes="body-small disabled" Text="{Binding AddAccessKeySubtitle, Source={x:Static res:Strings.Current}}" />
+      <!-- a key runs to a few hundred characters with no space: it wraps, so all of it is seen to arrive -->
       <TextBox x:Name="KeyBox" AutomationProperties.Name="{Binding AddAccessKeyTitle, Source={x:Static res:Strings.Current}}" PlaceholderText="vh:" AcceptsReturn="False" FlowDirection="LeftToRight"
+               TextWrapping="Wrap" Height="100" VerticalContentAlignment="Top"
                hosting:NativeTextInput.IsPreferred="True" />
       <TextBlock x:Name="ErrorText" AutomationProperties.LiveSetting="Assertive" Classes="body-small error" IsVisible="False" TextWrapping="Wrap" />
-      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" Margin="0,6,0,0">
-        <Button x:Name="AddButton" Classes="action" Content="{Binding Add, Source={x:Static res:Strings.Current}}" Click="OnAddClick" />
-        <Button x:Name="CancelButton" Classes="action" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" Click="OnCancelClick" />
-      </StackPanel>
+      <!-- the page's one action: the header's Back is its cancel, as on any page -->
+      <Button x:Name="AddButton" Classes="action" HorizontalAlignment="Right" Margin="0,6,0,0"
+              Content="{Binding Add, Source={x:Static res:Strings.Current}}" Click="OnAddClick" />
     </StackPanel>
   </DockPanel>
 </UserControl>

@@ -9,7 +9,7 @@ const ownEvents = ['keydown', 'keyup', 'keypress', 'beforeinput', 'input', 'comp
 // the colours only a rule can give: the placeholder's and the selection's
 let ruled = false;
 
-export function create(onInput, onKey, onFocus) {
+export function create(multiline, acceptsReturn, onInput, onKey, onFocus) {
     if (!ruled) {
         const rule = document.createElement('style');
         rule.textContent = '.vh-text-input::placeholder { color: var(--vh-placeholder); opacity: 1; } ' +
@@ -18,8 +18,10 @@ export function create(onInput, onKey, onFocus) {
         ruled = true;
     }
 
-    const input = document.createElement('input');
-    input.type = 'text';
+    // a box that wraps gets a textarea, which wraps a long key as the box does
+    const input = document.createElement(multiline ? 'textarea' : 'input');
+    if (!multiline)
+        input.type = 'text';
     input.className = 'vh-text-input';
     // a key or a code is taken as typed: no capitals, corrections or suggestions of a phone's keyboard
     input.autocomplete = 'off';
@@ -29,17 +31,25 @@ export function create(onInput, onKey, onFocus) {
     input.enterKeyHint = 'go';
     Object.assign(input.style, {
         boxSizing: 'border-box', margin: '0', padding: '0', border: '0', outline: 'none', background: 'transparent',
-        userSelect: 'text', webkitUserSelect: 'text', touchAction: 'manipulation'
+        userSelect: 'text', webkitUserSelect: 'text', touchAction: 'manipulation', resize: 'none',
+        overflowWrap: 'anywhere', scrollbarWidth: 'thin'
     });
 
     for (const type of ownEvents)
         input.addEventListener(type, e => e.stopPropagation());
-    input.addEventListener('input', () => onInput(input.value));
+    input.addEventListener('input', () => {
+        // a box that takes no return takes a key's lines as one, as an <input> does by itself: a key
+        // pasted out of a mail often comes broken into lines
+        if (!acceptsReturn && /[\r\n]/.test(input.value))
+            input.value = input.value.replace(/[\r\n]+/g, '');
+        onInput(input.value);
+    });
     input.addEventListener('focus', () => onFocus());
 
     // the keys that act on the page are Avalonia's: Enter submits, Tab moves on, Escape goes back
     input.addEventListener('keydown', e => {
-        if (e.isComposing || (e.key !== 'Enter' && e.key !== 'Tab' && e.key !== 'Escape'))
+        if (e.isComposing || (e.key !== 'Enter' && e.key !== 'Tab' && e.key !== 'Escape') ||
+            (e.key === 'Enter' && acceptsReturn))
             return;
         e.preventDefault();
         onKey(e.key, e.shiftKey);
@@ -58,6 +68,7 @@ export function setLook(input, font, color, caret, placeholder, selection, align
     input.style.caretColor = caret;
     input.style.textAlign = align;
     input.style.setProperty('--vh-placeholder', placeholder);
+    input.style.scrollbarColor = placeholder ? `${placeholder} transparent` : '';
     input.style.setProperty('--vh-selection', selection);
     input.dir = direction;
 }

@@ -20,7 +20,7 @@ internal static partial class BrowserTextInputInterop
     }
 
     [JSImport("create", ModuleName)]
-    public static partial JSObject Create(
+    public static partial JSObject Create(bool multiline, bool acceptsReturn,
         [JSMarshalAs<JSType.Function<JSType.String>>] Action<string> onInput,
         [JSMarshalAs<JSType.Function<JSType.String, JSType.Boolean>>] Action<string, bool> onKey,
         [JSMarshalAs<JSType.Function>] Action onFocus);

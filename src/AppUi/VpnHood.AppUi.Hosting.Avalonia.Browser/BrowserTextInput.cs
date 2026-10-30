@@ -20,7 +20,7 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Browser;
 // address) and Avalonia 12 cannot paste: its read throws on the missing API, and its fallback reads
 // the paste event's items after the browser has locked them. The box keeps its frame, its focus and
 // its Text; Enter, Tab and Escape reach it as its own keys.
-// TODO Drop it once Avalonia pastes on such a page.
+// TODO Drop it once Avalonia pastes on such a page (AvaloniaUI/Avalonia#22655).
 internal sealed class BrowserTextInput : NativeControlHost
 {
     private readonly TextBox _textBox;
@@ -101,7 +101,8 @@ internal sealed class BrowserTextInput : NativeControlHost
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
-        var input = BrowserTextInputInterop.Create(OnInput, OnKey, OnFocus);
+        var input = BrowserTextInputInterop.Create(_textBox.TextWrapping != TextWrapping.NoWrap, _textBox.AcceptsReturn,
+            OnInput, OnKey, OnFocus);
         BrowserTextInputInterop.SetText(input, _textBox.Text ?? "");
         BrowserTextInputInterop.SetLook(input, CssFont(), CssColor(_textBox.Foreground), CssColor(_textBox.CaretBrush),
             CssColor(_textBox.PlaceholderForeground, _placeholder?.Opacity ?? 1), CssColor(_textBox.SelectionBrush),

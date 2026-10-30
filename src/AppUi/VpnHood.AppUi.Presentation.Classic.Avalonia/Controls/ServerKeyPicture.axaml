@@ -1,0 +1,24 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppUi.Common"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.ServerKeyPicture"
+             HorizontalAlignment="Center">
+  <!-- A key that adds a server, drawn: the key, a dotted line, a server with a plus. Glyphs of the
+       icon font and a line, as TvLinkPicture, so it takes no image from the assets folder. Still:
+       a page someone copies and pastes on keeps no animation running. -->
+  <Grid ColumnDefinitions="Auto,Auto,Auto">
+    <TextBlock Classes="mdi" FontSize="36" Foreground="{StaticResource TonalIconBtnBrush}" Text="{x:Static res:Mdi.Key}"
+               VerticalAlignment="Center" />
+    <Line Grid.Column="1" StartPoint="0,0" EndPoint="56,0" Margin="6,0" StrokeThickness="4" StrokeDashArray="0.01,2"
+          StrokeLineCap="Round" Stroke="{StaticResource TonalIconBtnBrush}" VerticalAlignment="Center" />
+    <Panel Grid.Column="2">
+      <TextBlock Classes="mdi" FontSize="60" Margin="0,0,10,4" Foreground="{StaticResource TonalIconBtnBrush}"
+                 Text="{x:Static res:Mdi.ServerOutline}" />
+      <!-- the page's own colour around the plus cuts it out of the server beneath -->
+      <Border Background="{StaticResource BackgroundBrush}" CornerRadius="14" Padding="2"
+              HorizontalAlignment="Right" VerticalAlignment="Bottom">
+        <TextBlock Classes="mdi" FontSize="24" Foreground="{StaticResource TonalIconBtnBrush}" Text="{x:Static res:Mdi.PlusCircle}" />
+      </Border>
+    </Panel>
+  </Grid>
+</UserControl>

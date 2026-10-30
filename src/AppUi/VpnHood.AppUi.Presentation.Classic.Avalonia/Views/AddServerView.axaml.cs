@@ -47,11 +47,6 @@ public partial class AddServerView : UserControl, IPage
         }
     }
 
-    private void OnCancelClick(object? sender, RoutedEventArgs e)
-    {
-        _host.GoBack();
-    }
-
     // The key is the app's to judge: whatever it refuses is an unreadable key, and the page says so
     // in the web UI's own words rather than the exception's.
     private async Task Add(CancellationToken cancellationToken)

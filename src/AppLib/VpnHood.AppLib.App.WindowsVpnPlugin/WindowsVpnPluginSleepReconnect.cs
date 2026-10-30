@@ -6,10 +6,13 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.AppLib.App.WindowsVpnPlugin;
 
 // The VPN back after a sleep, while the app runs: Windows ends every RAS connection, the plug-in's too, as the machine
-// sleeps or hibernates (RAS 832, 833), and dials none at the wake. A sleep that came with the VPN up is noted at its
-// suspend; at the wake, once the VPN is down - Windows may still be ending it - the app connects again, and again every
-// 5 s for 2 minutes while that fails, the network still coming back. A VPN that outlived the sleep, a connect the
-// person makes meanwhile, or one cancelled, ends it. A Modern Standby, which may tell no suspend, is not caught.
+// sleeps or hibernates (RAS 832, 833) or enters Modern Standby (631), and dials none at the wake. A sleep that came with
+// the VPN up is noted at its suspend; after the wake, once the screen is on, the app connects again. A wake no person
+// made - a timer's - keeps the screen off and soon sleeps again, maybe by a hibernate out of Modern Standby, which takes
+// Windows' teardown of a VPN dialed meanwhile half-way: the dial after that wake hung in Windows. So the connect waits
+// for the person, through more sleeps if need be. Once the VPN is down - Windows may still be ending it - the app
+// connects, and again every 5 s for 2 minutes while that fails, the network still coming back. A VPN that outlived the
+// sleep, a connect the person makes meanwhile, or one cancelled, ends it.
 internal sealed class WindowsVpnPluginSleepReconnect : IDisposable
 {
     private static readonly TimeSpan DownWait = TimeSpan.FromSeconds(30);
@@ -20,11 +23,15 @@ internal sealed class WindowsVpnPluginSleepReconnect : IDisposable
     private readonly CancellationTokenSource _disposeCts = new();
     private volatile bool _isUp;
     private volatile bool _wasUpAtSuspend;
+    private volatile bool _isDisplayOn = true; // until Windows tells, at the registration
+    private int _isPending; // a wake after a sleep that ended the VPN, whose connect waits for the screen
+    private int _isReconnecting; // a wake notice while one runs is of the wake it connects after
 
     public WindowsVpnPluginSleepReconnect(VpnHoodApp app)
     {
         _app = app;
-        _sleepWatch = new WindowsVpnPluginSleepWatch(onSuspend: () => _wasUpAtSuspend = _isUp, onWake: OnWake);
+        _sleepWatch = new WindowsVpnPluginSleepWatch(onSuspend: () => _wasUpAtSuspend = _isUp, onWake: OnWake,
+            onDisplayChanged: OnDisplayChanged);
         _isUp = IsUp(app.ConnectionState);
         app.ConnectionStateChanged += OnConnectionStateChanged;
     }
@@ -44,6 +51,34 @@ internal sealed class WindowsVpnPluginSleepReconnect : IDisposable
             return;
 
         _wasUpAtSuspend = false;
+        if (Volatile.Read(ref _isReconnecting) == 1)
+            return;
+
+        Volatile.Write(ref _isPending, 1);
+        if (!_isDisplayOn)
+            VhLogger.Instance.LogInformation(
+                "The machine woke with its screen off, so the app connects the VPN again once the screen is on.");
+
+        TryStartReconnect();
+    }
+
+    private void OnDisplayChanged(bool isDisplayOn)
+    {
+        _isDisplayOn = isDisplayOn;
+        if (isDisplayOn)
+            TryStartReconnect();
+    }
+
+    private void TryStartReconnect()
+    {
+        if (!_isDisplayOn || Interlocked.CompareExchange(ref _isReconnecting, 1, 0) != 0)
+            return;
+
+        if (Interlocked.Exchange(ref _isPending, 0) == 0) {
+            Volatile.Write(ref _isReconnecting, 0);
+            return;
+        }
+
         _ = Reconnect(_disposeCts.Token);
     }
 
@@ -81,6 +116,9 @@ internal sealed class WindowsVpnPluginSleepReconnect : IDisposable
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not connect the VPN again after the machine's sleep.");
+        }
+        finally {
+            Volatile.Write(ref _isReconnecting, 0);
         }
     }
 

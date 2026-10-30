@@ -1,10 +1,12 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Net.Toolkit.Extensions;
@@ -31,8 +33,13 @@ public sealed class WindowsVpnPluginDevice : IDevice
     private const int InterfaceMetric = 1;
     private const string PhonebookFileName = "rasphone.pbk";
 
-    // Windows' dial has no limit of its own: after a hibernate took its teardown half-way, one stopped at "link
-    // established" for good. Past the plug-in's own wait for its session, the dial fails instead.
+    // Windows' dial has no limit of its own: after a hibernate took Windows' teardown half-way, the next dial did not
+    // reach the plug-in at all, and a dial after its cancel connected. A dial reaches the plug-in within seconds - and up
+    // to 15 s more while Windows still ends a dial cancelled before - which then writes a live state to its status file,
+    // so one that has not by HandoffTimeout is cancelled. One the plug-in took up fails past the plug-in's own wait for
+    // its session.
+    private static readonly TimeSpan HandoffTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan HandoffPollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan DialTimeout = WindowsVpnPluginService.ConnectTimeout + TimeSpan.FromSeconds(30);
     private readonly string _profileName;
 
@@ -108,7 +115,7 @@ public sealed class WindowsVpnPluginDevice : IDevice
         // it lost - as after a hibernate took its teardown half-way - which nothing the app calls ends.
         var statusFilePath = Path.Combine(VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         var connectTime = DateTime.UtcNow;
-        var status = await DialProfile(agent, profile, cancellationToken).Vhc();
+        var status = await DialProfile(agent, profile, statusFilePath, connectTime, cancellationToken).Vhc();
         if (status != VpnManagementErrorStatus.Ok && File.GetLastWriteTimeUtc(statusFilePath) < connectTime)
             throw new InvalidOperationException(status == VpnManagementErrorStatus.AlreadyConnected
                 ? "Windows' VPN service is stuck on an earlier connection and refuses a new one. " +
@@ -116,19 +123,70 @@ public sealed class WindowsVpnPluginDevice : IDevice
                 : $"Windows could not connect the VPN profile. Status: {status}");
     }
 
-    // The dial's operation may ignore the cancel asked of it, so the wait ends by itself.
+    // The dial's operation may ignore the cancel asked of it, so each wait ends by itself.
     private static async Task<VpnManagementErrorStatus> DialProfile(VpnManagementAgent agent, VpnPlugInProfile profile,
-        CancellationToken cancellationToken)
+        string statusFilePath, DateTime connectTime, CancellationToken cancellationToken)
     {
         using var dialCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var dialTask = agent.ConnectProfileAsync(profile).AsTask(dialCts.Token);
         try {
-            return await agent.ConnectProfileAsync(profile).AsTask(dialCts.Token)
-                .WaitAsync(DialTimeout, cancellationToken).Vhc();
+            if (!await WaitForHandoff(dialTask, statusFilePath, connectTime, cancellationToken).Vhc())
+                throw new TimeoutException(
+                    $"Windows did not hand the dial to the VPN plug-in in {HandoffTimeout.TotalSeconds} seconds.");
+
+            return await WaitForDial(dialTask, cancellationToken).Vhc();
         }
         catch (TimeoutException) {
             dialCts.Cancel();
+            throw;
+        }
+    }
+
+    private static async Task<VpnManagementErrorStatus> WaitForDial(Task<VpnManagementErrorStatus> dialTask,
+        CancellationToken cancellationToken)
+    {
+        try {
+            return await dialTask.WaitAsync(DialTimeout, cancellationToken).Vhc();
+        }
+        catch (TimeoutException ex) {
             throw new TimeoutException(
-                $"Windows did not finish dialing the VPN profile in {DialTimeout.TotalSeconds} seconds.");
+                $"Windows did not finish dialing the VPN profile in {DialTimeout.TotalSeconds} seconds.", ex);
+        }
+    }
+
+    // True once the VPN host has taken the dial up, or the dial has ended first; false at HandoffTimeout.
+    private static async Task<bool> WaitForHandoff(Task dialTask, string statusFilePath, DateTime connectTime,
+        CancellationToken cancellationToken)
+    {
+        var deadline = connectTime + HandoffTimeout;
+        while (!dialTask.IsCompleted && !IsTakenUp(statusFilePath, connectTime)) {
+            if (DateTime.UtcNow > deadline)
+                return false;
+
+            await Task.WhenAny(dialTask, Task.Delay(HandoffPollInterval, cancellationToken)).Vhc();
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        return true;
+    }
+
+    // The VPN host's status file holds a live state written since the dial began: the app writes only None and Disposed
+    // there, and a session that ended before the dial - its close may run on after a wake - only Disconnecting and
+    // Disposed. A file being written reads as not yet.
+    private static bool IsTakenUp(string statusFilePath, DateTime connectTime)
+    {
+        try {
+            if (File.GetLastWriteTimeUtc(statusFilePath) < connectTime)
+                return false;
+
+            using var stream = new FileStream(statusFilePath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            var connectionInfo = JsonSerializer.Deserialize<ConnectionInfo>(stream);
+            return connectionInfo is not null &&
+                   connectionInfo.ClientState is not (ClientState.None or ClientState.Disconnecting or ClientState.Disposed);
+        }
+        catch (Exception ex) when (ex is IOException or JsonException) {
+            return false;
         }
     }
 

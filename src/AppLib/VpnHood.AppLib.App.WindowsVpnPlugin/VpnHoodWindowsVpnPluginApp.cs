@@ -59,14 +59,14 @@ public class VpnHoodWindowsVpnPluginApp : Singleton<VpnHoodWindowsVpnPluginApp>
         }
     }
 
-    // A machine that will not say when it sleeps leaves the app without it, which the log says.
+    // A machine that will not say when it sleeps, or when its screen is on, leaves the app without it, which the log says.
     private static WindowsVpnPluginSleepReconnect? CreateSleepReconnect(VpnHoodApp app)
     {
         try {
             return new WindowsVpnPluginSleepReconnect(app);
         }
         catch (Win32Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not watch the machine's sleeps, so the VPN is not connected again after one.");
+            VhLogger.Instance.LogError(ex, "Could not watch the machine's sleeps and screen, so the VPN is not connected again after a sleep.");
             return null;
         }
     }

@@ -10,12 +10,15 @@ internal sealed class HttpReadStream(Stream sourceStream, ArrayPool<byte> buffer
     : StreamDecoratorAsync(sourceStream, leaveOpen: true)
 {
     private const int BufferSize = 16 * 1024;
+    private const int ReadStateSourceOnly = 1;
+    private const int ReadStateDisposed = 2;
     private readonly Lock _bufferLock = new();
     private byte[] _buffer = bufferPool.Rent(BufferSize);
     private int _offset;
     private int _count;
     private bool _filling;
     private bool _httpCompleted;
+    private int _readState; // zero while the HTTP buffer may still be used
 
     public HttpReadStream(Stream sourceStream) : this(sourceStream, ArrayPool<byte>.Shared)
     {
@@ -96,6 +99,13 @@ internal sealed class HttpReadStream(Stream sourceStream, ArrayPool<byte> buffer
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        // Once the last read-ahead byte is consumed, a tunnel read needs neither the HTTP buffer nor its
+        // lock. The state is published under that lock, including disposal, so the handoff is one-way.
+        var readState = Volatile.Read(ref _readState);
+        ObjectDisposedException.ThrowIf(readState == ReadStateDisposed, this);
+        if (readState == ReadStateSourceOnly)
+            return SourceStream.ReadAsync(buffer, cancellationToken);
+
         lock (_bufferLock) {
             ObjectDisposedException.ThrowIf(IsDisposed, this);
             if (_filling)
@@ -120,12 +130,14 @@ internal sealed class HttpReadStream(Stream sourceStream, ArrayPool<byte> buffer
         _offset = 0;
         _count = 0;
         bufferPool.Return(buffer, clearArray: true);
+        Volatile.Write(ref _readState, IsDisposed ? ReadStateDisposed : ReadStateSourceOnly);
     }
 
     protected override void Dispose(bool disposing)
     {
         lock (_bufferLock) {
             base.Dispose(disposing);
+            Volatile.Write(ref _readState, ReadStateDisposed);
             ReturnBufferIfUnused();
         }
     }

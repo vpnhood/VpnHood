@@ -144,6 +144,59 @@ public class HttpReadStreamTest : TestBase
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Disposal_after_handoff_leaves_an_inflight_source_read_open(bool asyncDispose)
+    {
+        var pool = new TrackingPool();
+        await using var source = new PendingReadStream();
+        var stream = new HttpReadStream(source, pool);
+        stream.CompleteHttp();
+        Assert.AreEqual(1, pool.ReturnCount);
+
+        var buffer = new byte[1];
+        var read = stream.ReadAsync(buffer, TestCt).AsTask();
+        await source.ReadStarted.Task.WaitAsync(TestCt);
+        try {
+            if (asyncDispose)
+                await stream.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+            else
+                await Task.Run(stream.Dispose, TestCt).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+
+            Assert.IsTrue(source.CanRead);
+            Assert.ThrowsExactly<ObjectDisposedException>(() => stream.ReadAsync(new byte[1], TestCt));
+            Assert.AreEqual(1, pool.ReturnCount);
+        }
+        finally {
+            source.FinishRead.TrySetResult();
+        }
+
+        // A read that already reached the source may finish. Disposal leaves that source to its owner.
+        Assert.AreEqual(1, await read);
+        Assert.AreEqual((byte)42, buffer[0]);
+        await stream.DisposeAsync();
+        Assert.AreEqual(1, pool.ReturnCount);
+    }
+
+    [TestMethod]
+    public async Task Cancellation_after_handoff_reaches_the_source_without_reallocating_the_buffer()
+    {
+        var pool = new TrackingPool();
+        await using var source = new PendingReadStream();
+        await using var stream = new HttpReadStream(source, pool);
+        stream.CompleteHttp();
+
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        var read = stream.ReadAsync(new byte[1], cancellation.Token).AsTask();
+        await source.ReadStarted.Task.WaitAsync(TestCt);
+        await cancellation.CancelAsync();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => read);
+        Assert.IsTrue(source.CanRead);
+        Assert.AreEqual(1, pool.RentCount);
+        Assert.AreEqual(1, pool.ReturnCount);
+    }
+
+    [TestMethod]
     public async Task Concurrent_disposals_return_the_buffer_once()
     {
         var pool = new TrackingPool();

@@ -34,6 +34,10 @@
 		     not yet when a head imports this from its own body. -->
 		<VhAppPlatform Condition="'$(VhAppPlatform)' == '' And $(TargetFramework.Contains('-android'))">android</VhAppPlatform>
 		<VhAppPlatform Condition="'$(VhAppPlatform)' == '' And $(TargetFramework.Contains('-ios'))">ios</VhAppPlatform>
+		<!-- An Apple TV build is the iOS app's, its id, App Group and extension too: Apple's universal
+		     purchase puts an app's iOS and tvOS builds in one App Store record, under one bundle id. -->
+		<VhAppPlatform Condition="'$(VhAppPlatform)' == '' And $(TargetFramework.Contains('-tvos'))">ios</VhAppPlatform>
+		<VhAppIsTvos Condition="$(TargetFramework.Contains('-tvos'))">true</VhAppIsTvos>
 		<VhAppPlatform Condition="'$(VhAppPlatform)' == '' And $(TargetFramework.Contains('-windows'))">windows</VhAppPlatform>
 	</PropertyGroup>
 
@@ -115,8 +119,9 @@
 	                             Quick Settings tile and themed icon (android/mipmap-anydpi-v33)
 	       banner.svg            the wide banner, 16:9: Android TV's
 
-	     An iOS extension takes none: the system shows its app's icon. -->
-	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppIconsDir)' != '' And '$(VhAppIsApp)' == 'true'">
+	     An iOS extension takes none: the system shows its app's icon. Nor does an Apple TV build: its icon
+	     is a layered stack with a top shelf image, which the tool does not draw. -->
+	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppIconsDir)' != '' And '$(VhAppIsApp)' == 'true' And '$(VhAppIsTvos)' != 'true'">
 		<_VhAppIconsDir>$([MSBuild]::EnsureTrailingSlash('$(VhAppIconsDir)'))</_VhAppIconsDir>
 		<AppIcon Condition="'$(AppIcon)' == '' And '$(VhAppPlatform)' == 'ios'">ic_launcher</AppIcon>
 	</PropertyGroup>
@@ -204,7 +209,8 @@ Blue = component(4);
 	</Target>
 
 	<!-- iOS: the launch screen every app's Info.plist names (UILaunchStoryboardName, LaunchScreen): one
-	     view in that colour, from ios/LaunchScreen.storyboard beside this file. A head with a
+	     view in that colour, from ios/LaunchScreen.storyboard beside this file - tvos/ on an Apple TV,
+	     since Interface Builder compiles a storyboard for one kind of device. A head with a
 	     LaunchScreen.storyboard of its own keeps it. The iOS SDK compiles storyboards as it collects
 	     the bundle's resources, ahead of BeforeBuild, so the storyboard joins them there: through
 	     CollectBundleResourcesDependsOn, the SDK's hook for items it bundles. -->
@@ -221,7 +227,9 @@ Blue = component(4);
 			<_VhLaunchGreen Condition="'$(_VhLaunchGreen)' == ''">1</_VhLaunchGreen>
 			<_VhLaunchBlue Condition="'$(_VhLaunchBlue)' == ''">1</_VhLaunchBlue>
 			<_VhLaunchScreenFile>$(IntermediateOutputPath)LaunchScreen.storyboard</_VhLaunchScreenFile>
-			<_VhLaunchScreenText>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)ios/LaunchScreen.storyboard'))</_VhLaunchScreenText>
+			<_VhLaunchScreenTemplate>$(MSBuildThisFileDirectory)ios/LaunchScreen.storyboard</_VhLaunchScreenTemplate>
+			<_VhLaunchScreenTemplate Condition="'$(VhAppIsTvos)' == 'true'">$(MSBuildThisFileDirectory)tvos/LaunchScreen.storyboard</_VhLaunchScreenTemplate>
+			<_VhLaunchScreenText>$([System.IO.File]::ReadAllText('$(_VhLaunchScreenTemplate)'))</_VhLaunchScreenText>
 			<_VhLaunchScreenText>$(_VhLaunchScreenText.Replace('VH_RED', '$(_VhLaunchRed)').Replace('VH_GREEN', '$(_VhLaunchGreen)').Replace('VH_BLUE', '$(_VhLaunchBlue)'))</_VhLaunchScreenText>
 		</PropertyGroup>
 		<WriteLinesToFile Condition="'$(_VhLaunchScreenFile)' != ''" File="$(_VhLaunchScreenFile)"

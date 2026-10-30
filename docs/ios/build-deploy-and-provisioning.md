@@ -14,6 +14,9 @@ The iOS apps live under `src/Apps/` — one host project + one Network-Extension
 |-----|-------------|------------------|---------------|
 | Client  | `src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj`   | `src/Apps/Client/Client.Ios.Extension/…`   | `com.vpnhood.client.ios` |
 | Connect | `src/Apps/Connect/Connect.Ios.Apple/VpnHood.App.Connect.Ios.Apple.csproj` | `src/Apps/Connect/Connect.Ios.Extension/…`  | `com.vpnhood.connect.ios` |
+| Client on Apple TV (unreleased) | `src/Apps/Client/Client.Tvos.Apple/VpnHood.App.Client.Tvos.Apple.csproj` | `src/Apps/Client/Client.Tvos.Extension/…` | `com.vpnhood.client.ios` (the iOS app's) |
+
+The Apple TV head builds with `-p:VhAppleTv=true` and the `tvos` workload; its README has the commands.
 
 The host references the extension as an `IsAppExtension` `ProjectReference`, so **building the host also builds
 and bundles the appex**. All iOS build settings are inlined per-csproj (no shared props file).

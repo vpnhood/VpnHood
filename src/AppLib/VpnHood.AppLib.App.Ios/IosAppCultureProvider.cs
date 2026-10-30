@@ -16,8 +16,8 @@ public class IosAppCultureProvider : IAppCultureProvider
     private const string SelectedCultureKey = "VpnHoodSelectedCulture";
     private const string AppleLanguagesKey = "AppleLanguages";
 
-    // always available on iOS
-    public static bool IsSupported => OperatingSystem.IsIOS();
+    // always available on iOS and on an Apple TV
+    public static bool IsSupported => OperatingSystem.IsIOS() || OperatingSystem.IsTvOS();
 
     private IosAppCultureProvider()
     {

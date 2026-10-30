@@ -1,12 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>Hosts the VpnHood Avalonia UI in an iOS app: the application delegate a head's AppDelegate derives from</Description>
-		<TargetFramework>net11.0-ios</TargetFramework>
+		<TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-tvos'))">17.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia.iOS" Version="12.1.3" />
+		<!-- The HarfBuzzSharp Avalonia names (8.3.1.3) has no build for an Apple TV simulator; 8.3.1.5 has. -->
+		<PackageReference Include="HarfBuzzSharp" Version="8.3.1.5" Condition="$(TargetFramework.Contains('-tvos'))" />
 	</ItemGroup>
 
 	<ItemGroup>

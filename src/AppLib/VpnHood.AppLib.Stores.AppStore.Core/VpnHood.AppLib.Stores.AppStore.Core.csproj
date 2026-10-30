@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>VpnHood App Store updates and reviews, which any App Store app can use. Billing and Sign in with Apple are in VpnHood.AppLib.Stores.AppStore.</Description>
-		<TargetFramework>net11.0-ios</TargetFramework>
+		<TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-tvos'))">17.0</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.AppLib.Stores.AppStore</RootNamespace>
 	</PropertyGroup>
 

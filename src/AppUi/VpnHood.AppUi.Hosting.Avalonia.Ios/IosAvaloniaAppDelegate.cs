@@ -34,6 +34,7 @@ public abstract class IosAvaloniaAppDelegate<TUi> : AvaloniaAppDelegate<TUi>
     // The head's init params: the app's, and the two iOS facts the platform builds its device from.
     protected abstract IosInitParams CreateInitParams();
 
+#if !TVOS // a TV does not turn
     // An iPhone stays upright: the UI's wide layout is for an iPad, not a phone on its side. iOS takes
     // this answer over the Info.plist's orientations; an iPad turns every way, and shares the
     // screen with other apps too (no UIRequiresFullScreen in the heads' Info.plist): nothing here
@@ -45,6 +46,7 @@ public abstract class IosAvaloniaAppDelegate<TUi> : AvaloniaAppDelegate<TUi>
             ? UIInterfaceOrientationMask.Portrait
             : UIInterfaceOrientationMask.All;
     }
+#endif
 
     private static void OnActivated(object? sender, ActivatedEventArgs e)
     {

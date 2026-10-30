@@ -1,4 +1,5 @@
-﻿using StoreKit;
+﻿#if !TVOS // an Apple TV has no in-app review prompt: StoreKit has none for tvOS
+using StoreKit;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.Ios.Utils;
@@ -32,3 +33,4 @@ public class AppStoreInAppUserReviewProvider : IAppUserReviewProvider
         }).Vhc();
     }
 }
+#endif

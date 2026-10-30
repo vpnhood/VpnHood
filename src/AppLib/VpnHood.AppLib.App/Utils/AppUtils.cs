@@ -77,6 +77,7 @@ public static class AppUtils
         if (OperatingSystem.IsAndroid()) return AppOsType.Android;
         if (OperatingSystem.IsMacCatalyst()) return AppOsType.MacOs;
         if (OperatingSystem.IsIOS()) return AppOsType.Ios;
+        if (OperatingSystem.IsTvOS()) return AppOsType.Ios; // the iOS app's other platform, under the same App Review
         if (OperatingSystem.IsWindows()) return AppOsType.Windows;
         if (OperatingSystem.IsMacOS()) return AppOsType.MacOs;
         if (OperatingSystem.IsLinux()) return AppOsType.Linux;

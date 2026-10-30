@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>iOS (Apple Network.framework, iOS 15+) implementation of the VpnHood QUIC abstractions.</Description>
-		<TargetFramework>net11.0-ios</TargetFramework>
+		<TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-tvos'))">17.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>

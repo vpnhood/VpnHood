@@ -27,6 +27,15 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!-- The Apple libraries' targets: iOS, and tvOS beside it only for a build that asks
+         (-p:VhAppleTv=true, the Apple TV heads'): the Apple TV app is not released yet, and no other
+         build - CI's packages included - has the tvOS workload. A library's tvOS floor is 17, the
+         first tvOS with Network Extension. -->
+    <VhAppleTargetFrameworks>net11.0-ios</VhAppleTargetFrameworks>
+    <VhAppleTargetFrameworks Condition="'$(VhAppleTv)' == 'true'">net11.0-ios;net11.0-tvos</VhAppleTargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <!-- The Vh checkout root (this repo's parent), defined ONCE for every project: the private
          ".user" folder and the sibling repos (VpnHood.AppUi.Spa, …) are all found from here,
          so no csproj ever counts "..\" again and a clone works wherever it lands. Anchored to

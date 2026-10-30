@@ -1,0 +1,75 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0-tvos</TargetFramework>
+    <RuntimeIdentifier>tvos-arm64</RuntimeIdentifier>
+    <!-- the first tvOS with Network Extension -->
+    <SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>
+    <UseMaui>false</UseMaui>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
+    <!-- The iOS app's other platform (Client.Ios.Apple): its bundle id, name, App Group and extension's
+         id come from the same identity (../Directory.Build.props), so both are one App Store record. -->
+    <AssemblyName>$(VhAppPackageTitle)</AssemblyName>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+
+    <!-- Automatic signing: Xcode picks the cert/profile for the team (6KKW3MKLR7, OmegaHood LLC). -->
+    <AutomaticProvisioning>true</AutomaticProvisioning>
+    <CodesignKey>Apple Development</CodesignKey>
+
+    <!-- The split filters' SQLite (VpnHood.Core.Filtering.Sqlite) calls into the process, as on iOS, but
+         its package ships no tvOS build of the library: tvOS's own libsqlite3 answers those calls. -->
+    <MtouchExtraArgs>$(MtouchExtraArgs) --gcc_flags=-lsqlite3</MtouchExtraArgs>
+  </PropertyGroup>
+
+  <!-- All but the one tvOS's libsqlite3 leaves out, which the filters never call: the linker is asked
+       for no such symbol. -->
+  <ItemGroup>
+    <ReferenceNativeSymbol Include="sqlite3_enable_load_extension" SymbolType="Function" SymbolMode="Ignore" />
+  </ItemGroup>
+
+  <!-- The Apple libraries target tvOS only for a build that asks (VhAppleTargetFrameworks). -->
+  <Target Name="VhRequireAppleTv" BeforeTargets="Restore;_GenerateRestoreGraph;Build" Condition="'$(VhAppleTv)' != 'true'">
+    <Error Text="Build the Apple TV head with -p:VhAppleTv=true: without it the Apple libraries have no tvOS build to reference." />
+  </Target>
+
+  <!-- Apple's privacy manifest, the iOS app's: the same app, the same uses. At the ROOT of the .app
+       bundle, where App Store Connect's scanner looks (Client.Ios.Apple's csproj says why). -->
+  <ItemGroup>
+    <BundleResource Include="..\Client.Ios.Apple\PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- App framework + the Apple device abstraction. -->
+    <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+    <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+    <!-- The Apple app code: the VpnHoodIosApp bootstrap and the UI context. -->
+    <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Ios\VpnHood.AppLib.App.Ios.csproj" />
+    <!-- App Store updates (AppStoreAppUpdaterProvider). -->
+    <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.AppStore.Core\VpnHood.AppLib.Stores.AppStore.Core.csproj" />
+    <!-- The UI this head runs, which AppDelegate is the application delegate of. -->
+    <ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Ios\VpnHood.AppUi.Hosting.Avalonia.Ios.csproj" />
+    <!-- The UI itself: the pages, the controls, the themes. -->
+    <ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
+    <!-- Shared client resources: the IP-location db and ClientAppResources. -->
+    <ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Network Extension, bundled as a PlugIn (.appex) inside the app, as on iOS
+         (Client.Ios.Apple's csproj says why CodesignProvision is dropped). -->
+    <ProjectReference Include="..\Client.Tvos.Extension\VpnHood.App.Client.Tvos.Extension.csproj">
+      <IsAppExtension>true</IsAppExtension>
+      <UndefineProperties>CodesignProvision</UndefineProperties>
+    </ProjectReference>
+  </ItemGroup>
+
+	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
+	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
+	<!-- The page the web host serves a paired phone - the Avalonia UI's browser build - placed the same way:
+	     the same targets a package reference of VpnHood.AppUi.Presentation.Classic.Avalonia imports; the
+	     head reads it at "assets/web-root.zip". -->
+	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\buildTransitive\VpnHood.AppUi.Presentation.Classic.Avalonia.targets" />
+</Project>

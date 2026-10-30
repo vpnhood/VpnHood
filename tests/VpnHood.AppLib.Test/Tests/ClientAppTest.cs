@@ -10,6 +10,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test;
+using VpnHood.Test.Device;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
@@ -312,6 +313,47 @@ public class ClientAppTest : TestAppBase
         Assert.AreEqual(token2.ServerToken.CreatedTime,
             app.VpnProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
+    }
+
+    // The person's no at the OS's VPN prompt ends the connect: the retry with a token from the server's
+    // urls is for a server that failed, and would only show the prompt again.
+    [TestMethod]
+    public async Task A_cancelled_vpn_prompt_is_not_asked_again_with_a_new_token()
+    {
+        // the token's url, counting the asks
+        var endPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback);
+        var tokenAsks = 0;
+        using var webServer = new WebserverLite(new WebserverSettings(endPoint.Address.ToString(), endPoint.Port),
+            x => x.SendPlainText("", 404));
+        webServer
+            .AddRouteMapper(allowAnyOrigin: true)
+            .AddStatic(HttpMethod.GET, "/accesskey", async ctx => {
+                Interlocked.Increment(ref tokenAsks);
+                await ctx.SendPlainText("something_wrong");
+            });
+        _ = webServer.StartAsync(TestContext.CancellationToken);
+
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.ServerTokenUrls = [$"http://{endPoint}/accesskey"];
+        using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+
+        // the person says no every time the prompt shows
+        var prompts = 0;
+        var device = new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter()) {
+            RequestVpnServiceHandler = _ => {
+                Interlocked.Increment(ref prompts);
+                return Task.FromException(new UserCanceledException("VPN permission has been rejected."));
+            }
+        };
+        await using var app = TestAppHelper.CreateClientApp(device: device);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+
+        await Assert.ThrowsExactlyAsync<UserCanceledException>(() =>
+            app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken));
+        Assert.AreEqual(1, prompts);
+        Assert.AreEqual(0, tokenAsks);
     }
 
     [TestMethod]

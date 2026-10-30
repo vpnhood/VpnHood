@@ -1198,6 +1198,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // try to update the token from url after connection or error if ResponseAccessKey is not set
             if (ex is not NoInternetException && // diagnoser
+                ex is not UserCanceledException && // the person's no at the VPN prompt; a retry asks again
                 allowUpdateToken &&
                 !VhUtils.IsNullOrEmpty(token.ServerToken.Urls) &&
                 await VpnProfileService.UpdateServerTokenByUrls(token, cancellationToken).Vhc()) {

@@ -151,6 +151,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // server finder
         _serverFinder = new ServerFinder(socketFactory,
+            farmSecret: Token.ServerToken.Secret ?? throw new InvalidOperationException("The access key has no farm secret."),
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.Transport.ServerQueryTimeout,
             endPointStrategy: options.EndPointStrategy,

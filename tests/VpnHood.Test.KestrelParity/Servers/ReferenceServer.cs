@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.Core.Tunneling.ProbeResistance;
 
 namespace VpnHood.Test.KestrelParity.Servers;
 
@@ -35,7 +36,7 @@ internal sealed class ReferenceServer : IAsyncDisposable
         HttpEndPoint = httpEndPoint;
     }
 
-    public static async Task<ReferenceServer> Start(X509Certificate2 certificate, int redirectPort,
+    public static async Task<ReferenceServer> Start(X509Certificate2 certificate, int redirectPort, byte[] farmSecret,
         CancellationToken cancellationToken)
     {
         var tlsEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
@@ -55,7 +56,9 @@ internal sealed class ReferenceServer : IAsyncDisposable
             .AddJwtBearer(options => {
                 options.IncludeErrorDetails = false;
                 options.TokenValidationParameters = new TokenValidationParameters {
-                    IssuerSigningKey = new SymmetricSecurityKey(new byte[32]),
+                    IssuerSigningKey = new SymmetricSecurityKey(RequestProof.DeriveSigningKey(farmSecret)),
+                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+                    ClockSkew = RequestProof.ClockTolerance,
                     ValidateIssuer = false,
                     ValidateAudience = false
                 };

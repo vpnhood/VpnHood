@@ -1,5 +1,6 @@
 # Latest
 
+* Update: A VpnHoodServer of your own must run this release or later before this version can connect to it #android #ios #windows #linux
 * Feature: On Windows and iOS, an access key's file (.cdy) and its link (vh:...) open in VpnHood! CLIENT, which adds its server, chooses it and says so, as on Android #windows #ios
 * Update: Access keys start with vh: rather than vh://, so their links open on iPhone and Mac too; a key given out before still works everywhere, and as a link everywhere but on iPhone and Mac
 * Improve: The Android app starts two to four times faster, most of all on budget phones #android

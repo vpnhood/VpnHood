@@ -10,18 +10,21 @@ internal static partial class ParityProbes
     private static readonly Guid PathId = Guid.Parse("2b9a7a4e-5c1d-4d0e-9f3a-6c2e8b1d7f40");
     private static readonly Guid ConnectionId = Guid.Parse("7d3e1c2a-0b4f-4e6d-8a9b-1f2e3d4c5b6a");
 
-    // requests in our clients' own form, from someone who has no key: before protocol 15 some still tell
+    // Requests in a client's form must prove the farm key before any upgrade or body read.
     private static IReadOnlyList<Probe> ClientRequests()
     {
         // made once, so both servers get the same token
         var unregistered = FakeJwt(expired: false);
-        var expired = FakeJwt(expired: true);
+        var expiredAt = DateTimeOffset.UtcNow.AddHours(-1);
         return [
             Tls("vh-upgrade-v14", t => VhUpgrade(t, 14)),
             Tls("vh-upgrade-v15-none", t => VhUpgrade(t, 15)),
             Tls("vh-upgrade-v15-malformed", t => VhUpgrade(t, 15, "abc.def")),
             Tls("vh-upgrade-v15-unregistered", t => VhUpgrade(t, 15, unregistered)),
-            Tls("vh-upgrade-v15-expired", t => VhUpgrade(t, 15, expired)),
+            Tls("vh-upgrade-v15-expired", t => VhUpgrade(t, 15,
+                t.Proof.Create(t.Sni, 15, expiredAt))),
+            Tls("vh-post-v15-expired-no-body", t => VhPost(t, 15, 50,
+                t.Proof.Create(t.Sni, 15, expiredAt))),
             Tls("vh-post-v14-fake-session", t => VhPost(t, 14, FakeSessionBody.Length) + FakeSessionBody),
             Tls("vh-post-v15-fake-session", t => VhPost(t, 15, FakeSessionBody.Length, unregistered) + FakeSessionBody),
             new("vh-post-v14-no-body", ProbeKind.Slow, (target, log, cancellationToken) =>

@@ -39,8 +39,9 @@ public class MaintenanceTest : TestBase
 
         await using var connectorService = CreateConnectorService(server, token, useWebSocket, useQuic);
         var payload = BuildHelloPayload(token);
-        await using var connection = await connectorService.GetConnectionToServer("maintenance-test", payload.Length,
+        var result = await connectorService.GetConnectionToServer("maintenance-test", payload.Length,
             isTcpPacketChannel: false, onConnectAttempt: null, TestCt);
+        await using var connection = result.Connection;
         await connection.Stream.WriteAsync(payload, TestCt);
         await connection.Stream.FlushAsync(TestCt);
 
@@ -55,7 +56,8 @@ public class MaintenanceTest : TestBase
         }
     }
 
-    // no client sends it; the server still serves it, so a request is written by hand
+    // Compatibility (2026-10): this is the pre-15 framing, without a header proof.
+    // No current client sends it; retain until the server's minimum protocol becomes 15.
     [TestMethod]
     public async Task Maintenance_answers_a_hello_with_a_503_on_a_WebSocket_with_no_handshake()
     {
@@ -78,7 +80,7 @@ public class MaintenanceTest : TestBase
             $"Host: {token.ServerToken.HostName}\r\n" +
             $"Content-Length: {payload.Length}\r\n" +
             "X-Buffered: false\r\n" +
-            $"X-ProtocolVersion: {VpnHoodClientConfig.MaxProtocolVersion}\r\n" +
+            "X-ProtocolVersion: 14\r\n" +
             $"X-BinaryStream: {TunnelStreamType.WebSocketNoHandshake}\r\n" +
             "\r\n";
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), TestCt);
@@ -165,6 +167,7 @@ public class MaintenanceTest : TestBase
 
         var serverToken = token.ServerToken;
         var connectorService = new ConnectorService(new ConnectorServiceOptions {
+            ServerSecret = serverToken.Secret!,
             SocketFactory = TestHelper.CreateTestSocketFactory(),
             ProxyConnector = null,
             VpnEndPoint = new VpnEndPoint(serverToken.HostEndPoints!.First(), serverToken.HostName,
@@ -174,8 +177,6 @@ public class MaintenanceTest : TestBase
         });
 
         connectorService.Init(
-            protocolVersion: connectorService.ProtocolVersion,
-            serverSecret: null,
             channelIdleTimeout: TimeSpan.FromSeconds(30),
             useWebSocket: useWebSocket,
             requestTimeout: TimeSpan.FromSeconds(10),

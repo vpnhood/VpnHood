@@ -1,8 +1,13 @@
 using System.Security.Cryptography.X509Certificates;
+using System.Net;
+using System.Net.Security;
+using System.Net.Sockets;
 using System.Text;
 using VpnHood.Test.KestrelParity.Probes;
 using VpnHood.Test.KestrelParity.Probing;
 using VpnHood.Test.KestrelParity.Servers;
+using VpnHood.Core.Tunneling.ProbeResistance;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Test.KestrelParity;
 
@@ -19,18 +24,10 @@ public class KestrelParityTest
     private static OurServer? _ourServer;
     private static ReferenceServer? _referenceServer;
 
-    // before protocol 15 a request with our headers carries no key: an upgrade gets its 101, a made-up session our
-    // error, and a POST waits for the body that holds the key
-    private const string UntilProtocol15 = "a v14 request with our headers is taken as a client's before any key";
-
-    // probes whose answers differ today, each with why and what ours answers; one that comes to match leaves the list
+    // This fixture represents the restricted-network profile: minimum protocol 15. Legacy clients
+    // remain supported by a server whose administrator has not raised that minimum yet.
     private static readonly IReadOnlyDictionary<string, KnownDifference> KnownDifferences =
-        new Dictionary<string, KnownDifference> {
-            ["vh-upgrade-v14"] = new(UntilProtocol15, @"HTTP/1\.1 101 Switching Protocols.*\n= open"),
-            ["vh-post-v14-fake-session"] = new(UntilProtocol15,
-                @"HTTP/1\.1 200 OK.*""ErrorCode"":""AccessError"".*\n= closed after 0s"),
-            ["vh-post-v14-no-body"] = new(UntilProtocol15, @"HTTP/1\.1 401 Unauthorized.*\n= closed after (29|30|31)s")
-        };
+        new Dictionary<string, KnownDifference>();
 
     public required TestContext TestContext { get; set; }
 
@@ -46,7 +43,7 @@ public class KestrelParityTest
         _ourServer = await OurServer.Start(StoragePath, testContext.CancellationToken);
         _certificate = X509CertificateLoader.LoadPkcs12FromFile(_ourServer.CertificatePath, null);
         _referenceServer = await ReferenceServer.Start(_certificate, _ourServer.TlsEndPoint.Port,
-            testContext.CancellationToken);
+            _ourServer.FarmSecret, testContext.CancellationToken);
     }
 
     // each step runs whatever the one before it did, so a reference that won't stop can't keep our server on port 80
@@ -87,6 +84,49 @@ public class KestrelParityTest
     }
 
     [TestMethod]
+    public async Task A_signed_proof_passes_both_validators_and_its_expired_twin_is_challenged()
+    {
+        var ours = _ourServer ?? throw new InvalidOperationException("Our server did not start.");
+        var reference = _referenceServer ?? throw new InvalidOperationException("The reference did not start.");
+        var proof = new RequestProof(ours.FarmSecret);
+        var now = DateTimeOffset.UtcNow;
+        var valid = proof.Create(ours.HostName, 15, now);
+        var expired = proof.Create(ours.HostName, 15, now.AddHours(-1));
+
+        // The two applications have different authenticated behavior. These positive controls prove
+        // both actually accept this signing key, so the expired cases cannot pass on bad signatures.
+        Assert.AreEqual(HttpStatusCode.OK,
+            await ReadProofStatus(reference.TlsEndPoint, valid, upgrade: false, TestContext.CancellationToken));
+        Assert.AreEqual(HttpStatusCode.SwitchingProtocols,
+            await ReadProofStatus(ours.TlsEndPoint, valid, upgrade: true, TestContext.CancellationToken));
+        Assert.AreEqual(HttpStatusCode.Unauthorized,
+            await ReadProofStatus(reference.TlsEndPoint, expired, upgrade: false, TestContext.CancellationToken));
+        Assert.AreEqual(HttpStatusCode.Unauthorized,
+            await ReadProofStatus(ours.TlsEndPoint, expired, upgrade: true, TestContext.CancellationToken));
+    }
+
+    private static async Task<HttpStatusCode> ReadProofStatus(IPEndPoint endPoint, string proof, bool upgrade,
+        CancellationToken cancellationToken)
+    {
+        var host = _ourServer!.HostName;
+        using var tcp = new TcpClient();
+        await tcp.ConnectAsync(endPoint, cancellationToken);
+        await using var tls = new SslStream(tcp.GetStream());
+        await tls.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
+            TargetHost = host,
+            RemoteCertificateValidationCallback = (_, _, _, _) => true
+        }, cancellationToken);
+        var upgradeHeaders = upgrade
+            ? "Connection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+            : "Connection: close\r\n";
+        var request = $"GET /api/status HTTP/1.1\r\nHost: {host}\r\nX-ProtocolVersion: 15\r\n" +
+                      $"Authorization: Bearer {proof}\r\n" + upgradeHeaders + "\r\n";
+        await tls.WriteAsync(Encoding.ASCII.GetBytes(request), cancellationToken);
+        using var response = await HttpUtils.ReadResponse(tls, cancellationToken);
+        return response.StatusCode;
+    }
+
+    [TestMethod]
     [DataRow(ProbeKind.Quick)]
     [DataRow(ProbeKind.Slow)]
     [DataRow(ProbeKind.Bulk)]
@@ -100,9 +140,10 @@ public class KestrelParityTest
 
         var reportPath = Path.Combine(RootPath, $"{kind}.txt");
         File.Delete(reportPath + ".progress");
+        var proof = new RequestProof(ourServer.FarmSecret);
         var results = await ProbeRunner.Run(probes,
-            new ProbeTarget("ref", referenceServer.TlsEndPoint, referenceServer.HttpEndPoint, ourServer.HostName),
-            new ProbeTarget("ours", ourServer.TlsEndPoint, ourServer.HttpEndPoint, ourServer.HostName),
+            new ProbeTarget("ref", referenceServer.TlsEndPoint, referenceServer.HttpEndPoint, ourServer.HostName, proof),
+            new ProbeTarget("ours", ourServer.TlsEndPoint, ourServer.HttpEndPoint, ourServer.HostName, proof),
             reportPath + ".progress", TestContext.CancellationToken);
         await File.WriteAllTextAsync(reportPath, Report(results), TestContext.CancellationToken);
         TestContext.WriteLine($"Kestrel {ReferenceServer.Version}; report: {reportPath}");

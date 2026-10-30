@@ -14,6 +14,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
+using VpnHood.Core.Tunneling.ProbeResistance;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client.ConnectorServices;
@@ -50,6 +51,12 @@ internal class ConnectorService : IAsyncDisposable
     private bool _disposed;
     private bool _useWebSocket;
     private int _generation; // RetireConnections moves it on: a connection made before it is not reused
+    private readonly RequestProof _requestProof;
+    private readonly Lock _proofLock = new();
+    private string? _proofToken;
+    private long _proofCreatedTick;
+    private TimeSpan _clockOffset;
+    private long _clockCorrectionVersion;
 
     // a connection kept too long draws a firewall's notice, so each retires at a random age between these: random,
     // so they do not retire together, as that would be a pattern too. Settable for tests
@@ -57,7 +64,9 @@ internal class ConnectorService : IAsyncDisposable
     internal static TimeSpan MaxConnectionLifespan { get; set; } = TimeSpan.FromMinutes(10);
 
     public ConnectorStat Stat { get; }
-    public int ProtocolVersion { get; private set; } = 8;
+    // The HTTP proof stays at 15 even if the server selects an older
+    // binary session format. A 401 never sends us back to an unauthenticated HTTP version.
+    public int ProtocolVersion => RequestProof.ProtocolVersion;
     public VpnEndPoint VpnEndPoint { get; init; }
     public TimeSpan RequestTimeout { get; set; }
     public bool UseQuic { get; set; }
@@ -75,6 +84,7 @@ internal class ConnectorService : IAsyncDisposable
         AllowChannelReuse = options.AllowChannelReuse;
         Stat = new ConnectorStat(() => _idleConnectionItems.Count);
         VpnEndPoint = options.VpnEndPoint;
+        _requestProof = new RequestProof(options.ServerSecret);
         RequestTimeout = options.RequestTimeout;
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
 
@@ -99,18 +109,15 @@ internal class ConnectorService : IAsyncDisposable
         _idleConnectionTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
     }
 
-    public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan channelIdleTimeout, bool useWebSocket,
+    public void Init(TimeSpan channelIdleTimeout, bool useWebSocket,
         TimeSpan requestTimeout, bool useQuic, IPEndPoint? quicEndPoint)
     {
-        _ = serverSecret;
-        ProtocolVersion = protocolVersion;
         _idleConnectionTimeout = channelIdleTimeout;
         _quicConnectionFactory?.IdleConnectionTimeout = channelIdleTimeout;
         _useWebSocket = useWebSocket;
         RequestTimeout = requestTimeout;
         UseQuic = useQuic;
         QuicEndPoint = quicEndPoint;
-
     }
 
     private static string BuildRequestPath(string? pathBase)
@@ -125,15 +132,53 @@ internal class ConnectorService : IAsyncDisposable
         return urlBuilder.ToString();
     }
 
+    private (string Token, long ClockCorrectionVersion) GetProofToken()
+    {
+        lock (_proofLock) {
+            var nowTick = Environment.TickCount64;
+            if (_proofToken == null ||
+                nowTick - _proofCreatedTick >= (RequestProof.Lifetime - TimeSpan.FromMinutes(1)).TotalMilliseconds) {
+                var now = DateTimeOffset.UtcNow + _clockOffset;
+                _proofToken = _requestProof.Create(VpnEndPoint.HostName, ProtocolVersion, now);
+                // Share a proof across streams; a wall-clock change must not delay its refresh.
+                _proofCreatedTick = nowTick;
+            }
+            return (_proofToken, _clockCorrectionVersion);
+        }
+    }
+
+    internal bool TryCorrectClock(DateTimeOffset? serverTime, long clockCorrectionVersion)
+    {
+        lock (_proofLock) {
+            // Another request already corrected this proof's clock. Retry with that correction;
+            // an older response must not overwrite it with a stale Date.
+            if (clockCorrectionVersion < _clockCorrectionVersion)
+                return true;
+            if (serverTime == null)
+                return false;
+
+            var offset = serverTime.Value - DateTimeOffset.UtcNow;
+            if ((offset - _clockOffset).Duration() <= RequestProof.ClockTolerance)
+                return false;
+
+            // Trust the verified TLS peer even after another device-clock change or a large offset.
+            _clockOffset = offset;
+            _clockCorrectionVersion++;
+            _proofToken = null;
+            return true;
+        }
+    }
+
     private static string BuildPostRequest(
         string hostName, string? pathBase,
         TunnelStreamType streamType, int protocolVersion,
-        int contentLength, string connectionId)
+        int contentLength, string connectionId, string proofToken)
     {
         // write HTTP request
         var headerBuilder = new StringBuilder()
             .Append($"POST {BuildRequestPath(pathBase)} HTTP/1.1\r\n")
             .Append($"Host: {hostName}\r\n")
+            .Append($"Authorization: Bearer {proofToken}\r\n")
             .Append($"Content-Length: {contentLength}\r\n")
             .Append("Content-Type: application/octet-stream\r\n")
             .Append("User-Agent: Hood\r\n")
@@ -149,6 +194,7 @@ internal class ConnectorService : IAsyncDisposable
 
     private async Task<IStreamConnection> CreateWebSocketConnection(
         IStreamConnection streamConnection, ReuseConnectionCallback? reuseCallback,
+        (string Token, long ClockCorrectionVersion) requestProof,
         CancellationToken cancellationToken)
     {
         var webSocketKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
@@ -157,6 +203,7 @@ internal class ConnectorService : IAsyncDisposable
         var headerBuilder = new StringBuilder()
             .Append($"GET /{BuildRequestPath(VpnEndPoint.PathBase)} HTTP/1.1\r\n")
             .Append($"Host: {VpnEndPoint.HostName}\r\n")
+            .Append($"Authorization: Bearer {requestProof.Token}\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
             .Append($"X-ConnectionId: {streamConnection.ConnectionId}\r\n")
@@ -170,7 +217,9 @@ internal class ConnectorService : IAsyncDisposable
         await streamConnection.Stream.WriteAsync(Encoding.UTF8.GetBytes(headerBuilder.ToString()), cancellationToken).Vhc();
 
         // wait for response and websocket upgrade if needed before sending any data because GET can not have body
-        var responseMessage = await HttpUtils.ReadResponse(streamConnection.Stream, cancellationToken).Vhc();
+        using var responseMessage = await HttpUtils.ReadResponse(streamConnection.Stream, cancellationToken).Vhc();
+        if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
+            throw new RequestAuthorizationException(responseMessage.Headers.Date, requestProof.ClockCorrectionVersion);
         if (responseMessage.StatusCode == HttpStatusCode.ServiceUnavailable)
             throw new MaintenanceException();
 
@@ -178,7 +227,8 @@ internal class ConnectorService : IAsyncDisposable
             throw new Exception("Unexpected response.");
 
         // create a client stream
-        var webSocketStream = new WebSocketStream(streamConnection.Stream, streamConnection.ConnectionId, UseBuffer, isServer: false);
+        var webSocketStream = new WebSocketStream(streamConnection.Stream, streamConnection.ConnectionId, UseBuffer,
+            isServer: false);
         return new ReusableStreamConnection(streamConnection, webSocketStream, reuseCallback) {
             RequireHttpResponse = false
         };
@@ -194,11 +244,12 @@ internal class ConnectorService : IAsyncDisposable
     }
 
     private async Task<IStreamConnection> CreateSimpleConnection(IStreamConnection streamConnection, int contentLength,
-        CancellationToken cancellationToken)
+        string proofToken, CancellationToken cancellationToken)
     {
         // write HTTP request
         var header = BuildPostRequest(hostName: VpnEndPoint.HostName, pathBase: VpnEndPoint.PathBase,
-            TunnelStreamType.None, ProtocolVersion, contentLength: contentLength, connectionId: streamConnection.ConnectionId);
+            TunnelStreamType.None, ProtocolVersion, contentLength: contentLength,
+            connectionId: streamConnection.ConnectionId, proofToken: proofToken);
 
         // Send header and wait for its response
         await streamConnection.Stream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
@@ -207,11 +258,12 @@ internal class ConnectorService : IAsyncDisposable
     }
 
     private Task<IStreamConnection> CreateHttpConnection(IStreamConnection streamConnection, int contentLength,
-        ReuseConnectionCallback? reuseCallback, CancellationToken cancellationToken)
+        ReuseConnectionCallback? reuseCallback, (string Token, long ClockCorrectionVersion) requestProof,
+        CancellationToken cancellationToken)
     {
         return _useWebSocket
-            ? CreateWebSocketConnection(streamConnection, reuseCallback, cancellationToken) // WebSocket connection
-            : CreateSimpleConnection(streamConnection, contentLength, cancellationToken); // Simple HTTP connection
+            ? CreateWebSocketConnection(streamConnection, reuseCallback, requestProof, cancellationToken) // WebSocket connection
+            : CreateSimpleConnection(streamConnection, contentLength, requestProof.Token, cancellationToken); // Simple HTTP connection
     }
 
     // Gate on FRESH server connections (pooled reuse is not gated). Every fresh connection is a full
@@ -243,8 +295,9 @@ internal class ConnectorService : IAsyncDisposable
     // fault, and the server finder alone checks more endpoints at once than the gate admits
     private static readonly TimeSpan LongConnectWaitTime = TimeSpan.FromMilliseconds(500);
 
-    public async Task<IStreamConnection> GetConnectionToServer(string streamId, int contentLength,
-        bool isTcpPacketChannel, Action? onConnectAttempt, CancellationToken cancellationToken)
+    public async Task<(IStreamConnection Connection, long ClockCorrectionVersion)> GetConnectionToServer(
+        string streamId, int contentLength, bool isTcpPacketChannel, Action? onConnectAttempt,
+        CancellationToken cancellationToken)
     {
         // Create raw stream connection from appropriate factory
         if (UseQuic && _quicConnectionFactory == null)
@@ -277,10 +330,11 @@ internal class ConnectorService : IAsyncDisposable
 
             try {
                 // Apply HTTP framing on top of the raw connection
+                var requestProof = GetProofToken();
                 var connection = await CreateHttpConnection(rawConnection, contentLength, reuseCallback,
-                    cancellationToken).Vhc();
+                    requestProof, cancellationToken).Vhc();
                 lock (Stat) Stat.CreatedConnectionCount++;
-                return connection;
+                return (connection, requestProof.ClockCorrectionVersion);
             }
             catch {
                 // not waited for: the gate's slot would be held while a QUIC stream's close waits for the peer

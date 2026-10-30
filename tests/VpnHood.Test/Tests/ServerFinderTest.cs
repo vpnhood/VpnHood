@@ -1,7 +1,9 @@
 ﻿using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Server;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
@@ -133,6 +135,33 @@ public class ServerFinderTest : TestBase
     }
 
     [TestMethod]
+    public async Task Redirect_without_secrets_uses_the_access_keys_farm_for_another_host()
+    {
+        var storageFolder = TestHelper.CreateAccessManagerWorkingDir();
+        using var entryAccessManager = TestHelper.CreateAccessManager(storagePath: storageFolder);
+        await using var entryServer = await TestHelper.CreateServer(entryAccessManager);
+        using var redirectedAccessManager = TestHelper.CreateAccessManager(storagePath: storageFolder);
+        await using var redirectedServer = await TestHelper.CreateServer(redirectedAccessManager);
+        var token = TestHelper.CreateAccessToken(entryServer);
+        var redirectedToken = JsonUtils.JsonClone(TestHelper.CreateAccessToken(redirectedServer).ServerToken);
+        redirectedToken.Secret = null;
+        redirectedToken.HostName = "localhost";
+        redirectedToken.IsValidHostName = true;
+        redirectedToken.HostEndPoints = null;
+        redirectedToken.HostPort = redirectedServer.ServerHost.TcpEndPoints.First().Port;
+        Assert.AreNotEqual(token.ServerToken.HostName, redirectedToken.HostName);
+
+        // A domain-only redirect has no farm token, and one failed certificate's name must not discard the others.
+        var unavailableToken = JsonUtils.JsonClone(redirectedToken);
+        unavailableToken.HostName = "unavailable-redirect.invalid";
+        entryAccessManager.RedirectServerTokens = [unavailableToken, redirectedToken];
+
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
+        await client.WaitForState(ClientState.Connected);
+        Assert.AreEqual(redirectedServer.ServerHost.TcpEndPoints.First(), client.RequiredSession.Config.HostTcpEndPoint);
+    }
+
+    [TestMethod]
     public async Task Connected_server_is_kept_until_the_client_closes()
     {
         await using var server = await TestHelper.CreateServer();
@@ -152,7 +181,9 @@ public class ServerFinderTest : TestBase
     }
 
     [TestMethod]
-    public async Task Name_that_resolves_to_nothing_connects_through_the_kept_server()
+    [DataRow("kept-server.invalid")]
+    [DataRow("redirected-server.invalid")]
+    public async Task Name_that_resolves_to_nothing_connects_through_the_kept_server(string savedHostName)
     {
         // a name that never resolves (.invalid), as none does through the dead tunnel after a VPN host's crash
         await using var server = await TestHelper.CreateServer();
@@ -171,12 +202,39 @@ public class ServerFinderTest : TestBase
 
         // what a crash leaves: the server its session was on
         new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), token.TokenId).Write(
-            new VpnEndPoint(serverEndPoint, token.ServerToken.HostName, token.ServerToken.CertificateHash,
+            new VpnEndPoint(serverEndPoint, savedHostName, token.ServerToken.CertificateHash,
                 token.ServerToken.PathBase));
 
         await using var client2 = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
         await client2.WaitForState(ClientState.Connected);
         Assert.AreEqual(serverEndPoint, client2.RequiredSession.Config.HostTcpEndPoint);
+    }
+
+    [TestMethod]
+    public async Task Unauthorized_kept_server_is_removed_before_the_next_connect()
+    {
+        await using var server = await TestHelper.CreateServer();
+        await using var savedServer = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var savedToken = TestHelper.CreateAccessToken(savedServer).ServerToken;
+        var workingFolder = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        var connectedServerFile = new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), token.TokenId);
+
+        // The probe proves reachability; the hello fails because the saved endpoint belongs to another farm.
+        connectedServerFile.Write(
+            new VpnEndPoint(savedServer.ServerHost.TcpEndPoints.First(), token.ServerToken.HostName,
+                savedToken.CertificateHash, token.ServerToken.PathBase));
+
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
+            vpnAdapter: new TestNullVpnAdapter(), autoConnect: false, workingFolder: workingFolder);
+        await Assert.ThrowsExactlyAsync<RequestAuthorizationException>(() => client.Connect(TestCt));
+        Assert.AreEqual(ClientState.Disposed, client.State);
+        Assert.IsNull(connectedServerFile.Read());
+
+        await using var nextClient = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
+            vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
+        await nextClient.WaitForState(ClientState.Connected);
+        Assert.AreEqual(server.ServerHost.TcpEndPoints.First(), nextClient.RequiredSession.Config.HostTcpEndPoint);
     }
 }

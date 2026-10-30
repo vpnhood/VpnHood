@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
@@ -10,9 +12,11 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Streams;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Dom;
@@ -717,20 +721,57 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task Disconnect_if_client_not_supported()
+    [DataRow(9, 8)]
+    [DataRow(14, 13)]
+    [DataRow(15, 14)]
+    [DataRow(1000, 14)]
+    public async Task Disconnect_if_client_not_supported(int minimumVersion, int clientVersion)
     {
-        // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.SessionOptions.MinClientProtocolVersion = 1000;
+        fileAccessManagerOptions.SessionOptions.MinClientProtocolVersion = minimumVersion;
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
-
         var token = TestHelper.CreateAccessToken(server);
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(server.ServerHost.TcpEndPoints[0], TestCt);
+        await using var stream = new SslStream(tcpClient.GetStream());
+        await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
+            TargetHost = token.ServerToken.HostName,
+            RemoteCertificateValidationCallback = (_, _, _, _) => true
+        }, TestCt);
 
-        // create client
-        await using var client = await TestHelper.CreateClient(token, autoConnect: false);
+        var clientInfo = new ClientInfo {
+            ClientId = Guid.NewGuid().ToString(),
+            ClientVersion = "1.0.0",
+            MinProtocolVersion = 8,
+            MaxProtocolVersion = clientVersion,
+            UserAgent = "MinimumVersionTest"
+        };
+        var hello = new HelloRequest {
+            RequestId = UniqueIdFactory.Create(),
+            EncryptedClientId = VhUtils.EncryptClientId(clientInfo.ClientId, token.Secret),
+            ClientInfo = clientInfo,
+            TokenId = token.TokenId
+        };
+        var body = StreamUtils.ObjectToJsonBuffer(hello);
+        // Legacy apps send HTTP 8 even when their binary capabilities are newer.
+        var header = $"POST / HTTP/1.1\r\nHost: {token.ServerToken.HostName}\r\n" +
+                     $"X-ProtocolVersion: 8\r\nX-BinaryStream: None\r\nContent-Length: {body.Length + 2}\r\n\r\n";
+        byte[] request = [.. Encoding.ASCII.GetBytes(header), 1, hello.RequestCode, .. body.Span];
+        await stream.WriteAsync(request, TestCt);
 
-        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => client.Connect(TestCt));
-        Assert.AreEqual(SessionErrorCode.UnsupportedClient, ex.SessionResponse.ErrorCode);
+        using var response = await HttpUtils.ReadResponse(stream, TestCt);
+        if (minimumVersion < 15) {
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var helloResponse = await StreamUtils.ReadObjectAsync<HelloResponse>(stream, TestCt);
+            Assert.AreEqual(SessionErrorCode.UnsupportedClient, helloResponse.ErrorCode);
+        }
+        else {
+            Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+            Assert.AreEqual(0, response.Content.Headers.ContentLength);
+            Assert.AreEqual("Bearer", response.Headers.WwwAuthenticate.Single().Scheme);
+            Assert.IsNull(response.Headers.WwwAuthenticate.Single().Parameter);
+            Assert.IsEmpty(server.SessionManager.Sessions);
+        }
     }
 
     [TestMethod]

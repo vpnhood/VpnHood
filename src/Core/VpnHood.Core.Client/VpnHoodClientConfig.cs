@@ -13,7 +13,9 @@ public class VpnHoodClientConfig
     // 12: fix server WebSocketNoHandshake 2026/02
     // 13: server QUIC 2026/05; no client sent it
     // 14: UDP with the server-reply bit and the freshness mark; older peers get no UDP 2026/10
-    public static int MaxProtocolVersion => 14;
+    // 15: prove the farm key in every HTTP request head; upgrade servers before these clients.
+    public static int MaxProtocolVersion => 15;
+    // The binary session may still use older capabilities; every fresh HTTP request uses 15.
     public static int MinProtocolVersion => 8;
     public required Version Version { get; init; }
     public required bool AutoDisposeVpnAdapter { get; init; }

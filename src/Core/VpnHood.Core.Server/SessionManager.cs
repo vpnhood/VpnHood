@@ -21,6 +21,7 @@ using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.ProbeResistance;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Core.Common.Configuration;
@@ -61,9 +62,16 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     public IpNetwork VirtualIpNetworkV4 => _virtualIpManager.IpNetworkV4;
     public IpNetwork VirtualIpNetworkV6 => _virtualIpManager.IpNetworkV6;
 
+    internal RequestProof RequestProof { get; private set; }
+
     public byte[] ServerSecret {
         get => _serverSecret;
-        set => _serverSecret = value;
+        set {
+            // Derive once when configuration changes, rather than on each incoming TCP stream.
+            var proof = new RequestProof(value);
+            _serverSecret = value;
+            RequestProof = proof;
+        }
     }
 
     internal SessionManager(
@@ -80,6 +88,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _vpnAdapter = vpnAdapter;
         _serverSecret = VhUtils.GenerateKey(128);
+        RequestProof = new RequestProof(_serverSecret);
         _deadSessionTimeout = options.DeadSessionTimeout;
         _sessionLocalService = new SessionLocalService(Path.Combine(storagePath, "sessions"), Sessions);
         _usageReporter = new SessionUsageReporter(_accessManager, this);

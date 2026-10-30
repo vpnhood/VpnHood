@@ -41,7 +41,7 @@ public class ServerHost : IAsyncDisposable
     private readonly ReverseProxyTrust _reverseProxyTrust;
     private bool _disposed;
 
-    public const int MaxProtocolVersion = 14;
+    public const int MaxProtocolVersion = 15;
     public const int MinProtocolVersion = 8;
 
     // the setting can only raise it: the server speaks nothing older than MinProtocolVersion
@@ -178,9 +178,12 @@ public class ServerHost : IAsyncDisposable
         HttpRequestHead request, Action? onAuthenticated, CancellationToken cancellationToken)
     {
         var headers = request.Headers;
+        if (!ClientRequestAuthenticator.TryAuthenticate(request, _sessionManager.RequestProof,
+                MinClientProtocolVersion, MaxProtocolVersion, out var protocolVersion))
+            return null;
+
         Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
         bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
-        int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
         var connectionId = headers.GetValueOrDefault("X-ConnectionId", streamConnection.ConnectionId);
         var webSocketKey = headers.GetValueOrDefault("Sec-WebSocket-Key", "");
         var upgrade = headers.GetValueOrDefault("Upgrade", "");
@@ -194,15 +197,13 @@ public class ServerHost : IAsyncDisposable
         if (upgrade.Equals("websocket", StringComparison.OrdinalIgnoreCase))
             streamType = TunnelStreamType.WebSocket;
 
-        if (protocolVersion is < MinProtocolVersion or > MaxProtocolVersion)
-            return null;
-
         switch (streamType) {
             case TunnelStreamType.None:
                 if (request.Method != "POST")
                     return null;
 
                 return new ServerStreamConnection(streamConnection) {
+                    HttpProtocolVersion = protocolVersion,
                     OnAuthenticated = onAuthenticated,
                     ClientIp = clientIp,
                     RequireHttpResponse = true,
@@ -218,6 +219,7 @@ public class ServerHost : IAsyncDisposable
                         streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
                     var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
                     return new ServerStreamConnection(reusableConnection) {
+                        HttpProtocolVersion = protocolVersion,
                         OnAuthenticated = onAuthenticated,
                         ConnectionId = connectionId,
                         ClientIp = clientIp,
@@ -230,9 +232,8 @@ public class ServerHost : IAsyncDisposable
                     if (request.Method != "GET")
                         return null;
 
-                    // the 101 goes out unchecked, as an upgrade carries no key before protocol 15. No gate by the
-                    // client's IP: it would refuse a client after an IP change or a restart; the minimum protocol
-                    // turns old clients away instead
+                    // Protocol 15 has proven the farm key before this 101. The older-protocol exception
+                    // is controlled by the configured minimum, not by an IP remembered from a prior hello.
                     var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
                     await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
@@ -240,6 +241,7 @@ public class ServerHost : IAsyncDisposable
                         streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
                     var reusableConnection = new ReusableStreamConnection(streamConnection, websocketStream, ReuseConnection);
                     return new ServerStreamConnection(reusableConnection) {
+                        HttpProtocolVersion = protocolVersion,
                         OnAuthenticated = onAuthenticated,
                         ConnectionId = connectionId,
                         ClientIp = clientIp,
@@ -517,8 +519,8 @@ public class ServerHost : IAsyncDisposable
         if (streamConnection is ServerStreamConnection serverConnection)
             serverConnection.OnAuthenticated?.Invoke();
 
-        // check client version; unfortunately it must be after CreateSession to preserve server anonymity. Not at the
-        // version check before the key either: every client up to protocol 14 sends its hello as 8
+        // Legacy hellos use HTTP 8; check their binary capabilities after the key so an older app
+        // gets an update message. The proof gate enforces minimums of 15 or more before the body.
         if (request.ClientInfo == null || protocolVersion < MinClientProtocolVersion)
             throw new ServerSessionException(streamConnection.RemoteEndPoint, session,
                 SessionErrorCode.UnsupportedClient, request.RequestId,
@@ -572,7 +574,10 @@ public class ServerHost : IAsyncDisposable
             SuppressedBy = sessionResponseEx.SuppressedBy,
             SessionId = sessionResponseEx.SessionId,
             SessionKey = sessionResponseEx.SessionKey,
-            ServerSecret = _sessionManager.ServerSecret,
+            // A v15 client already has the secret in its access key, so omit this redundant field
+            // even when an access manager negotiates an older binary session protocol.
+            ServerSecret = streamConnection is ServerStreamConnection { HttpProtocolVersion: >= 15 }
+                ? null : _sessionManager.ServerSecret,
             // Compatibility (2026-10): a client below the legacy UDP's protocol gets none; drop with the legacy UDP
             UdpPort = protocolVersion >= UdpDatagram.MinLegacyProtocolVersion ? udpPort : null,
             QuicPort = quicPort,

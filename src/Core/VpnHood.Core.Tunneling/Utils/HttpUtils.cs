@@ -59,7 +59,17 @@ public static class HttpUtils
         if (parts.Length < 2)
             throw new Exception("Invalid HTTP response. Make sure you have the latest version.");
 
-        return new HttpResponseMessage((HttpStatusCode)int.Parse(parts[1]));
+        var response = new HttpResponseMessage((HttpStatusCode)int.Parse(parts[1]));
+        while (await reader.ReadLineAsync(cancellationToken).Vhc() is { Length: > 0 } line) {
+            var separator = line.IndexOf(':');
+            if (separator <= 0)
+                continue;
+            var name = line[..separator].Trim();
+            var value = line[(separator + 1)..].Trim();
+            if (!response.Headers.TryAddWithoutValidation(name, value))
+                response.Content.Headers.TryAddWithoutValidation(name, value);
+        }
+        return response;
     }
 
 

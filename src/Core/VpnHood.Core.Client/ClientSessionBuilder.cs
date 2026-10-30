@@ -102,6 +102,7 @@ internal class ClientSessionBuilder(
                     ProxyConnector = proxyConnector,
                     SocketFactory = socketFactory,
                     VpnEndPoint = vpnEndPoint,
+                    ServerSecret = serverFinder.GetServerSecret(vpnEndPoint),
                     RequestTimeout = config.Transport.TcpConnectTimeout,
                     AllowChannelReuse = false,
                     TcpPacketChannelKernelBufferSize = config.Transport.TcpPacketChannelKernelBufferSize
@@ -111,7 +112,7 @@ internal class ClientSessionBuilder(
             var clientInfo = new ClientInfo {
                 ClientId = config.ClientId,
                 ClientVersion = config.Version.ToString(3),
-                MinProtocolVersion = requestSender.ConnectorService.ProtocolVersion,
+                MinProtocolVersion = VpnHoodClientConfig.MinProtocolVersion,
                 MaxProtocolVersion = VpnHoodClientConfig.MaxProtocolVersion,
                 UserAgent = config.UserAgent
             };
@@ -136,6 +137,9 @@ internal class ClientSessionBuilder(
             connectorService.AllowChannelReuse = config.AllowStreamReuse;
 
             var helloResponse = requestResult.Response;
+            if (helloResponse.ProtocolVersion < VpnHoodClientConfig.MinProtocolVersion ||
+                helloResponse.ProtocolVersion > VpnHoodClientConfig.MaxProtocolVersion)
+                throw new NotSupportedException("The server does not support the requested protocol version.");
             if (helloResponse.ClientPublicAddress is null)
                 throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
 
@@ -182,8 +186,6 @@ internal class ClientSessionBuilder(
                 : null;
 
             connectorService.Init(
-                helloResponse.ProtocolVersion,
-                serverSecret: helloResponse.ServerSecret,
                 channelIdleTimeout: helloResponse.ChannelIdleTimeout,
                 useWebSocket: config.UseWebSocket,
                 requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),

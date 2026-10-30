@@ -1,6 +1,7 @@
 using System.Net;
+using VpnHood.Core.Tunneling.ProbeResistance;
 
 namespace VpnHood.Test.KestrelParity.Probing;
 
 // one server as the probes reach it: its TLS port, its plain port and the name its certificate carries
-internal sealed record ProbeTarget(string Name, IPEndPoint Tls, IPEndPoint Http, string Sni);
+internal sealed record ProbeTarget(string Name, IPEndPoint Tls, IPEndPoint Http, string Sni, RequestProof Proof);

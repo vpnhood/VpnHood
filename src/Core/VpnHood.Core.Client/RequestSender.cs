@@ -83,7 +83,7 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
 
             // ReSharper disable once AccessToDisposedClosure
             var isTcpPacketChannel = request.RequestCode == (byte)RequestCode.TcpPacketChannel;
-            var ret = await SendRequest<T>(payload, request.RequestId, isTcpPacketChannel,
+            var ret = await SendRequestWithClockCorrection<T>(payload, request.RequestId, isTcpPacketChannel,
                 OnAttempt, requestCts.Token).Vhc();
 
             // the server ends a connection after its reply, but for a channel request's, which carries the channel:
@@ -105,6 +105,22 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
         catch (Exception ex) when (timeoutCts.IsCancellationRequested) {
             throw new TimeoutException(
                 $"Could not send the {(RequestCode)request.RequestCode} request in the given time.", ex);
+        }
+    }
+
+    private async Task<ConnectorRequestResult<T>> SendRequestWithClockCorrection<T>(ReadOnlyMemory<byte> request,
+        string requestId, bool isTcpPacketChannel, Action onAttempt, CancellationToken cancellationToken)
+        where T : SessionResponse
+    {
+        try {
+            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt, cancellationToken).Vhc();
+        }
+        catch (RequestAuthorizationException ex) {
+            if (!ConnectorService.TryCorrectClock(ex.ServerTime, ex.ClockCorrectionVersion))
+                throw;
+            // Both POST and the upgrade arrive here. A second 401 escapes this catch, so a bad
+            // farm key cannot create an authentication retry loop or a protocol downgrade.
+            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt, cancellationToken).Vhc();
         }
     }
 
@@ -136,6 +152,10 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
                 CloseConnection(reusableConnection);
                 throw;
             }
+            catch (OperationCanceledException) {
+                CloseConnection(reusableConnection);
+                throw;
+            }
             catch (Exception ex) {
                 // dispose the connection and retry with new connection
                 lock (ConnectorService.Stat) ConnectorService.Stat.ReusedConnectionFailedCount++;
@@ -147,7 +167,7 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
         }
 
         // create a new connection
-        var connection = await ConnectorService.GetConnectionToServer(
+        var (connection, clockCorrectionVersion) = await ConnectorService.GetConnectionToServer(
             requestId + ":tunnel", request.Length, isTcpPacketChannel, onAttempt, cancellationToken).Vhc();
 
         // send request
@@ -159,9 +179,9 @@ internal class RequestSender(ConnectorService connectorService) : IAsyncDisposab
             // parse the HTTP request
             if (connection.RequireHttpResponse) {
                 connection.RequireHttpResponse = false;
-                var responseMessage = await HttpUtils.ReadResponse(connection.Stream, cancellationToken).Vhc();
+                using var responseMessage = await HttpUtils.ReadResponse(connection.Stream, cancellationToken).Vhc();
                 if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
-                    throw new UnauthorizedAccessException();
+                    throw new RequestAuthorizationException(responseMessage.Headers.Date, clockCorrectionVersion);
 
                 if (responseMessage.StatusCode == HttpStatusCode.ServiceUnavailable)
                     throw new MaintenanceException();

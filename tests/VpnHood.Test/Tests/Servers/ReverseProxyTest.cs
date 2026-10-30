@@ -8,6 +8,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.ReverseProxies;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.ProbeResistance;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Streams;
@@ -199,11 +200,14 @@ public class ReverseProxyTest : TestBase
         }, TestCt);
 
         var payload = BuildHelloPayload(token);
+        var proof = new RequestProof(token.ServerToken.Secret!).Create(
+            token.ServerToken.HostName, RequestProof.ProtocolVersion, DateTimeOffset.UtcNow);
         var header =
             $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
             $"Host: {token.ServerToken.HostName}\r\n" +
             $"Content-Length: {payload.Length}\r\n" +
             $"X-ProtocolVersion: {VpnHoodClientConfig.MaxProtocolVersion}\r\n" +
+            $"Authorization: Bearer {proof}\r\n" +
             "X-BinaryStream: None\r\n" +
             (forwardedFor != null ? $"X-Forwarded-For: {forwardedFor}\r\n" : "") +
             "\r\n";

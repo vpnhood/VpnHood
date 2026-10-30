@@ -206,7 +206,7 @@ public class ClientAppTest : TestAppBase
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
         accessManager.ServerConfig.ServerTokenUrls = [newTokenUrl];
-        accessManager.ServerConfig.ServerSecret = VhUtils.GenerateKey(); // It can not be changed in new version
+        // Updating the URL keeps this farm's key: protocol 15 proves it before hello can return the new URL.
         accessManager.ClearCache();
 
         // create server and app

@@ -22,7 +22,9 @@ public class HelloResponse : SessionResponse
     public int? QuicPort { get; set; }
     public string ServerVersion { get; set; } = null!;
     public int ProtocolVersion { get; set; }
-    public byte[] ServerSecret { get; set; } = null!;
+    // Compatibility (2026-10): only pre-v15 clients obtain this from hello; v15 uses its access key.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public byte[]? ServerSecret { get; set; }
     public ulong SessionId { get; set; }
     public byte[] SessionKey { get; set; } = [];
     public SessionSuppressType SuppressedTo { get; set; }

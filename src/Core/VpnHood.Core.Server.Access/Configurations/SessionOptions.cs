@@ -45,7 +45,7 @@ public class SessionOptions
     public bool? AllowQuicPacket { get; set; }
     public bool? AllowUdpPacket { get; set; }
 
-    // raises the server's own minimum protocol; an older client is told to update once it has proven its key
+    // Raises the minimum accepted HTTP protocol before reading a body or upgrading the connection.
     public int? MinClientProtocolVersion { get; set; }
 
     // the server's connections that haven't proven a key yet, its port 80's included; above it, the address that

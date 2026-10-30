@@ -1,5 +1,6 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
@@ -22,10 +23,11 @@ namespace VpnHood.Core.Client;
 
 public class ServerFinder(
     ISocketFactory socketFactory,
+    byte[] farmSecret,
     string? serverLocation,
     TimeSpan serverQueryTimeout,
     EndPointStrategy endPointStrategy,
-    IPEndPoint[] customServerEndpoints,
+    IReadOnlyList<IPEndPoint> customServerEndpoints,
     ITracker? tracker,
     IProxyConnector? proxyConnector,
     bool includeIpV6,
@@ -34,10 +36,23 @@ public class ServerFinder(
 {
     private ProgressMonitor? _progressMonitor;
     private HostStatus[] _hostEndPointStatuses = [];
+    // Kept beside discovery, never in the public endpoint record or its saved/logged representation.
+    // Two tokens may name the same endpoint during a key rotation: keep the selected token's key.
+    private readonly ConcurrentDictionary<VpnEndPoint, byte[]> _serverSecrets = new(ReferenceEqualityComparer.Instance);
     public bool IncludeIpV6 { get; set; } = includeIpV6;
     public string? ServerLocation => serverLocation;
-    public IPEndPoint[] CustomServerEndpoints => customServerEndpoints;
+    public IReadOnlyList<IPEndPoint> CustomServerEndpoints => customServerEndpoints;
     public ProgressStatus? Progress => _progressMonitor?.Progress;
+
+    internal byte[] GetServerSecret(VpnEndPoint vpnEndPoint) => _serverSecrets[vpnEndPoint];
+
+    private VpnEndPoint CreateVpnEndPoint(IPEndPoint endPoint, ServerToken serverToken)
+    {
+        var vpnEndPoint = new VpnEndPoint(endPoint, serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase);
+        // Redirects stay in the access key's farm, even when they name another certificate's host.
+        _serverSecrets[vpnEndPoint] = serverToken.Secret ?? farmSecret;
+        return vpnEndPoint;
+    }
 
     private class HostStatus
     {
@@ -45,34 +60,27 @@ public class ServerFinder(
         public bool? Available { get; set; }
     }
 
-    public async Task<VpnEndPoint[]> ResolveVpnEndPoints(IEnumerable<ServerToken> serverTokens, bool includeIpV6,
+    public async Task<IReadOnlyList<VpnEndPoint>> ResolveVpnEndPoints(IReadOnlyList<ServerToken> serverTokens, bool includeIpV6,
         CancellationToken cancellationToken)
     {
         // log warning if there are some forced endpoints
-        if (customServerEndpoints.Any()) {
+        if (customServerEndpoints.Any())
             VhLogger.Instance.LogWarning("There are forced endpoints in the configuration. EndPoints: {EndPoints}",
                 string.Join(", ", customServerEndpoints.Select(VhLogger.Format)));
 
-            // select forced endpoints for each server token
-            return serverTokens
-                .SelectMany(serverToken => customServerEndpoints.Select(ep =>
-                    new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase)))
-                .Where(x =>
-                    includeIpV6 || // accept any IPv6 if allowed
-                    x.TcpEndPoint.IsV4() ||
-                    x.TcpEndPoint.Address.IsLoopback()) // loopback addresses are for tests
-                .ToArray();
-        }
-
         // resolve endpoints for each server token in parallel
-        var itemExceptions = new List<(Exception exception, ServerToken serverToken)>();
+        var itemExceptions = new ConcurrentBag<(Exception exception, ServerToken serverToken)>();
         var tasks = serverTokens.Select(async serverToken => {
             try {
-                var endpoints = await EndPointResolver.ResolveHostEndPoints(
-                    serverToken, endPointStrategy, cancellationToken).Vhc();
+                var endpoints = customServerEndpoints.Any()
+                    ? customServerEndpoints
+                    : await EndPointResolver.ResolveHostEndPoints(
+                        serverToken, endPointStrategy, cancellationToken).Vhc();
 
-                return endpoints.Select(ep => new VpnEndPoint(
-                    ep, serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase));
+                return endpoints.Select(ep => CreateVpnEndPoint(ep, serverToken)).ToArray();
+            }
+            catch (OperationCanceledException) {
+                throw;
             }
             catch (Exception ex) {
                 itemExceptions.Add((ex, serverToken));
@@ -106,7 +114,7 @@ public class ServerFinder(
     }
 
     // There is much work to be done here
-    public async Task<VpnEndPoint> FindReachableServerAsync(IEnumerable<ServerToken> serverTokens,
+    public async Task<VpnEndPoint> FindReachableServerAsync(IReadOnlyList<ServerToken> serverTokens,
         CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
@@ -116,6 +124,7 @@ public class ServerFinder(
 
         // before any lookup: after a VPN host's crash, the dead connection's routes let only this server through
         if (connectedServer != null) {
+            _serverSecrets[connectedServer] = farmSecret;
             var connectedServerStatus = new HostStatus { VpnEndPoint = connectedServer };
             await VerifyHostStatus(connectedServerStatus, serverQueryTimeout, cancellationToken).Vhc();
             if (connectedServerStatus.Available == true)
@@ -157,7 +166,7 @@ public class ServerFinder(
         throw new UnreachableServerException();
     }
 
-    public async Task<VpnEndPoint> FindBestRedirectedServerAsync(ServerToken[] serverTokens,
+    public async Task<VpnEndPoint> FindBestRedirectedServerAsync(IReadOnlyList<ServerToken> serverTokens,
         CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
@@ -386,10 +395,17 @@ public class ServerFinder(
                 : throw new SessionException(errorCode);
         }
         catch (UnauthorizedAccessException) {
-            return true; // the server is available but not authorized
+            // ServerCheck returns 401 even for a valid proof; it establishes reachability only.
+            // If a saved server refuses the hello, the client's close clears it for the next connect.
+            return true;
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
-            throw; // query cancelled due to discovery cancellationToken
+        catch (OperationCanceledException ex) {
+            if (cancellationToken.IsCancellationRequested)
+                throw;
+
+            VhLogger.Instance.LogInformation(ex, "Endpoint reachability check timed out. EndPoint: {EndPoint}",
+                VhLogger.Format(requestSender.ConnectorService.VpnEndPoint.TcpEndPoint));
+            return false;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Could not get server status. EndPoint: {EndPoint}",
@@ -403,6 +419,7 @@ public class ServerFinder(
     {
         var connectorService = new ConnectorServiceOptions {
             VpnEndPoint = vpnEndPoint,
+            ServerSecret = GetServerSecret(vpnEndPoint),
             ProxyConnector = proxyConnector,
             SocketFactory = socketFactory,
             RequestTimeout = serverQueryTimeout,
@@ -413,7 +430,6 @@ public class ServerFinder(
             new RequestSender(new ConnectorService(connectorService));
 
         requestSender.ConnectorService.Init(
-            protocolVersion: requestSender.ConnectorService.ProtocolVersion, serverSecret: null,
             channelIdleTimeout: TimeSpan.Zero,
             useWebSocket: false,
             requestTimeout: serverQueryTimeout,

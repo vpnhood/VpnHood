@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Test.KestrelParity.Servers;
@@ -24,13 +25,16 @@ internal sealed class OurServer : IAsyncDisposable
 
     // the certificate both servers present, so their handshakes compare
     public string CertificatePath { get; }
+    public byte[] FarmSecret { get; }
 
-    private OurServer(VpnHoodServer server, IPEndPoint tlsEndPoint, string hostName, string certificatePath)
+    private OurServer(VpnHoodServer server, IPEndPoint tlsEndPoint, string hostName, string certificatePath,
+        byte[] farmSecret)
     {
         _server = server;
         TlsEndPoint = tlsEndPoint;
         HostName = hostName;
         CertificatePath = certificatePath;
+        FarmSecret = farmSecret;
     }
 
     public static async Task<OurServer> Start(string storagePath, CancellationToken cancellationToken)
@@ -50,17 +54,19 @@ internal sealed class OurServer : IAsyncDisposable
             UdpEndPoints = [],
             UseExternalLocationService = false,
             LogAnonymizer = false,
-            EnableHttp01Challenge = true
+            EnableHttp01Challenge = true,
+            SessionOptions = new SessionOptions { MinClientProtocolVersion = 15 }
         });
 
         var server = CreateServer(accessManager, storagePath);
         try {
             var accessToken = accessManager.AccessTokenService.Create(tokenName: "parity", maxClientCount: 1);
-            var hostName = accessManager.GetToken(accessToken).ServerToken.HostName;
+            var serverToken = accessManager.GetToken(accessToken).ServerToken;
+            var hostName = serverToken.HostName;
             var certificatePath = Path.Combine(accessManager.CertsFolderPath, "default.pfx");
             await server.Start(cancellationToken);
             await RequireOwnRedirect(tlsEndPoint.Port, cancellationToken);
-            return new OurServer(server, tlsEndPoint, hostName, certificatePath);
+            return new OurServer(server, tlsEndPoint, hostName, certificatePath, serverToken.Secret!);
         }
         catch {
             await server.DisposeAsync();

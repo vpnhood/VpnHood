@@ -7,6 +7,7 @@ using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.AlwaysOn;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -116,8 +117,10 @@ public class AlwaysOnTest : TestAppBase
 
         await using var app = CreateApp(storagePath);
         await AssertEqualsWait(AlwaysOnStatus.Stopped, () => app.State.AlwaysOnState?.Status);
-        Assert.AreEqual(nameof(SessionErrorCode.UnsupportedClient),
-            app.State.AlwaysOnState?.Error?.Data.GetValueOrDefault("ErrorCode"));
+        // The minimum is checked before authentication, so the refusal is the ordinary HTTP 401,
+        // with no binary session error revealing why this server rejected the request.
+        Assert.AreEqual(nameof(RequestAuthorizationException), app.State.AlwaysOnState?.Error?.TypeName);
+        Assert.IsNull(app.State.AlwaysOnState?.Error?.Data.GetValueOrDefault("ErrorCode"));
 
         // and stays so: nothing tries again after the pause
         await Task.Delay(Pause * 3, TestCt);
@@ -454,6 +457,7 @@ public class AlwaysOnTest : TestAppBase
 
         ApiError[] stopping = [
             new UnauthorizedAccessException().ToApiError(),
+            new RequestAuthorizationException(DateTimeOffset.UtcNow, 0).ToApiError(),
             new SessionException(SessionErrorCode.SessionSuppressedBy).ToApiError(),
             new InvalidOperationException().ToApiError()
         ];

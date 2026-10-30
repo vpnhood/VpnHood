@@ -1,7 +1,8 @@
 namespace VpnHood.Test.KestrelParity.Probing;
 
-// Passes a connection's bytes through and notes the TLS records that arrive after the handshake, so a probe sees
-// whether the peer ended with a close_notify (an alert in TLS 1.2, a 19-byte record in TLS 1.3) or without one.
+// Passes a connection's bytes through and notes the TLS records that arrive after the handshake, by type and size,
+// so a probe sees how the peer ended: in TLS 1.2 a close_notify is an alert record; in TLS 1.3 it is encrypted, and
+// only a 19-byte record's size suggests it.
 internal sealed class TapStream(Stream inner) : Stream
 {
     private readonly List<string> _records = [];
@@ -31,10 +32,15 @@ internal sealed class TapStream(Stream inner) : Stream
         }
     }
 
-    // the records after the last application data the peer sent
+    // the records after the last application data the peer sent, and "cut" when the connection ended inside one, as
+    // a record's header gets noted before its body comes
     public string TailRecords()
     {
-        lock (_records) return string.Join(",", _records);
+        lock (_records) {
+            return _bodyLeft > 0 || _headerFill > 0
+                ? string.Join(",", _records.Append("cut"))
+                : string.Join(",", _records);
+        }
     }
 
     private void Note(ReadOnlySpan<byte> data)

@@ -11,7 +11,8 @@ namespace VpnHood.Test.KestrelParity.Probing;
 
 // One probe's connection: what was sent, what came back, and how and when the peer ended it. The log holds only
 // what a prober could compare: a reply's Date is masked, and times are whole seconds since the last send. With
-// timeReplies, each reply also says when its last byte came, as a drain that slows shows only there.
+// timeReplies, each reply also says when its first and last byte came, as a drain that slows shows only there.
+// Only the connection's own errors are what the peer did; any other error fails the probe.
 internal sealed partial class ProbeConnection : IAsyncDisposable
 {
     private readonly TcpClient _tcpClient;
@@ -23,8 +24,11 @@ internal sealed partial class ProbeConnection : IAsyncDisposable
     private readonly MemoryStream _pending = new();
     private readonly SemaphoreSlim _signal = new(0);
     private readonly CancellationTokenSource _readCts = new();
-    private TimeSpan _pendingArrival;
-    private TimeSpan _receivedArrival;
+    private TimeSpan _pendingFirstArrival;
+    private TimeSpan _pendingLastArrival;
+    private TimeSpan _receivedFirstArrival;
+    private TimeSpan _receivedLastArrival;
+    private Exception? _fault;
     private string? _endState;
     private TimeSpan _endTime;
     private bool _endLogged;
@@ -96,14 +100,24 @@ internal sealed partial class ProbeConnection : IAsyncDisposable
                 }
 
                 lock (_pending) {
+                    if (_pending.Length == 0)
+                        _pendingFirstArrival = _sinceSend.Elapsed;
                     _pending.Write(buffer, 0, read);
-                    _pendingArrival = _sinceSend.Elapsed;
+                    _pendingLastArrival = _sinceSend.Elapsed;
                 }
                 _signal.Release();
             }
         }
-        catch (Exception ex) {
+        catch (Exception) when (cancellationToken.IsCancellationRequested) {
+            // the connection is being disposed
+        }
+        catch (Exception ex) when (IsConnectionError(ex)) {
             SetEnd(IsReset(ex) ? "reset" : $"error {Describe(ex)}");
+        }
+        catch (Exception ex) {
+            // the harness's error, which both servers' logs could show alike: the probe fails at its next read
+            lock (_pending) _fault = ex;
+            _signal.Release();
         }
     }
 
@@ -132,7 +146,7 @@ internal sealed partial class ProbeConnection : IAsyncDisposable
             if (_tap != null)
                 await _tap.FlushBufferedWrites(cancellationToken);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException) {
+        catch (Exception ex) when (IsConnectionError(ex)) {
             // a server that has already ended the connection is what the log records, not a failed probe
             _log.AppendLine($"  (send failed: {Describe(ex)})");
         }
@@ -177,21 +191,29 @@ internal sealed partial class ProbeConnection : IAsyncDisposable
     private string? TakePending(MemoryStream received)
     {
         lock (_pending) {
+            if (_fault != null)
+                throw new InvalidOperationException("The probe's reader failed.", _fault);
+
             if (_pending.Length > 0) {
+                if (received.Length == 0)
+                    _receivedFirstArrival = _pendingFirstArrival;
                 _pending.Position = 0;
                 _pending.CopyTo(received);
                 _pending.SetLength(0);
-                _receivedArrival = _pendingArrival;
+                _receivedLastArrival = _pendingLastArrival;
             }
             return _endState;
         }
     }
 
+    // two replies in one read show when the first began and the last ended, so either one coming late tells
     private void Flush(MemoryStream received)
     {
         if (received.Length == 0) return;
         var text = Encoding.Latin1.GetString(received.ToArray());
-        var time = _timeReplies ? $"[after {Seconds(_receivedArrival)}s] " : "";
+        var time = _timeReplies
+            ? $"[first after {Seconds(_receivedFirstArrival)}s, last after {Seconds(_receivedLastArrival)}s] "
+            : "";
         _log.AppendLine($"< {time}{Escape(DateRegex().Replace(text, "Date: *"))}");
         received.SetLength(0);
     }
@@ -208,6 +230,11 @@ internal sealed partial class ProbeConnection : IAsyncDisposable
         return elapsed.TotalSeconds < 0.5 ? "0" : Math.Round(elapsed.TotalSeconds).ToString("0");
     }
 
+    private static bool IsConnectionError(Exception ex)
+    {
+        return ex is IOException or SocketException or AuthenticationException;
+    }
+
     private static bool IsReset(Exception ex)
     {
         for (var e = ex; e != null; e = e.InnerException)
@@ -222,10 +249,11 @@ internal sealed partial class ProbeConnection : IAsyncDisposable
         return $"{ex.GetType().Name}: {ex.Message}{inner}";
     }
 
-    // the cut keeps a report readable, and the hash keeps what it cut in the comparison
+    // A backslash is escaped too, so a reply that sends "\r" as text can't read as one that sends the byte. The cut
+    // keeps a report readable, and the hash keeps what it cut in the comparison.
     public static string Escape(string text)
     {
-        var escaped = text.Replace("\r", "\\r").Replace("\n", "\\n");
+        var escaped = text.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n");
         if (escaped.Length <= 400)
             return escaped;
 

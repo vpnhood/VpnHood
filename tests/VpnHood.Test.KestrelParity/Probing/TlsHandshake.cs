@@ -165,6 +165,10 @@ internal static class TlsHandshake
                 });
         }
 
+        // too few for a message's header after the last message, which the record's own length doesn't show
+        if (i < body.Length)
+            parts.Add($"+{body.Length - i} bytes");
+
         return string.Join(" ", parts);
     }
 

@@ -37,22 +37,20 @@ public static class SplitDbManifest
         return data.DbFiles.Select(fileName => Path.Combine(folderPath, fileName)).ToArray();
     }
 
-    // Publish the current db set (atomic temp+rename, so a concurrent Read never sees a torn file),
-    // then sweep superseded db-family files. Every path must live inside folderPath: the manifest
-    // names files, not locations, so a Read from either process resolves against its own folder view.
+    // Publish the current db set (replaced whole, so a concurrent Read never sees a torn file, over a temp
+    // file of its own, so two writers never meet on one), then sweep superseded db-family files. Every path
+    // must live inside folderPath: the manifest names files, not locations, so a Read from either process
+    // resolves against its own folder view.
     public static async Task Write(string folderPath, string[] dbPaths, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(folderPath);
         var dbFileNames = dbPaths.Select(dbPath => GetFileNameInFolder(folderPath, dbPath)).ToArray();
 
         var manifestPath = Path.Combine(folderPath, ManifestFileName);
-        var tempPath = manifestPath + ".tmp";
-        await File.WriteAllTextAsync(tempPath, JsonSerializer.Serialize(new ManifestData { DbFiles = dbFileNames }),
-            cancellationToken).Vhc();
-        await FileUtils.WaitOutSharingAsync(() => {
-            File.Move(tempPath, manifestPath, overwrite: true);
-            return Task.CompletedTask;
-        }, SharingTimeout, cancellationToken).Vhc();
+        var json = JsonSerializer.Serialize(new ManifestData { DbFiles = dbFileNames });
+        await FileUtils.WaitOutSharingAsync(
+            () => FileUtils.WriteAllTextAtomicAsync(manifestPath, json, cancellationToken),
+            SharingTimeout, cancellationToken).Vhc();
 
         // *.db* also catches sqlite side files (-wal/-shm) and orphaned build temps; the prefix match
         // keeps the side files of every listed db

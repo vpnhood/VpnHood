@@ -15,6 +15,7 @@
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="VpnHood.Test" />
+		<InternalsVisibleTo Include="VpnHood.Test.KestrelParity" />
 	</ItemGroup>
 
 </Project>

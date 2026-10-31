@@ -4,34 +4,32 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Http3;
 
-internal sealed class Http3ResponseDispatch(Stream stream, IQuicStream quic, Http3StreamContext context,
+internal sealed class Http3ResponseDispatch(Stream stream, IQuicStream quic,
     IHttp3Responder responder, Http3Request request, Http3HeaderBudget budget, Http3ServerOptions options,
     Action<Exception> onError, CancellationToken cancellationToken) : IDisposable
 {
     private readonly CancellationTokenSource _cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-    private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Lock _stateLock = new();
     private Task? _response;
     private Exception? _failure;
     private bool _responseSelected;
+    private bool _exceedsRequestLimits;
     private bool _completed;
 
-    public bool ResponseSelected => Volatile.Read(ref _responseSelected);
-
-    public async Task Start(CancellationToken cancellationToken)
+    public bool Select()
     {
-        if (_response == null) {
-            Http3RequestMetrics.RequestQueued(context.LocalEndPoint, 1);
-            _response = Task.Run(RunQueued);
+        if (!_responseSelected) {
+            _exceedsRequestLimits = budget.ExceedsRequestLimits;
+            _responseSelected = true;
         }
-        // Give the application its dispatch turn before inspecting trailers already in the burst.
-        await _started.Task.WaitAsync(cancellationToken).Vhc();
+        return _exceedsRequestLimits;
     }
 
     public async Task Complete(CancellationToken cancellationToken)
     {
         if (_response == null) {
             cancellationToken.ThrowIfCancellationRequested();
+            Select();
             _response = RunResponse(_cancellation.Token);
         }
         await _response.Vhc();
@@ -60,22 +58,13 @@ internal sealed class Http3ResponseDispatch(Stream stream, IQuicStream quic, Htt
         cancellationToken.ThrowIfCancellationRequested();
     }
 
-    private async Task RunQueued()
-    {
-        _started.TrySetResult();
-        Http3RequestMetrics.RequestQueued(context.LocalEndPoint, -1);
-        await RunResponse(_cancellation.Token).Vhc();
-    }
-
     private async Task RunResponse(CancellationToken cancellationToken)
     {
         try {
             cancellationToken.ThrowIfCancellationRequested();
             var response = new Http3ResponseWriter(stream, options);
-            // RC3 checks the live totals on application dispatch, before the response is committed.
-            var exceedsRequestLimits = budget.ExceedsRequestLimits;
-            Volatile.Write(ref _responseSelected, true);
-            if (exceedsRequestLimits)
+            // Selection is frozen before inspection continues; native writes cannot change the schedule.
+            if (_exceedsRequestLimits)
                 await response.WriteHeaders(431, [], cancellationToken).Vhc();
             else
                 await responder.Respond(request, response, cancellationToken).Vhc();

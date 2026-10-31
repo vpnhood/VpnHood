@@ -20,26 +20,34 @@ internal sealed class Http3StreamReader(Stream stream) : IAsyncDisposable
     public long AvailableBytesLimit { get; set; } = long.MaxValue;
     public Action? OnReadPending { get; set; }
 
-    public async ValueTask<int> ReadByte(CancellationToken cancellationToken)
+    public ValueTask<int> ReadByte(CancellationToken cancellationToken) => ReadByte(null, cancellationToken);
+
+    private async ValueTask<int> ReadByte(Http3TrailerInspection? inspection, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        inspection?.CheckForEmission();
         LimitAvailableRead(1);
         if (_count == 0 && !await Fill(cancellationToken).Vhc())
             return -1;
         var value = Buffer[_offset];
         Advance(1);
+        inspection?.Advance(1);
         return value;
     }
 
-    public async ValueTask<long?> ReadIntegerOrEnd(CancellationToken cancellationToken)
+    public ValueTask<long?> ReadIntegerOrEnd(CancellationToken cancellationToken) =>
+        ReadIntegerOrEnd(null, cancellationToken);
+
+    public async ValueTask<long?> ReadIntegerOrEnd(Http3TrailerInspection? inspection,
+        CancellationToken cancellationToken)
     {
-        var first = await ReadByte(cancellationToken).Vhc();
+        var first = await ReadByte(inspection, cancellationToken).Vhc();
         if (first < 0)
             return null;
         var length = 1 << (first >> 6);
         long value = first & 0x3f;
         for (var i = 1; i < length; i++) {
-            var next = await ReadByte(cancellationToken).Vhc();
+            var next = await ReadByte(inspection, cancellationToken).Vhc();
             if (next < 0)
                 throw new EndOfStreamException();
             value = (value << 8) | (byte)next;
@@ -49,6 +57,9 @@ internal sealed class Http3StreamReader(Stream stream) : IAsyncDisposable
 
     public async ValueTask<long> ReadInteger(CancellationToken cancellationToken) =>
         await ReadIntegerOrEnd(cancellationToken).Vhc() ?? throw new EndOfStreamException();
+
+    public async ValueTask<long> ReadInteger(Http3TrailerInspection? inspection, CancellationToken cancellationToken) =>
+        await ReadIntegerOrEnd(inspection, cancellationToken).Vhc() ?? throw new EndOfStreamException();
 
     public async ValueTask<int> Read(Memory<byte> bytes, CancellationToken cancellationToken)
     {
@@ -79,27 +90,36 @@ internal sealed class Http3StreamReader(Stream stream) : IAsyncDisposable
         return bytes;
     }
 
-    public async Task Discard(long length, CancellationToken cancellationToken)
+    public Task Discard(long length, CancellationToken cancellationToken) => Discard(length, null, cancellationToken);
+
+    public async Task Discard(long length, Http3TrailerInspection? inspection, CancellationToken cancellationToken)
     {
         while (length > 0) {
-            var count = await DiscardSome(length, cancellationToken).Vhc();
+            var count = await DiscardSome(length, inspection, cancellationToken).Vhc();
             if (count == 0)
                 throw new EndOfStreamException();
             length -= count;
         }
     }
 
-    public async ValueTask<int> DiscardSome(long maximumLength, CancellationToken cancellationToken)
+    public ValueTask<int> DiscardSome(long maximumLength, CancellationToken cancellationToken) =>
+        DiscardSome(maximumLength, null, cancellationToken);
+
+    private async ValueTask<int> DiscardSome(long maximumLength, Http3TrailerInspection? inspection,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentOutOfRangeException.ThrowIfNegative(maximumLength);
         if (maximumLength == 0)
             return 0;
         var requested = LimitAvailableRead((int)Math.Min(maximumLength, BufferSize));
+        if (inspection != null)
+            requested = inspection.LimitRead(requested);
         if (_count == 0 && !await Fill(cancellationToken).Vhc())
             return 0;
         var count = Math.Min(requested, _count);
         Advance(count);
+        inspection?.Advance(count);
         return count;
     }
 

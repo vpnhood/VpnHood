@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Quic;
 using System.Text;
+using VpnHood.Net.Http3;
 using VpnHood.Test.KestrelParity.Probing;
 using VpnHood.Test.KestrelParity.Servers;
 
@@ -133,6 +134,21 @@ public partial class Http3FrontTest
     }
 
     [TestMethod]
+    [TestCategory("Http3Framing")]
+    public async Task Data_after_trailers_before_dispatch_closes_the_connection()
+    {
+        var headers = BuildLiteralRequest(ValidationHeaders());
+        byte[] tail = [.. BuildLiteralRequest([.. Enumerable.Repeat(("x", ""), 8)]), .. Frame(0, [1])];
+        // No marker releases the reference application before its parser reaches the invalid DATA frame.
+        var expected = await ObserveTrailersBeforeDispatch(headers, tail, [], TestContext.CancellationToken);
+        var actual = await ObserveTrailersBeforeOurDispatch(headers, tail, [], TestContext.CancellationToken);
+        var error = new Http3ProbeResult("", false, QuicError.ConnectionAborted, 0x105);
+        Assert.AreEqual(error, expected.Response);
+        Assert.AreEqual(error, expected.Write);
+        AssertRequestEnding("data-after-trailers-parser-first", expected, actual);
+    }
+
+    [TestMethod]
     [TestCategory("Http3Validation")]
     [DataRow(32768)]
     [DataRow(32769)]
@@ -228,38 +244,21 @@ public partial class Http3FrontTest
         byte[] prefix = [.. headers, .. trailers];
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(Http3Probe.Timeout);
-        using var dispatch = new ReferenceRequestGate(Servers.OurEndPoint, Http3Probe.Timeout,
-            "VpnHood.Net.Http3", "http3.queued_requests", 1);
-        using var gate = dispatch.Arm(deadline.Token);
-        // Hold application validation until the parser has consumed every prefetched field.
-        using var buffered = Servers.BufferedQuic.BufferNextRequest(prefix.Length, gate.Release, finish: false,
+        await using var server = await PinnedHttp3Server.Start(Servers.Certificate,
+            new Http3TrailerSchedule(long.MaxValue, double.PositiveInfinity, double.PositiveInfinity), deadline.Token);
+        // The pinned parser-first schedule must see the complete prefix before its available-only inspection.
+        using var buffered = server.BufferedQuic.BufferNextRequest(prefix.Length, static () => { }, finish: false,
             deadline.Token);
-        try {
-            var result = lateTail.Length == 0
-                ? await ObserveRequestEnding(Servers.OurEndPoint, prefix, finish: false, atomicFin: false, deadline.Token)
-                : await ObserveAfterResponse(Servers.OurEndPoint, prefix, lateTail, deadline.Token);
-            await gate.WaitForDispatch(deadline.Token);
-            // A hard limit aborts before exhausting the prefix and therefore needs an explicit release.
-            gate.Release();
-            await gate.WaitForCompletion(deadline.Token);
-            return result;
-        }
-        finally {
-            gate.Release();
-            // Join even after the probe deadline, before disposing its synchronous metric callback's gate.
-            using var cleanup = new CancellationTokenSource(Http3Probe.Timeout);
-            try { await gate.WaitForCompletion(cleanup.Token); }
-            catch (Exception) {
-                // The successful path checked completion; retain the original failure during cleanup.
-            }
-        }
+        return lateTail.Length == 0
+            ? await ObserveRequestEnding(server.EndPoint, prefix, finish: false, atomicFin: false, deadline.Token)
+            : await ObserveAfterResponse(server.EndPoint, prefix, lateTail, deadline.Token);
     }
 
     private async Task AssertTrailersAfterResponse(string name, byte[] headers, byte[] trailers,
         CancellationToken cancellationToken)
     {
         var expected = await ObserveAfterResponse(Servers.ReferenceEndPoint, headers, trailers, cancellationToken);
-        var actual = await ObserveAfterResponse(Servers.OurEndPoint, headers, trailers, cancellationToken);
+        var actual = await ObserveAfterPinnedResponse(headers, trailers, cancellationToken);
         AssertTrailerResponse(expected, "401");
         AssertRequestEnding(name, expected, actual);
     }

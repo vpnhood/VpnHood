@@ -1,4 +1,3 @@
-using System.Net;
 using VpnHood.Net.Http3;
 using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Test.Providers;
@@ -19,9 +18,9 @@ public class Http3RequestStreamTest
         using var output = new MemoryStream();
         await using var reader = new Http3StreamReader(source);
         var quic = new RecordingQuicStream();
-        var context = new Http3StreamContext(new IPEndPoint(IPAddress.Loopback, 0), new IPEndPoint(IPAddress.Loopback, 0));
-        await Http3RequestStream.Process(output, reader, quic, context, static _ => { },
+        await Http3RequestStream.Process(output, reader, quic, static _ => { },
             new Http3RecordingResponder(), new Http3ServerOptions(),
+            new PinnedHttp3TrailerScheduleSampler(new Http3TrailerSchedule(0, 0, 0)),
             TestContext.CancellationToken,
             TestContext.CancellationToken);
 
@@ -57,8 +56,8 @@ public class Http3RequestStreamTest
             MaxHeaderCount = maximumHeaderCount,
             ResponseHeaders = status => [new("server", $"test-{status}"), new("content-length", "0")]
         };
-        var context = new Http3StreamContext(new IPEndPoint(IPAddress.Loopback, 0), new IPEndPoint(IPAddress.Loopback, 0));
-        await Http3RequestStream.Process(output, reader, quic, context, static _ => { }, responder, options,
+        await Http3RequestStream.Process(output, reader, quic, static _ => { }, responder, options,
+            new PinnedHttp3TrailerScheduleSampler(new Http3TrailerSchedule(0, 0, 0)),
             TestContext.CancellationToken, TestContext.CancellationToken);
 
         output.Position = 0;

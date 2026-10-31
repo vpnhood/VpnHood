@@ -21,14 +21,12 @@ internal class QuicListenerHost(
     UnauthenticatedConnections unauthenticatedConnections,
     CancellationToken cancellationToken,
     Func<IStreamConnection, CancellationToken, Task> processNewConnection)
-    : IAsyncDisposable
+    : IAsyncDisposable, IQuicCertificateSelector
 {
     private readonly List<QuicListenerEntry> _listeners = [];
     private IReadOnlyList<CertificateHostName> _certificates = [];
     private readonly AsyncLock _disposeLock = new();
-    private readonly Http3ServerOptions _http3Options = new() {
-        ResponseHeaders = Http3UnauthorizedResponder.CreateHeaders
-    };
+    private readonly Http3ServerOptions _http3Options = Http3ServerOptionsFactory.Create();
     private bool _disposed;
 
     // only report listeners that are still running; a listener whose task has finished
@@ -76,14 +74,7 @@ internal class QuicListenerHost(
                 if (quicServer is null)
                     throw new NotSupportedException("QUIC is not supported on this platform.");
 
-                var listenerOptions = new QuicListenerOptions {
-                    ListenEndPoint = ipEndPoint,
-                    // HTTP/3 owns idle and request deadlines; native expiry must not end a busy tunnel.
-                    IdleTimeout = Timeout.InfiniteTimeSpan,
-                    DefaultStreamErrorCode = Http3ErrorCode.InternalError,
-                    DefaultCloseErrorCode = Http3ErrorCode.NoError,
-                    ServerCertificateSelector = SelectCertificate
-                };
+                var listenerOptions = QuicListenerOptionsFactory.Create(ipEndPoint, this);
                 var listener = await quicServer.ListenAsync(listenerOptions, cancellationToken).Vhc();
                 var entry = new QuicListenerEntry(listener, cancellationToken);
                 entry.ListenerTask = ListenTask(entry, entry.Token);
@@ -104,10 +95,10 @@ internal class QuicListenerHost(
         return endPointStatuses;
     }
 
-    private X509Certificate SelectCertificate(string? hostname)
+    X509Certificate IQuicCertificateSelector.SelectCertificate(string? hostName)
     {
         var certificate =
-            _certificates.SingleOrDefault(x => x.HostName.Equals(hostname, StringComparison.OrdinalIgnoreCase))
+            _certificates.SingleOrDefault(x => x.HostName.Equals(hostName, StringComparison.OrdinalIgnoreCase))
             ?? _certificates.First();
 
         return certificate.Certificate;

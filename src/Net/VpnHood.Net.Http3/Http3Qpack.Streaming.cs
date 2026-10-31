@@ -13,14 +13,19 @@ internal static partial class Http3Qpack
         Action<KeyValuePair<string, string>>? onField, Http3ServerOptions options, CancellationToken cancellationToken) =>
         ReadSection(reader, length, onField, options, new Http3HeaderBudget(options), cancellationToken);
 
+    public static Task<Http3FieldSection> ReadSection(Http3StreamReader reader, long length,
+        Action<KeyValuePair<string, string>>? onField, Http3ServerOptions options, Http3HeaderBudget budget,
+        CancellationToken cancellationToken) =>
+        ReadSection(reader, length, onField, options, budget, null, cancellationToken);
+
     public static async Task<Http3FieldSection> ReadSection(Http3StreamReader reader, long length,
         Action<KeyValuePair<string, string>>? onField, Http3ServerOptions options, Http3HeaderBudget budget,
-        CancellationToken cancellationToken)
+        Http3TrailerInspection? inspection, CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(length);
         // The frame's declared size is not an allocation request. Decode each field as its bytes arrive,
         // keeping only bounded strings and at most the reference's 200-field parsing allowance.
-        var input = new Http3QpackSectionInput(reader, length);
+        var input = new Http3QpackSectionInput(reader, length, inspection);
         var fields = new List<KeyValuePair<string, string>>();
         try {
             var first = await input.ReadByte(cancellationToken).Vhc();
@@ -31,11 +36,13 @@ internal static partial class Http3Qpack
             if (await ReadInteger(input, first, 7, cancellationToken).Vhc() != 0)
                 throw new Http3QpackException("The field section has a nonzero Delta Base.");
 
+            input.StartFields();
             while (input.Remaining > 0) {
                 var field = await ReadField(input, options.MaxFieldBytes, cancellationToken).Vhc();
                 budget.Append(field);
                 onField?.Invoke(field);
                 fields.Add(field);
+                inspection?.FieldCompleted();
             }
             return new Http3FieldSection(fields, true, budget.ExceedsRequestLimits);
         }

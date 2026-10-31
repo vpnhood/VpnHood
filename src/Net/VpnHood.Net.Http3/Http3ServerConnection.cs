@@ -9,6 +9,7 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
     IHttp3StreamFilter filter, IHttp3StreamRunner runner, IHttp3Responder responder)
 {
     private readonly Http3ServerOptions _options = options.Validate();
+    private readonly IHttp3TrailerScheduleSampler _trailerScheduleSampler = Http3TrailerScheduleSampler.Shared;
     private readonly CancellationTokenSource _abort = new();
     private readonly CancellationTokenSource _idle = new();
     private readonly Lock _stateLock = new();
@@ -22,6 +23,13 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
     private bool _controlSettingsSent;
     private bool _gracefulCloseRequested;
     private bool _controlInputPending;
+
+    internal Http3ServerConnection(IQuicServerConnection connection, Http3ServerOptions options,
+        IHttp3StreamFilter filter, IHttp3StreamRunner runner, IHttp3Responder responder,
+        IHttp3TrailerScheduleSampler trailerScheduleSampler) : this(connection, options, filter, runner, responder)
+    {
+        _trailerScheduleSampler = trailerScheduleSampler;
+    }
 
     public async Task Run(CancellationToken cancellationToken)
     {
@@ -164,8 +172,8 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
         var errors = new Http3StreamErrorHandler(quic, reader, Close, AbortStream, cancellationToken);
         try {
             if (quic.CanWrite)
-                await Http3RequestStream.Process(output, reader, quic, _context, errors.Handle, responder,
-                    _options, headersToken, cancellationToken).Vhc();
+                await Http3RequestStream.Process(output, reader, quic, errors.Handle, responder,
+                    _options, _trailerScheduleSampler, headersToken, cancellationToken).Vhc();
             else
                 await control.Process(reader, quic, cancellationToken).Vhc();
         }

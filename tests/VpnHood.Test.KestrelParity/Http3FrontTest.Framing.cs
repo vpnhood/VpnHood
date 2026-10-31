@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Quic;
 using System.Diagnostics;
+using VpnHood.Net.Http3;
 using VpnHood.Test.KestrelParity.Probing;
+using VpnHood.Test.KestrelParity.Servers;
 
 namespace VpnHood.Test.KestrelParity;
 
@@ -16,7 +18,7 @@ public partial class Http3FrontTest
     {
         byte[] request = [.. BuildBodyHeaders(contentLength), .. Frame(0, [1, 2, 3])];
         await ObserveDataLengthTiming(name, request, TestContext.CancellationToken);
-        // Hold the reference application; our inline inspection sees the complete buffered request.
+        // Hold the reference application; the pinned fixture sees the complete buffered request.
         byte[] heldRequest = [.. BuildBodyHeaders(contentLength, waitForAbort: true), .. Frame(0, [1, 2, 3])];
         var expected = await ObserveRequestEnding(Servers.ReferenceEndPoint, heldRequest, requiresFin,
             atomicFin: true, TestContext.CancellationToken);
@@ -45,10 +47,12 @@ public partial class Http3FrontTest
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(Http3Probe.Timeout);
+        await using var server = await PinnedHttp3Server.Start(Servers.Certificate,
+            new Http3TrailerSchedule(long.MaxValue, double.PositiveInfinity, double.PositiveInfinity), deadline.Token);
         // Prefetch FIN as well when shortage needs it, so available-only inspection reaches the mismatch.
-        using var buffered = Servers.BufferedQuic.BufferNextRequest(request.Length, static () => { }, finish,
+        using var buffered = server.BufferedQuic.BufferNextRequest(request.Length, static () => { }, finish,
             deadline.Token);
-        return await ObserveRequestEnding(Servers.OurEndPoint, request, finish, atomicFin: true, deadline.Token);
+        return await ObserveRequestEnding(server.EndPoint, request, finish, atomicFin: true, deadline.Token);
     }
 
     private async Task ObserveDataLengthTiming(string name, byte[] request, CancellationToken cancellationToken)
@@ -83,7 +87,7 @@ public partial class Http3FrontTest
         var tail = Frame(0, [1, 2, 3]);
         var expected = await ObserveAfterResponse(Servers.ReferenceEndPoint, headers, tail,
             TestContext.CancellationToken);
-        var actual = await ObserveAfterResponse(Servers.OurEndPoint, headers, tail,
+        var actual = await ObserveAfterPinnedResponse(headers, tail,
             TestContext.CancellationToken);
         Assert.AreEqual(QuicError.StreamAborted, expected.Write.Error);
         Assert.AreEqual(0x100L, expected.Write.ApplicationErrorCode);
@@ -132,7 +136,7 @@ public partial class Http3FrontTest
             ? BuildLiteralRequest([(":path", "/")])
             : [.. BuildLiteralRequest([("x-trailer", "complete")]), .. Frame(0, [1])];
         var expected = await ObserveAfterResponse(Servers.ReferenceEndPoint, tail, TestContext.CancellationToken);
-        var actual = await ObserveAfterResponse(Servers.OurEndPoint, tail, TestContext.CancellationToken);
+        var actual = await ObserveAfterPinnedResponse(BuildBodyHeaders(null), tail, TestContext.CancellationToken);
         AssertRequestEnding(name, expected, actual);
     }
 
@@ -146,7 +150,7 @@ public partial class Http3FrontTest
     {
         var tail = Frame((ulong)frameType, []);
         var expected = await ObserveAfterResponse(Servers.ReferenceEndPoint, tail, TestContext.CancellationToken);
-        var actual = await ObserveAfterResponse(Servers.OurEndPoint, tail, TestContext.CancellationToken);
+        var actual = await ObserveAfterPinnedResponse(BuildBodyHeaders(null), tail, TestContext.CancellationToken);
         AssertRequestEnding($"reserved-request-frame-{frameType}", expected, actual);
     }
 
@@ -327,6 +331,14 @@ public partial class Http3FrontTest
     private static Task<RequestEnding> ObserveAfterResponse(IPEndPoint endPoint, byte[] tail,
         CancellationToken cancellationToken) => ObserveAfterResponse(endPoint, BuildBodyHeaders(null), tail,
         cancellationToken);
+
+    private static async Task<RequestEnding> ObserveAfterPinnedResponse(byte[] headers, byte[] tail,
+        CancellationToken cancellationToken)
+    {
+        await using var server = await PinnedHttp3Server.Start(Servers.Certificate,
+            new Http3TrailerSchedule(0, 0, 0), cancellationToken);
+        return await ObserveAfterResponse(server.EndPoint, headers, tail, cancellationToken);
+    }
 
     private static async Task<RequestEnding> ObserveAfterResponse(IPEndPoint endPoint, byte[] headers, byte[] tail,
         CancellationToken cancellationToken)

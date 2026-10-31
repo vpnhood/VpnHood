@@ -118,13 +118,17 @@ valid request and a correctly signed expired request, and confirm the latter get
 401. Never put proofs or access keys in URLs or deployment logs.
 
 HTTP/3 behavior is checked against the installed reference version, including malformed probes; this
-does not promise complete undetectability. An accepted statistical difference remains for uncontrolled
-bursts of headers and large trailers near the shared 64 KiB parsing allowance. Kestrel RC3 races its
-application pipeline against trailer parsing; this front gives response dispatch priority. Repeated
-probes can distinguish their proportions of 401, 431 and resets. RC3's proportions depend on host and
-load, so the front does not add an artificial delay to imitate them. Controlled cases check both
-orders. Burst diagnostics print both distributions and assert only when RC3's complete 401 response
-has at least two thirds of the samples. GOAWAY drain is compared without an artificial wake-up.
+does not promise complete undetectability. Anonymous requests with readable trailer bursts imitate
+Kestrel's proportions of 401, 431 and resets using a randomized parsing schedule calibrated on one
+host. Response selection follows a drawn number of completed trailer fields; a separate draw sets
+an encoded-byte distance based on the selected response, with a chance of immediate emission.
+Parsing continues for that distance, including frames after the trailers. The schedule ends as soon
+as readable input or the inspection budget ends; it never waits for more input
+and adds nothing to the authenticated tunnel path. The reference's own odds vary with host and load,
+and other field layouts are not covered by this calibration. Controlled cases pin the schedule;
+burst cases print both distributions, compare outcome shares within a tolerance, and require outcomes
+common on either server to appear on the other. The field-count hard-limit row checks only presence
+because the reference's reset share varied widely. GOAWAY drain is compared without an artificial wake-up.
 Native Android/iOS device interoperability and memory
 measurements remain release checks. Initial stream padding, published packages and the end-user wiki
 rollout remain separate plan stages.

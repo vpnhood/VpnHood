@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Quic;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -15,15 +16,15 @@ public partial class Http3FrontTest
     [DataRow(false, 101)]
     [DataRow(false, 200)]
     [DataRow(false, 201)]
-    public async Task Trailer_burst_distributions_match_clear_reference_401_majorities(bool octets, int total)
+    public async Task Trailer_burst_distributions_match_reference_shares(bool octets, int total)
     {
-        const int sampleCount = 30;
+        const int sampleCount = 200;
         var name = $"trailer-burst-{(octets ? "octets" : "count")}-{total}";
         var bytes = BuildTrailerBurst(octets, total);
         var cancellationToken = TestContext.CancellationToken;
         using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         startup.CancelAfter(Http3Probe.Timeout);
-        // Reuse each connection so 360 samples need only twelve handshakes.
+        // Reuse each connection so 2,400 samples need only twelve handshakes.
         await using var reference = await CreateProbe().Connect(Servers.ReferenceEndPoint, 3, startup.Token);
         await using var ours = await CreateProbe().Connect(Servers.OurEndPoint, 3, startup.Token);
         await using var referenceControl = await reference.OpenOutboundStreamAsync(QuicStreamType.Unidirectional,
@@ -51,24 +52,93 @@ public partial class Http3FrontTest
             WriteBurstDistribution(name + " ours", actual);
         }
 
-        // Burst odds depend on the host; the accepted difference stays diagnostic outside clear 401 majorities.
-        var referenceMajority = expected.Where(result => IsCompleteBurstChallenge(result.Response))
-            .GroupBy(result => result.Response).OrderByDescending(group => group.Count()).FirstOrDefault();
-        const int clearMajorityCount = (sampleCount * 2 + 2) / 3;
-        if (referenceMajority == null || referenceMajority.Count() < clearMajorityCount) {
-            TestContext.WriteLine($"{name}: the reference's complete 401 outcome has " +
-                $"{referenceMajority?.Count() ?? 0}/{sampleCount} samples, below the two-thirds threshold; " +
-                "distributions are diagnostic only.");
-            return;
-        }
-
-        var matching = actual.Count(result => result.Response == referenceMajority.Key);
-        Assert.IsTrue(matching >= clearMajorityCount,
-            $"{name}: ours matched the reference's {referenceMajority.Count()}/{sampleCount} 401 majority " +
-            $"only {matching}/{sampleCount} times; at least {clearMajorityCount} required: {referenceMajority.Key}");
+        // The reference's field-201 reset share varied from 7% to 70% on the calibration host.
+        AssertBurstDistributions(name, expected, actual, QuicError.StreamAborted, octets ? 0x10b : 0x10e,
+            presenceOnly: !octets && total == 201);
     }
 
-    private static bool IsCompleteBurstChallenge(Http3ProbeResult result)
+    [TestMethod]
+    [TestCategory("Http3Framing")]
+    public async Task Data_after_trailers_burst_distributions_match_reference_shares()
+    {
+        const int sampleCount = 200;
+        const string name = "trailer-burst-data-after-trailers";
+        byte[] bytes = [.. BuildLiteralRequest(ValidationHeaders()),
+            .. BuildLiteralRequest([.. Enumerable.Repeat(("x", ""), 8)]), .. Frame(0, [1])];
+        var cancellationToken = TestContext.CancellationToken;
+        var expected = new List<(Http3ProbeResult Response, Http3ProbeResult Write)>(sampleCount);
+        var actual = new List<(Http3ProbeResult Response, Http3ProbeResult Write)>(sampleCount);
+        try {
+            for (var sample = 0; sample < sampleCount; sample++) {
+                // A parser-first sample closes its connection, so neither server reuses one here.
+                if (sample % 2 == 0) {
+                    expected.Add(await ObserveFreshTrailerBurst(Servers.ReferenceEndPoint, bytes, cancellationToken));
+                    actual.Add(await ObserveFreshTrailerBurst(Servers.OurEndPoint, bytes, cancellationToken));
+                }
+                else {
+                    actual.Add(await ObserveFreshTrailerBurst(Servers.OurEndPoint, bytes, cancellationToken));
+                    expected.Add(await ObserveFreshTrailerBurst(Servers.ReferenceEndPoint, bytes, cancellationToken));
+                }
+            }
+        }
+        finally {
+            WriteBurstDistribution(name + " reference", expected);
+            WriteBurstDistribution(name + " ours", actual);
+        }
+        AssertBurstDistributions(name, expected, actual, QuicError.ConnectionAborted, 0x105, presenceOnly: false);
+    }
+
+    private void AssertBurstDistributions(string name,
+        IReadOnlyList<(Http3ProbeResult Response, Http3ProbeResult Write)> expected,
+        IReadOnlyList<(Http3ProbeResult Response, Http3ProbeResult Write)> actual,
+        QuicError error, long errorCode, bool presenceOnly)
+    {
+        Assert.AreEqual(expected.Count, actual.Count);
+        var sampleCount = expected.Count;
+        var expectedOutcomes = expected.Select(result => GetBurstOutcome(result.Response, error, errorCode)).ToArray();
+        var actualOutcomes = actual.Select(result => GetBurstOutcome(result.Response, error, errorCode)).ToArray();
+        var presenceThreshold = sampleCount / 10;
+        var allowedDifference = sampleCount * 22 / 100;
+        IReadOnlyList<string> outcomes = error == QuicError.ConnectionAborted
+            ? ["401", "connection-error"]
+            : ["401", "431", "reset"];
+        foreach (var outcome in outcomes) {
+            var referenceCount = expectedOutcomes.Count(value => value == outcome);
+            var ourCount = actualOutcomes.Count(value => value == outcome);
+            TestContext.WriteLine($"{name}: {outcome}: reference={referenceCount}/{sampleCount}, " +
+                $"ours={ourCount}/{sampleCount}; {(presenceOnly ? "presence only" : "22-point tolerance")}.");
+            if (referenceCount >= presenceThreshold)
+                Assert.IsTrue(ourCount > 0, $"{name}: reference {outcome} occurs at least 10%, but ours never occurs.");
+            if (ourCount >= presenceThreshold)
+                Assert.IsTrue(referenceCount > 0, $"{name}: ours {outcome} occurs at least 10%, but reference never occurs.");
+            if (!presenceOnly)
+                Assert.IsTrue(Math.Abs(referenceCount - ourCount) <= allowedDifference,
+                    $"{name}: {outcome} differs by more than 22 percentage points: " +
+                    $"reference={referenceCount}/{sampleCount}, ours={ourCount}/{sampleCount}.");
+
+            if ((outcome is "401" or "431") && referenceCount > 0 && ourCount > 0) {
+                var referenceForms = expected.Where(result => IsCompleteBurstResponse(result.Response, outcome))
+                    .Select(result => result.Response).ToHashSet();
+                foreach (var result in actual.Where(result => IsCompleteBurstResponse(result.Response, outcome)))
+                    Assert.Contains(result.Response, referenceForms,
+                        $"{name}: the complete {outcome} wire response must match the reference, apart from Date.");
+            }
+        }
+    }
+
+    private static string GetBurstOutcome(Http3ProbeResult result, QuicError error, long errorCode)
+    {
+        if (!result.Fin && result.Error == error && result.ApplicationErrorCode == errorCode)
+            return error == QuicError.ConnectionAborted ? "connection-error" : "reset";
+        if (IsCompleteBurstResponse(result, "401"))
+            return "401";
+        if (error == QuicError.StreamAborted && IsCompleteBurstResponse(result, "431"))
+            return "431";
+        throw new AssertFailedException(
+            $"Unexpected trailer-burst response (error must be {error}/0x{errorCode:x}): {result}");
+    }
+
+    private static bool IsCompleteBurstResponse(Http3ProbeResult result, string status)
     {
         if (!result.Fin || result.Error != null || result.ApplicationErrorCode != null)
             return false;
@@ -77,8 +147,12 @@ public partial class Http3FrontTest
             return false;
         var payloadOffset = 1 + (1 << (bytes[1] >> 6));
         // RC3 starts HEADERS with a zero QPACK prefix and a literal :status at static name index 63.
-        ReadOnlySpan<byte> challengePrefix = [0, 0, 0x5f, 0x30, 3, (byte)'4', (byte)'0', (byte)'1'];
-        return bytes.Length >= payloadOffset && bytes.AsSpan(payloadOffset).StartsWith(challengePrefix);
+        ReadOnlySpan<byte> statusPrefix = [0, 0, 0x5f, 0x30, 3];
+        return bytes.Length >= payloadOffset + statusPrefix.Length + status.Length &&
+               bytes.AsSpan(payloadOffset).StartsWith(statusPrefix) &&
+               bytes[payloadOffset + statusPrefix.Length] == status[0] &&
+               bytes[payloadOffset + statusPrefix.Length + 1] == status[1] &&
+               bytes[payloadOffset + statusPrefix.Length + 2] == status[2];
     }
 
     private static byte[] BuildTrailerBurst(bool octets, int total)
@@ -99,7 +173,7 @@ public partial class Http3FrontTest
         var response = ReadCompleteResponse(request, deadline.Token);
         var write = ObserveWriteEnd(request, deadline.Token);
         try {
-            // A single native send leaves initial headers, trailers and FIN in the same uncontrolled burst.
+            // A single native send leaves the whole request and FIN in the same uncontrolled burst.
             await SendAtomicRequest(request, bytes, deadline.Token);
             await Task.WhenAll(response, write);
             return (NormalizeBurstResponse(await response), await write);
@@ -111,6 +185,17 @@ public partial class Http3FrontTest
                 // Join both observers before native stream disposal while retaining the original failure.
             }
         }
+    }
+
+    private static async Task<(Http3ProbeResult Response, Http3ProbeResult Write)> ObserveFreshTrailerBurst(
+        IPEndPoint endPoint, byte[] bytes, CancellationToken cancellationToken)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(Http3Probe.Timeout);
+        await using var connection = await CreateProbe().Connect(endPoint, 3, deadline.Token);
+        await using var control = await connection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional, deadline.Token);
+        await control.WriteAsync(new byte[] { 0, 4, 0 }, deadline.Token);
+        return await ObserveTrailerBurst(connection, bytes, deadline.Token);
     }
 
     private static Http3ProbeResult NormalizeBurstResponse(Http3ProbeResult result)
@@ -128,7 +213,7 @@ public partial class Http3FrontTest
         TestContext.WriteLine($"{name}: {results.Count} samples");
         foreach (var group in results.GroupBy(result => result).OrderByDescending(group => group.Count()))
             TestContext.WriteLine($"  {group.Count()}: response={group.Key.Response}; write={group.Key.Write}");
-        // FIN acknowledgement can beat STOP_SENDING, so only the complete response chooses the majority.
+        // FIN acknowledgement can beat STOP_SENDING; retain both directions without treating it as another outcome.
         foreach (var group in results.GroupBy(result => result.Response).OrderByDescending(group => group.Count()))
             TestContext.WriteLine($"  response total {group.Count()}: {group.Key}");
     }

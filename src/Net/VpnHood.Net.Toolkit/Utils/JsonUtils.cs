@@ -2,6 +2,8 @@
 using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
@@ -51,6 +53,23 @@ public static class JsonUtils
         }
         catch (Exception ex) {
             logger?.LogError(ex, "Could not read json file. FilePath: {FilePath}", filePath);
+            return default;
+        }
+    }
+
+    // A file's object, or default where there is none to take: no file yet goes unlogged, and one that can't be
+    // read or parsed is logged. A cancel goes out, as FileUtils.TryReadAllTextAsync says.
+    public static async Task<T?> TryDeserializeFileAsync<T>(string filePath, CancellationToken cancellationToken)
+    {
+        var json = await FileUtils.TryReadAllTextAsync(filePath, cancellationToken).Vhc();
+        if (json == null)
+            return default;
+
+        try {
+            return Deserialize<T>(json);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not read json file. FilePath: {FilePath}", filePath);
             return default;
         }
     }

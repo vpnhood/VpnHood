@@ -1,5 +1,7 @@
 using System.Text;
+using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
@@ -59,6 +61,23 @@ public static class FileUtils
     {
         return ex is UnauthorizedAccessException ||
                ex is IOException and not FileNotFoundException and not DirectoryNotFoundException;
+    }
+
+    // A file's text, or null where there is none to take: no file yet, a first run's case, goes unlogged, and one
+    // that can't be read is logged. A cancel goes out: taken for a missing file, it would have the caller make the
+    // file anew.
+    public static async Task<string?> TryReadAllTextAsync(string filePath, CancellationToken cancellationToken)
+    {
+        try {
+            return File.Exists(filePath) ? await File.ReadAllTextAsync(filePath, cancellationToken).Vhc() : null;
+        }
+        catch (OperationCanceledException) {
+            throw;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not read the file. FilePath: {FilePath}", filePath);
+            return null;
+        }
     }
 
     // The file is replaced whole or not at all: the content goes to a file beside it, under the token, which then

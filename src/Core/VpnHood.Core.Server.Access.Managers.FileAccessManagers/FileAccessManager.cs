@@ -118,7 +118,7 @@ public class FileAccessManager : IAccessManager
 
 
         var serverLocationFile = Path.Combine(storagePath, ServerLocationFileName);
-        var serverLocation = await TryToReadFile(serverLocationFile, cancellationToken).Vhc();
+        var serverLocation = await FileUtils.TryReadAllTextAsync(serverLocationFile, cancellationToken).Vhc();
         VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
         var serverToken = new ServerToken {
             CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
@@ -168,7 +168,7 @@ public class FileAccessManager : IAccessManager
     private static async Task<byte[]> LoadServerSecret(string certsFolderPath, CancellationToken cancellationToken)
     {
         var serverSecretFile = Path.Combine(certsFolderPath, "secret");
-        var secretBase64 = await TryToReadFile(serverSecretFile, cancellationToken).Vhc();
+        var secretBase64 = await FileUtils.TryReadAllTextAsync(serverSecretFile, cancellationToken).Vhc();
         if (string.IsNullOrEmpty(secretBase64)) {
             secretBase64 = Convert.ToBase64String(VhUtils.GenerateKey(128));
             await FileUtils.WriteAllTextAtomicAsync(serverSecretFile, secretBase64, cancellationToken).Vhc();
@@ -183,7 +183,7 @@ public class FileAccessManager : IAccessManager
     {
         var serverLocationFile = Path.Combine(storagePath, ServerLocationFileName);
         if (!options.UseExternalLocationService ||
-            !string.IsNullOrEmpty(await TryToReadFile(serverLocationFile, cancellationToken).Vhc()))
+            !string.IsNullOrEmpty(await FileUtils.TryReadAllTextAsync(serverLocationFile, cancellationToken).Vhc()))
             return;
 
         try {
@@ -211,21 +211,6 @@ public class FileAccessManager : IAccessManager
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not find the server location.");
-        }
-    }
-
-    // a cancel goes out: taken for a missing file, it would have the secret made anew
-    private static async Task<string?> TryToReadFile(string filePath, CancellationToken cancellationToken)
-    {
-        try {
-            return File.Exists(filePath) ? await File.ReadAllTextAsync(filePath, cancellationToken).Vhc() : null;
-        }
-        catch (OperationCanceledException) {
-            throw;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not read file: {FilePath}", filePath);
-            return null;
         }
     }
 
@@ -268,7 +253,7 @@ public class FileAccessManager : IAccessManager
     private async Task<int> GetUdpPort(ServerInfo serverInfo, CancellationToken cancellationToken)
     {
         var udpPortFile = Path.Combine(StoragePath, "udp_port");
-        var udpPortText = await TryToReadFile(udpPortFile, cancellationToken).Vhc();
+        var udpPortText = await FileUtils.TryReadAllTextAsync(udpPortFile, cancellationToken).Vhc();
         if (!int.TryParse(udpPortText, out var udpPort) || udpPort is <= 0 or > ushort.MaxValue) {
             udpPort = serverInfo.FreeUdpPortV4 != 0 ? serverInfo.FreeUdpPortV4 : serverInfo.FreeUdpPortV6;
             if (udpPort == 0)

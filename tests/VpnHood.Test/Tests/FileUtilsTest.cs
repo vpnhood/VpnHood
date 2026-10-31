@@ -44,6 +44,24 @@ public class FileUtilsTest : TestBase
         Assert.IsEmpty(Directory.GetFiles(Path.GetDirectoryName(filePath)!));
     }
 
+    [TestMethod]
+    public async Task A_missing_file_reads_as_null()
+    {
+        Assert.IsNull(await FileUtils.TryReadAllTextAsync(CreateFilePath(), TestCt));
+    }
+
+    [TestMethod]
+    public async Task A_cancelled_read_goes_out_rather_than_reading_as_a_missing_file()
+    {
+        var filePath = CreateFilePath();
+        await File.WriteAllTextAsync(filePath, "old", TestCt);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        await cancellationTokenSource.CancelAsync();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            FileUtils.TryReadAllTextAsync(filePath, cancellationTokenSource.Token));
+    }
+
     private string CreateFilePath()
     {
         var folderPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());

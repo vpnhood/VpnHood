@@ -1,14 +1,12 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
-using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
@@ -55,7 +53,8 @@ public class SessionService : IDisposable
         // read all session from files
         var sessions = new ConcurrentDictionary<ulong, Session>();
         foreach (var filePath in Directory.GetFiles(sessionsFolderPath, $"*.{SessionFileExtension}")) {
-            var session = await TryLoadSession(filePath, cancellationToken).Vhc();
+            // a file that can't be loaded goes; a cancel goes out rather than taking a file for a bad one
+            var session = await JsonUtils.TryDeserializeFileAsync<Session>(filePath, cancellationToken).Vhc();
             if (session == null) {
                 VhUtils.TryDeleteFile(filePath);
                 continue;
@@ -65,22 +64,6 @@ public class SessionService : IDisposable
         }
 
         return sessions;
-    }
-
-    // a cancel goes out: taken for a bad file, it would have the file deleted
-    private static async Task<Session?> TryLoadSession(string filePath, CancellationToken cancellationToken)
-    {
-        try {
-            var json = await File.ReadAllTextAsync(filePath, cancellationToken).Vhc();
-            return JsonUtils.Deserialize<Session>(json);
-        }
-        catch (OperationCanceledException) {
-            throw;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not load session file. File: {File}", filePath);
-            return null;
-        }
     }
 
     private string GetSessionFilePath(ulong sessionId)

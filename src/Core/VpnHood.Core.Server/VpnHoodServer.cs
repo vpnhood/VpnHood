@@ -536,24 +536,15 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             return serverConfig;
         }
         catch (MaintenanceException) {
-            // try to load last config
-            try {
-                if (File.Exists(_lastConfigFilePath)) {
-                    var configJson = await File.ReadAllTextAsync(_lastConfigFilePath, cancellationToken).Vhc();
-                    var ret = JsonUtils.Deserialize<ServerConfig>(configJson);
-                    VhLogger.Instance.LogWarning("Last configuration has been loaded to report Maintenance mode.");
-                    return ret;
-                }
-            }
-            // a stop's cancellation passes: the maintenance error rethrown below would record a strike
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            // the last config, to report Maintenance mode; a stop's cancellation passes through the read, as the
+            // maintenance error rethrown would record a strike
+            var lastConfig = await JsonUtils.TryDeserializeFileAsync<ServerConfig>(_lastConfigFilePath,
+                cancellationToken).Vhc();
+            if (lastConfig == null)
                 throw;
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogInformation(ex, "Could not load last ServerConfig.");
-            }
 
-            throw;
+            VhLogger.Instance.LogWarning("Last configuration has been loaded to report Maintenance mode.");
+            return lastConfig;
         }
     }
 

@@ -116,7 +116,7 @@ public class AccessTokenService
 
         // try read usage
         var usageFileName = GetAccessTokenUsageFileName(tokenId);
-        var usage = JsonUtils.TryDeserializeFile<AccessTokenUsage>(usageFileName) ??
+        var usage = await JsonUtils.TryDeserializeFileAsync<AccessTokenUsage>(usageFileName, cancellationToken).Vhc() ??
                     new AccessTokenUsage { Version = 2 };
 
         // for backward compatibility

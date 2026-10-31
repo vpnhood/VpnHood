@@ -11,7 +11,8 @@ namespace VpnHood.Core.Client.Devices.Android.Messaging;
 
 // Binder-based IMessageClient. It keeps a single dormant binding (no AutoCreate) to
 // AndroidVpnService, so it never keeps the VPN service process alive by itself; the binding
-// connects whenever the service is started and reconnects automatically after a restart.
+// connects whenever the service is started and reconnects automatically after a restart (on
+// Android 7 the next send binds again: OnServiceDisconnected).
 // Discovery, endpoints and API keys do not exist here — the binder is obtained by component.
 //
 // Requests are oneway transactions correlated by requestId, and the response arrives on our reply
@@ -248,6 +249,17 @@ public sealed class AndroidMessageClient : IMessageClient
         public void OnServiceDisconnected(ComponentName? name)
         {
             VhLogger.Instance.LogDebug("VpnService message channel has been disconnected.");
+
+            // Android 7 has no OnBindingDied: a service it stops (a disconnect, not a crash) leaves
+            // the binding dead with this call alone, and the service's next start never answers it -
+            // the app lost the VPN service it had just connected. There each disconnect releases the
+            // binding, as OnBindingDied does, and the next send binds again.
+            if (!OperatingSystem.IsAndroidVersionAtLeast(26)) {
+                if (ResetBinding("VpnService has been disconnected."))
+                    client.FailPendingRequests("VpnService has been disconnected.");
+                return;
+            }
+
             lock (client._connectionLock) {
                 if (client._disposed)
                     return;

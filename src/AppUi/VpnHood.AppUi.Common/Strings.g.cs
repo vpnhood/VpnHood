@@ -310,10 +310,10 @@ public sealed partial class Strings
     /// <summary>Create a Personal Server</summary>
     public string Createserver => Get("createServer");
 
-    /// <summary>You disconnected another device because you used the same server key on multiple devices!</summary>
+    /// <summary>You connected on more devices than allowed, so another device was disconnected!</summary>
     public string SessionSuppressedToOther => Get("SESSION_SUPPRESSED_TO_OTHER");
 
-    /// <summary>You have been disconnected because another device connected with your server key!</summary>
+    /// <summary>You were disconnected because another device connected in your place!</summary>
     public string SessionSuppressedByOther => Get("SESSION_SUPPRESSED_BY_OTHER");
 
     /// <summary>Your {appName} app is deprecated and will stop working sooner or later! Consider upgrading as soon as possible.</summary>

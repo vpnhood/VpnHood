@@ -1406,39 +1406,65 @@
   <Style Selector="Border.snackbar Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderThickness" Value="1" />
   </Style>
-  <!-- the update snackbar's two tones -->
-  <Style Selector="Border.snackbar.update-alert">
-    <Setter Property="Background" Value="{StaticResource UpdateSnackbarAlertBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.update-warning">
-    <Setter Property="Background" Value="{StaticResource UpdateSnackbarWarningBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.update-alert TextBlock, Border.snackbar.update-warning TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource BtnOnUpdateSnackbarBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar Button.update-btn">
-    <Setter Property="Background" Value="{StaticResource BtnOnUpdateSnackbarBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+  <!-- The update notice (UpdateSnackbar.vue's): a bar along the top of the app, its colour to the
+       screen's edges and under the status bar, edged below - attached, as a browser's info bar is to
+       its toolbar - not a card floating over the page. In the app's own dark tones, not light: it
+       stays until Later and carries actions, so it is a banner, not a passing snackbar's inverse light
+       pill, and a big white area glares on a TV in a dark room. Its surface is the home rows' colour,
+       opaque, edged as they are; a deprecated version's edge is the warning colour. The buttons keep
+       the theme's white focus ring, which shows on the dark surface. Its two layouts are MainView's. -->
+  <Style Selector="Border.update-notice">
+    <Setter Property="Background" Value="{StaticResource UpdateNoticeBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource HomeConfigBtnBorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BoxShadow" Value="0 4 12 0 #4D000000" />
+    <Setter Property="Padding" Value="16,12" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="MinHeight" Value="32" />
-    <Setter Property="CornerRadius" Value="16" />
-    <!-- the ring's room kept, as the theme's buttons keep it, so the focus moves nothing -->
-    <Setter Property="BorderThickness" Value="3" />
-    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="VerticalAlignment" Value="Top" />
   </Style>
-  <Style Selector="Border.snackbar Button.update-btn.tonal">
-    <Setter Property="Background" Value="{StaticResource BtnOnUpdateSnackbarTonalBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource BtnOnUpdateSnackbarBrush}" />
+  <Style Selector="Border.update-notice.update-warning">
+    <Setter Property="BorderBrush" Value="{StaticResource WarningBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
   </Style>
-  <!-- the notice is a light card, where the dark pages' white ring would not show, nor the snackbar's
-       thin one across a room from a TV: as on the light dialog, a filled button's ring is the accent and
-       a tonal one's the card's words' colour -->
-  <Style Selector="Border.snackbar Button.update-btn:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="BorderThickness" Value="3" />
-    <Setter Property="BorderBrush" Value="{StaticResource HighlightBrush}" />
+  <!-- a TV's: the words and the buttons inside the overscan inset its pages keep, the colour beyond it -->
+  <Style Selector=":is(UserControl).tv Border.update-notice">
+    <Setter Property="Padding" Value="48,27,48,16" />
   </Style>
-  <Style Selector="Border.snackbar Button.update-btn.tonal:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="BorderBrush" Value="{StaticResource BtnOnUpdateSnackbarBrush}" />
+  <Style Selector="Border.update-notice TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource OnBackgroundBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="Border.update-notice TextBlock.body-small">
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+  <Style Selector="Border.update-notice TextBlock.update-icon">
+    <Setter Property="Foreground" Value="{StaticResource HighlightBrush}" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="0,0,12,0" />
+  </Style>
+  <Style Selector="Border.update-notice.update-warning TextBlock.update-icon">
+    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+  </Style>
+  <Style Selector="Border.update-notice ProgressBar">
+    <Setter Property="Foreground" Value="{StaticResource HighlightBrush}" />
+    <Setter Property="Background" Value="{StaticResource WhiteTonalBrush}" />
+  </Style>
+  <!-- the way forward filled in the highlight with the page's dark colour as text, as on the snackbar;
+       the others white on white at 16%. The ring's room is kept, so the focus moves nothing. -->
+  <Style Selector="Border.update-notice Button.update-btn">
+    <Setter Property="Background" Value="{StaticResource HighlightBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource BackgroundBrush}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="Padding" Value="16,6" />
+  </Style>
+  <Style Selector="Border.update-notice Button.update-btn.secondary">
+    <Setter Property="Background" Value="{StaticResource WhiteTonalBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnBackgroundBrush}" />
+    <Setter Property="FontWeight" Value="Normal" />
   </Style>
 
   <!-- the feature pages (FeaturePageLayout.vue): the gradient sheet, the image, the numbered steps.

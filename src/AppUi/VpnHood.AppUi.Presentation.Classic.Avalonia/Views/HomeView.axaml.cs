@@ -45,6 +45,15 @@ public partial class HomeView : UserControl, IPage
             BodyBg.Margin = new Thickness(-Padding.Left, -Padding.Top, -Padding.Right, -Padding.Bottom);
     }
 
+    // How far the page moves down under a bar over its top - a TV's update notice - so the bar covers
+    // the header alone, the app's name, and never the circle or the rows. The header's own place, not
+    // the padding's, so moving the page changes nothing here.
+    public double RoomUnder(double barBottom)
+    {
+        var headerBottom = Header.TranslatePoint(new Point(0, Header.Bounds.Height), this)?.Y - Padding.Top;
+        return headerBottom is { } bottom ? Math.Max(0, barBottom - bottom) : 0;
+    }
+
     // the countdown's colour steps down as the time does (CountDown.getCountdownColor)
     private void UpdateCountdownColor()
     {

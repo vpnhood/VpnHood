@@ -17,6 +17,75 @@
        and the snackbar. The font is the web UI's: Poppins Light for text, Bold where a style says.
        The language's direction is set here, on the root (Strings.IsRightToLeft), and everything
        beneath mirrors with it: the drawer's "Left" is the start edge, the right in Persian. -->
+  <!-- The update notice's two layouts, by the width of its layer (the "Notice" container): narrow, the
+       icon and the words over the actions, then the versions and Later at the foot; wide, the words and
+       the versions beside the actions and Later, so the bar stays low. Its look is AppTheme's. -->
+  <UserControl.Styles>
+    <Style Selector="Border.update-notice StackPanel.update-texts">
+      <Setter Property="Grid.Column" Value="1" />
+      <Setter Property="Grid.ColumnSpan" Value="3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.update-notice StackPanel.update-actions">
+      <Setter Property="Grid.Row" Value="1" />
+      <Setter Property="Grid.ColumnSpan" Value="4" />
+      <Setter Property="Margin" Value="0,12,0,0" />
+    </Style>
+    <Style Selector="Border.update-notice Border.update-divider">
+      <Setter Property="Grid.Row" Value="2" />
+      <Setter Property="Grid.ColumnSpan" Value="4" />
+      <Setter Property="Margin" Value="0,12,0,8" />
+    </Style>
+    <Style Selector="Border.update-notice StackPanel.update-versions">
+      <Setter Property="Grid.Row" Value="3" />
+      <Setter Property="Grid.ColumnSpan" Value="3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.update-notice Button.update-later">
+      <Setter Property="Grid.Row" Value="3" />
+      <Setter Property="Grid.Column" Value="3" />
+      <Setter Property="HorizontalAlignment" Value="Right" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <ContainerQuery Name="Notice" Query="min-width:600">
+      <!-- a wide window's bar keeps its parts within reach of each other -->
+      <Style Selector="Grid#UpdateNoticeContent">
+        <Setter Property="MaxWidth" Value="1100" />
+      </Style>
+      <Style Selector="Border.update-notice TextBlock.update-icon">
+        <Setter Property="Grid.RowSpan" Value="2" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+      </Style>
+      <Style Selector="Border.update-notice StackPanel.update-texts">
+        <Setter Property="Grid.ColumnSpan" Value="1" />
+      </Style>
+      <Style Selector="Border.update-notice StackPanel.update-versions">
+        <Setter Property="Grid.Row" Value="1" />
+        <Setter Property="Grid.Column" Value="1" />
+        <Setter Property="Grid.ColumnSpan" Value="1" />
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="Spacing" Value="16" />
+        <Setter Property="Margin" Value="0,4,0,0" />
+      </Style>
+      <Style Selector="Border.update-notice StackPanel.update-actions">
+        <Setter Property="Grid.Row" Value="0" />
+        <Setter Property="Grid.RowSpan" Value="2" />
+        <Setter Property="Grid.Column" Value="2" />
+        <Setter Property="Grid.ColumnSpan" Value="1" />
+        <Setter Property="MinWidth" Value="200" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="24,0,0,0" />
+      </Style>
+      <Style Selector="Border.update-notice Border.update-divider">
+        <Setter Property="IsVisible" Value="False" />
+      </Style>
+      <Style Selector="Border.update-notice Button.update-later">
+        <Setter Property="Grid.Row" Value="0" />
+        <Setter Property="Grid.RowSpan" Value="2" />
+        <Setter Property="Margin" Value="12,0,0,0" />
+      </Style>
+    </ContainerQuery>
+  </UserControl.Styles>
   <Panel>
     <TransitioningContentControl x:Name="Host" Container.Name="Page" Container.Sizing="Width">
       <TransitioningContentControl.PageTransition>
@@ -52,38 +121,46 @@
       <ContentControl x:Name="DialogContent" VerticalAlignment="Center" Margin="16" />
     </Panel>
 
-    <!-- UpdateSnackbar: a newer version and the way to it, until Later. The layer keeps a TV's notice to
-         its home (MainView.Show) -->
-    <Panel x:Name="UpdateNoticeLayer">
-      <Border x:Name="UpdateNotice" Classes="snackbar update-alert" IsVisible="False" MaxWidth="570" HorizontalAlignment="Center">
-        <StackPanel Spacing="8" MinWidth="320">
-          <TextBlock x:Name="UpdateNoticeText" Classes="body-large" />
-          <!-- where the app updates itself: Update downloads the package, its progress, then Install -->
-          <Button x:Name="UpdateDownloadButton" Classes="update-btn" Click="OnUpdateDownloadClick" Content="{Binding UpdateNow, Source={x:Static res:Strings.Current}}" />
-          <StackPanel x:Name="UpdateProgress" Spacing="4">
-            <ProgressBar x:Name="UpdateProgressBar" Minimum="0" Maximum="100" />
-            <TextBlock x:Name="UpdateProgressText" Classes="body-small" TextAlignment="Center" />
-          </StackPanel>
-          <Button x:Name="UpdateInstallButton" Classes="update-btn" Click="OnUpdateInstallClick" Content="{Binding Install, Source={x:Static res:Strings.Current}}" />
-          <TextBlock x:Name="UpdatePackageText" Classes="body-small" TextAlignment="Center" TextWrapping="Wrap" />
-          <Button x:Name="UpdateStoreButton" Classes="update-btn" Click="OnUpdateStoreClick" Content="{Binding UpdateFromGooglePlay, Source={x:Static res:Strings.Current}}" />
-          <Button x:Name="UpdateDirectButton" Classes="update-btn" Click="OnUpdateDirectClick" Content="{Binding UpdateFromDirectLink, Source={x:Static res:Strings.Current}}" />
-          <Button x:Name="UpdateNoStoreButton" Classes="update-btn tonal" Click="OnUpdateNoStoreClick" Content="{Binding DoNotHaveAccessToGooglePlay, Source={x:Static res:Strings.Current}}" />
-          <StackPanel x:Name="UpdateAlternative" Spacing="4" IsVisible="False">
-            <Button Classes="update-btn tonal" Click="OnUpdateDirectClick" Content="{Binding UpdateFromAlternativeLink, Source={x:Static res:Strings.Current}}" />
-            <TextBlock Classes="body-small" TextAlignment="Center" Opacity="0.6" Text="{Binding UpdateFromAlternativeLinkNotice, Source={x:Static res:Strings.Current}}" />
-          </StackPanel>
-          <Border Classes="divider" Margin="0,4" />
-          <Grid ColumnDefinitions="*,Auto">
-            <StackPanel>
-              <TextBlock x:Name="UpdateCurrentText" Classes="body-small" Opacity="0.6" />
-              <TextBlock x:Name="UpdateNewText" Classes="body-small" />
+    <!-- UpdateSnackbar: a newer version and the way to it, until Later - a bar along the top of the app,
+         under the status bar as the page's background is (MainView.ApplySystemBars). The layer keeps a
+         TV's notice to its home (MainView.Show). One set of parts in two layouts by the layer's width
+         (the styles above), so no part here carries a Grid position: a local value would beat the wide
+         layout's. -->
+    <!-- ReSharper disable Xaml.MissingGridIndex -->
+    <Panel x:Name="UpdateNoticeLayer" Container.Name="Notice" Container.Sizing="Width">
+      <Border x:Name="UpdateNotice" Classes="update-notice update-alert" IsVisible="False">
+        <Grid x:Name="UpdateNoticeContent" ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+          <TextBlock x:Name="UpdateNoticeIcon" Classes="mdi update-icon" />
+          <StackPanel Classes="update-texts" Spacing="4">
+            <TextBlock x:Name="UpdateNoticeText" Classes="body-large" />
+            <StackPanel x:Name="UpdateProgress" Spacing="4">
+              <ProgressBar x:Name="UpdateProgressBar" Minimum="0" Maximum="100" />
+              <TextBlock x:Name="UpdateProgressText" Classes="body-small" />
             </StackPanel>
-            <Button x:Name="UpdateLaterButton" Grid.Column="1" Classes="update-btn tonal" Width="NaN" HorizontalAlignment="Right" Click="OnUpdateLaterClick" Content="{Binding Later, Source={x:Static res:Strings.Current}}" />
-          </Grid>
-        </StackPanel>
+            <TextBlock x:Name="UpdatePackageText" Classes="body-small" />
+          </StackPanel>
+          <!-- where the app updates itself: Update downloads the package, its progress, then Install -->
+          <StackPanel Classes="update-actions" Spacing="8">
+            <Button x:Name="UpdateDownloadButton" Classes="update-btn" Click="OnUpdateDownloadClick" Content="{Binding UpdateNow, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateInstallButton" Classes="update-btn" Click="OnUpdateInstallClick" Content="{Binding Install, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateStoreButton" Classes="update-btn" Click="OnUpdateStoreClick" Content="{Binding UpdateFromGooglePlay, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateDirectButton" Classes="update-btn" Click="OnUpdateDirectClick" Content="{Binding UpdateFromDirectLink, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateNoStoreButton" Classes="update-btn secondary" Click="OnUpdateNoStoreClick" Content="{Binding DoNotHaveAccessToGooglePlay, Source={x:Static res:Strings.Current}}" />
+            <StackPanel x:Name="UpdateAlternative" Spacing="4" IsVisible="False">
+              <Button Classes="update-btn secondary" Click="OnUpdateDirectClick" Content="{Binding UpdateFromAlternativeLink, Source={x:Static res:Strings.Current}}" />
+              <TextBlock Classes="body-small" TextAlignment="Center" Opacity="0.6" Text="{Binding UpdateFromAlternativeLinkNotice, Source={x:Static res:Strings.Current}}" />
+            </StackPanel>
+          </StackPanel>
+          <Border Classes="divider update-divider" />
+          <StackPanel Classes="update-versions">
+            <TextBlock x:Name="UpdateCurrentText" Classes="body-small" Opacity="0.6" />
+            <TextBlock x:Name="UpdateNewText" Classes="body-small" />
+          </StackPanel>
+          <Button x:Name="UpdateLaterButton" Classes="update-btn secondary update-later" Click="OnUpdateLaterClick" Content="{Binding Later, Source={x:Static res:Strings.Current}}" />
+        </Grid>
       </Border>
     </Panel>
+    <!-- ReSharper restore Xaml.MissingGridIndex -->
 
     <!-- GeneralSnackbar: a sentence at the top, gone by itself or by Close; a screen reader says it -->
     <Border x:Name="Snackbar" Classes="snackbar" IsVisible="False">

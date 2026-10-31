@@ -52,7 +52,7 @@
       <!-- HomePageHeader: the drawer's door, the app name in the middle, the build at the end.
            A row of its own height, held at the top. The name at the web UI's size: an h4 there is
            bold body text, 15px. -->
-      <Grid Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,2*,*" Height="48" VerticalAlignment="Top">
+      <Grid x:Name="Header" Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,2*,*" Height="48" VerticalAlignment="Top">
         <Button x:Name="MenuButton" Classes="icon" HorizontalAlignment="Left" VerticalAlignment="Center"
                 IsVisible="{Binding IsNotTv}" Click="OnMenuClick"
                 AutomationProperties.Name="{Binding Menu, Source={x:Static res:Strings.Current}}">

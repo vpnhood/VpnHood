@@ -53,6 +53,7 @@ public partial class MainView : UserControl
     private IInputElement? _focusBeforeOverlay;
     private IPage? _pageAwaitingFocus;
     private Thickness _systemBars;
+    private double _updateBarRoom;
     private Version? _updateNoticeVersion;
     private VersionStatus _updateNoticeVersionStatus;
     private AppUpdateStage? _updateStage;
@@ -74,6 +75,10 @@ public partial class MainView : UserControl
                 ReconnectBar.IsVisible = ViewModel.IsReconnectRequired;
             if (e.PropertyName is nameof(MainViewModel.SystemBarsTopHeight) or nameof(MainViewModel.SystemBarsBottomHeight) or "")
                 ApplySystemBars();
+        };
+        UpdateNotice.PropertyChanged += (_, e) => {
+            if (e.Property == BoundsProperty || e.Property == IsVisibleProperty)
+                ApplyUpdateBarRoom();
         };
         Navigate(new HomeView(ViewModel, this));
         ViewModel.Host = this;
@@ -189,14 +194,13 @@ public partial class MainView : UserControl
             leaving.IsHitTestVisible = false;
         if (page is Control arriving)
             arriving.IsHitTestVisible = true;
-        if (page is TemplatedControl templated)
-            templated.Padding = _systemBars;
 
         Host.IsTransitionReversed = back;
         Host.Content = page;
         // a TV's notice shows over its home only: on another page it covers that page's top - the pairing
         // screen's code - and Back to the home brings it again
         UpdateNoticeLayer.IsVisible = !VhApp.IsTvUi || page is HomeView;
+        ApplyUpdateBarRoom(); // the page's padding too
         Dispatcher.UIThread.Post(() => TakeFocus(page, back), DispatcherPriority.Loaded);
     }
 
@@ -287,10 +291,29 @@ public partial class MainView : UserControl
         DrawerContent.Margin = beneath;
         DrawerScrim.Margin = beneath;
         DialogScrim.Margin = beneath;
+        // the update bar's colour reaches under the status bar too, its words below it
+        UpdateNoticeLayer.Margin = new Thickness(0, -_systemBars.Top, 0, 0);
+        UpdateNoticeContent.Margin = new Thickness(0, _systemBars.Top, 0, 0);
         if (Host.Content is TemplatedControl page)
-            page.Padding = _systemBars;
+            page.Padding = PagePadding;
         if (DrawerContent.Content is DrawerView drawer)
             drawer.ApplySystemBars(_systemBars);
+    }
+
+    // the page's inside edge: the system bars, and on a TV's home the room its update bar takes
+    private Thickness PagePadding => new(_systemBars.Left, _systemBars.Top + _updateBarRoom, _systemBars.Right, _systemBars.Bottom);
+
+    // A TV's update bar lies over the top of its home, which moves down by what the bar covers below its
+    // header (HomeView.RoomUnder), as a remote must reach every row; elsewhere a finger takes Later to
+    // reach what it covers. Read again as the bar comes, goes or changes height, and as a page arrives.
+    // The bar's layer starts at the screen's top, the page's words under the system bars.
+    private void ApplyUpdateBarRoom()
+    {
+        _updateBarRoom = VhApp.IsTvUi && UpdateNoticeLayer.IsVisible && UpdateNotice.IsVisible && Host.Content is HomeView home
+            ? home.RoomUnder(UpdateNotice.Bounds.Bottom - _systemBars.Top)
+            : 0;
+        if (Host.Content is TemplatedControl page)
+            page.Padding = PagePadding;
     }
 
     private void OnTopLevelScalingChanged(object? sender, EventArgs e)
@@ -533,6 +556,7 @@ public partial class MainView : UserControl
         var isDeprecated = status.VersionStatus == VersionStatus.Deprecated;
         UpdateNotice.Classes.Set("update-warning", isDeprecated);
         UpdateNotice.Classes.Set("update-alert", !isDeprecated);
+        UpdateNoticeIcon.Text = isDeprecated ? Mdi.AlertCircle : Mdi.Update;
         UpdateNoticeText.Text = isDeprecated
             ? Strings.Current.VersionIsDeprecated(VhApp.Features.AppName)
             : Strings.Current.VersionIsOld;

@@ -35,6 +35,11 @@
   <SolidColorBrush x:Key="HomeConfigBtnBgBrush" Color="#B3150E3D" />
   <SolidColorBrush x:Key="HomeConfigBtnBorderBrush" Color="#4DE7B481" />
 
+  <!-- the update notice's surface: a tone over the home's, as config-btn-bg is the home's own colour
+       here and the notice would melt into it; opaque, as the page under it must not show through;
+       this UI's own -->
+  <SolidColorBrush x:Key="UpdateNoticeBrush" Color="{StaticResource Purple400}" />
+
   <!-- .card-on-grad-bg: card-on-grad-bg at 30% -->
   <SolidColorBrush x:Key="CardOnGradBgAlphaBrush" Color="#4D2F296E" />
 

@@ -1,7 +1,10 @@
 using System.Text.Json;
+using VpnHood.Core.Client;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Test.Extensions;
 
 namespace VpnHood.Test.Tests;
@@ -54,6 +57,30 @@ public class WebSocketPaddingIntegrationTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // Unrelated VPN traffic could take the connection whose reuse this test observes.
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Real_client_hello_controls_proxy_masking_and_emitted_padding(bool enabled)
+    {
+        var options = TestHelper.CreateFileAccessManagerOptions();
+        options.SessionOptions.StartPadding = enabled;
+        await using var server = await TestHelper.CreateServer(options);
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(clientOptions:
+            TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
+        var session = (ClientSession)client.RequiredSession;
+        Assert.AreEqual(enabled, server.SessionManager.GetSessionById(client.SessionId)?.StartPadding);
+
+        // The real hello must configure the sender; enabling its padding here would hide a broken hand-off.
+        for (var i = 0; i < 3; i++) {
+            await AssertProxyMaskingAndPadding(session, enabled, i, TestCt);
+
+            await AssertEqualsWait(i == 0 ? 1 : 0,
+                () => client.RequiredSession.Status.ConnectorStatus.FreeConnectionCount);
+        }
+    }
+
+    [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
     public async Task Packet_channels_and_plain_streams_work_when_padding_is_enabled(bool useWebSocket)
@@ -68,5 +95,32 @@ public class WebSocketPaddingIntegrationTest : TestBase
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
         await TestHelper.Test_UdpEcho();
         await TestHelper.Test_Https();
+    }
+
+    private async Task AssertProxyMaskingAndPadding(ClientSession session, bool enabled, int streamIndex,
+        CancellationToken cancellationToken)
+    {
+        var request = new StreamProxyChannelRequest {
+            RequestId = UniqueIdFactory.Create(),
+            SessionId = session.Config.SessionId,
+            SessionKey = session.Config.SessionKey,
+            DestinationEndPoint = MockEps.TcpUploadEndPoint1
+        };
+        await using var result = await session.SendRequest<SessionResponse>(request, cancellationToken);
+        var stream = result.StreamConnection.Stream as WebSocketStream ??
+                     throw new InvalidOperationException("Expected a WebSocket proxy stream.");
+        Assert.AreEqual(streamIndex == 1 ? 1 : 0, stream.ReusedCount);
+        Assert.AreEqual(enabled, stream.UsesStandardMasking, $"Masking offer on proxy stream {streamIndex}.");
+        Assert.AreEqual(enabled, stream.HasWrittenInitialPadding, $"Client padding on proxy stream {streamIndex}.");
+
+        // A zero-byte upload produces a checksum without relying on a cover timer.
+        await stream.WriteAsync(new byte[4], cancellationToken);
+        var checksum = new byte[4];
+        await stream.ReadExactlyAsync(checksum, cancellationToken);
+        CollectionAssert.AreEqual(new byte[4], checksum);
+
+        // Reuse the first transport once, then require another actual upgrade.
+        if (streamIndex >= 1)
+            result.StreamConnection.PreventReuse();
     }
 }

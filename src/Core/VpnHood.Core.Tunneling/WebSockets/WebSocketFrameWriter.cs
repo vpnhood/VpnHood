@@ -18,6 +18,8 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
     private bool _disposed;
 
     public int WroteChunkCount { get; private set; }
+    // Tests must distinguish padding sent with real data from a policy that was merely enabled.
+    public bool HasWrittenInitialPadding { get; private set; }
     public Exception? Failure { get; private set; }
     public Task PaddingCompletion => _initialPadding?.Completion ?? Task.CompletedTask;
 
@@ -120,6 +122,7 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
             var length = EncodeFrame(rented, data.Span, paddingLength: 0, opcode: 2);
             length += EncodeFrame(rented.AsSpan(length), ReadOnlySpan<byte>.Empty, paddingLength, opcode: 1);
             await sourceStream.WriteAsync(rented.AsMemory(0, length), cancellationToken).Vhc();
+            HasWrittenInitialPadding = true;
             WroteChunkCount++;
         }
         finally {

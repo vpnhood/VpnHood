@@ -5,6 +5,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.Test" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
 		<ProjectReference Include="..\..\Net\VpnHood.Net.Packets\VpnHood.Net.Packets.csproj" />
 		<ProjectReference Include="..\..\Net\VpnHood.Net.PacketTransports\VpnHood.Net.PacketTransports.csproj" />

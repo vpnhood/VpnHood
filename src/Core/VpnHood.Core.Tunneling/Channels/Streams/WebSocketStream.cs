@@ -35,6 +35,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     public override bool CanReuse => !_isConnectionClosed && _exception == null && _frameWriter.Failure == null;
     public int PreserveWriteBufferLength => ChunkHeaderLength;
     public bool UsesStandardMasking => _useStandardMasking;
+    internal bool HasWrittenInitialPadding => _frameWriter.HasWrittenInitialPadding;
 
     // the status the peer's close frame carried, if it carried one
     public ushort? CloseStatus { get; private set; }

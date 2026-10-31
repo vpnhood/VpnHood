@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood Galaxy Store updates, which any Galaxy Store app can use.</Description>
+		<TargetFramework>net11.0-android37.0</TargetFramework>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.AppLib.Stores.GalaxyStore</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<BaseIntermediateOutputPath />
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+	  <ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
+	</ItemGroup>
+
+</Project>

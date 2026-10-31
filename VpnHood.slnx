@@ -100,6 +100,7 @@
     <Project Path="src/AppLib/VpnHood.AppLib.Stores.AppStore/VpnHood.AppLib.Stores.AppStore.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
+    <Project Path="src/AppLib/VpnHood.AppLib.Stores.GalaxyStore.Core/VpnHood.AppLib.Stores.GalaxyStore.Core.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Stores.GooglePlay.Core/VpnHood.AppLib.Stores.GooglePlay.Core.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Stores.GooglePlay/VpnHood.AppLib.Stores.GooglePlay.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Stores.MicrosoftStore.Core/VpnHood.AppLib.Stores.MicrosoftStore.Core.csproj" />
@@ -140,6 +141,9 @@
   <Folder Name="/src/Apps/Client/">
     <Project Path="src/Apps/Client/Client/VpnHood.App.Client.csproj" />
     <Project Path="src/Apps/Client/Client.Android.Google/VpnHood.App.Client.Android.Google.csproj">
+      <Deploy />
+    </Project>
+    <Project Path="src/Apps/Client/Client.Android.Samsung/VpnHood.App.Client.Android.Samsung.csproj">
       <Deploy />
     </Project>
     <Project Path="src/Apps/Client/Client.Android.Web/VpnHood.App.Client.Android.Web.csproj">

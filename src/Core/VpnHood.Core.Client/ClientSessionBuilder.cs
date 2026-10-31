@@ -137,7 +137,7 @@ internal class ClientSessionBuilder(
             connectorService.AllowChannelReuse = config.AllowStreamReuse;
 
             var helloResponse = requestResult.Response;
-            connectorService.StartPadding = helloResponse.StartPadding && config.UseWebSocket;
+            connectorService.InitialPadding.Enable(helloResponse.StartPadding);
             if (helloResponse.ProtocolVersion < VpnHoodClientConfig.MinProtocolVersion ||
                 helloResponse.ProtocolVersion > VpnHoodClientConfig.MaxProtocolVersion)
                 throw new NotSupportedException("The server does not support the requested protocol version.");

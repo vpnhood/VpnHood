@@ -86,11 +86,8 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
             requestBuffer.Span.CopyTo(payload.AsSpan(2)); // request buffer
             requestEx.PostBuffer.Span.CopyTo(payload.AsSpan(2 + requestBuffer.Length)); // post buffer
 
-            // ReSharper disable once AccessToDisposedClosure
-            var isTcpPacketChannel = request.RequestCode == (byte)RequestCode.TcpPacketChannel;
-            var startPadding = ConnectorService.StartPadding && request.RequestCode == (byte)RequestCode.ProxyChannel;
-            var ret = await SendRequestWithClockCorrection<T>(payload, request.RequestId, isTcpPacketChannel,
-                startPadding, onAttempt, lifetime.Token, requestCts.Token).Vhc();
+            var ret = await SendRequestWithClockCorrection<T>(payload, request.RequestId,
+                (RequestCode)request.RequestCode, onAttempt, lifetime.Token, requestCts.Token).Vhc();
 
             // the server ends a connection after its reply, but for a channel request's, which carries the channel:
             // ending the logical stream would only wait for the server's close
@@ -126,13 +123,13 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
         $"Could not send the {(RequestCode)request.RequestCode} request in the given time.", exception);
 
     private async Task<ConnectorRequestResult<T>> SendRequestWithClockCorrection<T>(ReadOnlyMemory<byte> request,
-        string requestId, bool isTcpPacketChannel, bool startPadding, Action onAttempt,
+        string requestId, RequestCode requestCode, Action onAttempt,
         CancellationToken callerCancellationToken, CancellationToken cancellationToken)
         where T : SessionResponse
     {
         var clockCorrectionVersion = requestSigner.ClockCorrectionVersion;
         try {
-            return await SendRequest<T>(request, requestId, isTcpPacketChannel, startPadding, onAttempt,
+            return await SendRequest<T>(request, requestId, requestCode, onAttempt,
                 callerCancellationToken, cancellationToken).Vhc();
         }
         catch (RequestAuthorizationException ex) {
@@ -140,19 +137,20 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
                 throw;
             // Both POST and the upgrade arrive here. A second 401 escapes this catch, so a bad
             // farm key cannot create an authentication retry loop or a protocol downgrade.
-            return await SendRequest<T>(request, requestId, isTcpPacketChannel, startPadding, onAttempt,
+            return await SendRequest<T>(request, requestId, requestCode, onAttempt,
                 callerCancellationToken, cancellationToken).Vhc();
         }
     }
 
     private async Task<ConnectorRequestResult<T>> SendRequest<T>(ReadOnlyMemory<byte> request, string requestId,
-        bool isTcpPacketChannel, bool startPadding, Action onAttempt, CancellationToken callerCancellationToken,
+        RequestCode requestCode, Action onAttempt, CancellationToken callerCancellationToken,
         CancellationToken cancellationToken)
         where T : SessionResponse
     {
         // A packet channel must be created with its packet-channel kernel buffer before the TCP
         // handshake. Never promote a pooled proxy/control connection whose window was negotiated with
         // the general socket setting.
+        var isTcpPacketChannel = requestCode == RequestCode.TcpPacketChannel;
         var reusableConnection = isTcpPacketChannel ? null : ConnectorService.GetFreeConnection();
         if (reusableConnection != null) {
             try {
@@ -161,7 +159,7 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
                     reusableConnection.ConnectionId, reusableConnection.LocalEndPoint);
 
                 // send the request
-                EnableInitialPadding(reusableConnection, startPadding);
+                ConnectorService.InitialPadding.Start(reusableConnection.Stream, requestCode);
                 await reusableConnection.Stream.WriteAsync(request, cancellationToken).Vhc();
                 var response = await ReadSessionResponse<T>(reusableConnection.Stream, cancellationToken).Vhc();
                 lock (ConnectorService.Stat) ConnectorService.Stat.ReusedConnectionSucceededCount++;
@@ -197,7 +195,7 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
         // send request
         try {
             // send the request
-            EnableInitialPadding(connection, startPadding);
+            ConnectorService.InitialPadding.Start(connection.Stream, requestCode);
             await WriteRequest(connection, request, callerCancellationToken, cancellationToken).Vhc();
 
             // parse the HTTP request
@@ -239,13 +237,6 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
             CloseConnection(connection);
             throw;
         }
-    }
-
-    private static void EnableInitialPadding(IStreamConnection connection, bool enabled)
-    {
-        // A pooled transport has a new logical WebSocket stream. Packet/control uses never opt in.
-        if (enabled && connection.Stream is WebSocketStream { UsesStandardMasking: true } webSocketStream)
-            webSocketStream.EnableInitialPadding();
     }
 
     private async Task WriteRequest(IStreamConnection connection, ReadOnlyMemory<byte> request,

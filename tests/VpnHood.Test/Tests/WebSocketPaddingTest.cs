@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Reflection;
 using System.Text;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
@@ -17,7 +18,7 @@ public class WebSocketPaddingTest
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
-    public async Task Preserved_payload_is_restored_when_an_unpadded_write_completes_or_fails(bool cancel)
+    public async Task Preserved_payload_keeps_the_written_mask_on_completion_or_failure(bool cancel)
     {
         using var source = new BlockingWriteStream(block: cancel);
         var writer = new WebSocketStream(source, "preserved", false, false, useStandardMasking: true);
@@ -34,8 +35,69 @@ public class WebSocketPaddingTest
         else {
             await write;
         }
-        CollectionAssert.AreEqual(data, buffer[writer.PreserveWriteBufferLength..]);
+        var lastWrite = source.LastWrite ?? throw new InvalidOperationException("BlockingWriteStream.LastWrite is missing.");
+        CollectionAssert.AreEqual(lastWrite[^data.Length..], buffer[writer.PreserveWriteBufferLength..]);
+        CollectionAssert.AreEqual(data, (await DecodeFrames(lastWrite)).Single().Payload);
         await writer.DisposeAsync();
+    }
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task Data_bypasses_the_gate_when_cover_is_absent_or_finished(bool padding, bool preserved)
+    {
+        using var source = new RecordingStream([0x82, 0]);
+        await using var stream = new WebSocketStream(source, "no-cover-gate", false, true, useStandardMasking: true);
+        if (padding) {
+            stream.EnableInitialPadding();
+            await stream.WriteAsync(new byte[] { 1 }, TestCt);
+        }
+        var writeGate = GetWriteGate(stream);
+        if (padding)
+            await GetPaddingCompletion(stream).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+
+        if (writeGate != null)
+            await writeGate.WaitAsync(TestCt);
+        try {
+            var data = new byte[] { 2, 3, 4 };
+            var buffer = new byte[stream.PreserveWriteBufferLength + data.Length];
+            data.CopyTo(buffer, stream.PreserveWriteBufferLength);
+            var write = preserved
+                ? stream.WritePreservedAsync(buffer, TestCt)
+                : stream.WriteAsync(data, TestCt);
+            await write.AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+            var frames = await DecodeFrames(source.Snapshot().Last());
+            CollectionAssert.AreEqual(data, frames[0].Payload);
+        }
+        finally {
+            writeGate?.Release();
+        }
+    }
+
+    [TestMethod]
+    public async Task Data_waits_for_cover_and_a_queued_write_survives_cover_completion()
+    {
+        using var source = new PausedWriteStream(pausedWrite: 2);
+        await using var stream = new WebSocketStream(source, "cover-order", false, true, useStandardMasking: true);
+        stream.EnableInitialPadding();
+        await stream.WriteAsync(new byte[] { 1 }, TestCt);
+        await source.Started.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        var write = stream.WriteAsync(new byte[] { 2 }, TestCt).AsTask();
+        try {
+            Assert.IsFalse(write.IsCompleted);
+            Assert.AreEqual(2, source.Snapshot().Length);
+        }
+        finally {
+            source.Release.TrySetResult();
+        }
+        await write.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        await GetPaddingCompletion(stream).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsFalse(source.OverlappedWrites);
+        var frames = await DecodeFrames(source.Snapshot().SelectMany(x => x).ToArray());
+        CollectionAssert.AreEqual(new byte[] { 1, 2 }, frames.Where(x => x.Header.IsBinary)
+            .SelectMany(x => x.Payload).ToArray());
     }
 
     [TestMethod]
@@ -47,9 +109,11 @@ public class WebSocketPaddingTest
         var large = new byte[writer.PreserveWriteBufferLength + 65536];
         await writer.WritePreservedAsync(large, TestCt);
         Assert.AreEqual(1, (await DecodeFrames(source.Snapshot().Single())).Count);
+        Assert.IsNull(GetWriteGate(writer), "A stream with no cover task needs no gate.");
         await Task.Delay(2100, TestCt);
         await writer.WriteAsync(new byte[] { 1 }, TestCt);
         Assert.AreEqual(1, (await DecodeFrames(source.Snapshot()[1])).Count);
+        Assert.IsNull(GetWriteGate(writer), "Expired padding without a cover task also needs no gate.");
         await writer.DisposeAsync();
     }
 
@@ -81,8 +145,6 @@ public class WebSocketPaddingTest
             var buffer = new byte[writer.PreserveWriteBufferLength + data.Length];
             data.CopyTo(buffer, writer.PreserveWriteBufferLength);
             await writer.WritePreservedAsync(buffer, TestCt);
-            CollectionAssert.AreEqual(data, buffer[writer.PreserveWriteBufferLength..],
-                "Framing must preserve the caller's payload after the write.");
         }
         else {
             await writer.WriteAsync(data, TestCt);
@@ -187,10 +249,7 @@ public class WebSocketPaddingTest
         await stream.ReadExactlyAsync(received, TestCt);
         CollectionAssert.AreEqual(Encoding.ASCII.GetBytes("abcdefgh"), received);
         Assert.AreEqual(0, await stream.ReadAsync(new byte[1], TestCt));
-        var reply = await DecodeFrames(source.Snapshot().Single());
-        Assert.IsTrue(reply.Single().Header.IsPong);
-        Assert.AreEqual(!isServer, !reply.Single().Header.MaskKey.IsEmpty);
-        CollectionAssert.AreEqual(Encoding.ASCII.GetBytes("ping"), reply.Single().Payload);
+        Assert.AreEqual(0, source.Snapshot().Length, "Ping and pong are discarded without writing replies.");
         await stream.DisposeAsync();
     }
 
@@ -281,7 +340,7 @@ public class WebSocketPaddingTest
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
-    public async Task Connection_owner_stops_cover_when_it_closes_without_reuse(bool quickDispose)
+    public async Task Cover_failure_stops_data_when_the_transport_owner_closes_without_reuse(bool quickDispose)
     {
         using var source = new BlockingWriteStream(allowedWrites: 1);
         var writer = new WebSocketStream(source, "owner-close", false, true, useStandardMasking: true);
@@ -289,11 +348,17 @@ public class WebSocketPaddingTest
         writer.EnableInitialPadding();
         await writer.WriteAsync(new byte[] { 1 }, TestCt);
         await source.Started.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        var write = writer.WriteAsync(new byte[] { 2 }, TestCt).AsTask();
         if (quickDispose)
             connection.Dispose();
         else
             await connection.DisposeAsync();
         await source.Finished.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        await GetPaddingCompletion(writer).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsFalse(writer.CanReuse);
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => write.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => writer.WriteAsync(new byte[] { 3 }, TestCt).AsTask());
+        Assert.AreEqual(2, source.WriteCount, "No data may follow a potentially partial cover frame.");
     }
 
     [TestMethod]
@@ -301,7 +366,7 @@ public class WebSocketPaddingTest
     [DataRow(true)]
     public async Task Close_waits_for_an_inflight_data_frame_without_interleaving(bool graceful)
     {
-        using var source = new PausedFirstWriteStream();
+        using var source = new PausedWriteStream();
         await using var stream = new WebSocketStream(source, "close-order", false, true, useStandardMasking: true);
         var data = Encoding.ASCII.GetBytes("the complete real frame must precede the close");
         var buffer = new byte[stream.PreserveWriteBufferLength + data.Length];
@@ -327,6 +392,31 @@ public class WebSocketPaddingTest
         Assert.AreEqual(graceful ? 2 : 1, stream.WroteChunkCount);
         CollectionAssert.AreEqual(data, buffer[stream.PreserveWriteBufferLength..]);
         Assert.AreEqual(graceful, stream.CanReuse);
+    }
+
+    private static object GetFrameWriter(WebSocketStream stream)
+    {
+        var field = typeof(WebSocketStream).GetField("_frameWriter", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("WebSocketStream._frameWriter field is missing.");
+        return field.GetValue(stream)
+            ?? throw new InvalidOperationException("WebSocketStream._frameWriter value is missing.");
+    }
+
+    private static SemaphoreSlim? GetWriteGate(WebSocketStream stream)
+    {
+        var writer = GetFrameWriter(stream);
+        var field = writer.GetType().GetField("_writeGate", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("WebSocketFrameWriter._writeGate field is missing.");
+        return (SemaphoreSlim?)field.GetValue(writer);
+    }
+
+    private static Task GetPaddingCompletion(WebSocketStream stream)
+    {
+        var writer = GetFrameWriter(stream);
+        var property = writer.GetType().GetProperty("PaddingCompletion")
+            ?? throw new InvalidOperationException("WebSocketFrameWriter.PaddingCompletion property is missing.");
+        return (Task)(property.GetValue(writer)
+            ?? throw new InvalidOperationException("WebSocketFrameWriter.PaddingCompletion value is missing."));
     }
 
     private async Task<List<DecodedFrame>> DecodeFrames(byte[] bytes)
@@ -384,12 +474,14 @@ public class WebSocketPaddingTest
         }
     }
 
-    private sealed class PausedFirstWriteStream()
+    private sealed class PausedWriteStream(int pausedWrite = 1)
         : StreamDecoratorAsync(new MemoryStream(new byte[] { 0x82, 0 }), false)
     {
         private readonly Lock _lock = new();
         private readonly List<byte[]> _writes = [];
         private int _writeCount;
+        private int _activeWrites;
+        public bool OverlappedWrites { get; private set; }
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -401,11 +493,18 @@ public class WebSocketPaddingTest
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            lock (_lock)
-                _writes.Add(buffer.ToArray());
-            if (Interlocked.Increment(ref _writeCount) == 1) {
-                Started.TrySetResult();
-                await Release.Task.WaitAsync(cancellationToken);
+            if (Interlocked.Increment(ref _activeWrites) != 1)
+                OverlappedWrites = true;
+            try {
+                lock (_lock)
+                    _writes.Add(buffer.ToArray());
+                if (Interlocked.Increment(ref _writeCount) == pausedWrite) {
+                    Started.TrySetResult();
+                    await Release.Task.WaitAsync(cancellationToken);
+                }
+            }
+            finally {
+                Interlocked.Decrement(ref _activeWrites);
             }
         }
     }
@@ -413,21 +512,34 @@ public class WebSocketPaddingTest
     private sealed class BlockingWriteStream(bool block = true, int allowedWrites = 0)
         : StreamDecoratorAsync(new MemoryStream(new byte[] { 0x82, 0 }), false)
     {
+        private readonly TaskCompletionSource _closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _writeCount;
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Finished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public byte[]? LastWrite { get; private set; }
+        public int WriteCount => _writeCount;
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            if (!block || ++_writeCount <= allowedWrites)
+            var writeCount = Interlocked.Increment(ref _writeCount);
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+            LastWrite = buffer.ToArray();
+            if (writeCount <= allowedWrites || !block)
                 return;
             Started.TrySetResult();
             try {
-                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                await _closed.Task.WaitAsync(cancellationToken);
+                throw new ObjectDisposedException(nameof(BlockingWriteStream));
             }
             finally {
                 Finished.TrySetResult();
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            _closed.TrySetResult();
+            base.Dispose(disposing);
         }
     }
 }

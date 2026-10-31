@@ -64,13 +64,6 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         _frameWriter.EnableInitialPadding();
     }
 
-    // A connection that will not be reused closes its transport without a logical-stream handshake.
-    // Its owner must still cancel cover traffic and release this stream's timer/cancellation state.
-    internal void StopInitialPadding()
-    {
-        _frameWriter.StopInitialPadding();
-    }
-
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
@@ -205,11 +198,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
                     };
                 }
 
-                if (webSocketHeader.IsPing) {
-                    await ReplyPong(webSocketHeader, cancellationToken).Vhc();
-                    continue;
-                }
-                if (webSocketHeader.IsPong) {
+                if (webSocketHeader.IsPing || webSocketHeader.IsPong) {
                     await DiscardWebSocketFrame(webSocketHeader.PayloadLength, cancellationToken).Vhc();
                     continue;
                 }
@@ -251,16 +240,6 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
                 PayloadLength = 0
             };
         }
-    }
-
-    private async Task ReplyPong(WebSocketHeader header, CancellationToken cancellationToken)
-    {
-        var payload = new byte[(int)header.PayloadLength]; // control frames are bounded to 125 bytes
-        await SourceStream.ReadExactlyAsync(payload, cancellationToken).Vhc();
-        if (!header.MaskKey.IsEmpty)
-            WebSocketUtils.MaskPayload(payload, header.MaskKey.Span, 0);
-        if (!_isConnectionClosed && !IsDisposed)
-            await _frameWriter.WritePong(payload, cancellationToken).Vhc();
     }
 
     private async Task<ushort?> ReadCloseStatus(WebSocketHeader webSocketHeader, CancellationToken cancellationToken)
@@ -402,6 +381,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         _isConnectionClosed = true;
 
         try {
+            await _writeTask.AsTask().WaitAsync(cancellationToken).Vhc();
             await _frameWriter.WriteClose(closeStatus, cancellationToken).Vhc();
         }
         catch (Exception ex) {

@@ -17,10 +17,10 @@ public partial class WebFrontTest
 {
     [TestMethod]
     [DataRow(15, true, true)]
-    [DataRow(15, false, true)] // An early protocol-15 client still uses legacy mask handling.
+    [DataRow(15, false, true)]
     [DataRow(14, true, true)]
     [DataRow(15, true, false)]
-    public async Task Padding_hello_and_upgrade_preserve_legacy_compatibility(int httpVersion, bool offerMasking,
+    public async Task Padding_requires_session_and_request_masking_on_new_and_reused_streams(int httpVersion, bool offerMasking,
         bool enabled)
     {
         using var accessManager = await TestHelper.CreateAccessManager(TestCt);
@@ -60,10 +60,18 @@ public partial class WebFrontTest
         using var upgradeResponse = await HttpUtils.ReadResponse(proxyTls, TestCt);
         Assert.AreEqual(HttpStatusCode.SwitchingProtocols, upgradeResponse.StatusCode);
         var standardMasking = httpVersion >= 15 && offerMasking;
-        Assert.AreEqual(standardMasking, upgradeResponse.Headers.Contains("X-WebSocketMasking"));
+        Assert.IsFalse(upgradeResponse.Headers.Contains("X-WebSocketMasking"));
 
-        // This writer intentionally has no read ownership: inspect the server's frames below the wrapper.
+        // Reading below the wrapper exposes text padding that WebSocketStream normally discards.
         using var writer = new WebSocketStream(proxyTls, "padding-proxy", false, false, standardMasking);
+        for (var streamIndex = 0; streamIndex < 2; streamIndex++)
+            await AssertProxyStreamPadding(writer, proxyTls, helloResponse, enabled && standardMasking,
+                streamIndex, TestCt);
+    }
+
+    private async Task AssertProxyStreamPadding(WebSocketStream writer, Stream transport, HelloResponse helloResponse,
+        bool expectedPadding, int streamIndex, CancellationToken cancellationToken)
+    {
         var proxy = new StreamProxyChannelRequest {
             RequestId = UniqueIdFactory.Create(), SessionId = helloResponse.SessionId,
             SessionKey = helloResponse.SessionKey, DestinationEndPoint = MockEps.TcpUploadEndPoint1
@@ -71,22 +79,44 @@ public partial class WebFrontTest
         var proxyBody = StreamUtils.ObjectToJsonBuffer(proxy);
         // A zero-byte upload makes the destination return a checksum, even when no text padding is sent.
         byte[] proxyPayload = [1, proxy.RequestCode, .. proxyBody.Span, 0, 0, 0, 0];
-        await writer.WriteAsync(proxyPayload, TestCt);
-        var responseHeader = await WebSocketUtils.ReadWebSocketHeader(proxyTls, new byte[14], TestCt);
+        await writer.WriteAsync(proxyPayload, cancellationToken);
+        var responseHeader = await WebSocketUtils.ReadWebSocketHeader(transport, new byte[14], cancellationToken);
         Assert.IsTrue(responseHeader.IsBinary);
         var responseBody = new byte[(int)responseHeader.PayloadLength];
-        await proxyTls.ReadExactlyAsync(responseBody, TestCt);
+        await transport.ReadExactlyAsync(responseBody, cancellationToken);
         using var responseStream = new MemoryStream(responseBody);
-        var responseJson = await StreamUtils.ReadMessageAsync(responseStream, TestCt);
+        var responseJson = await StreamUtils.ReadMessageAsync(responseStream, cancellationToken);
         Assert.AreEqual(SessionErrorCode.Ok, JsonSerializer.Deserialize<SessionResponse>(responseJson)?.ErrorCode);
-        var next = await WebSocketUtils.ReadWebSocketHeader(proxyTls, new byte[14], TestCt);
-        Assert.AreEqual(enabled && standardMasking, next.IsText,
-            "Only a capable peer receives padding after the server's initial session response.");
-        var nextPayload = new byte[(int)next.PayloadLength];
-        await proxyTls.ReadExactlyAsync(nextPayload, TestCt);
-        if (next.IsText)
-            Assert.IsTrue(nextPayload.All(x => x is >= 32 and <= 126));
-        else
-            CollectionAssert.AreEqual(new byte[4], nextPayload);
+
+        var next = await WebSocketUtils.ReadWebSocketHeader(transport, new byte[14], cancellationToken);
+        Assert.AreEqual(expectedPadding, next.IsText, $"Padding on logical stream {streamIndex}.");
+        using var checksum = new MemoryStream();
+        var sentTerminator = false;
+        while (true) {
+            Assert.IsTrue(next.IsBinary || next.IsText);
+            Assert.IsTrue(next.MaskKey.IsEmpty);
+            if (next.IsBinary && next.PayloadLength == 0)
+                break;
+
+            var payload = new byte[(int)next.PayloadLength];
+            await transport.ReadExactlyAsync(payload, cancellationToken);
+            if (next.IsText) {
+                Assert.IsTrue(expectedPadding);
+                Assert.IsTrue(payload.All(x => x is >= 32 and <= 126));
+            }
+            else {
+                checksum.Write(payload);
+                Assert.IsTrue(checksum.Length <= 4);
+            }
+
+            if (checksum.Length == 4 && !sentTerminator) {
+                // End only after the destination's reply: closing earlier would end its proxy pump.
+                await transport.WriteAsync(new byte[] { 0x82, 0x80, 0, 0, 0, 0 }, cancellationToken);
+                sentTerminator = true;
+            }
+            next = await WebSocketUtils.ReadWebSocketHeader(transport, new byte[14], cancellationToken);
+        }
+        Assert.IsTrue(sentTerminator);
+        CollectionAssert.AreEqual(new byte[4], checksum.ToArray());
     }
 }

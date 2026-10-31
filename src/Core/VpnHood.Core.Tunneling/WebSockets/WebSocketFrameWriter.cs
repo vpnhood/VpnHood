@@ -1,5 +1,4 @@
 using System.Buffers;
-using System.Security.Cryptography;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -11,9 +10,8 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
 {
     public const int MaximumHeaderLength = 14;
 
-    // Data, pong replies and gap cover share one gate, so their frames cannot interleave. This is the
-    // hot stream-write path; SemaphoreSlim avoids allocating a lock scope for each packet-channel write.
-    private readonly SemaphoreSlim _writeGate = new(1, 1);
+    // Only gap cover can write alongside data. Once it ends, packet and later data writes need no gate.
+    private SemaphoreSlim? _writeGate;
     private readonly Memory<byte> _headerBuffer = new byte[MaximumHeaderLength];
     private InitialStreamPadding? _initialPadding;
     private bool _stopped;
@@ -33,8 +31,12 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
         _initialPadding ??= new InitialStreamPadding(this);
     }
 
-    // Used when the connection owner closes the transport without a logical-stream handshake.
-    public void StopInitialPadding() => _initialPadding?.Dispose();
+    // The first padded data write has finished before cover starts; no earlier write needs this gate.
+    public void StartCover() => Volatile.Write(ref _writeGate, new SemaphoreSlim(1, 1));
+
+    // Publish only after the last cover write released its gate; a captured gate remains valid for
+    // any data write already waiting on it, while subsequent writes can bypass it.
+    public void FinishCover() => Volatile.Write(ref _writeGate, null);
 
     public void Stop()
     {
@@ -44,7 +46,9 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
 
     public async ValueTask Write(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
     {
-        await _writeGate.WaitAsync(cancellationToken).Vhc();
+        var writeGate = Volatile.Read(ref _writeGate);
+        if (writeGate != null)
+            await writeGate.WaitAsync(cancellationToken).Vhc();
         try {
             ObjectDisposedException.ThrowIf(_stopped || _disposed, this);
             if (data.IsEmpty)
@@ -53,7 +57,7 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
                 await WriteBinary(data, cancellationToken).Vhc();
         }
         finally {
-            _writeGate.Release();
+            writeGate?.Release();
         }
     }
 
@@ -62,7 +66,9 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
         if (buffer.Length < MaximumHeaderLength)
             throw new ArgumentException("Buffer length is less than required preserved header length.", nameof(buffer));
 
-        await _writeGate.WaitAsync(cancellationToken).Vhc();
+        var writeGate = Volatile.Read(ref _writeGate);
+        if (writeGate != null)
+            await writeGate.WaitAsync(cancellationToken).Vhc();
         try {
             ObjectDisposedException.ThrowIf(_stopped || _disposed, this);
             var data = buffer[MaximumHeaderLength..];
@@ -72,7 +78,7 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
                 await WriteBinaryPreserved(buffer, cancellationToken).Vhc();
         }
         finally {
-            _writeGate.Release();
+            writeGate?.Release();
         }
     }
 
@@ -86,22 +92,12 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
         var header = BuildHeader(_headerBuffer.Span, buffer.Length - MaximumHeaderLength);
         var finalBuffer = buffer[(MaximumHeaderLength - header.Length)..];
         header.CopyTo(finalBuffer.Span);
-        var headerLength = header.Length;
 
-        // Compatibility (2026-10): existing peers, including early protocol 15 builds, set MASK but
-        // leave payloads unchanged. Actual masking requires agreement in the upgrade response.
+        // The request's masking offer controls payload masking; MASK alone also appears on legacy frames.
         if (!isServer && useStandardMasking)
             WebSocketUtils.MaskPayload(buffer.Span[MaximumHeaderLength..], header[^4..], 0);
 
-        // The caller owns this buffer. Restore its payload even if a canceled write prevents reuse.
-        try {
-            await sourceStream.WriteAsync(finalBuffer, cancellationToken).Vhc();
-        }
-        finally {
-            if (!isServer && useStandardMasking)
-                WebSocketUtils.MaskPayload(buffer.Span[MaximumHeaderLength..],
-                    finalBuffer.Span.Slice(headerLength - 4, 4), 0);
-        }
+        await sourceStream.WriteAsync(finalBuffer, cancellationToken).Vhc();
         WroteChunkCount++;
     }
 
@@ -114,8 +110,8 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
         await WriteBinaryPreserved(buffer, cancellationToken).Vhc();
     }
 
-    // Called by the padding policy while Write/WritePreserved holds the gate. Combining these frames
-    // into one source write lets padding change the outer TLS record containing the real data.
+    // Combining both frames into one source write lets padding change the outer TLS record containing
+    // real data. The caller holds the gate for as long as gap cover can still write.
     public async ValueTask WritePaddedData(ReadOnlyMemory<byte> data, int paddingLength,
         CancellationToken cancellationToken)
     {
@@ -131,17 +127,20 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
         }
     }
 
-    public async Task TryWriteCover(InitialStreamPadding padding, CancellationToken cancellationToken)
+    public async Task<bool> TryWriteCover(InitialStreamPadding padding, CancellationToken cancellationToken)
     {
         // Cover skips a busy writer; it must never queue ahead of real traffic.
-        if (!_writeGate.Wait(0))
-            return;
+        var writeGate = Volatile.Read(ref _writeGate);
+        if (writeGate == null)
+            return false;
+        if (!writeGate.Wait(0))
+            return true;
         try {
             if (_stopped || _disposed)
-                return;
+                return false;
             var paddingLength = padding.TakePaddingLength(0, cover: true);
             if (paddingLength == 0)
-                return;
+                return false;
             var rented = ArrayPool<byte>.Shared.Rent(paddingLength + MaximumHeaderLength);
             try {
                 var length = EncodeFrame(rented, ReadOnlySpan<byte>.Empty, paddingLength, opcode: 1);
@@ -150,17 +149,21 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
             finally {
                 ArrayPool<byte>.Shared.Return(rented);
             }
+            return true;
         }
         catch (OperationCanceledException ex) {
-            // A partial cover frame is fatal to reuse. Expose the failure to the stream owner.
+            // A canceled cover frame may be partial; stop later data and forbid transport reuse.
+            _stopped = true;
             Failure ??= ex;
             throw;
         }
         catch (Exception ex) {
+            _stopped = true;
             Failure ??= ex;
+            return false;
         }
         finally {
-            _writeGate.Release();
+            writeGate.Release();
         }
     }
 
@@ -187,58 +190,27 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
         if (isServer)
             return WebSocketUtils.BuildWebSocketFrameHeader(buffer, payloadLength);
         Span<byte> key = stackalloc byte[4];
-        RandomNumberGenerator.Fill(key);
+        Random.Shared.NextBytes(key);
         return WebSocketUtils.BuildWebSocketFrameHeader(buffer, payloadLength, key);
-    }
-
-    public async ValueTask WritePong(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken)
-    {
-        await _writeGate.WaitAsync(cancellationToken).Vhc();
-        try {
-            // Graceful draining can still receive pings after data writes have stopped.
-            if (_disposed)
-                return;
-            var frame = new byte[MaximumHeaderLength + payload.Length];
-            var header = BuildHeader(frame, payload.Length);
-            header[0] = 0x8a;
-            payload.CopyTo(frame.AsMemory(header.Length));
-            if (!isServer)
-                WebSocketUtils.MaskPayload(frame.AsSpan(header.Length, payload.Length), header[^4..], 0);
-            await sourceStream.WriteAsync(frame.AsMemory(0, header.Length + payload.Length), cancellationToken).Vhc();
-        }
-        finally {
-            _writeGate.Release();
-        }
     }
 
     public async ValueTask WriteTerminator(CancellationToken cancellationToken)
     {
-        await _writeGate.WaitAsync(cancellationToken).Vhc();
-        try {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            await WriteBinary(ReadOnlyMemory<byte>.Empty, cancellationToken).Vhc();
-        }
-        finally {
-            _writeGate.Release();
-        }
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await WriteBinary(ReadOnlyMemory<byte>.Empty, cancellationToken).Vhc();
     }
 
     public async ValueTask WriteClose(ushort closeStatus, CancellationToken cancellationToken)
     {
         Stop();
-        _disposed = true; // no further data or pong frames after a connection close
-        await _writeGate.WaitAsync(cancellationToken).Vhc();
-        try {
-            await sourceStream.WriteAsync(WebSocketUtils.BuildServerCloseFrame(closeStatus), cancellationToken).Vhc();
-            await sourceStream.FlushAsync(cancellationToken).Vhc();
-        }
-        finally {
-            _writeGate.Release();
-        }
+        _disposed = true;
+        await PaddingCompletion.WaitAsync(cancellationToken).Vhc();
+        await sourceStream.WriteAsync(WebSocketUtils.BuildServerCloseFrame(closeStatus), cancellationToken).Vhc();
+        await sourceStream.FlushAsync(cancellationToken).Vhc();
     }
 
     // The transport owner ends pending native writes. Their rented buffers remain owned until the
-    // writes finish. Keep the gate alive too: a pending writer can still release it after this close.
+    // writes finish. A captured cover gate stays alive until any pending data writer releases it.
     public void Dispose()
     {
         _disposed = true;

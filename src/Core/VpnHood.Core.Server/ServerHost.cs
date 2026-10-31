@@ -235,11 +235,8 @@ public class ServerHost : IAsyncDisposable
 
                     // Protocol 15 has proven the farm key before this 101. The older-protocol exception
                     // is controlled by the configured minimum, not by an IP remembered from a prior hello.
-                    // Older clients and servers set the mask flag but leave payloads unchanged. Agree
-                    // on actual masking during the upgrade; the protocol number alone is not enough.
-                    var useStandardMasking = protocolVersion >= 15 &&
-                        bool.TryParse(headers.GetValueOrDefault("X-WebSocketMasking"), out var masking) && masking;
-                    var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey, useStandardMasking);
+                    var useStandardMasking = ServerInitialStreamPadding.UsesStandardMasking(protocolVersion, headers);
+                    var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
                     await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
                     var websocketStream = new WebSocketStream(
@@ -617,9 +614,7 @@ public class ServerHost : IAsyncDisposable
             IsTcpPacketSupported = isTcpPacketIpV4Supported,
 #pragma warning restore CS0618
             IsTcpProxySupported = session.AllowTcpProxy,
-            // Hello itself can use a plain POST; the client applies this only to later WebSocket proxies.
-            StartPadding = session.StartPadding &&
-                           streamConnection is ServerStreamConnection { HttpProtocolVersion: >= 15 },
+            StartPadding = ServerInitialStreamPadding.ShouldAdvertise(session, streamConnection),
             // no UDP means no QUIC either, so a client reads only one of them for each
             IsQuicPacketSupported = session.AllowQuicPacket && session.AllowUdpPacket,
             IsUdpPacketSupported = session.AllowUdpPacket,
@@ -725,11 +720,7 @@ public class ServerHost : IAsyncDisposable
 
         // find session
         var session = await GetSession(request, streamConnection, cancellationToken).Vhc();
-        // Enable only after authentication and before the first proxy response, including error replies.
-        if (session.StartPadding && streamConnection is ServerStreamConnection {
-                HttpProtocolVersion: >= 15, Stream: WebSocketStream { UsesStandardMasking: true } webSocketStream
-            })
-            webSocketStream.EnableInitialPadding();
+        ServerInitialStreamPadding.StartProxy(session, streamConnection.Stream);
         await session.ProcessTcpProxyRequest(request, streamConnection, cancellationToken).Vhc();
     }
 

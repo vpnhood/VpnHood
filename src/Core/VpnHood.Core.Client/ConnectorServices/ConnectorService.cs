@@ -66,7 +66,7 @@ internal class ConnectorService : IAsyncDisposable
     public VpnEndPoint VpnEndPoint { get; init; }
     public TimeSpan RequestTimeout { get; set; }
     public bool UseQuic { get; set; }
-    public bool StartPadding { get; set; }
+    public ClientInitialStreamPadding InitialPadding { get; } = new();
 
 
     public IPEndPoint? QuicEndPoint {
@@ -156,8 +156,10 @@ internal class ConnectorService : IAsyncDisposable
 
     private async Task<IStreamConnection> CreateWebSocketConnection(
         IStreamConnection streamConnection, ReuseConnectionCallback? reuseCallback,
-        string proofToken, CancellationToken callerCancellationToken, CancellationToken cancellationToken)
+        string proofToken, bool isTcpPacketChannel, CancellationToken callerCancellationToken,
+        CancellationToken cancellationToken)
     {
+        var useStandardMasking = InitialPadding.OffersMasking(isTcpPacketChannel);
         var webSocketKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
 
         // write HTTP request
@@ -171,7 +173,7 @@ internal class ConnectorService : IAsyncDisposable
             .Append("Upgrade: websocket\r\n")
             .Append("Connection: Upgrade\r\n")
             .Append("Sec-WebSocket-Version: 13\r\n")
-            .Append("X-WebSocketMasking: true\r\n")
+            .Append(useStandardMasking ? "X-WebSocketMasking: true\r\n" : "")
             .Append($"Sec-WebSocket-Key: {webSocketKey}\r\n")
             .Append("\r\n");
 
@@ -188,9 +190,7 @@ internal class ConnectorService : IAsyncDisposable
         if (responseMessage.StatusCode != HttpStatusCode.SwitchingProtocols)
             throw new Exception("Unexpected response.");
 
-        // An older server ignores the offer and does not echo it. Keep its unmasked payload format.
-        var useStandardMasking = responseMessage.Headers.TryGetValues("X-WebSocketMasking", out var maskingValues) &&
-            bool.TryParse(maskingValues.SingleOrDefault(), out var masking) && masking;
+        // The request fixes framing; a proxy may strip custom response headers.
         var webSocketStream = new WebSocketStream(streamConnection.Stream, streamConnection.ConnectionId, UseBuffer,
             isServer: false, useStandardMasking: useStandardMasking);
         return new ReusableStreamConnection(streamConnection, webSocketStream, reuseCallback) {
@@ -222,11 +222,12 @@ internal class ConnectorService : IAsyncDisposable
     }
 
     private Task<IStreamConnection> CreateHttpConnection(IStreamConnection streamConnection, int contentLength,
-        ReuseConnectionCallback? reuseCallback, string proofToken,
+        ReuseConnectionCallback? reuseCallback, string proofToken, bool isTcpPacketChannel,
         CancellationToken callerCancellationToken, CancellationToken cancellationToken)
     {
         return _useWebSocket
-            ? CreateWebSocketConnection(streamConnection, reuseCallback, proofToken, callerCancellationToken, cancellationToken)
+            ? CreateWebSocketConnection(streamConnection, reuseCallback, proofToken, isTcpPacketChannel,
+                callerCancellationToken, cancellationToken)
             : CreateSimpleConnection(streamConnection, contentLength, proofToken, callerCancellationToken, cancellationToken);
     }
 
@@ -338,7 +339,7 @@ internal class ConnectorService : IAsyncDisposable
                 // Connection waits can outlast a proof; select it only after connect and TLS finish.
                 var proofToken = _requestSigner.Sign();
                 var connection = await CreateHttpConnection(rawConnection, contentLength, reuseCallback,
-                    proofToken, callerCancellationToken, cancellationToken).Vhc();
+                    proofToken, isTcpPacketChannel, callerCancellationToken, cancellationToken).Vhc();
                 lock (Stat) Stat.CreatedConnectionCount++;
                 return connection;
             }

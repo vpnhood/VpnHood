@@ -49,8 +49,8 @@ public class WebSocketPaddingTlsTest
 
             TestContext.WriteLine($"OS={RuntimeInformation.OSDescription}; Runtime={RuntimeInformation.FrameworkDescription}; " +
                                   $"TLS={clientTls.SslProtocol}; Padding={padding}");
-            var client = new WebSocketStream(clientTls, "tls-client", false, false, useStandardMasking: true);
-            var server = new WebSocketStream(serverTls, "tls-server", false, true, useStandardMasking: true);
+            var client = new WebSocketStream(clientTls, "tls-client", false, false, useStandardMasking: padding);
+            var server = new WebSocketStream(serverTls, "tls-server", false, true, useStandardMasking: padding);
             var totalWireBytes = 0;
             // A small page-load sample: two directions on eight logical streams sharing one TLS connection.
             for (var i = 0; i < 8; i++) {

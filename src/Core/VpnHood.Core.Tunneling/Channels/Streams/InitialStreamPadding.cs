@@ -28,7 +28,7 @@ internal sealed class InitialStreamPadding
     public CancellationToken CancellationToken { get; }
     public bool CanPadData => !_stop.IsCancellationRequested && _remainingWrites > 0;
 
-    // The frame writer holds its gate across the budget decision and the combined data/text write.
+    // The frame writer holds its gate while cover can still share this budget and the transport.
     // This class owns padding policy and its lifetime; frame encoding and serialization stay in the writer.
     public async ValueTask<bool> TryWrite(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
     {
@@ -37,12 +37,15 @@ internal sealed class InitialStreamPadding
             return false;
         using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, CancellationToken);
         await _writer.WritePaddedData(data, paddingLength, writeCts.Token).Vhc();
-        _coverTask ??= RunCover(CancellationToken);
+        if (_coverTask == null) {
+            _writer.StartCover();
+            _coverTask = RunCover(CancellationToken);
+        }
         return true;
     }
 
-    // Called under the frame writer's gate. Counting the largest header keeps the entire wire overhead
-    // within 12 KiB per direction, including the independently scheduled gap frames.
+    // Counting the largest header keeps the entire wire overhead within 12 KiB per direction,
+    // including the independently scheduled gap frames.
     public int TakePaddingLength(int dataLength, bool cover)
     {
         // The server enables padding before connecting to the destination. A slow connect must not
@@ -65,6 +68,7 @@ internal sealed class InitialStreamPadding
         return length;
     }
 
+    // The window only limits starting frames; cancelling an in-flight cover write can break the stream.
     private async Task RunCover(CancellationToken cancellationToken)
     {
         try {
@@ -74,11 +78,15 @@ internal sealed class InitialStreamPadding
                 await Task.Delay(delay, cancellationToken).Vhc();
                 if (_writer.WroteChunkCount != writeCount)
                     continue; // Busy streams need no gap cover. Never make real data wait for a timer.
-                await _writer.TryWriteCover(this, cancellationToken).Vhc();
+                if (!await _writer.TryWriteCover(this, cancellationToken).Vhc())
+                    break;
             }
         }
         catch (OperationCanceledException) {
-            // The stream's close cancels a timer or a cover write, then waits for this task before reuse.
+            // A logical close joins this task before reuse; a transport close needs no padding hook.
+        }
+        finally {
+            _writer.FinishCover();
         }
     }
 
@@ -92,8 +100,7 @@ internal sealed class InitialStreamPadding
 
     public Task Completion => _coverTask ?? Task.CompletedTask;
 
-    // Only the graceful owner releases the source after joining the cover task. The quick close merely
-    // cancels it; the source's transport owner closes the socket, as it does for an ordinary data write.
+    // A quick close can race the graceful close's wait for cover; release cancellation state once.
     public void Dispose()
     {
         lock (_lifetimeLock) {

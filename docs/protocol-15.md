@@ -146,31 +146,36 @@ plan stages.
 
 ## Initial stream padding
 
-`WebSocketStream` owns reading, connection reuse and stream shutdown. `WebSocketFrameWriter` owns all
-outgoing frames, masking, preserved-buffer restoration and the shared write gate. `InitialStreamPadding`
-coordinates the initial data/text writes and timed cover through that writer, with its own budgets and
-cancellation lifetime. A background write failure is exposed to the stream so it can prevent reuse.
+Each side keeps padding eligibility in one place; connection owners make no padding calls.
+A background write failure stops further writes and prevents reuse.
 
 `SessionOptions.StartPadding` enables initial padding for WebSocket TCP proxy streams. It defaults off;
-an explicit `false` also overrides an inherited `true`. Hello advertises `StartPadding` to HTTP-15 clients,
-which enables their outgoing direction. Packet channels, including DNS carried as packets, plain HTTP
-streams and control requests do not opt in. Reusing a connection starts a fresh logical stream with its
-own budget; padding from the previous stream is stopped before its terminator.
+an explicit `false` also overrides an inherited `true`. Hello advertises `StartPadding` to HTTP-15 clients.
+The client records the successful hello's flag and offers `X-WebSocketMasking: true` on subsequent
+WebSocket upgrades only for that session, excluding connections opened for TCP packet channels.
+Connections opened before hello, including ServerFinder checks, keep unmasked payloads. Plain HTTP,
+no-handshake POST streams and packet channels keep unmasked payloads and receive no padding.
+Control requests receive no padding.
 
-Compatibility (2026-10): existing WebSocket peers, including early protocol-15 builds, set the mask flag
-but ignore the mask key and leave binary payloads unchanged. A new client offers
-`X-WebSocketMasking: true` on its upgrade. A capable HTTP-15 server echoes it in the 101 response. Both
-ends then mask client frames and unmask incoming payloads. Without the echo the client retains the
-legacy format; without the offer the server does too. No-handshake POST streams retain legacy framing.
-Padding requires this agreement as well as the session option. A protocol number alone is insufficient
-to retire the compatibility path; it can be removed only when those earlier builds are no longer supported.
+Masking is fixed by the upgrade request: the client masks if it offered; the server unmasks if the
+request offered at HTTP 15. The 101 carries no masking echo, so a proxy dropping unknown response
+headers cannot change framing. Mask keys come from `Random.Shared`. The server pads an authenticated
+proxy stream only when its session enables padding and its WebSocket stream carries this masking
+agreement. Reuse retains the agreement and starts a fresh padding budget in both directions, without
+depending on the initial HTTP connection wrapper.
+
+Compatibility (2026-10): unmasked client frames retain the MASK flag and key fields for older peers;
+those header fields can be dropped when those peers are no longer supported. Their payloads stay
+unmasked unless the request offered masking. The session's flag never changes an already-open
+connection's masking.
 
 The first eligible real write and a printable ASCII text frame are encoded into one source write,
 in each direction. This includes the client's proxy request and embedded inner hello and the server's
 initial session response. The temporary pooled buffer is at most 16 KiB; no large padding buffer is
-retained on an idle stream. Preserved caller buffers are restored after masking, including failed writes.
-Text frames are discarded by the receiver. Ping replies preserve the ping payload, pong is skipped,
-and interleaved control frames do not disrupt fragmented binary or text messages.
+retained on an idle stream. Ordinary writes copy into writer-owned storage; preserved-buffer writes
+may overwrite both header space and payload, including on failure. Neither path restores masked bytes.
+Text, ping and pong frames are discarded without replies. Interleaved control frames do not disrupt
+fragmented binary or text messages; close frames record the status and prevent reuse.
 
 Current experimental limits per direction and logical stream are:
 
@@ -179,18 +184,23 @@ Current experimental limits per direction and logical stream are:
 - One to three gap opportunities after the first padded write, separated by 40–350 ms. Each may add
   128–1400 bytes from the same budget. An interval with real writes, or a busy writer, skips that opportunity.
 - No new padding after two seconds from the first real write; a slow destination connect does not
-  consume the window before the server's initial response. After the write allowance is exhausted, data writes
-  bypass padding. Real traffic never waits for a cover timer; an already running physical write still
-  serializes with subsequent traffic as any write would.
+  consume the window before the server's initial response. After the write allowance is exhausted, data
+  writes bypass padding. Real traffic never waits for a cover timer.
+
+Only streams whose cover task can still write take a write gate. Data and cover frames cannot interleave;
+after cover finishes, publication of the gate-free path follows its last physical write. Streams with
+padding off, including packet channels, never take this gate. Inline data/text padding may spend its
+remaining budget after cover has finished without a gate, since it has no concurrent writer.
 
 These ranges are a bounded starting experiment, not a calibrated distribution of real page loads.
 At most 24 KiB of text-frame overhead can be added across both directions of one logical stream.
-Cover writes share the normal write gate. Close cancels them and waits under the existing graceful-close
-deadline; a canceled or failed frame prevents reuse. A pending transport write owns its rented memory
-until that write ends, even if graceful close times out.
+Graceful stream close cancels cover and joins it under the existing close deadline before sending the
+logical terminator; a canceled or failed frame prevents reuse. Closing the transport fails any pending
+cover write, which ends the loop quietly without a padding call from the connection owner. The padding
+window limits new cover frames; it does not cancel an in-flight write on a slow connection. A pending
+transport write owns its rented memory until that write ends, even if close times out.
 
-`WebSocketPaddingTlsTest` measures outer TLS record payloads below `SslStream`, on a new connection and
-seven reuses, with padding off and on. It checks that padding enlarges the first record in both directions
-and prints the total wire bytes for the synthetic eight-stream sample. Record boundaries remain an OS/TLS
+Local TLS record measurements with padding off and on showed that padding enlarges the first record
+in both directions on a new connection and seven reuses. Record boundaries remain an OS/TLS
 implementation detail. Native Android/iOS and other deployment-platform captures, realistic page-load
 bandwidth measurements and calibration remain required before enabling this experiment broadly.

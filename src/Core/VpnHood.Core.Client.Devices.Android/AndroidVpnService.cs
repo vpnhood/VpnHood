@@ -115,6 +115,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                     messageListener: _messageListener,
                     withLogger: AndroidDevice.IsVpnServiceProcess);
 
+                AndroidTlsProvider.EnsureInstalled(); // before the first handshake; after the log
                 if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn).Vhc())
                     StopSelf(_lastStartId);
             }

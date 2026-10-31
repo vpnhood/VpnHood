@@ -727,6 +727,38 @@ public class CheckNewVersionTest : TestAppBase
         await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => updaterService.StartUpdate(null, TestCt));
     }
 
+    // An update keeps the check time of the version before it: the new version's first start checks all the
+    // same, as that check is what removes the package the update came in; then the interval holds again.
+    [TestMethod]
+    public async Task The_first_start_after_an_update_checks_whatever_the_interval()
+    {
+        SetNewRelease(CurrentAppVersion, DateTime.UtcNow.AddDays(-1));
+        var folder = CreateUpdaterFolder();
+        var updaterOptions = new AppUpdaterOptions {
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.HttpUrl1,
+            UpdaterProvider = new TestPackageUpdaterProvider(),
+            CheckInterval = TimeSpan.FromDays(1)
+        };
+        var earlierVersion = new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build - 1);
+        DateTime? earlierCheckedTime;
+        using (var earlierService = new AppUpdaterService(folder, earlierVersion, updaterOptions, isConnected: () => true)) {
+            await earlierService.CheckForUpdate(null, force: false, TestCt);
+            earlierCheckedTime = earlierService.Status.CheckedTime;
+        }
+        Assert.IsNotNull(earlierCheckedTime);
+
+        // past FastDateTime's one-second precision, so a new check has a later stamp
+        await Task.Delay(TimeSpan.FromSeconds(1.5), TestCt);
+        using var updaterService = new AppUpdaterService(folder, CurrentAppVersion, updaterOptions, isConnected: () => true);
+        await updaterService.CheckForUpdate(null, force: false, TestCt);
+        var checkedTime = updaterService.Status.CheckedTime;
+        Assert.IsTrue(checkedTime > earlierCheckedTime, "the updated version checks at its first start");
+
+        await Task.Delay(TimeSpan.FromSeconds(1.5), TestCt);
+        await updaterService.CheckForUpdate(null, force: false, TestCt);
+        Assert.AreEqual(checkedTime, updaterService.Status.CheckedTime, "the same version waits the interval");
+    }
+
     // Later puts the notice off, but not an update the person started: its notice stays theirs.
     [TestMethod]
     public async Task Update_started_keeps_the_notice_after_later()

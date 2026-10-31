@@ -20,6 +20,7 @@
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
 * Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts #android
 * Fix: On Android 7.0, the app can check for updates, and the app from our website can download them #android
+* Fix: The app from our website removes the update it downloaded as soon as it starts on the new version; the file stayed in the app's storage for up to a day #android
 * Fix: On some phones, the quick-settings tile and the app no longer stall as they start, where Android could say the app isn't responding #android
 * Update: The times in the app's log are in UTC #android #ios #windows #linux
 * Fix: On Android, the app could close when you connected or disconnected just as a connection was ending #android

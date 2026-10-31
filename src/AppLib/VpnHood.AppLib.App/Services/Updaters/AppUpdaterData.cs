@@ -12,6 +12,9 @@ internal class AppUpdaterData
     // automatic update
     public Version? CheckRequestedVersion { get; set; }
     public DateTime? CheckedTime { get; set; }
+
+    // the installed version that made the last check: another one - just updated to - checks at its start
+    public Version? CheckedVersion { get; set; }
     public PublishInfo? PublishInfo { get; set; }
     // the installed version the store's update was offered to; an install of any version ends the offer
     public Version? UpdaterAvailableVersion { get; set; }

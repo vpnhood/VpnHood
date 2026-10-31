@@ -69,6 +69,18 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
 
     private static Context Context => Application.Context;
 
+    // Android 8 and later let an app install apps only once the person allows it, in "Install unknown
+    // apps"; a binder call, asked only while a downloaded package waits and at Install
+    private static bool CanInstallPackages()
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(26))
+            return true;
+
+        var packageManager = Context.PackageManager ??
+                             throw new InvalidOperationException("The app has no PackageManager.");
+        return packageManager.CanRequestPackageInstalls();
+    }
+
     private static DownloadManager DownloadManager =>
         Context.GetSystemService(Context.DownloadService) as DownloadManager ??
         throw new InvalidOperationException("This device has no DownloadManager.");
@@ -137,14 +149,19 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
             if (version is null)
                 return AppUpdateState.None;
 
-            if (current != null)
+            if (current != null) {
+                var stage = current.Status != DownloadStatus.Successful ? AppUpdateStage.Downloading
+                    : version == _installingVersion ? AppUpdateStage.Installing
+                    : AppUpdateStage.Downloaded;
                 return new AppUpdateState {
-                    Stage = current.Status != DownloadStatus.Successful ? AppUpdateStage.Downloading
-                        : version == _installingVersion ? AppUpdateStage.Installing
-                        : AppUpdateStage.Downloaded,
+                    Stage = stage,
                     DownloadedBytes = current.DownloadedBytes,
-                    TotalBytes = current.TotalBytes > 0 ? current.TotalBytes : null
+                    TotalBytes = current.TotalBytes > 0 ? current.TotalBytes : null,
+                    // the notice says so before Install opens Android's page: a TV's lists every app that
+                    // asked, so the person has to know which to turn on
+                    IsInstallPermissionNeeded = stage == AppUpdateStage.Downloaded && !CanInstallPackages()
                 };
+            }
 
             return version == _failedVersion
                 ? new AppUpdateState { Stage = AppUpdateStage.Failed, ErrorMessage = _failedMessage }
@@ -200,7 +217,7 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
                           throw new InvalidOperationException("The activity has no package name.");
 
         // Android 8 and later ask the person once to let this app install apps; their next press installs
-        if (OperatingSystem.IsAndroidVersionAtLeast(26) && !packageManager.CanRequestPackageInstalls()) {
+        if (!CanInstallPackages()) {
             VhLogger.Instance.LogInformation("Asking the person to let the app install apps.");
             using var settingsIntent = new Intent(Settings.ActionManageUnknownAppSources,
                 AndroidUri.Parse($"package:{packageName}"));

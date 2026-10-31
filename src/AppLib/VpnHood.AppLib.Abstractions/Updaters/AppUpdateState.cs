@@ -16,5 +16,9 @@ public class AppUpdateState
     // why the last download or install failed, with AppUpdateStage.Failed
     public string? ErrorMessage { get; init; }
 
+    // with AppUpdateStage.Downloaded: the system still has to let the app install apps, which Install asks
+    // first - Android's "Install unknown apps" - so the person's next Install installs
+    public bool IsInstallPermissionNeeded { get; init; }
+
     public static AppUpdateState None { get; } = new() { Stage = AppUpdateStage.None };
 }

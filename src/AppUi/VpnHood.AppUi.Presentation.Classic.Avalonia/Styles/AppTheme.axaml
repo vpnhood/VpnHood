@@ -1422,10 +1422,23 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="MinHeight" Value="32" />
     <Setter Property="CornerRadius" Value="16" />
+    <!-- the ring's room kept, as the theme's buttons keep it, so the focus moves nothing -->
+    <Setter Property="BorderThickness" Value="3" />
+    <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
   <Style Selector="Border.snackbar Button.update-btn.tonal">
     <Setter Property="Background" Value="{StaticResource BtnOnUpdateSnackbarTonalBrush}" />
     <Setter Property="Foreground" Value="{StaticResource BtnOnUpdateSnackbarBrush}" />
+  </Style>
+  <!-- the notice is a light card, where the dark pages' white ring would not show, nor the snackbar's
+       thin one across a room from a TV: as on the light dialog, a filled button's ring is the accent and
+       a tonal one's the card's words' colour -->
+  <Style Selector="Border.snackbar Button.update-btn:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderThickness" Value="3" />
+    <Setter Property="BorderBrush" Value="{StaticResource HighlightBrush}" />
+  </Style>
+  <Style Selector="Border.snackbar Button.update-btn.tonal:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource BtnOnUpdateSnackbarBrush}" />
   </Style>
 
   <!-- the feature pages (FeaturePageLayout.vue): the gradient sheet, the image, the numbered steps.

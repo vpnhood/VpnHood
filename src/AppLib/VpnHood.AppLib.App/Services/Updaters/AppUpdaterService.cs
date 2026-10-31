@@ -253,8 +253,10 @@ public class AppUpdaterService : IDisposable
             return VersionCheckResult.Failed;
         }
 
-        // skip if already checked and not forced
-        if (!force && FastDateTime.UtcNow - Data.CheckedTime < _updateOptions.CheckInterval) {
+        // skip if already checked and not forced. Not after an update: the check is what removes the package
+        // the update came in (the updater's GetState with no newer release), which would stay a day otherwise
+        if (!force && _appVersion.Equals(Data.CheckedVersion) &&
+            FastDateTime.UtcNow - Data.CheckedTime < _updateOptions.CheckInterval) {
             VhLogger.Instance.LogDebug("VersionCheck is postponed. CheckedTime: {CheckedTime}, Interval: {Interval}",
                 Data.CheckedTime, _updateOptions.CheckInterval);
             return GetCheckResult(isAnswered: true);
@@ -267,7 +269,7 @@ public class AppUpdaterService : IDisposable
             if (updater is not { HasOwnScreen: true }) {
                 var isFeedRead = await TryUpdateByPublishInfoUrl(cancellationToken).Vhc();
                 if (isFeedRead || _updateOptions.UpdateInfoUrl == null)
-                    Data.CheckedTime = FastDateTime.UtcNow;
+                    MarkChecked();
 
                 if (updater != null)
                     await updater.Check(NewerRelease, uiContext, cancellationToken).Vhc();
@@ -286,7 +288,7 @@ public class AppUpdaterService : IDisposable
             var isPublishInfoRead = !hasStoreUpdate && await TryUpdateByPublishInfoUrl(cancellationToken).Vhc();
             if (hasStoreUpdate ||
                 (storeAnswer == StoreAnswer.None && (isPublishInfoRead || _updateOptions.UpdateInfoUrl == null)))
-                Data.CheckedTime = FastDateTime.UtcNow;
+                MarkChecked();
 
             return storeAnswer switch {
                 StoreAnswer.Offered => VersionCheckResult.UpdateAvailable,
@@ -447,6 +449,13 @@ public class AppUpdaterService : IDisposable
         using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
         MarkPostponed();
         Save();
+    }
+
+    // the caller holds the check's lock
+    private void MarkChecked()
+    {
+        Data.CheckedTime = FastDateTime.UtcNow;
+        Data.CheckedVersion = _appVersion;
     }
 
     // the caller holds the check's lock

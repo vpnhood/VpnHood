@@ -364,6 +364,9 @@ public sealed partial class Strings
     /// <summary>The VPN disconnects while the update installs.</summary>
     public string UpdateVpnDisconnects => Get("UPDATE_VPN_DISCONNECTS");
 
+    /// <summary>Android will first ask you to allow {appName} to install apps: turn it on, then press Install again.</summary>
+    public string UpdateAllowInstalls(object appName) => Get("UPDATE_ALLOW_INSTALLS", ("appName", appName));
+
     /// <summary>Could not update. {error}</summary>
     public string UpdateFailed(object error) => Get("UPDATE_FAILED", ("error", error));
 

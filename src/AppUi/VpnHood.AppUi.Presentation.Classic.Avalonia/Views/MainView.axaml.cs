@@ -33,6 +33,10 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 public partial class MainView : UserControl
 {
     private static readonly TimeSpan SnackbarLife = TimeSpan.FromSeconds(3);
+
+    // how long a browser driving a TV says "Continue on your TV" after its Install: Android's question
+    // there is quick to answer, and one the person turned down there is not waited on for good
+    private static readonly TimeSpan RemoteInstallHintLife = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan DrawerTime = TimeSpan.FromMilliseconds(200);
     private static readonly Easing DrawerEase = new SplineEasing(0.4, 0, 0.2);
 
@@ -51,6 +55,8 @@ public partial class MainView : UserControl
     private Thickness _systemBars;
     private Version? _updateNoticeVersion;
     private VersionStatus _updateNoticeVersionStatus;
+    private AppUpdateStage? _updateStage;
+    private DateTime _remoteInstallUntil;
 
     public MainViewModel ViewModel { get; } = new();
 
@@ -188,6 +194,9 @@ public partial class MainView : UserControl
 
         Host.IsTransitionReversed = back;
         Host.Content = page;
+        // a TV's notice shows over its home only: on another page it covers that page's top - the pairing
+        // screen's code - and Back to the home brings it again
+        UpdateNoticeLayer.IsVisible = !VhApp.IsTvUi || page is HomeView;
         Dispatcher.UIThread.Post(() => TakeFocus(page, back), DispatcherPriority.Loaded);
     }
 
@@ -518,6 +527,7 @@ public partial class MainView : UserControl
         var publish = status.PublishInfo;
         if (publish == null)
             return;
+        var isArriving = !UpdateNotice.IsVisible;
         _updateNoticeVersion = publish.Version;
         _updateNoticeVersionStatus = status.VersionStatus;
         var isDeprecated = status.VersionStatus == VersionStatus.Deprecated;
@@ -536,6 +546,21 @@ public partial class MainView : UserControl
         UpdateNewText.Text = $"{Strings.Current.NewVersion} {publish.Version}";
         RefreshUpdateState(status.UpdateState);
         UpdateNotice.IsVisible = true;
+
+        // a TV's remote finds it at once: from Connect, where the home starts, Up goes to the list beside
+        // it, and the notice was six presses away. Not over a dialog, where the person is busy
+        if (isArriving && VhApp.IsTvUi && UpdateNoticeLayer.IsVisible && _dialogs.Count == 0)
+            Dispatcher.UIThread.Post(FocusUpdateNotice, DispatcherPriority.Loaded);
+    }
+
+    // the notice's way forward - Update, Install, a store's link - or Later while its update runs
+    private void FocusUpdateNotice()
+    {
+        if (!UpdateNotice.IsEffectivelyVisible)
+            return;
+
+        Control[] buttons = [UpdateDownloadButton, UpdateInstallButton, UpdateStoreButton, UpdateDirectButton, UpdateLaterButton];
+        buttons.FirstOrDefault(x => x is { IsVisible: true, IsEffectivelyEnabled: true })?.LandFocus();
     }
 
     // Read every second while the notice shows. A release other than the one it names - found by a check
@@ -556,6 +581,10 @@ public partial class MainView : UserControl
     private void RefreshUpdateState(AppUpdateState? updateState)
     {
         var stage = updateState?.Stage;
+        // the stage's button takes the place of the one pressed, which goes - Update for the progress -
+        // and took a TV's focus with it: the focus goes on to Install once it comes, else Later
+        var isFocusPassing = VhApp.IsTvUi && stage != _updateStage && UpdateNotice.IsKeyboardFocusWithin;
+        _updateStage = stage;
         UpdateDownloadButton.IsVisible = stage is AppUpdateStage.Available or AppUpdateStage.Failed;
         UpdateProgress.IsVisible = stage == AppUpdateStage.Downloading;
         UpdateInstallButton.IsVisible = stage is AppUpdateStage.Downloaded or AppUpdateStage.Installing;
@@ -568,11 +597,20 @@ public partial class MainView : UserControl
 
         UpdatePackageText.Text = stage switch {
             AppUpdateStage.Failed => Strings.Current.UpdateFailed(updateState?.ErrorMessage ?? string.Empty),
+            // a browser driving a TV: Android asks on the TV's screen, which nothing here would tell
+            AppUpdateStage.Downloaded or AppUpdateStage.Installing when DateTime.UtcNow < _remoteInstallUntil =>
+                Strings.Current.ContinueOnTvTitle,
             AppUpdateStage.Installing => Strings.Current.UpdateInstalling,
+            // before Install opens Android's page for it, where a TV lists every app that asked
+            AppUpdateStage.Downloaded when updateState?.IsInstallPermissionNeeded == true =>
+                Strings.Current.UpdateAllowInstalls(VhApp.Features.AppName),
             AppUpdateStage.Downloaded when VhApp.IsConnected() => Strings.Current.UpdateVpnDisconnects,
             _ => null
         };
         UpdatePackageText.IsVisible = UpdatePackageText.Text != null;
+
+        if (isFocusPassing)
+            FocusUpdateNotice();
     }
 
     private async void OnUpdateDownloadClick(object? sender, RoutedEventArgs e)
@@ -589,6 +627,8 @@ public partial class MainView : UserControl
     {
         try {
             await VhApp.Api.App.CompleteUpdate(CancellationToken.None);
+            if (VhApp.IsTvRemote)
+                _remoteInstallUntil = DateTime.UtcNow + RemoteInstallHintLife;
         }
         catch (Exception ex) {
             await this.ReportError(ex);

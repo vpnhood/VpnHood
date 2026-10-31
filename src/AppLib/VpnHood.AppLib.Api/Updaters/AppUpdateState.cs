@@ -13,4 +13,8 @@ public class AppUpdateState
 
     // why the last download or install failed, with AppUpdateStage.Failed
     public required string? ErrorMessage { get; init; }
+
+    // with AppUpdateStage.Downloaded: the system still has to let the app install apps, which Install asks
+    // first, so the person's next Install installs
+    public bool IsInstallPermissionNeeded { get; init; }
 }

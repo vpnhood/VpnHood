@@ -162,7 +162,8 @@ public static class ProviderDtoConverters
             Stage = state.Stage.ToAppDto(),
             DownloadedBytes = state.DownloadedBytes,
             TotalBytes = state.TotalBytes,
-            ErrorMessage = state.ErrorMessage
+            ErrorMessage = state.ErrorMessage,
+            IsInstallPermissionNeeded = state.IsInstallPermissionNeeded
         };
     }
 

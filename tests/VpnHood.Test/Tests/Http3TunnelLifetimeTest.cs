@@ -1,19 +1,85 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Quic;
+using System.Net.Security;
 using System.Net.Sockets;
-using VpnHood.Core.Server.Listeners.Http3;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server;
+using VpnHood.Net.Http3;
 using VpnHood.Net.Quic.Abstractions;
+using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Test.Providers;
+using QuicListenerOptions = VpnHood.Net.Quic.Abstractions.QuicListenerOptions;
 
 namespace VpnHood.Test.Tests;
 
 [TestClass]
 public class Http3TunnelLifetimeTest : TestBase
 {
+    [TestMethod]
+    [Timeout(30_000, CooperativeCancellation = true)]
+    public async Task A_tunnel_cut_by_FIN_does_not_close_another_tunnel_on_the_same_connection()
+    {
+        if (!QuicListener.IsSupported || !QuicConnection.IsSupported)
+            Assert.Inconclusive("QUIC is not supported on this platform.");
+
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        deadline.CancelAfter(TimeSpan.FromSeconds(15));
+        var cancellationToken = deadline.Token;
+        using var accessManager = TestHelper.CreateAccessManager();
+        var quicServer = new MsQuicServer();
+        await using var listener = await quicServer.ListenAsync(new QuicListenerOptions {
+            ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0),
+            IdleTimeout = TimeSpan.FromMinutes(1),
+            DefaultCloseErrorCode = Http3ErrorCode.NoError,
+            DefaultStreamErrorCode = Http3Protocol.RequestCancelled,
+            ServerCertificateSelector = _ => accessManager.DefaultCert
+        }, cancellationToken);
+        var accepting = listener.AcceptConnectionAsync(cancellationToken).AsTask();
+        await using var client = await QuicConnection.ConnectAsync(new QuicClientConnectionOptions {
+            RemoteEndPoint = listener.LocalEndPoint,
+            DefaultCloseErrorCode = Http3ErrorCode.NoError,
+            DefaultStreamErrorCode = Http3Protocol.RequestCancelled,
+            MaxInboundUnidirectionalStreams = 0,
+            ClientAuthenticationOptions = new SslClientAuthenticationOptions {
+                TargetHost = "localhost",
+                ApplicationProtocols = [SslApplicationProtocol.Http3],
+                RemoteCertificateValidationCallback = (_, certificate, _, _) =>
+                    certificate?.GetCertHashString() == accessManager.DefaultCert.GetCertHashString()
+            }
+        }, cancellationToken);
+        var transport = (IQuicServerConnection)await accepting;
+        var application = new Http3EchoTunnelApplication();
+        var engine = new Http3ServerConnection(transport, new Http3ServerOptions(), application, application,
+            application);
+        var running = engine.Run(cancellationToken);
+        try {
+            await using var first = await client.OpenOutboundStreamAsync(QuicStreamType.Bidirectional,
+                cancellationToken);
+            await using var second = await client.OpenOutboundStreamAsync(QuicStreamType.Bidirectional,
+                cancellationToken);
+            await first.WriteAsync(new byte[] { 0x42, 0x11, 0x22 }, cancellationToken);
+            await second.WriteAsync(new byte[] { 0x42, 0x33, 0x44 }, cancellationToken);
+            await AssertEcho(first, [0x11, 0x22], cancellationToken);
+            await AssertEcho(second, [0x33, 0x44], cancellationToken);
+
+            // FIN interrupts a runner's message, so ReadExactlyAsync throws outside HTTP/3 parsing.
+            await first.WriteAsync(new byte[] { 0x55 }, cancellationToken);
+            first.CompleteWrites();
+            await application.EndOfStreamObserved.WaitAsync(cancellationToken);
+            await AssertStreamEnded(first, cancellationToken);
+
+            await second.WriteAsync(new byte[] { 0x66, 0x77 }, cancellationToken);
+            await AssertEcho(second, [0x66, 0x77], cancellationToken);
+            Assert.IsFalse(running.IsCompleted, "One tunnel's FIN must leave the connection running.");
+        }
+        finally {
+            engine.Close(Http3ErrorCode.NoError);
+            await running.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        }
+    }
+
     [TestMethod]
     [TestCategory("Http3Slow")]
     [Timeout(210_000, CooperativeCancellation = true)]
@@ -50,7 +116,7 @@ public class Http3TunnelLifetimeTest : TestBase
         // Exercise the front's real idle timeout (130 seconds today), without a test override.
         // Send packets on the existing tunnel only. Opening fresh requests during this interval
         // could reset the HTTP/3 idle timer and conceal an untracked tunnel's premature closure.
-        var observationTime = Http3Protocol.KeepAliveTimeout + TimeSpan.FromSeconds(5);
+        var observationTime = new Http3ServerOptions().KeepAliveTimeout + TimeSpan.FromSeconds(5);
         var elapsed = Stopwatch.StartNew();
         while (elapsed.Elapsed < observationTime) {
             await TestHelper.Test_UdpEcho(udpClient).WaitAsync(TestCt);
@@ -80,6 +146,24 @@ public class Http3TunnelLifetimeTest : TestBase
         Assert.AreEqual(sockets.ConnectionCount, sockets.DisposedConnectionCount);
         Assert.AreEqual(ClientState.Disposed, client.State);
         Assert.AreEqual(ServerState.Disposed, server.State);
+    }
+
+    private static async Task AssertEcho(Stream stream, IReadOnlyList<byte> expected, CancellationToken cancellationToken)
+    {
+        var received = new byte[expected.Count];
+        await stream.ReadExactlyAsync(received, cancellationToken);
+        CollectionAssert.AreEqual(expected.ToArray(), received);
+    }
+
+    private static async Task AssertStreamEnded(Stream stream, CancellationToken cancellationToken)
+    {
+        try {
+            Assert.AreEqual(0, await stream.ReadAsync(new byte[1], cancellationToken));
+        }
+        catch (QuicException ex) {
+            Assert.AreEqual(QuicError.StreamAborted, ex.QuicError,
+                "Ending one tunnel may reset its stream but must not abort the connection.");
+        }
     }
 
     // Observe the real transport underneath the client pool so a successful automatic reconnect

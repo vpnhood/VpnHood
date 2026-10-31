@@ -6,9 +6,6 @@ namespace VpnHood.Net.Quic.Abstractions;
 /// </summary>
 public interface IQuicServerConnection : IQuicConnection
 {
-    /// <summary>The TLS server name sent by the client, or an empty string when absent.</summary>
-    string TargetHostName { get; }
-
     /// <summary>Opens an outbound, write-only stream, waiting for the peer's stream allowance.</summary>
     ValueTask<Stream> OpenOutboundUnidirectionalStreamAsync(CancellationToken cancellationToken);
 

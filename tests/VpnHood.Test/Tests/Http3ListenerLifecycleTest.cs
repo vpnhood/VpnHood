@@ -200,7 +200,6 @@ public class Http3ListenerLifecycleTest : TestBase
 
         public IPEndPoint LocalEndPoint => localEndPoint;
         public IPEndPoint RemoteEndPoint { get; } = IPEndPoint.Parse("127.0.0.1:12345");
-        public string TargetHostName => "localhost";
         public Task AcceptStarted => _acceptStarted.Task;
         public Task DisposeStarted => _disposeStarted.Task;
         public int DisposeCount => Volatile.Read(ref _disposeCount);

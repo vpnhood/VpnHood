@@ -58,15 +58,18 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
         where T : SessionResponse
     {
         var request = requestEx.Request;
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, _cancellationTokenSource.Token);
+        // Recovery has its own deadline and holds no fresh-connect slot. Even a failed probe leaves
+        // the application request its full timeout, and concurrent requests skip an active probe.
+        await ConnectorService.RecoverQuicRequest(request.RequestId, lifetime.Token).Vhc();
         using var timeoutCts = new CancellationTokenSource(ConnectorService.RequestTimeout);
         using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(
-            timeoutCts.Token, cancellationToken, _cancellationTokenSource.Token);
-        var freshQuicAttempt = false;
+            timeoutCts.Token, lifetime.Token);
 
         // callback to reset timeout on each proxy attempt
         // ReSharper disable once AccessToDisposedClosure
         Action onAttempt = () => timeoutCts.CancelAfter(ConnectorService.RequestTimeout);
-        Action onQuicAttempt = () => freshQuicAttempt = true;
 
         try {
             var eventId = GetRequestEventId(request);
@@ -86,7 +89,7 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
             // ReSharper disable once AccessToDisposedClosure
             var isTcpPacketChannel = request.RequestCode == (byte)RequestCode.TcpPacketChannel;
             var ret = await SendRequestWithClockCorrection<T>(payload, request.RequestId, isTcpPacketChannel,
-                onAttempt, onQuicAttempt, requestCts.Token).Vhc();
+                onAttempt, lifetime.Token, requestCts.Token).Vhc();
 
             // the server ends a connection after its reply, but for a channel request's, which carries the channel:
             // ending the logical stream would only wait for the server's close
@@ -105,52 +108,45 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
         // distinction is what separates an IP-level blackhole from SNI filtering when a whole region
         // reports "no reachable server".
         catch (OperationCanceledException ex) {
-            RecordQuicFailure(ex, freshQuicAttempt, cancellationToken);
+            lifetime.Token.ThrowIfCancellationRequested();
             if (timeoutCts.IsCancellationRequested)
                 throw RequestTimeout(request, ex);
             throw;
         }
         catch (Exception ex) {
-            RecordQuicFailure(ex, freshQuicAttempt, cancellationToken);
+            lifetime.Token.ThrowIfCancellationRequested();
             if (timeoutCts.IsCancellationRequested)
                 throw RequestTimeout(request, ex);
             throw;
         }
-    }
-
-    private void RecordQuicFailure(Exception exception, bool freshQuicAttempt, CancellationToken callerCancellationToken)
-    {
-        // A normal session error or a 401 with Date already has its own handling. Caller cancellation is not
-        // evidence of a broken proof; an internal request timeout is, and must not be swallowed with it.
-        if (freshQuicAttempt && !callerCancellationToken.IsCancellationRequested &&
-            !_cancellationTokenSource.IsCancellationRequested &&
-            exception is not (SessionException or RequestAuthorizationException))
-            ConnectorService.RequireQuicRequestRecovery();
     }
 
     private static TimeoutException RequestTimeout(ClientRequest request, Exception exception) => new(
         $"Could not send the {(RequestCode)request.RequestCode} request in the given time.", exception);
 
     private async Task<ConnectorRequestResult<T>> SendRequestWithClockCorrection<T>(ReadOnlyMemory<byte> request,
-        string requestId, bool isTcpPacketChannel, Action onAttempt, Action onQuicAttempt,
-        CancellationToken cancellationToken)
+        string requestId, bool isTcpPacketChannel, Action onAttempt,
+        CancellationToken callerCancellationToken, CancellationToken cancellationToken)
         where T : SessionResponse
     {
         var clockCorrectionVersion = requestSigner.ClockCorrectionVersion;
         try {
-            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt, onQuicAttempt, cancellationToken).Vhc();
+            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt,
+                callerCancellationToken, cancellationToken).Vhc();
         }
         catch (RequestAuthorizationException ex) {
             if (!requestSigner.TryCorrectClock(ex.ServerTime, clockCorrectionVersion))
                 throw;
             // Both POST and the upgrade arrive here. A second 401 escapes this catch, so a bad
             // farm key cannot create an authentication retry loop or a protocol downgrade.
-            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt, onQuicAttempt, cancellationToken).Vhc();
+            return await SendRequest<T>(request, requestId, isTcpPacketChannel, onAttempt,
+                callerCancellationToken, cancellationToken).Vhc();
         }
     }
 
     private async Task<ConnectorRequestResult<T>> SendRequest<T>(ReadOnlyMemory<byte> request, string requestId,
-        bool isTcpPacketChannel, Action onAttempt, Action onQuicAttempt, CancellationToken cancellationToken)
+        bool isTcpPacketChannel, Action onAttempt, CancellationToken callerCancellationToken,
+        CancellationToken cancellationToken)
         where T : SessionResponse
     {
         // A packet channel must be created with its packet-channel kernel buffer before the TCP
@@ -193,18 +189,19 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
 
         // create a new connection
         var connection = await ConnectorService.GetConnectionToServer(
-            requestId + ":tunnel", request.Length, isTcpPacketChannel, onAttempt, onQuicAttempt, cancellationToken).Vhc();
+            requestId + ":tunnel", request.Length, isTcpPacketChannel, onAttempt,
+            callerCancellationToken, cancellationToken).Vhc();
 
         // send request
         try {
             // send the request
-            await connection.Stream.WriteAsync(request, cancellationToken).Vhc();
-            await connection.Stream.FlushAsync(cancellationToken).Vhc();
+            await WriteRequest(connection, request, callerCancellationToken, cancellationToken).Vhc();
 
             // parse the HTTP request
             if (connection.RequireHttpResponse) {
                 connection.RequireHttpResponse = false;
-                using var responseMessage = await HttpUtils.ReadResponse(connection.Stream, cancellationToken).Vhc();
+                using var responseMessage = await ReadHttpResponse(connection,
+                    callerCancellationToken, cancellationToken).Vhc();
                 if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
                     throw new RequestAuthorizationException(responseMessage.Headers.Date);
 
@@ -226,6 +223,10 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
             CloseConnection(connection);
             throw;
         }
+        catch (OperationCanceledException) {
+            CloseConnection(connection);
+            throw;
+        }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Error in sending a request. ConnectionId: {ConnectionId}, RequestId: {requestId}",
@@ -233,6 +234,22 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
 
             // dispose the connection
             CloseConnection(connection);
+            throw;
+        }
+    }
+
+    private async Task WriteRequest(IStreamConnection connection, ReadOnlyMemory<byte> request,
+        CancellationToken callerCancellationToken, CancellationToken cancellationToken)
+    {
+        try {
+            await connection.Stream.WriteAsync(request, cancellationToken).Vhc();
+            await connection.Stream.FlushAsync(cancellationToken).Vhc();
+        }
+        catch {
+            // A completed WebSocket upgrade already admitted this stream; later failures cannot
+            // be repaired by a clock probe. A POST has not received its admission response yet.
+            if (connection.RequireHttpResponse)
+                ConnectorService.RecordQuicRequestFailure(connection, callerCancellationToken);
             throw;
         }
     }
@@ -248,15 +265,7 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
     private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        string message;
-        try {
-            message = await StreamUtils.ReadMessageAsync(stream, cancellationToken).Vhc();
-        }
-        // a server in maintenance closes a WebSocket with "Try Again Later" in place of its reply
-        catch when (stream is WebSocketStream { CloseStatus: WebSocketUtils.CloseStatusTryAgainLater }) {
-            throw new MaintenanceException();
-        }
-
+        var message = await ReadSessionMessage(stream, cancellationToken).Vhc();
         try {
             var response = JsonUtils.Deserialize<T>(message);
             ProcessResponseException(response);
@@ -271,6 +280,32 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
             var sessionResponse = JsonUtils.Deserialize<SessionResponse>(message);
             ProcessResponseException(sessionResponse);
             throw;
+        }
+    }
+
+    private async Task<HttpResponseMessage> ReadHttpResponse(IStreamConnection connection,
+        CancellationToken callerCancellationToken, CancellationToken cancellationToken)
+    {
+        try {
+            return await HttpUtils.ReadResponse(connection.Stream, cancellationToken).Vhc();
+        }
+        catch {
+            ConnectorService.RecordQuicRequestFailure(connection, callerCancellationToken);
+            throw;
+        }
+    }
+
+    private static async Task<string> ReadSessionMessage(Stream stream, CancellationToken cancellationToken)
+    {
+        try {
+            return await StreamUtils.ReadMessageAsync(stream, cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
+        }
+        // A server in maintenance closes a WebSocket with "Try Again Later" in place of its reply.
+        catch when (stream is WebSocketStream { CloseStatus: WebSocketUtils.CloseStatusTryAgainLater }) {
+            throw new MaintenanceException();
         }
     }
 

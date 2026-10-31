@@ -1,44 +1,43 @@
 using System.Buffers;
 using VpnHood.Net.Toolkit.Extensions;
 
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 internal static partial class Http3Qpack
 {
     public static Task<Http3FieldSection> ReadSection(Http3StreamReader reader, long length,
-        CancellationToken cancellationToken) => ReadSection(reader, length, null, cancellationToken);
+        Http3ServerOptions options, CancellationToken cancellationToken) =>
+        ReadSection(reader, length, null, options, cancellationToken);
+
+    public static Task<Http3FieldSection> ReadSection(Http3StreamReader reader, long length,
+        Action<KeyValuePair<string, string>>? onField, Http3ServerOptions options, CancellationToken cancellationToken) =>
+        ReadSection(reader, length, onField, options, new Http3HeaderBudget(options), cancellationToken);
 
     public static async Task<Http3FieldSection> ReadSection(Http3StreamReader reader, long length,
-        Action<KeyValuePair<string, string>>? onField, CancellationToken cancellationToken)
+        Action<KeyValuePair<string, string>>? onField, Http3ServerOptions options, Http3HeaderBudget budget,
+        CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(length);
         // The frame's declared size is not an allocation request. Decode each field as its bytes arrive,
         // keeping only bounded strings and at most the reference's 200-field parsing allowance.
-        var input = new SectionInput(reader, length);
+        var input = new Http3QpackSectionInput(reader, length);
         var fields = new List<KeyValuePair<string, string>>();
-        var decodedSize = 0;
         try {
             var first = await input.ReadByte(cancellationToken).Vhc();
             if (await ReadInteger(input, first, 8, cancellationToken).Vhc() != 0)
                 throw new Http3QpackException("A field section references the disabled dynamic table.");
             first = await input.ReadByte(cancellationToken).Vhc();
-            var negativeBase = (first & 0x80) != 0;
-            _ = await ReadInteger(input, first, 7, cancellationToken).Vhc();
-            if (negativeBase)
-                throw new Http3QpackException("The field section has a negative Base.");
+            // The reference ignores the sign bit and rejects a nonzero Delta Base.
+            if (await ReadInteger(input, first, 7, cancellationToken).Vhc() != 0)
+                throw new Http3QpackException("The field section has a nonzero Delta Base.");
 
             while (input.Remaining > 0) {
-                var field = await ReadField(input, cancellationToken).Vhc();
-                decodedSize += field.Key.Length + field.Value.Length;
-                if (decodedSize > MaxHeaderBytes * 2)
-                    throw new Http3ProtocolException(Http3Protocol.RequestRejected, connectionError: false);
-                if (fields.Count == MaxHeaderCount * 2)
-                    throw new Http3ProtocolException(Http3Protocol.MessageError, connectionError: false);
+                var field = await ReadField(input, options.MaxFieldBytes, cancellationToken).Vhc();
+                budget.Append(field);
                 onField?.Invoke(field);
                 fields.Add(field);
             }
-            return new Http3FieldSection(fields, true,
-                fields.Count > MaxHeaderCount || decodedSize > MaxHeaderBytes);
+            return new Http3FieldSection(fields, true, budget.ExceedsRequestLimits);
         }
         catch (EndOfStreamException) when (fields.Count > 0) {
             // Kestrel has already entered header parsing once a complete field was delivered. An
@@ -47,28 +46,30 @@ internal static partial class Http3Qpack
         }
     }
 
-    private static async ValueTask<KeyValuePair<string, string>> ReadField(SectionInput input,
-        CancellationToken cancellationToken)
+    private static async ValueTask<KeyValuePair<string, string>> ReadField(Http3QpackSectionInput input,
+        int maximumFieldBytes, CancellationToken cancellationToken)
     {
         var first = await input.ReadByte(cancellationToken).Vhc();
         switch (GetFieldKind(first)) {
-            case FieldKind.Indexed:
+            case Http3QpackFieldKind.Indexed:
                 return Http3QpackStaticTable.Get(await ReadInteger(input, first, 6, cancellationToken).Vhc());
-            case FieldKind.NameReference:
+            case Http3QpackFieldKind.NameReference:
                 var index = await ReadInteger(input, first, 4, cancellationToken).Vhc();
                 var name = Http3QpackStaticTable.Get(index).Key;
                 first = await input.ReadByte(cancellationToken).Vhc();
-                var value = await ReadString(input, first, 7, 0x80, cancellationToken).Vhc();
+                var value = await ReadString(input, first, 7, 0x80, maximumFieldBytes, cancellationToken).Vhc();
                 return new KeyValuePair<string, string>(name, value);
             default:
-                name = await ReadString(input, first, 3, 0x08, cancellationToken).Vhc();
+                name = await ReadString(input, first, 3, 0x08, maximumFieldBytes, cancellationToken).Vhc();
+                if (name.Length == 0)
+                    throw new Http3QpackException("A literal field name is empty.");
                 first = await input.ReadByte(cancellationToken).Vhc();
-                value = await ReadString(input, first, 7, 0x80, cancellationToken).Vhc();
+                value = await ReadString(input, first, 7, 0x80, maximumFieldBytes, cancellationToken).Vhc();
                 return new KeyValuePair<string, string>(name, value);
         }
     }
 
-    private static async ValueTask<ulong> ReadInteger(SectionInput input, byte first, int prefixBits,
+    private static async ValueTask<ulong> ReadInteger(Http3QpackSectionInput input, byte first, int prefixBits,
         CancellationToken cancellationToken)
     {
         var mask = (1 << prefixBits) - 1;
@@ -84,12 +85,12 @@ internal static partial class Http3Qpack
         throw new Http3QpackException("A QPACK integer has too many continuation bytes.");
     }
 
-    private static async ValueTask<string> ReadString(SectionInput input, byte first, int prefixBits,
-        int huffmanMask, CancellationToken cancellationToken)
+    private static async ValueTask<string> ReadString(Http3QpackSectionInput input, byte first, int prefixBits,
+        int huffmanMask, int maximumFieldBytes, CancellationToken cancellationToken)
     {
         var huffman = (first & huffmanMask) != 0;
         var length = await ReadInteger(input, first, prefixBits, cancellationToken).Vhc();
-        if (length > MaxHeaderBytes)
+        if (length > (ulong)maximumFieldBytes)
             throw new Http3QpackException("A QPACK string exceeds the reference's individual string limit.");
         if (length > (ulong)input.Remaining)
             throw new Http3QpackException("A compressed string is truncated.");
@@ -114,7 +115,7 @@ internal static partial class Http3Qpack
                 count += await input.Read(encoded.AsMemory(count, wanted), cancellationToken).Vhc();
             }
             try {
-                return DecodeString(encoded.AsSpan(0, count), huffman, MaxHeaderBytes);
+                return DecodeString(encoded.AsSpan(0, count), huffman, maximumFieldBytes);
             }
             catch (Http3HeaderLimitException) {
                 // An individual Huffman string over the reference's decoder limit is a compression
@@ -124,32 +125,6 @@ internal static partial class Http3Qpack
         }
         finally {
             ArrayPool<byte>.Shared.Return(encoded);
-        }
-    }
-
-    private sealed class SectionInput(Http3StreamReader reader, long length)
-    {
-        public long Remaining { get; private set; } = length;
-
-        public async ValueTask<byte> ReadByte(CancellationToken cancellationToken)
-        {
-            if (Remaining == 0)
-                throw new Http3QpackException("The field section ended in a compressed value.");
-            var value = await reader.ReadByte(cancellationToken).Vhc();
-            if (value < 0)
-                throw new EndOfStreamException();
-            Remaining--;
-            return (byte)value;
-        }
-
-        public async ValueTask<int> Read(Memory<byte> bytes, CancellationToken cancellationToken)
-        {
-            var count = await reader.Read(bytes[..(int)Math.Min(bytes.Length, Remaining)],
-                cancellationToken).Vhc();
-            if (count == 0)
-                throw new EndOfStreamException();
-            Remaining -= count;
-            return count;
         }
     }
 }

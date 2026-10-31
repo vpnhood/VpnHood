@@ -1,50 +1,62 @@
 using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 internal static class Http3RequestStream
 {
-    // Unrecognized frames are discarded in bounded chunks, never allocated by their advertised size.
-    // A finite budget also stops a stream of empty extension frames from keeping a request alive forever.
-    private const long MaxIgnoredBytes = 64 * 1024;
-
     public static async Task Process(Stream stream, Http3StreamReader reader, IQuicStream quic,
-        CancellationToken headersToken, CancellationToken cancellationToken)
+        Http3StreamContext context, Action<Exception> onError, IHttp3Responder responder,
+        Http3ServerOptions options, CancellationToken headersToken,
+        CancellationToken cancellationToken)
     {
-        var head = await ReadHeaders(reader, headersToken).Vhc();
+        var headerBudget = new Http3HeaderBudget(options);
+        var head = await ReadHeaders(reader, options, headerBudget, headersToken).Vhc();
         if (!head.Completed) {
             quic.CompleteWrites();
             return;
         }
         // Count every inspected byte, including zero-length DATA frame headers and QPACK trailers.
         // A continuously readable peer must not postpone the application's final response forever.
-        reader.AvailableBytesLimit = 64 * 1024;
+        reader.AvailableBytesLimit = options.MaxBodyInspectionBytes;
         reader.ReadAvailableOnly = true;
-        if (!head.ExceedsRequestLimits) {
-            try {
-                await ValidateAvailableBody(reader, head.ContentLength, head.IgnoredBytes, cancellationToken).Vhc();
+        using var dispatch = new Http3ResponseDispatch(stream, quic, context, responder, head.Request,
+            headerBudget, options, onError, headersToken);
+        try {
+            if (!head.ExceedsRequestLimits) {
+                try {
+                    await ValidateAvailableBody(reader, head.Request.ContentLength, headerBudget,
+                        dispatch, options, cancellationToken).Vhc();
+                }
+                catch (Exception ex) when (ex is Http3ReadPendingException or Http3ReadBudgetExceededException) {
+                    // Responders do not consume bodies; inspect available bytes without waiting for more.
+                }
             }
-            catch (Exception ex) when (ex is Http3ReadPendingException or Http3ReadBudgetExceededException) {
-                // The protected application does not consume a request body. Inspect bytes already
-                // present within a finite budget, then respond without waiting for more input.
-            }
+            await dispatch.Complete(headersToken).Vhc();
         }
-        var statusCode = head.ExceedsRequestLimits ? 431 : 401;
-        var response = Http3Protocol.Frame(1, Http3Qpack.EncodeResponse(statusCode, DateTimeOffset.UtcNow));
-        await stream.WriteAsync(response, headersToken).Vhc();
-        quic.CompleteWrites();
-        // The final response is the parsing boundary. Later malformed frames must not change the
-        // completed challenge into a reset or close the connection. Dispose observes any pending read.
-        quic.AbortRead(Http3Protocol.NoError);
+        catch (OperationCanceledException ex) {
+            dispatch.Fail(ex);
+            if (cancellationToken.IsCancellationRequested)
+                throw;
+        }
+        catch (Exception ex) {
+            dispatch.Fail(ex);
+        }
+        finally {
+            // Join dispatch before returning the reader or disposing the native stream.
+            await dispatch.Join(cancellationToken).Vhc();
+        }
     }
 
     private static async Task ValidateAvailableBody(Http3StreamReader reader, long? contentLength,
-        long ignored, CancellationToken cancellationToken)
+        Http3HeaderBudget headerBudget, Http3ResponseDispatch dispatch, Http3ServerOptions options,
+        CancellationToken cancellationToken)
     {
         long bodyBytes = 0;
         var trailers = false;
         while (true) {
+            if (dispatch.ResponseSelected)
+                return;
             var type = await reader.ReadIntegerOrEnd(cancellationToken).Vhc();
             if (type == null) {
                 ValidateBodyLength(bodyBytes, contentLength);
@@ -70,17 +82,18 @@ internal static class Http3RequestStream
                 if (trailers)
                     throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
                 trailers = true;
-                var trailerHeaders = new Http3RequestHeaders(trailers: true);
-                var section = await Http3Qpack.ReadSection(reader, length, trailerHeaders.Append, cancellationToken).Vhc();
+                await dispatch.Start(cancellationToken).Vhc();
+                if (dispatch.ResponseSelected)
+                    return;
+                var trailerHeaders = new Http3RequestHeaders(trailers: true, options.MaxRequestLineBytes);
+                var section = await Http3Qpack.ReadSection(reader, length, trailerHeaders.Append,
+                    options, headerBudget, cancellationToken).Vhc();
                 if (!section.Completed)
                     return;
                 trailerHeaders.Complete();
-                if (section.ExceedsRequestLimits)
-                    throw new Http3ProtocolException(Http3Protocol.RequestRejected, connectionError: false);
             }
             else {
                 RejectUnexpected(type.Value, beforeHeaders: false);
-                ignored = AddIgnored(ignored, length);
                 await reader.Discard(length, cancellationToken).Vhc();
             }
         }
@@ -92,24 +105,22 @@ internal static class Http3RequestStream
             throw new Http3ProtocolException(Http3Protocol.ProtocolError, connectionError: false);
     }
 
-    private readonly record struct RequestHead(bool Completed, bool ExceedsRequestLimits,
-        long? ContentLength, long IgnoredBytes);
-
-    private static async Task<RequestHead> ReadHeaders(Http3StreamReader reader, CancellationToken cancellationToken)
+    private static async Task<Http3RequestHead> ReadHeaders(Http3StreamReader reader, Http3ServerOptions options,
+        Http3HeaderBudget headerBudget, CancellationToken cancellationToken)
     {
-        long ignored = 0;
         try {
             while (true) {
                 var type = await reader.ReadInteger(cancellationToken).Vhc();
                 var length = await reader.ReadInteger(cancellationToken).Vhc();
                 if (type == 1) {
-                    var headers = new Http3RequestHeaders(trailers: false);
-                    var section = await Http3Qpack.ReadSection(reader, length, headers.Append, cancellationToken).Vhc();
-                    return new RequestHead(section.Completed, section.ExceedsRequestLimits,
-                        section.Completed ? headers.Complete() : null, ignored);
+                    var headers = new Http3RequestHeaders(trailers: false, options.MaxRequestLineBytes);
+                    var section = await Http3Qpack.ReadSection(reader, length, headers.Append,
+                        options, headerBudget, cancellationToken).Vhc();
+                    var request = new Http3Request(headers.Fields, section.Completed ? headers.Complete() : null);
+                    return new Http3RequestHead(section.Completed, section.ExceedsRequestLimits, request);
                 }
                 RejectUnexpected(type, beforeHeaders: true);
-                ignored = AddIgnored(ignored, length);
+                // RC3 discards request extensions without a size cap; the header deadline still applies.
                 await reader.Discard(length, cancellationToken).Vhc();
             }
         }
@@ -126,12 +137,5 @@ internal static class Http3RequestStream
         // on its control stream. HTTP/3 control-only frames still cannot appear on a request.
         if (type is 3 or 4 or 5 or 7 or 13 || beforeHeaders && type == 0)
             throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
-    }
-
-    private static long AddIgnored(long previous, long length)
-    {
-        if (length > MaxIgnoredBytes - previous - 16)
-            throw new Http3ProtocolException(Http3Protocol.ExcessiveLoad);
-        return previous + length + 16;
     }
 }

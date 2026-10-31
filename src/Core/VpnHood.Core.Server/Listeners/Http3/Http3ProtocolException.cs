@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 internal sealed class Http3ProtocolException(long errorCode, bool connectionError = true)
     : Exception($"HTTP/3 protocol error 0x{errorCode:x}.")

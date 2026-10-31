@@ -10,6 +10,8 @@ public partial class Http3FrontTest
     [DataRow("invalid-path")]
     [DataRow("unicode-path")]
     [DataRow("unicode-path-with-query")]
+    [DataRow("unicode-path-above-byte-range")]
+    [DataRow("escaped-null-path")]
     [DataRow("unicode-ordinary-value")]
     public async Task Utf8_header_octets_match_the_reference(string name)
     {
@@ -22,6 +24,8 @@ public partial class Http3FrontTest
             case "invalid-path": fields[2] = (":path", [0x2f, 0x80]); break;
             case "unicode-path": fields[2] = (":path", [0x2f, 0xc3, 0xa9]); break;
             case "unicode-path-with-query": fields[2] = (":path", [0x2f, 0xc3, 0xa9, 0x3f, 0x71]); break;
+            case "unicode-path-above-byte-range": fields[2] = (":path", Encoding.UTF8.GetBytes("/Ā")); break;
+            case "escaped-null-path": fields[2] = (":path", "/%00"u8.ToArray()); break;
             case "unicode-ordinary-value": fields.Add(("x-test", [0xc3, 0xa9])); break;
             default: throw new ArgumentOutOfRangeException(nameof(name));
         }
@@ -36,7 +40,7 @@ public partial class Http3FrontTest
         }
     }
 
-    private static byte[] BuildOctetRequest(IEnumerable<(string Name, byte[] Value)> fields)
+    private static byte[] BuildOctetRequest(IReadOnlyList<(string Name, byte[] Value)> fields)
     {
         // Encoding probes must preserve the supplied octets. The text helper intentionally uses
         // ASCII, which would replace malformed UTF-8 or Unicode with '?' before it reached the server.

@@ -1,26 +1,21 @@
 using System.Buffers;
 using System.Text;
 
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 // Validate HTTP message semantics separately from QPACK compression. The request handler maps each
 // failure to the measured reference's HTTP/3 error code and stream/connection scope.
-internal sealed class Http3RequestHeaders(bool trailers)
+internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes)
 {
     private static readonly UTF8Encoding HeaderEncoding = new(false, throwOnInvalidBytes: true);
     private readonly Dictionary<string, string> _pseudo = new(StringComparer.Ordinal);
+    private readonly List<KeyValuePair<string, string>> _fields = [];
     private bool _regularSeen;
     private string? _host;
     private int _hostCount;
     private long? _contentLength;
 
-    public static long? Validate(IReadOnlyList<KeyValuePair<string, string>> fields, bool trailers)
-    {
-        var headers = new Http3RequestHeaders(trailers);
-        foreach (var field in fields)
-            headers.Append(field);
-        return headers.Complete();
-    }
+    public IReadOnlyList<KeyValuePair<string, string>> Fields => _fields;
 
     public void Append(KeyValuePair<string, string> field)
     {
@@ -28,18 +23,19 @@ internal sealed class Http3RequestHeaders(bool trailers)
         value = DecodeValue(value);
         // Validate each decoded field immediately. A bad field followed by FIN must remain an
         // error even when the peer's declared HEADERS frame never finishes.
-        // The reference preserves surrounding SP/HTAB; these values only reach the fixed challenge.
+        // Preserve surrounding SP/HTAB as the reference does.
         if (name.Length == 0 || value.Any(c => c is '\0' or '\r' or '\n' or '\x7f' || c < ' ' && c != '\t'))
             Reject();
         if (name[0] == ':') {
-            if (trailers || _regularSeen || name is not (":method" or ":scheme" or ":path" or ":authority") ||
+            if (trailers || _regularSeen || name is not (":method" or ":scheme" or ":path" or ":authority" or ":protocol") ||
                 !_pseudo.TryAdd(name, value))
                 Reject();
+            _fields.Add(new KeyValuePair<string, string>(name, value));
             return;
         }
         _regularSeen = true;
         if (!name.All(IsLowerToken) || name is "connection" or "proxy-connection" or "keep-alive" or
-            "transfer-encoding" or "upgrade" || name == "te" && !value.Equals("trailers", StringComparison.OrdinalIgnoreCase))
+            "transfer-encoding" or "upgrade" || name == "te" && value != "trailers")
             Reject();
         if (name == "host") {
             _hostCount++;
@@ -52,6 +48,7 @@ internal sealed class Http3RequestHeaders(bool trailers)
             else
                 _contentLength = parsed;
         }
+        _fields.Add(new KeyValuePair<string, string>(name, value));
     }
 
     public long? Complete()
@@ -64,13 +61,13 @@ internal sealed class Http3RequestHeaders(bool trailers)
         if (method.Length == 0 || !method.All(IsToken))
             Reject(Http3Protocol.ProtocolError);
 
-        var hasAuthority = _pseudo.TryGetValue(":authority", out var pseudoAuthority) && pseudoAuthority.Length > 0;
-        var authority = hasAuthority ? pseudoAuthority! : _host ?? "";
+        var pseudoAuthority = _pseudo.GetValueOrDefault(":authority", "");
+        var hasAuthority = pseudoAuthority.Length > 0;
+        var authority = hasAuthority ? pseudoAuthority : _host ?? "";
         // Match the reference's authority precedence, including mismatched or repeated Host fields.
-        // This selects a syntactic request target only: the unauthenticated application always sends 401.
         if (!hasAuthority && _hostCount > 1 || !IsValidAuthority(authority))
             Reject(Http3Protocol.ProtocolError);
-        if (method == "CONNECT") {
+        if (method == "CONNECT" && !_pseudo.ContainsKey(":protocol")) {
             // The measured reference accepts Host fallback and an omitted port for CONNECT. It
             // rejects nonempty scheme/path values, but this front never establishes an HTTP tunnel.
             if (_pseudo.TryGetValue(":scheme", out var connectScheme) && connectScheme.Length > 0 ||
@@ -78,13 +75,21 @@ internal sealed class Http3RequestHeaders(bool trailers)
                 Reject(Http3Protocol.ProtocolError);
         }
         else {
-            var path = _pseudo[":path"];
-            if (!_pseudo[":scheme"].Equals("https", StringComparison.OrdinalIgnoreCase) || path.Length == 0 ||
+            var path = _pseudo.GetValueOrDefault(":path", "");
+            var scheme = _pseudo.GetValueOrDefault(":scheme", "");
+            if (!scheme.Equals("https", StringComparison.OrdinalIgnoreCase) || path.Length == 0 ||
                 path[0] != '/' && !(path == "*" && method == "OPTIONS") || path.Any(c => c <= ' ' || c == '#'))
                 Reject(Http3Protocol.ProtocolError);
+            // Kestrel approximates the request line with these decoded pseudo-header values.
+            if (!(path == "*" && method == "OPTIONS") &&
+                (long)method.Length + scheme.Length + authority.Length + path.Length > maxRequestLineBytes)
+                Reject(Http3Protocol.RequestRejected);
             // The reference preserves a plain UTF-8 raw path, but its unescaped path-with-query
             // conversion requires ASCII. Keep the measured /é and /é?q outcomes distinct.
             var queryIndex = path.IndexOf('?');
+            var pathSegment = queryIndex < 0 ? path.AsSpan() : path.AsSpan(0, queryIndex);
+            if (pathSegment.IndexOfAnyExceptInRange('\0', '\xff') >= 0 || pathSegment.Contains("%00", StringComparison.Ordinal))
+                Reject(Http3Protocol.ProtocolError);
             if (queryIndex >= 0 && !path.AsSpan(0, queryIndex).Contains('%') &&
                 !Ascii.IsValid(path.AsSpan(0, queryIndex)))
                 Reject(Http3Protocol.ProtocolError);
@@ -98,13 +103,11 @@ internal sealed class Http3RequestHeaders(bool trailers)
         // the reference's strict UTF-8 decoding; ordinary ASCII values need no conversion or buffer.
         if (Ascii.IsValid(octets))
             return octets;
-        if (octets.Length > Http3Qpack.MaxHeaderBytes || octets.Any(c => c > byte.MaxValue))
+        if (octets.Any(c => c > byte.MaxValue))
             Reject();
 
-        byte[]? rented = null;
-        Span<byte> bytes = octets.Length <= 256
-            ? stackalloc byte[octets.Length]
-            : (rented = ArrayPool<byte>.Shared.Rent(octets.Length));
+        var rented = octets.Length > 256 ? ArrayPool<byte>.Shared.Rent(octets.Length) : null;
+        Span<byte> bytes = rented is null ? stackalloc byte[octets.Length] : rented;
         try {
             var count = Encoding.Latin1.GetBytes(octets.AsSpan(), bytes);
             return HeaderEncoding.GetString(bytes[..count]);

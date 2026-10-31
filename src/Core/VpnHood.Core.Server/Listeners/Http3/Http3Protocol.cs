@@ -1,16 +1,16 @@
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 // RFC 9114, sections 6-8. These are application error codes, never QUIC transport errors.
 internal static class Http3Protocol
 {
-    public const long NoError = 0x100;
+    public const long NoError = Http3ErrorCode.NoError;
     public const long ProtocolError = 0x101;
-    public const long InternalError = 0x102;
+    public const long InternalError = Http3ErrorCode.InternalError;
     public const long StreamCreationError = 0x103;
     public const long ClosedCriticalStream = 0x104;
     public const long FrameUnexpected = 0x105;
     public const long FrameError = 0x106;
-    public const long ExcessiveLoad = 0x107;
+    public const long ExcessiveLoad = Http3ErrorCode.ExcessiveLoad;
     public const long IdError = 0x108;
     public const long SettingsError = 0x109;
     public const long MissingSettings = 0x10a;
@@ -20,15 +20,17 @@ internal static class Http3Protocol
     public const long MessageError = 0x10e;
     public const long QpackEncoderError = 0x201;
     public const long QpackDecoderError = 0x202;
-    public const int MaxHeaderBytes = 32768;
-    public const int MaxConcurrentStreams = 110;
-    public static readonly TimeSpan HeadersTimeout = TimeSpan.FromSeconds(30);
-    public static readonly TimeSpan KeepAliveTimeout = TimeSpan.FromSeconds(130);
-    public static readonly TimeSpan CloseTimeout = TimeSpan.FromSeconds(5);
-
-    // Control stream, SETTINGS, MAX_FIELD_SECTION_SIZE=32768. QPACK capacity and blocked streams
-    // retain their default zero, as in the reference server. No dynamic table is retained per peer.
-    public static readonly byte[] ControlStream = [0, 4, 5, 6, 0x80, 0, 0x80, 0];
+    public static byte[] CreateControlStream(int maxHeaderBytes)
+    {
+        // QPACK capacity and blocked streams retain zero; no dynamic table is kept per peer.
+        using var settings = new MemoryStream();
+        WriteInteger(settings, 6);
+        WriteInteger(settings, maxHeaderBytes);
+        using var output = new MemoryStream();
+        WriteInteger(output, 0);
+        output.Write(Frame(4, settings.GetBuffer().AsSpan(0, (int)settings.Length)));
+        return output.ToArray();
+    }
 
     public static byte[] Frame(long type, ReadOnlySpan<byte> payload)
     {

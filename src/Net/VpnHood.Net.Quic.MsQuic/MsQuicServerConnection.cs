@@ -9,7 +9,6 @@ internal sealed class MsQuicServerConnection(QuicConnection connection) : IQuicS
 {
     public IPEndPoint LocalEndPoint => connection.LocalEndPoint;
     public IPEndPoint RemoteEndPoint => connection.RemoteEndPoint;
-    public string TargetHostName => connection.TargetHostName;
 
     public async ValueTask<Stream> OpenOutboundStreamAsync(CancellationToken cancellationToken)
     {

@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 internal sealed class Http3QpackException(string message) : Exception(message)
 {

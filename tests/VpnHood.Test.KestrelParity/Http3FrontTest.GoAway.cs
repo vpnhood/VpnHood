@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Quic;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using VpnHood.Test.KestrelParity.Probing;
 
 namespace VpnHood.Test.KestrelParity;
@@ -31,9 +32,14 @@ public partial class Http3FrontTest
 
     [TestMethod]
     [TestCategory("Http3GoAway")]
+    [TestCategory("Http3Slow")]
     public async Task Client_goaway_drains_an_active_request_and_rejects_later_requests()
     {
-        var expected = await ObserveActiveClientGoAway(Servers.ReferenceEndPoint, TestContext.CancellationToken);
+        var keepAlive = new KestrelServerOptions().Limits.KeepAliveTimeout;
+        var results = await Task.WhenAll(
+            ObserveActiveClientGoAway(Servers.ReferenceEndPoint, keepAlive, TestContext.CancellationToken),
+            ObserveActiveClientGoAway(Servers.OurEndPoint, keepAlive, TestContext.CancellationToken));
+        var expected = results[0];
         TestContext.WriteLine($"Reference active GOAWAY: {expected}; " +
                               $"server identifiers=[{string.Join(",", expected.ServerGoAwayIds)}].");
         Assert.IsFalse(expected.ClosedBeforeOriginalCompleted, "GOAWAY must leave the accepted request alive.");
@@ -44,7 +50,7 @@ public partial class Http3FrontTest
         Assert.AreEqual(QuicError.ConnectionAborted, expected.Close.Error);
         Assert.AreEqual(0x100L, expected.Close.ApplicationErrorCode);
 
-        var actual = await ObserveActiveClientGoAway(Servers.OurEndPoint, TestContext.CancellationToken);
+        var actual = results[1];
         TestContext.WriteLine($"Our active GOAWAY: {actual}; " +
                               $"server identifiers=[{string.Join(",", actual.ServerGoAwayIds)}].");
         Assert.IsFalse(actual.ClosedBeforeOriginalCompleted, "GOAWAY closed an accepted request prematurely.");
@@ -56,10 +62,10 @@ public partial class Http3FrontTest
     }
 
     private async Task<ActiveGoAwayObservation> ObserveActiveClientGoAway(IPEndPoint endPoint,
-        CancellationToken cancellationToken)
+        TimeSpan keepAlive, CancellationToken cancellationToken)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(Http3Probe.Timeout);
+        deadline.CancelAfter(keepAlive + Http3Probe.Timeout + Http3Probe.Timeout);
         await using var connection = await CreateProbe().Connect(endPoint, 3, deadline.Token);
         await using var control = await connection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional, deadline.Token);
         await control.WriteAsync(new byte[] { 0, 4, 0 }, deadline.Token);
@@ -96,15 +102,22 @@ public partial class Http3FrontTest
             var completedRequest = await ReadCompleteResponse(original, deadline.Token);
             TestContext.WriteLine($"Active GOAWAY at {endPoint}: rejected={rejectedRequest}; " +
                                   $"completed={completedRequest}; closed early={closedBeforeOriginalCompleted}.");
-            // RC3 decrements its active count after the response ends, but that completion does not
-            // wake its accept loop. Give completion time to run, then supply an unknown uni stream as
-            // an accept event. Our front may already have closed; both paths must still return 0x100.
-            await Task.Delay(TimeSpan.FromMilliseconds(150), deadline.Token);
-            if (!close.IsCompleted)
-                await WakeGoAwayAcceptLoop(connection, deadline.Token);
+            // RC3's keep-alive and request completion cannot wake an existing GOAWAY drain.
+            // Keep both critical streams open past keep-alive before providing a new accept event.
+            var drainedAt = Stopwatch.GetTimestamp();
+            var observation = Task.Delay(keepAlive + TimeSpan.FromSeconds(2), deadline.Token);
+            var first = await Task.WhenAny(close, observation);
+            deadline.Token.ThrowIfCancellationRequested();
+            Assert.AreSame(observation, first,
+                $"{endPoint}: drained connection closed without another accept: {DescribeClose(close)}.");
+            await observation;
+            var idleElapsed = Stopwatch.GetElapsedTime(drainedAt);
+            Assert.IsFalse(close.IsCompleted, $"{endPoint}: drained connection closed at keep-alive.");
+            Assert.IsFalse(frames.IsCompleted, $"{endPoint}: server control stream ended during the drain.");
+            await WakeGoAwayAcceptLoop(connection, deadline.Token);
             await Task.WhenAll(close, frames);
             return new ActiveGoAwayObservation(rejectedRequest, completedRequest, await close, await frames,
-                closedBeforeOriginalCompleted);
+                closedBeforeOriginalCompleted, idleElapsed);
         }
         finally {
             // A failed request assertion or deadline must not leave either observer reading a disposed stream.
@@ -117,6 +130,9 @@ public partial class Http3FrontTest
             }
         }
     }
+
+    private static string DescribeClose(Task<Http3ProbeResult> close) =>
+        close.IsCompletedSuccessfully ? close.Result.ToString() : close.Status.ToString();
 
     private static async Task WakeGoAwayAcceptLoop(QuicConnection connection, CancellationToken cancellationToken)
     {
@@ -131,7 +147,7 @@ public partial class Http3FrontTest
         }
     }
 
-    private static void AssertValidServerGoAwayIds(ulong[] identifiers, ulong expectedIdentifier)
+    private static void AssertValidServerGoAwayIds(IReadOnlyList<ulong> identifiers, ulong expectedIdentifier)
     {
         // Repeated reference runs delivered either the final frame or only the QUIC close. If the
         // frame arrives, it must name the next stream after the highest request accepted before GOAWAY.
@@ -167,7 +183,8 @@ public partial class Http3FrontTest
         return new GoAwayObservation(result, await frames, elapsed);
     }
 
-    private static async Task<ulong[]> ReadServerGoAwayFrames(QuicStream stream, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<ulong>> ReadServerGoAwayFrames(QuicStream stream,
+        CancellationToken cancellationToken)
     {
         var identifiers = new List<ulong>();
         try {
@@ -209,9 +226,4 @@ public partial class Http3FrontTest
                 await stream.DisposeAsync();
         }
     }
-
-    private sealed record GoAwayObservation(Http3ProbeResult Close, ulong[] ServerGoAwayIds, TimeSpan Elapsed);
-
-    private sealed record ActiveGoAwayObservation(Http3ProbeResult RejectedRequest, Http3ProbeResult CompletedRequest,
-        Http3ProbeResult Close, ulong[] ServerGoAwayIds, bool ClosedBeforeOriginalCompleted);
 }

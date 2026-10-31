@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
@@ -14,8 +15,6 @@ using VpnHood.Core.Server.Access;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.ProbeResistance;
 using VpnHood.Core.Tunneling.Utils;
-using VpnHood.Net.Quic.Abstractions;
-using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.Providers;
 
@@ -32,7 +31,7 @@ public class QuicRequestRecoveryTest : TestBase
         RequireQuic();
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-        var sockets = new CountingSocketFactory();
+        var sockets = new QuicRecoverySocketFactory();
         var signer = CreateSigner(token);
         await using var sender = new RequestSender(CreateConnector(server, token, signer, sockets, useWebSocket), signer);
         var session = await CreateSession(sender, token, TestCt);
@@ -60,16 +59,16 @@ public class QuicRequestRecoveryTest : TestBase
     }
 
     [TestMethod]
-    public async Task Concurrent_recovery_waiters_share_one_plain_tls_probe()
+    public async Task Concurrent_requests_continue_while_one_plain_tls_probe_is_pending()
     {
         using var certificate = CertificateUtil.CreateSelfSigned();
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
-        var sockets = new CountingSocketFactory();
+        var sockets = new QuicRecoverySocketFactory();
         var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
         var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
         using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
-        var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint);
+        var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint, TimeProvider.System);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         deadline.CancelAfter(TimeSpan.FromSeconds(10));
         await recovery.Recover("healthy", deadline.Token);
@@ -80,13 +79,22 @@ public class QuicRequestRecoveryTest : TestBase
         var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var serverTime = DateTimeOffset.UtcNow.AddHours(2);
-        var peer = ReplyToClockProbe(listener, certificate, serverTime, received, release.Task, deadline.Token);
-        var requests = Enumerable.Range(0, 4)
-            .Select(index => recovery.Recover($"concurrent-{index}", deadline.Token)).ToArray();
+        var peer = ReplyToClockProbe(listener, certificate, endPoint, serverTime, received, release.Task, deadline.Token);
+        var first = recovery.Recover("first", deadline.Token);
         await received.Task.WaitAsync(deadline.Token);
-        Assert.AreEqual(1, sockets.TcpCount);
-        release.SetResult();
-        await Task.WhenAll(requests.Append(peer));
+        try {
+            var requests = Enumerable.Range(0, 4)
+                .Select(index => recovery.Recover($"concurrent-{index}", deadline.Token)).ToArray();
+            Assert.IsTrue(requests.All(request => request.IsCompletedSuccessfully),
+                "Other requests must continue without waiting for the active clock probe.");
+            await Task.WhenAll(requests);
+            Assert.IsFalse(first.IsCompleted, "The probe must remain held until its response is released.");
+            Assert.AreEqual(1, sockets.TcpCount);
+        }
+        finally {
+            release.TrySetResult();
+            await Task.WhenAll(first, peer);
+        }
         Assert.AreEqual(1, sockets.TcpCount);
         Assert.AreEqual(1L, signer.ClockCorrectionVersion);
         await recovery.Recover("after-success", deadline.Token);
@@ -94,36 +102,70 @@ public class QuicRequestRecoveryTest : TestBase
     }
 
     [TestMethod]
-    public async Task Cancellation_bounds_the_probe_and_its_waiters_without_losing_pending_recovery()
+    public async Task A_failure_during_a_successful_probe_keeps_a_later_probe_pending()
     {
         using var certificate = CertificateUtil.CreateSelfSigned();
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
-        var sockets = new CountingSocketFactory();
+        var sockets = new QuicRecoverySocketFactory();
         var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
         var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
         using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
-        var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint);
+        var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint, TimeProvider.System);
+        recovery.RequireRecovery();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        deadline.CancelAfter(TimeSpan.FromSeconds(10));
+        var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var serverTime = DateTimeOffset.UtcNow.AddHours(2);
+        var peer = ReplyToClockProbe(listener, certificate, endPoint, serverTime,
+            received, release.Task, deadline.Token);
+        var first = recovery.Recover("before-new-failure", deadline.Token);
+        await received.Task.WaitAsync(deadline.Token);
+        recovery.RequireRecovery();
+        release.SetResult();
+        await Task.WhenAll(first, peer);
+
+        var retryPeer = ReplyToClockProbe(listener, certificate, endPoint, serverTime,
+            new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously), Task.CompletedTask, deadline.Token);
+        await recovery.Recover("after-new-failure", deadline.Token);
+        await retryPeer;
+        Assert.AreEqual(2, sockets.TcpCount, "A successful probe must not consume failures raised while it ran.");
+        await recovery.Recover("after-second-success", deadline.Token);
+        Assert.AreEqual(2, sockets.TcpCount);
+    }
+
+    [TestMethod]
+    public async Task Caller_cancellation_stops_the_probe_without_losing_pending_recovery()
+    {
+        using var certificate = CertificateUtil.CreateSelfSigned();
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var sockets = new QuicRecoverySocketFactory();
+        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
+        var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
+        using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
+        var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint, TimeProvider.System);
         recovery.RequireRecovery();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         deadline.CancelAfter(TimeSpan.FromSeconds(10));
         using var probeCancellation = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token);
-        using var waiterCancellation = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token);
+        using var otherCancellation = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token);
         var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var peer = WithholdClockResponse(listener, certificate, received, deadline.Token);
+        var peer = WithholdClockResponse(listener, certificate, endPoint, received, deadline.Token);
         var first = recovery.Recover("cancel-active", probeCancellation.Token);
         await received.Task.WaitAsync(deadline.Token);
-        var waiter = recovery.Recover("cancel-waiter", waiterCancellation.Token);
-        await waiterCancellation.CancelAsync();
-        await Assert.ThrowsAsync<OperationCanceledException>(() => waiter.WaitAsync(TimeSpan.FromSeconds(2), deadline.Token));
-        Assert.AreEqual(1, sockets.TcpCount, "A canceled waiter must not start another probe.");
+        await otherCancellation.CancelAsync();
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            recovery.Recover("already-canceled", otherCancellation.Token));
+        Assert.AreEqual(1, sockets.TcpCount, "A canceled request must not start another probe.");
         await probeCancellation.CancelAsync();
         await Assert.ThrowsAsync<OperationCanceledException>(() => first.WaitAsync(TimeSpan.FromSeconds(2), deadline.Token));
         await peer;
         Assert.AreEqual(0L, signer.ClockCorrectionVersion);
 
         // Canceling the in-flight probe must not consume the recovery requirement.
-        var retryPeer = ReplyToClockProbe(listener, certificate, DateTimeOffset.UtcNow.AddHours(2),
+        var retryPeer = ReplyToClockProbe(listener, certificate, endPoint, DateTimeOffset.UtcNow.AddHours(2),
             new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously), Task.CompletedTask, deadline.Token);
         await recovery.Recover("after-cancellation", deadline.Token);
         await retryPeer;
@@ -132,12 +174,241 @@ public class QuicRequestRecoveryTest : TestBase
     }
 
     [TestMethod]
+    public async Task The_probes_own_deadline_leaves_recovery_pending_without_canceling_the_request()
+    {
+        using var certificate = CertificateUtil.CreateSelfSigned();
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var sockets = new QuicRecoverySocketFactory();
+        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
+        var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
+        using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
+        var timeProvider = new QuicRecoveryTimeProvider();
+        var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint, timeProvider);
+        recovery.RequireRecovery();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        deadline.CancelAfter(TimeSpan.FromSeconds(10));
+        var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var peer = WithholdClockResponse(listener, certificate, endPoint, received, deadline.Token);
+        var probe = recovery.Recover("probe-timeout", deadline.Token);
+        await received.Task.WaitAsync(deadline.Token);
+        await probe.WaitAsync(TimeSpan.FromSeconds(5), deadline.Token);
+        await peer.WaitAsync(deadline.Token);
+        Assert.IsFalse(deadline.IsCancellationRequested);
+        Assert.AreEqual(0L, signer.ClockCorrectionVersion);
+
+        await recovery.Recover("during-timeout-cooldown", deadline.Token);
+        Assert.AreEqual(1, sockets.TcpCount, "A timed-out probe must not delay the next request too.");
+        timeProvider.Advance(TimeSpan.FromMinutes(1));
+
+        var retryPeer = ReplyToClockProbe(listener, certificate, endPoint, DateTimeOffset.UtcNow.AddHours(2),
+            new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously), Task.CompletedTask, deadline.Token);
+        await recovery.Recover("after-probe-timeout", deadline.Token);
+        await retryPeer;
+        Assert.AreEqual(2, sockets.TcpCount);
+        Assert.AreEqual(1L, signer.ClockCorrectionVersion);
+    }
+
+    [TestMethod]
+    public async Task Failed_clock_probes_wait_a_minute_before_retrying_pending_recovery()
+    {
+        using var certificate = CertificateUtil.CreateSelfSigned();
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var sockets = new QuicRecoverySocketFactory { RejectTcpConnections = true };
+        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
+        var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
+        using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
+        var timeProvider = new QuicRecoveryTimeProvider();
+        var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint, timeProvider);
+        recovery.RequireRecovery();
+        await recovery.Recover("first-failed-probe", TestCt);
+        Assert.AreEqual(1, sockets.TcpCount);
+
+        // More QUIC failures must not bypass a cooldown on an unavailable TCP path.
+        recovery.RequireRecovery();
+        timeProvider.Advance(TimeSpan.FromSeconds(59));
+        var requests = Enumerable.Range(0, 4)
+            .Select(index => recovery.Recover($"cooldown-{index}", TestCt)).ToArray();
+        Assert.IsTrue(requests.All(request => request.IsCompletedSuccessfully));
+        await Task.WhenAll(requests);
+        Assert.AreEqual(1, sockets.TcpCount);
+        using var canceled = new CancellationTokenSource();
+        await canceled.CancelAsync();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => recovery.Recover("canceled-cooldown", canceled.Token));
+
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+        await recovery.Recover("second-failed-probe", TestCt);
+        Assert.AreEqual(2, sockets.TcpCount, "Pending recovery becomes eligible after one minute.");
+        sockets.RejectTcpConnections = false;
+        timeProvider.Advance(TimeSpan.FromSeconds(59));
+        await recovery.Recover("second-cooldown", TestCt);
+        Assert.AreEqual(2, sockets.TcpCount, "Each failed attempt starts its own cooldown.");
+
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+        var serverTime = DateTimeOffset.UtcNow.AddHours(2);
+        var peer = ReplyToClockProbe(listener, certificate, endPoint, serverTime,
+            new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously), Task.CompletedTask, TestCt);
+        await recovery.Recover("successful-retry", TestCt);
+        await peer;
+        Assert.AreEqual(3, sockets.TcpCount);
+        Assert.AreEqual(1L, signer.ClockCorrectionVersion);
+        await recovery.Recover("after-success", TestCt);
+        Assert.AreEqual(3, sockets.TcpCount, "Success clears pending recovery.");
+
+        recovery.RequireRecovery();
+        var nextPeer = ReplyToClockProbe(listener, certificate, endPoint, serverTime,
+            new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously), Task.CompletedTask, TestCt);
+        await recovery.Recover("new-failure-after-success", TestCt);
+        await nextPeer;
+        Assert.AreEqual(4, sockets.TcpCount, "A new failure after success can probe immediately.");
+        await recovery.Recover("after-unchanged-clock-success", TestCt);
+        Assert.AreEqual(4, sockets.TcpCount, "A verified Date clears pending recovery even without a clock change.");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_failed_quic_connect_or_stream_open_does_not_schedule_a_clock_probe(bool failStreamOpen)
+    {
+        RequireQuic();
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var sockets = new QuicRecoverySocketFactory();
+        var signer = CreateSigner(token);
+        await using var sender = new RequestSender(CreateConnector(server, token, signer, sockets, false), signer);
+        var session = await CreateSession(sender, token, TestCt);
+        sender.ConnectorService.UseQuic = true;
+        if (failStreamOpen)
+            await SendStatus(sender, session, TestCt);
+        sockets.RejectQuicConnects = !failStreamOpen;
+        sockets.RejectQuicStreamOpens = failStreamOpen;
+
+        await Assert.ThrowsExactlyAsync<IOException>(() => SendStatus(sender, session, TestCt));
+        Assert.AreEqual(1, sockets.TcpCount);
+        sockets.RejectQuicConnects = false;
+        sockets.RejectQuicStreamOpens = false;
+        await SendStatus(sender, session, TestCt);
+        Assert.AreEqual(1, sockets.TcpCount,
+            "A failure before an established request cannot establish a need for clock recovery.");
+        Assert.AreEqual(0L, signer.ClockCorrectionVersion);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_failed_tcp_probe_does_not_prevent_quic_requests_during_its_cooldown(bool useWebSocket)
+    {
+        RequireQuic();
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var sockets = new QuicRecoverySocketFactory();
+        var signer = CreateSigner(token);
+        await using var sender = new RequestSender(CreateConnector(server, token, signer, sockets, useWebSocket), signer);
+        var session = await CreateSession(sender, token, TestCt);
+        sender.ConnectorService.UseQuic = true;
+        Assert.IsTrue(signer.TryCorrectClock(DateTimeOffset.UtcNow.AddHours(1), signer.ClockCorrectionVersion));
+        sender.ConnectorService.RequestTimeout = TimeSpan.FromSeconds(1);
+        await Assert.ThrowsExactlyAsync<TimeoutException>(() => SendStatus(sender, session, TestCt));
+        Assert.AreEqual(1, sockets.TcpCount);
+        Assert.AreEqual(1, sockets.QuicStreamCount);
+
+        // Restore the request's proof while TCP stays unavailable; only the application uses QUIC.
+        Assert.IsTrue(signer.TryCorrectClock(DateTimeOffset.UtcNow, signer.ClockCorrectionVersion));
+        sender.ConnectorService.RequestTimeout = TimeSpan.FromSeconds(10);
+        sockets.RejectTcpConnections = true;
+        await SendStatus(sender, session, TestCt);
+        Assert.AreEqual(2, sockets.TcpCount);
+        Assert.AreEqual(2, sockets.QuicStreamCount);
+        await SendStatus(sender, session, TestCt);
+        Assert.AreEqual(2, sockets.TcpCount, "A failed probe must not delay each following QUIC request.");
+        Assert.AreEqual(3, sockets.QuicStreamCount);
+
+        sockets.RejectTcpConnections = false;
+        await SendStatus(sender, session, TestCt);
+        Assert.AreEqual(2, sockets.TcpCount);
+        await SendStatus(sender, session, TestCt);
+        Assert.AreEqual(2, sockets.TcpCount, "QUIC requests must keep progressing throughout the cooldown.");
+        Assert.AreEqual(5, sockets.QuicStreamCount);
+        Assert.IsTrue(sender.ConnectorService.UseQuic);
+        Assert.HasCount(1, server.SessionManager.Sessions);
+    }
+
+    [TestMethod]
+    public async Task A_held_tcp_probe_leaves_the_quic_request_its_full_timeout_and_other_requests_progress()
+    {
+        RequireQuic();
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = TestHelper.CreateAccessToken(server);
+        var sockets = new QuicRecoverySocketFactory();
+        var signer = CreateSigner(token);
+        await using var sessionSender = new RequestSender(CreateConnector(server, token, signer, sockets, false), signer);
+        var session = await CreateSession(sessionSender, token, TestCt);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, token.ServerToken.HostName,
+            token.ServerToken.CertificateHash, token.ServerToken.PathBase);
+        await using var sender = new RequestSender(CreateConnector(server, signer, sockets, false, endPoint), signer);
+        sender.ConnectorService.UseQuic = true;
+        await SendStatus(sender, session, TestCt);
+        Assert.IsTrue(signer.TryCorrectClock(DateTimeOffset.UtcNow.AddHours(1), signer.ClockCorrectionVersion));
+        sender.ConnectorService.RequestTimeout = TimeSpan.FromSeconds(1);
+        await Assert.ThrowsExactlyAsync<TimeoutException>(() => SendStatus(sender, session, TestCt));
+        Assert.IsTrue(signer.TryCorrectClock(DateTimeOffset.UtcNow, signer.ClockCorrectionVersion));
+
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        deadline.CancelAfter(TimeSpan.FromSeconds(10));
+        var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var peer = WithholdClockResponse(listener, accessManager.DefaultCert, endPoint, received, deadline.Token);
+        var elapsed = Stopwatch.StartNew();
+        var first = SendStatus(sender, session, deadline.Token);
+        await received.Task.WaitAsync(deadline.Token);
+        await SendStatus(sender, session, deadline.Token);
+        Assert.IsFalse(first.IsCompleted, "Another QUIC request must finish while the clock probe is still held.");
+        await first.WaitAsync(TimeSpan.FromSeconds(5), deadline.Token);
+        await peer;
+        Assert.IsTrue(elapsed.Elapsed > sender.ConnectorService.RequestTimeout,
+            "The probe must outlast the short application timeout without consuming it.");
+        Assert.AreEqual(2, sockets.TcpCount, "Concurrent application requests must share the one active probe.");
+        Assert.AreEqual(4, sockets.QuicStreamCount);
+        await SendStatus(sender, session, deadline.Token);
+        Assert.AreEqual(2, sockets.TcpCount, "A timed-out probe must not start again for the next request.");
+        Assert.AreEqual(5, sockets.QuicStreamCount);
+    }
+
+    [TestMethod]
+    public async Task Caller_cancellation_of_an_established_request_does_not_schedule_recovery()
+    {
+        RequireQuic();
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var sockets = new QuicRecoverySocketFactory();
+        var signer = CreateSigner(token);
+        await using var sender = new RequestSender(CreateConnector(server, token, signer, sockets, false), signer);
+        var session = await CreateSession(sender, token, TestCt);
+        sender.ConnectorService.UseQuic = true;
+        await SendStatus(sender, session, TestCt);
+        Assert.IsTrue(signer.TryCorrectClock(DateTimeOffset.UtcNow.AddHours(1), signer.ClockCorrectionVersion));
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        var request = SendStatus(sender, session, cancellation.Token);
+        await AssertEqualsWait(2, () => sockets.QuicStreamCount);
+        await cancellation.CancelAsync();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => request);
+
+        Assert.IsTrue(signer.TryCorrectClock(DateTimeOffset.UtcNow, signer.ClockCorrectionVersion));
+        await SendStatus(sender, session, TestCt);
+        Assert.AreEqual(1, sockets.TcpCount, "Caller cancellation is not a failed proof and must not request a TLS probe.");
+        Assert.AreEqual(3, sockets.QuicStreamCount);
+    }
+
+    [TestMethod]
     public async Task A_wrong_farm_key_is_not_fixed_by_switching_application_requests_to_tcp()
     {
         RequireQuic();
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-        var sockets = new CountingSocketFactory();
+        var sockets = new QuicRecoverySocketFactory();
         var goodSigner = CreateSigner(token);
         await using var goodSender = new RequestSender(CreateConnector(server, token, goodSigner, sockets, false), goodSigner);
         var session = await CreateSession(goodSender, token, TestCt);
@@ -167,12 +438,20 @@ public class QuicRequestRecoveryTest : TestBase
         token.ServerToken.HostName);
 
     private static ConnectorService CreateConnector(VpnHoodServer server, Token token, ClientRequestSigner signer,
-        CountingSocketFactory sockets, bool useWebSocket)
+        QuicRecoverySocketFactory sockets, bool useWebSocket)
     {
         var serverToken = token.ServerToken;
+        var hostEndPoints = serverToken.HostEndPoints ??
+            throw new InvalidOperationException("The token has no host endpoints.");
+        return CreateConnector(server, signer, sockets, useWebSocket,
+            new VpnEndPoint(hostEndPoints.First(), serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase));
+    }
+
+    private static ConnectorService CreateConnector(VpnHoodServer server, ClientRequestSigner signer,
+        QuicRecoverySocketFactory sockets, bool useWebSocket, VpnEndPoint endPoint)
+    {
         var connector = new ConnectorService(new ConnectorServiceOptions {
-            VpnEndPoint = new VpnEndPoint(serverToken.HostEndPoints!.First(), serverToken.HostName,
-                serverToken.CertificateHash, serverToken.PathBase),
+            VpnEndPoint = endPoint,
             ProxyConnector = null,
             SocketFactory = sockets,
             RequestTimeout = TimeSpan.FromSeconds(10),
@@ -214,12 +493,12 @@ public class QuicRequestRecoveryTest : TestBase
         Assert.AreEqual(SessionErrorCode.Ok, result.Response.ErrorCode);
     }
 
-    private static TcpStreamConnectionFactory CreateTcpFactory(CountingSocketFactory sockets, VpnEndPoint endPoint,
+    private static TcpStreamConnectionFactory CreateTcpFactory(QuicRecoverySocketFactory sockets, VpnEndPoint endPoint,
         X509Certificate2 certificate) => new(sockets, null, endPoint,
         (_, presented, _, _) => presented?.GetCertHashString() == certificate.GetCertHashString(), null);
 
     private static async Task ReadClockProbe(SslStream tls, X509Certificate2 certificate,
-        CancellationToken cancellationToken)
+        VpnEndPoint endPoint, CancellationToken cancellationToken)
     {
         await tls.AuthenticateAsServerAsync(new SslServerAuthenticationOptions {
             ServerCertificate = certificate,
@@ -227,8 +506,10 @@ public class QuicRequestRecoveryTest : TestBase
         }, cancellationToken);
         var headers = await HttpUtils.ParseHeadersAsync(tls, cancellationToken);
         Assert.IsNotNull(headers);
-        StringAssert.StartsWith(headers[HttpUtils.HttpRequestKey], "GET /base/");
-        Assert.AreEqual("localhost", headers["Host"]);
+        var pathBase = endPoint.PathBase?.Trim('/');
+        var path = string.IsNullOrEmpty(pathBase) ? "/" : $"/{pathBase}/";
+        StringAssert.StartsWith(headers[HttpUtils.HttpRequestKey], $"GET {path}");
+        Assert.AreEqual(endPoint.HostName, headers["Host"]);
         Assert.AreEqual("close", headers["Connection"]);
         Assert.IsFalse(headers.ContainsKey("Authorization"));
         Assert.IsFalse(headers.ContainsKey("Content-Length"));
@@ -236,11 +517,12 @@ public class QuicRequestRecoveryTest : TestBase
     }
 
     private static async Task ReplyToClockProbe(TcpListener listener, X509Certificate2 certificate,
-        DateTimeOffset serverTime, TaskCompletionSource received, Task release, CancellationToken cancellationToken)
+        VpnEndPoint endPoint, DateTimeOffset serverTime, TaskCompletionSource received, Task release,
+        CancellationToken cancellationToken)
     {
         using var client = await listener.AcceptTcpClientAsync(cancellationToken);
         await using var tls = new SslStream(client.GetStream());
-        await ReadClockProbe(tls, certificate, cancellationToken);
+        await ReadClockProbe(tls, certificate, endPoint, cancellationToken);
         received.SetResult();
         await release.WaitAsync(cancellationToken);
         await tls.WriteAsync(Encoding.ASCII.GetBytes(
@@ -249,11 +531,11 @@ public class QuicRequestRecoveryTest : TestBase
     }
 
     private static async Task WithholdClockResponse(TcpListener listener, X509Certificate2 certificate,
-        TaskCompletionSource received, CancellationToken cancellationToken)
+        VpnEndPoint endPoint, TaskCompletionSource received, CancellationToken cancellationToken)
     {
         using var client = await listener.AcceptTcpClientAsync(cancellationToken);
         await using var tls = new SslStream(client.GetStream());
-        await ReadClockProbe(tls, certificate, cancellationToken);
+        await ReadClockProbe(tls, certificate, endPoint, cancellationToken);
         received.SetResult();
         try {
             Assert.AreEqual(0, await tls.ReadAsync(new byte[1], cancellationToken),
@@ -261,47 +543,6 @@ public class QuicRequestRecoveryTest : TestBase
         }
         catch (IOException) {
             // Cancellation may abort TLS instead of sending close_notify. Both release the held connection.
-        }
-    }
-
-    private sealed class CountingSocketFactory : TestSocketFactory
-    {
-        private int _tcpCount;
-        private int _quicStreamCount;
-        public int TcpCount => Volatile.Read(ref _tcpCount);
-        public int QuicStreamCount => Volatile.Read(ref _quicStreamCount);
-
-        public override TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
-        {
-            Interlocked.Increment(ref _tcpCount);
-            return base.CreateTcpClient(ipEndPoint, options);
-        }
-
-        public override IQuicClient CreateQuicClient() => new CountingQuicClient(base.CreateQuicClient(), this);
-
-        private sealed class CountingQuicClient(IQuicClient client, CountingSocketFactory owner) : IQuicClient
-        {
-            public async ValueTask<IQuicConnection> ConnectAsync(QuicClientConnectOptions options,
-                CancellationToken cancellationToken) =>
-                new CountingQuicConnection(await client.ConnectAsync(options, cancellationToken), owner);
-        }
-
-        private sealed class CountingQuicConnection(IQuicConnection connection, CountingSocketFactory owner)
-            : IQuicConnection
-        {
-            public IPEndPoint LocalEndPoint => connection.LocalEndPoint;
-            public IPEndPoint RemoteEndPoint => connection.RemoteEndPoint;
-
-            public ValueTask<Stream> OpenOutboundStreamAsync(CancellationToken cancellationToken)
-            {
-                Interlocked.Increment(ref owner._quicStreamCount);
-                return connection.OpenOutboundStreamAsync(cancellationToken);
-            }
-
-            public ValueTask<Stream> AcceptInboundStreamAsync(CancellationToken cancellationToken) =>
-                connection.AcceptInboundStreamAsync(cancellationToken);
-
-            public ValueTask DisposeAsync() => connection.DisposeAsync();
         }
     }
 }

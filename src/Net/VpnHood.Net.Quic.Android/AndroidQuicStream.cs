@@ -39,7 +39,7 @@ internal sealed class AndroidQuicStream : Stream
         var stream = new AndroidQuicStream();
         stream._gch = GCHandle.Alloc(stream);
         try {
-            QUIC_HANDLE* handle;
+            QUIC_HANDLE* handle = null;
             ThrowIfFailure(MsQuicApi.Table->StreamOpen(connection, QUIC_STREAM_OPEN_FLAGS.NONE,
                 &StreamCallback, (void*)GCHandle.ToIntPtr(stream._gch), &handle));
             stream._stream = handle;
@@ -71,7 +71,7 @@ internal sealed class AndroidQuicStream : Stream
             return;
 
         try {
-            if (!_inboundShutdown!.Task.IsCompleted) {
+            if (_inboundShutdown is { Task.IsCompleted: false }) {
                 // MsQuic requires both abort flags with IMMEDIATE, even for a receive-only stream.
                 // This does not wait for the peer, but SHUTDOWN_COMPLETE must precede StreamClose.
                 ThrowIfFailure(MsQuicApi.Table->StreamShutdown(_stream,
@@ -127,8 +127,10 @@ internal sealed class AndroidQuicStream : Stream
             return;
 
         var tcs = PostSend(buffer.Span);
-        await using var reg = cancellationToken.Register(
-            static s => ((TaskCompletionSource)s!).TrySetCanceled(), tcs);
+        await using var reg = cancellationToken.Register(static state => {
+            if (state is TaskCompletionSource completion)
+                completion.TrySetCanceled();
+        }, tcs);
         await tcs.Task.Vhc(); // completed on SEND_COMPLETE
     }
 
@@ -215,7 +217,8 @@ internal sealed class AndroidQuicStream : Stream
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static unsafe int StreamCallback(QUIC_HANDLE* stream, void* ctx, QUIC_STREAM_EVENT* evt)
     {
-        var self = (AndroidQuicStream)GCHandle.FromIntPtr((IntPtr)ctx).Target!;
+        if (GCHandle.FromIntPtr((IntPtr)ctx).Target is not AndroidQuicStream self)
+            return QUIC_STATUS_SUCCESS;
         try {
             return self.OnEvent(evt);
         }
@@ -232,7 +235,8 @@ internal sealed class AndroidQuicStream : Stream
     {
         // Cleanup outlives setup cancellation. After IMMEDIATE, this wait is for native shutdown,
         // not a network acknowledgement; retaining the GCHandle keeps the final callback valid.
-        await _inboundShutdown!.Task.Vhc();
+        if (_inboundShutdown is { } shutdown)
+            await shutdown.Task.Vhc();
         try {
             CloseResources();
             base.Dispose(true);

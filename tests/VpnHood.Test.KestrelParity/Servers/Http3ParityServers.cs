@@ -16,13 +16,15 @@ namespace VpnHood.Test.KestrelParity.Servers;
 // Separate ports avoid routing tricks in the client; no HTTP-01 listener or external service is needed.
 internal sealed class Http3ParityServers(
     VpnHoodServer server, WebApplication reference, X509Certificate2 certificate,
-    IPEndPoint referenceEndPoint, string hostName, byte[] farmSecret) : IAsyncDisposable
+    IPEndPoint referenceEndPoint, string hostName, byte[] farmSecret,
+    BufferedQuicServer bufferedQuic) : IAsyncDisposable
 {
     public IPEndPoint OurEndPoint => server.ServerHost.QuicEndPoints.Single();
     public IPEndPoint ReferenceEndPoint => referenceEndPoint;
     public X509Certificate2 Certificate => certificate;
     public string HostName => hostName;
     public byte[] FarmSecret => farmSecret;
+    public BufferedQuicServer BufferedQuic => bufferedQuic;
 
     public static async Task<Http3ParityServers> Start(string storagePath, CancellationToken cancellationToken)
     {
@@ -40,38 +42,42 @@ internal sealed class Http3ParityServers(
             LogAnonymizer = false,
             SessionOptions = new SessionOptions { MinClientProtocolVersion = 15 }
         });
-        var server = CreateServer(accessManager, storagePath);
-        X509Certificate2? certificate = null;
-        WebApplication? reference = null;
+        var bufferedQuic = new BufferedQuicServer(new MsQuicServer());
+        var server = CreateServer(accessManager, storagePath, bufferedQuic);
         try {
+            var referenceEndPoint = VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback);
             var accessToken = accessManager.AccessTokenService.Create(tokenName: "http3-parity", maxClientCount: 1);
             var token = accessManager.GetToken(accessToken).ServerToken;
+            var farmSecret = token.Secret ?? throw new InvalidOperationException("The test token has no farm secret.");
             await server.Start(cancellationToken);
             Assert.HasCount(1, server.ServerHost.QuicEndPoints);
-            certificate = X509CertificateLoader.LoadPkcs12FromFile(
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(
                 Path.Combine(accessManager.CertsFolderPath, "default.pfx"), null);
-            var referenceEndPoint = VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback);
-            reference = await StartReference(certificate, referenceEndPoint, cancellationToken);
-            return new Http3ParityServers(server, reference, certificate, referenceEndPoint, token.HostName,
-                token.Secret ?? throw new InvalidOperationException("The test token has no farm secret."));
+            try {
+                var reference = await StartReference(certificate, referenceEndPoint, null, cancellationToken);
+                return new Http3ParityServers(server, reference, certificate, referenceEndPoint, token.HostName,
+                    farmSecret, bufferedQuic);
+            }
+            catch {
+                certificate.Dispose();
+                throw;
+            }
         }
         catch {
-            if (reference != null)
-                await reference.DisposeAsync();
-            certificate?.Dispose();
             await server.DisposeAsync();
             throw;
         }
     }
 
-    private static VpnHoodServer CreateServer(FileAccessManager accessManager, string storagePath)
+    private static VpnHoodServer CreateServer(FileAccessManager accessManager, string storagePath,
+        BufferedQuicServer bufferedQuic)
     {
         try {
             return new VpnHoodServer(accessManager, new ServerOptions {
                 StoragePath = Path.Combine(storagePath, "server"),
                 PublicIpDiscovery = false,
                 AutoDisposeAccessManager = true,
-                QuicServer = new MsQuicServer()
+                QuicServer = bufferedQuic
             });
         }
         catch {
@@ -80,20 +86,26 @@ internal sealed class Http3ParityServers(
         }
     }
 
-    private static async Task<WebApplication> StartReference(X509Certificate2 certificate, IPEndPoint endPoint,
-        CancellationToken cancellationToken)
+    internal static async Task<WebApplication> StartReference(X509Certificate2 certificate, IPEndPoint endPoint,
+        ReferenceRequestGate? referenceGate, CancellationToken cancellationToken)
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
-        builder.WebHost.ConfigureKestrel(options => options.Listen(endPoint, listen => {
-            listen.Protocols = HttpProtocols.Http3;
-            listen.UseHttps(certificate);
-        }));
+        builder.WebHost.ConfigureKestrel(options => {
+            if (referenceGate != null)
+                options.RequestHeaderEncodingSelector = referenceGate.SelectEncoding;
+            options.Listen(endPoint, listen => {
+                listen.Protocols = HttpProtocols.Http3;
+                listen.UseHttps(certificate);
+            });
+        });
         var app = builder.Build();
-        app.Run(context => {
+        app.Run(async context => {
+            // Only timing probes hold the application so the frame parser must choose the first error.
+            if (context.Request.Headers.ContainsKey("x-parity-wait-for-abort"))
+                await Task.Delay(Timeout.InfiniteTimeSpan, context.RequestAborted);
             context.Response.StatusCode = 401;
             context.Response.Headers.WWWAuthenticate = "Bearer";
-            return Task.CompletedTask;
         });
         try {
             await app.StartAsync(cancellationToken);

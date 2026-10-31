@@ -1,7 +1,7 @@
 using System.Buffers;
 using VpnHood.Net.Toolkit.Extensions;
 
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 // A bounded reader for the HTTP/3 front only. Authenticated tunnels bypass it completely.
 internal sealed class Http3StreamReader(Stream stream) : IAsyncDisposable
@@ -14,6 +14,7 @@ internal sealed class Http3StreamReader(Stream stream) : IAsyncDisposable
     private long _availableBytesRead;
     private Task<int>? _pendingRead;
     private CancellationTokenSource? _availableCancellation;
+    private byte[] Buffer => _buffer ??= ArrayPool<byte>.Shared.Rent(BufferSize);
     public bool IsCritical { get; set; }
     public bool ReadAvailableOnly { get; set; }
     public long AvailableBytesLimit { get; set; } = long.MaxValue;
@@ -25,7 +26,7 @@ internal sealed class Http3StreamReader(Stream stream) : IAsyncDisposable
         LimitAvailableRead(1);
         if (_count == 0 && !await Fill(cancellationToken).Vhc())
             return -1;
-        var value = _buffer![_offset];
+        var value = Buffer[_offset];
         Advance(1);
         return value;
     }
@@ -58,7 +59,7 @@ internal sealed class Http3StreamReader(Stream stream) : IAsyncDisposable
         if (_count == 0 && !await Fill(cancellationToken).Vhc())
             return 0;
         var count = Math.Min(requested, _count);
-        _buffer.AsMemory(_offset, count).CopyTo(bytes);
+        Buffer.AsMemory(_offset, count).CopyTo(bytes);
         Advance(count);
         return count;
     }
@@ -127,13 +128,9 @@ internal sealed class Http3StreamReader(Stream stream) : IAsyncDisposable
         if (_pendingRead != null)
             throw new Http3ReadPendingException();
 
-        _buffer ??= ArrayPool<byte>.Shared.Rent(BufferSize);
         // Available-only inspection may leave a native read pending after its caller moves on to the
         // response. Read exclusively into our private buffer, never a caller's temporary QPACK buffer.
-        if (ReadAvailableOnly)
-            _availableCancellation ??= CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var read = stream.ReadAsync(_buffer.AsMemory(0, BufferSize),
-            ReadAvailableOnly ? _availableCancellation!.Token : cancellationToken);
+        var read = stream.ReadAsync(Buffer.AsMemory(0, BufferSize), GetReadCancellationToken(cancellationToken));
         if (!read.IsCompleted) {
             // The control stream uses this boundary to finish already available frame validation
             // before acting on GOAWAY. The read stays owned here through cancellation and completion.
@@ -149,11 +146,17 @@ internal sealed class Http3StreamReader(Stream stream) : IAsyncDisposable
         return !_endOfStream;
     }
 
+    private CancellationToken GetReadCancellationToken(CancellationToken cancellationToken) =>
+        ReadAvailableOnly
+            ? (_availableCancellation ??= CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)).Token
+            : cancellationToken;
+
     public async ValueTask DisposeAsync()
     {
         if (_pendingRead != null) {
             try {
-                await _availableCancellation!.CancelAsync().Vhc();
+                if (_availableCancellation is { } cancellation)
+                    await cancellation.CancelAsync().Vhc();
             }
             catch (Exception) {
                 // Still observe the read below before releasing memory, even if cancellation fails.

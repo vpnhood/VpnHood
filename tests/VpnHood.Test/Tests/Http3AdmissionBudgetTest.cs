@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Server.Listeners.Http3;
+using VpnHood.Net.Http3;
 using VpnHood.Core.Server.ProbeResistance;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.ProbeResistance;
@@ -134,7 +134,8 @@ public class Http3AdmissionBudgetTest : TestBase
             SessionKey = new byte[16]
         };
         var payload = StreamUtils.ObjectToJsonBuffer(request);
-        var proof = new RequestProof(token.ServerToken.Secret!).Create(token.ServerToken.HostName, 15,
+        var secret = token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no proof secret.");
+        var proof = new RequestProof(secret).Create(token.ServerToken.HostName, 15,
             DateTimeOffset.UtcNow);
         var header = Encoding.ASCII.GetBytes(
             $"POST / HTTP/1.1\r\nHost: {token.ServerToken.HostName}\r\nX-ProtocolVersion: 15\r\n" +

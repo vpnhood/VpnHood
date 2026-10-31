@@ -90,7 +90,8 @@ internal class ConnectorService : IAsyncDisposable
             options.VpnEndPoint,
             UserCertificateValidationCallback,
             options.TcpPacketChannelKernelBufferSize);
-        _quicRequestRecovery = new QuicRequestRecovery(_tcpConnectionFactory, requestSigner, options.VpnEndPoint);
+        _quicRequestRecovery = new QuicRequestRecovery(
+            _tcpConnectionFactory, requestSigner, options.VpnEndPoint, TimeProvider.System);
 
         _quicConnectionFactory = options.SocketFactory.IsQuicSupported
             ? new QuicStreamConnectionFactory(
@@ -154,7 +155,7 @@ internal class ConnectorService : IAsyncDisposable
 
     private async Task<IStreamConnection> CreateWebSocketConnection(
         IStreamConnection streamConnection, ReuseConnectionCallback? reuseCallback,
-        string proofToken, CancellationToken cancellationToken)
+        string proofToken, CancellationToken callerCancellationToken, CancellationToken cancellationToken)
     {
         var webSocketKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
 
@@ -173,10 +174,10 @@ internal class ConnectorService : IAsyncDisposable
             .Append("\r\n");
 
         // Send header and wait for its response
-        await streamConnection.Stream.WriteAsync(Encoding.UTF8.GetBytes(headerBuilder.ToString()), cancellationToken).Vhc();
+        await WriteHttpHeader(streamConnection, headerBuilder.ToString(), callerCancellationToken, cancellationToken).Vhc();
 
         // wait for response and websocket upgrade if needed before sending any data because GET can not have body
-        using var responseMessage = await HttpUtils.ReadResponse(streamConnection.Stream, cancellationToken).Vhc();
+        using var responseMessage = await ReadHttpResponse(streamConnection, callerCancellationToken, cancellationToken).Vhc();
         if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
             throw new RequestAuthorizationException(responseMessage.Headers.Date);
         if (responseMessage.StatusCode == HttpStatusCode.ServiceUnavailable)
@@ -203,7 +204,7 @@ internal class ConnectorService : IAsyncDisposable
     }
 
     private async Task<IStreamConnection> CreateSimpleConnection(IStreamConnection streamConnection, int contentLength,
-        string proofToken, CancellationToken cancellationToken)
+        string proofToken, CancellationToken callerCancellationToken, CancellationToken cancellationToken)
     {
         // write HTTP request
         var header = BuildPostRequest(hostName: VpnEndPoint.HostName, pathBase: VpnEndPoint.PathBase,
@@ -211,18 +212,42 @@ internal class ConnectorService : IAsyncDisposable
             connectionId: streamConnection.ConnectionId, proofToken: proofToken);
 
         // Send header and wait for its response
-        await streamConnection.Stream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
+        await WriteHttpHeader(streamConnection, header, callerCancellationToken, cancellationToken).Vhc();
         streamConnection.RequireHttpResponse = true;
         return streamConnection;
     }
 
     private Task<IStreamConnection> CreateHttpConnection(IStreamConnection streamConnection, int contentLength,
         ReuseConnectionCallback? reuseCallback, string proofToken,
-        CancellationToken cancellationToken)
+        CancellationToken callerCancellationToken, CancellationToken cancellationToken)
     {
         return _useWebSocket
-            ? CreateWebSocketConnection(streamConnection, reuseCallback, proofToken, cancellationToken) // WebSocket connection
-            : CreateSimpleConnection(streamConnection, contentLength, proofToken, cancellationToken); // Simple HTTP connection
+            ? CreateWebSocketConnection(streamConnection, reuseCallback, proofToken, callerCancellationToken, cancellationToken)
+            : CreateSimpleConnection(streamConnection, contentLength, proofToken, callerCancellationToken, cancellationToken);
+    }
+
+    private async Task WriteHttpHeader(IStreamConnection connection, string header,
+        CancellationToken callerCancellationToken, CancellationToken cancellationToken)
+    {
+        try {
+            await connection.Stream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
+        }
+        catch {
+            RecordQuicRequestFailure(connection, callerCancellationToken);
+            throw;
+        }
+    }
+
+    private async Task<HttpResponseMessage> ReadHttpResponse(IStreamConnection connection,
+        CancellationToken callerCancellationToken, CancellationToken cancellationToken)
+    {
+        try {
+            return await HttpUtils.ReadResponse(connection.Stream, cancellationToken).Vhc();
+        }
+        catch {
+            RecordQuicRequestFailure(connection, callerCancellationToken);
+            throw;
+        }
     }
 
     // Gate on FRESH server connections (pooled reuse is not gated). Every fresh connection is a full
@@ -257,17 +282,27 @@ internal class ConnectorService : IAsyncDisposable
     public Task<IStreamConnection> GetConnectionToServer(
         string streamId, int contentLength, bool isTcpPacketChannel, Action? onConnectAttempt,
         CancellationToken cancellationToken) => GetConnectionToServer(streamId, contentLength, isTcpPacketChannel,
-            onConnectAttempt, onQuicAttempt: null, cancellationToken);
+            onConnectAttempt, cancellationToken, cancellationToken);
 
-    public void RequireQuicRequestRecovery() => _quicRequestRecovery.RequireRecovery();
+    public Task RecoverQuicRequest(string connectionId, CancellationToken cancellationToken) =>
+        UseQuic ? _quicRequestRecovery.Recover(connectionId, cancellationToken) : Task.CompletedTask;
+
+    public void RecordQuicRequestFailure(IStreamConnection connection, CancellationToken callerCancellationToken)
+    {
+        // These callers have an established stream but no usable admission response. A timeout can
+        // mean an expired proof; stopping the request or failing before stream creation cannot.
+        if (connection is QuicStreamConnection && !callerCancellationToken.IsCancellationRequested && !_disposed)
+            _quicRequestRecovery.RequireRecovery();
+    }
 
     public async Task<IStreamConnection> GetConnectionToServer(
-        string streamId, int contentLength, bool isTcpPacketChannel, Action? onConnectAttempt, Action? onQuicAttempt,
-        CancellationToken cancellationToken)
+        string streamId, int contentLength, bool isTcpPacketChannel, Action? onConnectAttempt,
+        CancellationToken callerCancellationToken, CancellationToken cancellationToken)
     {
         // Create raw stream connection from appropriate factory
         var useQuic = UseQuic;
-        if (useQuic && _quicConnectionFactory == null)
+        var quicFactory = _quicConnectionFactory;
+        if (useQuic && quicFactory == null)
             throw new InvalidOperationException("QUIC is not supported by the current socket factory.");
 
         var waitStartTime = Stopwatch.GetTimestamp();
@@ -290,14 +325,8 @@ internal class ConnectorService : IAsyncDisposable
             // this also keeps a finite channel lifespan meaningful
             var reuseCallback = AllowChannelReuse && !isTcpPacketChannel ? CreateReuseCallback() : null;
 
-            if (useQuic) {
-                await _quicRequestRecovery.Recover(streamId, cancellationToken).Vhc();
-                // The sender records the actual attempt, not a mutable UseQuic value observed later.
-                // A failed TLS recovery has made no QUIC attempt and leaves its own pending flag intact.
-                onQuicAttempt?.Invoke();
-            }
-            var rawConnection = useQuic
-                ? await _quicConnectionFactory!.CreateConnection(streamId, cancellationToken).Vhc()
+            var rawConnection = useQuic && quicFactory != null
+                ? await quicFactory.CreateConnection(streamId, cancellationToken).Vhc()
                 : await _tcpConnectionFactory.CreateConnection(
                     streamId, isTcpPacketChannel, onConnectAttempt, cancellationToken).Vhc();
 
@@ -305,9 +334,13 @@ internal class ConnectorService : IAsyncDisposable
                 // Connection waits can outlast a proof; select it only after connect and TLS finish.
                 var proofToken = _requestSigner.Sign();
                 var connection = await CreateHttpConnection(rawConnection, contentLength, reuseCallback,
-                    proofToken, cancellationToken).Vhc();
+                    proofToken, callerCancellationToken, cancellationToken).Vhc();
                 lock (Stat) Stat.CreatedConnectionCount++;
                 return connection;
+            }
+            catch (OperationCanceledException) {
+                _ = rawConnection.TryDisposeAsync();
+                throw;
             }
             catch {
                 // not waited for: the gate's slot would be held while a QUIC stream's close waits for the peer

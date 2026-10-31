@@ -1,68 +1,60 @@
 using System.Buffers;
-using VpnHood.Core.Server.ProbeResistance;
 using VpnHood.Net.Toolkit.Extensions;
 
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
-// Compatibility (2026-10): existing clients carry HTTP/1 inside QUIC. Only a verified protocol-15
-// proof admits that path; remove this gate when the tunnel itself migrates to standard HTTP/3.
 internal static class Http3Admission
 {
-    private const int PrefixLimit = 4096;
-
-    public static async Task<(Stream Stream, bool Authenticated)> Read(Stream source, SessionManager sessionManager,
-        CancellationToken cancellationToken)
+    public static async Task<(Http3PrefixStream Stream, bool Claimed)> Read(Stream source,
+        Http3StreamContext context, IHttp3StreamFilter filter, int prefixLimit, CancellationToken cancellationToken)
     {
-        var prefix = ArrayPool<byte>.Shared.Rent(PrefixLimit);
-        var count = 0;
-        var handedOff = false;
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(prefixLimit);
+        var prefix = ArrayPool<byte>.Shared.Rent(prefixLimit);
         try {
-            var authenticated = false;
-            while (count < PrefixLimit) {
-                var read = await source.ReadAsync(prefix.AsMemory(count, PrefixLimit - count), cancellationToken).Vhc();
-                if (read == 0)
-                    break;
-                count += read;
-                if (!CouldBeClientRequest(prefix.AsSpan(0, count)))
-                    break;
-                var end = prefix.AsSpan(0, count).IndexOf("\r\n\r\n"u8);
-                if (end < 0)
-                    continue;
-                authenticated = await Authenticate(prefix, end + 4, sessionManager, cancellationToken).Vhc();
-                break;
-            }
-            // GET/POST also look like unknown HTTP/3 frames. Decide before their first payload ends
-            // (5156/4952 bytes), so waiting for HTTP/1 headers cannot hide the next HTTP/3 frame error.
-            var replay = new Http3PrefixStream(source, prefix, count);
-            handedOff = true;
-            return (replay, authenticated);
+            var result = await ReadPrefix(source, context, filter, prefix, prefixLimit, cancellationToken).Vhc();
+            return (new Http3PrefixStream(source, prefix, result.Count), result.Claimed);
         }
-        finally {
-            if (!handedOff)
-                ArrayPool<byte>.Shared.Return(prefix, clearArray: true);
+        catch {
+            ArrayPool<byte>.Shared.Return(prefix, clearArray: true);
+            throw;
         }
     }
 
-    private static bool CouldBeClientRequest(ReadOnlySpan<byte> bytes) =>
-        "GET "u8.StartsWith(bytes[..Math.Min(bytes.Length, 4)]) ||
-        "POST "u8.StartsWith(bytes[..Math.Min(bytes.Length, 5)]);
-
-    private static async Task<bool> Authenticate(byte[] bytes, int length, SessionManager sessionManager,
-        CancellationToken cancellationToken)
+    private static async Task<(int Count, bool Claimed)> ReadPrefix(Stream source, Http3StreamContext context,
+        IHttp3StreamFilter filter, byte[] prefix, int prefixLimit, CancellationToken cancellationToken)
     {
-        using var memory = new MemoryStream(bytes, 0, length, writable: false);
-        await using var reader = new HttpReadStream(memory);
-        try {
-            var request = await HttpRequestHeadReader.Read(reader, cancellationToken).Vhc();
-            var minimum = Math.Max(15, sessionManager.SessionOptions.MinClientProtocolVersion ?? 0);
-            return ClientRequestAuthenticator.TryAuthenticate(request, sessionManager.RequestProof,
-                minimum, ServerHost.MaxProtocolVersion, out _);
+        var count = 0;
+        var readLimit = prefixLimit;
+        while (count < readLimit) {
+            var read = await source.ReadAsync(prefix.AsMemory(count, readLimit - count), cancellationToken).Vhc();
+            if (read == 0)
+                break;
+            count += read;
+            var decision = await filter.Filter(context, prefix.AsMemory(0, count), cancellationToken).Vhc();
+            if (decision != Http3StreamDecision.NeedMore)
+                return (count, decision == Http3StreamDecision.Claimed);
+            readLimit = GetReadLimit(prefix.AsSpan(0, count), prefixLimit);
         }
-        catch (HttpRequestRejectedException) {
-            return false;
-        }
-        catch (EndOfStreamException) {
-            return false;
-        }
+        return (count, false);
+    }
+
+    private static int GetReadLimit(ReadOnlySpan<byte> prefix, int prefixLimit)
+    {
+        var typeLength = 1 << (prefix[0] >> 6);
+        if (prefix.Length < typeLength)
+            return Math.Min(prefixLimit, typeLength);
+        var offset = 0;
+        var type = Http3Protocol.ReadInteger(prefix, ref offset);
+        // Known request frames and errors go straight to HTTP/3. An extension frame may be
+        // inspected only through its payload, so a raw header wait cannot hide the next error.
+        if (type is 0 or 1 or 3 or 4 or 5 or 7 or 13)
+            return typeLength;
+        if (prefix.Length == typeLength)
+            return Math.Min(prefixLimit, typeLength + 1);
+        var lengthLength = 1 << (prefix[typeLength] >> 6);
+        if (prefix.Length < typeLength + lengthLength)
+            return Math.Min(prefixLimit, typeLength + lengthLength);
+        var length = Http3Protocol.ReadInteger(prefix, ref offset);
+        return (int)Math.Min(prefixLimit, offset + length);
     }
 }

@@ -1,13 +1,13 @@
 using System.Buffers;
 using System.Text;
 
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 // RFC 7541 Appendix B, also used by QPACK. A small decoding tree is built once for the process.
 // Requests rent only their bounded output buffer; neither the tree nor a buffer lives on each stream.
 internal static class Http3QpackHuffman
 {
-    private static readonly Node[] Nodes = CreateTree();
+    private static readonly Http3QpackHuffmanNode[] Nodes = CreateTree();
 
     public static string Decode(ReadOnlySpan<byte> encoded, int maximumLength)
     {
@@ -56,9 +56,9 @@ internal static class Http3QpackHuffman
         }
     }
 
-    private static Node[] CreateTree()
+    private static Http3QpackHuffmanNode[] CreateTree()
     {
-        var nodes = new List<Node> { new() };
+        var nodes = new List<Http3QpackHuffmanNode> { new() };
         for (var symbol = 0; symbol < Http3QpackHuffmanTable.Codes.Length; symbol++) {
             var code = Http3QpackHuffmanTable.Codes[symbol];
             var node = 0;
@@ -67,7 +67,7 @@ internal static class Http3QpackHuffman
                 var next = one ? nodes[node].One : nodes[node].Zero;
                 if (next < 0) {
                     next = nodes.Count;
-                    nodes.Add(new Node());
+                    nodes.Add(new Http3QpackHuffmanNode());
                     if (one)
                         nodes[node].One = next;
                     else
@@ -78,12 +78,5 @@ internal static class Http3QpackHuffman
             nodes[node].Symbol = symbol;
         }
         return nodes.ToArray();
-    }
-
-    private sealed class Node
-    {
-        public int Zero { get; set; } = -1;
-        public int One { get; set; } = -1;
-        public int Symbol { get; set; } = -1;
     }
 }

@@ -1,4 +1,4 @@
-using VpnHood.Core.Server.Listeners.Http3;
+using VpnHood.Net.Http3;
 
 namespace VpnHood.Test.Tests;
 

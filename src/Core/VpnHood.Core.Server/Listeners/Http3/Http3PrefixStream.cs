@@ -2,7 +2,7 @@ using System.Buffers;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Streams;
 
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 // The header buffer belongs to this wrapper until its final replayed byte. A tunnel thereafter
 // reads straight from QUIC, with no buffer retained and no lock on its steady-state reads.
@@ -13,7 +13,7 @@ internal sealed class Http3PrefixStream(Stream source, byte[] prefix, int count)
     private byte[]? _prefix = prefix;
     private int _offset;
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (Volatile.Read(ref _prefix) != null) {

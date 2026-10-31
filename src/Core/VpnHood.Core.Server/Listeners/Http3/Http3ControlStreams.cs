@@ -1,30 +1,20 @@
 using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 
-namespace VpnHood.Core.Server.Listeners.Http3;
+namespace VpnHood.Net.Http3;
 
 // One instance per connection. Control and QPACK streams may arrive concurrently, but each type
 // has exactly one owner. The front advertises zero QPACK capacity and never sends dynamic references.
-internal sealed class Http3ControlStreams(Action beginGracefulClose, Action controlInputPending)
+internal sealed class Http3ControlStreams(Http3ServerOptions options, Action beginGracefulClose,
+    Action controlInputPending)
 {
-    private const int MaxControlPayload = 10_000;
     private int _controlOpened;
     private int _encoderOpened;
     private int _decoderOpened;
 
     public async Task Process(Http3StreamReader reader, IQuicStream stream, CancellationToken cancellationToken)
     {
-        long? type;
-        using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) {
-            timeout.CancelAfter(Http3Protocol.HeadersTimeout);
-            try {
-                type = await reader.ReadIntegerOrEnd(timeout.Token).Vhc();
-            }
-            catch (EndOfStreamException) {
-                // RFC 9114 permits a stream to end before its complete type is received.
-                return;
-            }
-        }
+        var type = await ReadStreamType(reader, cancellationToken).Vhc();
         if (type is null)
             return;
 
@@ -58,6 +48,19 @@ internal sealed class Http3ControlStreams(Action beginGracefulClose, Action cont
         }
     }
 
+    private async Task<long?> ReadStreamType(Http3StreamReader reader, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(options.HeadersTimeout);
+        try {
+            return await reader.ReadIntegerOrEnd(timeout.Token).Vhc();
+        }
+        catch (EndOfStreamException) {
+            // RFC 9114 permits a stream to end before its complete type is received.
+            return null;
+        }
+    }
+
     private async Task ProcessControl(Http3StreamReader reader, CancellationToken cancellationToken)
     {
         var settingsReceived = false;
@@ -67,7 +70,7 @@ internal sealed class Http3ControlStreams(Action beginGracefulClose, Action cont
             // Kestrel RC3 limits SETTINGS and unknown control payloads, not the frame envelope.
             // Its frame reader waits for a first payload byte before dispatching a nonempty frame.
             var limitsPayload = type is not (0 or 1 or 3 or 5 or 7 or 13);
-            if (limitsPayload && length >= MaxControlPayload) {
+            if (limitsPayload && length >= options.MaxControlFrameBytes) {
                 if (await reader.ReadByte(cancellationToken).Vhc() < 0)
                     throw new EndOfStreamException();
                 throw new Http3ProtocolException(Http3Protocol.FrameError);
@@ -77,7 +80,8 @@ internal sealed class Http3ControlStreams(Action beginGracefulClose, Action cont
                     throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
                 if (type != 4)
                     throw new Http3ProtocolException(Http3Protocol.MissingSettings);
-                var settings = await reader.ReadPayload(length, MaxControlPayload - 1, cancellationToken).Vhc();
+                var settings = await reader.ReadPayload(length, options.MaxControlFrameBytes - 1,
+                    cancellationToken).Vhc();
                 ValidateSettings(settings);
                 settingsReceived = true;
                 continue;
@@ -91,8 +95,7 @@ internal sealed class Http3ControlStreams(Action beginGracefulClose, Action cont
                     throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
                 case 3: // CANCEL_PUSH
                 case 0x0d: // MAX_PUSH_ID
-                    // Compatibility (2026-10): the Kestrel reference checks the integer's framing but
-                    // does not validate push IDs or their order. Keep no unused push state here either.
+                    // The reference checks integer framing without retaining push IDs or their order.
                     await ReadSingleInteger(reader, length, cancellationToken).Vhc();
                     break;
                 case 7: // Client GOAWAY requests a graceful close; its push ID is otherwise unused.
@@ -141,8 +144,8 @@ internal sealed class Http3ControlStreams(Action beginGracefulClose, Action cont
 
     private static async Task DrainQpack(Http3StreamReader reader, CancellationToken cancellationToken)
     {
-        // Compatibility (2026-10): Kestrel's zero-capacity implementation drains both instruction
-        // streams without interpreting them. HEADERS still rejects dynamic references separately.
+        // The reference drains zero-capacity instruction streams without interpreting them.
+        // HEADERS rejects dynamic references separately.
         while (await reader.DiscardSome(4096, cancellationToken).Vhc() != 0) {
         }
         throw new EndOfStreamException(); // Closing either critical QPACK stream still ends the connection.

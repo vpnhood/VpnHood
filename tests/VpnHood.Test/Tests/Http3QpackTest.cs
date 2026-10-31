@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using VpnHood.Core.Server.Listeners.Http3;
+using VpnHood.Net.Http3;
 
 namespace VpnHood.Test.Tests;
 
@@ -10,19 +10,19 @@ public class Http3QpackTest
     public required TestContext TestContext { get; set; }
 
     [TestMethod]
-    public void Rfc9204_literal_name_reference_example_decodes()
+    public async Task Rfc9204_literal_name_reference_example_decodes()
     {
         // RFC 9204 Appendix B.1: :path = /index.html, without a dynamic table.
-        var headers = Http3Qpack.Decode(Convert.FromHexString("0000510b2f696e6465782e68746d6c"));
+        var headers = await ReadHeaders(Convert.FromHexString("0000510b2f696e6465782e68746d6c"), TestContext.CancellationToken);
         CollectionAssert.AreEqual(new[] { new KeyValuePair<string, string>(":path", "/index.html") },
             headers.ToArray());
     }
 
     [TestMethod]
-    public void A_browser_request_can_mix_static_fields_and_huffman_authority()
+    public async Task A_browser_request_can_mix_static_fields_and_huffman_authority()
     {
         // The authority's Huffman bytes are RFC 7541 Appendix C.4.1's www.example.com vector.
-        var headers = Http3Qpack.Decode(Convert.FromHexString("0000d1d7c1508cf1e3c2e5f23a6ba0ab90f4ff"));
+        var headers = await ReadHeaders(Convert.FromHexString("0000d1d7c1508cf1e3c2e5f23a6ba0ab90f4ff"), TestContext.CancellationToken);
         CollectionAssert.AreEqual(new[] {
             new KeyValuePair<string, string>(":method", "GET"),
             new KeyValuePair<string, string>(":scheme", "https"),
@@ -34,20 +34,20 @@ public class Http3QpackTest
     [TestMethod]
     [DataRow("2f")]
     [DataRow("3f")]
-    public void Huffman_literal_names_and_never_indexed_flags_decode(string first)
+    public async Task Huffman_literal_names_and_never_indexed_flags_decode(string first)
     {
         // RFC 7541 C.4.3's custom-key and custom-value strings, in QPACK's literal-name form.
-        var headers = Http3Qpack.Decode(Convert.FromHexString(
-            "0000" + first + "0125a849e95ba97d7f8925a849e95bb8e8b4bf"));
+        var headers = await ReadHeaders(Convert.FromHexString(
+            "0000" + first + "0125a849e95ba97d7f8925a849e95bb8e8b4bf"), TestContext.CancellationToken);
         Assert.HasCount(1, headers);
         Assert.AreEqual("custom-key", headers[0].Key);
         Assert.AreEqual("custom-value", headers[0].Value);
     }
 
     [TestMethod]
-    public void Header_order_duplicates_and_opaque_octets_are_preserved()
+    public async Task Header_order_duplicates_and_opaque_octets_are_preserved()
     {
-        var headers = Http3Qpack.Decode(Convert.FromHexString("0000217801613178016221780180"));
+        var headers = await ReadHeaders(Convert.FromHexString("0000217801613178016221780180"), TestContext.CancellationToken);
         Assert.HasCount(3, headers);
         Assert.AreEqual(new KeyValuePair<string, string>("x", "a"), headers[0]);
         Assert.AreEqual(new KeyValuePair<string, string>("x", "b"), headers[1]);
@@ -55,20 +55,26 @@ public class Http3QpackTest
     }
 
     [TestMethod]
-    public void The_static_table_is_zero_based_and_includes_its_last_entry()
+    public async Task The_static_table_is_zero_based_and_includes_its_last_entry()
     {
-        var headers = Http3Qpack.Decode(Convert.FromHexString("0000c0ff23"));
+        var headers = await ReadHeaders(Convert.FromHexString("0000c0ff23"), TestContext.CancellationToken);
         Assert.AreEqual(new KeyValuePair<string, string>(":authority", ""), headers[0]);
         Assert.AreEqual(new KeyValuePair<string, string>("x-frame-options", "sameorigin"), headers[1]);
     }
 
     [TestMethod]
-    public void A_positive_base_is_legal_without_dynamic_references_even_at_62_bits()
+    public async Task A_nonzero_delta_base_is_rejected_even_without_dynamic_references()
     {
         var block = new List<byte> { 0 };
         AppendInteger(block, 0, 7, (1UL << 62) - 1);
         block.Add(0xc1);
-        var headers = Http3Qpack.Decode(block.ToArray());
+        await Assert.ThrowsExactlyAsync<Http3QpackException>(() => ReadHeaders(block.ToArray(), TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task A_zero_delta_base_ignores_its_sign_bit_like_the_reference()
+    {
+        var headers = await ReadHeaders([0, 0x80, 0xc1], TestContext.CancellationToken);
         Assert.AreEqual(new KeyValuePair<string, string>(":path", "/"), headers.Single());
     }
 
@@ -77,7 +83,8 @@ public class Http3QpackTest
     [DataRow("00")]
     [DataRow("ff")]
     [DataRow("0100")]
-    [DataRow("0080d1")]
+    [DataRow("0001d1")]
+    [DataRow("00002000")]
     [DataRow("000080")]
     [DataRow("00004000")]
     [DataRow("000010")]
@@ -85,20 +92,20 @@ public class Http3QpackTest
     [DataRow("0000ff24")]
     [DataRow("0000500261")]
     [DataRow("00005f")]
-    public void Invalid_prefixes_references_and_truncated_strings_fail_decompression(string hex)
+    public async Task Invalid_prefixes_references_and_truncated_strings_fail_decompression(string hex)
     {
-        var exception = Assert.ThrowsExactly<Http3QpackException>(() =>
-            Http3Qpack.Decode(Convert.FromHexString(hex)));
+        var exception = await Assert.ThrowsExactlyAsync<Http3QpackException>(() =>
+            ReadHeaders(Convert.FromHexString(hex), TestContext.CancellationToken));
         Assert.AreEqual(0x200L, exception.ErrorCode);
     }
 
     [TestMethod]
-    public void Integer_overflow_and_unbounded_continuations_do_not_wrap()
+    public async Task Integer_overflow_and_unbounded_continuations_do_not_wrap()
     {
         byte[] overflow = [0, 0x7f, .. Enumerable.Repeat((byte)0xff, 8), 0x40];
         byte[] continuation = [0, 0x7f, .. Enumerable.Repeat((byte)0x80, 10), 0];
-        Assert.ThrowsExactly<Http3QpackException>(() => Http3Qpack.Decode(overflow));
-        Assert.ThrowsExactly<Http3QpackException>(() => Http3Qpack.Decode(continuation));
+        await Assert.ThrowsExactlyAsync<Http3QpackException>(() => ReadHeaders(overflow, TestContext.CancellationToken));
+        await Assert.ThrowsExactlyAsync<Http3QpackException>(() => ReadHeaders(continuation, TestContext.CancellationToken));
     }
 
     [TestMethod]
@@ -133,31 +140,42 @@ public class Http3QpackTest
     }
 
     [TestMethod]
-    public void Indexed_expansion_counts_decoded_size_and_field_overhead()
+    public async Task Indexed_expansion_counts_name_and_value_bytes()
     {
-        byte[] block = [0, 0, 0xc1, 0xc1]; // Two :path=/ fields, each five + one + thirty-two bytes.
-        Assert.HasCount(2, Http3Qpack.Decode(block, maxHeaderBytes: 76));
-        Assert.ThrowsExactly<Http3HeaderLimitException>(() => Http3Qpack.Decode(block, maxHeaderBytes: 75));
-        Assert.ThrowsExactly<Http3HeaderLimitException>(() => Http3Qpack.Decode(block, maxHeaderCount: 1));
+        byte[] block = [0, 0, 0xc1, 0xc1];
+        var exact = await ReadSection(block, new Http3ServerOptions { MaxHeaderBytes = 12 }, TestContext.CancellationToken);
+        Assert.HasCount(2, exact.Fields);
+        Assert.IsFalse(exact.ExceedsRequestLimits);
+        var excessive = await ReadSection(block, new Http3ServerOptions { MaxHeaderBytes = 11 }, TestContext.CancellationToken);
+        Assert.IsTrue(excessive.ExceedsRequestLimits);
+        var tooMany = await ReadSection(block, new Http3ServerOptions { MaxHeaderCount = 1 }, TestContext.CancellationToken);
+        Assert.IsTrue(tooMany.ExceedsRequestLimits);
     }
 
     [TestMethod]
-    public void Default_decoded_size_limit_bounds_large_literals()
+    public async Task Default_decoded_size_limit_bounds_large_literals()
     {
-        var value = new string('a', Http3Qpack.MaxHeaderBytes - 33); // x + value + per-field overhead.
-        var block = CreateLiteralField("x", value);
-        Assert.AreEqual(value, Http3Qpack.Decode(block).Single().Value);
-        Assert.ThrowsExactly<Http3HeaderLimitException>(() =>
-            Http3Qpack.Decode(CreateLiteralField("x", value + "a")));
+        var options = new Http3ServerOptions();
+        var value = new string('a', options.MaxHeaderBytes - 1);
+        var exact = await ReadSection(CreateLiteralField("x", value), options, TestContext.CancellationToken);
+        Assert.AreEqual(value, exact.Fields.Single().Value);
+        Assert.IsFalse(exact.ExceedsRequestLimits);
+        var excessive = await ReadSection(CreateLiteralField("x", value + "a"), options, TestContext.CancellationToken);
+        Assert.IsTrue(excessive.ExceedsRequestLimits);
+        await Assert.ThrowsExactlyAsync<Http3QpackException>(() =>
+            ReadSection(CreateLiteralField("x", value + "aa"), options, TestContext.CancellationToken));
     }
 
     [TestMethod]
-    public void Default_header_count_limit_bounds_many_short_fields()
+    public async Task Default_header_count_limit_bounds_many_short_fields()
     {
-        byte[] maximum = [0, 0, .. Enumerable.Repeat((byte)0xc1, Http3Qpack.MaxHeaderCount)];
+        var options = new Http3ServerOptions();
+        byte[] maximum = [0, 0, .. Enumerable.Repeat((byte)0xc1, options.MaxHeaderCount)];
         byte[] excessive = [.. maximum, 0xc1];
-        Assert.HasCount(Http3Qpack.MaxHeaderCount, Http3Qpack.Decode(maximum));
-        Assert.ThrowsExactly<Http3HeaderLimitException>(() => Http3Qpack.Decode(excessive));
+        var exact = await ReadSection(maximum, options, TestContext.CancellationToken);
+        Assert.HasCount(options.MaxHeaderCount, exact.Fields);
+        Assert.IsFalse(exact.ExceedsRequestLimits);
+        Assert.IsTrue((await ReadSection(excessive, options, TestContext.CancellationToken)).ExceedsRequestLimits);
     }
 
     [TestMethod]
@@ -165,13 +183,13 @@ public class Http3QpackTest
     [DataRow(400, false)]
     [DataRow(431, false)]
     [DataRow(503, false)]
-    public void Empty_responses_have_the_expected_http_headers(int statusCode, bool challenge)
+    public async Task Empty_responses_have_the_expected_http_headers(int statusCode, bool challenge)
     {
         var date = new DateTimeOffset(2026, 10, 30, 10, 20, 30, TimeSpan.FromHours(2));
-        var encoded = Http3Qpack.EncodeResponse(statusCode, date);
+        var encoded = Http3Qpack.EncodeResponse(statusCode, CreateResponseHeaders(statusCode, date));
         Assert.AreEqual(0, encoded[0], "The response must not depend on a dynamic table.");
         Assert.AreEqual(0, encoded[1]);
-        var headers = Http3Qpack.Decode(encoded);
+        var headers = await ReadHeaders(encoded, TestContext.CancellationToken);
         Assert.AreEqual(":status", headers[0].Key);
         var fields = headers.ToDictionary(x => x.Key, x => x.Value);
         Assert.AreEqual(statusCode.ToString(CultureInfo.InvariantCulture), fields[":status"]);
@@ -196,7 +214,7 @@ public class Http3QpackTest
             0xc4
         ];
         var date = new DateTimeOffset(2026, 10, 30, 8, 20, 30, TimeSpan.Zero);
-        CollectionAssert.AreEqual(expected, Http3Qpack.EncodeResponse(401, date));
+        CollectionAssert.AreEqual(expected, Http3Qpack.EncodeResponse(401, CreateResponseHeaders(401, date)));
     }
 
     [TestMethod]
@@ -208,10 +226,10 @@ public class Http3QpackTest
         var block = Convert.FromHexString("0000d1d7c1508cf1e3c2e5f23a6ba0ab90f4ff");
         using var stream = new FragmentedReadStream([.. block, 0x40, 0x7f], fragmentSize);
         await using var reader = new Http3StreamReader(stream);
-        var section = await Http3Qpack.ReadSection(reader, block.Length, TestContext.CancellationToken);
+        var section = await Http3Qpack.ReadSection(reader, block.Length, new Http3ServerOptions(), TestContext.CancellationToken);
         Assert.IsTrue(section.Completed);
         Assert.IsFalse(section.ExceedsRequestLimits);
-        CollectionAssert.AreEqual(Http3Qpack.Decode(block).ToArray(), section.Fields.ToArray());
+        CollectionAssert.AreEqual((await ReadHeaders(block, TestContext.CancellationToken)).ToArray(), section.Fields.ToArray());
         Assert.AreEqual(0x40, await reader.ReadByte(TestContext.CancellationToken));
         Assert.AreEqual(0x7f, await reader.ReadByte(TestContext.CancellationToken));
     }
@@ -226,7 +244,7 @@ public class Http3QpackTest
         bytes.AddRange(Enumerable.Repeat((byte)'a', valueBytesReceived));
         using var stream = new FragmentedReadStream(bytes.ToArray(), 1);
         await using var reader = new Http3StreamReader(stream);
-        var section = await Http3Qpack.ReadSection(reader, 1024 * 1024,
+        var section = await Http3Qpack.ReadSection(reader, 1024 * 1024, new Http3ServerOptions(),
             TestContext.CancellationToken);
         Assert.IsFalse(section.Completed);
         Assert.HasCount(1, section.Fields);
@@ -243,7 +261,7 @@ public class Http3QpackTest
         using var stream = new FragmentedReadStream(bytes.ToArray(), 1);
         await using var reader = new Http3StreamReader(stream);
         await Assert.ThrowsExactlyAsync<Http3QpackException>(() =>
-            Http3Qpack.ReadSection(reader, 1024 * 1024, TestContext.CancellationToken));
+            Http3Qpack.ReadSection(reader, 1024 * 1024, new Http3ServerOptions(), TestContext.CancellationToken));
         Assert.IsTrue(stream.LargestReadRequest <= 4096);
     }
 
@@ -253,7 +271,7 @@ public class Http3QpackTest
         using var stream = new FragmentedReadStream([0, 0, 0], 1);
         await using var reader = new Http3StreamReader(stream);
         await Assert.ThrowsExactlyAsync<Http3QpackException>(() =>
-            Http3Qpack.ReadSection(reader, 1024 * 1024, TestContext.CancellationToken));
+            Http3Qpack.ReadSection(reader, 1024 * 1024, new Http3ServerOptions(), TestContext.CancellationToken));
         Assert.AreEqual(3L, stream.Position);
         Assert.IsTrue(stream.LargestReadRequest <= 4096);
     }
@@ -264,7 +282,7 @@ public class Http3QpackTest
         using var stream = new FragmentedReadStream([0], 1);
         await using var reader = new Http3StreamReader(stream);
         await Assert.ThrowsExactlyAsync<EndOfStreamException>(() =>
-            Http3Qpack.ReadSection(reader, 5, TestContext.CancellationToken));
+            Http3Qpack.ReadSection(reader, 5, new Http3ServerOptions(), TestContext.CancellationToken));
     }
 
     [TestMethod]
@@ -274,9 +292,9 @@ public class Http3QpackTest
     {
         using var stream = new FragmentedReadStream(prefix, 1);
         await using var reader = new Http3StreamReader(stream);
-        var headers = new Http3RequestHeaders(trailers: false);
+        var headers = new Http3RequestHeaders(trailers: false, new Http3ServerOptions().MaxRequestLineBytes);
         var exception = await Assert.ThrowsExactlyAsync<Http3ProtocolException>(() =>
-            Http3Qpack.ReadSection(reader, 1024 * 1024, headers.Append,
+            Http3Qpack.ReadSection(reader, 1024 * 1024, headers.Append, new Http3ServerOptions(),
                 TestContext.CancellationToken));
         Assert.AreEqual(Http3Protocol.MessageError, exception.ErrorCode);
         Assert.IsFalse(exception.ConnectionError);
@@ -292,7 +310,7 @@ public class Http3QpackTest
         byte[] block = [0, 0, .. Enumerable.Repeat((byte)0xc1, count)];
         using var stream = new FragmentedReadStream(block, 7);
         await using var reader = new Http3StreamReader(stream);
-        var section = await Http3Qpack.ReadSection(reader, block.Length,
+        var section = await Http3Qpack.ReadSection(reader, block.Length, new Http3ServerOptions(),
             TestContext.CancellationToken);
         Assert.IsTrue(section.Completed);
         Assert.AreEqual(exceedsRequestLimits, section.ExceedsRequestLimits);
@@ -306,7 +324,7 @@ public class Http3QpackTest
         using var stream = new FragmentedReadStream(block, 7);
         await using var reader = new Http3StreamReader(stream);
         var exception = await Assert.ThrowsExactlyAsync<Http3ProtocolException>(() =>
-            Http3Qpack.ReadSection(reader, block.Length, TestContext.CancellationToken));
+            Http3Qpack.ReadSection(reader, block.Length, new Http3ServerOptions(), TestContext.CancellationToken));
         Assert.AreEqual(Http3Protocol.MessageError, exception.ErrorCode);
         Assert.IsFalse(exception.ConnectionError);
     }
@@ -320,7 +338,7 @@ public class Http3QpackTest
         var block = CreateLiteralField("x", new string('a', valueLength));
         using var stream = new FragmentedReadStream(block, 19);
         await using var reader = new Http3StreamReader(stream);
-        var section = await Http3Qpack.ReadSection(reader, block.Length,
+        var section = await Http3Qpack.ReadSection(reader, block.Length, new Http3ServerOptions(),
             TestContext.CancellationToken);
         Assert.IsTrue(section.Completed);
         Assert.AreEqual(exceedsRequestLimits, section.ExceedsRequestLimits);
@@ -339,7 +357,32 @@ public class Http3QpackTest
         using var stream = new FragmentedReadStream(block.ToArray(), 31);
         await using var reader = new Http3StreamReader(stream);
         await Assert.ThrowsExactlyAsync<Http3QpackException>(() =>
-            Http3Qpack.ReadSection(reader, block.Count, TestContext.CancellationToken));
+            Http3Qpack.ReadSection(reader, block.Count, new Http3ServerOptions(), TestContext.CancellationToken));
+    }
+
+    private async Task<IReadOnlyList<KeyValuePair<string, string>>> ReadHeaders(byte[] block,
+        CancellationToken cancellationToken) =>
+        (await ReadSection(block, new Http3ServerOptions(), cancellationToken)).Fields;
+
+    private async Task<Http3FieldSection> ReadSection(byte[] block, Http3ServerOptions options,
+        CancellationToken cancellationToken)
+    {
+        using var stream = new MemoryStream(block);
+        await using var reader = new Http3StreamReader(stream);
+        return await Http3Qpack.ReadSection(reader, block.Length, options, cancellationToken);
+    }
+
+    private static IReadOnlyList<KeyValuePair<string, string>> CreateResponseHeaders(int statusCode,
+        DateTimeOffset date)
+    {
+        List<KeyValuePair<string, string>> headers = [
+            new("date", date.UtcDateTime.ToString("R", CultureInfo.InvariantCulture)),
+            new("server", "Kestrel")
+        ];
+        if (statusCode == 401)
+            headers.Add(new KeyValuePair<string, string>("www-authenticate", "Bearer"));
+        headers.Add(new KeyValuePair<string, string>("content-length", "0"));
+        return headers;
     }
 
     private sealed class FragmentedReadStream(byte[] bytes, int maximumReadSize) : MemoryStream(bytes)

@@ -1,6 +1,7 @@
 # Latest
 
 * Feature: VpnHoodServer verifies a protocol-15 HTTP request's proof of the access key's farm secret before reading its body or accepting a WebSocket upgrade. Update servers first, then users' apps, then set `MinClientProtocolVersion` to 15.
+* Feature: VpnHoodServer's QUIC port answers as an HTTP/3 server does, with Kestrel's replies and errors for any request, malformed ones included, so a probe can no longer tell it from a website's HTTP/3; only an app's protocol-15 proof opens a tunnel there. Apps before protocol 15 are offered no QUIC port and go on over TCP. The server's TCP replies don't advertise HTTP/3 (Alt-Svc), so browsers keep fetching its downloads over TCP.
 * Update: The access keys VpnHoodServer prints start with vh: rather than vh://, the standard form of a link that carries data; apps read both
 * Feature: VpnHoodServer limits each session's DNS over UDP, by default to 200 packets a second (`MaxUdpDnsPacketsPerSecond` in the session options), and drops the excess, so one client can no longer flood a DNS server through it and get the server's address reported for abuse. Its log names the session that reached the limit.
 * Feature: VpnHoodServer limits the TCP connections each session opens, by default to 200 a second (`MaxTcpConnectsPerSecond` in the session options), whether through its TUN adapter or its proxy, and `NetScanLimit` now covers the TCP connections through its TUN adapter too, where it saw only those through its proxy.
@@ -16,7 +17,7 @@
 * Improve: Ordinary HTTP requests get the headers, parsing limits, timeouts and keep-alive behavior of ASP.NET Core's Kestrel behind a token check: a 401 except for configured downloads, which return 200. Port 80 answers certificate challenges and redirects other valid requests to the address's TLS port, choosing 443 when present; it used to answer with a 400 that named the challenge and the caller's address, and `HEAD /` with 200.
 * Fix: HTTP parsing follows Kestrel for malformed UTF-8, Host ports and brackets, header tokens and incomplete chunk framing. Chunk framing counts toward the body limit; buffered reads drain large bodies and leading blank lines promptly while preserving pipelined client requests.
 * Fix: A zero byte in an HTTP request line is refused immediately, while a TLS start without one waits for the request timeout; port 80 answers the exact first HTTP/2 preface with Kestrel's GOAWAY. The HTTP read-ahead buffer returns to its pool once the tunnel consumes it, instead of staying allocated for the connection's lifetime.
-* Feature: `MaxUnauthenticatedConnectionCount` in the session options caps TCP connections that haven't proven a key yet, port 80's included, by default at 1,000; QUIC is not counted. Above the cap, or when it is lowered, the address that holds the most loses its oldest, so a flood from one machine costs that machine first.
+* Feature: `MaxUnauthenticatedConnectionCount` in the session options caps the connections that haven't proven a key yet, over TCP, port 80's included, and over QUIC, by default at 1,000. Above the cap, or when it is lowered, the address that holds the most loses its oldest, so a flood from one machine costs that machine first.
 
 # v9.0.859
 

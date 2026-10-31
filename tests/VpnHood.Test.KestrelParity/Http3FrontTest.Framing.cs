@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Quic;
+using System.Diagnostics;
 using VpnHood.Test.KestrelParity.Probing;
 
 namespace VpnHood.Test.KestrelParity;
@@ -8,14 +9,85 @@ public partial class Http3FrontTest
 {
     [TestMethod]
     [TestCategory("Http3Framing")]
-    [DataRow("short-body", "4")]
-    [DataRow("long-body", "2")]
-    public async Task Data_length_mismatches_match_both_terminal_stream_directions(string name, string contentLength)
+    [DataRow("short-body", "4", true)]
+    [DataRow("long-body", "2", false)]
+    public async Task Data_length_mismatches_match_both_terminal_stream_directions(string name, string contentLength,
+        bool requiresFin)
     {
         byte[] request = [.. BuildBodyHeaders(contentLength), .. Frame(0, [1, 2, 3])];
-        var expected = await ObserveWholeRequest(Servers.ReferenceEndPoint, request, TestContext.CancellationToken);
-        var actual = await ObserveWholeRequest(Servers.OurEndPoint, request, TestContext.CancellationToken);
-        AssertRequestEnding(name, expected, actual);
+        await ObserveDataLengthTiming(name, request, TestContext.CancellationToken);
+        // Hold the reference application; our inline inspection sees the complete buffered request.
+        byte[] heldRequest = [.. BuildBodyHeaders(contentLength, waitForAbort: true), .. Frame(0, [1, 2, 3])];
+        var expected = await ObserveRequestEnding(Servers.ReferenceEndPoint, heldRequest, requiresFin,
+            atomicFin: true, TestContext.CancellationToken);
+        var actual = await ObserveBufferedDataLength(heldRequest, requiresFin,
+            TestContext.CancellationToken);
+        Assert.AreEqual(QuicError.StreamAborted, expected.Response.Error);
+        Assert.AreEqual(0x101L, expected.Response.ApplicationErrorCode);
+        Assert.IsEmpty(expected.Response.Bytes, "The held reference application cannot send a response first.");
+        if (!requiresFin) {
+            // Excess DATA is detectable while the client write side remains open: both resets are observable.
+            Assert.AreEqual(QuicError.StreamAborted, expected.Write.Error);
+            Assert.AreEqual(0x101L, expected.Write.ApplicationErrorCode);
+            AssertRequestEnding(name + "-parser-first", expected, actual);
+            return;
+        }
+        TestContext.WriteLine($"{name}-parser-first: reference={expected}; ours={actual}");
+        AssertSame(name + " response", expected.Response, actual.Response);
+        // Shortage requires FIN. Its transport acknowledgement can beat the HTTP parser's STOP_SENDING,
+        // so an already completed client write cannot establish which stop code the server chose.
+        AssertFinishedShortBodyWrite(expected.Write);
+        AssertFinishedShortBodyWrite(actual.Write);
+    }
+
+    private static async Task<RequestEnding> ObserveBufferedDataLength(byte[] request, bool finish,
+        CancellationToken cancellationToken)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(Http3Probe.Timeout);
+        // Prefetch FIN as well when shortage needs it, so available-only inspection reaches the mismatch.
+        using var buffered = Servers.BufferedQuic.BufferNextRequest(request.Length, static () => { }, finish,
+            deadline.Token);
+        return await ObserveRequestEnding(Servers.OurEndPoint, request, finish, atomicFin: true, deadline.Token);
+    }
+
+    private async Task ObserveDataLengthTiming(string name, byte[] request, CancellationToken cancellationToken)
+    {
+        // These are diagnostics, not parity evidence: RC3 runs its application beside DATA/FIN parsing.
+        // Compare the controlled parser-first and response-first cases instead of two independent races.
+        foreach (var atomicFin in new[] { false, true }) {
+            var results = await Task.WhenAll(
+                ObserveWholeRequest(Servers.ReferenceEndPoint, request, atomicFin, cancellationToken),
+                ObserveWholeRequest(Servers.OurEndPoint, request, atomicFin, cancellationToken));
+            TestContext.WriteLine($"{name}-natural-schedule-atomic-fin-{atomicFin} (diagnostic only): " +
+                                  $"reference={results[0]}; ours={results[1]}");
+        }
+    }
+
+    private static void AssertFinishedShortBodyWrite(Http3ProbeResult write)
+    {
+        var expected = write.Fin
+            ? new Http3ProbeResult("", true, null, null)
+            : new Http3ProbeResult("", false, QuicError.StreamAborted, 0x101);
+        Assert.AreEqual(expected, write, "A short body must finish sending or observe H3_GENERAL_PROTOCOL_ERROR.");
+    }
+
+    [TestMethod]
+    [TestCategory("Http3Framing")]
+    [DataRow("short-body", "4")]
+    [DataRow("long-body", "2")]
+    public async Task Data_length_mismatches_after_the_final_response_preserve_the_response(string name,
+        string contentLength)
+    {
+        var headers = BuildBodyHeaders(contentLength);
+        var tail = Frame(0, [1, 2, 3]);
+        var expected = await ObserveAfterResponse(Servers.ReferenceEndPoint, headers, tail,
+            TestContext.CancellationToken);
+        var actual = await ObserveAfterResponse(Servers.OurEndPoint, headers, tail,
+            TestContext.CancellationToken);
+        Assert.AreEqual(QuicError.StreamAborted, expected.Write.Error);
+        Assert.AreEqual(0x100L, expected.Write.ApplicationErrorCode);
+        AssertRequestEnding(name + "-response-first", expected, actual);
     }
 
     [TestMethod]
@@ -179,13 +251,15 @@ public partial class Http3FrontTest
             TestContext.CancellationToken);
     }
 
-    private static byte[] BuildBodyHeaders(string? contentLength)
+    private static byte[] BuildBodyHeaders(string? contentLength, bool waitForAbort = false)
     {
         List<(string Name, string Value)> fields = [
             (":method", "POST"), (":scheme", "https"), (":path", "/probe"), (":authority", Servers.HostName)
         ];
         if (contentLength != null)
             fields.Add(("content-length", contentLength));
+        if (waitForAbort)
+            fields.Add(("x-parity-wait-for-abort", "1"));
         return BuildLiteralRequest(fields);
     }
 
@@ -209,7 +283,15 @@ public partial class Http3FrontTest
         }
     }
 
-    private static async Task<RequestEnding> ObserveWholeRequest(IPEndPoint endPoint, byte[] bytes,
+    private static Task<RequestEnding> ObserveWholeRequest(IPEndPoint endPoint, byte[] bytes,
+        CancellationToken cancellationToken) => ObserveWholeRequest(endPoint, bytes, atomicFin: false, cancellationToken);
+
+    private static Task<RequestEnding> ObserveWholeRequest(IPEndPoint endPoint, byte[] bytes, bool atomicFin,
+        CancellationToken cancellationToken) => ObserveRequestEnding(endPoint, bytes, finish: true, atomicFin,
+        cancellationToken);
+
+    private static async Task<RequestEnding> ObserveRequestEnding(IPEndPoint endPoint, byte[] bytes, bool finish,
+        bool atomicFin,
         CancellationToken cancellationToken)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -218,13 +300,35 @@ public partial class Http3FrontTest
         await using var control = await connection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional, deadline.Token);
         await control.WriteAsync(new byte[] { 0, 4, 0 }, deadline.Token);
         await using var request = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, deadline.Token);
-        await SendRequestTail(request, bytes, finish: true, deadline.Token);
-        var response = await ReadCompleteResponse(request, deadline.Token);
-        var write = await ObserveWriteEnd(request, deadline.Token);
-        return new RequestEnding(response, write);
+        var started = Stopwatch.GetTimestamp();
+        var response = ObserveTimedResponseEnd(request, started, deadline.Token);
+        var write = ObserveTimedWriteEnd(request, started, deadline.Token);
+        try {
+            if (finish && atomicFin)
+                await SendAtomicRequest(request, bytes, deadline.Token);
+            else
+                await SendRequestTail(request, bytes, finish, deadline.Token);
+            var sentAt = Stopwatch.GetElapsedTime(started);
+            await Task.WhenAll(response, write);
+            var completedResponse = await response;
+            var completedWrite = await write;
+            return new RequestEnding(completedResponse.Result, completedWrite.Result, sentAt,
+                completedResponse.Elapsed, completedWrite.Elapsed);
+        }
+        finally {
+            await deadline.CancelAsync();
+            try { await Task.WhenAll(response, write); }
+            catch (Exception) {
+                // Keep the original failure while joining both observers before stream disposal.
+            }
+        }
     }
 
-    private static async Task<RequestEnding> ObserveAfterResponse(IPEndPoint endPoint, byte[] tail,
+    private static Task<RequestEnding> ObserveAfterResponse(IPEndPoint endPoint, byte[] tail,
+        CancellationToken cancellationToken) => ObserveAfterResponse(endPoint, BuildBodyHeaders(null), tail,
+        cancellationToken);
+
+    private static async Task<RequestEnding> ObserveAfterResponse(IPEndPoint endPoint, byte[] headers, byte[] tail,
         CancellationToken cancellationToken)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -233,16 +337,55 @@ public partial class Http3FrontTest
         await using var control = await connection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional, deadline.Token);
         await control.WriteAsync(new byte[] { 0, 4, 0 }, deadline.Token);
         await using var request = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, deadline.Token);
-        await request.WriteAsync(BuildBodyHeaders(null), deadline.Token);
-        var response = await ReadCompleteResponse(request, deadline.Token);
-        Assert.IsTrue(response.Fin, "The protected application must finish its response without waiting for the body.");
-        Assert.IsNotEmpty(response.Bytes);
+        var started = Stopwatch.GetTimestamp();
+        var response = ObserveTimedResponseEnd(request, started, deadline.Token);
+        var write = ObserveTimedWriteEnd(request, started, deadline.Token);
+        try {
+            await request.WriteAsync(headers, deadline.Token);
+            var completedResponse = await response;
+            Assert.IsTrue(completedResponse.Result.Fin,
+                "The protected application must finish its response without waiting for the body.");
+            Assert.IsNotEmpty(completedResponse.Result.Bytes);
 
-        // Finish the response first to remove the application/error scheduling race. Keep our write
-        // side open: a malformed tail must then surface through STOP_SENDING or a connection close.
-        await SendRequestTail(request, tail, finish: false, deadline.Token);
-        var write = await ObserveWriteEnd(request, deadline.Token);
-        return new RequestEnding(response, write);
+            // Keeping the write side open separates STOP_SENDING from an acknowledged client FIN.
+            await SendRequestTail(request, tail, finish: false, deadline.Token);
+            var sentAt = Stopwatch.GetElapsedTime(started);
+            var completedWrite = await write;
+            return new RequestEnding(completedResponse.Result, completedWrite.Result, sentAt,
+                completedResponse.Elapsed, completedWrite.Elapsed);
+        }
+        finally {
+            await deadline.CancelAsync();
+            try { await Task.WhenAll(response, write); }
+            catch (Exception) {
+                // Keep the original failure while joining both observers before stream disposal.
+            }
+        }
+    }
+
+    private static async Task SendAtomicRequest(QuicStream stream, byte[] bytes, CancellationToken cancellationToken)
+    {
+        try {
+            // One native send removes the gap between DATA being queued and FIN being queued.
+            await stream.WriteAsync(bytes, completeWrites: true, cancellationToken);
+        }
+        catch (QuicException) {
+            // The read and WritesClosed observers retain both directions when a peer rejects early.
+        }
+    }
+
+    private static async Task<(Http3ProbeResult Result, TimeSpan Elapsed)> ObserveTimedWriteEnd(QuicStream stream,
+        long started, CancellationToken cancellationToken)
+    {
+        var result = await ObserveWriteEnd(stream, cancellationToken);
+        return (result, Stopwatch.GetElapsedTime(started));
+    }
+
+    private static async Task<(Http3ProbeResult Result, TimeSpan Elapsed)> ObserveTimedResponseEnd(QuicStream stream,
+        long started, CancellationToken cancellationToken)
+    {
+        var result = await ReadCompleteResponse(stream, cancellationToken);
+        return (result, Stopwatch.GetElapsedTime(started));
     }
 
     private static async Task SendRequestTail(QuicStream stream, byte[] bytes, bool finish,
@@ -293,6 +436,4 @@ public partial class Http3FrontTest
         AssertSame(name + " response", expected.Response, actual.Response);
         Assert.AreEqual(expected.Write, actual.Write, name + " write-side completion");
     }
-
-    private sealed record RequestEnding(Http3ProbeResult Response, Http3ProbeResult Write);
 }

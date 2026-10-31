@@ -10,6 +10,11 @@
        states no identity, as the tools and the server do, is left as it is. -->
   <Import Project="$(MSBuildThisFileDirectory)..\AppLib\VpnHood.AppLib.App\buildTransitive\VpnHood.AppLib.App.targets" />
 
+  <!-- Every Android head's manifest and the place of its languages, likewise: the Android app library's
+       targets, which its project reference does not carry. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\AppLib\VpnHood.AppLib.App.Android\buildTransitive\VpnHood.AppLib.App.Android.targets"
+          Condition="$(TargetFramework.Contains('-android'))" />
+
   <!-- Windows' console launcher beside the window's executable, for the same reason: the Windows
        hosting package's targets, which its project reference does not carry. They act only on a
        WinExe that names a command. -->

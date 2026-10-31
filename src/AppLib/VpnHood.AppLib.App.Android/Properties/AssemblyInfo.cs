@@ -12,3 +12,7 @@ using Android;
 [assembly: UsesPermission(Name = Manifest.Permission.ForegroundServiceSystemExempted)] // required for VPN
 [assembly: UsesPermission(Name = Manifest.Permission.StartForegroundServicesFromBackground)] // required for VPN
 [assembly: UsesPermission(Name = Manifest.Permission.AccessNetworkState)] // for finding network to exclude VPN for own process
+
+// a TV's launcher lists the app, and a TV, which has no touchscreen, may install it
+[assembly: UsesFeature("android.software.leanback", Required = false)]
+[assembly: UsesFeature("android.hardware.touchscreen", Required = false)]

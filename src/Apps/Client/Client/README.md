@@ -1,6 +1,6 @@
 # VpnHood.App.Client
 
-What every distribution of VpnHood Client shares - Android (Play and web), iOS, Windows and Linux. It
+What every distribution of VpnHood Client shares - Android (Play, Galaxy Store and web), iOS, Windows and Linux. It
 is **not** a library, it is not published, and a forker does not use it: VpnHood Connect has its own
 (`../../Connect/VpnHood.App.Connect`), and a fork writes its own of this shape.
 
@@ -13,6 +13,8 @@ Every head under `src/Apps/Client/` is a thin platform shell: an activity, a vie
 |---|---|
 | `ClientAppOptions.cs` | the options every head shares - the logo and consent summary, the settings below, the web host's port, the three packaged files at the paths the asset packages place them - and `IsAddAccessKeySupported`, a constant the desktop commands read too. A head's options factory is this call and its channel's lines on top |
 | `ClientAppConfigs.cs` | the product's settings: what its private appsettings can say (`AppConfigs` in `VpnHood.AppLib.App`), which `Load` fills. Client adds no keys of its own |
+| `ClientAccessKeys.cs` | the forms an access key comes to the app in from outside: the link schemes and the file MIME types, which the Android heads' `MainActivity` registers and the Windows web head's schemes repeat. Client's own: the libraries register none |
+| `android/locales_config.xml` | the languages the Android heads offer in Android's per-app language setting, which `../Directory.Build.props` names (`VhAppLocaleConfig`) - see `docs/source-layout.md`, "What every Android app shares" |
 | the project file | the IP-location database the product ships (`VpnHood.Net.IpLocations.Assets.Ip2LocationLite`), the private appsettings from `.user/VpnHoodClient`, embedded here once for every head, and the app framework and web host every head builds on |
 
 A setting has no value in code: one the appsettings do not name stays null, and what needs it is

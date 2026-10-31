@@ -32,13 +32,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<AndroidResource Update="Resources\xml\locales_config.xml">
-			<SubType>Designer</SubType>
-			<Generator>MSBuild:UpdateGeneratedFiles</Generator>
-		</AndroidResource>
-	</ItemGroup>
-	
-	<ItemGroup>
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Android\VpnHood.AppLib.App.Android.csproj" />
 		<!-- The UI this head runs, which MainActivity is the activity of. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Android\VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />

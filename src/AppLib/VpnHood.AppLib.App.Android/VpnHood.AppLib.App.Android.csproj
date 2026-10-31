@@ -20,4 +20,12 @@
 		<PackageReference Include="Microsoft.Maui.Resizetizer" Version="11.0.0-rc.2.26505.5" />
 	</ItemGroup>
 
+	<!-- Every Android app's manifest (buildTransitive/, the targets beside it make it the app's). No build/
+	     copy: NuGet takes buildTransitive/ for a direct reference too. Each file on its own line: a folder
+	     alone as PackagePath would nest it twice. -->
+	<ItemGroup>
+		<None Update="buildTransitive\VpnHood.AppLib.App.Android.targets" Pack="true" PackagePath="buildTransitive\VpnHood.AppLib.App.Android.targets" />
+		<None Update="buildTransitive\AndroidManifest.xml" Pack="true" PackagePath="buildTransitive\AndroidManifest.xml" />
+	</ItemGroup>
+
 </Project>

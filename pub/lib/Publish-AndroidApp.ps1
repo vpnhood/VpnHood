@@ -95,7 +95,6 @@ if ([string]::IsNullOrWhiteSpace($keystoreAlias)) {
 	}
 	$keystoreAlias = $keyAliases[0]
 }
-$manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
 if ([string]::IsNullOrWhiteSpace($archs)) {
     $archs = "android-arm64;android-x64;android-arm;"
 }

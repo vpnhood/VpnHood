@@ -3,9 +3,6 @@
 // values defined in project properties. For details of which attributes are included
 // and how to customise this process see: https://aka.ms/assembly-info-properties
 
-[assembly: UsesFeature("android.software.leanback", Required = false)]
-[assembly: UsesFeature("android.hardware.touchscreen", Required = false)]
-
 // Firebase starts before the app has read the person's choice, so a fresh install starts off and
 // sends nothing until the usage-data switch turns it on (FirebaseAnalyticsTracker.IsEnabled), which
 // Firebase keeps for the next start: where the law wants a yes first, nothing goes before the person

@@ -9,7 +9,8 @@ namespace VpnHood.App.Client.Android.Samsung;
 
 // The launcher and the UI in one activity: Avalonia's. The theme above is the one that UI brings
 // (Avalonia.Android, Resources/values/themes.xml). The access keys a file or a link carries are
-// this activity's too, so the intent filters that take them are here.
+// this activity's too, so the intent filters that take them are here, in the forms CLIENT takes
+// (ClientAccessKeys).
 [Activity(
     // Launchers keep the app's home-screen icon by this Java name. The generated default hashes the
     // namespace and the assembly name, and the publish build's assembly is <project>.csproj.tmp, so it
@@ -26,23 +27,16 @@ namespace VpnHood.App.Client.Android.Samsung;
 [IntentFilter([TileService.ActionQsTilePreferences])]
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault], DataScheme = "content",
-    DataMimeTypes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3])]
+    DataMimeTypes = [ClientAccessKeys.Mime1, ClientAccessKeys.Mime2, ClientAccessKeys.Mime3])]
 [IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable],
-    DataSchemes = [AccessKeyScheme1, AccessKeyScheme2])]
+    DataSchemes = [ClientAccessKeys.Scheme1, ClientAccessKeys.Scheme2])]
 public class MainActivity : AndroidAvaloniaMainActivity<ClassicAvaloniaApp>
 {
-    // https://android.googlesource.com/platform/libcore/+/android-5.0.2_r1/luni/src/main/java/libcore/net/MimeUtils.java
-    public const string AccessKeyScheme1 = "vh";
-    public const string AccessKeyScheme2 = "vhkey";
-    public const string AccessKeyMime1 = "application/vhkey";
-    public const string AccessKeyMime2 = "application/pgp-keys"; //.key
-    public const string AccessKeyMime3 = "application/vnd.cinderella"; //.cdy
-
     protected override AndroidMainActivityOptions CreateActivityOptions()
     {
         return new AndroidMainActivityOptions {
-            AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2],
-            AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3]
+            AccessKeySchemes = [ClientAccessKeys.Scheme1, ClientAccessKeys.Scheme2],
+            AccessKeyMimes = [ClientAccessKeys.Mime1, ClientAccessKeys.Mime2, ClientAccessKeys.Mime3]
         };
     }
 }

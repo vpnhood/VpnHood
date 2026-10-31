@@ -37,13 +37,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<AndroidResource Update="Resources\xml\locales_config.xml">
-			<SubType>Designer</SubType>
-			<Generator>MSBuild:UpdateGeneratedFiles</Generator>
-		</AndroidResource>
-	</ItemGroup>
-	
-	<ItemGroup>
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Android\VpnHood.AppLib.App.Android.csproj" />
 		<!-- The APK updates itself; never in a store's head. -->
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.AndroidWeb\VpnHood.AppLib.Stores.AndroidWeb.csproj" />

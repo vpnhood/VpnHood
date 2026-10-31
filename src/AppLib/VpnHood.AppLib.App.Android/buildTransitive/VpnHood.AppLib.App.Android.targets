@@ -1,0 +1,41 @@
+<Project>
+	<!-- What every Android app is the same in that lives in the app's own files rather than in this
+	     library's code: its manifest, and the place of its languages. An app that references this package
+	     gets them without naming them; our heads import this file directly (src/Apps/Directory.Build.targets),
+	     a project reference carrying no targets.
+
+	     The manifest beside this file is the app's own, not a library's merged into it: Android takes the
+	     target SDK from the app's alone. A head with a manifest of its own (Properties/AndroidManifest.xml)
+	     keeps it, and answers for all of this itself. Set here, after the SDK's defaults, which leave
+	     AndroidManifest unset for a head with none. The SDK reads it as a path under the head's folder
+	     ($(ProjectDir)$(AndroidManifest)), which a package's file is not - the NuGet cache may even be on
+	     another drive - so the head gets a copy in its obj before the SDK first reads it.
+
+	     The build settings - the oldest Android, the runtime ids, the trimming - stay in each head: the SDK
+	     reads them before any targets file of a package, and a props file comes before the head says it is
+	     an Android one. -->
+	<PropertyGroup Condition="'$(AndroidApplication)' == 'true' And '$(AndroidManifest)' == ''">
+		<AndroidManifest>$(IntermediateOutputPath)vh\AndroidManifest.xml</AndroidManifest>
+		<_VhAndroidSharedManifest>true</_VhAndroidSharedManifest>
+	</PropertyGroup>
+	<Target Name="VhCopyAndroidManifest" BeforeTargets="_GetAndroidPackageName" Condition="'$(_VhAndroidSharedManifest)' == 'true'">
+		<Copy SourceFiles="$(MSBuildThisFileDirectory)AndroidManifest.xml" DestinationFiles="$(AndroidManifest)" SkipUnchangedFiles="true" />
+		<ItemGroup>
+			<FileWrites Include="$(AndroidManifest)" />
+		</ItemGroup>
+	</Target>
+
+	<!-- The app's languages, which the manifest names: the product's own list, an Android locale-config
+	     file it states beside its identity (VhAppLocaleConfig), as only the product knows the languages its
+	     words come in. Android 14 and later replace it at run time with the UI's own (AndroidAppCultureProvider);
+	     this is the list before the first start, and Android 13's. -->
+	<ItemGroup Condition="'$(_VhAndroidSharedManifest)' == 'true' And '$(VhAppLocaleConfig)' != ''">
+		<AndroidResource Include="$(VhAppLocaleConfig)" Link="Resources\xml\locales_config.xml" />
+	</ItemGroup>
+	<Target Name="VhCheckAppLocaleConfig" BeforeTargets="BeforeBuild" Condition="'$(_VhAndroidSharedManifest)' == 'true'">
+		<Error Condition="'$(VhAppLocaleConfig)' == ''"
+		       Text="The app states no languages: state VhAppLocaleConfig beside its identity, an Android locale-config file of the languages its words come in." />
+		<Error Condition="'$(VhAppLocaleConfig)' != '' And !Exists('$(VhAppLocaleConfig)')"
+		       Text="The app's languages (VhAppLocaleConfig) are not at '$(VhAppLocaleConfig)'." />
+	</Target>
+</Project>

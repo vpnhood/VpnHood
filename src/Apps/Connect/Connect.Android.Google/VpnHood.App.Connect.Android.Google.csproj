@@ -60,13 +60,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<AndroidResource Update="Resources\xml\locales_config.xml">
-			<SubType>Designer</SubType>
-			<Generator>MSBuild:UpdateGeneratedFiles</Generator>
-		</AndroidResource>
-	</ItemGroup>
-
-	<ItemGroup>
 		<PackageReference Include="Xamarin.Firebase.Analytics" Version="123.2.0.2" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="120.1.1" />
 	</ItemGroup>

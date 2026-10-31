@@ -122,6 +122,7 @@ src/Apps/
 ├── Client/
 │   ├── Client/                     VpnHood.App.Client.csproj          the product
 │   ├── Client.Android.Google/      the Play distribution
+│   ├── Client.Android.Samsung/     the Galaxy Store distribution
 │   ├── Client.Android.Web/         the APK from our site
 │   ├── Client.Ios.Apple/           the App Store distribution
 │   ├── Client.Ios.Extension/       the Network Extension it bundles
@@ -141,8 +142,8 @@ src/Apps/
 folder, and a head's folder is `<Product>.<Platform>.<Channel>` without the `VpnHood.App.` prefix.
 
 **A head is `<Product>.<Platform>.<Channel>`.** The channel is who hands the app to the user:
-`Google` is Play, `Apple` is the App Store, `Microsoft` is the Microsoft Store, `Web` is our own
-site. Every head names its channel, so
+`Google` is Play, `Samsung` is the Galaxy Store, `Apple` is the App Store, `Microsoft` is the Microsoft
+Store, `Web` is our own site. Every head names its channel, so
 a second one on the same platform is a sibling rather than a rename.
 
 Two folders are not heads and do not follow that rule. `*.Ios.Extension` is the Network Extension
@@ -156,12 +157,14 @@ identity.
 
 ## What a head is made of
 
-A head is a thin shell — an activity, a view controller, a window — and usually only two files. Its
-ids and names are not among them: they come from the app's identity (below).
+A head is a thin shell — an activity, a view controller, a window — and only a few files. Its
+ids and names are not among them: they come from the app's identity (below), and an Android head's
+manifest and resources come from the library ([What every Android app shares](#what-every-android-app-shares)).
 
 | File | What it does |
 | --- | --- |
 | `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id and name, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params and its UI to the platform's host (`WindowsDesktopHost.Run`, `LinuxDesktopHost.Run`), whose service starts the app, or `WindowsVpnPluginDesktopHost.Run`, which starts it in the window's own process. Either way the platform builds its own device and starts `VpnHoodApp` |
+| `MainActivity.cs` (Android) | the one activity, Avalonia's: the launcher's, the Quick Settings tile's preferences', and in CLIENT the access keys' links and files (below). Its Java name is pinned to the one the app shipped under, as launchers keep the home-screen icon by it |
 | `_publish.ps1` | the one entry point that builds and packages this head; CI calls exactly this |
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
@@ -175,6 +178,39 @@ manifest, which `_publish.ps1` stamps, and `_install.ps1`, which installs that p
 machine; both scripts hand over to `pub/lib`'s `Publish-WinStoreApp.ps1` and `Install-WinStoreApp.ps1`,
 which serve every product's Store head.
 
+## What every Android app shares
+
+An Android head needs no manifest and no resource file of its own: `VpnHood.AppLib.App.Android` gives
+every Android app the same ones, placed by its build targets
+(`buildTransitive/VpnHood.AppLib.App.Android.targets`, which a package reference imports and
+`src/Apps/Directory.Build.targets` imports for our heads). A head, ours or a fork's, overrides any of
+them in its own folder:
+
+| What | Where it comes from | How a head overrides it |
+| --- | --- | --- |
+| the manifest: the target SDK, and the language list and backup rules the `<application>` element names | `buildTransitive/AndroidManifest.xml`, copied into the head's `obj` (the SDK takes a manifest only under the head's folder) | its own `Properties/AndroidManifest.xml`, which the build then takes instead, whole |
+| the backup rules: `backup_rules.xml` for Android 11 and older, `data_extraction_rules.xml` for 12 and newer | the library's `Resources/xml/` | a file of the same name in its own `Resources/xml/` |
+| the network security config: Let's Encrypt's root for Android 7.0, plain http to localhost | the library's `Resources/xml/network_security_config.xml` | the same |
+| the `<application>` switches: label, icon, banner, backup on or off, right-to-left, the network security config | `AndroidAppConstants`, which the head's `App.cs` names in its `[Application]` | its own values in that attribute |
+| the VPN's permissions, and the TV and the touchscreen as optional features | the library's `[assembly: UsesPermission]` and `[assembly: UsesFeature]` | none: every VPN app needs them; a head that declares them too gets each once |
+| the languages Android's per-app language setting offers | the product's `android/locales_config.xml`, which its `Directory.Build.props` names (`VhAppLocaleConfig`) and the build places as `Resources/xml/locales_config.xml`; a head on the shared manifest without it fails to build | the file the product names |
+
+A head's own resource replaces the library's file of that name whole, with nothing of the library's
+kept: a fork that writes its own backup rules leaves out the SDK files the library's leave out, or
+they travel to a new phone. Android 14 and later replace the language list at run time with the UI's
+own languages (`AndroidAppCultureProvider`): the file is the list before the app's first start, and
+Android 13's.
+
+What only one product registers stays in its heads. CLIENT opens access keys from links and files,
+so its Android heads' `MainActivity` declares the intent filters, in the forms its product project
+names (`ClientAccessKeys`: the `vh` and `vhkey` schemes and three MIME types, `.cdy` among them); its
+Windows web head registers the same schemes. CONNECT registers none, and a fork registers its own or
+none.
+
+The build settings stay in each head's project: the oldest Android (`SupportedOSPlatformVersion`),
+the runtime ids and the trimming. The SDK reads them before any package's targets, and a props file
+comes before the head says it is an Android one.
+
 ## The product project
 
 `Client/Client/` and `Connect/Connect/` hold what every distribution of that product agrees on:
@@ -182,7 +218,9 @@ the options every head shares (`ClientAppOptions`, `ConnectAppOptions`), the pro
 what its private appsettings can say (`ClientAppConfigs`, `ConnectAppConfigs`, over `AppConfigs` in
 `VpnHood.AppLib.App`), with the files from `.user/<product>` embedded here once for every head —
 the packages the product pins (today the IP-location database), the app framework and web host its
-heads build on, and any product-wide constant — Connect's premium feature list lives there. A
+heads build on, and any product-wide constant — Connect's premium feature list lives there, and
+CLIENT's access-key forms (`ClientAccessKeys`). Its `android/locales_config.xml` is the languages its
+Android heads offer ([What every Android app shares](#what-every-android-app-shares)). A
 setting the appsettings do not name takes its default: a switch and the look have one in code
 (`ShowPoweredBy` on, `UiTheme` blue), the web UI's port is 9090, or 9091 in a Debug build, and an
 address, an id or a key stays null, so what needs it is off or fails where it is used.
@@ -201,6 +239,7 @@ Each product folder has a `Directory.Build.props` that states the app once, for 
 | `VhAppPackageTitle` | `VpnHoodClient` | the name without spaces: the start of every release file's name, the update feeds' included (`AppConstants.PackageTitle`); the desktop executable, its service or unit, their folders. Taken from the name's letters and digits when not stated; an app that has shipped states it, since installs keep these names |
 | `Company` | `OmegaHood LLC` | the app's maker, as the UI (`AppConstants.CompanyName`) and the executable's details name it, with a copyright made from it where none is stated. The repo's own `Directory.Build.props` states it for every project, so the products do not |
 | `VhAdMobApplicationId` | — | the AdMob application id a head that shows AdMob ads names in its manifest (`AppConstants.AdMobApplicationId`); Connect states it. Google's sample app id when not stated |
+| `VhAppLocaleConfig` | `Client/android/locales_config.xml` | the languages the app's words come in, as Android's per-app language setting takes them: an Android locale-config file, which every Android head on the shared manifest needs ([What every Android app shares](#what-every-android-app-shares)) |
 | `VhAppSetupImage` | `setup.bmp` | the picture the Windows setup's Welcome and Finish pages show: a 24-bit BMP, 328 by 628 (twice the pages' 164 by 314, sharp on a high-DPI screen), stretched to them as it is; a path beside the Windows head when not a full one. NSIS's own picture when not stated |
 
 A build target in `VpnHood.AppLib.App` (`buildTransitive/VpnHood.AppLib.App.targets`, the file a

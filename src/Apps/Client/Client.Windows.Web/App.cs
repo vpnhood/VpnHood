@@ -23,11 +23,10 @@ internal static class App
             AppVersion = Version.Parse(AppConstants.AppVersion),
             AppOptionsFactory = CreateAppOptions,
             IsAddAccessKeySupported = ClientAppOptions.IsAddAccessKeySupported,
-            // the extension Android's file managers know (Client.Android.Google's MainActivity), so one file an
-            // admin mails opens on every platform
+            // the extension Android's file managers know (ClientAccessKeys.Mime3), so one file an admin mails
+            // opens on every platform
             AccessKeyFileExtensions = [".cdy"],
-            // vhkey too, a form keys may switch to, so an install from before the switch opens its links
-            AccessKeySchemes = ["vh", "vhkey"],
+            AccessKeySchemes = [ClientAccessKeys.Scheme1, ClientAccessKeys.Scheme2],
             Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
         });
     }

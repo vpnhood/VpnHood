@@ -240,6 +240,7 @@
     <Project Path="src/Net/VpnHood.Net.IpLocations/VpnHood.Net.IpLocations.csproj" />
   </Folder>
   <Folder Name="/src/Net/Quic/">
+    <Project Path="src/Net/VpnHood.Net.Http3/VpnHood.Net.Http3.csproj" />
     <Project Path="src/Net/VpnHood.Net.Quic.Abstractions/VpnHood.Net.Quic.Abstractions.csproj" />
     <Project Path="src/Net/VpnHood.Net.Quic.Android/VpnHood.Net.Quic.Android.csproj" />
     <Project Path="src/Net/VpnHood.Net.Quic.Ios/VpnHood.Net.Quic.Ios.csproj">

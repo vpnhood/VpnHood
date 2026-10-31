@@ -65,9 +65,12 @@ version is 15, including when the binary session is older. Legacy HTTP clients s
 
 ## QUIC admission and HTTP/3
 
-`Listeners/Http3` owns the anonymous HTTP/3 endpoint: frame handling, bounded static/literal/Huffman
-QPACK decoding, request validation and response encoding. It uses the existing QUIC provider and adds
-no production framework or package dependency. Kestrel is only the differential-test reference.
+The `VpnHood.Net.Http3` project owns the anonymous HTTP/3 endpoint: frame handling, bounded
+static/literal/Huffman QPACK decoding, request validation and response encoding. It knows nothing of
+VpnHood: the server plugs in a stream filter (the proof check), a runner for the streams it claims (the
+tunnel) and a responder (the 401), and its unauthenticated budget closes connections through it. It uses
+the existing QUIC provider and adds no production framework or package dependency. Kestrel is only the
+differential-test reference.
 
 Anonymous streams use a pooled 4 KB reader. HEADERS are decoded incrementally instead of allocating
 their declared size; QPACK strings grow only as bytes arrive, within fixed limits, and no dynamic table is kept.

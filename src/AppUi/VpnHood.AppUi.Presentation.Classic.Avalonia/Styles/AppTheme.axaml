@@ -40,6 +40,16 @@
     <SolidColorBrush x:Key="SnackbarWarningBrush" Color="#e65100" />
     <SolidColorBrush x:Key="SnackbarSuppressBrush" Color="#7b7afe" />
 
+    <!-- The countdown chip, the same in both products: solid in the tone of the time left, white
+         text on it 5:1 or more - the theme's countdown tones are light text over their own tint,
+         and its red came to 3.0:1 on the blue home - and the crown in the theme's yellow
+         (Yellow200), 4:1 or more on each tone. -->
+    <SolidColorBrush x:Key="CountdownChipNormalBrush" Color="#0b7a5a" />
+    <SolidColorBrush x:Key="CountdownChipAlertBrush" Color="#a15c00" />
+    <SolidColorBrush x:Key="CountdownChipWarningBrush" Color="#c62828" />
+    <SolidColorBrush x:Key="OnCountdownChipBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="CountdownChipCrownBrush" Color="#ffe648" />
+
     <!-- how much brighter a button or a row is under the pointer, and how strong a click's ripple
          is: the text colour at this opacity, twice it on a light button -->
     <x:Double x:Key="HoverBrightness">1.2</x:Double>
@@ -1509,41 +1519,37 @@
   <!-- GoPremiumButton's three shapes: the countdown chip in the three tones of the time left, the
        premium mark, and the outlined pitch with the crown in a filled round -->
   <Style Selector="Border.chip.countdown">
-    <Setter Property="Background" Value="{StaticResource CountDownNormalTonalBrush}" />
+    <Setter Property="Background" Value="{StaticResource CountdownChipNormalBrush}" />
     <Setter Property="Padding" Value="8,3,3,3" />
   </Style>
   <Style Selector="Border.chip.countdown TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource CountDownNormalBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnCountdownChipBrush}" />
     <Setter Property="FontSize" Value="14" />
   </Style>
+  <Style Selector="Border.chip.countdown TextBlock.countdown-crown">
+    <Setter Property="Foreground" Value="{StaticResource CountdownChipCrownBrush}" />
+  </Style>
+  <Style Selector="Border.chip.countdown.alert">
+    <Setter Property="Background" Value="{StaticResource CountdownChipAlertBrush}" />
+  </Style>
+  <Style Selector="Border.chip.countdown.warning-time">
+    <Setter Property="Background" Value="{StaticResource CountdownChipWarningBrush}" />
+  </Style>
+  <!-- Extend: the chip's text colour as a button, its label in the chip's tone; the label rules
+       come after the chip's TextBlock rule, which would paint the label white on white -->
   <Style Selector="Border.chip.countdown Button.countdown-extend">
-    <Setter Property="Background" Value="{StaticResource CountDownNormalBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
+    <Setter Property="Background" Value="{StaticResource OnCountdownChipBrush}" />
     <Setter Property="MinHeight" Value="24" />
     <Setter Property="Padding" Value="8,0,4,0" />
   </Style>
-  <Style Selector="Border.chip.countdown.alert">
-    <Setter Property="Background" Value="{StaticResource CountDownAlertTonalBrush}" />
-  </Style>
-  <Style Selector="Border.chip.countdown.alert TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource CountDownAlertBrush}" />
-  </Style>
-  <Style Selector="Border.chip.countdown.alert Button.countdown-extend">
-    <Setter Property="Background" Value="{StaticResource CountDownAlertBrush}" />
-  </Style>
-  <Style Selector="Border.chip.countdown.warning-time">
-    <Setter Property="Background" Value="{StaticResource CountDownWarningTonalBrush}" />
-  </Style>
-  <Style Selector="Border.chip.countdown.warning-time TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource CountDownWarningBrush}" />
-  </Style>
-  <Style Selector="Border.chip.countdown.warning-time Button.countdown-extend">
-    <Setter Property="Background" Value="{StaticResource CountDownWarningBrush}" />
-  </Style>
-  <!-- after the three tones: each tone's text colour matches the button's label too, which then
-       vanished into the button's own colour under 15 minutes -->
   <Style Selector="Border.chip.countdown Button.countdown-extend TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource CountdownChipNormalBrush}" />
+  </Style>
+  <Style Selector="Border.chip.countdown.alert Button.countdown-extend TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource CountdownChipAlertBrush}" />
+  </Style>
+  <Style Selector="Border.chip.countdown.warning-time Button.countdown-extend TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource CountdownChipWarningBrush}" />
   </Style>
   <Style Selector="Button.status-on-btn">
     <Setter Property="Background" Value="{StaticResource EnablePremiumTonalBrush}" />

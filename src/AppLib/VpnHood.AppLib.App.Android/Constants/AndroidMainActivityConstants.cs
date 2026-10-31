@@ -23,7 +23,9 @@ public static class AndroidMainActivityConstants
     // intent over a task a link started, a link to the running app - goes to that activity (OnNewIntent), not to a
     // second one stacked over it. A second takes the UI's one view from the first, and the view came back from it
     // with its layout broken: the home's circle on the server row after Back (Android 11, 2026-10-30). Never
-    // SingleTask or SingleInstance: reopening the app would drop the ad activity above it.
+    // SingleTask or SingleInstance: reopening the app would drop the ad activity above it. A link opened inside
+    // another app's own task still makes a second; the home's circle there keeps the size it had before the view
+    // had a surface - Avalonia's to fix.
     public const LaunchMode LaunchMode = global::Android.Content.PM.LaunchMode.SingleTop;
 
     public const ConfigChanges ConfigChanges =

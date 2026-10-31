@@ -21,7 +21,14 @@ namespace VpnHood.AppLib.Stores.AndroidWeb;
 /// PackageInstaller session installs it once the person confirms. Nothing starts unpressed: the notice
 /// offers it, as the person may be on mobile data. The package lives in the app's external cache folder,
 /// which no backup takes, named by its version, so what to remove needs no record of its own:
-/// DownloadManager lists only this app's downloads.
+/// DownloadManager lists only this app's downloads. No option keeps a package after its install: it is of
+/// no use then.
+/// Not in the VPN service: it runs only while connected, Android lets it open no screen from the
+/// background, and the install ends its process. DownloadManager takes the network of the app that asked,
+/// and this app is always in the tunnel: a download goes direct before a connect, and on through the
+/// tunnel after it, from where it was. The implementation rule that an updater runs apart from what it
+/// updates cannot hold here, as Android lets no app run one: Android's process downloads and its installer
+/// installs, only the press is the app's, and an app that no longer starts is updated from the website.
 /// </summary>
 public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
 {
@@ -185,6 +192,9 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
             _failedVersion = null;
             _failedMessage = null;
 
+            // the feed's address, never the link it redirects to: GitHub's signed link lasts about 30
+            // minutes, and after a longer cut DownloadManager asks the address again and goes on where it
+            // stopped
             using var request = new DownloadManager.Request(AndroidUri.Parse(release.PackageUrl.AbsoluteUri));
             Directory.CreateDirectory(FolderPath);
             using var file = new Java.IO.File(FolderPath, FileNameOf(release.Version));
@@ -216,7 +226,8 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
         var packageName = activity.PackageName ??
                           throw new InvalidOperationException("The activity has no package name.");
 
-        // Android 8 and later ask the person once to let this app install apps; their next press installs
+        // Android 8 and later ask the person once to let this app install apps; their next press installs.
+        // Android 11 ends the app at the grant, and it comes back at Install: the download is DownloadManager's
         if (!CanInstallPackages()) {
             VhLogger.Instance.LogInformation("Asking the person to let the app install apps.");
             using var settingsIntent = new Intent(Settings.ActionManageUnknownAppSources,
@@ -240,6 +251,8 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
             _installingVersion = version;
         }
 
+        // a session, not ACTION_VIEW on the file, which tells nothing back: the notice shows how the install
+        // ended, a failure with its reason (ACTION_INSTALL_PACKAGE is deprecated too)
         EnsureInstallStatusReceiver();
         var packageInstaller = packageManager.PackageInstaller;
         using var sessionParams = new PackageInstaller.SessionParams(PackageInstallMode.FullInstall);
@@ -297,6 +310,8 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
             status, message);
 
         lock (_lock) {
+            // Installing lasts only while the package is handed over: with Android's screen up the notice is
+            // back at Install, so a screen that never answers leaves nothing stuck
             var version = _installingVersion;
             _installingVersion = null;
             switch (status) {

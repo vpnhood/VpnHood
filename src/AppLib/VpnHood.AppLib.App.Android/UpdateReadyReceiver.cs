@@ -10,6 +10,8 @@ namespace VpnHood.AppLib.App.Android;
 // show it in its notice. DownloadManager tells only a receiver in the manifest in time: since
 // Android 14 one registered while the app runs waits until the app is in front again. Inert in a head
 // whose app updates through its store: DownloadManager tells only the app that asked it to download.
+// Without the notification permission, which the first connect asks for, Android drops it unseen; the
+// notice still shows Install at the next open.
 [BroadcastReceiver(Exported = true, Permission = "android.permission.SEND_DOWNLOAD_COMPLETED_INTENTS")]
 [IntentFilter([DownloadManager.ActionDownloadComplete])]
 public class UpdateReadyReceiver : BroadcastReceiver

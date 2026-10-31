@@ -12,6 +12,7 @@ public class AppUpdaterOptions
 
     // How long the store's "update available" keeps the feed's notice away. A store out of reach
     // answers "none" (Play does with no connection to Google), so only this long without its offer
-    // makes the feed's notice the way.
+    // makes the feed's notice the way. Not shorter: on Play that notice leads to an APK from the website,
+    // and Google may not like a Play app sending people there; it is the worst case only.
     public TimeSpan UpdaterOfferPeriod { get; init; } = TimeSpan.FromDays(7);
 }

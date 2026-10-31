@@ -198,9 +198,9 @@ public partial class MainView : UserControl
 
         Host.IsTransitionReversed = back;
         Host.Content = page;
-        // a TV's notice shows over its home only: on another page it covers that page's top - the pairing
-        // screen's code - and Back to the home brings it again
-        UpdateNoticeLayer.IsVisible = !VhApp.IsTvUi || page is HomeView;
+        // the update notice shows over the home only: another page is for a task, and the bar would
+        // cover its top - its Back, a TV's pairing code; Back to the home brings the notice again
+        UpdateNoticeLayer.IsVisible = page is HomeView;
         ApplyUpdateBarRoom(); // the page's padding too
         Dispatcher.UIThread.Post(() => TakeFocus(page, back), DispatcherPriority.Loaded);
     }

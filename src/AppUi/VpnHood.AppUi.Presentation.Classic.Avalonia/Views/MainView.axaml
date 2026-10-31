@@ -122,8 +122,8 @@
     </Panel>
 
     <!-- UpdateSnackbar: a newer version and the way to it, until Later - a bar along the top of the app,
-         under the status bar as the page's background is (MainView.ApplySystemBars). The layer keeps a
-         TV's notice to its home (MainView.Show). One set of parts in two layouts by the layer's width
+         under the status bar as the page's background is (MainView.ApplySystemBars). The layer keeps it
+         to the home (MainView.Show). One set of parts in two layouts by the layer's width
          (the styles above), so no part here carries a Grid position: a local value would beat the wide
          layout's. -->
     <!-- ReSharper disable Xaml.MissingGridIndex -->

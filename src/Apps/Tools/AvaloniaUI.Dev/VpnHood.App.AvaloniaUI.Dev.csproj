@@ -8,7 +8,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+		<PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
 		<!-- The IP-location database a product ships, placed beside the app the way its heads get it. -->
 		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="9.0.863" />
 	</ItemGroup>

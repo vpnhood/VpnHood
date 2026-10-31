@@ -24,8 +24,9 @@ uses it. The Kestrel reference derives the same signing key without a hostname a
 positive controls accept valid proofs and reject expired proofs with either the original or a rewritten
 Host, ensuring expired-token tests actually reach lifetime validation.
 
-`ClientRequestSigner` derives the client key once and caches a proof for four minutes measured by
-`Environment.TickCount64`, so a wall-clock change cannot postpone refresh. The sender and connector
+`ClientRequestSigner` derives the client key once and caches a proof until either
+`Environment.TickCount64` or corrected wall-clock age reaches four minutes. A wall-clock change cannot
+postpone refresh, and wall-clock age also catches expiration during sleep. The sender and connector
 receive the same signer through their constructors. The connector selects the proof after connection
 setup and TLS, immediately before writing the HTTP head, so connection waits cannot age it before
 selection. Reused connections do not sign a proof. The server derives its key when configuration
@@ -51,8 +52,11 @@ fails; closing the client deletes the saved endpoint, so the next connect search
 
 ## Rollout and compatibility
 
-The earlier, unreleased protocol-15 proof shape containing `host` is rejected. Update experimental
-protocol-15 clients and servers together; compatibility with HTTP versions 8–14 remains as follows.
+The earlier protocol-15 proof shape containing `host`, shipped in the 9.0.860 NuGet packages from
+`e097474e1` and the server prerelease from `6894fabdf`, is rejected. Update clients and servers using
+that shape together: the HTTP version number
+does not distinguish the two proof formats, and either mixed pair fails authentication. Publish the
+current source under a new package version. Compatibility with HTTP versions 8–14 remains as follows.
 
 1. Update servers before deploying protocol-15 clients. These clients send HTTP version 15 from
    the initial probe and hello onward and cannot connect to an older server that rejects it.
@@ -97,10 +101,12 @@ separate connection identities because multiple QUIC connections can share one U
 The first valid proof releases that connection's budget entry, without bypassing later stream checks.
 Active tunnels remain tracked until their owner disposes them, so HTTP idle expiry does not cut them off.
 
-A later proof clock error cannot expose a custom HTTP/1 Date response on QUIC. After a failed fresh QUIC
-request, the next fresh request first obtains a Date through the existing certificate-validated TLS path.
-Concurrent recoveries share one successful check; cancellation leaves recovery pending. The failed
-application request is not replayed, and application traffic stays on QUIC.
+A later proof clock error cannot expose a custom HTTP/1 Date response on QUIC. After failed admission
+on an established QUIC stream, a subsequent request makes a best-effort Date probe through the existing
+certificate-validated TLS path, with a two-second deadline. Concurrent requests continue without waiting.
+A failed probe leaves recovery pending with a one-minute retry cooldown; the application request still
+gets its full timeout and stays on QUIC. Connect failures, stream-open failures and caller cancellation
+do not schedule recovery. The failed application request is not replayed.
 
 Android and iOS keep their native providers and wire format. The server's control-stream open is
 independent of incoming stream acceptance, including clients with zero incoming unidirectional credit.
@@ -140,9 +146,9 @@ they are not a passed release gate. Controlled cases pin the schedule; burst cas
 distributions, compare outcome shares within a tolerance, and require outcomes
 common on either server to appear on the other. The field-count hard-limit row checks only presence
 because the reference's reset share varied widely. GOAWAY drain is compared without an artificial wake-up.
-Native Android/iOS device interoperability and memory
-measurements remain release checks. Published packages and the end-user wiki rollout remain separate
-plan stages.
+Native Android/iOS device interoperability and memory measurements remain release checks. The
+[release checklist](ip-blocking-release.md) covers full-suite validation, package/dependent-reference
+checks and the end-user documentation to publish alongside the enforcing server release.
 
 ## Initial stream padding
 

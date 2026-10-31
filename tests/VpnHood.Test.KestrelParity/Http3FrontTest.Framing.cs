@@ -96,14 +96,29 @@ public partial class Http3FrontTest
 
     [TestMethod]
     [TestCategory("Http3Framing")]
-    public async Task A_truncated_data_frame_counts_only_the_body_bytes_that_arrive()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_truncated_data_frame_counts_only_the_body_bytes_that_arrive(bool finish)
     {
-        // The DATA envelope promises ten bytes, but only three precede FIN and Content-Length is three.
+        // The DATA envelope promises ten bytes, but only three arrive and Content-Length is three.
         // Counting the promise as received data would select the wrong error before the peer finishes.
         byte[] request = [.. BuildBodyHeaders("3"), 0, 10, 1, 2, 3];
-        var expected = await ObserveWholeRequest(Servers.ReferenceEndPoint, request, TestContext.CancellationToken);
-        var actual = await ObserveWholeRequest(Servers.OurEndPoint, request, TestContext.CancellationToken);
-        AssertRequestEnding("truncated-data-frame", expected, actual);
+        var expected = await ObserveRequestEnding(Servers.ReferenceEndPoint, request, finish,
+            atomicFin: false, TestContext.CancellationToken);
+        var actual = await ObserveRequestEnding(Servers.OurEndPoint, request, finish,
+            atomicFin: false, TestContext.CancellationToken);
+        TestContext.WriteLine($"truncated-data-frame-finish-{finish}: reference={expected}; ours={actual}");
+        AssertSame("truncated-data-frame response", expected.Response, actual.Response);
+
+        // An acknowledged client FIN can complete WritesClosed before STOP_SENDING arrives. Only that
+        // row permits normal completion; leaving writes open must expose H3_NO_ERROR on both servers.
+        var stoppedWrite = new Http3ProbeResult("", false, QuicError.StreamAborted, 0x100);
+        foreach (var write in new[] { expected.Write, actual.Write }) {
+            var expectedWrite = finish && write.Fin
+                ? new Http3ProbeResult("", true, null, null)
+                : stoppedWrite;
+            Assert.AreEqual(expectedWrite, write, "A truncated DATA frame must finish sending or observe H3_NO_ERROR.");
+        }
     }
 
     [TestMethod]

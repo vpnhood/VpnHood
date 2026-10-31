@@ -35,6 +35,7 @@ internal class ClientSessionBuilder(
     VpnHoodClientConfig config,
     ITracker? tracker,
     ServerFinder serverFinder,
+    ConnectedServerFile connectedServerFile,
     IProxyConnector? proxyConnector,
     DomainFilteringService domainFilteringService,
     NetFilter netFilter,
@@ -80,7 +81,9 @@ internal class ClientSessionBuilder(
 
         setState(ClientState.FindingReachableServer);
 
-        var vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], linkedCts.Token).Vhc();
+        var connectedServer = await connectedServerFile.Read(linkedCts.Token).Vhc();
+        var vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], connectedServer,
+            linkedCts.Token).Vhc();
         var allowRedirect = !serverFinder.CustomServerEndpoints.Any();
         return await Connect(vpnEndPoint, allowRedirect, linkedCts.Token).Vhc();
     }

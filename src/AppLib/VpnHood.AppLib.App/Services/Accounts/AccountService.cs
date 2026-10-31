@@ -19,6 +19,10 @@ public class AccountService
     private static readonly TimeSpan RefreshRetryInterval = TimeSpan.FromMinutes(5);
 
     private readonly AsyncLock _refreshLock = new();
+
+    // account.json and the account held from it: a read the refresh overtakes must not put back the account it
+    // replaced, and the file cannot be replaced or deleted while it is read
+    private readonly AsyncLock _fileLock = new();
     private Account? _account;
     private DateTime _lastRefreshAttemptTime = DateTime.MinValue;
     private readonly AppSettingsService _settingsService;
@@ -79,13 +83,17 @@ public class AccountService
     {
         if (AuthenticationService.UserId == null &&
             !await AuthenticationService.TryRestoreSession(cancellationToken).Vhc()) {
-            ClearAccount();
+            await ClearAccount(cancellationToken).Vhc();
             return null;
         }
 
         // Get from local cache
         if (useCache) {
-            _account ??= JsonUtils.TryDeserializeFile<Account>(_accountFilePath, logger: VhLogger.Instance);
+            if (_account == null) {
+                using var fileLock = await _fileLock.LockAsync(cancellationToken).Vhc();
+                _account ??= await JsonUtils.TryDeserializeFileAsync<Account>(_accountFilePath, cancellationToken)
+                    .Vhc();
+            }
 
             // Trust the cache while nothing it carries has expired, and ask NOTHING in the meantime.
             // A working credential needs no permission to go on working, and the portal is precisely
@@ -115,7 +123,7 @@ public class AccountService
             if (AuthenticationService.UserId == null) {
                 VhLogger.Instance.LogInformation(ex,
                     "The account session is no longer valid. Forgetting the account on this device.");
-                ClearAccount();
+                await ClearAccount(cancellationToken).Vhc();
                 return null;
             }
 
@@ -239,9 +247,7 @@ public class AccountService
         await UploadPendingAccessCode(cancellationToken).Vhc();
 
         _lastRefreshAttemptTime = FastDateTime.UtcNow;
-        _account = await _accountProvider.GetAccount(cancellationToken).Vhc();
-        Directory.CreateDirectory(_storageFolderPath);
-        await File.WriteAllTextAsync(_accountFilePath, JsonSerializer.Serialize(_account), cancellationToken).Vhc();
+        await SaveAccount(await _accountProvider.GetAccount(cancellationToken).Vhc(), cancellationToken).Vhc();
 
         // the current profile is what carries premium on this device
         var currentProfile = GetCurrentProfile();
@@ -249,6 +255,15 @@ public class AccountService
             throw new InvalidOperationException("Could not refresh account when there is no current VPN profile.");
 
         ApplyAccountAccessCode(currentProfile);
+    }
+
+    private async Task SaveAccount(Account? account, CancellationToken cancellationToken)
+    {
+        using var fileLock = await _fileLock.LockAsync(cancellationToken).Vhc();
+        _account = account;
+        Directory.CreateDirectory(_storageFolderPath);
+        await FileUtils.WriteAllTextAtomicAsync(_accountFilePath, JsonSerializer.Serialize(account), cancellationToken)
+            .Vhc();
     }
 
     /// <summary>
@@ -286,8 +301,9 @@ public class AccountService
     }
 
     /// <summary>Forget the account on this device, premium included.</summary>
-    private void ClearAccount()
+    private async Task ClearAccount(CancellationToken cancellationToken)
     {
+        using var fileLock = await _fileLock.LockAsync(cancellationToken).Vhc();
         if (File.Exists(_accountFilePath))
             File.Delete(_accountFilePath);
 

@@ -149,7 +149,7 @@ public partial class RequestAuthorizationTest : TestBase
         var secret1 = RandomNumberGenerator.GetBytes(16);
         var secret2 = RandomNumberGenerator.GetBytes(16);
         var finder = new ServerFinder(new TestSocketFactory(), secret1, null, TimeSpan.FromSeconds(10),
-            EndPointStrategy.IpOnly, [], null, null, false, null);
+            EndPointStrategy.IpOnly, [], null, null, false);
         var endpoints = await finder.ResolveVpnEndPoints([
             CreateServerToken("same.example.com", secret1),
             CreateServerToken("same.example.com", secret2)

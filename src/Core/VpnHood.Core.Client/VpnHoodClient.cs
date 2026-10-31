@@ -158,8 +158,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null,
             proxyConnector: ProxyConnector,
-            includeIpV6: _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
-            connectedServer: _connectedServerFile.Read());
+            includeIpV6: _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6));
 
         // SNI extraction is sensitive and costly, so it runs only while a domain rule could consume it
         // (or SNI logging is forced). Nobody tells the client: it derives the answer from its own pipe
@@ -254,6 +253,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             config: Config,
             tracker: Tracker,
             serverFinder: _serverFinder,
+            connectedServerFile: _connectedServerFile,
             proxyConnector: ProxyConnector,
             domainFilteringService: _domainFilteringService,
             netFilter: NetFilter,
@@ -265,7 +265,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _session.StateChanged += Session_StateChanged;
 
         // before the adapter starts: a crash from then on leaves it for the redial
-        _connectedServerFile.Write(_session.VpnEndPoint);
+        await _connectedServerFile.Write(_session.VpnEndPoint, cancellationToken).Vhc();
         await _session.Start(cancellationToken).Vhc();
 
         State = ClientState.Connected;

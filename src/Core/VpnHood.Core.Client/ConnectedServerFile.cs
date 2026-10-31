@@ -15,12 +15,15 @@ internal class ConnectedServerFile(string folderPath, string tokenId)
         Path.Combine(folderPath, FileUtils.ReplaceInvalidFileNameChars(tokenId) + ".json");
 
     // a file an update left mid-session may not parse: that is no server to try, not a failed connect
-    public VpnEndPoint? Read() => JsonUtils.TryDeserializeFile<VpnEndPoint>(_filePath, logger: VhLogger.Instance);
+    public Task<VpnEndPoint?> Read(CancellationToken cancellationToken)
+    {
+        return JsonUtils.TryDeserializeFileAsync<VpnEndPoint>(_filePath, cancellationToken);
+    }
 
-    public void Write(VpnEndPoint vpnEndPoint)
+    public Task Write(VpnEndPoint vpnEndPoint, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(folderPath);
-        File.WriteAllText(_filePath, JsonSerializer.Serialize(vpnEndPoint));
+        return FileUtils.WriteAllTextAtomicAsync(_filePath, JsonSerializer.Serialize(vpnEndPoint), cancellationToken);
     }
 
     // In the client's close, which must run to its end. The whole folder, so what a crash under another key left goes

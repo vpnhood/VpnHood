@@ -172,7 +172,7 @@ public class ServerFinderTest : TestBase
         await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
         await client.WaitForState(ClientState.Connected);
-        var connectedServer = new ConnectedServerFile(connectedServersFolder, token.TokenId).Read();
+        var connectedServer = await new ConnectedServerFile(connectedServersFolder, token.TokenId).Read(TestCt);
         Assert.AreEqual(client.RequiredSession.Config.HostTcpEndPoint, connectedServer?.TcpEndPoint);
 
         // a close, not a crash: nothing is left for the next connect
@@ -201,9 +201,9 @@ public class ServerFinderTest : TestBase
         await Assert.ThrowsExactlyAsync<EndPointDiscoveryException>(() => client.Connect(TestCt));
 
         // what a crash leaves: the server its session was on
-        new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), token.TokenId).Write(
+        await new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), token.TokenId).Write(
             new VpnEndPoint(serverEndPoint, savedHostName, token.ServerToken.CertificateHash,
-                token.ServerToken.PathBase));
+                token.ServerToken.PathBase), TestCt);
 
         await using var client2 = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
@@ -222,15 +222,15 @@ public class ServerFinderTest : TestBase
         var connectedServerFile = new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), token.TokenId);
 
         // The probe proves reachability; the hello fails because the saved endpoint belongs to another farm.
-        connectedServerFile.Write(
+        await connectedServerFile.Write(
             new VpnEndPoint(savedServer.ServerHost.TcpEndPoints.First(), token.ServerToken.HostName,
-                savedToken.CertificateHash, token.ServerToken.PathBase));
+                savedToken.CertificateHash, token.ServerToken.PathBase), TestCt);
 
         await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), autoConnect: false, workingFolder: workingFolder);
         await Assert.ThrowsExactlyAsync<RequestAuthorizationException>(() => client.Connect(TestCt));
         Assert.AreEqual(ClientState.Disposed, client.State);
-        Assert.IsNull(connectedServerFile.Read());
+        Assert.IsNull(await connectedServerFile.Read(TestCt));
 
         await using var nextClient = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);

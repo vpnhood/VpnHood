@@ -31,7 +31,6 @@ public class ServerFinder(
     ITracker? tracker,
     IProxyConnector? proxyConnector,
     bool includeIpV6,
-    VpnEndPoint? connectedServer,
     int maxDegreeOfParallelism = 10)
 {
     private ProgressMonitor? _progressMonitor;
@@ -115,7 +114,7 @@ public class ServerFinder(
 
     // There is much work to be done here
     public async Task<VpnEndPoint> FindReachableServerAsync(IReadOnlyList<ServerToken> serverTokens,
-        CancellationToken cancellationToken)
+        VpnEndPoint? connectedServer, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Finding a reachable server... " +

@@ -8,6 +8,7 @@ internal sealed class ClientRequestSigner(byte[] farmSecret, string hostName)
     private readonly Lock _proofLock = new();
     private string? _proofToken;
     private long _proofCreatedTick;
+    private DateTimeOffset _proofIssuedAt;
     private TimeSpan _clockOffset;
     private long _clockCorrectionVersion;
 
@@ -21,13 +22,18 @@ internal sealed class ClientRequestSigner(byte[] farmSecret, string hostName)
     public string Sign()
     {
         lock (_proofLock) {
+            // Share a proof across streams, renewed by whichever clock says so first: the tick, so a wall-clock change
+            // never delays it, and the wall clock, as the tick stops while the machine sleeps - a session that lives
+            // through a sleep would otherwise send the server a proof it has expired until the tick catches up.
             var nowTick = Environment.TickCount64;
+            var now = DateTimeOffset.UtcNow + _clockOffset;
+            var renewAge = RequestProof.Lifetime - TimeSpan.FromMinutes(1);
             if (_proofToken == null ||
-                nowTick - _proofCreatedTick >= (RequestProof.Lifetime - TimeSpan.FromMinutes(1)).TotalMilliseconds) {
-                var now = DateTimeOffset.UtcNow + _clockOffset;
+                TimeSpan.FromMilliseconds(nowTick - _proofCreatedTick) >= renewAge ||
+                now - _proofIssuedAt >= renewAge) {
                 _proofToken = _requestProof.Create(hostName, RequestProof.ProtocolVersion, now);
-                // Share a proof across streams; a wall-clock change must not delay its refresh.
                 _proofCreatedTick = nowTick;
+                _proofIssuedAt = now;
             }
             return _proofToken;
         }

@@ -32,8 +32,6 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 // and a page reaches them through its host.
 public partial class MainView : UserControl
 {
-    private static readonly TimeSpan SnackbarLife = TimeSpan.FromSeconds(3);
-
     // how long a browser driving a TV says "Continue on your TV" after its Install: Android's question
     // there is quick to answer, and one the person turned down there is not waited on for good
     private static readonly TimeSpan RemoteInstallHintLife = TimeSpan.FromSeconds(30);
@@ -49,6 +47,8 @@ public partial class MainView : UserControl
     private CancellationTokenSource _drawerSlideCancel = new();
     private bool _isDrawerOpen;
     private DateTime _snackbarUntil;
+    private TimeSpan? _snackbarHeldLeft;
+    private bool _isSnackbarPassing;
     private TopLevel? _topLevel;
     private IInputElement? _focusBeforeOverlay;
     private IPage? _pageAwaitingFocus;
@@ -69,7 +69,8 @@ public partial class MainView : UserControl
         // root (AppTheme). The device's answer never changes while the app runs, so it is a class,
         // not a binding.
         Classes.Set("tv", ViewModel.IsTv);
-        _snackbarTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(50), DispatcherPriority.Background, (_, _) => TickSnackbar());
+        _snackbarTimer = new DispatcherTimer(DispatcherPriority.Background);
+        _snackbarTimer.Tick += (_, _) => HideSnackbar();
         ViewModel.PropertyChanged += (_, e) => {
             if (e.PropertyName is nameof(MainViewModel.IsReconnectRequired) or "")
                 ReconnectBar.IsVisible = ViewModel.IsReconnectRequired;
@@ -515,24 +516,87 @@ public partial class MainView : UserControl
             _ => Mdi.Information
         };
         SnackbarClose.IsVisible = hasClose ?? !hasTimer;
-        SnackbarBar.IsVisible = hasTimer;
-        SnackbarBar.Value = 1;
         Snackbar.IsVisible = true;
         LiveText.Say(SnackbarText, message);
-        if (hasTimer) {
-            _snackbarUntil = DateTime.UtcNow + SnackbarLife;
-            _snackbarTimer.Start();
-        }
-        else {
-            _snackbarTimer.Stop();
-        }
+        _snackbarTimer.Stop();
+        _snackbarHeldLeft = null;
+        _isSnackbarPassing = hasTimer;
+        if (hasTimer)
+            StartSnackbarTimer(SnackbarLife(message));
     }
 
+    // A passing message stays as long as it takes to read - 4 s for a short one, a second more for each 15
+    // characters past 30, at most 10 s, Material's range - and shows no time left: a bar running out only
+    // hurries the reading. One that must be read stays until Close (hasTimer false).
+    private static TimeSpan SnackbarLife(string message)
+    {
+        return TimeSpan.FromSeconds(Math.Clamp(2 + message.Length / 15.0, 4, 10));
+    }
+
+    private void StartSnackbarTimer(TimeSpan life)
+    {
+        _snackbarUntil = DateTime.UtcNow + life;
+        _snackbarTimer.Interval = life;
+        _snackbarTimer.Start();
+    }
+
+    // A pointer on a passing message holds it, and its time goes on when the pointer lets go: a mouse resting
+    // on it, a finger or a pen pressing it - a touch is never "over" a control until it presses, so it holds
+    // by its press. A tap closes it. One with Close is closed only by Close, which also keeps the 'suppressed
+    // to' notice away.
+    private void OnSnackbarPointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (e.Pointer.Type == PointerType.Mouse)
+            HoldSnackbar();
+    }
+
+    private void OnSnackbarPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (e.Pointer.Type == PointerType.Mouse)
+            ReleaseSnackbar();
+    }
+
+    private void OnSnackbarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.Pointer.Type != PointerType.Mouse)
+            HoldSnackbar();
+    }
+
+    private void OnSnackbarPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (e.Pointer.Type != PointerType.Mouse)
+            ReleaseSnackbar();
+    }
+
+    private void HoldSnackbar()
+    {
+        if (!_snackbarTimer.IsEnabled)
+            return;
+        _snackbarTimer.Stop();
+        _snackbarHeldLeft = _snackbarUntil - DateTime.UtcNow;
+    }
+
+    private void ReleaseSnackbar()
+    {
+        if (_snackbarHeldLeft is not { } left || !Snackbar.IsVisible)
+            return;
+        _snackbarHeldLeft = null;
+        StartSnackbarTimer(left > TimeSpan.Zero ? left : TimeSpan.FromMilliseconds(1));
+    }
+
+    private void OnSnackbarTapped(object? sender, TappedEventArgs e)
+    {
+        if (_isSnackbarPassing)
+            HideSnackbar();
+    }
+
+    // the snackbar alone: its time running out, a tap or Close leaves the update notice where it is, which
+    // has Later and HideUpdateNotice of its own
     public void HideSnackbar()
     {
         _snackbarTimer.Stop();
+        _snackbarHeldLeft = null;
         Snackbar.IsVisible = false;
-        UpdateNotice.IsVisible = false;
     }
 
     public bool IsSnackbarShown => Snackbar.IsVisible;
@@ -691,16 +755,6 @@ public partial class MainView : UserControl
     {
         ViewModel.PostponeUpdate();
         UpdateNotice.IsVisible = false;
-    }
-
-    private void TickSnackbar()
-    {
-        var left = _snackbarUntil - DateTime.UtcNow;
-        if (left <= TimeSpan.Zero) {
-            HideSnackbar();
-            return;
-        }
-        SnackbarBar.Value = left / SnackbarLife;
     }
 
     private void OnSnackbarCloseClick(object? sender, RoutedEventArgs e)

@@ -162,17 +162,16 @@
     </Panel>
     <!-- ReSharper restore Xaml.MissingGridIndex -->
 
-    <!-- GeneralSnackbar: a sentence at the top, gone by itself or by Close; a screen reader says it -->
-    <Border x:Name="Snackbar" Classes="snackbar" IsVisible="False">
-      <StackPanel Spacing="6">
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <TextBlock x:Name="SnackbarIcon" Classes="mdi" FontSize="22" Margin="0,0,10,0" />
-          <TextBlock x:Name="SnackbarText" Grid.Column="1" AutomationProperties.LiveSetting="Polite" />
-          <Button x:Name="SnackbarClose" Grid.Column="2" Margin="12,0,0,0" IsVisible="False" Click="OnSnackbarCloseClick"
-                  Content="{Binding Close, Source={x:Static res:Strings.Current}}" />
-        </Grid>
-        <ProgressBar x:Name="SnackbarBar" Minimum="0" Maximum="1" Value="1" MinHeight="3" Foreground="#73FFFFFF" Background="Transparent" />
-      </StackPanel>
+    <!-- GeneralSnackbar: a sentence at the top, gone by itself, by a tap or by Close; a screen reader says it -->
+    <Border x:Name="Snackbar" Classes="snackbar" IsVisible="False" PointerEntered="OnSnackbarPointerEntered"
+            PointerExited="OnSnackbarPointerExited" PointerPressed="OnSnackbarPointerPressed"
+            PointerReleased="OnSnackbarPointerReleased" Tapped="OnSnackbarTapped">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <TextBlock x:Name="SnackbarIcon" Classes="mdi" FontSize="22" Margin="0,0,10,0" />
+        <TextBlock x:Name="SnackbarText" Grid.Column="1" AutomationProperties.LiveSetting="Polite" />
+        <Button x:Name="SnackbarClose" Grid.Column="2" Margin="12,0,0,0" IsVisible="False" Click="OnSnackbarCloseClick"
+                Content="{Binding Close, Source={x:Static res:Strings.Current}}" />
+      </Grid>
     </Border>
   </Panel>
 </UserControl>

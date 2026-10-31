@@ -28,6 +28,18 @@
     <SolidColorBrush x:Key="WhiteTonalBrush" Color="#29FFFFFF" />
     <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
 
+    <!-- The snackbar, the same in both products: white with near-black text (Gray800), the inverse of
+         the dark page, as Material's snackbar is, and its kind in its icon's colour, each 3:1 or more on
+         the white - the information blue (Blue200), the success green (Green400), the 'suppressed to'
+         violet (Purple200), and for a warning an orange darker than the theme's, whose #fb8c00 is
+         2.2:1 there. -->
+    <SolidColorBrush x:Key="SnackbarBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="OnSnackbarBrush" Color="#1e1e1e" />
+    <SolidColorBrush x:Key="SnackbarInfoBrush" Color="#1940b0" />
+    <SolidColorBrush x:Key="SnackbarActiveBrush" Color="#078362" />
+    <SolidColorBrush x:Key="SnackbarWarningBrush" Color="#e65100" />
+    <SolidColorBrush x:Key="SnackbarSuppressBrush" Color="#7b7afe" />
+
     <!-- how much brighter a button or a row is under the pointer, and how strong a click's ripple
          is: the text colour at this opacity, twice it on a light button -->
     <x:Double x:Key="HoverBrightness">1.2</x:Double>
@@ -1346,7 +1358,9 @@
     <Setter Property="Padding" Value="8,10" />
   </Style>
 
-  <!-- The snackbar (GeneralSnackbar.vue): a pill at the top, in the colour the caller named -->
+  <!-- The snackbar (GeneralSnackbar.vue): a white pill at the top, lifted off the page by a shadow, its
+       kind in its icon's colour (the brushes above). At the top rather than Android's bottom, where it
+       would cover the home's rows - the server row an imported key's message is about. -->
   <Style Selector="Border.snackbar">
     <Setter Property="CornerRadius" Value="24" />
     <Setter Property="Padding" Value="16,10" />
@@ -1354,15 +1368,14 @@
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Top" />
     <Setter Property="Margin" Value="16,20" />
-    <Setter Property="Background" Value="{StaticResource HighlightBrush}" />
+    <Setter Property="Background" Value="{StaticResource SnackbarBrush}" />
+    <Setter Property="BoxShadow" Value="0 2 10 0 #66000000" />
   </Style>
-  <!-- the page's dark colour as text, white being under 3:1 on the highlight; before the kinds,
-       so the style each kind names below wins -->
   <Style Selector="Border.snackbar TextBlock">
     <Setter Property="FontSize" Value="14" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="Foreground" Value="{StaticResource BackgroundBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnSnackbarBrush}" />
   </Style>
   <Style Selector="Border.snackbar Button">
     <Setter Property="FontSize" Value="12" />
@@ -1370,38 +1383,20 @@
     <Setter Property="Padding" Value="10,2" />
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Foreground" Value="{StaticResource BackgroundBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource BackgroundBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnSnackbarBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource OnSnackbarBrush}" />
   </Style>
-  <Style Selector="Border.snackbar.active">
-    <Setter Property="Background" Value="{StaticResource ActiveBrush}" />
+  <Style Selector="Border.snackbar TextBlock.mdi">
+    <Setter Property="Foreground" Value="{StaticResource SnackbarInfoBrush}" />
   </Style>
-  <Style Selector="Border.snackbar.active TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
+  <Style Selector="Border.snackbar.active TextBlock.mdi">
+    <Setter Property="Foreground" Value="{StaticResource SnackbarActiveBrush}" />
   </Style>
-  <Style Selector="Border.snackbar.active Button">
-    <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource OnActiveBrush}" />
+  <Style Selector="Border.snackbar.warning TextBlock.mdi">
+    <Setter Property="Foreground" Value="{StaticResource SnackbarWarningBrush}" />
   </Style>
-  <Style Selector="Border.snackbar.warning">
-    <Setter Property="Background" Value="{StaticResource WarningBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.warning TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource OnWarningBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.warning Button">
-    <Setter Property="Foreground" Value="{StaticResource OnWarningBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource OnWarningBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.suppress">
-    <Setter Property="Background" Value="{StaticResource SuppressSnackbarBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.suppress TextBlock">
-    <Setter Property="Foreground" Value="{StaticResource OnSuppressSnackbarBrush}" />
-  </Style>
-  <Style Selector="Border.snackbar.suppress Button">
-    <Setter Property="Foreground" Value="{StaticResource OnSuppressSnackbarBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource OnSuppressSnackbarBrush}" />
+  <Style Selector="Border.snackbar.suppress TextBlock.mdi">
+    <Setter Property="Foreground" Value="{StaticResource SnackbarSuppressBrush}" />
   </Style>
   <Style Selector="Border.snackbar Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderThickness" Value="1" />

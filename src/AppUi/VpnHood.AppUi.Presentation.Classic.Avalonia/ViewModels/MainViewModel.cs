@@ -51,6 +51,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isQuickLaunchPrompted;
     private bool _isAnonymousTrackerPromptShown;
     private bool _isInternalAdShown;
+    private readonly List<string> _consentPendingAccessKeys = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -487,6 +488,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         else if (host.IsUpdateNoticeShown && state.UpdaterStatus != null)
             host.RefreshUpdateNotice(state.UpdaterStatus);
 
+        // the keys the app was opened with while the consent page held it (ImportAccessKey)
+        if (!isConsentPending && _consentPendingAccessKeys.Count > 0)
+            ImportConsentPendingAccessKeys(CancellationToken.None).Forget("Could not import the access keys held for the consent page.");
+
         if (IsConnected && state.SessionInfo?.SuppressedTo == SessionSuppressType.Other &&
             _ignoredSuppressTime != state.ConnectRequestTime && !host.IsSnackbarShown)
             host.ShowSnackbar(Strings.Current.SessionSuppressedToOther, SnackbarKind.Suppress, hasTimer: false, hasClose: true);
@@ -871,10 +876,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         return profile.VpnProfileId;
     }
 
-    // A key the OS opened the app with - its file, mailed on by an admin - as Android's activity imports one: its
-    // server becomes the chosen one, and the snackbar says it was added or updated, or that the key could not be read.
+    // A key the OS opened the app with - a link, or a file mailed on by an admin: its server becomes the chosen one,
+    // and the snackbar says it was added or updated, or that the key could not be read. While the consent page holds
+    // the app the key waits, as the update notice does: nothing is added before the person accepts the terms, and
+    // the page would hide the message. It is added at the first refresh after Accept (RefreshPrompts), in memory
+    // only: an app closed on the page drops it, and the link opens it again.
     public async Task ImportAccessKey(string accessKey, CancellationToken cancellationToken)
     {
+        if (IsConsentPending(VhApp.State)) {
+            _consentPendingAccessKeys.Add(accessKey);
+            return;
+        }
+
         try {
             await AddAndChooseAccessKey(accessKey, cancellationToken);
         }
@@ -884,18 +897,28 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    // The same for the file itself, as iOS hands it over: one it cannot read is said as a key it cannot.
+    // The same for the file itself, as iOS hands it over: read at once, while the file is ours to read, and one it
+    // cannot read is said as a key it cannot.
     public async Task ImportAccessKeyFile(IStorageFile file, CancellationToken cancellationToken)
     {
         try {
             await using var stream = await file.OpenReadAsync();
             using var reader = new StreamReader(stream);
-            await AddAndChooseAccessKey(await reader.ReadToEndAsync(cancellationToken), cancellationToken);
+            await ImportAccessKey(await reader.ReadToEndAsync(cancellationToken), cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not import the access key file the app was opened with.");
             Host?.ShowSnackbar(Strings.Current.MsgCantReadAccessKey, SnackbarKind.Warning);
         }
+    }
+
+    // one by one, so each message follows its own add
+    private async Task ImportConsentPendingAccessKeys(CancellationToken cancellationToken)
+    {
+        var accessKeys = _consentPendingAccessKeys.ToArray();
+        _consentPendingAccessKeys.Clear();
+        foreach (var accessKey in accessKeys)
+            await ImportAccessKey(accessKey, cancellationToken);
     }
 
     // A head that takes no keys says so of the file: it holds nothing a key could be added to.

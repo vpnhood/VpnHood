@@ -79,8 +79,8 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
         // TalkBack and with VoiceOver, which was never walked.
     }
 
-    // the view last made, whose notice an imported key's message goes on: one per run, but on Android, which
-    // imports keys in its activity
+    // the view last made, whose snackbar an imported key's message goes on: one per run, but one per activity on
+    // Android, where the activity in front hands over its key as it is made
     private MainView? _mainView;
 
     protected override Control CreateMainView()

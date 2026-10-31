@@ -108,7 +108,8 @@ public class AndroidAppMainActivityHandler
         return true;
     }
 
-    protected void ImportAccessKey(string accessKey)
+    // A UI that imports keys itself, and says so in its own way, takes this over (the Avalonia UI's activity).
+    protected virtual void ImportAccessKey(string accessKey)
     {
         var profiles = VpnHoodApp.Instance.VpnProfileService.List();
         var profileInfo = VpnHoodApp.Instance.VpnProfileService.ImportAccessKey(accessKey).ToInfo(VpnHoodApp.Instance.Features);

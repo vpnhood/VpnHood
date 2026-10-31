@@ -7,6 +7,10 @@ public class StaticIpFilter : IIpFilter
     private readonly IIpFilter? _nextFilter;
     private readonly bool _autoDisposeNextFilter;
 
+    // arrays, as a loop over an interface would take an enumerator for each packet
+    private PortRange[] _blockedTcpPorts = [];
+    private PortRange[] _blockedUdpPorts = [];
+
     public event EventHandler? Changed;
 
     public StaticIpFilter(IIpFilter? nextFilter, bool autoDisposeNextFilter = true)
@@ -36,6 +40,16 @@ public class StaticIpFilter : IIpFilter
         set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
     } = [];
 
+    public IReadOnlyList<PortRange> BlockedTcpPorts {
+        get => _blockedTcpPorts;
+        set { _blockedTcpPorts = value.ToArray(); Changed?.Invoke(this, EventArgs.Empty); }
+    }
+
+    public IReadOnlyList<PortRange> BlockedUdpPorts {
+        get => _blockedUdpPorts;
+        set { _blockedUdpPorts = value.ToArray(); Changed?.Invoke(this, EventArgs.Empty); }
+    }
+
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
         var result = _nextFilter?.Process(protocol, endPoint) ?? FilterAction.Default;
@@ -44,6 +58,10 @@ public class StaticIpFilter : IIpFilter
 
         // blocked IP ranges
         if (BlockedRanges.Count > 0 && BlockedRanges.Contains(endPoint.Address))
+            return FilterAction.Block;
+
+        // blocked ports
+        if (IsPortBlocked(protocol, endPoint.Port))
             return FilterAction.Block;
 
         // excluded IP ranges
@@ -59,6 +77,21 @@ public class StaticIpFilter : IIpFilter
         return FilterAction.Default;
     }
 
+    private bool IsPortBlocked(IpProtocol protocol, int port)
+    {
+        var blockedPorts = protocol switch {
+            IpProtocol.Tcp => _blockedTcpPorts,
+            IpProtocol.Udp => _blockedUdpPorts,
+            _ => []
+        };
+
+        foreach (var portRange in blockedPorts)
+            if (portRange.IsInRange(port))
+                return true;
+
+        return false;
+    }
+
     // this stage's own sets are program state, not external configuration; just forward the command
     public Task Reconfigure(CancellationToken cancellationToken) =>
         _nextFilter?.Reconfigure(cancellationToken) ?? Task.CompletedTask;
@@ -67,6 +100,8 @@ public class StaticIpFilter : IIpFilter
         BlockedRanges.Count == 0 &&
         ExcludeRanges.Count == 0 &&
         IncludeRanges.Count == 0 &&
+        _blockedTcpPorts.Length == 0 &&
+        _blockedUdpPorts.Length == 0 &&
         (_nextFilter?.IsEmpty ?? true);
 
     public void Dispose()

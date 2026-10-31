@@ -1,7 +1,10 @@
 ﻿using System.Net;
+using System.Text.Json;
+using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
+using ClientState = VpnHood.Core.Client.Abstractions.ClientState;
 
 namespace VpnHood.Test.Tests;
 
@@ -130,5 +133,82 @@ public class ServerNetFilterConfigTest : TestBase
         Assert.IsTrue(server.SessionManager.NetFilter.IsIpBlocked("130.0.0.110"));
         Assert.IsFalse(server.SessionManager.NetFilter.IsIpBlocked("130.0.0.50"));
         Assert.IsTrue(server.SessionManager.NetFilter.IsIpBlocked("130.0.0.254"));
+    }
+
+    [TestMethod]
+    public async Task BlockPorts_default_blocks_tcp_25_only()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var netFilter = server.SessionManager.NetFilter;
+
+        Assert.IsTrue(netFilter.IsPortBlocked(IpProtocol.Tcp, 25));
+        Assert.IsFalse(netFilter.IsPortBlocked(IpProtocol.Tcp, 587));
+        Assert.IsFalse(netFilter.IsPortBlocked(IpProtocol.Tcp, 465));
+        Assert.IsFalse(netFilter.IsPortBlocked(IpProtocol.Udp, 25));
+    }
+
+    [TestMethod]
+    public async Task BlockPorts_set_replace_the_default()
+    {
+        var serverOptions = TestHelper.CreateFileAccessManagerOptions();
+        serverOptions.NetFilterOptions.BlockTcpPorts = [];
+        serverOptions.NetFilterOptions.BlockUdpPorts = [PortRange.Parse("6881-6889"), new PortRange(1900)];
+        await using var server = await TestHelper.CreateServer(serverOptions);
+        var netFilter = server.SessionManager.NetFilter;
+
+        Assert.IsFalse(netFilter.IsPortBlocked(IpProtocol.Tcp, 25));
+        Assert.IsTrue(netFilter.IsPortBlocked(IpProtocol.Udp, 6881));
+        Assert.IsTrue(netFilter.IsPortBlocked(IpProtocol.Udp, 6889));
+        Assert.IsTrue(netFilter.IsPortBlocked(IpProtocol.Udp, 1900));
+        Assert.IsFalse(netFilter.IsPortBlocked(IpProtocol.Udp, 6880));
+        Assert.IsFalse(netFilter.IsPortBlocked(IpProtocol.Udp, 6890));
+        Assert.IsFalse(netFilter.IsPortBlocked(IpProtocol.Tcp, 6885));
+    }
+
+    [TestMethod]
+    public void BlockPorts_json()
+    {
+        var options = JsonSerializer.Deserialize<NetFilterOptions>("""{"BlockTcpPorts":["25"," 6881 - 6889 "]}""");
+        Assert.IsNotNull(options?.BlockTcpPorts);
+        CollectionAssert.AreEqual(new[] { new PortRange(25), new PortRange(6881, 6889) },
+            options.BlockTcpPorts.ToArray());
+        Assert.IsNull(options.BlockUdpPorts);
+        StringAssert.Contains(JsonSerializer.Serialize(options), "\"BlockTcpPorts\":[\"25\",\"6881-6889\"]");
+
+        Assert.ThrowsExactly<FormatException>(() => PortRange.Parse("smtp"));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => PortRange.Parse("70000"));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => PortRange.Parse("30-20"));
+    }
+
+    [TestMethod]
+    public async Task BlockPorts_drop_without_closing_the_session()
+    {
+        var blockedUdpEndPoint = MockEps.UdpV4EndPoint1;
+        var openUdpEndPoint = MockEps.UdpV4EndPoint2;
+        var blockedTcpEndPoint = MockEps.TcpUploadEndPoint1;
+        var openTcpEndPoint = MockEps.TcpDownloadEndPoint1;
+        if (blockedUdpEndPoint.Port == openUdpEndPoint.Port || blockedTcpEndPoint.Port == openTcpEndPoint.Port)
+            Assert.Inconclusive("The test servers took the same port.");
+
+        var serverOptions = TestHelper.CreateFileAccessManagerOptions();
+        serverOptions.NetFilterOptions.BlockTcpPorts = [new PortRange(blockedTcpEndPoint.Port)];
+        serverOptions.NetFilterOptions.BlockUdpPorts = [new PortRange(blockedUdpEndPoint.Port)];
+        await using var server = await TestHelper.CreateServer(serverOptions);
+        var token = TestHelper.CreateAccessToken(server);
+        await using var client = await TestHelper.CreateClient(token);
+
+        // the blocked ports get no answer, again and again
+        for (var i = 0; i < 3; i++) {
+            await Assert.ThrowsAsync<OperationCanceledException>(() =>
+                TestHelper.Test_UdpEcho(blockedUdpEndPoint, timeout: TimeSpan.FromSeconds(1)));
+            await Assert.ThrowsAsync<Exception>(() =>
+                TestHelper.Test_TcpUpload(tcpEndPoint: blockedTcpEndPoint, timeout: TimeSpan.FromSeconds(3)));
+        }
+
+        // the session goes on for every other port
+        await TestHelper.Test_UdpEcho(openUdpEndPoint);
+        await TestHelper.Test_TcpDownload(tcpEndPoint: openTcpEndPoint);
+        await TestHelper.Test_Https();
+        Assert.AreEqual(ClientState.Connected, client.State);
     }
 }

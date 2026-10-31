@@ -443,7 +443,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             string.Join(",", blockedIpRanges));
 
         return new StaticIpFilter(ipFilter) {
-            BlockedRanges = blockedIpRanges
+            BlockedRanges = blockedIpRanges,
+            BlockedTcpPorts = netFilterOptions.BlockTcpPortsValue,
+            BlockedUdpPorts = netFilterOptions.BlockUdpPortsValue
         };
     }
 

@@ -128,6 +128,7 @@ public class Session : IDisposable
         _netFilter = netFilter;
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
+        _filterBlockDestinationReporter.LogScope.Data.AddRange(logScope.Data);
         _netProtector = new NetProtector(new NetProtectorOptions {
             MaxUdpDnsPacketsPerSecond = options.MaxUdpDnsPacketsPerSecondValue,
             MaxTcpConnectsPerSecond = options.MaxTcpConnectsPerSecondValue,
@@ -324,12 +325,12 @@ public class Session : IDisposable
             return;
         }
 
-        // filter before mapper because it supposes to filter user requests
+        // filter before mapper because it supposes to filter user requests; a blocked packet goes without an
+        // exception, as a flood would throw one for each packet
         if (_netFilter.IpFilter?.Process(protocol, destinationEndPoint) == FilterAction.Block) {
-            LogTrack(protocol, null, destinationEndPoint, false, true, "NetFilter");
-            _filterBlockDestinationReporter.Raise();
-            throw new NetFilterException(
-                $"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(ipPacket.DestinationAddress)}");
+            ReportBlockedDestination(protocol, destinationEndPoint);
+            ipPacket.Dispose();
+            return;
         }
 
         // Map destination
@@ -570,8 +571,7 @@ public class Session : IDisposable
         try {
             // filter before mapper because it supposes to filter user requests
             if (_netFilter.IpFilter?.Process(IpProtocol.Tcp, request.DestinationEndPoint.ToValue()) == FilterAction.Block) {
-                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "NetFilter");
-                _filterBlockDestinationReporter.Raise();
+                ReportBlockedDestination(IpProtocol.Tcp, request.DestinationEndPoint.ToValue());
                 throw new NetFilterException(
                     $"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(request.DestinationEndPoint)}");
             }
@@ -675,6 +675,18 @@ public class Session : IDisposable
             // passed all limits; reserve a channel slot until the channel is added or the request fails
             Interlocked.Increment(ref _tcpConnectWaitCount);
         }
+    }
+
+    // the reporter counts every block, and only the first since its last report gets a line of its own: a line for
+    // each would flood the log, and the count alone would not say which rule a session hit
+    private void ReportBlockedDestination(IpProtocol protocol, IpEndPointValue destinationEndPoint)
+    {
+        LogTrack(protocol, null, destinationEndPoint, false, true, "NetFilter");
+        if (_filterBlockDestinationReporter.Raise())
+            VhLogger.Instance.LogInformation(GeneralEventId.NetProtect,
+                "A destination has been blocked by the NetFilter. SessionId: {SessionId}, Protocol: {Protocol}, " +
+                "DstIp: {DstIp}, DstPort: {DstPort}",
+                SessionId, protocol, Redactor.Always.RedactIpAddress(destinationEndPoint.Address), destinationEndPoint.Port);
     }
 
     private void VerifyNetScan(IpProtocol protocol, IpEndPointValue remoteEndPoint, string requestId)

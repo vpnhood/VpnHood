@@ -13,6 +13,13 @@ public static class NetFilterExtensions
             return netFilter.IsIpBlocked(IPAddress.Parse(ipAddress));
         }
 
+        // to a public address, which no IP range blocks
+        public bool IsPortBlocked(IpProtocol protocol, int port)
+        {
+            var result = netFilter.IpFilter?.Process(protocol, new IpEndPointValue(IPAddress.Parse("8.8.8.8"), port));
+            return result == FilterAction.Block;
+        }
+
         public bool IsIpBlocked(IPAddress ipAddress)
         {
             return netFilter.IpFilter.IsIpBlocked(ipAddress);

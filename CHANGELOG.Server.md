@@ -1,5 +1,7 @@
 # Latest
 
+* Feature: VpnHoodServer blocks its users' TCP to port 25 by default, so one user's spam no longer gets the server's IP reported and its mail port cut by the host; mail apps send on 587 or 465 and are not affected. `BlockTcpPorts` and `BlockUdpPorts` in the NetFilter options list the destination ports or ranges to block (`"25"`, `"6881-6889"`); a list that is set replaces the default, and `[]` blocks none.
+* Improve: VpnHoodServer drops a packet its NetFilter blocks without an error for each one; its log counts them per session and names the first one's protocol and port in each report.
 * Feature: VpnHoodServer verifies a protocol-15 HTTP request's proof of the access key's farm secret before reading its body or accepting a WebSocket upgrade. Update servers first, then users' apps, then set `MinClientProtocolVersion` to 15.
 * Feature: VpnHoodServer's QUIC port answers as an HTTP/3 server does, with Kestrel's replies and errors for any request, malformed ones included, so a probe can no longer tell it from a website's HTTP/3; only an app's protocol-15 proof opens a tunnel there. Apps before protocol 15 are offered no QUIC port and go on over TCP. The server's TCP replies don't advertise HTTP/3 (Alt-Svc), so browsers keep fetching its downloads over TCP.
 * Update: The access keys VpnHoodServer prints start with vh: rather than vh://, the standard form of a link that carries data; apps read both

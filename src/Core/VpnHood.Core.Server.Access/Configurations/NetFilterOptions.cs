@@ -13,6 +13,8 @@ public class NetFilterOptions
     public IpRange[]? IncludeIpRanges { get; set; }
     public IpRange[]? ExcludeIpRanges { get; set; }
     public bool? BlockIpV6 { get; set; }
+    public IReadOnlyList<PortRange>? BlockTcpPorts { get; set; }
+    public IReadOnlyList<PortRange>? BlockUdpPorts { get; set; }
 
     [JsonIgnore]
     public bool NetworkIsolationValue => NetworkIsolation ?? true;
@@ -23,6 +25,13 @@ public class NetFilterOptions
     [JsonIgnore]
     public bool BlockIpV6Value => BlockIpV6 ?? false;
 
+    // a user's mail to port 25 gets the server's IP blocked as a spam source; a list that is set replaces this one
+    [JsonIgnore]
+    public IReadOnlyList<PortRange> BlockTcpPortsValue => BlockTcpPorts ?? [new PortRange(25)];
+
+    [JsonIgnore]
+    public IReadOnlyList<PortRange> BlockUdpPortsValue => BlockUdpPorts ?? [];
+
     public void Merge(NetFilterOptions obj)
     {
         if (obj.NetworkIsolation != null) NetworkIsolation = obj.NetworkIsolation;
@@ -32,6 +41,8 @@ public class NetFilterOptions
         if (obj.IncludeIpRanges != null) IncludeIpRanges = obj.IncludeIpRanges;
         if (obj.ExcludeIpRanges != null) ExcludeIpRanges = obj.ExcludeIpRanges;
         if (obj.BlockIpV6 != null) BlockIpV6 = obj.BlockIpV6;
+        if (obj.BlockTcpPorts != null) BlockTcpPorts = obj.BlockTcpPorts;
+        if (obj.BlockUdpPorts != null) BlockUdpPorts = obj.BlockUdpPorts;
     }
 
     public void ApplyDefaults()
@@ -39,6 +50,8 @@ public class NetFilterOptions
         NetworkIsolation = NetworkIsolationValue;
         IncludeLocalNetwork = IncludeLocalNetworkValue;
         BlockIpV6 = BlockIpV6Value;
+        BlockTcpPorts = BlockTcpPortsValue;
+        BlockUdpPorts = BlockUdpPortsValue;
     }
 
     public IpRangeOrderedList GetFinalIncludeIpRanges()

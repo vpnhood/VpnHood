@@ -22,9 +22,9 @@ internal static partial class ParityProbes
             Tls("vh-upgrade-v15-malformed", t => VhUpgrade(t, 15, "abc.def")),
             Tls("vh-upgrade-v15-unregistered", t => VhUpgrade(t, 15, unregistered)),
             Tls("vh-upgrade-v15-expired", t => VhUpgrade(t, 15,
-                t.Proof.Create(t.Sni, 15, expiredAt))),
+                t.Proof.Create(15, expiredAt))),
             Tls("vh-post-v15-expired-no-body", t => VhPost(t, 15, 50,
-                t.Proof.Create(t.Sni, 15, expiredAt))),
+                t.Proof.Create(15, expiredAt))),
             Tls("vh-post-v14-fake-session", t => VhPost(t, 14, FakeSessionBody.Length) + FakeSessionBody),
             Tls("vh-post-v15-fake-session", t => VhPost(t, 15, FakeSessionBody.Length, unregistered) + FakeSessionBody),
             new("vh-post-v14-no-body", ProbeKind.Slow, (target, log, cancellationToken) =>

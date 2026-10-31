@@ -26,8 +26,8 @@ public partial class Http3FrontTest
         if (error == QuicError.ConnectionAborted)
             await AssertFreshBurstDistributions(name, bytes, errorCode, TestContext.CancellationToken);
         else
-            await AssertReusedBurstDistributions(name, bytes, errorCode, presenceOnly: false,
-                TestContext.CancellationToken);
+            await AssertReusedBurstDistributions(name, bytes, errorCode, allowLimitResponse: false,
+                presenceOnly: false, TestContext.CancellationToken);
     }
 
     private static byte[] BuildPostHeaderBurst(string layout)

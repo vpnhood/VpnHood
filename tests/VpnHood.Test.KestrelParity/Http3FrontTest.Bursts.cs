@@ -22,13 +22,13 @@ public partial class Http3FrontTest
         var bytes = BuildTrailerBurst(octets, total);
         // The reference's field-201 reset share varied from 7% to 70% on the calibration host.
         await AssertReusedBurstDistributions(name, bytes, octets ? 0x10b : 0x10e,
-            presenceOnly: !octets && total == 201, TestContext.CancellationToken);
+            allowLimitResponse: true, presenceOnly: !octets && total == 201, TestContext.CancellationToken);
     }
 
     private async Task AssertReusedBurstDistributions(string name, byte[] bytes, long errorCode,
-        bool presenceOnly, CancellationToken cancellationToken)
+        bool allowLimitResponse, bool presenceOnly, CancellationToken cancellationToken)
     {
-        const int sampleCount = 200;
+        var sampleCount = GetBurstSampleCount();
         using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         startup.CancelAfter(Http3Probe.Timeout);
         // Stream resets leave the connection usable for the next sample.
@@ -59,7 +59,8 @@ public partial class Http3FrontTest
             WriteBurstDistribution(name + " ours", actual);
         }
 
-        AssertBurstDistributions(name, expected, actual, QuicError.StreamAborted, errorCode, presenceOnly);
+        AssertBurstDistributions(name, expected, actual, QuicError.StreamAborted, errorCode,
+            allowLimitResponse, presenceOnly);
     }
 
     [TestMethod]
@@ -75,7 +76,7 @@ public partial class Http3FrontTest
     private async Task AssertFreshBurstDistributions(string name, byte[] bytes, long errorCode,
         CancellationToken cancellationToken)
     {
-        const int sampleCount = 200;
+        var sampleCount = GetBurstSampleCount();
         var expected = new List<(Http3ProbeResult Response, Http3ProbeResult Write)>(sampleCount);
         var actual = new List<(Http3ProbeResult Response, Http3ProbeResult Write)>(sampleCount);
         try {
@@ -95,23 +96,38 @@ public partial class Http3FrontTest
             WriteBurstDistribution(name + " reference", expected);
             WriteBurstDistribution(name + " ours", actual);
         }
-        AssertBurstDistributions(name, expected, actual, QuicError.ConnectionAborted, errorCode, presenceOnly: false);
+        AssertBurstDistributions(name, expected, actual, QuicError.ConnectionAborted, errorCode,
+            allowLimitResponse: false, presenceOnly: false);
+    }
+
+    private static int GetBurstSampleCount()
+    {
+        const string variable = "VH_HTTP3_BURST_SAMPLES";
+        var configured = Environment.GetEnvironmentVariable(variable);
+        if (configured == null)
+            return 200;
+        // Local calibration may need more observations; keep the 10% presence threshold at least one.
+        if (!int.TryParse(configured, out var sampleCount) || sampleCount is < 10 or > 10000)
+            throw new InvalidOperationException($"{variable} must be an integer between 10 and 10000.");
+        return sampleCount;
     }
 
     private void AssertBurstDistributions(string name,
         IReadOnlyList<(Http3ProbeResult Response, Http3ProbeResult Write)> expected,
         IReadOnlyList<(Http3ProbeResult Response, Http3ProbeResult Write)> actual,
-        QuicError error, long errorCode, bool presenceOnly)
+        QuicError error, long errorCode, bool allowLimitResponse, bool presenceOnly)
     {
         Assert.AreEqual(expected.Count, actual.Count);
         var sampleCount = expected.Count;
-        var expectedOutcomes = expected.Select(result => GetBurstOutcome(result.Response, error, errorCode)).ToArray();
-        var actualOutcomes = actual.Select(result => GetBurstOutcome(result.Response, error, errorCode)).ToArray();
+        var expectedOutcomes = expected.Select(result =>
+            GetBurstOutcome(result.Response, error, errorCode, allowLimitResponse)).ToArray();
+        var actualOutcomes = actual.Select(result =>
+            GetBurstOutcome(result.Response, error, errorCode, allowLimitResponse)).ToArray();
         var presenceThreshold = sampleCount / 10;
         var allowedDifference = sampleCount * 22 / 100;
         IReadOnlyList<string> outcomes = error == QuicError.ConnectionAborted
             ? ["401", "connection-error"]
-            : ["401", "431", "reset"];
+            : allowLimitResponse ? ["401", "431", "reset"] : ["401", "reset"];
         foreach (var outcome in outcomes) {
             var referenceCount = expectedOutcomes.Count(value => value == outcome);
             var ourCount = actualOutcomes.Count(value => value == outcome);
@@ -136,13 +152,15 @@ public partial class Http3FrontTest
         }
     }
 
-    private static string GetBurstOutcome(Http3ProbeResult result, QuicError error, long errorCode)
+    private static string GetBurstOutcome(Http3ProbeResult result, QuicError error, long errorCode,
+        bool allowLimitResponse)
     {
         if (!result.Fin && result.Error == error && result.ApplicationErrorCode == errorCode)
             return error == QuicError.ConnectionAborted ? "connection-error" : "reset";
         if (IsCompleteBurstResponse(result, "401"))
             return "401";
-        if (error == QuicError.StreamAborted && IsCompleteBurstResponse(result, "431"))
+        // Only the trailer limit rows can exceed the soft header limits; 431 elsewhere is a protocol mismatch.
+        if (allowLimitResponse && error == QuicError.StreamAborted && IsCompleteBurstResponse(result, "431"))
             return "431";
         throw new AssertFailedException(
             $"Unexpected burst response (error must be {error}/0x{errorCode:x}): {result}");

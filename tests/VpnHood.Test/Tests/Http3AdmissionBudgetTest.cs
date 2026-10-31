@@ -135,7 +135,7 @@ public class Http3AdmissionBudgetTest : TestBase
         };
         var payload = StreamUtils.ObjectToJsonBuffer(request);
         var secret = token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no proof secret.");
-        var proof = new RequestProof(secret).Create(token.ServerToken.HostName, 15,
+        var proof = new RequestProof(secret).Create(15,
             DateTimeOffset.UtcNow);
         var header = Encoding.ASCII.GetBytes(
             $"POST / HTTP/1.1\r\nHost: {token.ServerToken.HostName}\r\nX-ProtocolVersion: 15\r\n" +

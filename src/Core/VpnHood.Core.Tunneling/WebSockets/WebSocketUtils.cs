@@ -65,7 +65,7 @@ public static class WebSocketUtils
     }
 
     public static Span<byte> BuildWebSocketFrameHeader(
-        Span<byte> buffer, long payloadLength, ReadOnlySpan<byte> maskKey, bool closeConnection = false)
+        Span<byte> buffer, long payloadLength, scoped ReadOnlySpan<byte> maskKey, bool closeConnection = false)
     {
         // Always ensure buffer is large enough for worst case (64-bit length + mask)
         if (buffer.Length < 14)
@@ -129,6 +129,11 @@ public static class WebSocketUtils
         var isMasked = (secondByte & 0x80) != 0;
         var lenIndicator = (byte)(secondByte & 0x7F);
 
+        if ((firstByte & 0x70) != 0 || opcode is not (0 or 1 or 2 or 8 or 9 or 10))
+            throw new InvalidDataException("Unsupported WebSocket frame flags or opcode.");
+        if (opcode >= 8 && ((firstByte & 0x80) == 0 || lenIndicator > 125))
+            throw new InvalidDataException("WebSocket control frames must be final and at most 125 bytes.");
+
         long payloadLength;
         byte headerLength = 2;
         ReadOnlySpan<byte> span;
@@ -162,6 +167,9 @@ public static class WebSocketUtils
                 break;
         }
 
+        if (payloadLength < 0)
+            throw new InvalidDataException("Invalid WebSocket payload length.");
+
         var maskKey = Memory<byte>.Empty;
         if (isMasked) {
             maskKey = buffer.Slice(headerLength, 4);
@@ -172,6 +180,8 @@ public static class WebSocketUtils
 
 
         var header = new WebSocketHeader {
+            IsFinal = (firstByte & 0x80) != 0,
+            IsContinuation = opcode == 0,
             IsBinary = opcode == 0x2,
             IsText = opcode == 0x1,
             IsPing = opcode == 0x9,

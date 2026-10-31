@@ -45,12 +45,14 @@ internal static class HttpResponseBuilder
         return Build(response);
     }
 
-    public static ReadOnlyMemory<byte> WebSocketUpgrade(string webSocketKey)
+    public static ReadOnlyMemory<byte> WebSocketUpgrade(string webSocketKey, bool useStandardMasking = false)
     {
         var response = new HttpResponseMessage(HttpStatusCode.SwitchingProtocols);
         response.Headers.Add("Upgrade", "websocket");
         response.Headers.Connection.Add("Upgrade");
         response.Headers.Add("Sec-WebSocket-Accept", WebSocketUtils.ComputeWebSocketAccept(webSocketKey));
+        if (useStandardMasking)
+            response.Headers.Add("X-WebSocketMasking", "true");
         return Build(response);
     }
 

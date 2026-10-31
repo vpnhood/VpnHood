@@ -20,7 +20,7 @@ using VpnHood.Test.Providers;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class RequestAuthorizationTest : TestBase
+public partial class RequestAuthorizationTest : TestBase
 {
     [TestMethod]
     [DataRow(false, true)]
@@ -33,7 +33,7 @@ public class RequestAuthorizationTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var secret = RandomNumberGenerator.GetBytes(16);
-        var signer = new ClientRequestSigner(secret, "localhost");
+        var signer = new ClientRequestSigner(secret);
         await using var sender = new RequestSender(CreateConnector((IPEndPoint)listener.LocalEndpoint,
             certificate, signer, useWebSocket), signer);
         var request = new ServerCheckRequest { RequestId = "clock-correction" };
@@ -57,9 +57,9 @@ public class RequestAuthorizationTest : TestBase
 
             await serverTask;
             Assert.HasCount(2, receivedTokens);
-            Assert.IsTrue(proof.Verify(receivedTokens[0], "localhost", 15, previousTime));
-            Assert.IsFalse(proof.Verify(receivedTokens[0], "localhost", 15, serverTime));
-            Assert.IsTrue(proof.Verify(receivedTokens[1], "localhost", 15, serverTime));
+            Assert.IsTrue(proof.Verify(receivedTokens[0], 15, previousTime));
+            Assert.IsFalse(proof.Verify(receivedTokens[0], 15, serverTime));
+            Assert.IsTrue(proof.Verify(receivedTokens[1], 15, serverTime));
             clockCorrectionVersion++;
             Assert.IsFalse(signer.TryCorrectClock(serverTime, clockCorrectionVersion));
             previousTime = serverTime;
@@ -75,7 +75,7 @@ public class RequestAuthorizationTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var secret = RandomNumberGenerator.GetBytes(16);
-        var signer = new ClientRequestSigner(secret, "localhost");
+        var signer = new ClientRequestSigner(secret);
         await using var sender = new RequestSender(CreateConnector((IPEndPoint)listener.LocalEndpoint,
             certificate, signer, useWebSocket), signer);
         var originalTime = DateTimeOffset.UtcNow;
@@ -92,11 +92,11 @@ public class RequestAuthorizationTest : TestBase
         Assert.HasCount(4, receivedTokens);
         var proof = new RequestProof(secret);
         foreach (var token in receivedTokens.Take(2)) {
-            Assert.IsTrue(proof.Verify(token, "localhost", 15, originalTime));
-            Assert.IsFalse(proof.Verify(token, "localhost", 15, serverTime));
+            Assert.IsTrue(proof.Verify(token, 15, originalTime));
+            Assert.IsFalse(proof.Verify(token, 15, serverTime));
         }
         foreach (var token in receivedTokens.Skip(2))
-            Assert.IsTrue(proof.Verify(token, "localhost", 15, serverTime));
+            Assert.IsTrue(proof.Verify(token, 15, serverTime));
         Assert.IsFalse(signer.TryCorrectClock(serverTime, 1));
     }
 
@@ -109,7 +109,7 @@ public class RequestAuthorizationTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var secret = RandomNumberGenerator.GetBytes(16);
-        var signer = new ClientRequestSigner(secret, "localhost");
+        var signer = new ClientRequestSigner(secret);
         await using var sender = new RequestSender(CreateConnector((IPEndPoint)listener.LocalEndpoint,
             certificate, signer, useWebSocket), signer);
         var originalTime = DateTimeOffset.UtcNow;
@@ -123,8 +123,8 @@ public class RequestAuthorizationTest : TestBase
         await Task.WhenAll(requestTask, serverTask);
         var receivedToken = await serverTask;
         var proof = new RequestProof(secret);
-        Assert.IsTrue(proof.Verify(receivedToken, "localhost", 15, serverTime));
-        Assert.IsFalse(proof.Verify(receivedToken, "localhost", 15, originalTime));
+        Assert.IsTrue(proof.Verify(receivedToken, 15, serverTime));
+        Assert.IsFalse(proof.Verify(receivedToken, 15, originalTime));
         Assert.AreEqual(1L, signer.ClockCorrectionVersion);
     }
 

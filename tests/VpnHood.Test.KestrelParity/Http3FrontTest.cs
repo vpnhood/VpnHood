@@ -36,6 +36,9 @@ public partial class Http3FrontTest
             Guid.CreateVersion7().ToString());
         _servers = await Http3ParityServers.Start(storagePath, context.CancellationToken);
         context.WriteLine($"HTTP/3 reference: Kestrel {ReferenceServer.Version}; storage: {storagePath}");
+        ThreadPool.GetMinThreads(out var workerThreads, out var completionThreads);
+        context.WriteLine($"HTTP/3 measurement environment: processors={Environment.ProcessorCount}; " +
+            $"minimum worker threads={workerThreads}; minimum completion threads={completionThreads}.");
     }
 
     [ClassCleanup]
@@ -372,7 +375,7 @@ public partial class Http3FrontTest
         using var request = CreateHttp3Request(Servers.OurEndPoint, method, "/probe");
         request.Headers.TryAddWithoutValidation("X-ProtocolVersion", "15");
         request.Headers.TryAddWithoutValidation("Authorization",
-            "Bearer " + new RequestProof(Servers.FarmSecret).Create(Servers.HostName, 15, DateTimeOffset.UtcNow));
+            "Bearer " + new RequestProof(Servers.FarmSecret).Create(15, DateTimeOffset.UtcNow));
         using var response = await client.SendAsync(request, TestContext.CancellationToken);
         Assert.AreEqual(HttpVersion.Version30, response.Version);
         Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -399,8 +402,6 @@ public partial class Http3FrontTest
     [DataRow("POST", "malformed")]
     [DataRow("GET", "wrong-key")]
     [DataRow("POST", "wrong-key")]
-    [DataRow("GET", "wrong-host")]
-    [DataRow("POST", "wrong-host")]
     [DataRow("GET", "expired")]
     [DataRow("POST", "expired")]
     [DataRow("GET", "legacy")]
@@ -486,13 +487,16 @@ public partial class Http3FrontTest
     }
 
     [TestMethod]
-    public async Task A_signed_native_upgrade_still_returns_101()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_signed_native_upgrade_still_returns_101(bool rewriteHost)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         deadline.CancelAfter(Http3Probe.Timeout);
         await using var connection = await CreateProbe().Connect(Servers.OurEndPoint, 0, deadline.Token);
         await using var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, deadline.Token);
-        await stream.WriteAsync(Encoding.ASCII.GetBytes(BuildHead("GET", "valid")), deadline.Token);
+        var head = BuildHead("GET", "valid", hostName: rewriteHost ? "origin.example.com" : Servers.HostName);
+        await stream.WriteAsync(Encoding.ASCII.GetBytes(head), deadline.Token);
         using var response = await HttpUtils.ReadResponse(stream, deadline.Token);
         Assert.AreEqual(HttpStatusCode.SwitchingProtocols, response.StatusCode);
         Assert.AreEqual("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", response.Headers.GetValues("Sec-WebSocket-Accept").Single());
@@ -581,20 +585,19 @@ public partial class Http3FrontTest
             Headers = { Host = Servers.HostName }
         };
 
-    private static string BuildHead(string method, string proofKind, int contentLength = 1024)
+    private static string BuildHead(string method, string proofKind, int contentLength = 1024, string? hostName = null)
     {
         var proof = new RequestProof(Servers.FarmSecret);
         var now = DateTimeOffset.UtcNow;
         var token = proofKind switch {
             "missing" or "legacy" => null,
             "malformed" => "not-a-jwt",
-            "wrong-key" => new RequestProof(RandomNumberGenerator.GetBytes(16)).Create(Servers.HostName, 15, now),
-            "wrong-host" => proof.Create("other.example.com", 15, now),
-            "expired" => proof.Create(Servers.HostName, 15, now.AddHours(-1)),
+            "wrong-key" => new RequestProof(RandomNumberGenerator.GetBytes(16)).Create(15, now),
+            "expired" => proof.Create(15, now.AddHours(-1)),
             // The signer only creates current proofs. Put that valid proof on a legacy-version head
             // to exercise the listener's version gate independently of the signature's authenticity.
-            "signed-legacy" => proof.Create(Servers.HostName, 15, now),
-            "valid" => proof.Create(Servers.HostName, 15, now),
+            "signed-legacy" => proof.Create(15, now),
+            "valid" => proof.Create(15, now),
             _ => throw new ArgumentOutOfRangeException(nameof(proofKind))
         };
         var authorization = token == null ? "" : $"Authorization: Bearer {token}\r\n";
@@ -603,7 +606,7 @@ public partial class Http3FrontTest
             ? "Connection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\n" +
               "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
             : $"X-BinaryStream: None\r\nContent-Length: {contentLength}\r\n";
-        return $"{method} /probe HTTP/1.1\r\nHost: {Servers.HostName}\r\nX-ProtocolVersion: {version}\r\n" +
+        return $"{method} /probe HTTP/1.1\r\nHost: {hostName ?? Servers.HostName}\r\nX-ProtocolVersion: {version}\r\n" +
                authorization + framing + "\r\n";
     }
 

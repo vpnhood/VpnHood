@@ -97,7 +97,7 @@ internal class ClientSessionBuilder(
                 VhLogger.Format(vpnEndPoint.TcpEndPoint));
             setState(ClientState.Connecting);
 
-            var requestSigner = new ClientRequestSigner(serverFinder.GetServerSecret(vpnEndPoint), vpnEndPoint.HostName);
+            var requestSigner = new ClientRequestSigner(serverFinder.GetServerSecret(vpnEndPoint));
             var connectorService = new ConnectorService(
                 new ConnectorServiceOptions {
                     ProxyConnector = proxyConnector,
@@ -137,6 +137,7 @@ internal class ClientSessionBuilder(
             connectorService.AllowChannelReuse = config.AllowStreamReuse;
 
             var helloResponse = requestResult.Response;
+            connectorService.StartPadding = helloResponse.StartPadding && config.UseWebSocket;
             if (helloResponse.ProtocolVersion < VpnHoodClientConfig.MinProtocolVersion ||
                 helloResponse.ProtocolVersion > VpnHoodClientConfig.MaxProtocolVersion)
                 throw new NotSupportedException("The server does not support the requested protocol version.");

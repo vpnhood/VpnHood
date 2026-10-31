@@ -425,7 +425,7 @@ public class ServerFinder(
             AllowChannelReuse = false
         };
 
-        var requestSigner = new ClientRequestSigner(GetServerSecret(vpnEndPoint), vpnEndPoint.HostName);
+        var requestSigner = new ClientRequestSigner(GetServerSecret(vpnEndPoint));
         var requestSender = new RequestSender(new ConnectorService(connectorService, requestSigner), requestSigner);
 
         requestSender.ConnectorService.Init(

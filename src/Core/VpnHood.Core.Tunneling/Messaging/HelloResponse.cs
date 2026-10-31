@@ -40,6 +40,9 @@ public class HelloResponse : SessionResponse
     public string[] ServerTags { get; set; } = [];
     public AccessInfo? AccessInfo { get; set; }
     public bool IsTcpProxySupported { get; set; } = true;
+    // An older server omits this, leaving initial WebSocket proxy padding disabled.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool StartPadding { get; set; }
     public bool IsTcpPacketIpV4Supported { get; set; }
     public bool IsTcpPacketIpV6Supported { get; set; }
 

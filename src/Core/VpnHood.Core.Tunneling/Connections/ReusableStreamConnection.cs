@@ -109,6 +109,8 @@ public class ReusableStreamConnection : IStreamConnection
     // that with the peer. A quick close that comes meanwhile cuts it short
     private async Task CloseAsync()
     {
+        if (_stream is WebSocketStream webSocketStream)
+            webSocketStream.StopInitialPadding();
         await _transport.DisposeAsync().Vhc();
         VhTypeTracker.Record("ReusableStreamConnection.disposed");
     }
@@ -120,6 +122,8 @@ public class ReusableStreamConnection : IStreamConnection
         if (Interlocked.Exchange(ref _transportTaken, true))
             return;
 
+        if (_stream is WebSocketStream webSocketStream)
+            webSocketStream.StopInitialPadding();
         _transport.Dispose();
         VhTypeTracker.Record("ReusableStreamConnection.disposed");
     }

@@ -2,7 +2,7 @@ using VpnHood.Core.Tunneling.ProbeResistance;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 
-internal sealed class ClientRequestSigner(byte[] farmSecret, string hostName)
+internal sealed class ClientRequestSigner(byte[] farmSecret)
 {
     private readonly RequestProof _requestProof = new(farmSecret);
     private readonly Lock _proofLock = new();
@@ -31,7 +31,7 @@ internal sealed class ClientRequestSigner(byte[] farmSecret, string hostName)
             if (_proofToken == null ||
                 TimeSpan.FromMilliseconds(nowTick - _proofCreatedTick) >= renewAge ||
                 now - _proofIssuedAt >= renewAge) {
-                _proofToken = _requestProof.Create(hostName, RequestProof.ProtocolVersion, now);
+                _proofToken = _requestProof.Create(RequestProof.ProtocolVersion, now);
                 _proofCreatedTick = nowTick;
                 _proofIssuedAt = now;
             }

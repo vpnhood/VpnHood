@@ -84,36 +84,40 @@ public class KestrelParityTest
     }
 
     [TestMethod]
-    public async Task A_signed_proof_passes_both_validators_and_its_expired_twin_is_challenged()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_signed_proof_passes_both_validators_and_its_expired_twin_is_challenged(bool rewriteHost)
     {
         var ours = _ourServer ?? throw new InvalidOperationException("Our server did not start.");
         var reference = _referenceServer ?? throw new InvalidOperationException("The reference did not start.");
         var proof = new RequestProof(ours.FarmSecret);
         var now = DateTimeOffset.UtcNow;
-        var valid = proof.Create(ours.HostName, 15, now);
-        var expired = proof.Create(ours.HostName, 15, now.AddHours(-1));
+        var valid = proof.Create(15, now);
+        var expired = proof.Create(15, now.AddHours(-1));
+        var host = rewriteHost ? "origin.example.com" : ours.HostName;
 
         // The two applications have different authenticated behavior. These positive controls prove
         // both actually accept this signing key, so the expired cases cannot pass on bad signatures.
+        // A reverse proxy can replace the viewer's Host without changing its Authorization header.
         Assert.AreEqual(HttpStatusCode.OK,
-            await ReadProofStatus(reference.TlsEndPoint, valid, upgrade: false, TestContext.CancellationToken));
+            await ReadProofStatus(reference.TlsEndPoint, valid, host, upgrade: false, TestContext.CancellationToken));
         Assert.AreEqual(HttpStatusCode.SwitchingProtocols,
-            await ReadProofStatus(ours.TlsEndPoint, valid, upgrade: true, TestContext.CancellationToken));
+            await ReadProofStatus(ours.TlsEndPoint, valid, host, upgrade: true, TestContext.CancellationToken));
         Assert.AreEqual(HttpStatusCode.Unauthorized,
-            await ReadProofStatus(reference.TlsEndPoint, expired, upgrade: false, TestContext.CancellationToken));
+            await ReadProofStatus(reference.TlsEndPoint, expired, host, upgrade: false, TestContext.CancellationToken));
         Assert.AreEqual(HttpStatusCode.Unauthorized,
-            await ReadProofStatus(ours.TlsEndPoint, expired, upgrade: true, TestContext.CancellationToken));
+            await ReadProofStatus(ours.TlsEndPoint, expired, host, upgrade: true, TestContext.CancellationToken));
     }
 
-    private static async Task<HttpStatusCode> ReadProofStatus(IPEndPoint endPoint, string proof, bool upgrade,
+    private static async Task<HttpStatusCode> ReadProofStatus(IPEndPoint endPoint, string proof, string host, bool upgrade,
         CancellationToken cancellationToken)
     {
-        var host = _ourServer!.HostName;
+        var ours = _ourServer ?? throw new InvalidOperationException("Our server did not start.");
         using var tcp = new TcpClient();
         await tcp.ConnectAsync(endPoint, cancellationToken);
         await using var tls = new SslStream(tcp.GetStream());
         await tls.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
-            TargetHost = host,
+            TargetHost = ours.HostName,
             RemoteCertificateValidationCallback = (_, _, _, _) => true
         }, cancellationToken);
         var upgradeHeaders = upgrade

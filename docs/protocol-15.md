@@ -9,16 +9,20 @@ the HTTP/3 front. It never receives a plaintext HTTP/1 authentication response.
 ## Proof and lifetime
 
 `RequestProof` is shared by client and server. It creates an HS256 JWT in the `Authorization:
-Bearer` header, with `purpose = vpnhood-request`, `version = 15`, normalized HTTP hostname,
-issued-at time, and expiration five minutes later. Verification allows 30 seconds of clock skew.
-The host ignores DNS case, a trailing dot and the port; a reverse proxy must preserve the public
-HTTP Host and Authorization headers. Its backend TLS certificate may have a different name.
+Bearer` header, with exactly four claims: `purpose = vpnhood-request`, `version = 15`, `iat`
+(issued-at time), and `exp` (expiration five minutes later). Verification allows 30 seconds of clock
+skew. The proof authorizes the farm through its signing key; it contains no hostname or key identifier.
+A reverse proxy must preserve Authorization, but may replace the public HTTP Host with its origin's
+name. This supports CloudFront routes using `AllViewerExceptHostHeader`; the origin certificate can
+match the origin hostname rather than the viewer's `cloudfront.net` name. TLS certificate validation
+on the client and proxy remains unchanged.
 
 The signing key is 32 bytes derived using HKDF-SHA256, empty salt, and UTF-8 info
 `VpnHood.Protocol15.RequestProof.HS256`. The input is the existing farm secret from
 `ServerToken.Secret`. Its length is unchanged because the access-key encryption format also
-uses it. The Kestrel reference derives the same signing key, and a valid-token positive control
-ensures expired-token tests actually reach lifetime validation.
+uses it. The Kestrel reference derives the same signing key without a hostname audience check. Its
+positive controls accept valid proofs and reject expired proofs with either the original or a rewritten
+Host, ensuring expired-token tests actually reach lifetime validation.
 
 `ClientRequestSigner` derives the client key once and caches a proof for four minutes measured by
 `Environment.TickCount64`, so a wall-clock change cannot postpone refresh. The sender and connector
@@ -46,6 +50,9 @@ means the endpoint is reachable. If the saved server refuses the subsequent hell
 fails; closing the client deletes the saved endpoint, so the next connect searches normally.
 
 ## Rollout and compatibility
+
+The earlier, unreleased protocol-15 proof shape containing `host` is rejected. Update experimental
+protocol-15 clients and servers together; compatibility with HTTP versions 8–14 remains as follows.
 
 1. Update servers before deploying protocol-15 clients. These clients send HTTP version 15 from
    the initial probe and hello onward and cannot connect to an older server that rejects it.
@@ -111,11 +118,11 @@ that a TLS-terminating proxy can never see a farm secret. Existing access-key up
 distribution requires its own protocol design. Do not describe JWT expiry as limiting a proxy
 that has received a long-lived key through those paths.
 
-The local TLS tests exercise signed POSTs, upgrades, ordinary proxy-forwarded request headers,
-secret rotation, clock correction and status handling. They do not test a deployed Cloudflare
-route. Before deployment, verify Authorization and Host forwarding on the actual route with a
-valid request and a correctly signed expired request, and confirm the latter gets the ordinary
-401. Never put proofs or access keys in URLs or deployment logs.
+The local TLS tests exercise signed POSTs, upgrades, proxy-forwarded request headers with a rewritten
+Host, secret rotation, clock correction and status handling. They do not test a deployed CloudFront
+route. Before deployment, verify Authorization forwarding and the configured origin Host on the actual
+route with a valid request and a correctly signed expired request, and confirm the latter gets the
+ordinary 401. Never put proofs or access keys in URLs or deployment logs.
 
 HTTP/3 behavior is checked against the installed reference version, including malformed probes; this
 does not promise complete undetectability. Anonymous requests with readable trailer bursts imitate
@@ -125,10 +132,60 @@ an encoded-byte distance based on the selected response, with a chance of immedi
 Parsing continues for that distance, including frames after the trailers. The schedule ends as soon
 as readable input or the inspection budget ends; it never waits for more input and adds nothing to
 the authenticated tunnel path. The reference's own odds vary with host and load,
-and other field layouts are not covered by this calibration. Controlled cases pin the schedule;
-burst cases print both distributions, compare outcome shares within a tolerance, and require outcomes
+and other field layouts are not covered by this calibration. The post-header body/framing race remains
+an open follow-up. Two broader scheduling candidates were
+rejected after they regressed existing trailer comparisons, so no broader parity claim follows from
+the current trailer calibration. The twelve post-header measurement rows remain in the test suite;
+they are not a passed release gate. Controlled cases pin the schedule; burst cases print both
+distributions, compare outcome shares within a tolerance, and require outcomes
 common on either server to appear on the other. The field-count hard-limit row checks only presence
 because the reference's reset share varied widely. GOAWAY drain is compared without an artificial wake-up.
 Native Android/iOS device interoperability and memory
-measurements remain release checks. Initial stream padding, published packages and the end-user wiki
-rollout remain separate plan stages.
+measurements remain release checks. Published packages and the end-user wiki rollout remain separate
+plan stages.
+
+## Initial stream padding
+
+`SessionOptions.StartPadding` enables initial padding for WebSocket TCP proxy streams. It defaults off;
+an explicit `false` also overrides an inherited `true`. Hello advertises `StartPadding` to HTTP-15 clients,
+which enables their outgoing direction. Packet channels, including DNS carried as packets, plain HTTP
+streams and control requests do not opt in. Reusing a connection starts a fresh logical stream with its
+own budget; padding from the previous stream is stopped before its terminator.
+
+Compatibility (2026-10): existing WebSocket peers, including early protocol-15 builds, set the mask flag
+but ignore the mask key and leave binary payloads unchanged. A new client offers
+`X-WebSocketMasking: true` on its upgrade. A capable HTTP-15 server echoes it in the 101 response. Both
+ends then mask client frames and unmask incoming payloads. Without the echo the client retains the
+legacy format; without the offer the server does too. No-handshake POST streams retain legacy framing.
+Padding requires this agreement as well as the session option. A protocol number alone is insufficient
+to retire the compatibility path; it can be removed only when those earlier builds are no longer supported.
+
+The first eligible real write and a printable ASCII text frame are encoded into one source write,
+in each direction. This includes the client's proxy request and embedded inner hello and the server's
+initial session response. The temporary pooled buffer is at most 16 KiB; no large padding buffer is
+retained on an idle stream. Preserved caller buffers are restored after masking, including failed writes.
+Text frames are discarded by the receiver. Ping replies preserve the ping payload, pong is skipped,
+and interleaved control frames do not disrupt fragmented binary or text messages.
+
+Current experimental limits per direction and logical stream are:
+
+- A randomly drawn 4–12 KiB padding budget, counting text frame headers conservatively.
+- Two to five eligible initial writes, with 128–3072 bytes of text each. Writes over 12 KiB are skipped.
+- One to three gap opportunities after the first padded write, separated by 40–350 ms. Each may add
+  128–1400 bytes from the same budget. An interval with real writes, or a busy writer, skips that opportunity.
+- No new padding after two seconds from the first real write; a slow destination connect does not
+  consume the window before the server's initial response. After the write allowance is exhausted, data writes
+  bypass padding. Real traffic never waits for a cover timer; an already running physical write still
+  serializes with subsequent traffic as any write would.
+
+These ranges are a bounded starting experiment, not a calibrated distribution of real page loads.
+At most 24 KiB of text-frame overhead can be added across both directions of one logical stream.
+Cover writes share the normal write gate. Close cancels them and waits under the existing graceful-close
+deadline; a canceled or failed frame prevents reuse. A pending transport write owns its rented memory
+until that write ends, even if graceful close times out.
+
+`WebSocketPaddingTlsTest` measures outer TLS record payloads below `SslStream`, on a new connection and
+seven reuses, with padding off and on. It checks that padding enlarges the first record in both directions
+and prints the total wire bytes for the synthetic eight-stream sample. Record boundaries remain an OS/TLS
+implementation detail. Native Android/iOS and other deployment-platform captures, realistic page-load
+bandwidth measurements and calibration remain required before enabling this experiment broadly.

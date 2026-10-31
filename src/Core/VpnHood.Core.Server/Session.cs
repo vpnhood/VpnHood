@@ -88,6 +88,7 @@ public class Session : IDisposable
     public VirtualIpBundle VirtualIps { get; }
     public bool AllowTcpPacket { get; }
     public bool AllowTcpProxy { get; }
+    public bool StartPadding { get; }
     public bool AllowQuicPacket { get; }
     public bool AllowUdpPacket { get; }
 
@@ -138,6 +139,7 @@ public class Session : IDisposable
         });
         AllowTcpPacket = options.AllowTcpPacketValue;
         AllowTcpProxy = options.AllowTcpProxyValue;
+        StartPadding = options.StartPaddingValue;
         AllowQuicPacket = AllowTcpPacket || options.AllowQuicPacketValue;
         AllowUdpPacket = AllowTcpPacket || options.AllowUdpPacketValue;
         ExtraData = extraData;

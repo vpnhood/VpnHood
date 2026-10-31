@@ -55,6 +55,8 @@ internal sealed class ReferenceServer : IAsyncDisposable
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options => {
                 options.IncludeErrorDetails = false;
+                // The same farm-derived key accepts a proof through every proxy route. Host is
+                // deliberately neither an audience nor a claim; proxies may send their origin's name.
                 options.TokenValidationParameters = new TokenValidationParameters {
                     IssuerSigningKey = new SymmetricSecurityKey(RequestProof.DeriveSigningKey(farmSecret)),
                     ValidAlgorithms = [SecurityAlgorithms.HmacSha256],

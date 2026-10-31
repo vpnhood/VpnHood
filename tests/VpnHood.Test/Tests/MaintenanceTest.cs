@@ -189,8 +189,7 @@ public class MaintenanceTest : TestBase
     }
 
     private static ClientRequestSigner CreateRequestSigner(Token token) => new(
-        token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret."),
-        token.ServerToken.HostName);
+        token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret."));
 
     private static HelloRequest CreateHelloRequest(Token token)
     {

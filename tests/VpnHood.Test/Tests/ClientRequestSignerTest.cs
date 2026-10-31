@@ -14,7 +14,7 @@ public class ClientRequestSignerTest
     [DataRow(7200, true)]
     public void Clock_correction_requires_a_meaningful_offset_without_a_cap(int seconds, bool accepted)
     {
-        var signer = new ClientRequestSigner(new byte[16], "localhost");
+        var signer = new ClientRequestSigner(new byte[16]);
         var serverTime = DateTimeOffset.UtcNow.AddSeconds(seconds);
         Assert.AreEqual(0L, signer.ClockCorrectionVersion);
         Assert.IsFalse(signer.TryCorrectClock(null, 0));

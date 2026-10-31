@@ -66,6 +66,7 @@ internal class ConnectorService : IAsyncDisposable
     public VpnEndPoint VpnEndPoint { get; init; }
     public TimeSpan RequestTimeout { get; set; }
     public bool UseQuic { get; set; }
+    public bool StartPadding { get; set; }
 
 
     public IPEndPoint? QuicEndPoint {
@@ -170,6 +171,7 @@ internal class ConnectorService : IAsyncDisposable
             .Append("Upgrade: websocket\r\n")
             .Append("Connection: Upgrade\r\n")
             .Append("Sec-WebSocket-Version: 13\r\n")
+            .Append("X-WebSocketMasking: true\r\n")
             .Append($"Sec-WebSocket-Key: {webSocketKey}\r\n")
             .Append("\r\n");
 
@@ -186,9 +188,11 @@ internal class ConnectorService : IAsyncDisposable
         if (responseMessage.StatusCode != HttpStatusCode.SwitchingProtocols)
             throw new Exception("Unexpected response.");
 
-        // create a client stream
+        // An older server ignores the offer and does not echo it. Keep its unmasked payload format.
+        var useStandardMasking = responseMessage.Headers.TryGetValues("X-WebSocketMasking", out var maskingValues) &&
+            bool.TryParse(maskingValues.SingleOrDefault(), out var masking) && masking;
         var webSocketStream = new WebSocketStream(streamConnection.Stream, streamConnection.ConnectionId, UseBuffer,
-            isServer: false);
+            isServer: false, useStandardMasking: useStandardMasking);
         return new ReusableStreamConnection(streamConnection, webSocketStream, reuseCallback) {
             RequireHttpResponse = false
         };

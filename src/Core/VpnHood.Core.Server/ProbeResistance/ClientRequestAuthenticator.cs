@@ -29,9 +29,8 @@ internal static class ClientRequestAuthenticator
             string.IsNullOrEmpty(authorization.Parameter))
             return false;
 
-        // Bind to the HTTP authority the client signed. A proxy's public hostname need not be
-        // the backend certificate's name; the shared farm key authorizes the farm, not one node.
-        return proof.Verify(authorization.Parameter, request.Headers.GetValueOrDefault("Host", ""),
-            protocolVersion, DateTimeOffset.UtcNow);
+        // A proxy may replace the public Host with its origin hostname. Possession of the
+        // shared farm key authorizes the request regardless of the route used to reach it.
+        return proof.Verify(authorization.Parameter, protocolVersion, DateTimeOffset.UtcNow);
     }
 }

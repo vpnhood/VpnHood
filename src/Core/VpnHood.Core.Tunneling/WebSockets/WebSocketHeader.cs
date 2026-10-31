@@ -2,6 +2,8 @@
 
 public readonly struct WebSocketHeader
 {
+    public bool IsFinal { get; init; }
+    public bool IsContinuation { get; init; }
     public bool IsBinary { get; init; }
     public bool IsText { get; init; }
     public bool IsPing { get; init; }

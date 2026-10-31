@@ -170,6 +170,21 @@ public class ReverseProxyTest : TestBase
         Assert.IsNull(forwardedHelloResponse.QuicPort);
     }
 
+    [TestMethod]
+    public async Task A_forwarded_hello_accepts_the_proof_when_the_proxy_rewrites_host()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        const string originHost = "origin.example.com";
+        Assert.AreNotEqual(originHost, token.ServerToken.HostName);
+
+        var response = await SendHello(token, ForwardedIp.ToString(), originHost);
+        Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
+        Assert.IsNull(response.ServerSecret);
+        Assert.IsNull(response.UdpPort);
+        Assert.IsNull(response.QuicPort);
+    }
+
     // as the server's parser hands them over: names in any case
     private static Dictionary<string, string> Forwarded(string xForwardedFor)
     {
@@ -186,7 +201,7 @@ public class ReverseProxyTest : TestBase
         return Path.Combine(TestHelper.WorkingPath, "reverse-proxy", Guid.NewGuid().ToString());
     }
 
-    private async Task<HelloResponse> SendHello(Token token, string? forwardedFor)
+    private async Task<HelloResponse> SendHello(Token token, string? forwardedFor, string? hostName = null)
     {
         var serverEndPoint = token.ServerToken.HostEndPoints?.First(x => x.AddressFamily == ProxyIp.AddressFamily)
                              ?? throw new InvalidOperationException("The token has no endpoint.");
@@ -200,11 +215,11 @@ public class ReverseProxyTest : TestBase
         }, TestCt);
 
         var payload = BuildHelloPayload(token);
-        var proof = new RequestProof(token.ServerToken.Secret!).Create(
-            token.ServerToken.HostName, RequestProof.ProtocolVersion, DateTimeOffset.UtcNow);
+        var secret = token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret.");
+        var proof = new RequestProof(secret).Create(RequestProof.ProtocolVersion, DateTimeOffset.UtcNow);
         var header =
             $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
-            $"Host: {token.ServerToken.HostName}\r\n" +
+            $"Host: {hostName ?? token.ServerToken.HostName}\r\n" +
             $"Content-Length: {payload.Length}\r\n" +
             $"X-ProtocolVersion: {VpnHoodClientConfig.MaxProtocolVersion}\r\n" +
             $"Authorization: Bearer {proof}\r\n" +

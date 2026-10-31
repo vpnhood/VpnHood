@@ -65,7 +65,7 @@ public class QuicRequestRecoveryTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var sockets = new QuicRecoverySocketFactory();
-        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
+        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16));
         var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
         using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
         var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint, TimeProvider.System);
@@ -108,7 +108,7 @@ public class QuicRequestRecoveryTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var sockets = new QuicRecoverySocketFactory();
-        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
+        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16));
         var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
         using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
         var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint, TimeProvider.System);
@@ -142,7 +142,7 @@ public class QuicRequestRecoveryTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var sockets = new QuicRecoverySocketFactory();
-        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
+        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16));
         var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
         using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
         var recovery = new QuicRequestRecovery(tcpFactory, signer, endPoint, TimeProvider.System);
@@ -180,7 +180,7 @@ public class QuicRequestRecoveryTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var sockets = new QuicRecoverySocketFactory();
-        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
+        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16));
         var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
         using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
         var timeProvider = new QuicRecoveryTimeProvider();
@@ -216,7 +216,7 @@ public class QuicRequestRecoveryTest : TestBase
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var sockets = new QuicRecoverySocketFactory { RejectTcpConnections = true };
-        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), "localhost");
+        var signer = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16));
         var endPoint = new VpnEndPoint((IPEndPoint)listener.LocalEndpoint, "localhost", certificate.GetCertHash(), "/base");
         using var tcpFactory = CreateTcpFactory(sockets, endPoint, certificate);
         var timeProvider = new QuicRecoveryTimeProvider();
@@ -412,7 +412,7 @@ public class QuicRequestRecoveryTest : TestBase
         var goodSigner = CreateSigner(token);
         await using var goodSender = new RequestSender(CreateConnector(server, token, goodSigner, sockets, false), goodSigner);
         var session = await CreateSession(goodSender, token, TestCt);
-        var wrongSigner = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16), token.ServerToken.HostName);
+        var wrongSigner = new ClientRequestSigner(RandomNumberGenerator.GetBytes(16));
         await using var sender = new RequestSender(CreateConnector(server, token, wrongSigner, sockets, false), wrongSigner);
         sender.ConnectorService.UseQuic = true;
         sender.ConnectorService.RequestTimeout = TimeSpan.FromSeconds(1);
@@ -434,8 +434,7 @@ public class QuicRequestRecoveryTest : TestBase
     }
 
     private static ClientRequestSigner CreateSigner(Token token) => new(
-        token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret."),
-        token.ServerToken.HostName);
+        token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret."));
 
     private static ConnectorService CreateConnector(VpnHoodServer server, Token token, ClientRequestSigner signer,
         QuicRecoverySocketFactory sockets, bool useWebSocket)

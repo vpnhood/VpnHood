@@ -40,6 +40,10 @@ public class SessionOptions
     public bool? AllowTcpProxy { get; set; }
     public bool? AllowTcpPacket { get; set; }
 
+    // Optional cover traffic at the start of WebSocket proxy streams; never applies to packet channels.
+    // Null inherits a layered configuration; explicit false overrides true. The effective default is off.
+    public bool? StartPadding { get; set; }
+
     // The users' own QUIC and UDP inside the tunnel, not the server's UDP and QUIC channels. Turned off, they are
     // enforced only with AllowTcpPacket off, as otherwise the tunnel carries the users' TCP as packets anyway.
     public bool? AllowQuicPacket { get; set; }
@@ -114,6 +118,9 @@ public class SessionOptions
     public bool AllowTcpProxyValue => AllowTcpProxy ?? true;
 
     [JsonIgnore]
+    public bool StartPaddingValue => StartPadding ?? false;
+
+    [JsonIgnore]
     public bool AllowTcpPacketValue => AllowTcpPacket ?? true;
 
     [JsonIgnore]
@@ -147,6 +154,7 @@ public class SessionOptions
         if (obj.NetScanTimeout != null) NetScanTimeout = obj.NetScanTimeout;
         if (obj.AllowTcpProxy != null) AllowTcpProxy = obj.AllowTcpProxy;
         if (obj.AllowTcpPacket != null) AllowTcpPacket = obj.AllowTcpPacket;
+        if (obj.StartPadding != null) StartPadding = obj.StartPadding;
         if (obj.AllowQuicPacket != null) AllowQuicPacket = obj.AllowQuicPacket;
         if (obj.AllowUdpPacket != null) AllowUdpPacket = obj.AllowUdpPacket;
         if (obj.MinClientProtocolVersion != null) MinClientProtocolVersion = obj.MinClientProtocolVersion;

@@ -23,8 +23,6 @@ public partial class WebFrontTest
     [DataRow("malformed", true)]
     [DataRow("invalid-signature", false)]
     [DataRow("invalid-signature", true)]
-    [DataRow("wrong-host", false)]
-    [DataRow("wrong-host", true)]
     [DataRow("expired", false)]
     [DataRow("expired", true)]
     public async Task Protocol15_rejects_bad_proofs_before_body_or_upgrade(string failure, bool upgrade)
@@ -72,10 +70,30 @@ public partial class WebFrontTest
         var token = TestHelper.CreateAccessToken(server);
         var proof = httpVersion == 15
             ? new RequestProof(token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret."))
-                .Create(token.ServerToken.HostName, 15, DateTimeOffset.UtcNow)
+                .Create(15, DateTimeOffset.UtcNow)
             : null;
 
         using var response = await SendAuthenticationHead(token, upgrade: true, httpVersion, proof, TestCt);
+        Assert.AreEqual(HttpStatusCode.SwitchingProtocols, response.StatusCode);
+        Assert.IsTrue(response.Headers.Contains("Sec-WebSocket-Accept"));
+    }
+
+    [TestMethod]
+    public async Task Protocol15_accepts_a_proxy_rewritten_host_before_upgrade()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+        var secret = token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret.");
+        var proof = new RequestProof(secret).Create(15, DateTimeOffset.UtcNow);
+        const string originHost = "origin.example.com";
+        Assert.AreNotEqual(originHost, token.ServerToken.HostName);
+
+        using var tcpClient = new TcpClient();
+        await using var stream = await ConnectTls(tcpClient, token);
+        // CloudFront preserves Authorization but replaces the viewer's Host with the origin's name.
+        var head = BuildAuthenticationHead(originHost, upgrade: true, 15, proof, contentLength: 0);
+        await stream.WriteAsync(Encoding.ASCII.GetBytes(head), TestCt);
+        using var response = await HttpUtils.ReadResponse(stream, TestCt);
         Assert.AreEqual(HttpStatusCode.SwitchingProtocols, response.StatusCode);
         Assert.IsTrue(response.Headers.Contains("Sec-WebSocket-Accept"));
     }
@@ -110,9 +128,9 @@ public partial class WebFrontTest
         };
         var body = StreamUtils.ObjectToJsonBuffer(hello);
         var proof = httpVersion == 15
-            ? new RequestProof(token.ServerToken.Secret!).Create(token.ServerToken.HostName, 15, DateTimeOffset.UtcNow)
+            ? new RequestProof(token.ServerToken.Secret!).Create(15, DateTimeOffset.UtcNow)
             : null;
-        var header = BuildAuthenticationHead(token, upgrade: false, httpVersion, proof, body.Length + 2);
+        var header = BuildAuthenticationHead(token.ServerToken.HostName, upgrade: false, httpVersion, proof, body.Length + 2);
         byte[] request = [.. Encoding.ASCII.GetBytes(header), 1, hello.RequestCode, .. body.Span];
         await stream.WriteAsync(request, TestCt);
 
@@ -143,7 +161,7 @@ public partial class WebFrontTest
     {
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-        var oldProof = new RequestProof(token.ServerToken.Secret!).Create(token.ServerToken.HostName, 15,
+        var oldProof = new RequestProof(token.ServerToken.Secret!).Create(15,
             DateTimeOffset.UtcNow);
         using var before = await SendAuthenticationHead(token, upgrade: true, 15, oldProof, TestCt);
         Assert.AreEqual(HttpStatusCode.SwitchingProtocols, before.StatusCode);
@@ -152,7 +170,7 @@ public partial class WebFrontTest
         server.SessionManager.ServerSecret = newSecret;
         using var oldKey = await SendAuthenticationHead(token, upgrade: true, 15, oldProof, TestCt);
         AssertPlainUnauthorized(oldKey);
-        var newProof = new RequestProof(newSecret).Create(token.ServerToken.HostName, 15, DateTimeOffset.UtcNow);
+        var newProof = new RequestProof(newSecret).Create(15, DateTimeOffset.UtcNow);
         using var newKey = await SendAuthenticationHead(token, upgrade: true, 15, newProof, TestCt);
         Assert.AreEqual(HttpStatusCode.SwitchingProtocols, newKey.StatusCode);
     }
@@ -165,10 +183,9 @@ public partial class WebFrontTest
             "missing" => null,
             "malformed" => "not-a-jwt",
             "invalid-signature" => new RequestProof(RandomNumberGenerator.GetBytes(16))
-                .Create(token.ServerToken.HostName, 15, now),
-            "wrong-host" => proof.Create("other.example.com", 15, now),
+                .Create(15, now),
             // Signed with the real farm key, so this reaches expiry validation, not just signature rejection.
-            "expired" => proof.Create(token.ServerToken.HostName, 15, now.AddMinutes(-10)),
+            "expired" => proof.Create(15, now.AddMinutes(-10)),
             _ => throw new ArgumentOutOfRangeException(nameof(failure))
         };
     }
@@ -179,13 +196,13 @@ public partial class WebFrontTest
         using var tcpClient = new TcpClient();
         await using var stream = await ConnectTls(tcpClient, token);
         await stream.WriteAsync(Encoding.ASCII.GetBytes(
-            BuildAuthenticationHead(token, upgrade, httpVersion, proof, contentLength: 1024)), cancellationToken);
+            BuildAuthenticationHead(token.ServerToken.HostName, upgrade, httpVersion, proof, contentLength: 1024)), cancellationToken);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(3));
         return await HttpUtils.ReadResponse(stream, deadline.Token);
     }
 
-    private static string BuildAuthenticationHead(Token token, bool upgrade, int httpVersion, string? proof,
+    private static string BuildAuthenticationHead(string hostName, bool upgrade, int httpVersion, string? proof,
         int contentLength)
     {
         var authorization = proof == null ? "" : $"Authorization: Bearer {proof}\r\n";
@@ -194,7 +211,7 @@ public partial class WebFrontTest
               "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
             : $"X-BinaryStream: None\r\nContent-Length: {contentLength}\r\n";
         return $"{(upgrade ? "GET" : "POST")} /request-proof HTTP/1.1\r\n" +
-               $"Host: {token.ServerToken.HostName}\r\nX-ProtocolVersion: {httpVersion}\r\n" +
+               $"Host: {hostName}\r\nX-ProtocolVersion: {httpVersion}\r\n" +
                authorization + bodyOrUpgrade + "\r\n";
     }
 

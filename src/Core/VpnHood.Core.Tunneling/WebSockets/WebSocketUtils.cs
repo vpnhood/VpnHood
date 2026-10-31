@@ -9,6 +9,12 @@ namespace VpnHood.Core.Tunneling.WebSockets;
 
 public static class WebSocketUtils
 {
+    internal static void MaskPayload(Span<byte> payload, ReadOnlySpan<byte> key, int offset)
+    {
+        for (var i = 0; i < payload.Length; i++)
+            payload[i] ^= key[(offset + i) & 3];
+    }
+
     // the close status of RFC 6455's registry for a server that can't serve for now: "Try Again Later"
     public const ushort CloseStatusTryAgainLater = 1013;
 

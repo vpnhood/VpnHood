@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using VpnHood.Core.Tunneling.WebSockets;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
@@ -7,6 +8,7 @@ namespace VpnHood.Core.Tunneling.Channels.Streams;
 // stream gets a fresh budget even when its underlying TLS connection is reused.
 internal sealed class InitialStreamPadding
 {
+    private readonly WebSocketFrameWriter _writer;
     private const int MaximumLifetimeMilliseconds = 2000;
     private long? _started;
     private readonly CancellationTokenSource _stop = new();
@@ -17,15 +19,29 @@ internal sealed class InitialStreamPadding
     private readonly Lock _lifetimeLock = new();
     private bool _disposed;
 
-    public InitialStreamPadding()
+    public InitialStreamPadding(WebSocketFrameWriter writer)
     {
+        _writer = writer;
         CancellationToken = _stop.Token;
     }
 
     public CancellationToken CancellationToken { get; }
-    public bool CanPadData => _remainingWrites > 0;
+    public bool CanPadData => !_stop.IsCancellationRequested && _remainingWrites > 0;
 
-    // Called under the stream's write gate. Counting the largest header keeps the entire wire overhead
+    // The frame writer holds its gate across the budget decision and the combined data/text write.
+    // This class owns padding policy and its lifetime; frame encoding and serialization stay in the writer.
+    public async ValueTask<bool> TryWrite(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
+    {
+        var paddingLength = TakePaddingLength(data.Length, cover: false);
+        if (paddingLength == 0)
+            return false;
+        using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, CancellationToken);
+        await _writer.WritePaddedData(data, paddingLength, writeCts.Token).Vhc();
+        _coverTask ??= RunCover(CancellationToken);
+        return true;
+    }
+
+    // Called under the frame writer's gate. Counting the largest header keeps the entire wire overhead
     // within 12 KiB per direction, including the independently scheduled gap frames.
     public int TakePaddingLength(int dataLength, bool cover)
     {
@@ -49,23 +65,16 @@ internal sealed class InitialStreamPadding
         return length;
     }
 
-    public void StartCover(Func<InitialStreamPadding, CancellationToken, Task> writeCover, Func<int> getWriteCount)
-    {
-        // The first real write leaves immediately; only the optional dummy frames wait on timers.
-        _coverTask ??= RunCover(writeCover, getWriteCount, CancellationToken);
-    }
-
-    private async Task RunCover(Func<InitialStreamPadding, CancellationToken, Task> writeCover,
-        Func<int> getWriteCount, CancellationToken cancellationToken)
+    private async Task RunCover(CancellationToken cancellationToken)
     {
         try {
             for (var i = 0; i < _coverCount; i++) {
-                var writeCount = getWriteCount();
+                var writeCount = _writer.WroteChunkCount;
                 var delay = Random.Shared.Next(40, 351);
                 await Task.Delay(delay, cancellationToken).Vhc();
-                if (getWriteCount() != writeCount)
+                if (_writer.WroteChunkCount != writeCount)
                     continue; // Busy streams need no gap cover. Never make real data wait for a timer.
-                await writeCover(this, cancellationToken).Vhc();
+                await _writer.TryWriteCover(this, cancellationToken).Vhc();
             }
         }
         catch (OperationCanceledException) {

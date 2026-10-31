@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Security.Cryptography;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Streams;
@@ -17,15 +16,11 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 {
     private readonly bool _isServer;
     private readonly bool _useStandardMasking;
-    // A read can answer a ping while the proxy writes. Cover frames use the same gate, so no frame can
-    // split another write. SemaphoreSlim's uncontended path avoids allocating a lock scope per packet.
-    private readonly SemaphoreSlim _writeGate = new(1, 1);
-    private InitialStreamPadding? _initialPadding;
-    private bool _paddingActive;
+    private readonly WebSocketFrameWriter _frameWriter;
     private ReadOnlyMemory<byte> _readMask;
     private int _readMaskOffset;
     private bool? _fragmentedBinary;
-    private const int ChunkHeaderLength = 14; // maximum websocket frame header length with inline padding length
+    private const int ChunkHeaderLength = WebSocketFrameWriter.MaximumHeaderLength;
     private int _remainingChunkBytes;
     private bool _finished;
     private Exception? _exception;
@@ -33,12 +28,11 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private ValueTask _writeTask;
     private bool _isConnectionClosed;
     private readonly Memory<byte> _readChunkHeaderBuffer = new byte[ChunkHeaderLength];
-    private readonly Memory<byte> _writeChunkHeaderBuffer = new byte[ChunkHeaderLength];
     private Task? _closeStreamTask;
     private readonly Lock _closeStreamLock = new();
     private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
-    public override bool CanReuse => !_isConnectionClosed && _exception == null;
+    public override bool CanReuse => !_isConnectionClosed && _exception == null && _frameWriter.Failure == null;
     public int PreserveWriteBufferLength => ChunkHeaderLength;
     public bool UsesStandardMasking => _useStandardMasking;
 
@@ -53,6 +47,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     {
         _isServer = isServer;
         _useStandardMasking = useStandardMasking;
+        _frameWriter = new WebSocketFrameWriter(SourceStream, isServer, useStandardMasking);
     }
 
     private WebSocketStream(Stream sourceStream, string streamId, int reusedCount, bool isServer, bool useStandardMasking)
@@ -60,25 +55,20 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     {
         _isServer = isServer;
         _useStandardMasking = useStandardMasking;
+        _frameWriter = new WebSocketFrameWriter(SourceStream, isServer, useStandardMasking);
     }
 
     public void EnableInitialPadding()
     {
         ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
-        if (!_useStandardMasking)
-            throw new InvalidOperationException("Initial padding requires negotiated WebSocket masking.");
-        if (WroteChunkCount != 0)
-            throw new InvalidOperationException("Initial padding must be enabled before the first stream write.");
-        _initialPadding ??= new InitialStreamPadding();
-        _paddingActive = true;
+        _frameWriter.EnableInitialPadding();
     }
 
     // A connection that will not be reused closes its transport without a logical-stream handshake.
     // Its owner must still cancel cover traffic and release this stream's timer/cancellation state.
     internal void StopInitialPadding()
     {
-        _paddingActive = false;
-        _initialPadding?.Dispose();
+        _frameWriter.StopInitialPadding();
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
@@ -88,12 +78,11 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
 
         try {
-            // support zero length buffer. It should just call the base stream write
+            // An empty read reaches the source without consuming a frame.
             _readTask = buffer.Length == 0
                 ? SourceStream.ReadAsync(buffer, cancellationToken)
                 : ReadInternalAsync(buffer, cancellationToken);
 
-            // await needed to dispose tokenSource
             return await _readTask.Vhc();
         }
         catch (Exception ex) {
@@ -137,7 +126,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             throw new Exception("WebSocketStream has been closed unexpectedly.");
 
         if (!_readMask.IsEmpty) {
-            MaskPayload(buffer.Span[..bytesRead], _readMask.Span, _readMaskOffset);
+            WebSocketUtils.MaskPayload(buffer.Span[..bytesRead], _readMask.Span, _readMaskOffset);
             _readMaskOffset += bytesRead;
         }
 
@@ -156,11 +145,11 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
 
         try {
-            // support zero length buffer. It should just call the base stream write
-            _writeTask = WriteSerialized(buffer, cancellationToken);
+            // Graceful close waits for the current data write before sending its terminator.
+            _writeTask = _frameWriter.Write(buffer, cancellationToken);
 
-            // await needed to dispose tokenSource
             await _writeTask.Vhc();
+            WroteChunkCount = _frameWriter.WroteChunkCount;
         }
         catch (Exception ex) {
             CloseByError(ex);
@@ -174,193 +163,15 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
 
         try {
-            // should not write a zero chunk if caller data is zero
-            _writeTask = WritePreservedSerialized(buffer, cancellationToken);
+            _writeTask = _frameWriter.WritePreserved(buffer, cancellationToken);
 
-            // await needed to dispose tokenSource
             await _writeTask.Vhc();
+            WroteChunkCount = _frameWriter.WroteChunkCount;
         }
         catch (Exception ex) {
             CloseByError(ex);
             throw;
         }
-    }
-
-    private async ValueTask WriteSerialized(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
-    {
-        await _writeGate.WaitAsync(cancellationToken).Vhc();
-        try {
-            ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
-            if (buffer.IsEmpty)
-                await SourceStream.WriteAsync(buffer, cancellationToken).Vhc();
-            else
-                await WriteInternalAsync(buffer, cancellationToken).Vhc();
-        }
-        finally {
-            _writeGate.Release();
-        }
-    }
-
-    private async ValueTask WritePreservedSerialized(Memory<byte> buffer, CancellationToken cancellationToken)
-    {
-        if (buffer.Length < PreserveWriteBufferLength)
-            throw new ArgumentException("Buffer length is less than required preserved header length.", nameof(buffer));
-
-        await _writeGate.WaitAsync(cancellationToken).Vhc();
-        try {
-            ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
-            var data = buffer[PreserveWriteBufferLength..];
-            if (data.IsEmpty)
-                await SourceStream.WriteAsync(ReadOnlyMemory<byte>.Empty, cancellationToken).Vhc();
-            else if (!_paddingActive || !await TryWritePadded(data, cancellationToken).Vhc())
-                await WriteInternalPreserverAsync(buffer, cancellationToken).Vhc();
-        }
-        finally {
-            _writeGate.Release();
-        }
-    }
-
-    private async ValueTask WriteInternalPreserverAsync(Memory<byte> buffer, CancellationToken cancellationToken)
-    {
-        if (buffer.Length < PreserveWriteBufferLength)
-            throw new ArgumentException("Buffer length is less than required preserved header length.", nameof(buffer));
-
-        // create the chunk header
-        var header = BuildHeader(_writeChunkHeaderBuffer.Span,
-            buffer.Length - PreserveWriteBufferLength);
-
-        // change start if buffer to skip the unused header length
-        var finalBuffer = buffer[(PreserveWriteBufferLength - header.Length)..];
-
-        // Copy the header to the start of the buffer
-        header.CopyTo(finalBuffer.Span);
-        var headerLength = header.Length;
-
-        // Compatibility (2026-10): existing peers, including early protocol 15 builds, set MASK but leave
-        // payloads unchanged. Actual masking requires agreement in the WebSocket upgrade response.
-        if (!_isServer && _useStandardMasking)
-            MaskPayload(buffer.Span[PreserveWriteBufferLength..], header[^4..], 0);
-
-        // The caller owns a preserved buffer and may inspect or reuse its payload after the write.
-        // Restore it even when a canceled transport write prevents reuse of this connection.
-        try {
-            await SourceStream.WriteAsync(finalBuffer, cancellationToken).Vhc();
-        }
-        finally {
-            if (!_isServer && _useStandardMasking)
-                MaskPayload(buffer.Span[PreserveWriteBufferLength..],
-                    finalBuffer.Span.Slice(headerLength - 4, 4), 0);
-        }
-        WroteChunkCount++;
-    }
-
-    private async ValueTask WriteInternalAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
-    {
-        if (!buffer.IsEmpty && _paddingActive && await TryWritePadded(buffer, cancellationToken).Vhc())
-            return;
-
-        var bufferLength = ChunkHeaderLength + buffer.Length;
-        using var memoryOwner = MemoryPool<byte>.Shared.Rent(bufferLength);
-        var fullBuffer = memoryOwner.Memory[..bufferLength];
-        buffer.CopyTo(fullBuffer[ChunkHeaderLength..]);
-        // await required to prevent releasing of the memory owner
-        await WriteInternalPreserverAsync(fullBuffer, cancellationToken).Vhc();
-    }
-
-    private async ValueTask<bool> TryWritePadded(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
-    {
-        if (_initialPadding is not { } padding)
-            return false;
-        var paddingLength = padding.TakePaddingLength(data.Length, cover: false);
-        _paddingActive = padding.CanPadData;
-        if (paddingLength == 0)
-            return false;
-
-        // One source write is essential: a separate padding write commonly becomes a separate TLS record.
-        // Rent only while encoding/writing, never keep a large buffer on every open proxy stream.
-        var rented = ArrayPool<byte>.Shared.Rent(data.Length + paddingLength + 2 * ChunkHeaderLength);
-        try {
-            var length = EncodeFrame(rented, data.Span, paddingLength: 0, opcode: 2);
-            length += EncodeFrame(rented.AsSpan(length), ReadOnlySpan<byte>.Empty, paddingLength, opcode: 1);
-            using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, padding.CancellationToken);
-            await SourceStream.WriteAsync(rented.AsMemory(0, length), writeCts.Token).Vhc();
-            WroteChunkCount++;
-            padding.StartCover(WriteCover, GetWriteCount);
-            return true;
-        }
-        finally {
-            ArrayPool<byte>.Shared.Return(rented);
-        }
-    }
-
-    private int GetWriteCount() => WroteChunkCount;
-
-    private int EncodeFrame(Span<byte> buffer, ReadOnlySpan<byte> data, int paddingLength, byte opcode)
-    {
-        var payloadLength = data.Length + paddingLength;
-        var header = BuildHeader(buffer[..ChunkHeaderLength], payloadLength);
-        header[0] = (byte)(0x80 | opcode);
-        var payload = buffer.Slice(header.Length, payloadLength);
-        if (paddingLength == 0)
-            data.CopyTo(payload);
-        else {
-            Random.Shared.NextBytes(payload);
-            for (var i = 0; i < payload.Length; i++)
-                payload[i] = (byte)(' ' + payload[i] % 95); // printable ASCII is always valid UTF-8 text
-        }
-
-        if (!_isServer && _useStandardMasking)
-            MaskPayload(payload, header[^4..], 0);
-        return header.Length + payloadLength;
-    }
-
-    private async Task WriteCover(InitialStreamPadding padding, CancellationToken cancellationToken)
-    {
-        // Skip a busy writer instead of queueing fake traffic ahead of real traffic.
-        if (!_writeGate.Wait(0))
-            return;
-        try {
-            if (_disposed || IsDisposed || _isConnectionClosed)
-                return;
-            var length = padding.TakePaddingLength(0, cover: true);
-            if (length == 0)
-                return;
-            var rented = ArrayPool<byte>.Shared.Rent(length + ChunkHeaderLength);
-            try {
-                var frameLength = EncodeFrame(rented, ReadOnlySpan<byte>.Empty, length, opcode: 1);
-                await SourceStream.WriteAsync(rented.AsMemory(0, frameLength), cancellationToken).Vhc();
-            }
-            finally {
-                ArrayPool<byte>.Shared.Return(rented);
-            }
-        }
-        catch (OperationCanceledException ex) {
-            // Cancellation can leave part of a frame on the transport. It must not enter the reuse pool.
-            CloseByError(ex);
-            throw;
-        }
-        catch (Exception ex) {
-            CloseByError(ex); // The cover task owns and observes this failure, just like a data writer.
-        }
-        finally {
-            _writeGate.Release();
-        }
-    }
-
-    private static void MaskPayload(Span<byte> payload, ReadOnlySpan<byte> key, int offset)
-    {
-        for (var i = 0; i < payload.Length; i++)
-            payload[i] ^= key[(offset + i) & 3];
-    }
-
-    private Span<byte> BuildHeader(Span<byte> header, int payloadLength)
-    {
-        if (_isServer)
-            return WebSocketUtils.BuildWebSocketFrameHeader(header, payloadLength);
-
-        Span<byte> maskKey = stackalloc byte[4];
-        RandomNumberGenerator.Fill(maskKey);
-        return WebSocketUtils.BuildWebSocketFrameHeader(header, payloadLength, maskKey);
     }
 
     // records only: inside a read or write, a close could only be the sync one; DisposeAsync closes the source
@@ -386,7 +197,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
                         CloseStatus, StreamId);
 
                     _isConnectionClosed = true;
-                    _initialPadding?.Stop();
+                    _frameWriter.Stop();
                     return new WebSocketHeader {
                         IsCloseConnection = true,
                         IsBinary = true,
@@ -447,22 +258,9 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         var payload = new byte[(int)header.PayloadLength]; // control frames are bounded to 125 bytes
         await SourceStream.ReadExactlyAsync(payload, cancellationToken).Vhc();
         if (!header.MaskKey.IsEmpty)
-            MaskPayload(payload, header.MaskKey.Span, 0);
-        await _writeGate.WaitAsync(cancellationToken).Vhc();
-        try {
-            if (_isConnectionClosed || IsDisposed)
-                return;
-            var frame = new byte[ChunkHeaderLength + payload.Length];
-            var frameHeader = BuildHeader(frame, payload.Length);
-            frameHeader[0] = 0x8a;
-            payload.CopyTo(frame, frameHeader.Length);
-            if (!_isServer)
-                MaskPayload(frame.AsSpan(frameHeader.Length, payload.Length), frameHeader[^4..], 0);
-            await SourceStream.WriteAsync(frame.AsMemory(0, frameHeader.Length + payload.Length), cancellationToken).Vhc();
-        }
-        finally {
-            _writeGate.Release();
-        }
+            WebSocketUtils.MaskPayload(payload, header.MaskKey.Span, 0);
+        if (!_isConnectionClosed && !IsDisposed)
+            await _frameWriter.WritePong(payload, cancellationToken).Vhc();
     }
 
     private async Task<ushort?> ReadCloseStatus(WebSocketHeader webSocketHeader, CancellationToken cancellationToken)
@@ -517,6 +315,8 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         // check if there is exception in the stream
         if (_exception != null)
             throw _exception;
+        if (_frameWriter.Failure is { } writeFailure)
+            throw writeFailure;
 
         // could not reuse the underlying stream has been closed
         if (_isConnectionClosed)
@@ -543,22 +343,15 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             // wait for write to finish and write the terminator
             await _writeTask.AsTask().WaitAsync(timeoutCts.Token).Vhc();
 
-            if (_initialPadding != null)
-                await _initialPadding.Completion.WaitAsync(timeoutCts.Token).Vhc();
+            await _frameWriter.PaddingCompletion.WaitAsync(timeoutCts.Token).Vhc();
 
             // A canceled cover write can have left half a frame. Close the transport instead of adding
             // a logical terminator to an already unusable byte stream.
             if (!CanReuse)
                 return;
 
-            // Finish the stream by sending the chunk terminator and 
-            await _writeGate.WaitAsync(timeoutCts.Token).Vhc();
-            try {
-                await WriteInternalAsync(ReadOnlyMemory<byte>.Empty, timeoutCts.Token).Vhc();
-            }
-            finally {
-                _writeGate.Release();
-            }
+            await _frameWriter.WriteTerminator(timeoutCts.Token).Vhc();
+            WroteChunkCount = _frameWriter.WroteChunkCount;
 
             // wait for the current read task to finish
             await _readTask.AsTask().WaitAsync(timeoutCts.Token).Vhc();
@@ -607,18 +400,9 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             return;
 
         _isConnectionClosed = true;
-        _initialPadding?.Stop();
 
         try {
-            await _writeGate.WaitAsync(cancellationToken).Vhc();
-            try {
-                var closeFrame = WebSocketUtils.BuildServerCloseFrame(closeStatus);
-                await SourceStream.WriteAsync(closeFrame, cancellationToken).Vhc();
-                await SourceStream.FlushAsync(cancellationToken).Vhc();
-            }
-            finally {
-                _writeGate.Release();
-            }
+            await _frameWriter.WriteClose(closeStatus, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             CloseByError(ex);
@@ -630,7 +414,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     protected override void Dispose(bool disposing)
     {
         _disposed = true; // don't return if already disposed. DisposeAsync may call set this
-        _initialPadding?.Dispose();
+        _frameWriter.Dispose();
         base.Dispose(disposing);
     }
 
@@ -642,7 +426,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             return;
 
         _disposed = true;
-        _initialPadding?.Stop();
+        _frameWriter.Stop();
 
         // just ignore exceptions during close stream as close stream already handles logging
         if (CanReuse)
@@ -653,11 +437,9 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         if (!CanReuse && !IsDisposed)
             await CloseSourceAsync().Vhc();
 
-        if (_initialPadding != null) {
-            // The graceful path already joined the cover task under its close deadline. If that failed,
-            // the source has been closed instead; do not add an unbounded second wait for a failed writer.
-            _initialPadding.Dispose();
-        }
+        // Graceful close joined cover under its deadline. A failed close ended the source instead;
+        // disposing the writer cancels local state without an unbounded second wait for native I/O.
+        _frameWriter.Dispose();
 
         await base.DisposeAsync().Vhc();
     }

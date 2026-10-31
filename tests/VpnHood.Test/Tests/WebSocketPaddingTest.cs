@@ -296,6 +296,39 @@ public class WebSocketPaddingTest
         await source.Finished.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Close_waits_for_an_inflight_data_frame_without_interleaving(bool graceful)
+    {
+        using var source = new PausedFirstWriteStream();
+        await using var stream = new WebSocketStream(source, "close-order", false, true, useStandardMasking: true);
+        var data = Encoding.ASCII.GetBytes("the complete real frame must precede the close");
+        var buffer = new byte[stream.PreserveWriteBufferLength + data.Length];
+        data.CopyTo(buffer, stream.PreserveWriteBufferLength);
+        var write = stream.WritePreservedAsync(buffer, TestCt).AsTask();
+        await source.Started.Task.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        var close = graceful ? stream.DisposeAsync().AsTask() : stream.WriteClose(1000, TestCt).AsTask();
+        try {
+            Assert.IsFalse(write.IsCompleted);
+            Assert.IsFalse(close.IsCompleted, "Closing cannot overtake a transport write that still owns its buffer.");
+            Assert.AreEqual(1, source.Snapshot().Length);
+        }
+        finally {
+            source.Release.TrySetResult();
+        }
+        await Task.WhenAll(write, close).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        var frames = await DecodeFrames(source.Snapshot().SelectMany(x => x).ToArray());
+        Assert.AreEqual(2, frames.Count);
+        Assert.IsTrue(frames[0].Header.IsBinary);
+        CollectionAssert.AreEqual(data, frames[0].Payload);
+        Assert.AreEqual(!graceful, frames[1].Header.IsCloseConnection);
+        Assert.AreEqual(graceful ? 0 : 2, frames[1].Payload.Length);
+        Assert.AreEqual(graceful ? 2 : 1, stream.WroteChunkCount);
+        CollectionAssert.AreEqual(data, buffer[stream.PreserveWriteBufferLength..]);
+        Assert.AreEqual(graceful, stream.CanReuse);
+    }
+
     private async Task<List<DecodedFrame>> DecodeFrames(byte[] bytes)
     {
         using var source = new MemoryStream(bytes);
@@ -348,6 +381,32 @@ public class WebSocketPaddingTest
             lock (_lock)
                 _writes.Add(buffer.ToArray());
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class PausedFirstWriteStream()
+        : StreamDecoratorAsync(new MemoryStream(new byte[] { 0x82, 0 }), false)
+    {
+        private readonly Lock _lock = new();
+        private readonly List<byte[]> _writes = [];
+        private int _writeCount;
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public byte[][] Snapshot()
+        {
+            lock (_lock)
+                return _writes.ToArray();
+        }
+
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            lock (_lock)
+                _writes.Add(buffer.ToArray());
+            if (Interlocked.Increment(ref _writeCount) == 1) {
+                Started.TrySetResult();
+                await Release.Task.WaitAsync(cancellationToken);
+            }
         }
     }
 

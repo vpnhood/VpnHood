@@ -146,6 +146,11 @@ plan stages.
 
 ## Initial stream padding
 
+`WebSocketStream` owns reading, connection reuse and stream shutdown. `WebSocketFrameWriter` owns all
+outgoing frames, masking, preserved-buffer restoration and the shared write gate. `InitialStreamPadding`
+coordinates the initial data/text writes and timed cover through that writer, with its own budgets and
+cancellation lifetime. A background write failure is exposed to the stream so it can prevent reuse.
+
 `SessionOptions.StartPadding` enables initial padding for WebSocket TCP proxy streams. It defaults off;
 an explicit `false` also overrides an inherited `true`. Hello advertises `StartPadding` to HTTP-15 clients,
 which enables their outgoing direction. Packet channels, including DNS carried as packets, plain HTTP

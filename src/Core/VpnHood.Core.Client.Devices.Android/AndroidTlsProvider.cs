@@ -9,10 +9,10 @@ namespace VpnHood.Core.Client.Devices.Android;
 // (SslStream.VerifyRemoteCertificateCore), and the client's callback pins the server's certificate.
 // Android 7's own TLS has no cipher to give at that point and answers "(NONE)", which .NET cannot
 // parse, so no connect got through; Android 8.1's crashes the process there (dotnet/runtime#136272
-// skips the ask on 8.1 only). So below Android 9 the VPN service takes its TLS from a current Conscrypt
-// - the library Android's own TLS is an old copy of - put first among the providers, where
-// SSLContext.getInstance finds it. On Android it brings no trust manager: the app's network security
-// config still decides the trust.
+// skips the ask on 8.1 only), and Android 9's answers SSL_NULL_WITH_NULL_NULL (dotnet/runtime#136456).
+// So below Android 10 the VPN service takes its TLS from a current Conscrypt - the library Android's
+// own TLS is an old copy of - put first among the providers, where SSLContext.getInstance finds it.
+// On Android it brings no trust manager: the app's network security config still decides the trust.
 internal static class AndroidTlsProvider
 {
     private static readonly Lazy<bool> Installed = new(Install);
@@ -21,7 +21,7 @@ internal static class AndroidTlsProvider
 
     private static bool Install()
     {
-        if (OperatingSystem.IsAndroidVersionAtLeast(28))
+        if (OperatingSystem.IsAndroidVersionAtLeast(29))
             return false;
 
         using var conscrypt = Java.Lang.Class.ForName("org.conscrypt.Conscrypt", true, Application.Context.ClassLoader);

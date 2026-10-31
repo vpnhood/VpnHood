@@ -13,7 +13,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- the VPN service's TLS below Android 9 (AndroidTlsProvider); Java only, so no binding -->
+		<!-- the VPN service's TLS below Android 10 (AndroidTlsProvider); Java only, so no binding -->
 		<AndroidMavenLibrary Include="org.conscrypt:conscrypt-android" Version="2.8.0" Bind="false" />
 	</ItemGroup>
 </Project>

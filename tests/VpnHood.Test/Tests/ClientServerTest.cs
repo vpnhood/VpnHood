@@ -38,7 +38,7 @@ public class ClientServerTest : TestBase
     {
         // Create Server 1
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions1);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1);
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // Create Server 2
@@ -46,7 +46,7 @@ public class ClientServerTest : TestBase
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions2.TcpEndPoints = [serverEndPoint2];
         using var accessManager2 =
-            TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath);
+            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions2, accessManager1.StoragePath);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
 
         // redirect server1 to server2
@@ -65,7 +65,7 @@ public class ClientServerTest : TestBase
     {
         // Create Server 1
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions1);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1);
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // Create Server 2
@@ -73,7 +73,7 @@ public class ClientServerTest : TestBase
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions2.TcpEndPoints = [serverEndPoint2];
         using var accessManager2 =
-            TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath);
+            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions2, accessManager1.StoragePath);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
         var token = accessManager2.CreateToken();
 
@@ -95,14 +95,14 @@ public class ClientServerTest : TestBase
         // Create Server 1
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         using var accessManager1 =
-            TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "US/california");
+            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1, serverLocation: "US/california");
         await using var server1 = await TestHelper.CreateServer(accessManager1);
         var token1 = accessManager1.CreateToken();
 
         // Create Server 2
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath,
-            serverLocation: "UK/london");
+        using var accessManager2 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions2,
+            accessManager1.StoragePath, serverLocation: "UK/london");
         await using var server2 = await TestHelper.CreateServer(accessManager2);
         var token2 = accessManager2.CreateToken();
 
@@ -127,7 +127,7 @@ public class ClientServerTest : TestBase
         // Create Server
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         using var accessManager1 =
-            TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "US/california");
+            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1, serverLocation: "US/california");
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // create client
@@ -510,7 +510,7 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Client_disposed_while_waiting_for_ad_does_not_start_its_adapter()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
@@ -535,7 +535,7 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Session_closed_by_server_while_waiting_for_ad_fails_the_start_with_its_error()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
@@ -571,7 +571,7 @@ public class ClientServerTest : TestBase
         using var udpClient = new UdpClient();
         using var ping = new Ping();
 
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -631,7 +631,7 @@ public class ClientServerTest : TestBase
     public async Task Disconnect_if_session_closed_by_server()
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -665,7 +665,7 @@ public class ClientServerTest : TestBase
         // --------
         // Check: AccessManager is on at start
         // --------
-        var accessManager = TestHttpAccessManager.Create(TestHelper.CreateAccessManager());
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
         await using var server = await TestHelper.CreateServer(accessManager);
 
         await server.DisposeAsync();

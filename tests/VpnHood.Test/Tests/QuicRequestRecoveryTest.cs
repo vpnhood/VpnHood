@@ -338,7 +338,7 @@ public class QuicRequestRecoveryTest : TestBase
     public async Task A_held_tcp_probe_leaves_the_quic_request_its_full_timeout_and_other_requests_progress()
     {
         RequireQuic();
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         var sockets = new QuicRecoverySocketFactory();

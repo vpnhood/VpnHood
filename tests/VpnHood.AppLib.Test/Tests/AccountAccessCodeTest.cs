@@ -366,7 +366,7 @@ public class AccountAccessCodeTest : TestAppBase
     [TestMethod]
     public async Task A_device_code_the_server_would_refuse_is_replaced_at_sign_in_and_connects()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var baseToken = TestHelper.CreateAccessToken(server);
         var premiumToken = TestHelper.CreateAccessToken(server, maxClientCount: 6);
@@ -403,7 +403,7 @@ public class AccountAccessCodeTest : TestAppBase
     [TestMethod]
     public async Task A_refused_account_code_is_reported_so_the_account_stops_handing_it_out()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var baseToken = TestHelper.CreateAccessToken(server);
 

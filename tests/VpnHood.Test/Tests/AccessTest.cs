@@ -65,7 +65,7 @@ public class AccessTest : TestBase
         var managerOptions = TestHelper.CreateFileAccessManagerOptions();
         managerOptions.SessionOptions.SyncInterval =
             TimeSpan.FromMinutes(10); // make sure the disconnect is not due to sync
-        using var accessManager = TestHelper.CreateAccessManager(managerOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt, managerOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create a short expiring token
@@ -203,7 +203,7 @@ public class AccessTest : TestBase
     public async Task Client_should_not_suppress_itself_after_disconnect()
     {
         // Create Server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -232,7 +232,7 @@ public class AccessTest : TestBase
     {
         // Create Server
         var expired = DateTime.UtcNow.AddDays(1);
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server, maxClientCount: 2,
             expirationTime: expired,

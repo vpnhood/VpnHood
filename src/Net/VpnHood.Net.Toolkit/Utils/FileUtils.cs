@@ -1,3 +1,4 @@
+using System.Text;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Toolkit.Utils;
@@ -58,6 +59,27 @@ public static class FileUtils
     {
         return ex is UnauthorizedAccessException ||
                ex is IOException and not FileNotFoundException and not DirectoryNotFoundException;
+    }
+
+    // The file is replaced whole or not at all: the content goes to a file beside it, under the token, which then
+    // takes the file's place, so a cancel or a crash leaves the old file, never a part of the new one.
+    public static Task WriteAllTextAtomicAsync(string filePath, string content, CancellationToken cancellationToken)
+    {
+        return WriteAllBytesAtomicAsync(filePath, Encoding.UTF8.GetBytes(content), cancellationToken);
+    }
+
+    public static async Task WriteAllBytesAtomicAsync(string filePath, byte[] bytes,
+        CancellationToken cancellationToken)
+    {
+        var tempFilePath = $"{filePath}.{Guid.NewGuid():N}.tmp";
+        try {
+            await File.WriteAllBytesAsync(tempFilePath, bytes, cancellationToken).Vhc();
+            File.Move(tempFilePath, filePath, overwrite: true);
+        }
+        catch {
+            VhUtils.TryDeleteFile(tempFilePath);
+            throw;
+        }
     }
 
     public static async Task WriteAllTextRetryAsync(string filePath, string content, TimeSpan timeout,

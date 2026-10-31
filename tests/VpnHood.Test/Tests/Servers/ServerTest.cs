@@ -33,7 +33,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task Configure()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         Assert.IsNotNull(accessManager.LastServerInfo);
@@ -46,7 +46,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task Configure_refuses_options_that_leave_tcp_no_way()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfig.SessionOptions.AllowTcpPacket = false;
         accessManager.ServerConfig.SessionOptions.AllowTcpProxy = false;
 
@@ -61,7 +61,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task Add_IpAddress_ToSystem()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
 
         var netConfigurationProvider = new TestNetConfigurationProvider();
@@ -82,7 +82,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task A_server_host_close_past_its_limit_leaves_the_rest_of_the_close_to_run()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
         var netConfigurationProvider = new TestNetConfigurationProvider();
         var quicServer = new QuicListenerCloseHoldingServer();
@@ -110,7 +110,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task A_quick_close_ends_a_server_whose_graceful_close_is_held()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
         var netConfigurationProvider = new TestNetConfigurationProvider();
         var quicServer = new QuicListenerCloseHoldingServer();
@@ -146,7 +146,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task A_graceful_close_after_a_quick_close_waits_for_the_hosts_close()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         var quicServer = new QuicListenerCloseHoldingServer();
         var server = new VpnHoodServer(accessManager, new ServerOptions {
             SocketFactory = new TestSocketFactory(),
@@ -174,7 +174,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task The_host_closes_beside_a_status_upload_under_way()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         var quicServer = new QuicListenerCloseHoldingServer();
         var server = new VpnHoodServer(accessManager, new ServerOptions {
             SocketFactory = new TestSocketFactory(),
@@ -204,7 +204,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task A_host_configuration_under_way_ends_before_the_hosts_close_and_none_starts_after()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         var quicServer = new QuicListenerCloseHoldingServer();
         quicServer.ReleaseCloses();
         quicServer.ListenHold.IsHeld = true;
@@ -241,7 +241,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task A_configuration_the_close_interrupts_applies_nothing_and_records_no_error()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
         accessManager.ConfigureHold.IsHeld = true;
         var netConfigurationProvider = new TestNetConfigurationProvider();
@@ -295,7 +295,7 @@ public class ServerTest : TestBase
         // traffic that stays unreported until the close, so its last sync has usage to send
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.SessionOptions.SyncCacheSize = 1_000_000_000;
-        using var accessManager = TestHelper.CreateAccessManager(options);
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt, options);
         await using var server = await TestHelper.CreateServer(accessManager);
         await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server));
         await TestHelper.Test_Https();
@@ -320,7 +320,7 @@ public class ServerTest : TestBase
         // traffic that stays unreported until the close, so its last sync has usage to send
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.SessionOptions.SyncCacheSize = 1_000_000_000;
-        using var accessManager = TestHelper.CreateAccessManager(options);
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt, options);
         await using var server = await TestHelper.CreateServer(accessManager);
         await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server));
         await TestHelper.Test_Https();
@@ -345,7 +345,7 @@ public class ServerTest : TestBase
         serverOptions.SessionOptions.SyncCacheSize = 10;
         serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         serverOptions.UpdateStatusInterval = TimeSpan.FromMilliseconds(200);
-        var accessManager = TestHelper.CreateAccessManager(serverOptions);
+        var accessManager = await TestHelper.CreateAccessManager(TestCt, serverOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create client
@@ -373,7 +373,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task Reconfigure_Listeners()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
         await using var server = await TestHelper.CreateServer(accessManager);
 
@@ -407,7 +407,7 @@ public class ServerTest : TestBase
     public async Task Reconfigure()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions);
         var serverConfig = accessManager.ServerConfig;
         serverConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(500);
         serverConfig.TrackingOptions.TrackClientIp = true;
@@ -461,7 +461,7 @@ public class ServerTest : TestBase
     public async Task Close_session_by_client_disconnect()
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client
@@ -479,7 +479,7 @@ public class ServerTest : TestBase
     {
         // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions);
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // create client
@@ -492,7 +492,8 @@ public class ServerTest : TestBase
         await server1.DisposeAsync();
         accessManager1.Dispose();
         accessManager1.Dispose();
-        using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions, accessManager1.StoragePath);
+        using var accessManager2 =
+            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions, accessManager1.StoragePath);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
 
         VhLogger.Instance.LogInformation("Test: Sending another HTTP Request...");
@@ -504,7 +505,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task Recover_should_call_access_server_only_once()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create Client
@@ -681,7 +682,7 @@ public class ServerTest : TestBase
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.SessionOptions.SyncCacheSize = 10;
         serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
-        using var accessManager = TestHelper.CreateAccessManager(serverOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt, serverOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client
@@ -775,7 +776,7 @@ public class ServerTest : TestBase
         VhLogger.IsAnonymousMode = true;
 
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.AcmeHttp01KeyToken = Guid.NewGuid().ToString();
         accessManager.AcmeHttp01KeyAuthorization = Guid.NewGuid().ToString();
         accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
@@ -804,7 +805,7 @@ public class ServerTest : TestBase
     public async Task Http01Challenge_redirects_a_token_it_doesnt_know_to_https()
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.AcmeHttp01KeyToken = Guid.NewGuid().ToString();
         accessManager.AcmeHttp01KeyAuthorization = Guid.NewGuid().ToString();
         accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
@@ -831,7 +832,7 @@ public class ServerTest : TestBase
             OtherUsed = 20 * VhUtils.Megabytes
         };
 
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager,
             swapMemoryProvider: swapMemoryProvider);
 
@@ -872,7 +873,7 @@ public class ServerTest : TestBase
     public async Task BadEndPoint_reported_for_invalid_endpoint()
     {
         // Arrange: occupy a port so the server can't bind to it
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         using var blocker = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
         blocker.Start();
         var occupiedEndPoint = (IPEndPoint)blocker.LocalEndpoint;
@@ -909,7 +910,7 @@ public class ServerTest : TestBase
         // A single bad endpoint must be recorded per-endpoint and must NOT fail the whole
         // server configuration. (Port 0 can't be used here: the access manager treats port 0
         // as "auto-assign" and replaces it with a free port.)
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         using var blocker = new System.Net.Sockets.UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var occupiedEndPoint = (IPEndPoint)blocker.Client.LocalEndPoint!;
         accessManager.ServerConfig.QuicEndPoints = [occupiedEndPoint];
@@ -963,7 +964,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task An_older_protocol_session_has_legacy_udp()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.SessionProtocolVersion = UdpDatagram.MinProtocolVersion - 1;
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
@@ -986,7 +987,7 @@ public class ServerTest : TestBase
         using var portHolder = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.UdpEndPoints = [portHolder.Client.GetLocalEndPoint()];
-        using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
@@ -1000,7 +1001,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task A_session_below_the_legacy_protocol_has_no_udp()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.SessionProtocolVersion = UdpDatagram.MinLegacyProtocolVersion - 1;
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
@@ -1020,7 +1021,7 @@ public class ServerTest : TestBase
     public async Task A_recovered_session_keeps_its_protocol()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions);
         accessManager1.SessionProtocolVersion = UdpDatagram.MinProtocolVersion - 1;
         await using var server1 = await TestHelper.CreateServer(accessManager1);
         var token = TestHelper.CreateAccessToken(server1);
@@ -1029,7 +1030,8 @@ public class ServerTest : TestBase
 
         await server1.DisposeAsync();
         accessManager1.Dispose();
-        using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions, accessManager1.StoragePath);
+        using var accessManager2 =
+            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions, accessManager1.StoragePath);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
         await TestHelper.Test_Https();
 

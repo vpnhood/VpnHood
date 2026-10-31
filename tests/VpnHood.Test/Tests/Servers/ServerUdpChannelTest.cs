@@ -71,7 +71,7 @@ public class ServerUdpChannelTest : TestBase
     [TestMethod]
     public async Task Udp_session_follows_a_recreated_listener()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
@@ -130,7 +130,7 @@ public class ServerUdpChannelTest : TestBase
     [TestMethod]
     public async Task A_lost_udp_datagram_goes_up_once_and_keeps_a_tcp_session_on_tcp()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);

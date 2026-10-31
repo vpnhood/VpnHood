@@ -28,7 +28,7 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AccessCode_Accept()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
@@ -55,7 +55,7 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AccessCode_reject_keeps_the_code_and_marks_it_refused()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
@@ -149,7 +149,7 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AccessCode_FailedByChecksum()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app

@@ -24,7 +24,7 @@ public class ServerFinderTest : TestBase
         try {
             // create servers
             for (var i = 0; i < 5; i++) {
-                var accessManager = TestHelper.CreateAccessManager(storagePath: storageFolder);
+                var accessManager = await TestHelper.CreateAccessManager(TestCt, storagePath: storageFolder);
                 var server = await TestHelper.CreateServer(accessManager);
                 servers.Add(server);
                 accessManagers.Add(accessManager);
@@ -65,7 +65,7 @@ public class ServerFinderTest : TestBase
         try {
             // create servers
             for (var i = 0; i < 10; i++) {
-                var accessManager = TestHelper.CreateAccessManager(storagePath: storageFolder);
+                var accessManager = await TestHelper.CreateAccessManager(TestCt, storagePath: storageFolder);
                 var server = await TestHelper.CreateServer(accessManager);
                 servers.Add(server);
                 accessManagers.Add(accessManager);
@@ -138,9 +138,9 @@ public class ServerFinderTest : TestBase
     public async Task Redirect_without_secrets_uses_the_access_keys_farm_for_another_host()
     {
         var storageFolder = TestHelper.CreateAccessManagerWorkingDir();
-        using var entryAccessManager = TestHelper.CreateAccessManager(storagePath: storageFolder);
+        using var entryAccessManager = await TestHelper.CreateAccessManager(TestCt, storagePath: storageFolder);
         await using var entryServer = await TestHelper.CreateServer(entryAccessManager);
-        using var redirectedAccessManager = TestHelper.CreateAccessManager(storagePath: storageFolder);
+        using var redirectedAccessManager = await TestHelper.CreateAccessManager(TestCt, storagePath: storageFolder);
         await using var redirectedServer = await TestHelper.CreateServer(redirectedAccessManager);
         var token = TestHelper.CreateAccessToken(entryServer);
         var redirectedToken = JsonUtils.JsonClone(TestHelper.CreateAccessToken(redirectedServer).ServerToken);

@@ -47,7 +47,7 @@ internal sealed class OurServer : IAsyncDisposable
                 $"{Http01EndPoint} is in use; the parity tests need it for our server's HTTP-01 handler.");
 
         var tlsEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var accessManager = new FileAccessManager(storagePath, new FileAccessManagerOptions {
+        var accessManager = await FileAccessManager.Create(storagePath, new FileAccessManagerOptions {
             PublicEndPoints = [tlsEndPoint],
             TcpEndPoints = [tlsEndPoint],
             QuicEndPoints = [],
@@ -56,7 +56,7 @@ internal sealed class OurServer : IAsyncDisposable
             LogAnonymizer = false,
             EnableHttp01Challenge = true,
             SessionOptions = new SessionOptions { MinClientProtocolVersion = 15 }
-        });
+        }, cancellationToken);
 
         var server = CreateServer(accessManager, storagePath);
         try {

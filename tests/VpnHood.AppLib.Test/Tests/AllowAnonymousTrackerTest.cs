@@ -213,7 +213,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     [TestMethod]
     public async Task The_access_manager_is_told_the_switch_at_each_connect()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -237,7 +237,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     [TestMethod]
     public async Task A_build_without_a_tracker_tells_the_vpn_service_off()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 

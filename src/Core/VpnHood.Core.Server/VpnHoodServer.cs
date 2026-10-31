@@ -336,8 +336,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             _configErrorTracker.RecordError(ex);
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
         }
-        // a stop's cancellation is not a configuration error: it passes, and the job swallows it
+        // a stop's cancellation is not a configuration error: it passes, and the job swallows it. One the server's
+        // close made reports the close, as a configuration the close interrupts after its read does
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            ObjectDisposedException.ThrowIf(_disposing, this);
             throw;
         }
         // nor is a refusal once the server's close has begun, which would keep the next start from configuring
@@ -519,11 +521,13 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         try {
             var serverConfig = await AccessManager.Server_Configure(serverInfo, cancellationToken).Vhc();
             _isRestarted = false; // is restarted should send once
-            // not cancelled: a write cut off after the truncation would leave no last config for maintenance
+            // replaced whole: a cut write would leave no last config for maintenance
             try {
-                await File.WriteAllTextAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig),
-                        CancellationToken.None)
-                    .Vhc();
+                await FileUtils.WriteAllTextAtomicAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig),
+                    cancellationToken).Vhc();
+            }
+            catch (OperationCanceledException) {
+                throw;
             }
             catch {
                 /* Ignore */

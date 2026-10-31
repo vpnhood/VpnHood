@@ -67,7 +67,8 @@ internal class ClientServerDom : IAsyncDisposable
         ClientOptions? clientOptions = null,
         Traffic? maxSpeedMbps = null,
         ProxyOptions? proxyOptions = null,
-        ISocketFactory? clientSocketFactory = null)
+        ISocketFactory? clientSocketFactory = null,
+        CancellationToken cancellationToken = default)
     {
         TestAccessManager? accessManager = null;
         VpnHoodServer? server = null;
@@ -92,7 +93,7 @@ internal class ClientServerDom : IAsyncDisposable
                     TestWebServerLocalEps.AllocateFreeUdpEndPoint(IPAddress.IPv6Any)
                 ];
 
-            accessManager = testHelper.CreateAccessManager(fileAccessManagerOptions);
+            accessManager = await testHelper.CreateAccessManager(cancellationToken, fileAccessManagerOptions);
             server = await testHelper.CreateServer(accessManager, socketFactory: testSocketFactory);
             var token = testHelper.CreateAccessToken(server, maxSpeedMbps: maxSpeedMbps);
 

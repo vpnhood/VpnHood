@@ -215,7 +215,7 @@ public class ConfigErrorTrackerTest : TestBase
     public async Task Server_should_stay_Waiting_when_configure_fails_before_strike_duration()
     {
         // Arrange: access manager that always throws on configure
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfigureException = new Exception("bad config");
 
         // Create server with short intervals but long strike duration — should keep retrying
@@ -240,7 +240,7 @@ public class ConfigErrorTrackerTest : TestBase
         Directory.CreateDirectory(TestHelper.WorkingPath);
         WriteStrikeFile(TestHelper.WorkingPath, DateTime.UtcNow.AddDays(-30));
 
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfigureException = new Exception("persistent bad config");
 
         await using var server = CreateServer(accessManager,
@@ -264,7 +264,7 @@ public class ConfigErrorTrackerTest : TestBase
     public async Task Server_should_recover_when_configure_succeeds_after_errors()
     {
         // Arrange: start with a failing access manager
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfigureException = new Exception("temporary failure");
 
         await using var server = CreateServer(accessManager, retryInterval: TimeSpan.FromMilliseconds(50));
@@ -298,7 +298,7 @@ public class ConfigErrorTrackerTest : TestBase
         Directory.CreateDirectory(TestHelper.WorkingPath);
         WriteStrikeFile(TestHelper.WorkingPath, DateTime.UtcNow.AddDays(-30));
 
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfigureException = new Exception("still broken");
 
         await using var server = CreateServer(accessManager,

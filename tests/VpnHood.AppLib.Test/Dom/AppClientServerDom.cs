@@ -58,9 +58,10 @@ public class AppClientServerDom : IAsyncDisposable
     public static async Task<AppClientServerDom> CreateWithNullCapture(
         TestAppHelper testAppHelper,
         FileAccessManagerOptions? fileAccessManagerOptions = null,
-        AppOptions? appOptions = null)
+        AppOptions? appOptions = null,
+        CancellationToken cancellationToken = default)
     {
-        var accessManager = testAppHelper.CreateAccessManager(fileAccessManagerOptions);
+        var accessManager = await testAppHelper.CreateAccessManager(cancellationToken, fileAccessManagerOptions);
         appOptions ??= testAppHelper.CreateAppOptions();
 
         // create server
@@ -78,10 +79,11 @@ public class AppClientServerDom : IAsyncDisposable
         TestVpnAdapterOptions? adapterOptions = null,
         AdType adProviderAdType = AdType.RewardedAd,
         FileAccessManagerOptions? fileAccessManagerOptions = null,
-        AppOptions? appOptions = null)
+        AppOptions? appOptions = null,
+        CancellationToken cancellationToken = default)
     {
         var device = testAppHelper.CreateDevice(adapterOptions);
-        var accessManager = testAppHelper.CreateAccessManager(fileAccessManagerOptions);
+        var accessManager = await testAppHelper.CreateAccessManager(cancellationToken, fileAccessManagerOptions);
         appOptions ??= testAppHelper.CreateAppOptions();
 
         // create server

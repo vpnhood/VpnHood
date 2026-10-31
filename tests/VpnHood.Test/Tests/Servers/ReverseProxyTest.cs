@@ -142,7 +142,7 @@ public class ReverseProxyTest : TestBase
     public async Task The_client_ip_follows_the_reverse_proxy_ranges(string? reverseProxyIpRanges,
         string forwardedFor, string expectedClientIp)
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         accessManager.ServerConfig.ReverseProxyIpRanges = reverseProxyIpRanges?
             .Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(IpRange.Parse)
@@ -158,7 +158,7 @@ public class ReverseProxyTest : TestBase
     [TestMethod]
     public async Task A_forwarded_hello_gets_no_udp_or_quic_port()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 

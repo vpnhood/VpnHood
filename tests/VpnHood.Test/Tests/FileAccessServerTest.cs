@@ -19,7 +19,7 @@ public class FileAccessManagerTest : TestBase
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.IsValidHostName = true;
 
-        var accessManager = TestHelper.CreateAccessManager(options);
+        var accessManager = await TestHelper.CreateAccessManager(TestCt, options);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         var accessToken = accessManager.AccessTokenService.Create();
@@ -36,7 +36,7 @@ public class FileAccessManagerTest : TestBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.TcpEndPoints = [new IPEndPoint(IPAddress.Any, 8000)];
         fileAccessManagerOptions.PublicEndPoints = [IPEndPoint.Parse("127.0.0.1:8000")];
-        var accessManager1 = new FileAccessManager(storagePath, fileAccessManagerOptions);
+        var accessManager1 = await FileAccessManager.Create(storagePath, fileAccessManagerOptions, TestCt);
 
         //add two tokens
         var token1 = accessManager1.CreateToken();
@@ -82,7 +82,7 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)
-        var accessManager2 = new FileAccessManager(storagePath, fileAccessManagerOptions);
+        var accessManager2 = await FileAccessManager.Create(storagePath, fileAccessManagerOptions, TestCt);
 
         accessTokenDatas = await accessManager2.AccessTokenService.List(TestCt);
         Assert.Contains(x => x.AccessToken.TokenId == token2.TokenId, accessTokenDatas);
@@ -99,7 +99,7 @@ public class FileAccessManagerTest : TestBase
         // ************
         // *** TEST ***: token must be retrieved after reloading
         accessManager1.CreateToken();
-        var accessManager3 = new FileAccessManager(storagePath, fileAccessManagerOptions);
+        var accessManager3 = await FileAccessManager.Create(storagePath, fileAccessManagerOptions, TestCt);
         accessTokenDatas = await accessManager3.AccessTokenService.List(TestCt);
         Assert.HasCount(3, accessTokenDatas);
         Assert.AreEqual(new Traffic(sent: 5, received: 50),
@@ -112,7 +112,7 @@ public class FileAccessManagerTest : TestBase
     public async Task AddUsage()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        var accessManager1 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
 
         //add token
         var token = accessManager1.CreateToken();
@@ -157,7 +157,7 @@ public class FileAccessManagerTest : TestBase
         Assert.AreEqual(30, response.AccessUsage?.CycleTraffic.Received);
 
         // check restore
-        var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        var accessManager2 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
         response = await accessManager2.Session_Create(sessionRequestEx1, TestCt);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
         Assert.AreEqual(60, response.AccessUsage?.CycleTraffic.Sent);
@@ -168,7 +168,7 @@ public class FileAccessManagerTest : TestBase
     public async Task A_restart_keeps_the_end_of_a_clients_old_sessions()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        using var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
         var sessionRequestEx = CreateSessionRequestEx(accessManager1.CreateToken());
 
         // one client: its first session closed, its second suppressed by its third, the live one
@@ -179,7 +179,7 @@ public class FileAccessManagerTest : TestBase
 
         // a restarted server's recovery asks for every session. Loaded as live, an ended session suppressed the
         // client's live one, which the server then closed
-        using var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        using var accessManager2 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
         var responses = await accessManager2.Session_GetAll(TestCt);
         Assert.AreEqual(SessionErrorCode.Ok, responses.Single(x => x.SessionId == liveSession.SessionId).ErrorCode);
         Assert.AreEqual(SessionErrorCode.SessionClosed,
@@ -192,7 +192,7 @@ public class FileAccessManagerTest : TestBase
     public async Task A_used_session_times_out_from_its_last_use_not_its_creation()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        using var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
         var token = accessManager1.CreateToken(maxClientCount: 2);
         var usedSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
         var unusedSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
@@ -201,7 +201,7 @@ public class FileAccessManagerTest : TestBase
         var oldTime = DateTime.UtcNow.AddHours(-47);
         SetSessionTimes(accessManager1.SessionsFolderPath, usedSession.SessionId, oldTime);
         SetSessionTimes(accessManager1.SessionsFolderPath, unusedSession.SessionId, oldTime);
-        using var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        using var accessManager2 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
 
         // the server's report of a session's traffic is its use; the start's recovery is none
         await accessManager2.Session_GetAll(TestCt);
@@ -211,7 +211,7 @@ public class FileAccessManagerTest : TestBase
         Assert.IsLessThan(oldTime.AddMinutes(1), GetLastUsedTime(accessManager2, unusedSession.SessionId));
 
         // a restart keeps the use
-        using var accessManager3 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        using var accessManager3 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
         Assert.IsGreaterThan(DateTime.UtcNow.AddMinutes(-1), GetLastUsedTime(accessManager3, usedSession.SessionId));
     }
 
@@ -219,7 +219,7 @@ public class FileAccessManagerTest : TestBase
     public async Task Cleanup_removes_a_timed_out_session_with_its_file()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        using var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
         var token = accessManager1.CreateToken(maxClientCount: 3);
         var oldSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
         var recentSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
@@ -231,7 +231,7 @@ public class FileAccessManagerTest : TestBase
         SetSessionTimes(sessionsFolderPath, oldSession.SessionId, DateTime.UtcNow.AddHours(-49));
         SetSessionTimes(sessionsFolderPath, recentSession.SessionId, DateTime.UtcNow.AddHours(-47));
         SetSessionTimes(sessionsFolderPath, endedSession.SessionId, DateTime.UtcNow.AddHours(-21));
-        using var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        using var accessManager2 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
 
         // the cleanup takes those past their timeout, files too, and keeps the other
         var sessions = accessManager2.SessionService.Sessions;
@@ -252,14 +252,14 @@ public class FileAccessManagerTest : TestBase
         var options = CreateOptionsWithDefaultUdp();
         options.TcpEndPoints = null; // every address
         options.PublicEndPoints = [IPEndPoint.Parse("127.0.0.1:443")];
-        using var accessManager1 = TestHelper.CreateAccessManager(options, storagePath);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, options, storagePath);
         var serverConfig = await accessManager1.Server_Configure(CreateServerInfo(freeUdpPort: 20001), TestCt);
         Assert.AreEqual("0.0.0.0:20001,[::]:20001", FormatUdpEndPoints(serverConfig));
         Assert.AreEqual("20001", File.ReadAllText(Path.Combine(storagePath, "udp_port")));
 
         // a restart keeps the port, whatever port is free then; one TCP address, one UDP address
         options = CreateOptionsWithDefaultUdp();
-        using var accessManager2 = TestHelper.CreateAccessManager(options, storagePath);
+        using var accessManager2 = await TestHelper.CreateAccessManager(TestCt, options, storagePath);
         serverConfig = await accessManager2.Server_Configure(CreateServerInfo(freeUdpPort: 30001), TestCt);
         Assert.AreEqual("127.0.0.1:20001", FormatUdpEndPoints(serverConfig));
     }
@@ -280,25 +280,25 @@ public class FileAccessManagerTest : TestBase
     public async Task Udp_endpoints_of_the_settings_win_over_the_kept_port()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        using var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
         await accessManager1.Server_Configure(CreateServerInfo(freeUdpPort: 20001), TestCt);
 
         // a port of their own
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 5000)];
-        using var accessManager2 = TestHelper.CreateAccessManager(options, storagePath);
+        using var accessManager2 = await TestHelper.CreateAccessManager(TestCt, options, storagePath);
         var serverConfig = await accessManager2.Server_Configure(CreateServerInfo(freeUdpPort: 30001), TestCt);
         Assert.AreEqual(5000, serverConfig.UdpEndPointsValue.Single().Port);
 
         // port 0: the kept one
-        using var accessManager3 = TestHelper.CreateAccessManager(storagePath: storagePath);
+        using var accessManager3 = await TestHelper.CreateAccessManager(TestCt, storagePath: storagePath);
         serverConfig = await accessManager3.Server_Configure(CreateServerInfo(freeUdpPort: 30001), TestCt);
         Assert.AreEqual(20001, serverConfig.UdpEndPointsValue.Single().Port);
 
         // none: no UDP
         options = TestHelper.CreateFileAccessManagerOptions();
         options.UdpEndPoints = [];
-        using var accessManager4 = TestHelper.CreateAccessManager(options, storagePath);
+        using var accessManager4 = await TestHelper.CreateAccessManager(TestCt, options, storagePath);
         serverConfig = await accessManager4.Server_Configure(CreateServerInfo(freeUdpPort: 30001), TestCt);
         Assert.IsEmpty(serverConfig.UdpEndPointsValue);
     }

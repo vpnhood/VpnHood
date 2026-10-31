@@ -29,7 +29,7 @@ internal sealed class Http3ParityServers(
         Directory.CreateDirectory(storagePath);
         var tcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         var quicEndPoint = VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback);
-        var accessManager = new FileAccessManager(storagePath, new FileAccessManagerOptions {
+        var accessManager = await FileAccessManager.Create(storagePath, new FileAccessManagerOptions {
             PublicEndPoints = [tcpEndPoint],
             TcpEndPoints = [tcpEndPoint],
             QuicEndPoints = [quicEndPoint],
@@ -39,7 +39,7 @@ internal sealed class Http3ParityServers(
             UseExternalLocationService = false,
             LogAnonymizer = false,
             SessionOptions = new SessionOptions { MinClientProtocolVersion = 15 }
-        });
+        }, cancellationToken);
         var server = CreateServer(accessManager, storagePath);
         try {
             var referenceEndPoint = VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback);

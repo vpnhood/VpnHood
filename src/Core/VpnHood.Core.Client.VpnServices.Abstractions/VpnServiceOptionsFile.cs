@@ -75,11 +75,11 @@ public class VpnServiceOptionsFile(string configFolder)
         }, SharingTimeout, cancellationToken).Vhc();
     }
 
-    // the token ends the wait between tries, not a write under way: a cut one would leave the file in part
+    // replaced whole, so the service never reads a part of it; the replace is tried again while the service reads
     private async Task WriteFile(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(serviceOptions);
-        await FileUtils.WaitOutSharingAsync(() => File.WriteAllTextAsync(FilePath, json, CancellationToken.None),
+        await FileUtils.WaitOutSharingAsync(() => FileUtils.WriteAllTextAtomicAsync(FilePath, json, cancellationToken),
             SharingTimeout, cancellationToken).Vhc();
     }
 }

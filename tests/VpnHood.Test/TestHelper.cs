@@ -130,18 +130,21 @@ public class TestHelper : IDisposable
         return Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
     }
 
-    public TestAccessManager CreateAccessManager(FileAccessManagerOptions? options = null,
+    // the token first: a required one can't follow the optional parameters
+    public async Task<TestAccessManager> CreateAccessManager(CancellationToken cancellationToken,
+        FileAccessManagerOptions? options = null,
         string? storagePath = null,
         string? serverLocation = null)
     {
         storagePath ??= CreateAccessManagerWorkingDir();
         if (!string.IsNullOrEmpty(serverLocation)) {
             Directory.CreateDirectory(storagePath);
-            File.WriteAllText(Path.Combine(storagePath, "server_location"), serverLocation);
+            await File.WriteAllTextAsync(Path.Combine(storagePath, "server_location"), serverLocation,
+                cancellationToken);
         }
 
         options ??= CreateFileAccessManagerOptions();
-        return new TestAccessManager(storagePath, options);
+        return await TestAccessManager.Create(storagePath, options, cancellationToken);
     }
 
     public FileAccessManagerOptions CreateFileAccessManagerOptions()
@@ -226,7 +229,7 @@ public class TestHelper : IDisposable
 
         var autoDisposeAccessManager = false;
         if (accessManager == null) {
-            accessManager = CreateAccessManager(fileAccessManagerOptions);
+            accessManager = await CreateAccessManager(cancellationToken, fileAccessManagerOptions);
             autoDisposeAccessManager = true;
         }
 

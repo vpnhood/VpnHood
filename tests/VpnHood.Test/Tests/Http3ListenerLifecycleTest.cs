@@ -12,7 +12,7 @@ public class Http3ListenerLifecycleTest : TestBase
     [Timeout(30_000, CooperativeCancellation = true)]
     public async Task A_stalled_final_GOAWAY_write_is_cancelled_only_after_native_connection_close_starts()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         var quicServer = new FailingQuicServer(blockFinalGoAway: true);
         await using var server = new VpnHoodServer(accessManager, new ServerOptions {
             SocketFactory = new TestSocketFactory(),
@@ -72,7 +72,7 @@ public class Http3ListenerLifecycleTest : TestBase
     [Timeout(30_000, CooperativeCancellation = true)]
     public async Task An_ended_QUIC_listener_is_removed_from_live_endpoints_and_restarted_by_configuration()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         var quicServer = new FailingQuicServer();
         await using var server = new VpnHoodServer(accessManager, new ServerOptions {
             SocketFactory = new TestSocketFactory(),

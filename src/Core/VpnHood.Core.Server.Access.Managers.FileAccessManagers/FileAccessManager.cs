@@ -24,38 +24,64 @@ public class FileAccessManager : IAccessManager
     public FileAccessManagerOptions ServerConfig { get; }
     public string StoragePath { get; }
     public SessionService SessionService { get; }
-    public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
-    public string SessionsFolderPath => Path.Combine(StoragePath, "sessions");
+    public string CertsFolderPath => GetCertsFolderPath(StoragePath);
+    public string SessionsFolderPath => GetSessionsFolderPath(StoragePath);
     public X509Certificate2 DefaultCert { get; }
     public ServerStatus? ServerStatus { get; private set; }
     public ServerInfo? ServerInfo { get; private set; }
     public AccessTokenService AccessTokenService { get; }
 
-    // A manager whose server token carries the server's location: the network is asked for it here, once, when the
-    // settings allow; the constructor only reads what was found, and goes without it otherwise.
+    // A manager over its storage folder, whose files are read here, as a constructor can't wait on them. The server
+    // token carries the server's location: the network is asked for it once, when the settings allow, and the token
+    // goes without it otherwise.
     public static async Task<FileAccessManager> Create(string storagePath, FileAccessManagerOptions options,
         CancellationToken cancellationToken)
     {
-        await FindServerLocation(storagePath, options, cancellationToken).Vhc();
-        return new FileAccessManager(storagePath, options);
+        var storage = await LoadStorage(storagePath, options, cancellationToken).Vhc();
+        return new FileAccessManager(storage);
     }
 
-    public FileAccessManager(string storagePath, FileAccessManagerOptions options)
+    // a derived manager's Create reads the storage here; the server secret read or made goes into the options
+    protected static async Task<FileAccessManagerStorage> LoadStorage(string storagePath,
+        FileAccessManagerOptions options, CancellationToken cancellationToken)
     {
         using var scope = VhLogger.Instance.BeginScope("FileAccessManager");
+        ArgumentNullException.ThrowIfNull(storagePath);
 
-        StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
-        ServerConfig = options;
-        AccessTokenService = new AccessTokenService(storagePath);
-        SessionService = new SessionService(SessionsFolderPath, options.IsUnitTest);
-        Directory.CreateDirectory(StoragePath);
+        await FindServerLocation(storagePath, options, cancellationToken).Vhc();
+        Directory.CreateDirectory(storagePath);
+        var defaultCert = await LoadDefaultCert(GetCertsFolderPath(storagePath),
+            options.SslCertificatesPassword ?? string.Empty, cancellationToken).Vhc();
 
-        var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
-        DefaultCert = File.Exists(defaultCertFile)
-            ? X509CertificateLoader.LoadPkcs12FromFile(defaultCertFile,
-                options.SslCertificatesPassword ?? string.Empty,
-                X509KeyStorageFlags.Exportable)
-            : CreateSelfSignedCertificate(defaultCertFile, options.SslCertificatesPassword ?? string.Empty);
+        // the certificate is closed when a later step fails, a cancel included
+        try {
+            options.ServerSecret ??= await LoadServerSecret(GetCertsFolderPath(storagePath), cancellationToken).Vhc();
+            var serverToken = await GetAndUpdateServerToken(storagePath, options, defaultCert, cancellationToken).Vhc();
+            var sessionService = await SessionService.Create(GetSessionsFolderPath(storagePath), options.IsUnitTest,
+                cancellationToken).Vhc();
+
+            return new FileAccessManagerStorage {
+                StoragePath = storagePath,
+                Options = options,
+                DefaultCert = defaultCert,
+                ServerToken = serverToken,
+                SessionService = sessionService
+            };
+        }
+        catch {
+            defaultCert.Dispose();
+            throw;
+        }
+    }
+
+    protected FileAccessManager(FileAccessManagerStorage storage)
+    {
+        StoragePath = storage.StoragePath;
+        ServerConfig = storage.Options;
+        AccessTokenService = new AccessTokenService(StoragePath);
+        SessionService = storage.SessionService;
+        DefaultCert = storage.DefaultCert;
+        _serverToken = storage.ServerToken;
 
         ServerConfig.Certificates = [
             new CertificateData {
@@ -65,30 +91,24 @@ public class FileAccessManager : IAccessManager
             }
         ];
 
-        // get or create server secret
-        ServerConfig.ServerSecret ??= LoadServerSecret();
-
         // UDP is on unless the settings set its endpoints: on TCP's addresses, since a UDP socket on any address answers
         // from the machine's main one, not always the one an app reached; on the port this server keeps (port 0)
         ServerConfig.UdpEndPoints ??= ServerConfig.TcpEndPointsValue
             .Select(x => new IPEndPoint(x.Address, 0))
             .Distinct()
             .ToArray();
-
-        // get server token
-        _serverToken = GetAndUpdateServerToken();
     }
 
-    public void ClearCache()
+    private static string GetCertsFolderPath(string storagePath) => Path.Combine(storagePath, "certificates");
+    private static string GetSessionsFolderPath(string storagePath) => Path.Combine(storagePath, "sessions");
+
+    public async Task ClearCache(CancellationToken cancellationToken)
     {
-        _serverToken = GetAndUpdateServerToken();
+        _serverToken = await GetAndUpdateServerToken(StoragePath, ServerConfig, DefaultCert, cancellationToken).Vhc();
     }
 
-    private ServerToken GetAndUpdateServerToken() => GetAndUpdateServerToken(ServerConfig, DefaultCert,
-        Path.Combine(StoragePath, "server-token", "enc-server-token"));
-
-    private ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate,
-        string encServerTokenFilePath)
+    private static async Task<ServerToken> GetAndUpdateServerToken(string storagePath,
+        FileAccessManagerOptions serverConfig, X509Certificate2 certificate, CancellationToken cancellationToken)
     {
         // PublicEndPoints
         var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
@@ -97,7 +117,8 @@ public class FileAccessManager : IAccessManager
             throw new Exception("PublicEndPoints has not been configured properly.");
 
 
-        var serverLocation = TryToReadFile(Path.Combine(StoragePath, ServerLocationFileName));
+        var serverLocationFile = Path.Combine(storagePath, ServerLocationFileName);
+        var serverLocation = await TryToReadFile(serverLocationFile, cancellationToken).Vhc();
         VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
         var serverToken = new ServerToken {
             CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
@@ -113,29 +134,44 @@ public class FileAccessManager : IAccessManager
         };
 
         // write encrypted server token
+        var encServerTokenFilePath = Path.Combine(storagePath, "server-token", "enc-server-token");
         if (File.Exists(encServerTokenFilePath))
             try {
                 var oldServerToken = ServerToken.Decrypt(serverConfig.ServerSecret ?? new byte[16],
-                    File.ReadAllText(encServerTokenFilePath));
+                    await File.ReadAllTextAsync(encServerTokenFilePath, cancellationToken).Vhc());
                 if (!oldServerToken.IsTokenUpdated(serverToken))
                     return oldServerToken;
+            }
+            catch (OperationCanceledException) {
+                throw;
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogWarning(ex, "Error in reading enc-server-token.");
             }
 
         Directory.CreateDirectory(Path.GetDirectoryName(encServerTokenFilePath)!);
-        File.WriteAllText(encServerTokenFilePath, serverToken.Encrypt());
+        await FileUtils.WriteAllTextAtomicAsync(encServerTokenFilePath, serverToken.Encrypt(), cancellationToken).Vhc();
         return serverToken;
     }
 
-    private byte[] LoadServerSecret()
+    private static async Task<X509Certificate2> LoadDefaultCert(string certsFolderPath, string password,
+        CancellationToken cancellationToken)
     {
-        var serverSecretFile = Path.Combine(CertsFolderPath, "secret");
-        var secretBase64 = TryToReadFile(serverSecretFile);
+        var defaultCertFile = Path.Combine(certsFolderPath, "default.pfx");
+        if (!File.Exists(defaultCertFile))
+            return await CreateSelfSignedCertificate(defaultCertFile, password, cancellationToken).Vhc();
+
+        var buf = await File.ReadAllBytesAsync(defaultCertFile, cancellationToken).Vhc();
+        return X509CertificateLoader.LoadPkcs12(buf, password, X509KeyStorageFlags.Exportable);
+    }
+
+    private static async Task<byte[]> LoadServerSecret(string certsFolderPath, CancellationToken cancellationToken)
+    {
+        var serverSecretFile = Path.Combine(certsFolderPath, "secret");
+        var secretBase64 = await TryToReadFile(serverSecretFile, cancellationToken).Vhc();
         if (string.IsNullOrEmpty(secretBase64)) {
             secretBase64 = Convert.ToBase64String(VhUtils.GenerateKey(128));
-            File.WriteAllText(serverSecretFile, secretBase64);
+            await FileUtils.WriteAllTextAtomicAsync(serverSecretFile, secretBase64, cancellationToken).Vhc();
         }
 
         return Convert.FromBase64String(secretBase64);
@@ -146,7 +182,8 @@ public class FileAccessManager : IAccessManager
         CancellationToken cancellationToken)
     {
         var serverLocationFile = Path.Combine(storagePath, ServerLocationFileName);
-        if (!options.UseExternalLocationService || !string.IsNullOrEmpty(TryToReadFile(serverLocationFile)))
+        if (!options.UseExternalLocationService ||
+            !string.IsNullOrEmpty(await TryToReadFile(serverLocationFile, cancellationToken).Vhc()))
             return;
 
         try {
@@ -166,9 +203,8 @@ public class FileAccessManager : IAccessManager
             var serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName,
                 ipLocation.CityName);
 
-            // not under the token: a cut write would keep a part of the location
             Directory.CreateDirectory(storagePath);
-            await File.WriteAllTextAsync(serverLocationFile, serverLocation, CancellationToken.None).Vhc();
+            await FileUtils.WriteAllTextAtomicAsync(serverLocationFile, serverLocation, cancellationToken).Vhc();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
@@ -178,10 +214,14 @@ public class FileAccessManager : IAccessManager
         }
     }
 
-    private static string? TryToReadFile(string filePath)
+    // a cancel goes out: taken for a missing file, it would have the secret made anew
+    private static async Task<string?> TryToReadFile(string filePath, CancellationToken cancellationToken)
     {
         try {
-            return File.Exists(filePath) ? File.ReadAllText(filePath) : null;
+            return File.Exists(filePath) ? await File.ReadAllTextAsync(filePath, cancellationToken).Vhc() : null;
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not read file: {FilePath}", filePath);
@@ -198,7 +238,7 @@ public class FileAccessManager : IAccessManager
         return result;
     }
 
-    public virtual Task<ServerConfig> Server_Configure(ServerInfo serverInfo, CancellationToken cancellationToken)
+    public virtual async Task<ServerConfig> Server_Configure(ServerInfo serverInfo, CancellationToken cancellationToken)
     {
         ServerInfo = serverInfo;
         ServerStatus = serverInfo.Status;
@@ -206,7 +246,7 @@ public class FileAccessManager : IAccessManager
         // port 0 takes the UDP port this server keeps, so a firewall rule made for it holds across restarts
         var udpEndPoints = ServerConfig.UdpEndPointsValue.ToArray();
         if (udpEndPoints.Any(x => x.Port == 0)) {
-            var udpPort = GetUdpPort(serverInfo);
+            var udpPort = await GetUdpPort(serverInfo, cancellationToken).Vhc();
             foreach (var udpEndPoint in udpEndPoints.Where(x => x.Port == 0))
                 udpEndPoint.Port = udpPort;
         }
@@ -221,19 +261,20 @@ public class FileAccessManager : IAccessManager
         }
         ServerConfig.QuicEndPoints = quicEndPoints.Where(x => x.Port != 0).ToArray();
 
-        return Task.FromResult<ServerConfig>(ServerConfig);
+        return ServerConfig;
     }
 
     // a free port the server found at its first start, one for both IP versions; 0 when it found none
-    private int GetUdpPort(ServerInfo serverInfo)
+    private async Task<int> GetUdpPort(ServerInfo serverInfo, CancellationToken cancellationToken)
     {
         var udpPortFile = Path.Combine(StoragePath, "udp_port");
-        if (!int.TryParse(TryToReadFile(udpPortFile), out var udpPort) || udpPort is <= 0 or > ushort.MaxValue) {
+        var udpPortText = await TryToReadFile(udpPortFile, cancellationToken).Vhc();
+        if (!int.TryParse(udpPortText, out var udpPort) || udpPort is <= 0 or > ushort.MaxValue) {
             udpPort = serverInfo.FreeUdpPortV4 != 0 ? serverInfo.FreeUdpPortV4 : serverInfo.FreeUdpPortV6;
             if (udpPort == 0)
                 return 0;
 
-            File.WriteAllText(udpPortFile, udpPort.ToString());
+            await FileUtils.WriteAllTextAtomicAsync(udpPortFile, udpPort.ToString(), cancellationToken).Vhc();
         }
 
         VhLogger.Instance.LogInformation("UDP port: {UdpPort}, kept in {UdpPortFile}. Open it for UDP in the firewall.",
@@ -518,13 +559,14 @@ public class FileAccessManager : IAccessManager
         return Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
     }
 
-    private static X509Certificate2 CreateSelfSignedCertificate(string certFilePath, string password)
+    private static async Task<X509Certificate2> CreateSelfSignedCertificate(string certFilePath, string password,
+        CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation($"Creating Certificate file: {certFilePath}");
         var certificate = CertificateUtil.CreateSelfSigned();
         var buf = certificate.Export(X509ContentType.Pfx, password);
         Directory.CreateDirectory(Path.GetDirectoryName(certFilePath)!);
-        File.WriteAllBytes(certFilePath, buf);
+        await FileUtils.WriteAllBytesAtomicAsync(certFilePath, buf, cancellationToken).Vhc();
         return X509CertificateLoader.LoadPkcs12(buf, password, X509KeyStorageFlags.Exportable);
     }
 

@@ -6,6 +6,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
 using VpnHood.Core.Server.Access.Messaging;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -28,28 +29,34 @@ public class SessionService : IDisposable
     public ConcurrentDictionary<ulong, Session> Sessions { get; }
 
 
-    public SessionService(string sessionsFolderPath, bool isUnitTest)
+    // the previous sessions are read here, as a constructor can't wait on their files
+    public static async Task<SessionService> Create(string sessionsFolderPath, bool isUnitTest,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(sessionsFolderPath);
+        var sessions = await LoadAllSessions(sessionsFolderPath, cancellationToken).Vhc();
+        return new SessionService(sessionsFolderPath, sessions, isUnitTest);
+    }
+
+    private SessionService(string sessionsFolderPath, ConcurrentDictionary<ulong, Session> sessions, bool isUnitTest)
     {
         IsUnitTest = isUnitTest;
         _sessionsFolderPath = sessionsFolderPath;
-        Directory.CreateDirectory(sessionsFolderPath);
-
-        // load all previous sessions to dictionary
-        Sessions = LoadAllSessions(sessionsFolderPath);
+        Sessions = sessions;
         if (Sessions.Any())
             _lastSessionId = Sessions.Max(x => (long)x.Key);
 
         _cleanupSessionsJob = new Job(Cleanup, name: nameof(SessionService));
     }
 
-    private static ConcurrentDictionary<ulong, Session> LoadAllSessions(string sessionsFolderPath)
+    private static async Task<ConcurrentDictionary<ulong, Session>> LoadAllSessions(string sessionsFolderPath,
+        CancellationToken cancellationToken)
     {
         // read all session from files
         var sessions = new ConcurrentDictionary<ulong, Session>();
         foreach (var filePath in Directory.GetFiles(sessionsFolderPath, $"*.{SessionFileExtension}")) {
-            var session = JsonUtils.TryDeserializeFile<Session>(filePath);
+            var session = await TryLoadSession(filePath, cancellationToken).Vhc();
             if (session == null) {
-                VhLogger.Instance.LogError("Could not load session file. File: {File}", filePath);
                 VhUtils.TryDeleteFile(filePath);
                 continue;
             }
@@ -58,6 +65,22 @@ public class SessionService : IDisposable
         }
 
         return sessions;
+    }
+
+    // a cancel goes out: taken for a bad file, it would have the file deleted
+    private static async Task<Session?> TryLoadSession(string filePath, CancellationToken cancellationToken)
+    {
+        try {
+            var json = await File.ReadAllTextAsync(filePath, cancellationToken).Vhc();
+            return JsonUtils.Deserialize<Session>(json);
+        }
+        catch (OperationCanceledException) {
+            throw;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not load session file. File: {File}", filePath);
+            return null;
+        }
     }
 
     private string GetSessionFilePath(ulong sessionId)

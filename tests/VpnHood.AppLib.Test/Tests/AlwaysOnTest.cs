@@ -57,7 +57,7 @@ public class AlwaysOnTest : TestAppBase
     [TestMethod]
     public async Task Maintenance_is_tried_again_after_a_pause_that_grows()
     {
-        var accessManager = TestHttpAccessManager.Create(TestHelper.CreateAccessManager());
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
@@ -82,7 +82,7 @@ public class AlwaysOnTest : TestAppBase
     [TestMethod]
     public async Task A_server_out_of_reach_is_tried_again_and_a_session_that_held_starts_the_pauses_over()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         var token = TestHelper.CreateAccessToken(accessManager);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
 
@@ -131,7 +131,7 @@ public class AlwaysOnTest : TestAppBase
     [TestMethod]
     public async Task A_persons_disconnect_stops_it_until_a_persons_connect()
     {
-        var accessManager = TestHttpAccessManager.Create(TestHelper.CreateAccessManager());
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
@@ -273,7 +273,7 @@ public class AlwaysOnTest : TestAppBase
     [TestMethod]
     public async Task A_plan_change_during_a_try_that_stops_makes_it_try_once_more()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         token.IsPublic = true; // a CONNECT-style profile: premium comes from a code alone
@@ -299,7 +299,7 @@ public class AlwaysOnTest : TestAppBase
     [TestMethod]
     public async Task Without_its_plan_it_is_refused_and_a_plan_change_tries_once_more()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         token.IsPublic = true; // a CONNECT-style profile: premium comes from a code alone

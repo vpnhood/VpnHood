@@ -52,7 +52,7 @@ public class UserAgentTest : TestAppBase
     [TestMethod]
     public async Task The_trackers_name_the_model_and_the_server_does_not()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 

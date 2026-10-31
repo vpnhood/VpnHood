@@ -108,7 +108,7 @@ public class ClientAppTest : TestAppBase
     public async Task State_Waiting()
     {
         // create Access Manager and token
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         var token = TestHelper.CreateAccessToken(accessManager);
 
         // create server
@@ -200,14 +200,14 @@ public class ClientAppTest : TestAppBase
     public async Task update_server_token_url_from_server()
     {
         // create Access Manager and token
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         var token = TestHelper.CreateAccessToken(accessManager);
 
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
         accessManager.ServerConfig.ServerTokenUrls = [newTokenUrl];
         // Updating the URL keeps this farm's key: protocol 15 proves it before hello can return the new URL.
-        accessManager.ClearCache();
+        await accessManager.ClearCache(TestCt);
 
         // create server and app
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -232,7 +232,7 @@ public class ClientAppTest : TestAppBase
     public async Task update_token_from_server()
     {
         // create Access Manager and token
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         var token = TestHelper.CreateAccessToken(accessManager, expirationTime: DateTime.UtcNow.AddDays(-1));
         var orgTokenName = token.Name;
 
@@ -265,7 +265,7 @@ public class ClientAppTest : TestAppBase
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions1.TcpEndPoints = [tcpEndPoint];
         fileAccessManagerOptions1.ServerTokenUrls = [$"http://{endPoint1}/accesskey", $"http://{endPoint2}/accesskey"];
-        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions1);
+        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1);
         await using var server1 = await TestHelper.CreateServer(accessManager1);
         var token1 = TestHelper.CreateAccessToken(server1);
         // ReSharper disable once DisposeOnUsingVariable
@@ -274,7 +274,7 @@ public class ClientAppTest : TestAppBase
         // create server 2
         await Task.Delay(1100, TestContext.CancellationToken); // wait for new CreatedTime
         fileAccessManagerOptions1.TcpEndPoints = [TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback)];
-        var accessManager2 = TestHelper.CreateAccessManager(storagePath: accessManager1.StoragePath,
+        var accessManager2 = await TestHelper.CreateAccessManager(TestCt, storagePath: accessManager1.StoragePath,
             options: fileAccessManagerOptions1);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
         var token2 = TestHelper.CreateAccessToken(server2);
@@ -335,7 +335,7 @@ public class ClientAppTest : TestAppBase
 
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.ServerTokenUrls = [$"http://{endPoint}/accesskey"];
-        using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -400,7 +400,7 @@ public class ClientAppTest : TestAppBase
     public async Task ServerLocation_must_reset_to_default_for_no_server_error()
     {
         // Create Server 1
-        using var accessManager = TestHelper.CreateAccessManager(serverLocation: "US/california");
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt, serverLocation: "US/california");
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create Client
@@ -435,7 +435,7 @@ public class ClientAppTest : TestAppBase
         var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         accessManagerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         accessManagerOptions.SessionOptions.SyncCacheSize = 50;
-        using var accessManager = TestHelper.CreateAccessManager(accessManagerOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt, accessManagerOptions);
 
         // create server
         await using var server = await TestHelper.CreateServer(accessManager);

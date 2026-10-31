@@ -26,7 +26,7 @@ public class AdTest : TestAppBase
     public async Task flexible_ad_should_not_close_session_if_load_ad_failed()
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
@@ -67,7 +67,7 @@ public class AdTest : TestAppBase
     public async Task flexible_ad_should_not_be_displayed_on_trial()
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
@@ -88,7 +88,7 @@ public class AdTest : TestAppBase
     public async Task Session_must_be_closed_after_few_minutes_if_ad_is_not_accepted()
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
@@ -114,7 +114,7 @@ public class AdTest : TestAppBase
     [DoNotParallelize] // clears the process-global AppUiContext; parallel tests restore it
     public async Task An_app_without_ads_refuses_an_ad_server_with_no_window_too()
     {
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // a build with no ad network, as the desktop service runs it: with no window
@@ -182,7 +182,7 @@ public class AdTest : TestAppBase
     public async Task RewardedAd_expiration_must_be_increased_by_user(bool acceptAd)
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         accessManager.CanExtendPremiumByAd = true;
         accessManager.RejectAllAds = !acceptAd;
@@ -225,7 +225,7 @@ public class AdTest : TestAppBase
     public async Task RewardedAd_should_toggle_by_access_manager(bool enable)
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
         accessManager.CanExtendPremiumByAd = enable;
 
@@ -252,7 +252,7 @@ public class AdTest : TestAppBase
     public async Task ShowAd_must_change_state_to_WaitingForAd()
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
@@ -292,7 +292,7 @@ public class AdTest : TestAppBase
         string errorLevel)
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // the ad's post-load delay keeps the connect waiting
@@ -327,7 +327,7 @@ public class AdTest : TestAppBase
     [TestMethod]
     public async Task SplitAll_must_on_while_playing_ad_ex()
     {
-        using var accessManager = TestAppHelper.CreateAccessManager();
+        using var accessManager = await TestAppHelper.CreateAccessManager(TestCt);
         await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
 
         // create the server
@@ -482,7 +482,7 @@ public class AdTest : TestAppBase
     public async Task Internal_Ad_provider_with_fallback()
     {
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
+        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item

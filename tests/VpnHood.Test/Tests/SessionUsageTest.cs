@@ -20,7 +20,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Usage_of_a_failed_request_is_dropped()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -41,7 +41,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Closes_of_an_outage_go_in_one_request()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         await using var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: TestHelper.CreateAccessToken(server));
@@ -66,7 +66,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Usage_of_a_lost_reply_is_billed_once()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -88,7 +88,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Requests_go_one_at_a_time()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -122,7 +122,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Close_is_reported_once()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -140,7 +140,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Close_by_the_access_manager_is_not_reported_back()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -165,7 +165,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Close_is_reported_after_a_failed_sync_and_a_stale_reply()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -200,7 +200,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Status_reply_that_crossed_an_ad_does_not_undo_it()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // a session that needs a rewarded ad has a short expiration, which the ad clears
@@ -246,7 +246,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Close_after_a_failed_request_waits_for_the_status_upload()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -269,7 +269,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Close_of_a_removed_session_still_goes()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -290,7 +290,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Close_made_while_a_sync_runs_goes_right_after_it()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         await using var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: TestHelper.CreateAccessToken(server));
@@ -322,7 +322,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Stop_reports_the_last_bytes_and_keeps_sessions_open()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -340,7 +340,7 @@ public class SessionUsageTest : TestBase
     [TestMethod]
     public async Task Active_session_is_reported_once_per_sync_interval()
     {
-        using var accessManager = CreateAccessManager();
+        using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
@@ -369,12 +369,12 @@ public class SessionUsageTest : TestBase
     }
 
     // only the test sends usage: the server's own status and sync wait an hour
-    private TestHttpAccessManager CreateAccessManager()
+    private async Task<TestHttpAccessManager> CreateAccessManager()
     {
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.UpdateStatusInterval = TimeSpan.FromHours(1);
         options.SessionOptions.SyncInterval = TimeSpan.FromHours(1);
-        return TestHttpAccessManager.Create(TestHelper.CreateAccessManager(options));
+        return TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt, options));
     }
 
     private static void AddTraffic(Session session, long sent, long received)

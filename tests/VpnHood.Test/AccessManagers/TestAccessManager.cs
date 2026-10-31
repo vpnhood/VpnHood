@@ -11,8 +11,7 @@ using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.AccessManagers;
 
-public class TestAccessManager(string storagePath, FileAccessManagerOptions options)
-    : FileAccessManager(storagePath, options)
+public class TestAccessManager : FileAccessManager
 {
     private readonly TimeoutDictionary<string, TimeoutItem> _adsData = new(TimeSpan.FromMinutes(10));
     private readonly Lock _lockObject = new();
@@ -49,6 +48,18 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public TestHold StatusUpdateHold { get; } = new();
     public TestHold ConfigureHold { get; } = new();
     public TestHold UsageHold { get; } = new();
+
+    public new static async Task<TestAccessManager> Create(string storagePath, FileAccessManagerOptions options,
+        CancellationToken cancellationToken)
+    {
+        var storage = await LoadStorage(storagePath, options, cancellationToken);
+        return new TestAccessManager(storage);
+    }
+
+    private TestAccessManager(FileAccessManagerStorage storage)
+        : base(storage)
+    {
+    }
 
     public void AddAdData(string adData)
     {

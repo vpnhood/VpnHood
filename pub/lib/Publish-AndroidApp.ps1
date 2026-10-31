@@ -13,7 +13,9 @@ param(
 . "$PSScriptRoot/Common.ps1"
 
 # store: google distribution -> google; web and web-arm64 share the web key/id (same as the keystore).
-$store = if ($distribution -eq 'google') { 'google' } else { 'web' }
+# samsung, the Galaxy Store's APK, is the Play build's app - its id, and its key, which Play signs CLIENT
+# with too (checked 2026-10-31 on Play's own APK) - so either store's install takes the other's update.
+$store = if ($distribution -eq 'google' -or $distribution -eq 'samsung') { 'google' } else { 'web' }
 
 # clean up any leftover temp project files
 Get-ChildItem -Path $projectDir -File -Filter "*.tmp.csproj" | Remove-Item -Force;
@@ -141,16 +143,18 @@ try {
 
 		if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 
-		# publish info
+		# publish info. The Galaxy Store's release goes up by hand and through its review, which takes days:
+		# its feed waits as Play's does, so the notice does not open a store page that has no update yet
+		$apkNotificationDelay = if ($distribution -eq 'samsung') { "7.00:00:00" } else { "$versionNotificationDelay" };
 		$json = @{
-			Version = $versionParam; 
+			Version = $versionParam;
 			UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
 			PackageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
 			PackageId = "$packageId";
 			InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
 			ReleaseDate = "$releaseDate";
 			DeprecatedVersion = "$deprecatedVersion";
-			NotificationDelay = "$versionNotificationDelay";
+			NotificationDelay = $apkNotificationDelay;
 		};
 
 		$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;

@@ -408,6 +408,11 @@ jobs:
       - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
+          name: ${{ inputs.app }}-android-samsung-apk
+          path: ${{ env.MODULE_DIR }}/android-samsung
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
           name: ${{ inputs.app }}-android-web-apk
           path: ${{ env.MODULE_DIR }}/android-web
       - uses: actions/download-artifact@v8

@@ -1,7 +1,8 @@
 name: _build_app_android (reusable)
 
-# Builds the Android packages (Google AAB / Web APK / Web arm64 APK, one matrix leg each) for
-# client/connect from the vpnhood/VpnHood monorepo (checked out into code/). Called by publish_app.yml.
+# Builds the Android packages (Google AAB / Web APK / Web arm64 APK, one matrix leg each, and CLIENT's
+# Galaxy Store APK in the Google leg) for client/connect from the vpnhood/VpnHood monorepo (checked out
+# into code/). Called by publish_app.yml.
 # Uploads one `<app>-android-<id>` artifact per leg. Signing keystores + Connect access keys arrive via
 # `secrets: inherit`; a missing keystore falls back to an ephemeral (non-Play-grade) key.
 
@@ -162,3 +163,18 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           path: ${{ env.MODULE_DIR }}/${{ matrix.outdir }}/**
+      # CLIENT's Galaxy Store APK, in the Play leg: it is signed with the Play build's key, which this
+      # runner already holds, and is CLIENT's alone (Connect has no Samsung head), which a leg of its own
+      # in the shared matrix could not say.
+      - name: Build Android (Galaxy Store APK)
+        if: matrix.id == 'google-aab' && inputs.app == 'client'
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Android.Samsung/_publish.ps1"
+      - uses: actions/upload-artifact@v7
+        if: matrix.id == 'google-aab' && inputs.app == 'client'
+        with:
+          name: ${{ inputs.app }}-android-samsung-apk
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ env.MODULE_DIR }}/android-samsung/**

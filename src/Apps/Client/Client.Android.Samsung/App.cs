@@ -33,8 +33,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     }
 
     // The product's options, and Galaxy Store's lines on top. The licence agreement keeps its default,
-    // on (AppOptions): a screen too many rather than a disclosure missing, until Galaxy Store's
-    // review says otherwise.
+    // on (AppOptions): Galaxy Store's install takes no acceptance of ours, and its distribution guide
+    // (3.1.2) wants the privacy policy shown in the app.
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
         var appConfigs = ClientAppConfigs.Load();

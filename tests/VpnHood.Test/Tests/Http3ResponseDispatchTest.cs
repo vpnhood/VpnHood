@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using VpnHood.Net.Http3;
 using VpnHood.Test.Providers;
 
@@ -16,9 +15,8 @@ public class Http3ResponseDispatchTest
         var options = new Http3ServerOptions { MaxHeaderCount = 1 };
         var budget = new Http3HeaderBudget(options);
         var failures = new List<Exception>();
-        using var dispatch = new Http3ResponseDispatch(output, new Http3RecordingQuicStream(),
-            new Http3RecordingResponder(), new Http3Request([], null), budget, options, failures.Add,
-            TestContext.CancellationToken);
+        var dispatch = new Http3ResponseDispatch(output, new Http3RecordingQuicStream(),
+            new Http3RecordingResponder(), new Http3Request([], null), budget, options, failures.Add);
         budget.Append(new KeyValuePair<string, string>("x", ""));
 
         Assert.IsFalse(dispatch.Select());
@@ -30,46 +28,66 @@ public class Http3ResponseDispatchTest
     }
 
     [TestMethod]
-    public async Task A_protocol_failure_is_reported_before_cancellation_and_joins_the_pending_write()
+    public async Task A_protocol_failure_prevents_the_response_and_precedes_caller_cancellation()
+    {
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        using var output = new MemoryStream();
+        var quic = new Http3RecordingQuicStream();
+        var responder = new Http3RecordingResponder();
+        var options = new Http3ServerOptions();
+        var failures = new List<Exception>();
+        var dispatch = new Http3ResponseDispatch(output, quic, responder, new Http3Request([], null),
+            new Http3HeaderBudget(options), options, failures.Add);
+        var failure = new Http3ProtocolException(Http3Protocol.MessageError, connectionError: false);
+
+        dispatch.Fail(failure);
+        await dispatch.Complete(lifetime.Token);
+        await lifetime.CancelAsync();
+        dispatch.Fail(new OperationCanceledException(lifetime.Token));
+        var actual = Assert.ThrowsExactly<Http3ProtocolException>(() => dispatch.ThrowIfFailed(lifetime.Token));
+
+        Assert.AreSame(failure, actual);
+        Assert.AreSame(failure, failures.Single());
+        Assert.AreEqual(0L, output.Length);
+        Assert.IsNull(responder.Request);
+        Assert.AreEqual(0, quic.CompletedWrites);
+    }
+
+    [TestMethod]
+    public async Task A_canceled_response_keeps_awaiting_its_write_before_reporting_failure()
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         lifetime.CancelAfter(TimeSpan.FromSeconds(5));
-        var events = new ConcurrentQueue<string>();
-        var failures = new ConcurrentQueue<Exception>();
-        using var output = new Http3PendingWriteStream(() => events.Enqueue("canceled"), lifetime.Token);
+        using var headers = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        var failures = new List<Exception>();
+        using var output = new Http3PendingWriteStream(lifetime.Token);
         var quic = new Http3RecordingQuicStream();
         var options = new Http3ServerOptions();
-        using var dispatch = new Http3ResponseDispatch(output, quic, new Http3RecordingResponder(),
-            new Http3Request([], null), new Http3HeaderBudget(options), options, error => {
-                events.Enqueue("reported");
-                failures.Enqueue(error);
-            }, lifetime.Token);
-        var failure = new Http3ProtocolException(Http3Protocol.MessageError, connectionError: false);
-        var response = dispatch.Complete(lifetime.Token);
+        var dispatch = new Http3ResponseDispatch(output, quic, new Http3RecordingResponder(),
+            new Http3Request([], null), new Http3HeaderBudget(options), options, failures.Add);
+        var response = dispatch.Complete(headers.Token);
         try {
             await output.WaitForWrite(lifetime.Token);
-            dispatch.Fail(failure);
+            await headers.CancelAsync();
             await output.WaitForCancellation(lifetime.Token);
 
-            var join = dispatch.Join(lifetime.Token);
-            Assert.IsFalse(join.IsCompleted, "Reporting an error must not abandon the native write.");
+            Assert.IsFalse(response.IsCompleted, "Cancellation must not abandon the native write.");
+            Assert.IsEmpty(failures);
             output.ReleaseWrite();
-            var actual = await Assert.ThrowsExactlyAsync<Http3ProtocolException>(() => join.WaitAsync(lifetime.Token));
             await response.WaitAsync(lifetime.Token);
+            var actual = Assert.ThrowsExactly<OperationCanceledException>(() => dispatch.ThrowIfFailed(lifetime.Token));
 
-            Assert.AreSame(failure, actual);
-            Assert.AreSame(failure, failures.Single());
-            CollectionAssert.AreEqual(new[] { "reported", "canceled" }, events.ToArray());
+            Assert.AreSame(actual, failures.Single());
+            Assert.AreEqual(headers.Token, actual.CancellationToken);
             Assert.AreEqual(0, quic.CompletedWrites);
         }
         finally {
             output.ReleaseWrite();
             try {
                 await response.WaitAsync(lifetime.Token);
-                await dispatch.Join(lifetime.Token).WaitAsync(lifetime.Token);
             }
             catch (Exception) {
-                // The assertions retain the failure; cleanup still observes dispatch before disposing its stream.
+                // Cleanup still observes the write before disposing its stream.
             }
         }
     }
@@ -82,16 +100,16 @@ public class Http3ResponseDispatchTest
         using var headers = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         using var output = new MemoryStream();
         var quic = new Http3RecordingQuicStream();
-        var failures = new ConcurrentQueue<Exception>();
+        var failures = new List<Exception>();
         var options = new Http3ServerOptions();
-        using var dispatch = new Http3ResponseDispatch(output, quic, new Http3RecordingResponder(),
-            new Http3Request([], null), new Http3HeaderBudget(options), options, failures.Enqueue, headers.Token);
+        var dispatch = new Http3ResponseDispatch(output, quic, new Http3RecordingResponder(),
+            new Http3Request([], null), new Http3HeaderBudget(options), options, failures.Add);
 
         await dispatch.Complete(headers.Token);
         var response = output.ToArray();
         await headers.CancelAsync();
         await dispatch.Complete(headers.Token);
-        await dispatch.Join(lifetime.Token);
+        dispatch.ThrowIfFailed(lifetime.Token);
 
         Assert.IsNotEmpty(response);
         CollectionAssert.AreEqual(response, output.ToArray());

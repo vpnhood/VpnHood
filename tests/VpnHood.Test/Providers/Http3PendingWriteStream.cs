@@ -1,6 +1,6 @@
 namespace VpnHood.Test.Providers;
 
-internal sealed class Http3PendingWriteStream(Action onCanceled, CancellationToken lifetimeToken) : MemoryStream
+internal sealed class Http3PendingWriteStream(CancellationToken lifetimeToken) : MemoryStream
 {
     private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource _canceled = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -24,7 +24,6 @@ internal sealed class Http3PendingWriteStream(Action onCanceled, CancellationTok
 
     private void OnCanceled()
     {
-        onCanceled();
         _canceled.TrySetResult();
     }
 }

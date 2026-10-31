@@ -16,15 +16,13 @@ namespace VpnHood.Test.KestrelParity.Servers;
 // Separate ports avoid routing tricks in the client; no HTTP-01 listener or external service is needed.
 internal sealed class Http3ParityServers(
     VpnHoodServer server, WebApplication reference, X509Certificate2 certificate,
-    IPEndPoint referenceEndPoint, string hostName, byte[] farmSecret,
-    BufferedQuicServer bufferedQuic) : IAsyncDisposable
+    IPEndPoint referenceEndPoint, string hostName, byte[] farmSecret) : IAsyncDisposable
 {
     public IPEndPoint OurEndPoint => server.ServerHost.QuicEndPoints.Single();
     public IPEndPoint ReferenceEndPoint => referenceEndPoint;
     public X509Certificate2 Certificate => certificate;
     public string HostName => hostName;
     public byte[] FarmSecret => farmSecret;
-    public BufferedQuicServer BufferedQuic => bufferedQuic;
 
     public static async Task<Http3ParityServers> Start(string storagePath, CancellationToken cancellationToken)
     {
@@ -42,8 +40,7 @@ internal sealed class Http3ParityServers(
             LogAnonymizer = false,
             SessionOptions = new SessionOptions { MinClientProtocolVersion = 15 }
         });
-        var bufferedQuic = new BufferedQuicServer(new MsQuicServer());
-        var server = CreateServer(accessManager, storagePath, bufferedQuic);
+        var server = CreateServer(accessManager, storagePath);
         try {
             var referenceEndPoint = VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback);
             var accessToken = accessManager.AccessTokenService.Create(tokenName: "http3-parity", maxClientCount: 1);
@@ -56,7 +53,7 @@ internal sealed class Http3ParityServers(
             try {
                 var reference = await StartReference(certificate, referenceEndPoint, null, cancellationToken);
                 return new Http3ParityServers(server, reference, certificate, referenceEndPoint, token.HostName,
-                    farmSecret, bufferedQuic);
+                    farmSecret);
             }
             catch {
                 certificate.Dispose();
@@ -69,15 +66,14 @@ internal sealed class Http3ParityServers(
         }
     }
 
-    private static VpnHoodServer CreateServer(FileAccessManager accessManager, string storagePath,
-        BufferedQuicServer bufferedQuic)
+    private static VpnHoodServer CreateServer(FileAccessManager accessManager, string storagePath)
     {
         try {
             return new VpnHoodServer(accessManager, new ServerOptions {
                 StoragePath = Path.Combine(storagePath, "server"),
                 PublicIpDiscovery = false,
                 AutoDisposeAccessManager = true,
-                QuicServer = bufferedQuic
+                QuicServer = new MsQuicServer()
             });
         }
         catch {

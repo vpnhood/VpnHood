@@ -6,7 +6,6 @@ internal sealed class ReferenceRequestGateSession : IDisposable
 {
     private readonly string _markerName;
     private readonly TimeSpan _timeout;
-    private readonly int _dispatchOrdinal;
     private readonly Action<ReferenceRequestGateSession> _disarm;
     private readonly CancellationTokenSource _deadline;
     private readonly CancellationToken _deadlineToken;
@@ -17,12 +16,11 @@ internal sealed class ReferenceRequestGateSession : IDisposable
     private int _dispatches;
     private int _disposed;
 
-    public ReferenceRequestGateSession(string markerName, TimeSpan timeout, int dispatchOrdinal,
+    public ReferenceRequestGateSession(string markerName, TimeSpan timeout,
         Action<ReferenceRequestGateSession> disarm, CancellationToken cancellationToken)
     {
         _markerName = markerName;
         _timeout = timeout;
-        _dispatchOrdinal = dispatchOrdinal;
         _disarm = disarm;
         _deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _deadline.CancelAfter(timeout);
@@ -61,8 +59,8 @@ internal sealed class ReferenceRequestGateSession : IDisposable
 
     public void OnDispatch(CancellationToken cancellationToken)
     {
-        // RC3 dequeues parsing before application dispatch; the engine exposes only the latter.
-        if (Interlocked.Increment(ref _dispatches) != _dispatchOrdinal)
+        // RC3 dequeues parsing before application dispatch, so only the second event holds the application.
+        if (Interlocked.Increment(ref _dispatches) != 2)
             return;
         _entered.TrySetResult();
         try {

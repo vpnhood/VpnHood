@@ -20,8 +20,8 @@ internal static class Http3RequestStream
         // A continuously readable peer must not postpone the application's final response forever.
         reader.AvailableBytesLimit = options.MaxBodyInspectionBytes;
         reader.ReadAvailableOnly = true;
-        using var dispatch = new Http3ResponseDispatch(stream, quic, responder, head.Request,
-            headerBudget, options, onError, headersToken);
+        var dispatch = new Http3ResponseDispatch(stream, quic, responder, head.Request,
+            headerBudget, options, onError);
         try {
             if (!head.ExceedsRequestLimits) {
                 try {
@@ -44,8 +44,7 @@ internal static class Http3RequestStream
             dispatch.Fail(ex);
         }
         finally {
-            // Join dispatch before returning the reader or disposing the native stream.
-            await dispatch.Join(cancellationToken).Vhc();
+            dispatch.ThrowIfFailed(cancellationToken);
         }
     }
 

@@ -18,13 +18,20 @@ public partial class Http3FrontTest
     [DataRow(false, 201)]
     public async Task Trailer_burst_distributions_match_reference_shares(bool octets, int total)
     {
-        const int sampleCount = 200;
         var name = $"trailer-burst-{(octets ? "octets" : "count")}-{total}";
         var bytes = BuildTrailerBurst(octets, total);
-        var cancellationToken = TestContext.CancellationToken;
+        // The reference's field-201 reset share varied from 7% to 70% on the calibration host.
+        await AssertReusedBurstDistributions(name, bytes, octets ? 0x10b : 0x10e,
+            presenceOnly: !octets && total == 201, TestContext.CancellationToken);
+    }
+
+    private async Task AssertReusedBurstDistributions(string name, byte[] bytes, long errorCode,
+        bool presenceOnly, CancellationToken cancellationToken)
+    {
+        const int sampleCount = 200;
         using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         startup.CancelAfter(Http3Probe.Timeout);
-        // Reuse each connection so 2,400 samples need only twelve handshakes.
+        // Stream resets leave the connection usable for the next sample.
         await using var reference = await CreateProbe().Connect(Servers.ReferenceEndPoint, 3, startup.Token);
         await using var ours = await CreateProbe().Connect(Servers.OurEndPoint, 3, startup.Token);
         await using var referenceControl = await reference.OpenOutboundStreamAsync(QuicStreamType.Unidirectional,
@@ -38,12 +45,12 @@ public partial class Http3FrontTest
             for (var sample = 0; sample < sampleCount; sample++) {
                 // Alternate the first server without adding concurrent load or a parser barrier.
                 if (sample % 2 == 0) {
-                    expected.Add(await ObserveTrailerBurst(reference, bytes, cancellationToken));
-                    actual.Add(await ObserveTrailerBurst(ours, bytes, cancellationToken));
+                    expected.Add(await ObserveBurst(reference, bytes, cancellationToken));
+                    actual.Add(await ObserveBurst(ours, bytes, cancellationToken));
                 }
                 else {
-                    actual.Add(await ObserveTrailerBurst(ours, bytes, cancellationToken));
-                    expected.Add(await ObserveTrailerBurst(reference, bytes, cancellationToken));
+                    actual.Add(await ObserveBurst(ours, bytes, cancellationToken));
+                    expected.Add(await ObserveBurst(reference, bytes, cancellationToken));
                 }
             }
         }
@@ -52,32 +59,35 @@ public partial class Http3FrontTest
             WriteBurstDistribution(name + " ours", actual);
         }
 
-        // The reference's field-201 reset share varied from 7% to 70% on the calibration host.
-        AssertBurstDistributions(name, expected, actual, QuicError.StreamAborted, octets ? 0x10b : 0x10e,
-            presenceOnly: !octets && total == 201);
+        AssertBurstDistributions(name, expected, actual, QuicError.StreamAborted, errorCode, presenceOnly);
     }
 
     [TestMethod]
     [TestCategory("Http3Framing")]
     public async Task Data_after_trailers_burst_distributions_match_reference_shares()
     {
-        const int sampleCount = 200;
         const string name = "trailer-burst-data-after-trailers";
         byte[] bytes = [.. BuildLiteralRequest(ValidationHeaders()),
             .. BuildLiteralRequest([.. Enumerable.Repeat(("x", ""), 8)]), .. Frame(0, [1])];
-        var cancellationToken = TestContext.CancellationToken;
+        await AssertFreshBurstDistributions(name, bytes, 0x105, TestContext.CancellationToken);
+    }
+
+    private async Task AssertFreshBurstDistributions(string name, byte[] bytes, long errorCode,
+        CancellationToken cancellationToken)
+    {
+        const int sampleCount = 200;
         var expected = new List<(Http3ProbeResult Response, Http3ProbeResult Write)>(sampleCount);
         var actual = new List<(Http3ProbeResult Response, Http3ProbeResult Write)>(sampleCount);
         try {
             for (var sample = 0; sample < sampleCount; sample++) {
                 // A parser-first sample closes its connection, so neither server reuses one here.
                 if (sample % 2 == 0) {
-                    expected.Add(await ObserveFreshTrailerBurst(Servers.ReferenceEndPoint, bytes, cancellationToken));
-                    actual.Add(await ObserveFreshTrailerBurst(Servers.OurEndPoint, bytes, cancellationToken));
+                    expected.Add(await ObserveFreshBurst(Servers.ReferenceEndPoint, bytes, cancellationToken));
+                    actual.Add(await ObserveFreshBurst(Servers.OurEndPoint, bytes, cancellationToken));
                 }
                 else {
-                    actual.Add(await ObserveFreshTrailerBurst(Servers.OurEndPoint, bytes, cancellationToken));
-                    expected.Add(await ObserveFreshTrailerBurst(Servers.ReferenceEndPoint, bytes, cancellationToken));
+                    actual.Add(await ObserveFreshBurst(Servers.OurEndPoint, bytes, cancellationToken));
+                    expected.Add(await ObserveFreshBurst(Servers.ReferenceEndPoint, bytes, cancellationToken));
                 }
             }
         }
@@ -85,7 +95,7 @@ public partial class Http3FrontTest
             WriteBurstDistribution(name + " reference", expected);
             WriteBurstDistribution(name + " ours", actual);
         }
-        AssertBurstDistributions(name, expected, actual, QuicError.ConnectionAborted, 0x105, presenceOnly: false);
+        AssertBurstDistributions(name, expected, actual, QuicError.ConnectionAborted, errorCode, presenceOnly: false);
     }
 
     private void AssertBurstDistributions(string name,
@@ -135,7 +145,7 @@ public partial class Http3FrontTest
         if (error == QuicError.StreamAborted && IsCompleteBurstResponse(result, "431"))
             return "431";
         throw new AssertFailedException(
-            $"Unexpected trailer-burst response (error must be {error}/0x{errorCode:x}): {result}");
+            $"Unexpected burst response (error must be {error}/0x{errorCode:x}): {result}");
     }
 
     private static bool IsCompleteBurstResponse(Http3ProbeResult result, string status)
@@ -164,7 +174,7 @@ public partial class Http3FrontTest
         return [.. BuildLiteralRequest(headers), .. BuildLiteralRequest(trailers)];
     }
 
-    private static async Task<(Http3ProbeResult Response, Http3ProbeResult Write)> ObserveTrailerBurst(
+    private static async Task<(Http3ProbeResult Response, Http3ProbeResult Write)> ObserveBurst(
         QuicConnection connection, byte[] bytes, CancellationToken cancellationToken)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -187,7 +197,7 @@ public partial class Http3FrontTest
         }
     }
 
-    private static async Task<(Http3ProbeResult Response, Http3ProbeResult Write)> ObserveFreshTrailerBurst(
+    private static async Task<(Http3ProbeResult Response, Http3ProbeResult Write)> ObserveFreshBurst(
         IPEndPoint endPoint, byte[] bytes, CancellationToken cancellationToken)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -195,7 +205,7 @@ public partial class Http3FrontTest
         await using var connection = await CreateProbe().Connect(endPoint, 3, deadline.Token);
         await using var control = await connection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional, deadline.Token);
         await control.WriteAsync(new byte[] { 0, 4, 0 }, deadline.Token);
-        return await ObserveTrailerBurst(connection, bytes, deadline.Token);
+        return await ObserveBurst(connection, bytes, deadline.Token);
     }
 
     private static Http3ProbeResult NormalizeBurstResponse(Http3ProbeResult result)

@@ -128,9 +128,9 @@ public class Http3TrailerScheduleTest
         using var output = new MemoryStream();
         var options = new Http3ServerOptions();
         var errors = new List<Exception>();
-        using var dispatch = new Http3ResponseDispatch(output, new Http3RecordingQuicStream(),
+        var dispatch = new Http3ResponseDispatch(output, new Http3RecordingQuicStream(),
             new Http3RecordingResponder(), new Http3Request([], null), new Http3HeaderBudget(options),
-            options, errors.Add, TestContext.CancellationToken);
+            options, errors.Add);
 
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
             new Http3TrailerInspection(new Http3TrailerSchedule(0, applicationBytes, limitBytes), dispatch));

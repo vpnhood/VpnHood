@@ -7,31 +7,20 @@ namespace VpnHood.Test.KestrelParity.Servers;
 internal sealed class ReferenceRequestGate : IDisposable
 {
     public const string MarkerName = "x-parity-trailers-parsed";
+    private const string MeterName = "Microsoft.AspNetCore.Server.Kestrel";
+    private const string InstrumentName = "kestrel.queued_requests";
 
     private readonly IPEndPoint _endPoint;
     private readonly TimeSpan _timeout;
-    private readonly string _meterName;
-    private readonly string _instrumentName;
-    private readonly int _dispatchOrdinal;
     private readonly MeterListener _listener = new();
     private ReferenceRequestGateSession? _active;
     private Exception? _instrumentError;
     private int _disposed;
 
     public ReferenceRequestGate(IPEndPoint endPoint, TimeSpan timeout)
-        : this(endPoint, timeout, "Microsoft.AspNetCore.Server.Kestrel", "kestrel.queued_requests", 2)
     {
-    }
-
-    public ReferenceRequestGate(IPEndPoint endPoint, TimeSpan timeout, string meterName, string instrumentName,
-        int dispatchOrdinal)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(dispatchOrdinal);
         _endPoint = endPoint;
         _timeout = timeout;
-        _meterName = meterName;
-        _instrumentName = instrumentName;
-        _dispatchOrdinal = dispatchOrdinal;
         _listener.InstrumentPublished = InstrumentPublished;
         _listener.SetMeasurementEventCallback<long>(OnMeasurement);
         _listener.Start();
@@ -42,10 +31,8 @@ internal sealed class ReferenceRequestGate : IDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         cancellationToken.ThrowIfCancellationRequested();
         if (Volatile.Read(ref _instrumentError) is { } error)
-            throw new InvalidOperationException($"Could not observe {_instrumentName} request dispatch.", error);
-        // A lazy engine meter can first publish when the armed request reaches dispatch.
-        var session = new ReferenceRequestGateSession(MarkerName, _timeout, _dispatchOrdinal, Disarm,
-            cancellationToken);
+            throw new InvalidOperationException($"Could not observe {InstrumentName} request dispatch.", error);
+        var session = new ReferenceRequestGateSession(MarkerName, _timeout, Disarm, cancellationToken);
         if (Interlocked.CompareExchange(ref _active, session, null) == null)
             return session;
         session.Dispose();
@@ -61,7 +48,7 @@ internal sealed class ReferenceRequestGate : IDisposable
 
     private void InstrumentPublished(Instrument instrument, MeterListener listener)
     {
-        if (instrument.Meter.Name != _meterName || instrument.Name != _instrumentName)
+        if (instrument.Meter.Name != MeterName || instrument.Name != InstrumentName)
             return;
         try {
             listener.EnableMeasurementEvents(instrument);

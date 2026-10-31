@@ -123,8 +123,8 @@ Kestrel's proportions of 401, 431 and resets using a randomized parsing schedule
 host. Response selection follows a drawn number of completed trailer fields; a separate draw sets
 an encoded-byte distance based on the selected response, with a chance of immediate emission.
 Parsing continues for that distance, including frames after the trailers. The schedule ends as soon
-as readable input or the inspection budget ends; it never waits for more input
-and adds nothing to the authenticated tunnel path. The reference's own odds vary with host and load,
+as readable input or the inspection budget ends; it never waits for more input and adds nothing to
+the authenticated tunnel path. The reference's own odds vary with host and load,
 and other field layouts are not covered by this calibration. Controlled cases pin the schedule;
 burst cases print both distributions, compare outcome shares within a tolerance, and require outcomes
 common on either server to appear on the other. The field-count hard-limit row checks only presence

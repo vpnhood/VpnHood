@@ -6,5 +6,6 @@ namespace VpnHood.Core.Server;
 // request went out (a Stopwatch timestamp), so a session can tell a stale reply
 internal interface ISessionResponseHandler
 {
-    void ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses, long requestTimestamp);
+    Task ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses, long requestTimestamp,
+        CancellationToken cancellationToken);
 }

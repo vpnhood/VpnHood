@@ -3,6 +3,7 @@ using System.Net;
 using System.Text.Json;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -11,29 +12,35 @@ namespace VpnHood.Core.Server;
 internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, string lastVirtualIpFilePath)
 {
     private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
+    private readonly AsyncLock _allocateLock = new();
 
-    private VirtualIpBundle _lastAllocatedVirtualIps =
-        JsonUtils.TryDeserializeFile<VirtualIpBundle>(lastVirtualIpFilePath) ?? new VirtualIpBundle {
-            IpV4 = ipNetworkV4.FirstIpAddress,
-            IpV6 = ipNetworkV6.FirstIpAddress
-        };
+    // read at the first allocation, its only use
+    private VirtualIpBundle? _lastAllocatedVirtualIps;
 
     public IpNetwork IpNetworkV4 => ipNetworkV4;
     public IpNetwork IpNetworkV6 => ipNetworkV6;
 
-    public VirtualIpBundle Allocate()
+    public async Task<VirtualIpBundle> Allocate(CancellationToken cancellationToken)
     {
-        lock (_virtualIps) {
-            // allocate new IPs
-            _lastAllocatedVirtualIps = new VirtualIpBundle {
-                IpV4 = Allocate(ipNetworkV4, _lastAllocatedVirtualIps.IpV4),
-                IpV6 = Allocate(ipNetworkV6, _lastAllocatedVirtualIps.IpV6)
+        using var lockResult = await _allocateLock.LockAsync(cancellationToken).Vhc();
+        var lastVirtualIps = _lastAllocatedVirtualIps ??=
+            await JsonUtils.TryDeserializeFileAsync<VirtualIpBundle>(lastVirtualIpFilePath, cancellationToken).Vhc() ??
+            new VirtualIpBundle {
+                IpV4 = ipNetworkV4.FirstIpAddress,
+                IpV6 = ipNetworkV6.FirstIpAddress
             };
 
-            // save the last IPs
-            File.WriteAllText(lastVirtualIpFilePath, JsonSerializer.Serialize(_lastAllocatedVirtualIps));
-            return _lastAllocatedVirtualIps;
-        }
+        // allocate new IPs
+        var virtualIps = new VirtualIpBundle {
+            IpV4 = Allocate(ipNetworkV4, lastVirtualIps.IpV4),
+            IpV6 = Allocate(ipNetworkV6, lastVirtualIps.IpV6)
+        };
+
+        // saved before they count as allocated: a failed save leaves them to the next allocation
+        await FileUtils.WriteAllTextAtomicAsync(lastVirtualIpFilePath, JsonSerializer.Serialize(virtualIps),
+            cancellationToken).Vhc();
+        _lastAllocatedVirtualIps = virtualIps;
+        return virtualIps;
     }
 
     private IPAddress Allocate(IpNetwork ipNetwork, IPAddress lastUsedIpAddress)

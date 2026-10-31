@@ -54,7 +54,8 @@ internal class SessionUsageReporter(IAccessManager accessManager, ISessionRespon
         status.SessionUsages = TakeUsages();
         var requestTimestamp = Stopwatch.GetTimestamp();
         var serverCommand = await UpdateStatus(status, cancellationToken).Vhc();
-        sessionResponseHandler.ApplySessionResponses(serverCommand.SessionResponses, requestTimestamp);
+        await sessionResponseHandler.ApplySessionResponses(serverCommand.SessionResponses, requestTimestamp,
+            cancellationToken).Vhc();
         return serverCommand;
     }
 
@@ -68,7 +69,7 @@ internal class SessionUsageReporter(IAccessManager accessManager, ISessionRespon
 
         var requestTimestamp = Stopwatch.GetTimestamp();
         var sessionResponses = await AddUsages(TakeUsages(), cancellationToken).Vhc();
-        sessionResponseHandler.ApplySessionResponses(sessionResponses, requestTimestamp);
+        await sessionResponseHandler.ApplySessionResponses(sessionResponses, requestTimestamp, cancellationToken).Vhc();
         return sessionResponses;
     }
 

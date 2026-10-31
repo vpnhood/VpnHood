@@ -70,12 +70,12 @@ public class ConfigErrorTrackerTest : TestBase
     }
 
     [TestMethod]
-    public void IsPaused_returns_false_before_strike_duration()
+    public async Task IsPaused_returns_false_before_strike_duration()
     {
         var storagePath = CreateTempStorage();
         try {
             var tracker = CreateTracker(storagePath);
-            tracker.RecordError(new Exception("test error"));
+            await tracker.RecordError(new Exception("test error"), TestCt);
             Assert.IsFalse(tracker.IsPaused, "IsPaused should be false when strike duration has not been reached.");
         }
         finally {
@@ -84,7 +84,7 @@ public class ConfigErrorTrackerTest : TestBase
     }
 
     [TestMethod]
-    public void IsPaused_returns_false_until_RecordError_even_when_strike_expired()
+    public async Task IsPaused_returns_false_until_RecordError_even_when_strike_expired()
     {
         var storagePath = CreateTempStorage();
         try {
@@ -96,14 +96,14 @@ public class ConfigErrorTrackerTest : TestBase
                 "IsPaused should return false before any RecordError call.");
 
             // After RecordError, the tracker evaluates the persisted strike and pauses
-            tracker.RecordError(new Exception("another failure"));
+            await tracker.RecordError(new Exception("another failure"), TestCt);
 
             // Immediately after RecordError: paused (must wait for RetryInterval)
             Assert.IsTrue(tracker.IsPaused,
                 "IsPaused should return true immediately after RecordError.");
 
             // After RetryInterval elapses: allowed
-            Thread.Sleep(150);
+            await Task.Delay(150, TestCt);
             Assert.IsFalse(tracker.IsPaused,
                 "IsPaused should return false after RetryInterval has elapsed.");
         }
@@ -113,7 +113,7 @@ public class ConfigErrorTrackerTest : TestBase
     }
 
     [TestMethod]
-    public void IsPaused_allows_retry_after_interval()
+    public async Task IsPaused_allows_retry_after_interval()
     {
         var storagePath = CreateTempStorage();
         try {
@@ -124,11 +124,11 @@ public class ConfigErrorTrackerTest : TestBase
             Assert.IsFalse(tracker.IsPaused);
 
             // RecordError triggers threshold evaluation — immediately paused
-            tracker.RecordError(new Exception("failure"));
+            await tracker.RecordError(new Exception("failure"), TestCt);
             Assert.IsTrue(tracker.IsPaused);
 
             // After RetryInterval elapses: allowed
-            Thread.Sleep(150);
+            await Task.Delay(150, TestCt);
             Assert.IsFalse(tracker.IsPaused, "IsPaused should return false after RetryInterval has elapsed.");
 
             // Calling IsPaused again is still false (idempotent — time hasn't changed)
@@ -140,14 +140,14 @@ public class ConfigErrorTrackerTest : TestBase
     }
 
     [TestMethod]
-    public void ReportSuccess_clears_pause()
+    public async Task ReportSuccess_clears_pause()
     {
         var storagePath = CreateTempStorage();
         try {
             var tracker = CreateTracker(storagePath, strikeDuration: TimeSpan.FromMilliseconds(1));
-            tracker.RecordError(new Exception("test error"));
-            Thread.Sleep(10);
-            tracker.RecordError(new Exception("test error again"));
+            await tracker.RecordError(new Exception("test error"), TestCt);
+            await Task.Delay(10, TestCt);
+            await tracker.RecordError(new Exception("test error again"), TestCt);
 
             // Immediately after RecordError: paused
             Assert.IsTrue(tracker.IsPaused);
@@ -164,12 +164,12 @@ public class ConfigErrorTrackerTest : TestBase
     }
 
     [TestMethod]
-    public void Strike_persists_across_instances()
+    public async Task Strike_persists_across_instances()
     {
         var storagePath = CreateTempStorage();
         try {
             var tracker1 = CreateTracker(storagePath);
-            tracker1.RecordError(new Exception("persistent error"));
+            await tracker1.RecordError(new Exception("persistent error"), TestCt);
 
             var tracker2 = CreateTracker(storagePath);
 
@@ -184,7 +184,7 @@ public class ConfigErrorTrackerTest : TestBase
     }
 
     [TestMethod]
-    public void Unreadable_file_causes_pause()
+    public async Task Unreadable_file_causes_pause()
     {
         var storagePath = CreateTempStorage();
         try {
@@ -196,7 +196,7 @@ public class ConfigErrorTrackerTest : TestBase
                 "IsPaused should return false before any RecordError call.");
 
             // RecordError with corrupt file on disk triggers pause
-            tracker.RecordError(new Exception("failure after corrupt file"));
+            await tracker.RecordError(new Exception("failure after corrupt file"), TestCt);
 
             // Immediately after RecordError: paused
             Assert.IsTrue(tracker.IsPaused,

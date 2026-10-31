@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
-using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server;
@@ -17,7 +17,7 @@ internal class SessionLocalService : IDisposable
 
     // a recovery and a removal may touch the same record at once: one file operation at a time, so neither fails
     // on a sharing violation nor reads a half-written record and deletes it as broken
-    private readonly Lock _fileLock = new();
+    private readonly AsyncLock _fileLock = new();
 
     public SessionLocalService(string storagePath, IReadOnlyDictionary<ulong, Session> sessions)
     {
@@ -35,42 +35,37 @@ internal class SessionLocalService : IDisposable
         return Path.Combine(_storagePath, $"{sessionId}.{SessionFileExtension}");
     }
 
-    public SessionLocalData Get(ulong sessionId)
+    public async Task<SessionLocalData> Get(ulong sessionId, CancellationToken cancellationToken)
     {
-        return Find(sessionId) ?? throw new SessionException(SessionErrorCode.AccessError,
-            $"Could not get SessionId from session local data. SessionId: {sessionId}");
+        return await Find(sessionId, cancellationToken).Vhc() ?? throw new SessionException(
+            SessionErrorCode.AccessError, $"Could not get SessionId from session local data. SessionId: {sessionId}");
     }
 
-    public SessionLocalData? Find(ulong sessionId)
+    public async Task<SessionLocalData?> Find(ulong sessionId, CancellationToken cancellationToken)
     {
-        lock (_fileLock) {
-            // return null if file does not exist or any error in serialization
-            var filePath = GetSessionFilePath(sessionId);
-            if (!File.Exists(filePath))
-                return null;
+        using var lockResult = await _fileLock.LockAsync(cancellationToken).Vhc();
 
-            // deserialize the file
-            var sessionLocalData = JsonUtils.TryDeserializeFile<SessionLocalData>(filePath, logger: VhLogger.Instance);
-            if (sessionLocalData == null) {
-                VhUtils.TryDeleteFile(filePath);
-                return null;
-            }
-
-            // update write time
-            File.WriteAllText(filePath, JsonSerializer.Serialize(sessionLocalData));
-            return sessionLocalData;
-        }
-    }
-
-    public void Remove(ulong sessionId)
-    {
-        lock (_fileLock) {
-            var filePath = GetSessionFilePath(sessionId);
+        // null if the file does not exist or does not parse; a broken one goes
+        var filePath = GetSessionFilePath(sessionId);
+        var sessionLocalData =
+            await JsonUtils.TryDeserializeFileAsync<SessionLocalData>(filePath, cancellationToken).Vhc();
+        if (sessionLocalData == null) {
             VhUtils.TryDeleteFile(filePath);
+            return null;
         }
+
+        // update write time
+        File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow);
+        return sessionLocalData;
     }
 
-    public void Update(Session session)
+    public async Task Remove(ulong sessionId, CancellationToken cancellationToken)
+    {
+        using var lockResult = await _fileLock.LockAsync(cancellationToken).Vhc();
+        VhUtils.TryDeleteFile(GetSessionFilePath(sessionId));
+    }
+
+    public async Task Update(Session session, CancellationToken cancellationToken)
     {
         var sessionLocalData = new SessionLocalData {
             SessionId = session.SessionId,
@@ -78,31 +73,27 @@ internal class SessionLocalService : IDisposable
             VirtualIps = session.VirtualIps
         };
 
-        lock (_fileLock) {
-            var filePath = GetSessionFilePath(session.SessionId);
-            File.WriteAllText(filePath, JsonSerializer.Serialize(sessionLocalData));
-        }
+        using var lockResult = await _fileLock.LockAsync(cancellationToken).Vhc();
+        await FileUtils.WriteAllTextAtomicAsync(GetSessionFilePath(session.SessionId),
+            JsonSerializer.Serialize(sessionLocalData), cancellationToken).Vhc();
     }
 
     // removes the records of sessions that left memory 7 days ago and were not asked for since. A session in memory
     // keeps its record, however old, and has it refreshed: a restart recovers the session from it
-    internal ValueTask CleanupSessionFiles(CancellationToken cancellationToken)
+    internal async ValueTask CleanupSessionFiles(CancellationToken cancellationToken)
     {
         var utcNow = DateTime.UtcNow;
         var files = Directory.GetFiles(_storagePath, $"*.{SessionFileExtension}");
         foreach (var file in files) {
-            lock (_fileLock) {
-                if (!File.Exists(file))
-                    continue; // removed meanwhile
+            using var lockResult = await _fileLock.LockAsync(cancellationToken).Vhc();
+            if (!File.Exists(file))
+                continue; // removed meanwhile
 
-                if (IsSessionInMemory(file))
-                    File.SetLastWriteTimeUtc(file, utcNow);
-                else if (utcNow - File.GetLastWriteTimeUtc(file) > RecordLifetime)
-                    VhUtils.TryDeleteFile(file);
-            }
+            if (IsSessionInMemory(file))
+                File.SetLastWriteTimeUtc(file, utcNow);
+            else if (utcNow - File.GetLastWriteTimeUtc(file) > RecordLifetime)
+                VhUtils.TryDeleteFile(file);
         }
-
-        return default;
     }
 
     private bool IsSessionInMemory(string filePath)

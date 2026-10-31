@@ -333,7 +333,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             _lastConfigException = ex;
             SessionManager.Tracker?.TryTrackError(ex, "Bad Configuration!", "Configure", CancellationToken.None);
             VhLogger.Instance.LogError(ex, "Bad Configuration.");
-            _configErrorTracker.RecordError(ex);
+            await _configErrorTracker.RecordError(ex, cancellationToken).Vhc();
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
         }
         // a stop's cancellation is not a configuration error: it passes, and the job swallows it. One the server's
@@ -350,7 +350,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             State = ServerState.Waiting;
             _lastConfigException = ex;
             SessionManager.Tracker?.TryTrackError(ex, "Could not configure server!", "Configure", CancellationToken.None);
-            _configErrorTracker.RecordError(ex);
+            await _configErrorTracker.RecordError(ex, cancellationToken).Vhc();
             VhLogger.Instance.LogError(ex,
                 "Could not configure server! Retrying after {TotalSeconds} seconds.",
                 _configureAndSendStatusJob.Interval.TotalSeconds);
@@ -613,7 +613,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the server status.");
-            _configErrorTracker.RecordError(ex);
+            await _configErrorTracker.RecordError(ex, cancellationToken).Vhc();
         }
     }
 

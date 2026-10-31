@@ -148,9 +148,9 @@ public class SessionUsageTest : TestBase
 
         // the access manager closes the session in a reply
         AddTraffic(session, sent: 1000, received: 2000);
-        server.SessionManager.ApplySessionResponses(new Dictionary<ulong, SessionResponse> {
+        await server.SessionManager.ApplySessionResponses(new Dictionary<ulong, SessionResponse> {
             [session.SessionId] = new() { ErrorCode = SessionErrorCode.SessionSuppressedBy }
-        }, Stopwatch.GetTimestamp());
+        }, Stopwatch.GetTimestamp(), TestCt);
         Assert.IsTrue(session.IsDisposed);
 
         // its last bytes go once, without its close
@@ -280,7 +280,7 @@ public class SessionUsageTest : TestBase
         await Assert.ThrowsExactlyAsync<MaintenanceException>(() =>
             server.SessionManager.CloseSession(session.SessionId, TestCt));
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = null;
-        server.SessionManager.RemoveSession(session);
+        await server.SessionManager.RemoveSession(session, TestCt);
 
         // its close is not lost with it
         await server.ConfigureAndSendStatus(TestCt);

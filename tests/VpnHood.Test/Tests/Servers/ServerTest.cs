@@ -524,7 +524,7 @@ public class ServerTest : TestBase
         Assert.AreEqual(0, accessManager.SessionGetCounter, "session must be loaded in startup.");
 
         // remove session from access server
-        server2.SessionManager.RemoveSession(server2.SessionManager.GetSessionById(client.SessionId)!);
+        await server2.SessionManager.RemoveSession(server2.SessionManager.GetSessionById(client.SessionId)!, TestCt);
 
         // try using recovery
         await Task.WhenAll(
@@ -556,7 +556,7 @@ public class ServerTest : TestBase
         Assert.AreSame(recoveredSession, server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4));
 
         // the removal then finishes and leaves the recovered session alone
-        server.SessionManager.RemoveSession(removedSession);
+        await server.SessionManager.RemoveSession(removedSession, TestCt);
         Assert.AreSame(recoveredSession, server.GetSession(client));
         Assert.AreSame(recoveredSession, server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4));
     }
@@ -573,7 +573,7 @@ public class ServerTest : TestBase
         var session2 = server.GetSession(client2);
         var virtualIpManager = new VirtualIpManager(IpNetwork.Parse("10.10.0.0/16"), IpNetwork.Parse("fd00::/112"),
             Path.Combine(TestHelper.WorkingPath, "last_virtual_ips.json"));
-        var virtualIps = virtualIpManager.Allocate();
+        var virtualIps = await virtualIpManager.Allocate(TestCt);
 
         // a session keeps its IPs until it releases them
         virtualIpManager.Add(virtualIps, session1);
@@ -588,7 +588,9 @@ public class ServerTest : TestBase
         Assert.AreSame(session2, virtualIpManager.FindSession(virtualIps.IpV6));
 
         // a failed add leaves nothing behind: an IPv4 taken before its IPv6 is refused goes back
-        var conflictingIps = new VirtualIpBundle { IpV4 = virtualIpManager.Allocate().IpV4, IpV6 = virtualIps.IpV6 };
+        var conflictingIps = new VirtualIpBundle {
+            IpV4 = (await virtualIpManager.Allocate(TestCt)).IpV4, IpV6 = virtualIps.IpV6
+        };
         Assert.ThrowsExactly<SessionException>(() => virtualIpManager.Add(conflictingIps, session1));
         Assert.IsNull(virtualIpManager.FindSession(conflictingIps.IpV4));
     }
@@ -610,8 +612,8 @@ public class ServerTest : TestBase
         var goneRecordPath = Path.Combine(storagePath, $"{goneSession.SessionId}.session");
         using var sessionLocalService = new SessionLocalService(storagePath,
             new Dictionary<ulong, Session> { [liveSession.SessionId] = liveSession });
-        sessionLocalService.Update(liveSession);
-        sessionLocalService.Update(goneSession);
+        await sessionLocalService.Update(liveSession, TestCt);
+        await sessionLocalService.Update(goneSession, TestCt);
         var oldTime = DateTime.UtcNow.AddDays(-8);
         File.SetLastWriteTimeUtc(liveRecordPath, oldTime);
         File.SetLastWriteTimeUtc(goneRecordPath, oldTime);
@@ -622,21 +624,21 @@ public class ServerTest : TestBase
         Assert.IsFalse(File.Exists(goneRecordPath));
 
         // a record written lately stays, though its session is not in memory: its client may come back
-        sessionLocalService.Update(goneSession);
+        await sessionLocalService.Update(goneSession, TestCt);
         await sessionLocalService.CleanupSessionFiles(TestCt);
         Assert.IsTrue(File.Exists(goneRecordPath));
     }
 
     [TestMethod]
-    public void Sessions_created_at_once_get_different_virtual_ips()
+    public async Task Sessions_created_at_once_get_different_virtual_ips()
     {
         Directory.CreateDirectory(TestHelper.WorkingPath);
         var virtualIpManager = new VirtualIpManager(IpNetwork.Parse("10.10.0.0/16"), IpNetwork.Parse("fd00::/112"),
             Path.Combine(TestHelper.WorkingPath, "last_virtual_ips.json"));
 
         // the first session has not added its IPs yet when the second one allocates
-        var virtualIps1 = virtualIpManager.Allocate();
-        var virtualIps2 = virtualIpManager.Allocate();
+        var virtualIps1 = await virtualIpManager.Allocate(TestCt);
+        var virtualIps2 = await virtualIpManager.Allocate(TestCt);
         Assert.AreNotEqual(virtualIps1.IpV4, virtualIps2.IpV4);
         Assert.AreNotEqual(virtualIps1.IpV6, virtualIps2.IpV6);
     }

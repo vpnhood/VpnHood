@@ -104,16 +104,18 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         _heartbeatJob = new Job(SendHeartbeat, options.HeartbeatInterval, "Heartbeat");
     }
 
-    private Session CreateSessionInternal(
+    private async Task<Session> CreateSessionInternal(
         SessionResponseEx sessionResponseEx,
         IPEndPointPair ipEndPointPair,
         string requestId,
-        bool isRecovery)
+        bool isRecovery,
+        CancellationToken cancellationToken)
     {
         // add to sessions
-        var session = BuildSessionFromResponseEx(sessionResponseEx, isRecovery: isRecovery);
+        var session = await BuildSessionFromResponseEx(sessionResponseEx, isRecovery: isRecovery, cancellationToken)
+            .Vhc();
         if (TryAddSession(session)) {
-            _sessionLocalService.Update(session);
+            await _sessionLocalService.Update(session, cancellationToken).Vhc();
             return session;
         }
 
@@ -139,7 +141,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         return session is null or { IsDisposed: true, Response.ErrorCode: SessionErrorCode.Ok };
     }
 
-    private Session BuildSessionFromResponseEx(SessionResponseEx sessionResponseEx, bool isRecovery)
+    private async Task<Session> BuildSessionFromResponseEx(SessionResponseEx sessionResponseEx, bool isRecovery,
+        CancellationToken cancellationToken)
     {
         var extraData = sessionResponseEx.ExtraData != null
             ? JsonUtils.Deserialize<SessionExtraData>(sessionResponseEx.ExtraData)
@@ -147,11 +150,13 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
 
         // A recovered session takes its virtual IPs and its protocol from its local record: no IP goes to two sessions,
         // and its UDP does not count on the access manager to keep the protocol
-        var localData = isRecovery ? _sessionLocalService.Get(sessionResponseEx.SessionId) : null;
+        var localData = isRecovery
+            ? await _sessionLocalService.Get(sessionResponseEx.SessionId, cancellationToken).Vhc()
+            : null;
         if (localData != null)
             sessionResponseEx.ProtocolVersion = localData.ProtocolVersion;
 
-        var virtualIps = localData?.VirtualIps ?? _virtualIpManager.Allocate();
+        var virtualIps = localData?.VirtualIps ?? await _virtualIpManager.Allocate(cancellationToken).Vhc();
 
         // create the session
         var session = new Session(
@@ -215,8 +220,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponseEx, helloRequest);
 
         // create the session and add it to list
-        var session = CreateSessionInternal(sessionResponseEx, ipEndPointPair,
-            helloRequest.RequestId, isRecovery: false);
+        var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair,
+            helloRequest.RequestId, isRecovery: false, cancellationToken).Vhc();
 
         // Anonymous Report to GA
         _ = TryTrackNewSession(helloRequest.ClientInfo, CancellationToken.None);
@@ -269,18 +274,21 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         var responseExs = await _accessManager.Session_GetAll(cancellationToken).Vhc();
         foreach (var responseEx in responseExs) {
             // a closed session's record is gone for good, though the access manager may still list it for a while
-            if (_sessionLocalService.Find(responseEx.SessionId) == null) {
+            if (await _sessionLocalService.Find(responseEx.SessionId, cancellationToken).Vhc() == null) {
                 VhLogger.Instance.LogDebug("Skipping a closed session. SessionId: {SessionId}",
                     VhLogger.FormatSessionId(responseEx.SessionId));
                 continue;
             }
 
             try {
-                var session = BuildSessionFromResponseEx(responseEx, true);
+                var session = await BuildSessionFromResponseEx(responseEx, true, cancellationToken).Vhc();
                 if (!Sessions.TryAdd(session.SessionId, session)) {
                     DisposeSession(session);
                     throw new Exception("Could not add session to collection.");
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                throw;
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not add a session. SessionId: {SessionId}",
@@ -304,7 +312,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
 
         try {
             // check if the session exists in the local storage
-            if (_sessionLocalService.Find(sessionRequest.SessionId) == null)
+            if (await _sessionLocalService.Find(sessionRequest.SessionId, cancellationToken).Vhc() == null)
                 throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, new SessionResponse {
                     ErrorCode = SessionErrorCode.AccessError,
                     ErrorMessage = "Invalid SessionId."
@@ -327,7 +335,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
                 throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, sessionRequest);
 
             // create the session
-            session = CreateSessionInternal(sessionResponse, ipEndPointPair, "recovery", isRecovery: true);
+            session = await CreateSessionInternal(sessionResponse, ipEndPointPair, "recovery", isRecovery: true,
+                cancellationToken).Vhc();
             VhLogger.Instance.LogInformation(GeneralEventId.Session,
                 "Session has been recovered. SessionId: {SessionId}",
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
@@ -344,7 +353,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
 
             // this will block all other session recovery at early stage
-            _sessionLocalService.Remove(sessionRequest.SessionId);
+            await _sessionLocalService.Remove(sessionRequest.SessionId, cancellationToken).Vhc();
             throw;
         }
     }
@@ -429,7 +438,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     }
 
     // remove sessions from memory that are idle but not disposed yet
-    private void RemoveIdleSessions()
+    private async Task RemoveIdleSessions(CancellationToken cancellationToken)
     {
         var idleSessions = GetIdleSessions();
         if (idleSessions.Length == 0)
@@ -437,7 +446,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
 
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {IdleSessions} idle sessions...",
             idleSessions.Length);
-        RemoveSessions(idleSessions);
+        await RemoveSessions(idleSessions, cancellationToken).Vhc();
     }
 
     // these are the sessions the access manager closed in a reply: their close is not reported back, only their
@@ -484,7 +493,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
 
     // a closed session stays listed for the dead-session timeout after it is disposed, so its client gets its real
     // error rather than a failed recovery; then it goes
-    private void RemoveDisposedSessions()
+    private async Task RemoveDisposedSessions(CancellationToken cancellationToken)
     {
         var deadSessions = GetDeadSessions();
         if (deadSessions.Length == 0)
@@ -492,16 +501,16 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
 
         VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {DeadSessions} disposed sessions...",
             deadSessions.Length);
-        RemoveSessions(deadSessions);
+        await RemoveSessions(deadSessions, cancellationToken).Vhc();
     }
 
-    public void RemoveSessions(Session[] sessions)
+    public async Task RemoveSessions(Session[] sessions, CancellationToken cancellationToken)
     {
         foreach (var session in sessions)
-            RemoveSession(session);
+            await RemoveSession(session, cancellationToken).Vhc();
     }
 
-    public void RemoveSession(Session session)
+    public async Task RemoveSession(Session session, CancellationToken cancellationToken)
     {
         DisposeSession(session); // its virtual IPs go back with it
 
@@ -512,9 +521,9 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
 
         // an open session stays recoverable for when its client comes back; a closed one is gone for good
         if (session.Response.ErrorCode == SessionErrorCode.Ok)
-            _sessionLocalService.Update(session); // let update the last state
+            await _sessionLocalService.Update(session, cancellationToken).Vhc(); // let update the last state
         else
-            _sessionLocalService.Remove(session.SessionId);
+            await _sessionLocalService.Remove(session.SessionId, cancellationToken).Vhc();
     }
 
     public Session? GetSessionById(ulong sessionId)
@@ -543,7 +552,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         }
     }
 
-    public void ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses, long requestTimestamp)
+    public Task ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses, long requestTimestamp,
+        CancellationToken cancellationToken)
     {
         // update sessions from the result of access manager; a closed session keeps its code, a stale reply is skipped
         foreach (var responsePair in sessionResponses) {
@@ -558,15 +568,15 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
                     responsePair.Key, responsePair.Value.ErrorCode);
         }
 
-        Cleanup();
+        return Cleanup(cancellationToken);
     }
 
-    private void Cleanup()
+    private async Task Cleanup(CancellationToken cancellationToken)
     {
         DisposeExpiredSessions(); // first: an expired session that is idle too goes with its close
-        RemoveIdleSessions(); // remove idle sessions
+        await RemoveIdleSessions(cancellationToken).Vhc(); // remove idle sessions
         DisposeClosedSessions(); // dispose closed sessions
-        RemoveDisposedSessions(); // remove dead sessions
+        await RemoveDisposedSessions(cancellationToken).Vhc(); // remove dead sessions
     }
 
     public Task<int> Sync(CancellationToken cancellationToken)
@@ -581,7 +591,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         if (sessionResponses != null)
             return sessionResponses.Count;
 
-        Cleanup(); // nothing to send; the sessions are cleaned up all the same
+        await Cleanup(cancellationToken).Vhc(); // nothing to send; the sessions are cleaned up all the same
         return 0;
     }
 
@@ -591,7 +601,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
                       ?? throw new KeyNotFoundException($"Could not find Session. SessionId: {sessionId}");
 
         // a closed session is not recovered after a restart
-        _sessionLocalService.Remove(session.SessionId);
+        await _sessionLocalService.Remove(session.SessionId, cancellationToken).Vhc();
         if (!session.TryClose(SessionErrorCode.SessionClosed))
             return;
 

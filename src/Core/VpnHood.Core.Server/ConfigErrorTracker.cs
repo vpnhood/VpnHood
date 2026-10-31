@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -46,6 +47,7 @@ public class ConfigErrorTracker
     public const string StrikeFileName = "config-error.json";
     private readonly string _filePath;
     private ConfigErrorStrike? _strike;
+    private bool _isStrikeLoaded; // the file is read at the first error: nothing before it needs the strike
     private bool _hasReachedPauseThreshold;
 
     public ConfigErrorTracker(string storagePath, TimeSpan strikeDuration, TimeSpan retryInterval)
@@ -53,7 +55,6 @@ public class ConfigErrorTracker
         StrikeDuration = strikeDuration;
         RetryInterval = retryInterval;
         _filePath = Path.Combine(storagePath, StrikeFileName);
-        _strike = LoadFromFile();
     }
 
     /// <summary>
@@ -79,15 +80,23 @@ public class ConfigErrorTracker
     /// After recording, checks whether the pause threshold has been reached based on the
     /// persisted first error time. If the file cannot be written, the tracker enters the paused state.
     /// </summary>
-    public void RecordError(Exception error)
+    public async Task RecordError(Exception error, CancellationToken cancellationToken)
     {
+        if (!_isStrikeLoaded) {
+            _strike = await LoadFromFile(cancellationToken).Vhc();
+            _isStrikeLoaded = true;
+        }
+
         _strike ??= new ConfigErrorStrike { FirstErrorTime = DateTime.UtcNow };
         _strike.LastErrorTime = DateTime.UtcNow;
         _strike.LastErrorMessage = error.Message;
 
         try {
             var json = JsonSerializer.Serialize(_strike);
-            File.WriteAllText(_filePath, json);
+            await FileUtils.WriteAllTextAtomicAsync(_filePath, json, cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogCritical(ex,
@@ -115,6 +124,7 @@ public class ConfigErrorTracker
     public void RecordSuccess()
     {
         _strike = null;
+        _isStrikeLoaded = true;
         _hasReachedPauseThreshold = false;
         try {
             if (File.Exists(_filePath))
@@ -130,12 +140,16 @@ public class ConfigErrorTracker
     /// with <see cref="ConfigErrorStrike.FirstErrorTime"/> set to <see cref="DateTime.MinValue"/>
     /// so that the tracker immediately enters the paused state.
     /// </summary>
-    private ConfigErrorStrike? LoadFromFile()
+    private async Task<ConfigErrorStrike?> LoadFromFile(CancellationToken cancellationToken)
     {
         try {
             return File.Exists(_filePath)
-                ? JsonUtils.DeserializeFile<ConfigErrorStrike>(_filePath)
+                ? JsonUtils.Deserialize<ConfigErrorStrike>(
+                    await File.ReadAllTextAsync(_filePath, cancellationToken).Vhc())
                 : null;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogCritical(ex,

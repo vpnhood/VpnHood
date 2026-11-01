@@ -62,8 +62,6 @@ internal sealed class IosMessageClient(IosDevice device) : IMessageClient
     // is a live NETunnelProviderSession. We cache that session and reuse it for later polls.
     private async Task<NETunnelProviderSession> GetProviderSessionAsync(CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
-
         // 1. Reuse the cached live session (connection-reuse, like TcpMessageClient).
         if (IsLive(_session))
             return _session!;
@@ -76,19 +74,24 @@ internal sealed class IosMessageClient(IosDevice device) : IMessageClient
         // Do NOT fall back to a Disconnected/Invalid session: messaging one can wake a dead extension
         // or return stale data (the false-"Connected"-at-launch bug). Fail fast so the manager
         // transitions to Disposed/None on the next poll.
+        var managers = await LoadSavedManagers().Vhc();
+        var liveSession = managers
+            .Select(m => m?.Connection as NETunnelProviderSession)
+            .FirstOrDefault(IsLive);
+        if (liveSession != null)
+            return liveSession;
+
+        // none runs, so the status the app read is the dead extension's last one
+        throw await IosVpnServiceEnd.ToException(managers.FirstOrDefault(), cancellationToken).Vhc();
+    }
+
+    private static async Task<NETunnelProviderManager?[]> LoadSavedManagers()
+    {
         try {
-            var managersArray = await NETunnelProviderManager.LoadAllFromPreferencesAsync().Vhc();
-            var liveSessions = managersArray.ToArray<NETunnelProviderManager>()
-                .Select(m => m?.Connection as NETunnelProviderSession)
-                .Where(IsLive);
-                
-            var liveSession = liveSessions.FirstOrDefault() 
-                ?? throw new VpnServiceUnreachableException("VpnService is unreachable. No live provider sessions found.");
-              
-            return liveSession; 
+            var managers = await NETunnelProviderManager.LoadAllFromPreferencesAsync().Vhc();
+            return managers.ToArray<NETunnelProviderManager>();
         }
         catch (Exception ex) {
-            _session = null;
             throw new VpnServiceUnreachableException("VpnService is unreachable.", ex);
         }
     }

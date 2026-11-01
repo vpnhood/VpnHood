@@ -22,7 +22,7 @@ public class LinuxDevice(string storageFolder) : IDevice
     public bool IsIncludeAppsSupported => false;
     public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsAlwaysOnSupported => true;
-    public IVpnKillSwitch? KillSwitch => null;
+    public IVpnKillSwitch KillSwitch { get; } = new LinuxVpnKillSwitch(owner: storageFolder);
     public bool IsTv => false;
     public bool IsWaitingForVpnPermission => false;
 
@@ -47,7 +47,7 @@ public class LinuxDevice(string storageFolder) : IDevice
     public Task StartVpnService(CancellationToken cancellationToken)
     {
         if (_vpnService == null || _vpnService.IsDisposed)
-            _vpnService = new LinuxVpnService(VpnServiceConfigFolder);
+            _vpnService = new LinuxVpnService(VpnServiceConfigFolder, KillSwitch);
 
         _vpnService.OnConnect();
         return Task.CompletedTask;

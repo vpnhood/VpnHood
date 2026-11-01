@@ -347,6 +347,34 @@ if ! icu_found; then
 	fi
 fi
 
+# nftables, for the kill switch's block: the service runs nft as the adapter runs ip. Most systems have it;
+# a minimal one, Debian 13's cloud image among them, does not. In /usr/sbin, off a person's PATH. Optional:
+# without it the client connects, and a connect with the kill switch on fails and says why.
+function nft_found() {
+	[ -x /usr/sbin/nft ] || [ -x /sbin/nft ] || [ -x /usr/bin/nft ];
+}
+function install_nft() {
+	if command -v apt-get >/dev/null 2>&1; then
+		DEBIAN_FRONTEND=noninteractive apt-get update -qq;
+		DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+			-o DPkg::Lock::Timeout=300 nftables;
+	elif command -v dnf >/dev/null 2>&1; then
+		dnf install -y -q nftables;
+	elif command -v zypper >/dev/null 2>&1; then
+		ZYPP_LOCK_TIMEOUT=300 zypper --non-interactive --quiet install nftables;
+	elif command -v pacman >/dev/null 2>&1; then
+		pacman -S --noconfirm --needed nftables;
+	fi
+}
+if ! nft_found; then
+	echo "Installing nftables, which $productName's kill switch needs...";
+	install_nft;
+	if ! nft_found; then
+		echo "WARNING: Could not install nftables, without which the kill switch cannot block.";
+		echo "WARNING: Install it with your package manager.";
+	fi
+fi
+
 # MsQuic, for the QUIC channel, once the package is in: a run that fails before changes nothing else.
 # Optional everywhere: without it the client uses TCP. Where the distribution has no package for it,
 # it goes in the version folder. One try of 30 s at its download: an update installed from its package

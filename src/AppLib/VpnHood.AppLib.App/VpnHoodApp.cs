@@ -1507,9 +1507,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // A person's disconnect, which also stops always on until a person connects or the service restarts. It
     // lifts the kill switch's block too, and only it does, not an error stop, a crash or a reboot (owner,
     // 2026-10-31: "the block should stay until the user disconnects manually"), even when the stop failed.
-    // No lockdown, which would keep it after a disconnect too: a hotel's sign-in page would then need the
-    // switch turned off (owner, 2026-10-31: dropped). Not under the caller's token: a person's disconnect
-    // is finished whoever stops waiting for it.
+    // Not under the caller's token: a person's disconnect is finished whoever stops waiting for it.
     public async Task Disconnect()
     {
         _alwaysOnService.PersonDisconnecting();

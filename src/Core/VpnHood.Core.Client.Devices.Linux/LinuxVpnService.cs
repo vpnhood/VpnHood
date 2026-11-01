@@ -13,7 +13,7 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
     private bool _disposed;
     public bool IsDisposed => _disposed;
 
-    public LinuxVpnService(string configFolder)
+    public LinuxVpnService(string configFolder, IVpnKillSwitch killSwitch)
     {
         _vpnServiceHost = new VpnServiceHost(
             configFolder: configFolder, 
@@ -22,7 +22,8 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
             socketFactory: new MsQuicSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),
             withLogger: false,
-            tunnelLock: new LinuxVpnTunnelLock());
+            tunnelLock: new LinuxVpnTunnelLock(),
+            killSwitch: killSwitch);
     }
 
     public void OnConnect()

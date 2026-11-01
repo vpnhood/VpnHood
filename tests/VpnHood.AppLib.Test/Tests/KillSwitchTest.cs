@@ -116,8 +116,9 @@ public class KillSwitchTest : TestAppBase
         await using var app = CreateApp(device, killSwitchOn: true);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
+        // the state settles a moment after the connect's failure, later under load
         await Assert.ThrowsAsync<Exception>(() => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt));
-        Assert.AreEqual(AppConnectionState.None, app.State.ConnectionState);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.IsNotNull(app.State.LastError);
         Assert.IsNull(device.VpnService?.CurrentVpnAdapter);
     }

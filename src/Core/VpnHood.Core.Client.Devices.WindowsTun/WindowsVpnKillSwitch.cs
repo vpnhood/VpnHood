@@ -20,8 +20,9 @@ namespace VpnHood.Core.Client.Devices.WindowsTun;
 // and accept layers (ALE) judge a connection once, nothing per packet; the forward layers judge what Windows
 // forwards for WSL2, Hyper-V's switches and Docker, which would otherwise go around the block. The keys are the
 // SDK's, so every app built on VpnHood shares the one block; the provider's data names the app whose block it
-// is, by its exe. Needs an administrator: the service, which runs as SYSTEM.
-public sealed class WindowsVpnKillSwitch : IVpnKillSwitch
+// is (owner: the app's own storage folder, which an update keeps, where the exe's folder changes). Needs an
+// administrator: the service, which runs as SYSTEM.
+public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
 {
     private static readonly Guid ProviderKey = new("7e45054d-79d4-41a8-9bc4-f1409b25dcfe");
     private static readonly Guid SubLayerKey = new("552f1197-0054-4f0b-bc94-d9225d265b5b");
@@ -51,15 +52,15 @@ public sealed class WindowsVpnKillSwitch : IVpnKillSwitch
 
     // one change at a time in this process; the engine's transaction keeps other processes' apart
     private static readonly Lock ChangeLock = new();
-    private readonly string _ownerPath = Environment.ProcessPath ??
-                                         throw new InvalidOperationException("The process has no path.");
+    private readonly string _exePath = Environment.ProcessPath ??
+                                       throw new InvalidOperationException("The process has no path.");
 
     public Task<bool> IsBlocking(CancellationToken cancellationToken)
     {
         lock (ChangeLock) {
             var engine = OpenEngine();
             try {
-                return Task.FromResult(GetOwnerPath(engine) == _ownerPath);
+                return Task.FromResult(GetOwner(engine) == owner);
             }
             finally {
                 WfpNative.FwpmEngineClose0(engine);
@@ -97,13 +98,13 @@ public sealed class WindowsVpnKillSwitch : IVpnKillSwitch
         lock (ChangeLock) {
             var engine = OpenEngine();
             try {
-                var ownerPath = GetOwnerPath(engine);
-                if (ownerPath == null || (!anyApp && ownerPath != _ownerPath))
+                var blockOwner = GetOwner(engine);
+                if (blockOwner == null || (!anyApp && blockOwner != owner))
                     return Task.CompletedTask;
 
                 InTransaction(engine, () => Delete(engine));
                 VhLogger.Instance.LogInformation("The kill switch's block is lifted. Its app: {Owner}",
-                    ownerPath == _ownerPath ? "this" : "another");
+                    blockOwner == owner ? "this" : "another");
             }
             finally {
                 WfpNative.FwpmEngineClose0(engine);
@@ -136,8 +137,8 @@ public sealed class WindowsVpnKillSwitch : IVpnKillSwitch
         }
     }
 
-    // The exe of the app whose block is up, or null where none is.
-    private static string? GetOwnerPath(IntPtr engine)
+    // The app whose block is up, or null where none is.
+    private static string? GetOwner(IntPtr engine)
     {
         var key = ProviderKey;
         var error = WfpNative.FwpmProviderGetByKey0(engine, ref key, out var providerPtr);
@@ -176,7 +177,7 @@ public sealed class WindowsVpnKillSwitch : IVpnKillSwitch
 
     private void Add(IntPtr engine, IReadOnlyList<FilterSpec> filters, NativeMemory native)
     {
-        var ownerBytes = Encoding.Unicode.GetBytes(_ownerPath);
+        var ownerBytes = Encoding.Unicode.GetBytes(owner);
         var provider = new WfpNative.FwpmProvider {
             ProviderKey = ProviderKey,
             DisplayData = native.DisplayData("VpnHood Kill Switch", "Nothing leaves outside the VPN tunnel."),
@@ -215,7 +216,7 @@ public sealed class WindowsVpnKillSwitch : IVpnKillSwitch
     // The block's filters, by the weights above; a family's filter that would have no address left goes.
     private List<FilterSpec> CreateFilters(VpnKillSwitchRules rules, ulong? tunnelLuid, NativeMemory native)
     {
-        var appId = native.AppId(_ownerPath);
+        var appId = native.AppId(_exePath);
         var serviceUser = native.SecurityDescriptor(ServiceUserSddl);
         var filters = new List<FilterSpec>();
         foreach (var addressFamily in new[] { AddressFamily.InterNetwork, AddressFamily.InterNetworkV6 }) {

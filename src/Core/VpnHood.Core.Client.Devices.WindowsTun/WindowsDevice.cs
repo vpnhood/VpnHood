@@ -24,7 +24,7 @@ public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
     public bool IsIncludeAppsSupported => isDebugMode;
     public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsAlwaysOnSupported => true;
-    public IVpnKillSwitch KillSwitch { get; } = new WindowsVpnKillSwitch();
+    public IVpnKillSwitch KillSwitch { get; } = new WindowsVpnKillSwitch(owner: storageFolder);
     public bool IsTv => false;
     public bool IsWaitingForVpnPermission => false;
 

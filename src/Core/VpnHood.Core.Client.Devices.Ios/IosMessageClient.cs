@@ -79,7 +79,7 @@ internal sealed class IosMessageClient(IosDevice device) : IMessageClient
             .Select(m => m?.Connection as NETunnelProviderSession)
             .FirstOrDefault(IsLive);
         if (liveSession != null)
-            return liveSession;
+            return _session = liveSession;
 
         // none runs, so the status the app read is the dead extension's last one
         throw await IosVpnServiceEnd.ToException(managers.FirstOrDefault(), cancellationToken).Vhc();

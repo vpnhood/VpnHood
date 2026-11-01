@@ -21,7 +21,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     public async Task Switched_off_every_tracker_is_made_switched_off()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // turned off in one run and read by the next, as after a restart
         var firstOptions = CreateAppOptions();
@@ -48,7 +48,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     public async Task Changed_while_connected_the_vpn_service_follows_at_once()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         RecordingTrackerFactory.Made.Clear();
         await using var app = TestAppHelper.CreateClientApp(CreateAppOptions());
@@ -77,7 +77,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     public async Task The_vpn_service_makes_each_factory_again_with_its_settings()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         RecordingTrackerFactory.Made.Clear();
         await using var app = TestAppHelper.CreateClientApp(CreateAppOptions());
@@ -96,7 +96,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     public async Task The_first_run_terms_hold_every_tracker_until_accepted()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // not accepted yet: made switched off, in the app and at a connect in the VPN service
         RecordingTrackerFactory.Made.Clear();
@@ -125,7 +125,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     public async Task Where_the_law_wants_a_yes_first_every_tracker_waits_for_the_answer()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // a device in Germany whose terms were accepted before: the switch's default on counts for nothing
         AppRegionInfo.CurrentRegion = new RegionInfo("DE");
@@ -185,7 +185,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     public async Task Switched_off_while_disconnected_a_start_from_the_saved_options_follows()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var device = new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter());
         await using var app = TestAppHelper.CreateClientApp(CreateAppOptions(), device);
@@ -215,7 +215,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         await using var app = TestAppHelper.CreateClientApp(CreateAppOptions());
         AcceptTerms(app);
@@ -239,7 +239,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var device = new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter());
         var appOptions = TestAppHelper.CreateAppOptions(isDebugMode: false);

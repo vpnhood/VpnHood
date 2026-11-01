@@ -96,7 +96,7 @@ public class CheckNewVersionTest : TestAppBase
 
         // create server and token
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create client
         var appOptions = TestAppHelper.CreateAppOptions();
@@ -157,7 +157,7 @@ public class CheckNewVersionTest : TestAppBase
     {
         // create server and token
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // Set invalid file version to raise error
         TestHelper.WebServer.FileContent1 = Guid.NewGuid().ToString();

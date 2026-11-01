@@ -370,7 +370,7 @@ public class VpnAdapterRecoveryTest : TestBase
     public async Task Client_ends_its_session_when_its_adapter_fails()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var adapter = new TestFaultyVpnAdapter(autoRestart: false);
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: adapter);

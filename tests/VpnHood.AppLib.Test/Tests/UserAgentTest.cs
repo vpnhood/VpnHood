@@ -54,7 +54,7 @@ public class UserAgentTest : TestAppBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // a Release build, since a Debug build makes no tracker
         RecordingTrackerFactory.Made.Clear();

@@ -55,17 +55,18 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     close may go through `TryDisposeAsync`, ours or not. A close handles its own failures where they
     arise, so a sync `Dispose` of our own types must not throw (CA1065), and its caller wraps it in
     neither a `TryDispose` nor a `finally`.
-16. A token is passed down, never dropped: a method that waits, or calls one that takes a token,
-    takes a required `CancellationToken` as its last parameter and passes it on. `CancellationToken.None`
-    is written only at a chain's head - a callback the system or the UI makes without one, an entry
-    point, a fire-and-forget start, a constructor, a close - or where the work must outlive its
-    caller's cancel, which a comment there says; inside the method when that is the method's own
-    promise (a stop that waits for a restart). A write that a cut would leave in part is no such
-    work: it takes the token and replaces the file whole (`FileUtils.WriteAllTextAtomicAsync`), so a
-    cancel or a crash leaves the old file. A method's own
-    limit is a linked token (`CreateLinkedTokenSource`, `CancelAfter`) when its end is a cancel, and a
-    `TimeSpan` beside the token when its end is an error of its own (`FileUtils.WaitOutSharingAsync`
-    rethrows the last sharing error).
+16. A token is passed down, never dropped: a method that waits, or calls one that takes a token, takes a
+    required `CancellationToken` as its last parameter, or before its optional ones, which a required
+    parameter can't follow (first when all the others are optional), and passes it on.
+    `CancellationToken.None` is written only at a chain's head - a callback the system or the UI makes
+    without one, an entry point, a fire-and-forget start, a constructor, a close - or where the work
+    must outlive its caller's cancel, which a comment there says; inside the method when that is the
+    method's own promise (a stop that waits for a restart). A write that a cut would leave in part is no
+    such work: it takes the token and replaces the file whole (`FileUtils.WriteAllTextAtomicAsync`), so
+    a cancel or a crash leaves the old file. A method's own limit is a linked token
+    (`CreateLinkedTokenSource`, `CancelAfter`) when its end is a cancel, and a `TimeSpan` beside the
+    token when its end is an error of its own (`FileUtils.WaitOutSharingAsync` rethrows the last sharing
+    error).
 17. A method that waits on I/O - a file, the network, a delay between tries - returns a `Task`, and so
     do its callers, up to the head. It is sync only on a hot path, for a sync lock's own wait, where the
     I/O has no async form (SQLite opening its databases), or under a caller that is sync by contract

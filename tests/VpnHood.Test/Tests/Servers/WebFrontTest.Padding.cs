@@ -26,7 +26,7 @@ public partial class WebFrontTest
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.SessionOptions.StartPadding = enabled;
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var clientInfo = new ClientInfo {
             ClientId = Guid.NewGuid().ToString(), ClientVersion = "1.0.0", MinProtocolVersion = 8,
             MaxProtocolVersion = 15, UserAgent = "PaddingTest"

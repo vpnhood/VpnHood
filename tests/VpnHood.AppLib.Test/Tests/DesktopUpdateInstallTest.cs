@@ -47,7 +47,7 @@ public class DesktopUpdateInstallTest : TestAppBase
     public async Task A_server_switch_and_a_quick_reconnect_install_nothing()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var updater = CreateUpdater();
         updater.InstallerEnd.SetResult("The installed version is up to date.");
         await using var app = CreateApp(updater);

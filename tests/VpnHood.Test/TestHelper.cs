@@ -95,10 +95,10 @@ public class TestHelper : IDisposable
         return _isIpV6Supported.Value;
     }
 
-    public Token CreateAccessToken(FileAccessManager fileAccessManager,
+    public async Task<Token> CreateAccessToken(FileAccessManager fileAccessManager,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null, Traffic? maxSpeedMbps = null)
     {
-        var accessToken = fileAccessManager.AccessTokenService.Create(
+        var accessToken = await fileAccessManager.AccessTokenService.Create(TestCt,
             tokenName: $"Test Server {++_accessTokenIndex}",
             maxClientCount: maxClientCount,
             maxTrafficByteCount: maxTrafficByteCount,
@@ -121,7 +121,7 @@ public class TestHelper : IDisposable
         };
     }
 
-    public Token CreateAccessToken(VpnHoodServer server,
+    public Task<Token> CreateAccessToken(VpnHoodServer server,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null,
         Traffic? maxSpeedMbps = null)
     {

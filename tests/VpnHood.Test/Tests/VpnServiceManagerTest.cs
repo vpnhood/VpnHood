@@ -98,7 +98,7 @@ public class VpnServiceManagerTest : TestBase
     public async Task A_reconfigure_sent_before_the_session_is_up_reaches_it()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // the service's connect held where it makes its adapter: it has read the options, and has no client
         var adapterAsked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -45,7 +45,7 @@ public class SavedOptionsTest : TestAppBase
     {
         await using var server = await TestHelper.CreateServer();
         var device = new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter());
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         token.ServerToken.ServerLocations = ["US", "FR/Paris"];
         await using var app = await CreateConnectedOnceApp(server, device, token.ToAccessKey());
         var serviceOptionsFile = new VpnServiceOptionsFile(device.VpnServiceConfigFolder);
@@ -57,7 +57,7 @@ public class SavedOptionsTest : TestAppBase
             "the saved options take the location");
 
         // another server chosen
-        var otherToken = TestHelper.CreateAccessToken(server);
+        var otherToken = await TestHelper.CreateAccessToken(server);
         var otherProfile = app.VpnProfileService.ImportAccessKey(otherToken.ToAccessKey());
         app.UserSettings.VpnProfileId = otherProfile.VpnProfileId;
         app.SettingsService.Save();
@@ -86,7 +86,8 @@ public class SavedOptionsTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var device = new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter());
         await using var app = TestAppHelper.CreateClientApp(device: device);
-        var vpnProfile = app.VpnProfileService.ImportAccessKey(TestHelper.CreateAccessToken(server).ToAccessKey());
+        var token = await TestHelper.CreateAccessToken(server);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.VpnProfileId = vpnProfile.VpnProfileId;
         app.UserSettings.SplitTunneling.UseLocalNetwork = !app.UserSettings.SplitTunneling.UseLocalNetwork;
         app.SettingsService.Save();
@@ -103,7 +104,7 @@ public class SavedOptionsTest : TestAppBase
         var app = TestAppHelper.CreateClientApp(device: device);
         try {
             var vpnProfile = app.VpnProfileService.ImportAccessKey(
-                accessKey ?? TestHelper.CreateAccessToken(server).ToAccessKey());
+                accessKey ?? (await TestHelper.CreateAccessToken(server)).ToAccessKey());
             await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
             await app.WaitForState(AppConnectionState.Connected, TestCt);
             await app.Disconnect();

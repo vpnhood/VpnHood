@@ -29,7 +29,8 @@ public class AppClientServerDom : IAsyncDisposable
         VpnHoodServer server,
         AppOptions appOptions,
         AdType adProviderAdType,
-        IDevice? device)
+        IDevice? device,
+        Token token)
     {
         TestAppHelper = testAppHelper;
         AccessManager = accessManager;
@@ -43,9 +44,6 @@ public class AppClientServerDom : IAsyncDisposable
                 }
             ];
         }
-
-        // create a toke
-        var token = testAppHelper.CreateAccessToken(server);
 
         // create app
         App = testAppHelper.CreateClientApp(device: device, appOptions: appOptions);
@@ -65,12 +63,14 @@ public class AppClientServerDom : IAsyncDisposable
 
         // create server
         var server = await testAppHelper.CreateServer(accessManager: accessManager);
+        var token = await testAppHelper.CreateAccessToken(server);
         return new AppClientServerDom(testAppHelper,
             accessManager: accessManager,
             server: server,
             device: null,
             adProviderAdType: AdType.RewardedAd,
-            appOptions: appOptions);
+            appOptions: appOptions,
+            token: token);
     }
 
     public static async Task<AppClientServerDom> Create(
@@ -89,12 +89,14 @@ public class AppClientServerDom : IAsyncDisposable
             accessManager: accessManager,
             socketFactory: device.SocketFactory);
 
+        var token = await testAppHelper.CreateAccessToken(server);
         return new AppClientServerDom(testAppHelper,
             accessManager: accessManager,
             server: server,
             appOptions: appOptions,
             adProviderAdType: adProviderAdType,
-            device: device);
+            device: device,
+            token: token);
     }
 
     public Task Connect(ConnectPlanId planId = ConnectPlanId.Normal)

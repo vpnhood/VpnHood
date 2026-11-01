@@ -272,16 +272,17 @@ public class FileAccessManager : IAccessManager
         throw new KeyNotFoundException("This server does not support HTTP-01 challenge.");
     }
 
-    public Token CreateToken(int maxClientCount = 1, string? tokenName = null, int maxTrafficByteCount = 0,
-        DateTime? expirationTime = null, AdRequirement adRequirement = AdRequirement.None)
+    public async Task<Token> CreateToken(CancellationToken cancellationToken, int maxClientCount = 1,
+        string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null,
+        AdRequirement adRequirement = AdRequirement.None)
     {
-        var accessToken = AccessTokenService.Create(
+        var accessToken = await AccessTokenService.Create(cancellationToken,
             tokenName: tokenName,
             maxClientCount: maxClientCount,
             maxTrafficByteCount: maxTrafficByteCount,
             expirationTime: expirationTime,
             adRequirement: adRequirement
-        );
+        ).Vhc();
 
         return GetToken(accessToken);
     }

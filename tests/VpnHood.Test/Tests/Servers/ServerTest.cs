@@ -124,7 +124,7 @@ public class ServerTest : TestBase
             ServerHostDisposeTimeout = Timeout.InfiniteTimeSpan
         });
         await server.Start(TestCt);
-        await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server));
+        await using var client = await TestHelper.CreateClient(await TestHelper.CreateAccessToken(server));
         var session = server.SessionManager.GetSessionById(client.SessionId);
         Assert.IsNotNull(session);
 
@@ -297,7 +297,7 @@ public class ServerTest : TestBase
         options.SessionOptions.SyncCacheSize = 1_000_000_000;
         using var accessManager = await TestHelper.CreateAccessManager(options);
         await using var server = await TestHelper.CreateServer(accessManager);
-        await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server));
+        await using var client = await TestHelper.CreateClient(await TestHelper.CreateAccessToken(server));
         await TestHelper.Test_Https();
 
         // the first close's last sync, held at the access manager
@@ -322,7 +322,7 @@ public class ServerTest : TestBase
         options.SessionOptions.SyncCacheSize = 1_000_000_000;
         using var accessManager = await TestHelper.CreateAccessManager(options);
         await using var server = await TestHelper.CreateServer(accessManager);
-        await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server));
+        await using var client = await TestHelper.CreateClient(await TestHelper.CreateAccessToken(server));
         await TestHelper.Test_Https();
 
         // the graceful close's last sync, held at the access manager, which lets it wait for 7 s
@@ -349,7 +349,7 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client =
             await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token,
                 channelProtocol: ChannelProtocol.Udp));
@@ -465,7 +465,7 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         Assert.IsTrue(accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
@@ -483,7 +483,7 @@ public class ServerTest : TestBase
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server1);
+        var token = await TestHelper.CreateAccessToken(server1);
         await using var client = await TestHelper.CreateClient(token);
         Assert.AreEqual(ClientState.Connected, client.State);
         await TestHelper.Test_Https();
@@ -509,7 +509,7 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create Client
-        var token1 = TestHelper.CreateAccessToken(accessManager);
+        var token1 = await TestHelper.CreateAccessToken(accessManager);
         await using var client = await TestHelper.CreateClient(token1);
 
         await server.DisposeAsync();
@@ -541,7 +541,7 @@ public class ServerTest : TestBase
     public async Task Request_during_an_idle_removal_recovers_the_session()
     {
         await using var server = await TestHelper.CreateServer();
-        await using var client = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+        await using var client = await TestHelper.CreateClient(await TestHelper.CreateAccessToken(server),
             vpnAdapter: new TestNullVpnAdapter());
         var removedSession = server.GetSession(client);
 
@@ -565,9 +565,9 @@ public class ServerTest : TestBase
     public async Task Virtual_ips_are_released_only_by_the_session_that_holds_them()
     {
         await using var server = await TestHelper.CreateServer();
-        await using var client1 = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+        await using var client1 = await TestHelper.CreateClient(await TestHelper.CreateAccessToken(server),
             vpnAdapter: new TestNullVpnAdapter());
-        await using var client2 = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+        await using var client2 = await TestHelper.CreateClient(await TestHelper.CreateAccessToken(server),
             vpnAdapter: new TestNullVpnAdapter());
         var session1 = server.GetSession(client1);
         var session2 = server.GetSession(client2);
@@ -599,9 +599,9 @@ public class ServerTest : TestBase
     public async Task Old_session_records_go_unless_their_session_is_in_memory()
     {
         await using var server = await TestHelper.CreateServer();
-        await using var client1 = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+        await using var client1 = await TestHelper.CreateClient(await TestHelper.CreateAccessToken(server),
             vpnAdapter: new TestNullVpnAdapter());
-        await using var client2 = await TestHelper.CreateClient(TestHelper.CreateAccessToken(server),
+        await using var client2 = await TestHelper.CreateClient(await TestHelper.CreateAccessToken(server),
             vpnAdapter: new TestNullVpnAdapter());
         var liveSession = server.GetSession(client1);
         var goneSession = server.GetSession(client2);
@@ -647,7 +647,7 @@ public class ServerTest : TestBase
     public async Task Unauthorized_response_is_expected_for_unknown_request()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var handler = new HttpClientHandler();
         handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
@@ -666,7 +666,7 @@ public class ServerTest : TestBase
     public async Task A_request_no_client_of_ours_sends_gets_the_401_of_a_scan(string method, string headers)
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var request =
             $"{method} /{Guid.NewGuid()} HTTP/1.1\r\n" +
@@ -688,7 +688,7 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
         Log("Clearing all sessions...");
@@ -950,7 +950,7 @@ public class ServerTest : TestBase
     public async Task A_closed_session_takes_no_udp_datagram()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
         var session = server.GetSession(client);
         using var listener = new TestUdpListener();
@@ -969,7 +969,7 @@ public class ServerTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.SessionProtocolVersion = UdpDatagram.MinProtocolVersion - 1;
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
         var session = server.GetSession(client);
         using var listener = new TestUdpListener();
@@ -991,7 +991,7 @@ public class ServerTest : TestBase
         fileAccessManagerOptions.UdpEndPoints = [portHolder.Client.GetLocalEndPoint()];
         using var accessManager = await TestHelper.CreateAccessManager(fileAccessManagerOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
         Assert.IsNull(client.RequiredSession.Config.HostUdpEndPoint);
@@ -1006,7 +1006,7 @@ public class ServerTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.SessionProtocolVersion = UdpDatagram.MinLegacyProtocolVersion - 1;
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
         var session = server.GetSession(client);
         using var listener = new TestUdpListener();
@@ -1026,7 +1026,7 @@ public class ServerTest : TestBase
         using var accessManager1 = await TestHelper.CreateAccessManager(fileAccessManagerOptions);
         accessManager1.SessionProtocolVersion = UdpDatagram.MinProtocolVersion - 1;
         await using var server1 = await TestHelper.CreateServer(accessManager1);
-        var token = TestHelper.CreateAccessToken(server1);
+        var token = await TestHelper.CreateAccessToken(server1);
         await using var client = await TestHelper.CreateClient(token);
         Assert.AreEqual(UdpDatagram.MinProtocolVersion - 1, server1.GetSession(client).ProtocolVersion);
 

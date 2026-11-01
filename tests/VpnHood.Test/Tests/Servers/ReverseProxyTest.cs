@@ -148,7 +148,7 @@ public class ReverseProxyTest : TestBase
             .Select(IpRange.Parse)
             .ToArray();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var helloResponse = await SendHello(token, forwardedFor);
         Assert.AreEqual(IPAddress.Parse(expectedClientIp), helloResponse.ClientPublicAddress);
@@ -160,7 +160,7 @@ public class ReverseProxyTest : TestBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var directHelloResponse = await SendHello(token, forwardedFor: null);
         Assert.IsNotNull(directHelloResponse.UdpPort);
@@ -174,7 +174,7 @@ public class ReverseProxyTest : TestBase
     public async Task A_forwarded_hello_accepts_the_proof_when_the_proxy_rewrites_host()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         const string originHost = "origin.example.com";
         Assert.AreNotEqual(originHost, token.ServerToken.HostName);
 

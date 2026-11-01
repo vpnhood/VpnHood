@@ -53,7 +53,7 @@ public class ClientServerTest : TestBase
         accessManager1.RedirectHostEndPoint = serverEndPoint2;
 
         // Create Client
-        var token1 = TestHelper.CreateAccessToken(accessManager1);
+        var token1 = await TestHelper.CreateAccessToken(accessManager1);
         await using var client = await TestHelper.CreateClient(token1, vpnAdapter: TestHelper.CreateTestVpnAdapter());
         await TestHelper.Test_Https();
 
@@ -75,13 +75,13 @@ public class ClientServerTest : TestBase
         using var accessManager2 =
             await TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
-        var token = accessManager2.CreateToken();
+        var token = await accessManager2.CreateToken(TestCt);
 
         // redirect server1 to server2
         accessManager1.RedirectServerTokens = [token.ServerToken];
 
         // Create Client
-        var token1 = TestHelper.CreateAccessToken(accessManager1);
+        var token1 = await TestHelper.CreateAccessToken(accessManager1);
         await using var client = await TestHelper.CreateClient(token1, vpnAdapter: TestHelper.CreateTestVpnAdapter());
         await TestHelper.Test_Https();
 
@@ -97,21 +97,21 @@ public class ClientServerTest : TestBase
         using var accessManager1 =
             await TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "US/california");
         await using var server1 = await TestHelper.CreateServer(accessManager1);
-        var token1 = accessManager1.CreateToken();
+        var token1 = await accessManager1.CreateToken(TestCt);
 
         // Create Server 2
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
         using var accessManager2 = await TestHelper.CreateAccessManager(fileAccessManagerOptions2,
             accessManager1.StoragePath, serverLocation: "UK/london");
         await using var server2 = await TestHelper.CreateServer(accessManager2);
-        var token2 = accessManager2.CreateToken();
+        var token2 = await accessManager2.CreateToken(TestCt);
 
         // redirect server1 to server2
         accessManager1.ServerLocations.Add("US/california", token1.ServerToken);
         accessManager1.ServerLocations.Add("UK/london", token2.ServerToken);
 
         // Create Client
-        var token = TestHelper.CreateAccessToken(accessManager1);
+        var token = await TestHelper.CreateAccessToken(accessManager1);
         var clientOptions = TestHelper.CreateClientOptions(token: token);
         clientOptions.ServerLocation = "UK/london";
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
@@ -131,7 +131,7 @@ public class ClientServerTest : TestBase
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // create client
-        var token1 = TestHelper.CreateAccessToken(accessManager1);
+        var token1 = await TestHelper.CreateAccessToken(accessManager1);
         await using var client = await TestHelper.CreateClient(token1, vpnAdapter: new TestNullVpnAdapter());
         Assert.AreEqual("US/california", client.RequiredSession.Info.ServerLocationInfo?.ServerLocation);
     }
@@ -141,7 +141,7 @@ public class ClientServerTest : TestBase
     {
         // Create Server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.DropUdp = true;
@@ -160,7 +160,7 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // the client drops the users' UDP itself, though its own setting is off, and lets DNS through by its port
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token));
         Assert.IsFalse(client.RequiredSession.Info.IsUdpPacketSupported);
         Assert.IsFalse(client.RequiredSession.Info.IsQuicPacketSupported, "Dropping all UDP drops QUIC too.");
@@ -180,7 +180,7 @@ public class ClientServerTest : TestBase
         fileAccessManagerOptions.SessionOptions.AllowQuicPacket = false;
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token));
         Assert.AreEqual(isQuicPacketSupported, client.RequiredSession.Info.IsQuicPacketSupported);
         Assert.AreEqual(!isQuicPacketSupported, client.RequiredSession.Status.IsDropQuic);
@@ -209,7 +209,7 @@ public class ClientServerTest : TestBase
 
         // Create Server
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // --------
         // Check: Client MaxPacketChannelCount larger than server
@@ -254,7 +254,7 @@ public class ClientServerTest : TestBase
     {
         // Create Server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // Create Client
         var clientOptions = TestHelper.CreateClientOptions(token);
@@ -276,7 +276,7 @@ public class ClientServerTest : TestBase
 
         // Create Server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // Create Client
         await using var client = await TestHelper.CreateClient(
@@ -301,7 +301,7 @@ public class ClientServerTest : TestBase
 
         // Create Server
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // Create Client
         await using var client = await TestHelper.CreateClient(
@@ -322,7 +322,7 @@ public class ClientServerTest : TestBase
     public async Task Client_must_dispose_after_device_closed()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         using var vpnAdapter = new TestNullVpnAdapter();
         await using var client = await TestHelper.CreateClient(token, vpnAdapter);
@@ -338,7 +338,7 @@ public class ClientServerTest : TestBase
     public async Task Client_releases_its_adapter_when_its_session_close_fails()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // the session's UDP channel has a socket from this factory
         var socketFactory = new UdpCloseFailingSocketFactory();
@@ -364,7 +364,7 @@ public class ClientServerTest : TestBase
     public async Task A_second_close_of_the_client_waits_for_the_first_to_release_it()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // the first close is held in its release, as the adapter tells of its dispose. The client has no session, as
         // when a disconnect comes during connect: a session's own close would hold the second close anyway
@@ -394,7 +394,7 @@ public class ClientServerTest : TestBase
     public async Task A_close_of_the_client_waits_for_the_release_its_sessions_own_close_started()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // the session closes on its own, as when the server ends it, and its disposed state starts the client's quick
         // close, held here in its release as the adapter tells of its dispose
@@ -424,7 +424,7 @@ public class ClientServerTest : TestBase
     public async Task A_failed_session_state_handler_does_not_break_the_sessions_close()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = (ClientSession)client.RequiredSession;
         session.StateChanged += (_, _) => throw new InvalidOperationException("Test: the handler failed.");
@@ -439,7 +439,7 @@ public class ClientServerTest : TestBase
     public async Task Client_must_dispose_after_server_stopped()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create client
         var clientOptions = TestHelper.CreateClientOptions(token);
@@ -467,7 +467,7 @@ public class ClientServerTest : TestBase
     public async Task Client_is_connecting_until_its_adapter_has_started()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // what the client says of itself while its adapter is still starting; by then the server has
         // answered its first requests
@@ -485,7 +485,7 @@ public class ClientServerTest : TestBase
     public async Task Request_answered_while_disconnecting_does_not_reconnect()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         var session = (VpnHood.Core.Client.ClientSession)client.RequiredSession;
 
@@ -512,7 +512,7 @@ public class ClientServerTest : TestBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
 
         // the client's start waits for an ad that nobody shows
@@ -537,7 +537,7 @@ public class ClientServerTest : TestBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
 
         // the client's start waits for an ad that nobody shows
@@ -573,7 +573,7 @@ public class ClientServerTest : TestBase
 
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create client
         var vpnAdapter1 = TestHelper.CreateTestVpnAdapter();
@@ -633,7 +633,7 @@ public class ClientServerTest : TestBase
         // create server
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // connect
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: TestHelper.CreateTestVpnAdapter());
@@ -680,7 +680,7 @@ public class ClientServerTest : TestBase
         // ----------
         // Check: MaintenanceMode is expected
         // ----------
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // while the access manager is unreachable, detecting maintenance costs the server a refused
         // round trip, which takes seconds on a loaded machine; the default 3s connect budget is too tight
@@ -730,7 +730,7 @@ public class ClientServerTest : TestBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.SessionOptions.MinClientProtocolVersion = minimumVersion;
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         using var tcpClient = new TcpClient();
         await tcpClient.ConnectAsync(server.ServerHost.TcpEndPoints[0], TestCt);
         await using var stream = new SslStream(tcpClient.GetStream());
@@ -787,7 +787,7 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, socketFactory: socketFactory);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: vpnAdapter);
 
 
@@ -811,7 +811,7 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.ChannelProtocol = ChannelProtocol.Udp;
@@ -844,7 +844,7 @@ public class ClientServerTest : TestBase
     {
         // Create Server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // Create Client
         await using var client =
@@ -937,7 +937,7 @@ public class ClientServerTest : TestBase
         ConnectorService.MaxConnectionLifespan = TimeSpan.Zero;
         try {
             await using var server = await TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessToken(server);
+            var token = await TestHelper.CreateAccessToken(server);
             await using var client = await TestHelper.CreateClient(
                 clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
 
@@ -968,7 +968,7 @@ public class ClientServerTest : TestBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.UdpEndPoints = [];
         await using var server = await TestHelper.CreateServer(options: fileAccessManagerOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // Create Client
         await using var client = await TestHelper.CreateClient(
@@ -992,7 +992,7 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
         // test udp
@@ -1010,7 +1010,7 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
 
         // the client sends IPv4 TCP as packets, and IPv6 TCP by its proxy
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpProxy: false));
         Assert.IsTrue(client.RequiredSession.Info.IsTcpPacketIpV4Supported);
         Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV6Supported);
@@ -1027,7 +1027,7 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
 
         // a client with Cloak Mode off turns its TCP proxy on by itself
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpProxy: false));
         Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV4Supported);
         Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV6Supported);
@@ -1044,7 +1044,7 @@ public class ClientServerTest : TestBase
     {
         // Create Server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create app
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
@@ -1069,7 +1069,7 @@ public class ClientServerTest : TestBase
         };
 
         await using var client = await TestHelper.CreateClient(
-            TestHelper.CreateClientOptions(TestHelper.CreateAccessToken(server), useTcpProxy: false),
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server), useTcpProxy: false),
             netFilter: netFilter);
         await client.WaitForState(ClientState.Connected, TestCt);
         Assert.IsFalse(client.RequiredSession.Status.IsTcpProxy);

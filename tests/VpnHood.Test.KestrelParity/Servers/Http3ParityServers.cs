@@ -43,7 +43,8 @@ internal sealed class Http3ParityServers(
         var server = CreateServer(accessManager, storagePath);
         try {
             var referenceEndPoint = VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback);
-            var accessToken = accessManager.AccessTokenService.Create(tokenName: "http3-parity", maxClientCount: 1);
+            var accessToken = await accessManager.AccessTokenService.Create(cancellationToken,
+                tokenName: "http3-parity", maxClientCount: 1);
             var token = accessManager.GetToken(accessToken).ServerToken;
             var farmSecret = token.Secret ?? throw new InvalidOperationException("The test token has no farm secret.");
             await server.Start(cancellationToken);

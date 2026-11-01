@@ -19,7 +19,7 @@ public class NetScanTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
         var session = server.GetSession(client);

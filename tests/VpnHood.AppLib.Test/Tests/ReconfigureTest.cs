@@ -14,7 +14,7 @@ public class ReconfigureTest : TestAppBase
     public async Task A_setting_changed_while_the_app_connects_reaches_the_session()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var app = TestAppHelper.CreateClientApp();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 

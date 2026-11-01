@@ -25,7 +25,7 @@ public class ClientAppTest : TestAppBase
     {
         // create server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create app; this test asserts State.LogExists, so it keeps the log service enabled
         var appOptions = TestAppHelper.CreateAppOptions();
@@ -66,7 +66,7 @@ public class ClientAppTest : TestAppBase
     public async Task Runs_without_ip_location_asset()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.IpLocationZipAsset = null;
@@ -87,7 +87,7 @@ public class ClientAppTest : TestAppBase
     {
         // create server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         token.ServerToken.HostEndPoints = [IPEndPoint.Parse("10.10.10.99:443")];
 
         // create app; this test asserts State.LogExists, so it keeps the log service enabled
@@ -109,7 +109,7 @@ public class ClientAppTest : TestAppBase
     {
         // create Access Manager and token
         using var accessManager = await TestHelper.CreateAccessManager();
-        var token = TestHelper.CreateAccessToken(accessManager);
+        var token = await TestHelper.CreateAccessToken(accessManager);
 
         // create server
         await using var server1 = await TestHelper.CreateServer(accessManager);
@@ -149,7 +149,7 @@ public class ClientAppTest : TestAppBase
     public async Task Connect_fail_ConnectionTimeoutException()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create device
         using var testDevice = TestHelper.CreateNullDevice();
@@ -172,7 +172,7 @@ public class ClientAppTest : TestAppBase
     {
         // create server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create app; this test asserts State.LogExists, so it keeps the log service enabled
         var appOptions = TestAppHelper.CreateAppOptions();
@@ -201,7 +201,7 @@ public class ClientAppTest : TestAppBase
     {
         // create Access Manager and token
         using var accessManager = await TestHelper.CreateAccessManager();
-        var token = TestHelper.CreateAccessToken(accessManager);
+        var token = await TestHelper.CreateAccessToken(accessManager);
 
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
@@ -233,7 +233,7 @@ public class ClientAppTest : TestAppBase
     {
         // create Access Manager and token
         using var accessManager = await TestHelper.CreateAccessManager();
-        var token = TestHelper.CreateAccessToken(accessManager, expirationTime: DateTime.UtcNow.AddDays(-1));
+        var token = await TestHelper.CreateAccessToken(accessManager, expirationTime: DateTime.UtcNow.AddDays(-1));
         var orgTokenName = token.Name;
 
         // Update ServerTokenUrl after token creation
@@ -267,7 +267,7 @@ public class ClientAppTest : TestAppBase
         fileAccessManagerOptions1.ServerTokenUrls = [$"http://{endPoint1}/accesskey", $"http://{endPoint2}/accesskey"];
         using var accessManager1 = await TestHelper.CreateAccessManager(fileAccessManagerOptions1);
         await using var server1 = await TestHelper.CreateServer(accessManager1);
-        var token1 = TestHelper.CreateAccessToken(server1);
+        var token1 = await TestHelper.CreateAccessToken(server1);
         // ReSharper disable once DisposeOnUsingVariable
         await server1.DisposeAsync();
 
@@ -277,7 +277,7 @@ public class ClientAppTest : TestAppBase
         var accessManager2 = await TestHelper.CreateAccessManager(storagePath: accessManager1.StoragePath,
             options: fileAccessManagerOptions1);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
-        var token2 = TestHelper.CreateAccessToken(server2);
+        var token2 = await TestHelper.CreateAccessToken(server2);
 
         //update web server enc_server_token
         var isTokenRetrieved = false;
@@ -337,7 +337,7 @@ public class ClientAppTest : TestAppBase
         fileAccessManagerOptions.ServerTokenUrls = [$"http://{endPoint}/accesskey"];
         using var accessManager = await TestHelper.CreateAccessManager(fileAccessManagerOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // the person says no every time the prompt shows
         var prompts = 0;
@@ -362,8 +362,8 @@ public class ClientAppTest : TestAppBase
         await using var server1 = await TestHelper.CreateServer();
         await using var server2 = await TestHelper.CreateServer();
 
-        var token1 = TestHelper.CreateAccessToken(server1);
-        var token2 = TestHelper.CreateAccessToken(server2);
+        var token1 = await TestHelper.CreateAccessToken(server1);
+        var token2 = await TestHelper.CreateAccessToken(server2);
 
         // connect
         await using var app = TestAppHelper.CreateClientApp();
@@ -385,7 +385,7 @@ public class ClientAppTest : TestAppBase
     public async Task Premium_token_must_create_premium_session()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         await using var app = TestAppHelper.CreateClientApp();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
@@ -404,7 +404,7 @@ public class ClientAppTest : TestAppBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create Client
-        var token = accessManager.CreateToken();
+        var token = await accessManager.CreateToken(TestCt);
         token.ServerToken.ServerLocations = ["US", "FR/Paris"];
 
         // Create App
@@ -442,7 +442,7 @@ public class ClientAppTest : TestAppBase
 
         // create app
         var testUserReviewProvider = new TestAppUserReviewProvider();
-        var token = accessManager.CreateToken();
+        var token = await accessManager.CreateToken(TestCt);
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UserReviewProvider = testUserReviewProvider;
         appOptions.AllowRecommendUserReviewByServer = true;

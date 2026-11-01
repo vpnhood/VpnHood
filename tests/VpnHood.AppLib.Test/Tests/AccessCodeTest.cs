@@ -32,8 +32,8 @@ public class AccessCodeTest : TestAppBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
-        var token1 = TestHelper.CreateAccessToken(server);
-        var token2 = TestHelper.CreateAccessToken(server, maxClientCount: 6);
+        var token1 = await TestHelper.CreateAccessToken(server);
+        var token2 = await TestHelper.CreateAccessToken(server, maxClientCount: 6);
 
         // create access code and add it to test manager
         var accessCode = TestAppHelper.BuildAccessCode();
@@ -59,7 +59,7 @@ public class AccessCodeTest : TestAppBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
-        var token1 = TestHelper.CreateAccessToken(server);
+        var token1 = await TestHelper.CreateAccessToken(server);
 
         // create access code and add it to test manager
         var accessCode = TestAppHelper.BuildAccessCode();
@@ -153,7 +153,7 @@ public class AccessCodeTest : TestAppBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var str = new StringBuilder(TestAppHelper.BuildAccessCode());
         str[1] = str[1] == '0' ? '1' : '0'; // destroy checksum
         var accessCode = str.ToString();
@@ -181,7 +181,7 @@ public class AccessCodeTest : TestAppBase
             PremiumByRewardedAd = 20,
             PremiumByTrial = 30
         };
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         token.ServerToken.ServerLocations = ["US/California"];
         token.ClientPolicies = [defaultPolicy];
 

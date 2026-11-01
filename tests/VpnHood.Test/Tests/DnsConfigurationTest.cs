@@ -18,7 +18,7 @@ public class DnsConfigurationTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
 
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.RequiredSession.Info.DnsConfig.DnsServers);
@@ -34,7 +34,7 @@ public class DnsConfigurationTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions(token: token);
         clientOptions.DnsServers = [IPAddress.Parse("200.0.0.1"), IPAddress.Parse("200.0.0.2")];
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
@@ -58,7 +58,7 @@ public class DnsConfigurationTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions(token: token);
         clientOptions.DnsServers = clientDnsServers;
         await using var client = await TestHelper.CreateClient(
@@ -83,7 +83,7 @@ public class DnsConfigurationTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
 
         foreach (var serverDnsServer in serverDnsServers)

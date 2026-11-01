@@ -40,7 +40,8 @@ public class AccessTokenService
         return Path.Combine(_storagePath, tokenId + FileExtAccessTokenUsage);
     }
 
-    public AccessToken Create(
+    public async Task<AccessToken> Create(
+        CancellationToken cancellationToken,
         int maxClientCount = 1,
         string? tokenName = null,
         int maxTrafficByteCount = 0,
@@ -49,7 +50,7 @@ public class AccessTokenService
         AdRequirement adRequirement = AdRequirement.None)
     {
         // generate key
-        var aes = Aes.Create();
+        using var aes = Aes.Create();
         aes.KeySize = 128;
         aes.GenerateKey();
 
@@ -67,7 +68,8 @@ public class AccessTokenService
         };
 
         // Write AccessToken
-        File.WriteAllText(GetAccessTokenFileName(accessToken.TokenId), JsonSerializer.Serialize(accessToken));
+        await FileUtils.WriteAllTextAtomicAsync(GetAccessTokenFileName(accessToken.TokenId),
+            JsonSerializer.Serialize(accessToken), cancellationToken).Vhc();
 
         return accessToken;
     }
@@ -140,17 +142,14 @@ public class AccessTokenService
     {
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
 
+        // a copy with the new name, cached once it is on disk: a cancel or a failed write leaves both as they were
         var accessTokenData = await GetInternal(tokenId, cancellationToken).Vhc();
-        accessTokenData.AccessToken.Name = tokenName;
+        var accessToken = JsonUtils.Deserialize<AccessToken>(JsonSerializer.Serialize(accessTokenData.AccessToken));
+        accessToken.Name = tokenName;
+        await FileUtils.WriteAllTextAtomicAsync(GetAccessTokenFileName(tokenId), JsonSerializer.Serialize(accessToken),
+            cancellationToken).Vhc();
 
-        // not cancelled: a write cut off after the truncation would leave the usage empty
-        await File
-            .WriteAllTextAsync(
-                GetAccessTokenUsageFileName(tokenId),
-                JsonSerializer.Serialize(accessTokenData.Usage),
-                CancellationToken.None)
-            .Vhc();
-
+        accessTokenData.AccessToken = accessToken;
         return accessTokenData;
     }
 
@@ -177,21 +176,19 @@ public class AccessTokenService
         //lock tokenId
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
 
-        // add usage
+        // the new usage, cached once it is on disk: a cancel or a failed write leaves both as they were
         var accessTokenData = await GetInternal(tokenId, cancellationToken).Vhc();
-        accessTokenData.Usage.Sent += traffic.Sent;
-        accessTokenData.Usage.Received += traffic.Received;
-        accessTokenData.Usage.Version = 2;
-        accessTokenData.Usage.LastUsedTime = DateTime.UtcNow;
+        var usage = new AccessTokenUsage {
+            Version = 2,
+            CreatedTime = accessTokenData.Usage.CreatedTime,
+            LastUsedTime = DateTime.UtcNow,
+            Sent = accessTokenData.Usage.Sent + traffic.Sent,
+            Received = accessTokenData.Usage.Received + traffic.Received
+        };
+        await FileUtils.WriteAllTextAtomicAsync(GetAccessTokenUsageFileName(tokenId), JsonSerializer.Serialize(usage),
+            cancellationToken).Vhc();
 
-        // save to file; not cancelled: a write cut off after the truncation would leave the usage empty. A crash in
-        // the write still can, and the token's traffic then reads as zero (left so: a crash must land in the write)
-        await File
-            .WriteAllTextAsync(
-                GetAccessTokenUsageFileName(tokenId),
-                JsonSerializer.Serialize(accessTokenData.Usage),
-                CancellationToken.None)
-            .Vhc();
+        accessTokenData.Usage = usage;
     }
 
     public async Task Delete(string tokenId, CancellationToken cancellationToken)

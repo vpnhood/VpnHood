@@ -22,7 +22,7 @@ public class VpnTunnelLockTest : TestAppBase
     public async Task Another_app_takes_the_tunnel_and_this_one_takes_it_back()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var tunnelLock = new TestVpnTunnelLock();
         var device = new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter()) { TunnelLock = tunnelLock };
         await using var app = TestAppHelper.CreateClientApp(device: device);
@@ -59,7 +59,7 @@ public class VpnTunnelLockTest : TestAppBase
     public async Task Null_capture_takes_no_tunnel()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var tunnelLock = new TestVpnTunnelLock();
         var device = new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter()) { TunnelLock = tunnelLock };
         await using var app = TestAppHelper.CreateClientApp(device: device);

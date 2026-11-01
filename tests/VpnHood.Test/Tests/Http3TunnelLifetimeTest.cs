@@ -96,7 +96,7 @@ public class Http3TunnelLifetimeTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager,
             socketFactory: TestHelper.CreateTestSocketFactory(adapter));
 
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions(token, ChannelProtocol.Quic);
         clientOptions.MinPacketChannelTimespan = TimeSpan.FromMinutes(5);
         clientOptions.MaxPacketChannelTimespan = TimeSpan.FromMinutes(5);

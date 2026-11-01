@@ -28,7 +28,7 @@ public partial class WebFrontTest
     public async Task Protocol15_rejects_bad_proofs_before_body_or_upgrade(string failure, bool upgrade)
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var proof = CreateRejectedProof(token, failure);
 
         // The POST declares a body but sends none. Waiting for it would miss this helper's deadline.
@@ -47,7 +47,7 @@ public partial class WebFrontTest
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.SessionOptions.MinClientProtocolVersion = 15;
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         using var response = await SendAuthenticationHead(token, upgrade, httpVersion, proof: null, TestCt);
         AssertPlainUnauthorized(response);
@@ -67,7 +67,7 @@ public partial class WebFrontTest
         if (minimumVersion != 0)
             accessManager.ServerConfig.SessionOptions.MinClientProtocolVersion = minimumVersion;
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var proof = httpVersion == 15
             ? new RequestProof(token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret."))
                 .Create(15, DateTimeOffset.UtcNow)
@@ -82,7 +82,7 @@ public partial class WebFrontTest
     public async Task Protocol15_accepts_a_proxy_rewritten_host_before_upgrade()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var secret = token.ServerToken.Secret ?? throw new InvalidOperationException("The token has no farm secret.");
         var proof = new RequestProof(secret).Create(15, DateTimeOffset.UtcNow);
         const string originHost = "origin.example.com";
@@ -110,7 +110,7 @@ public partial class WebFrontTest
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.SessionProtocolVersion = binaryVersion;
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         using var tcpClient = new TcpClient();
         await using var stream = await ConnectTls(tcpClient, token);
         var clientInfo = new ClientInfo {
@@ -160,7 +160,7 @@ public partial class WebFrontTest
     public async Task Protocol15_secret_rotation_updates_the_proof_gate()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var oldProof = new RequestProof(token.ServerToken.Secret!).Create(15,
             DateTimeOffset.UtcNow);
         using var before = await SendAuthenticationHead(token, upgrade: true, 15, oldProof, TestCt);

@@ -34,7 +34,7 @@ public class MaintenanceTest : TestBase
     {
         var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
 
         var requestSigner = CreateRequestSigner(token);
@@ -63,7 +63,7 @@ public class MaintenanceTest : TestBase
     {
         var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
 
         using var tcpClient = new TcpClient();
@@ -104,7 +104,7 @@ public class MaintenanceTest : TestBase
     {
         var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
 
         var requestSigner = CreateRequestSigner(token);
@@ -119,7 +119,7 @@ public class MaintenanceTest : TestBase
     {
         var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
 
         var handler = new HttpClientHandler {

@@ -25,7 +25,7 @@ public class NetProtectTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
         try {
@@ -49,7 +49,7 @@ public class NetProtectTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.ChannelProtocol = ChannelProtocol.Udp;
         clientOptions.UseTcpProxy = true;
@@ -192,7 +192,7 @@ public class NetProtectTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpProxy: true));
 
         // connections at once: a second's worth goes, the rest of that second is refused
@@ -210,7 +210,7 @@ public class NetProtectTest : TestBase
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
         // a flood from one port: a few seconds' worth comes back at most, as the burst may span a second's turn

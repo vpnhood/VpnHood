@@ -12,7 +12,7 @@ public class DiagnoserTest : TestAppBase
     {
         // create server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         token.ServerToken.HostEndPoints = [MockEps.HttpV4EndPointInvalid];
 
         // create client

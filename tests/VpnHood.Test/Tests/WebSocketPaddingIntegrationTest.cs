@@ -36,7 +36,7 @@ public class WebSocketPaddingIntegrationTest : TestBase
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.SessionOptions.StartPadding = enabled;
         await using var server = await TestHelper.CreateServer(options);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(clientOptions:
             TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
         Assert.AreEqual(enabled, server.SessionManager.GetSessionById(client.SessionId)?.StartPadding);
@@ -65,7 +65,7 @@ public class WebSocketPaddingIntegrationTest : TestBase
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.SessionOptions.StartPadding = enabled;
         await using var server = await TestHelper.CreateServer(options);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(clientOptions:
             TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
         var session = (ClientSession)client.RequiredSession;
@@ -88,7 +88,7 @@ public class WebSocketPaddingIntegrationTest : TestBase
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.SessionOptions.StartPadding = true;
         await using var server = await TestHelper.CreateServer(options);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Tcp);
         if (!useWebSocket)
             clientOptions.DebugData1 = "/disable-WebSocket";

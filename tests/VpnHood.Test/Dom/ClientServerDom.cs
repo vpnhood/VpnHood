@@ -97,7 +97,7 @@ internal class ClientServerDom : IAsyncDisposable
 
             accessManager = await testHelper.CreateAccessManager(fileAccessManagerOptions);
             server = await testHelper.CreateServer(accessManager, socketFactory: testSocketFactory);
-            var token = testHelper.CreateAccessToken(server, maxSpeedMbps: maxSpeedMbps);
+            var token = await testHelper.CreateAccessToken(server, maxSpeedMbps: maxSpeedMbps);
 
             // Create Client
             clientOptions.AccessKey = token.ToAccessKey();

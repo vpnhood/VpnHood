@@ -11,7 +11,7 @@ public class AppCloseTest : TestAppBase
     public async Task A_second_graceful_close_waits_for_the_first_ones_end()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var app = TestAppHelper.CreateClientApp();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
@@ -29,7 +29,7 @@ public class AppCloseTest : TestAppBase
     public async Task A_quick_close_ends_a_graceful_ones_wait_for_the_vpn_service()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var app = TestAppHelper.CreateClientApp();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);

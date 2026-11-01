@@ -31,7 +31,7 @@ public class ServerFinderTest : TestBase
             }
 
             // create token
-            var token = TestHelper.CreateAccessToken(servers[0]);
+            var token = await TestHelper.CreateAccessToken(servers[0]);
             token.ServerToken.HostEndPoints = servers.SelectMany(x => x.ServerHost.TcpEndPoints).ToArray();
 
             // stop server1 and server2
@@ -71,7 +71,8 @@ public class ServerFinderTest : TestBase
                 accessManagers.Add(accessManager);
             }
 
-            var serverTokens = accessManagers.Select(x => x.CreateToken().ServerToken).ToArray();
+            var serverTokens = (await Task.WhenAll(accessManagers.Select(x => x.CreateToken(TestCt))))
+                .Select(x => x.ServerToken).ToArray();
             accessManagers[2].RedirectServerTokens = [
                 serverTokens[4],
                 serverTokens[5],
@@ -80,7 +81,7 @@ public class ServerFinderTest : TestBase
             ];
 
             // create token by server[2]
-            var token = TestHelper.CreateAccessToken(servers[0]);
+            var token = await TestHelper.CreateAccessToken(servers[0]);
             var serverEndPoints = servers.SelectMany(x => x.ServerHost.TcpEndPoints).ToArray();
             token.ServerToken.HostEndPoints = [
                 serverEndPoints[1],
@@ -142,8 +143,8 @@ public class ServerFinderTest : TestBase
         await using var entryServer = await TestHelper.CreateServer(entryAccessManager);
         using var redirectedAccessManager = await TestHelper.CreateAccessManager(storagePath: storageFolder);
         await using var redirectedServer = await TestHelper.CreateServer(redirectedAccessManager);
-        var token = TestHelper.CreateAccessToken(entryServer);
-        var redirectedToken = JsonUtils.JsonClone(TestHelper.CreateAccessToken(redirectedServer).ServerToken);
+        var token = await TestHelper.CreateAccessToken(entryServer);
+        var redirectedToken = JsonUtils.JsonClone((await TestHelper.CreateAccessToken(redirectedServer)).ServerToken);
         redirectedToken.Secret = null;
         redirectedToken.HostName = "localhost";
         redirectedToken.IsValidHostName = true;
@@ -165,7 +166,7 @@ public class ServerFinderTest : TestBase
     public async Task Connected_server_is_kept_until_the_client_closes()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var workingFolder = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
         var connectedServersFolder = Path.Combine(workingFolder, "connected-servers");
 
@@ -188,7 +189,7 @@ public class ServerFinderTest : TestBase
         // a name that never resolves (.invalid), as none does through the dead tunnel after a VPN host's crash
         await using var server = await TestHelper.CreateServer();
         var serverEndPoint = server.ServerHost.TcpEndPoints.First();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         token.ServerToken.HostName = "kept-server.invalid";
         token.ServerToken.IsValidHostName = true;
         token.ServerToken.HostPort = serverEndPoint.Port;
@@ -216,8 +217,8 @@ public class ServerFinderTest : TestBase
     {
         await using var server = await TestHelper.CreateServer();
         await using var savedServer = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
-        var savedToken = TestHelper.CreateAccessToken(savedServer).ServerToken;
+        var token = await TestHelper.CreateAccessToken(server);
+        var savedToken = (await TestHelper.CreateAccessToken(savedServer)).ServerToken;
         var workingFolder = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
         var connectedServerFile = new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), token.TokenId);
 

@@ -30,7 +30,7 @@ public class QuicRequestRecoveryTest : TestBase
     {
         RequireQuic();
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var sockets = new QuicRecoverySocketFactory();
         var signer = CreateSigner(token);
         await using var sender = new RequestSender(CreateConnector(server, token, signer, sockets, useWebSocket), signer);
@@ -273,7 +273,7 @@ public class QuicRequestRecoveryTest : TestBase
     {
         RequireQuic();
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var sockets = new QuicRecoverySocketFactory();
         var signer = CreateSigner(token);
         await using var sender = new RequestSender(CreateConnector(server, token, signer, sockets, false), signer);
@@ -301,7 +301,7 @@ public class QuicRequestRecoveryTest : TestBase
     {
         RequireQuic();
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var sockets = new QuicRecoverySocketFactory();
         var signer = CreateSigner(token);
         await using var sender = new RequestSender(CreateConnector(server, token, signer, sockets, useWebSocket), signer);
@@ -340,7 +340,7 @@ public class QuicRequestRecoveryTest : TestBase
         RequireQuic();
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var sockets = new QuicRecoverySocketFactory();
         var signer = CreateSigner(token);
         await using var sessionSender = new RequestSender(CreateConnector(server, token, signer, sockets, false), signer);
@@ -382,7 +382,7 @@ public class QuicRequestRecoveryTest : TestBase
     {
         RequireQuic();
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var sockets = new QuicRecoverySocketFactory();
         var signer = CreateSigner(token);
         await using var sender = new RequestSender(CreateConnector(server, token, signer, sockets, false), signer);
@@ -407,7 +407,7 @@ public class QuicRequestRecoveryTest : TestBase
     {
         RequireQuic();
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var sockets = new QuicRecoverySocketFactory();
         var goodSigner = CreateSigner(token);
         await using var goodSender = new RequestSender(CreateConnector(server, token, goodSigner, sockets, false), goodSigner);

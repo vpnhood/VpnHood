@@ -60,7 +60,8 @@ internal sealed class OurServer : IAsyncDisposable
 
         var server = CreateServer(accessManager, storagePath);
         try {
-            var accessToken = accessManager.AccessTokenService.Create(tokenName: "parity", maxClientCount: 1);
+            var accessToken = await accessManager.AccessTokenService.Create(cancellationToken, tokenName: "parity",
+                maxClientCount: 1);
             var serverToken = accessManager.GetToken(accessToken).ServerToken;
             var hostName = serverToken.HostName;
             var certificatePath = Path.Combine(accessManager.CertsFolderPath, "default.pfx");

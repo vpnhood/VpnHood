@@ -20,7 +20,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // Create Server
         await using var server = await TestHelper.CreateServer(serverOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create client
         var clientOptions = TestHelper.CreateClientOptions(token: token);
@@ -47,7 +47,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // Create Server
         await using var server = await TestHelper.CreateServer(serverOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create client
         var clientOptions = TestHelper.CreateClientOptions(token: token);
@@ -81,7 +81,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // Create Server
         await using var server = await TestHelper.CreateServer(serverOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create client
         var clientOptions = TestHelper.CreateClientOptions(token: token);
@@ -117,7 +117,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // Create Server
         await using var server = await TestHelper.CreateServer(serverOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create client
         var clientOptions = TestHelper.CreateClientOptions(token: token);
@@ -194,7 +194,7 @@ public class ServerNetFilterConfigTest : TestBase
         serverOptions.NetFilterOptions.BlockTcpPorts = [new PortRange(blockedTcpEndPoint.Port)];
         serverOptions.NetFilterOptions.BlockUdpPorts = [new PortRange(blockedUdpEndPoint.Port)];
         await using var server = await TestHelper.CreateServer(serverOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
         // the blocked ports get no answer, again and again

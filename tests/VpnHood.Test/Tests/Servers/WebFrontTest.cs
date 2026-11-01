@@ -26,7 +26,7 @@ public partial class WebFrontTest : TestBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         using var tcpClient = new TcpClient();
         await using var sslStream = await ConnectTls(tcpClient, token);
 
@@ -296,7 +296,7 @@ public partial class WebFrontTest : TestBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         using var tcpClient = new TcpClient();
         await using var stream = await ConnectTls(tcpClient, token);
         var clientInfo = new ClientInfo {

@@ -19,7 +19,7 @@ public class AlpnTest : TestBase
     public async Task Server_picks_http11_from_a_browser_offer()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var alpn = await Negotiate(token, [SslApplicationProtocol.Http2, SslApplicationProtocol.Http11]);
         Assert.AreEqual(SslApplicationProtocol.Http11, alpn);
@@ -30,7 +30,7 @@ public class AlpnTest : TestBase
     public async Task Server_takes_a_hello_without_alpn()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         var alpn = await Negotiate(token, offer: null);
         Assert.AreEqual(default(SslApplicationProtocol), alpn);
@@ -40,7 +40,7 @@ public class AlpnTest : TestBase
     public async Task Server_fails_the_handshake_of_an_h2_only_hello()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         await Assert.ThrowsExactlyAsync<AuthenticationException>(() =>
             Negotiate(token, [SslApplicationProtocol.Http2]));

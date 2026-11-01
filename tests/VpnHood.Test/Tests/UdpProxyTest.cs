@@ -253,7 +253,7 @@ public class UdpProxyTest : TestBase
         accessManagerOptions.SessionOptions.MaxUdpClientCount = maxUdpCount;
 
         await using var server = await TestHelper.CreateServer(accessManagerOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // Create Client
         await using var client =

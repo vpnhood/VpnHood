@@ -22,7 +22,7 @@ public class AccessTest : TestBase
 
         // ************
         // *** TEST ***: request with invalid tokenId
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         token.TokenId = Guid.NewGuid().ToString(); //set invalid tokenId
 
         try {
@@ -34,7 +34,7 @@ public class AccessTest : TestBase
 
         // ************
         // *** TEST ***: request with invalid token signature
-        token = TestHelper.CreateAccessToken(server);
+        token = await TestHelper.CreateAccessToken(server);
         token.Secret = Guid.NewGuid().ToByteArray(); //set invalid secret
 
         try {
@@ -51,7 +51,7 @@ public class AccessTest : TestBase
         await using var server = await TestHelper.CreateServer();
 
         // create an expired token
-        var token = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
+        var token = await TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
 
         // create client and connect
         await using var client = await TestHelper.CreateClient(token, autoConnect: false);
@@ -69,7 +69,7 @@ public class AccessTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create a short expiring token
-        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.UtcNow.AddSeconds(1));
+        var accessToken = await TestHelper.CreateAccessToken(server, expirationTime: DateTime.UtcNow.AddSeconds(1));
 
         // connect and download
         await using var client = await TestHelper.CreateClient(accessToken);
@@ -99,7 +99,7 @@ public class AccessTest : TestBase
         await using var server = await TestHelper.CreateServer(managerOptions);
 
         // create a fast expiring token
-        var accessToken = TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
+        var accessToken = await TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
 
         // ----------
         // check: client must disconnect at runtime on traffic overflow
@@ -130,7 +130,7 @@ public class AccessTest : TestBase
 
         // Create Server
         await using var server = await TestHelper.CreateServer(managerOptions);
-        var token = TestHelper.CreateAccessToken(server, maxClientCount: 2);
+        var token = await TestHelper.CreateAccessToken(server, maxClientCount: 2);
 
         // create default token with 2 client count
         await using var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
@@ -159,7 +159,7 @@ public class AccessTest : TestBase
             token: token);
 
         // create a client with another token
-        var accessTokenX = TestHelper.CreateAccessToken(server);
+        var accessTokenX = await TestHelper.CreateAccessToken(server);
         await using var clientX = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: accessTokenX);
 
@@ -183,7 +183,7 @@ public class AccessTest : TestBase
     {
         // Create Server
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server, 0);
+        var token = await TestHelper.CreateAccessToken(server, 0);
 
         // client1
         await using var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
@@ -205,7 +205,7 @@ public class AccessTest : TestBase
         // Create Server
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
 
         // create default token with 2 client count
         var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
@@ -234,7 +234,7 @@ public class AccessTest : TestBase
         var expired = DateTime.UtcNow.AddDays(1);
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server, maxClientCount: 2,
+        var token = await TestHelper.CreateAccessToken(server, maxClientCount: 2,
             expirationTime: expired,
             maxTrafficByteCount: 2_000_000,
             maxSpeedMbps: new Traffic(5, 50));

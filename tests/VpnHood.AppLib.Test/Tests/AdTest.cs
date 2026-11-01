@@ -30,7 +30,7 @@ public class AdTest : TestAppBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
 
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
@@ -55,7 +55,7 @@ public class AdTest : TestAppBase
         AppUiContext.Context = null;
 
         // connect
-        var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var token = await appDom.AccessManager.CreateToken(TestCt, adRequirement: AdRequirement.Flexible);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(()
             => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt));
@@ -77,7 +77,7 @@ public class AdTest : TestAppBase
         //adProviderItem.FailShow = true;
 
         // connect
-        var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var token = await accessManager.CreateToken(TestCt, adRequirement: AdRequirement.Flexible);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, TestCt, planId: ConnectPlanId.PremiumByTrial);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
@@ -100,7 +100,7 @@ public class AdTest : TestAppBase
         //adProviderItem.FailShow = true;
 
         // connect
-        var token = accessManager.CreateToken();
+        var token = await accessManager.CreateToken(TestCt);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(() => app.Connect(uiContext: null, new ConnectOptions {
             VpnProfileId = vpnProfile.VpnProfileId,
@@ -122,7 +122,7 @@ public class AdTest : TestAppBase
         AppUiContext.Context = null;
 
         // the reason is the app's, not a window that is not open
-        var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var token = await accessManager.CreateToken(TestCt, adRequirement: AdRequirement.Flexible);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         var exception = await Assert.ThrowsExactlyAsync<AdException>(() =>
             app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt));
@@ -195,7 +195,7 @@ public class AdTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
 
         // create access token
-        var token = accessManager.CreateToken();
+        var token = await accessManager.CreateToken(TestCt);
         token.IsPublic = true;
 
         // connect
@@ -237,7 +237,7 @@ public class AdTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
 
         // create token
-        var token = accessManager.CreateToken();
+        var token = await accessManager.CreateToken(TestCt);
         token.IsPublic = true;
 
         // connect
@@ -256,7 +256,7 @@ public class AdTest : TestAppBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
 
         // configure client app for ad
@@ -296,7 +296,7 @@ public class AdTest : TestAppBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // the ad's post-load delay keeps the connect waiting
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
         var appOptions = TestAppHelper.CreateAppOptions(isDebugMode: false); // a Debug build makes no tracker
         appOptions.AdOptions.PreloadAd = false;
@@ -331,7 +331,7 @@ public class AdTest : TestAppBase
         await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
 
         // create the server
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
 
         // add provider
@@ -410,7 +410,7 @@ public class AdTest : TestAppBase
         };
 
         // connect
-        var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var token = await appDom.AccessManager.CreateToken(TestCt, adRequirement: AdRequirement.Flexible);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         _ = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
 
@@ -441,7 +441,7 @@ public class AdTest : TestAppBase
         };
 
         // the ad loads once, after the answer
-        var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var token = await appDom.AccessManager.CreateToken(TestCt, adRequirement: AdRequirement.Flexible);
         var vpnProfile = appDom.App.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await appDom.App.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         Assert.IsTrue(isLoadedAfterConsent);
@@ -472,7 +472,7 @@ public class AdTest : TestAppBase
             adProviderAdType: AdType.InterstitialAd, appOptions: appOptions);
         appDom.TestAdProvider.LoadAdCallback = () => Task.Delay(TimeSpan.FromSeconds(10));
 
-        var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var token = await appDom.AccessManager.CreateToken(TestCt, adRequirement: AdRequirement.Flexible);
         var vpnProfile = appDom.App.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await appDom.App.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         Assert.AreEqual(2, appDom.TestAdProvider.LoadAdCount, "Once before the tunnel is up and once after.");
@@ -486,7 +486,7 @@ public class AdTest : TestAppBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
 
         // configure client app for ad

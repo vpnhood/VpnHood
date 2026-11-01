@@ -74,7 +74,7 @@ public class ServerUdpChannelTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(
             clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp),
             vpnAdapter: TestHelper.CreateTestVpnAdapter());
@@ -133,7 +133,7 @@ public class ServerUdpChannelTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(
             clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp),
             vpnAdapter: TestHelper.CreateTestVpnAdapter());

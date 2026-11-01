@@ -33,7 +33,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task The_start_connects_when_on_and_turning_it_on_connects_nothing()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: false);
 
         // off: the start connects nothing, and turning the switch on connects nothing either
@@ -59,7 +59,7 @@ public class AlwaysOnTest : TestAppBase
     {
         var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
 
         // down for maintenance: tried again after the first pause, then after the longer second
@@ -83,7 +83,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task A_server_out_of_reach_is_tried_again_and_a_session_that_held_starts_the_pauses_over()
     {
         using var accessManager = await TestHelper.CreateAccessManager();
-        var token = TestHelper.CreateAccessToken(accessManager);
+        var token = await TestHelper.CreateAccessToken(accessManager);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
 
         // no server yet: a failure, so that the next pause would be the long one
@@ -112,7 +112,7 @@ public class AlwaysOnTest : TestAppBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.SessionOptions.MinClientProtocolVersion = 1000; // a version the server no longer takes
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
 
         await using var app = CreateApp(storagePath);
@@ -133,7 +133,7 @@ public class AlwaysOnTest : TestAppBase
     {
         var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
 
         // a disconnect while always on waits to try again
@@ -164,7 +164,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task A_revoke_stands_across_a_restart_until_a_persons_connect()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
         var tunnelLock = new TestVpnTunnelLock();
 
@@ -195,7 +195,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task A_revoke_the_app_had_not_seen_yet_stands_across_a_restart()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
         var tunnelLock = new TestVpnTunnelLock();
         var otherHolder = new RecordingVpnTunnelHolder();
@@ -221,7 +221,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task A_revoke_a_persons_connect_ended_stays_ended()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
         var tunnelLock = new TestVpnTunnelLock();
 
@@ -249,7 +249,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task Always_ons_connect_gives_way_to_a_persons_disconnect_or_connect_that_came_after_it()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
 
         // a person's disconnect: it stays disconnected
@@ -275,7 +275,7 @@ public class AlwaysOnTest : TestAppBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         token.IsPublic = true; // a CONNECT-style profile: premium comes from a code alone
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
         var premium = new AppPremiumOptions { Features = [AppFeature.AlwaysOn], AllowImportAccessCode = true };
@@ -287,7 +287,7 @@ public class AlwaysOnTest : TestAppBase
         await using var app = CreateApp(storagePath, premium: premium, device: device);
         await AssertEqualsWait(AppConnectionState.Initializing, () => app.State.ConnectionState);
         var accessCode = TestAppHelper.BuildAccessCode();
-        accessManager.AccessCodes.Add(accessCode, TestHelper.CreateAccessToken(server).TokenId);
+        accessManager.AccessCodes.Add(accessCode, (await TestHelper.CreateAccessToken(server)).TokenId);
         app.VpnProfileService.Update(vpnProfileId, new VpnProfileUpdateParams { AccessCode = accessCode });
         device.StartServiceDelay = TimeSpan.Zero;
 
@@ -301,7 +301,7 @@ public class AlwaysOnTest : TestAppBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         token.IsPublic = true; // a CONNECT-style profile: premium comes from a code alone
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
         var premium = new AppPremiumOptions { Features = [AppFeature.AlwaysOn], AllowImportAccessCode = true };
@@ -313,7 +313,7 @@ public class AlwaysOnTest : TestAppBase
 
         // a code makes it premium: always on tries once more, and connects
         var accessCode = TestAppHelper.BuildAccessCode();
-        accessManager.AccessCodes.Add(accessCode, TestHelper.CreateAccessToken(server).TokenId);
+        accessManager.AccessCodes.Add(accessCode, (await TestHelper.CreateAccessToken(server)).TokenId);
         app.VpnProfileService.Update(vpnProfileId, new VpnProfileUpdateParams { AccessCode = accessCode });
         await app.WaitForState(AppConnectionState.Connected, TestCt, timeout: 10000);
         Assert.AreEqual(AlwaysOnStatus.On, app.State.AlwaysOnState?.Status);
@@ -323,7 +323,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task A_persons_connect_takes_over_from_always_ons_connect_on_its_way()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
 
         // always on's start connect waits for a VPN service slow to start, and a person connects meanwhile
@@ -345,7 +345,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task A_diagnose_connects_session_is_sorted_by_how_it_ended()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
         var tunnelLock = new TestVpnTunnelLock();
 
@@ -365,7 +365,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task A_connect_its_caller_gave_up_on_is_tried_again()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
 
         // after the start's connect, a person's, slow to start, whose caller gives up on it, as a window's
@@ -391,7 +391,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task An_end_with_no_reason_stops_it_as_an_error_does()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
 
         // the VPN service ends the session by itself, giving no reason
@@ -410,7 +410,7 @@ public class AlwaysOnTest : TestAppBase
     public async Task An_adapter_that_stopped_on_its_own_is_tried_again()
     {
         await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
         var adapters = new List<BreakableVpnAdapter>();
         var device = new TestDevice(TestAppHelper, _ => {

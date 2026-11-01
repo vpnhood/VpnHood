@@ -72,7 +72,7 @@ public class Http3AdmissionBudgetTest : TestBase
         accessManager.ServerConfig.SessionOptions.MaxUnauthenticatedConnectionCount = 1;
         accessManager.ServerConfig.SessionOptions.MinClientProtocolVersion = 15;
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         var endPoint = server.ServerHost.QuicEndPoints.Single();
         var certificateHash = accessManager.DefaultCert.GetCertHashString();
 

@@ -93,13 +93,13 @@ public class FileAccessManagerCommand(Func<FileAccessManager> getFileAccessManag
         command.SetAction(async (parseResult, cancellationToken) => {
             var fileAccessManager = getFileAccessManager();
             var maxSpeedMbps = parseResult.GetValue(maxSpeedOption);
-            var accessToken = fileAccessManager.AccessTokenService.Create(
+            var accessToken = await fileAccessManager.AccessTokenService.Create(cancellationToken,
                 tokenName: parseResult.GetValue(nameOption),
                 maxClientCount: parseResult.GetValue(maxClientOption) ?? 2,
                 maxTrafficByteCount: (parseResult.GetValue(maxTrafficOptions) ?? 0) * 1_000_000,
                 expirationTime: parseResult.GetValue(expirationTimeOption),
                 maxSpeedMbps: maxSpeedMbps != null ? new Traffic(sent: maxSpeedMbps.Value, received: maxSpeedMbps.Value) : null
-            );
+            ).Vhc();
 
             Console.WriteLine("The following token has been generated: ");
             await PrintToken(accessToken.TokenId, cancellationToken).Vhc();

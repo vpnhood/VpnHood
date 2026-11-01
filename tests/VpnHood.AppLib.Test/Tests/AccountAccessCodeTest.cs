@@ -368,8 +368,8 @@ public class AccountAccessCodeTest : TestAppBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var baseToken = TestHelper.CreateAccessToken(server);
-        var premiumToken = TestHelper.CreateAccessToken(server, maxClientCount: 6);
+        var baseToken = await TestHelper.CreateAccessToken(server);
+        var premiumToken = await TestHelper.CreateAccessToken(server, maxClientCount: 6);
         var unknownCode = TestAppHelper.BuildAccessCode();
         var accountCode = BuildDistinctAccessCode(unknownCode);
         accessManager.AccessCodes.Add(accountCode, premiumToken.TokenId);
@@ -405,7 +405,7 @@ public class AccountAccessCodeTest : TestAppBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var baseToken = TestHelper.CreateAccessToken(server);
+        var baseToken = await TestHelper.CreateAccessToken(server);
 
         // the account's code, and the access server has never heard of it
         var deadCode = TestAppHelper.BuildAccessCode();

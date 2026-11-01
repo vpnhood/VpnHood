@@ -5,6 +5,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
 using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -22,7 +23,7 @@ public class FileAccessManagerTest : TestBase
         var accessManager = await TestHelper.CreateAccessManager(options);
         await using var server = await TestHelper.CreateServer(accessManager);
 
-        var accessToken = accessManager.AccessTokenService.Create();
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt);
         var token = accessManager.GetToken(accessToken);
         Assert.AreEqual(accessManager.ServerConfig.TcpEndPointsValue.First().Port, token.ServerToken.HostPort);
         Assert.AreEqual(accessManager.ServerConfig.IsValidHostName, token.ServerToken.IsValidHostName);
@@ -39,14 +40,15 @@ public class FileAccessManagerTest : TestBase
         var accessManager1 = await FileAccessManager.Create(storagePath, fileAccessManagerOptions, TestCt);
 
         //add two tokens
-        var token1 = accessManager1.CreateToken();
+        var token1 = await accessManager1.CreateToken(TestCt);
         var sessionRequestEx1 = CreateSessionRequestEx(token1);
         sessionRequestEx1.ExtraData = "1234";
 
-        var token2 = accessManager1.AccessTokenService.Create(maxSpeedMbps: new Traffic(sent: 5, received: 50));
+        var token2 = await accessManager1.AccessTokenService.Create(TestCt,
+            maxSpeedMbps: new Traffic(sent: 5, received: 50));
         var sessionRequestEx2 = CreateSessionRequestEx(accessManager1.GetToken(token2));
 
-        var token3 = accessManager1.CreateToken();
+        var token3 = await accessManager1.CreateToken(TestCt);
 
         // ************
         // *** TEST ***: get all tokensId
@@ -98,7 +100,7 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: token must be retrieved after reloading
-        accessManager1.CreateToken();
+        await accessManager1.CreateToken(TestCt);
         var accessManager3 = await FileAccessManager.Create(storagePath, fileAccessManagerOptions, TestCt);
         accessTokenDatas = await accessManager3.AccessTokenService.List(TestCt);
         Assert.HasCount(3, accessTokenDatas);
@@ -115,7 +117,7 @@ public class FileAccessManagerTest : TestBase
         var accessManager1 = await TestHelper.CreateAccessManager(storagePath: storagePath);
 
         //add token
-        var token = accessManager1.CreateToken();
+        var token = await accessManager1.CreateToken(TestCt);
         var sessionRequestEx1 = CreateSessionRequestEx(token);
 
         // create a session
@@ -165,11 +167,45 @@ public class FileAccessManagerTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_token_keeps_its_new_name_after_a_restart()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        Directory.CreateDirectory(storagePath);
+        var accessToken = await new AccessTokenService(storagePath).Create(TestCt, tokenName: "old name");
+        await new AccessTokenService(storagePath).Update(accessToken.TokenId, "new name", TestCt);
+
+        // a store made afresh reads it from the token's file
+        var accessTokenData = await new AccessTokenService(storagePath).Get(accessToken.TokenId, TestCt);
+        Assert.AreEqual("new name", accessTokenData.AccessToken.Name);
+    }
+
+    [TestMethod]
+    public async Task A_failed_usage_write_leaves_the_usage_as_it_was()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        Directory.CreateDirectory(storagePath);
+        var accessTokenService = new AccessTokenService(storagePath);
+        var accessToken = await accessTokenService.Create(TestCt);
+        await accessTokenService.AddUsage(accessToken.TokenId, new Traffic(sent: 10, received: 20), TestCt);
+
+        // a folder where the usage file goes: its replacement fails, as a full disk's would
+        var usageFilePath = Path.Combine(storagePath, accessToken.TokenId + ".usage");
+        File.Delete(usageFilePath);
+        Directory.CreateDirectory(usageFilePath);
+        await Assert.ThrowsAsync<Exception>(() =>
+            accessTokenService.AddUsage(accessToken.TokenId, new Traffic(sent: 1, received: 2), TestCt));
+
+        var accessTokenData = await accessTokenService.Get(accessToken.TokenId, TestCt);
+        Assert.AreEqual(10, accessTokenData.Usage.Sent);
+        Assert.AreEqual(20, accessTokenData.Usage.Received);
+    }
+
+    [TestMethod]
     public async Task A_restart_keeps_the_end_of_a_clients_old_sessions()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
         using var accessManager1 = await TestHelper.CreateAccessManager(storagePath: storagePath);
-        var sessionRequestEx = CreateSessionRequestEx(accessManager1.CreateToken());
+        var sessionRequestEx = CreateSessionRequestEx(await accessManager1.CreateToken(TestCt));
 
         // one client: its first session closed, its second suppressed by its third, the live one
         var closedSession = await accessManager1.Session_Create(sessionRequestEx, TestCt);
@@ -193,7 +229,7 @@ public class FileAccessManagerTest : TestBase
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
         using var accessManager1 = await TestHelper.CreateAccessManager(storagePath: storagePath);
-        var token = accessManager1.CreateToken(maxClientCount: 2);
+        var token = await accessManager1.CreateToken(TestCt, maxClientCount: 2);
         var usedSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
         var unusedSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
 
@@ -220,7 +256,7 @@ public class FileAccessManagerTest : TestBase
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
         using var accessManager1 = await TestHelper.CreateAccessManager(storagePath: storagePath);
-        var token = accessManager1.CreateToken(maxClientCount: 3);
+        var token = await accessManager1.CreateToken(TestCt, maxClientCount: 3);
         var oldSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
         var recentSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);
         var endedSession = await accessManager1.Session_Create(CreateSessionRequestEx(token), TestCt);

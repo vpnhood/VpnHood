@@ -22,7 +22,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
@@ -44,9 +44,9 @@ public class SessionUsageTest : TestBase
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         await using var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
-            token: TestHelper.CreateAccessToken(server));
+            token: await TestHelper.CreateAccessToken(server));
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
-            token: TestHelper.CreateAccessToken(server));
+            token: await TestHelper.CreateAccessToken(server));
         var session1 = server.GetSession(client1);
         var session2 = server.GetSession(client2);
 
@@ -68,7 +68,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
         await server.SessionManager.Sync(true, TestCt);
@@ -90,7 +90,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
@@ -124,7 +124,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
@@ -142,7 +142,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
@@ -167,7 +167,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
@@ -204,7 +204,7 @@ public class SessionUsageTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // a session that needs a rewarded ad has a short expiration, which the ad clears
-        var clientOptions = TestHelper.CreateClientOptions(TestHelper.CreateAccessToken(server));
+        var clientOptions = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
         clientOptions.PlanId = ConnectPlanId.PremiumByRewardedAd;
         await using var client = await TestHelper.CreateClient(clientOptions, vpnAdapter: new TestNullVpnAdapter(),
             autoConnect: false);
@@ -248,7 +248,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
@@ -271,7 +271,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
@@ -293,9 +293,9 @@ public class SessionUsageTest : TestBase
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         await using var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
-            token: TestHelper.CreateAccessToken(server));
+            token: await TestHelper.CreateAccessToken(server));
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
-            token: TestHelper.CreateAccessToken(server));
+            token: await TestHelper.CreateAccessToken(server));
         var session1 = server.GetSession(client1);
         var session2 = server.GetSession(client2);
 
@@ -324,7 +324,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 
@@ -342,7 +342,7 @@ public class SessionUsageTest : TestBase
     {
         using var accessManager = await CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
-        var token = TestHelper.CreateAccessToken(server);
+        var token = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
         var session = server.GetSession(client);
 

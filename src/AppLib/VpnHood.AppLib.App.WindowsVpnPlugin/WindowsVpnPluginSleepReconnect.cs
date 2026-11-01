@@ -6,14 +6,15 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.AppLib.App.WindowsVpnPlugin;
 
 // The VPN back after a sleep, while the app runs: Windows ends every RAS connection, the plug-in's too, as the machine
-// sleeps or hibernates (RAS 832, 833) or enters Modern Standby (631), and dials none at the wake. A sleep that came with
-// the VPN up is noted at its suspend; after the wake, once the screen is on, the app connects again. A wake no person
-// made - a timer's - keeps the screen off and soon sleeps again, maybe by a hibernate out of Modern Standby, which takes
-// Windows' teardown of a VPN dialed meanwhile half-way: the dial after that wake hung in Windows. So the connect waits
-// for the person, through more sleeps if need be. Once the VPN is down - Windows may still be ending it - the app
-// connects, and again every 5 s for 2 minutes while that fails, the network still coming back; only the last try's
-// failure is shown, as an earlier one's would stand over the VPN the next try connects. A VPN that outlived the sleep,
-// a connect the person makes meanwhile, or one cancelled, ends it.
+// sleeps or hibernates (RAS 832, 833), at times as it enters Modern Standby (631; one by the screen's idle timeout kept
+// it up 48 minutes), and dials none at the wake. A sleep that came with the VPN up is noted at its suspend; after the
+// wake, once the screen is on, the app connects again. A wake no person made - a timer's - keeps the screen off and
+// soon sleeps again, maybe by a hibernate out of Modern Standby, which takes Windows' teardown of a VPN dialed
+// meanwhile half-way: the dial after that wake hung in Windows. So the connect waits for the person, through more
+// sleeps if need be. Once the VPN is down - Windows may still be ending it - the app connects, and again every 5 s for
+// 2 minutes while that fails, the network still coming back; only the last try's failure is shown, as an earlier one's
+// would stand over the VPN the next try connects. A VPN that outlived the sleep, a connect the person makes meanwhile,
+// or one cancelled, ends it.
 internal sealed class WindowsVpnPluginSleepReconnect : IDisposable
 {
     private static readonly TimeSpan DownWait = TimeSpan.FromSeconds(30);

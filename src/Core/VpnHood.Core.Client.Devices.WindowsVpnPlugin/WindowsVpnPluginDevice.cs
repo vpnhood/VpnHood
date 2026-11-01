@@ -34,10 +34,11 @@ public sealed class WindowsVpnPluginDevice : IDevice
     private const string PhonebookFileName = "rasphone.pbk";
 
     // Windows' dial has no limit of its own: after a hibernate took Windows' teardown half-way, the next dial did not
-    // reach the plug-in at all, and a dial after its cancel connected. A dial reaches the plug-in within seconds - and up
-    // to 15 s more while Windows still ends a dial cancelled before - which then writes a live state to its status file,
-    // so one that has not by HandoffTimeout is cancelled. One the plug-in took up fails past the plug-in's own wait for
-    // its session.
+    // reach the plug-in at all, and a dial after its cancel connected. A dial reaches the plug-in within seconds - and
+    // up to 15 s more while Windows still ends a dial cancelled before - which then writes a live state to its status
+    // file, so one that has not by HandoffTimeout is cancelled. One the plug-in took up fails only past the plug-in's
+    // own wait for its session: a dial cancelled while the plug-in's Connect runs has Windows end the package's
+    // container 5 s on, the app's process with it.
     private static readonly TimeSpan HandoffTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan HandoffPollInterval = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan DialTimeout = WindowsVpnPluginService.ConnectTimeout + TimeSpan.FromSeconds(30);

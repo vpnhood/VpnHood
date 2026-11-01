@@ -56,7 +56,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         }, TestCt);
 
         await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
-        await dom.App.WaitForState(AppConnectionState.Connected);
+        await dom.App.WaitForState(AppConnectionState.Connected, TestCt);
 
         var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
@@ -88,7 +88,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         }, TestCt);
 
         await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
-        await dom.App.WaitForState(AppConnectionState.Connected);
+        await dom.App.WaitForState(AppConnectionState.Connected, TestCt);
         await TestHelper.Test_Https();
 
         // make sure new status is fetched from core
@@ -112,7 +112,7 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         // reconnect and make sure status is restored
         await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
-        await dom.App.WaitForState(AppConnectionState.Connected);
+        await dom.App.WaitForState(AppConnectionState.Connected, TestCt);
         await dom.App.ForceUpdateState(TestCt);
         endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(1, endPointInfos);
@@ -371,7 +371,7 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         // connect
         await dom.App.Connect(AppUiContext.Context, connectOptions: null, TestCt);
-        await dom.App.WaitForState(AppConnectionState.Connected);
+        await dom.App.WaitForState(AppConnectionState.Connected, TestCt);
 
         // delete the extra endpoint while the core session is live, then force a core status flush;
         // the flush is UPDATE-only and must not bring the deleted row back

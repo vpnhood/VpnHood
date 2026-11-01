@@ -24,7 +24,7 @@ public class ServerFinderTest : TestBase
         try {
             // create servers
             for (var i = 0; i < 5; i++) {
-                var accessManager = await TestHelper.CreateAccessManager(TestCt, storagePath: storageFolder);
+                var accessManager = await TestHelper.CreateAccessManager(storagePath: storageFolder);
                 var server = await TestHelper.CreateServer(accessManager);
                 servers.Add(server);
                 accessManagers.Add(accessManager);
@@ -40,7 +40,7 @@ public class ServerFinderTest : TestBase
 
             // connect
             var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-            await client.WaitForState(ClientState.Connected);
+            await client.WaitForState(ClientState.Connected, TestCt);
 
             Assert.IsTrue(
                 servers[2].ServerHost.TcpEndPoints.First().Equals(client.RequiredSession.Config.HostTcpEndPoint) ||
@@ -65,7 +65,7 @@ public class ServerFinderTest : TestBase
         try {
             // create servers
             for (var i = 0; i < 10; i++) {
-                var accessManager = await TestHelper.CreateAccessManager(TestCt, storagePath: storageFolder);
+                var accessManager = await TestHelper.CreateAccessManager(storagePath: storageFolder);
                 var server = await TestHelper.CreateServer(accessManager);
                 servers.Add(server);
                 accessManagers.Add(accessManager);
@@ -98,7 +98,7 @@ public class ServerFinderTest : TestBase
             var clientOptions = TestHelper.CreateClientOptions(token);
             var client =
                 await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: new TestNullVpnAdapter());
-            await client.WaitForState(ClientState.Connected);
+            await client.WaitForState(ClientState.Connected, TestCt);
 
             Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.RequiredSession.Config.HostTcpEndPoint);
 
@@ -138,9 +138,9 @@ public class ServerFinderTest : TestBase
     public async Task Redirect_without_secrets_uses_the_access_keys_farm_for_another_host()
     {
         var storageFolder = TestHelper.CreateAccessManagerWorkingDir();
-        using var entryAccessManager = await TestHelper.CreateAccessManager(TestCt, storagePath: storageFolder);
+        using var entryAccessManager = await TestHelper.CreateAccessManager(storagePath: storageFolder);
         await using var entryServer = await TestHelper.CreateServer(entryAccessManager);
-        using var redirectedAccessManager = await TestHelper.CreateAccessManager(TestCt, storagePath: storageFolder);
+        using var redirectedAccessManager = await TestHelper.CreateAccessManager(storagePath: storageFolder);
         await using var redirectedServer = await TestHelper.CreateServer(redirectedAccessManager);
         var token = TestHelper.CreateAccessToken(entryServer);
         var redirectedToken = JsonUtils.JsonClone(TestHelper.CreateAccessToken(redirectedServer).ServerToken);
@@ -157,7 +157,7 @@ public class ServerFinderTest : TestBase
         entryAccessManager.RedirectServerTokens = [unavailableToken, redirectedToken];
 
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-        await client.WaitForState(ClientState.Connected);
+        await client.WaitForState(ClientState.Connected, TestCt);
         Assert.AreEqual(redirectedServer.ServerHost.TcpEndPoints.First(), client.RequiredSession.Config.HostTcpEndPoint);
     }
 
@@ -171,7 +171,7 @@ public class ServerFinderTest : TestBase
 
         await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
-        await client.WaitForState(ClientState.Connected);
+        await client.WaitForState(ClientState.Connected, TestCt);
         var connectedServer = await new ConnectedServerFile(connectedServersFolder, token.TokenId).Read(TestCt);
         Assert.AreEqual(client.RequiredSession.Config.HostTcpEndPoint, connectedServer?.TcpEndPoint);
 
@@ -207,7 +207,7 @@ public class ServerFinderTest : TestBase
 
         await using var client2 = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
-        await client2.WaitForState(ClientState.Connected);
+        await client2.WaitForState(ClientState.Connected, TestCt);
         Assert.AreEqual(serverEndPoint, client2.RequiredSession.Config.HostTcpEndPoint);
     }
 
@@ -234,7 +234,7 @@ public class ServerFinderTest : TestBase
 
         await using var nextClient = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
-        await nextClient.WaitForState(ClientState.Connected);
+        await nextClient.WaitForState(ClientState.Connected, TestCt);
         Assert.AreEqual(server.ServerHost.TcpEndPoints.First(), nextClient.RequiredSession.Config.HostTcpEndPoint);
     }
 }

@@ -55,7 +55,7 @@ public class SessionTest : TestBase
     [TestMethod]
     public async Task Channel_request_closes_the_older_channels_the_client_no_longer_lists()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         using var netFilter = new NetFilter();
         using var session = CreateSession(accessManager, netFilter);
 
@@ -93,7 +93,7 @@ public class SessionTest : TestBase
     [TestMethod]
     public async Task Late_request_leaves_the_newer_channels_open()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         using var netFilter = new NetFilter();
         using var session = CreateSession(accessManager, netFilter);
 
@@ -134,7 +134,7 @@ public class SessionTest : TestBase
     public async Task Udp_drop_stops_what_an_app_sends_anyway(bool allowTcpPacket, bool allowUdpPacket,
         bool allowQuicPacket, int[] passedPorts)
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         var ipFilter = new PortRecorderFilter();
         using var netFilter = new NetFilter { IpFilter = ipFilter };
         using var session = CreateSession(accessManager, netFilter, new SessionOptions {

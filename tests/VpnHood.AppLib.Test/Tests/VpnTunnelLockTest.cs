@@ -29,7 +29,7 @@ public class VpnTunnelLockTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.IsTrue(tunnelLock.IsHeld);
 
         // another app takes it: this one's adapter is gone by the time the take returns, and the app ends
@@ -38,18 +38,18 @@ public class VpnTunnelLockTest : TestAppBase
         using var otherHold = await tunnelLock.Take(otherApp, TestContext.CancellationToken)
             .WaitAsync(Timeout, TestContext.CancellationToken);
         Assert.IsNull(device.VpnService?.CurrentVpnAdapter);
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.AreEqual(nameof(VpnServiceRevokedException), app.State.LastError?.TypeName);
 
         // a person connects again: the other app is asked, and this one connects with nothing more of it
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.IsTrue(otherApp.Asked.IsCompleted);
         Assert.IsTrue(tunnelLock.IsHeld);
 
         // a person's disconnect lets it go unasked
         await app.Disconnect();
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         await AssertEqualsWait(false, () => tunnelLock.IsHeld);
     }
 
@@ -67,7 +67,7 @@ public class VpnTunnelLockTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.IsFalse(tunnelLock.IsHeld);
     }
 

@@ -366,7 +366,7 @@ public class AccountAccessCodeTest : TestAppBase
     [TestMethod]
     public async Task A_device_code_the_server_would_refuse_is_replaced_at_sign_in_and_connects()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var baseToken = TestHelper.CreateAccessToken(server);
         var premiumToken = TestHelper.CreateAccessToken(server, maxClientCount: 6);
@@ -390,7 +390,7 @@ public class AccountAccessCodeTest : TestAppBase
         TypeAccessCode(app, profileId, null);
 
         await SignIn(accountService);
-        await app.Connect(profileId);
+        await app.Connect(profileId, TestCt);
 
         var profile = app.VpnProfileService.Get(profileId);
         Assert.AreEqual(AppConnectionState.Connected, app.ConnectionState);
@@ -403,7 +403,7 @@ public class AccountAccessCodeTest : TestAppBase
     [TestMethod]
     public async Task A_refused_account_code_is_reported_so_the_account_stops_handing_it_out()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var baseToken = TestHelper.CreateAccessToken(server);
 
@@ -423,7 +423,7 @@ public class AccountAccessCodeTest : TestAppBase
         Assert.AreEqual(deadCode, app.VpnProfileService.Get(profileId).AccessCode,
             "the account handed its code down before anything was tried");
 
-        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(profileId));
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(profileId, TestCt));
         Assert.AreEqual(SessionErrorCode.AccessCodeRejected, ex.SessionResponse.ErrorCode);
 
         // ONE bit of news, and the code is what names it (keyring plan §4)

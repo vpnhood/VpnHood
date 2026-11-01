@@ -30,24 +30,25 @@ public static class VpnHoodClientExtensions
             return errorCode ?? SessionErrorCode.Ok;
         }
 
-        public Task WaitForState(ClientState clientState, int timeout = 6000,
+        public Task WaitForState(ClientState clientState, CancellationToken cancellationToken, int timeout = 6000,
             bool useUpdateStatus = false)
         {
             return VhTestUtil.AssertEqualsWait(clientState,
                 async () => {
                     if (useUpdateStatus)
                         try {
-                            using var timeoutCts = new CancellationTokenSource(timeout);
+                            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                            timeoutCts.CancelAfter(timeout);
                             await client.UpdateSessionStatus(timeoutCts.Token);
                         }
-                        catch {
+                        catch when (!cancellationToken.IsCancellationRequested) {
                             /*ignore*/
                         }
 
                     return client.State;
                 },
                 "Client state didn't reach the expected value.",
-                timeout);
+                timeout, cancellationToken: cancellationToken);
         }
 
         public ulong SessionId => ulong.Parse(client.RequiredSession.Info.SessionId);

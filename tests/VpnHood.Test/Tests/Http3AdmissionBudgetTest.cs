@@ -68,7 +68,7 @@ public class Http3AdmissionBudgetTest : TestBase
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         deadline.CancelAfter(TimeSpan.FromSeconds(15));
         var cancellationToken = deadline.Token;
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.SessionOptions.MaxUnauthenticatedConnectionCount = 1;
         accessManager.ServerConfig.SessionOptions.MinClientProtocolVersion = 15;
         await using var server = await TestHelper.CreateServer(accessManager);

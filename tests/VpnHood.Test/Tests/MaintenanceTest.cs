@@ -32,7 +32,7 @@ public class MaintenanceTest : TestBase
     [DataRow(true, true)]
     public async Task Maintenance_answers_a_hello_as_a_web_server(bool useWebSocket, bool useQuic)
     {
-        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
@@ -61,7 +61,7 @@ public class MaintenanceTest : TestBase
     [TestMethod]
     public async Task Maintenance_answers_a_hello_with_a_503_on_a_WebSocket_with_no_handshake()
     {
-        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
@@ -102,7 +102,7 @@ public class MaintenanceTest : TestBase
     [DataRow(true, true)]
     public async Task Maintenance_reaches_the_client(bool useWebSocket, bool useQuic)
     {
-        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
@@ -117,7 +117,7 @@ public class MaintenanceTest : TestBase
     [TestMethod]
     public async Task Probe_Without_Valid_Request_Gets_401_In_Maintenance()
     {
-        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.ServiceUnavailable;
@@ -141,7 +141,7 @@ public class MaintenanceTest : TestBase
     [DataRow(403, false)]
     public async Task HttpAccessManager_StatusCode_Handling(int statusCode, bool expectMaintenance)
     {
-        using var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
+        using var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = (HttpStatusCode)statusCode;
 
         if (expectMaintenance) {

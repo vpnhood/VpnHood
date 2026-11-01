@@ -28,7 +28,7 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AccessCode_Accept()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
@@ -47,7 +47,7 @@ public class AccessCodeTest : TestAppBase
         });
 
         // connect
-        await app.Connect(vpnProfile.VpnProfileId);
+        await app.Connect(vpnProfile.VpnProfileId, TestCt);
         Assert.AreEqual(6, app.State.SessionInfo?.AccessInfo?.MaxDeviceCount,
             "token2 must be used instead of token1 due the access code.");
     }
@@ -55,7 +55,7 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AccessCode_reject_keeps_the_code_and_marks_it_refused()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
@@ -77,7 +77,7 @@ public class AccessCodeTest : TestAppBase
         });
 
         // connect
-        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(vpnProfile.VpnProfileId));
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(vpnProfile.VpnProfileId, TestCt));
         Assert.AreEqual(SessionErrorCode.AccessCodeRejected, ex.SessionResponse.ErrorCode);
 
         // The code is KEPT — refusal never deletes a credential (its issuer may extend it) — but
@@ -149,7 +149,7 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AccessCode_FailedByChecksum()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app

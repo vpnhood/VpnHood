@@ -32,7 +32,7 @@ public abstract class TestBase
     }
 
     protected TestWebServerMockEps MockEps => TestHelper.WebServer.MockEps;
-    protected virtual TestHelper CreateTestHelper() => new();
+    protected virtual TestHelper CreateTestHelper() => new(TestCt);
 
     protected Task AssertEqualsWait<TValue>(TValue expectedValue, Func<TValue> valueFactory,
         string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)

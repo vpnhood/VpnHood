@@ -8,6 +8,6 @@ public abstract class TestAppBase : TestBase
 
     protected override TestHelper CreateTestHelper()
     {
-        return new TestAppHelper();
+        return new TestAppHelper(TestCt);
     }
 }

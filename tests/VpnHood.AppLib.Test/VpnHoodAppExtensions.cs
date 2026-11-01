@@ -12,14 +12,14 @@ public static class VpnHoodAppExtensions
 {
     extension(VpnHoodApp app)
     {
-        public AppSessionStatus GetSessionStatus(CancellationToken cancellationToken = default)
+        public AppSessionStatus GetSessionStatus(CancellationToken cancellationToken)
         {
             app.ForceUpdateState(cancellationToken).Wait(cancellationToken);
             return app.State.SessionStatus ??
                    throw new InvalidOperationException("Session has not been initialized yet");
         }
 
-        public async Task<AppSessionStatus> GetSessionStatusAsync(CancellationToken cancellationToken = default)
+        public async Task<AppSessionStatus> GetSessionStatusAsync(CancellationToken cancellationToken)
         {
             await app.ForceUpdateState(cancellationToken);
             return app.State.SessionStatus ??
@@ -27,16 +27,17 @@ public static class VpnHoodAppExtensions
         }
 
 
-        public Task WaitForState(AppConnectionState connectionSate, int timeout = 5000)
+        public Task WaitForState(AppConnectionState connectionSate, CancellationToken cancellationToken,
+            int timeout = 5000)
         {
             return VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState,
-                "App state didn't reach the expected value.", timeout);
+                "App state didn't reach the expected value.", timeout, cancellationToken: cancellationToken);
         }
 
         public Task Connect(Guid? vpnProfileId,
+            CancellationToken cancellationToken,
             ConnectPlanId planId = ConnectPlanId.Normal,
-            bool diagnose = false,
-            CancellationToken cancellationToken = default)
+            bool diagnose = false)
         {
             // the window as the API passes it: the one the test has set, if any
             return app.Connect(AppUiContext.Context, new ConnectOptions {

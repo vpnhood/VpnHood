@@ -65,7 +65,7 @@ public class AccessTest : TestBase
         var managerOptions = TestHelper.CreateFileAccessManagerOptions();
         managerOptions.SessionOptions.SyncInterval =
             TimeSpan.FromMinutes(10); // make sure the disconnect is not due to sync
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt, managerOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(managerOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create a short expiring token
@@ -145,7 +145,7 @@ public class AccessTest : TestBase
 
         // wait for finishing client1
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
-        await client1.WaitForState(ClientState.Disposed, useUpdateStatus: true);
+        await client1.WaitForState(ClientState.Disposed, TestCt, useUpdateStatus: true);
         Assert.AreEqual(SessionSuppressType.None, client1.RequiredSession.Info.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client1.GetSessionErrorCode());
         Assert.AreEqual(SessionSuppressType.YourSelf, client1.GetSessionExceptionResponse()?.SuppressedBy);
@@ -165,7 +165,7 @@ public class AccessTest : TestBase
 
         // wait for finishing client2
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
-        await client2.WaitForState(ClientState.Disposed, useUpdateStatus: true);
+        await client2.WaitForState(ClientState.Disposed, TestCt, useUpdateStatus: true);
 
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.RequiredSession.Info.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client2.GetSessionErrorCode());
@@ -203,7 +203,7 @@ public class AccessTest : TestBase
     public async Task Client_should_not_suppress_itself_after_disconnect()
     {
         // Create Server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -212,7 +212,7 @@ public class AccessTest : TestBase
             token: token);
         var serverSession1 = server.GetSession(client1);
         await client1.DisposeAsync();
-        await client1.WaitForState(ClientState.Disposed);
+        await client1.WaitForState(ClientState.Disposed, TestCt);
 
         // wait for the access manager to get the close before reconnecting with the same clientId; otherwise the
         // new session suppresses the not-yet-closed one. The server stops the session before it reports the close
@@ -232,7 +232,7 @@ public class AccessTest : TestBase
     {
         // Create Server
         var expired = DateTime.UtcNow.AddDays(1);
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server, maxClientCount: 2,
             expirationTime: expired,
@@ -241,7 +241,7 @@ public class AccessTest : TestBase
 
         // create default token with 2 client count
         var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token);
-        await client1.WaitForState(ClientState.Connected);
+        await client1.WaitForState(ClientState.Connected, TestCt);
         var serverSession1 = server.GetSession(client1);
         await client1.DisposeAsync();
 

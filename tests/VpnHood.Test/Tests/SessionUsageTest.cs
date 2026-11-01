@@ -209,7 +209,7 @@ public class SessionUsageTest : TestBase
         await using var client = await TestHelper.CreateClient(clientOptions, vpnAdapter: new TestNullVpnAdapter(),
             autoConnect: false);
         var connectTask = client.Connect(TestCt);
-        await client.WaitForState(ClientState.WaitingForAd);
+        await client.WaitForState(ClientState.WaitingForAd, TestCt);
         var session = server.GetSession(client);
 
         // the access manager builds a status reply before the ad, and the reply is held on its way back
@@ -374,7 +374,7 @@ public class SessionUsageTest : TestBase
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.UpdateStatusInterval = TimeSpan.FromHours(1);
         options.SessionOptions.SyncInterval = TimeSpan.FromHours(1);
-        return TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt, options));
+        return TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(options));
     }
 
     private static void AddTraffic(Session session, long sent, long received)

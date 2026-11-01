@@ -24,8 +24,8 @@ public class TrafficMeterTest : TestBase
         await using var clientServerDom = await ClientServerDom.Create(TestHelper,
             clientOption);
         await Task.WhenAll(
-            TestHelper.Test_TcpUpload(100_000, cancellationToken: TestCt),
-            TestHelper.Test_TcpDownload(60_0000, cancellationToken: TestCt));
+            TestHelper.Test_TcpUpload(100_000),
+            TestHelper.Test_TcpDownload(60_0000));
         
         Assert.IsGreaterThanOrEqualTo(100_000, clientServerDom.Client.Session!.Status.SessionTraffic.Sent,
             "TrafficMeter should track sent bytes.");
@@ -304,14 +304,14 @@ public class TrafficMeterTest : TestBase
 
         // Upload is throttled at 1 Mbps; sending 100 KB should take well over 500 ms
         var uploadStopwatch = Stopwatch.StartNew();
-        await TestHelper.Test_QuicUpload(100_000, cancellationToken: TestCt);
+        await TestHelper.Test_QuicUpload(100_000);
         uploadStopwatch.Stop();
         Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(500), uploadStopwatch.Elapsed,
             $"Upload should be throttled (>500 ms). Elapsed: {uploadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
 
         // Download has no throttle; receiving 100 KB locally should complete in under 300 ms
         var downloadStopwatch = Stopwatch.StartNew();
-        await TestHelper.Test_QuicDownload(100_000, cancellationToken: TestCt);
+        await TestHelper.Test_QuicDownload(100_000);
         downloadStopwatch.Stop();
         Assert.IsLessThan(TimeSpan.FromMilliseconds(300), downloadStopwatch.Elapsed,
             $"Download should not be throttled (<300 ms). Elapsed: {downloadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
@@ -331,14 +331,14 @@ public class TrafficMeterTest : TestBase
 
         // Upload has no throttle; sending 100 KB locally should complete in under 300 ms
         var uploadStopwatch = Stopwatch.StartNew();
-        await TestHelper.Test_QuicUpload(100_000, cancellationToken: TestCt);
+        await TestHelper.Test_QuicUpload(100_000);
         uploadStopwatch.Stop();
         Assert.IsLessThan(TimeSpan.FromMilliseconds(300), uploadStopwatch.Elapsed,
             $"Upload should not be throttled (<300 ms). Elapsed: {uploadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
 
         // Download is throttled at 1 Mbps; receiving 100 KB should take well over 500 ms
         var downloadStopwatch = Stopwatch.StartNew();
-        await TestHelper.Test_QuicDownload(100_000, cancellationToken: TestCt);
+        await TestHelper.Test_QuicDownload(100_000);
         downloadStopwatch.Stop();
         Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(500), downloadStopwatch.Elapsed,
             $"Download should be throttled (>500 ms). Elapsed: {downloadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
@@ -356,14 +356,14 @@ public class TrafficMeterTest : TestBase
 
         // Upload is throttled at 1 Mbps; sending 100 KB should take well over 500 ms
         var uploadStopwatch = Stopwatch.StartNew();
-        await TestHelper.Test_TcpUpload(100_000, cancellationToken: TestCt);
+        await TestHelper.Test_TcpUpload(100_000);
         uploadStopwatch.Stop();
         Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(500), uploadStopwatch.Elapsed,
             $"Upload should be throttled (>500 ms). Elapsed: {uploadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
 
         // Download has no throttle; receiving 100 KB locally should complete in under 300 ms
         var downloadStopwatch = Stopwatch.StartNew();
-        await TestHelper.Test_TcpDownload(100_000, cancellationToken: TestCt);
+        await TestHelper.Test_TcpDownload(100_000);
         downloadStopwatch.Stop();
         Assert.IsLessThan(TimeSpan.FromMilliseconds(300), downloadStopwatch.Elapsed,
             $"Download should not be throttled (<300 ms). Elapsed: {downloadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
@@ -380,14 +380,14 @@ public class TrafficMeterTest : TestBase
 
         // Upload has no throttle; sending 100 KB locally should complete in under 300 ms
         var uploadStopwatch = Stopwatch.StartNew();
-        await TestHelper.Test_TcpUpload(100_000, cancellationToken: TestCt);
+        await TestHelper.Test_TcpUpload(100_000);
         uploadStopwatch.Stop();
         Assert.IsLessThan(TimeSpan.FromMilliseconds(300), uploadStopwatch.Elapsed,
             $"Upload should not be throttled (<300 ms). Elapsed: {uploadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
 
         // Download is throttled at 1 Mbps; receiving 100 KB should take well over 500 ms
         var downloadStopwatch = Stopwatch.StartNew();
-        await TestHelper.Test_TcpDownload(100_000, cancellationToken: TestCt);
+        await TestHelper.Test_TcpDownload(100_000);
         downloadStopwatch.Stop();
         Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(500), downloadStopwatch.Elapsed,
             $"Download should be throttled (>500 ms). Elapsed: {downloadStopwatch.Elapsed.TotalMilliseconds:F0} ms");

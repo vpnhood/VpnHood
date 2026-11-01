@@ -23,7 +23,7 @@ public partial class WebFrontTest
     public async Task Padding_requires_session_and_request_masking_on_new_and_reused_streams(int httpVersion, bool offerMasking,
         bool enabled)
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.SessionOptions.StartPadding = enabled;
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);

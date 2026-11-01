@@ -35,7 +35,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(CreateAppOptions(firstOptions.StorageFolderPath));
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         var made = RecordingTrackerFactory.Made.ToArray();
         Assert.HasCount(4, made, "the app's two trackers and the VPN service's two");
@@ -55,7 +55,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
         AcceptTerms(app);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // the service's trackers: the last two made, at the connect
         Assert.IsInstanceOfType<CompositeTracker>(app.Services.TrackerService.Tracker);
@@ -84,7 +84,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
         AcceptTerms(app);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // the service's two, the last made: by copies of the app's factories, each with its setting
         var made = RecordingTrackerFactory.Made.ToArray();
@@ -103,7 +103,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(CreateAppOptions());
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         var trackers = MadeTrackers();
         Assert.HasCount(4, trackers);
@@ -135,7 +135,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
         Assert.IsTrue(app.State.IsAnonymousTrackerPromptRequired, "the first-run page asks");
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         var trackers = MadeTrackers();
         Assert.HasCount(4, trackers);
@@ -192,9 +192,9 @@ public class AllowAnonymousTrackerTest : TestAppBase
         AcceptTerms(app);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await app.Disconnect();
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
 
         // turned off with no session to reconfigure: the saved options take it all the same
         app.UserSettings.AllowAnonymousTracker = false;
@@ -213,7 +213,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
     [TestMethod]
     public async Task The_access_manager_is_told_the_switch_at_each_connect()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -221,23 +221,23 @@ public class AllowAnonymousTrackerTest : TestAppBase
         AcceptTerms(app);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.IsTrue(accessManager.AllowAnonymousTracker, "on: the hello says so");
 
         // a session keeps what its hello said: the access manager hears a change at the next connect
         app.UserSettings.AllowAnonymousTracker = false;
         app.SettingsService.Save();
         await app.Disconnect();
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.IsFalse(accessManager.AllowAnonymousTracker, "off at the next connect");
     }
 
     [TestMethod]
     public async Task A_build_without_a_tracker_tells_the_vpn_service_off()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -250,7 +250,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
 
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // so the access manager's own hit stays off too, and it is told off
         var savedOptions = await new VpnServiceOptionsFile(device.VpnServiceConfigFolder).Read(TestCt);

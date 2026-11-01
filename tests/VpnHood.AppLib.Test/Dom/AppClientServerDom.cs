@@ -58,10 +58,9 @@ public class AppClientServerDom : IAsyncDisposable
     public static async Task<AppClientServerDom> CreateWithNullCapture(
         TestAppHelper testAppHelper,
         FileAccessManagerOptions? fileAccessManagerOptions = null,
-        AppOptions? appOptions = null,
-        CancellationToken cancellationToken = default)
+        AppOptions? appOptions = null)
     {
-        var accessManager = await testAppHelper.CreateAccessManager(cancellationToken, fileAccessManagerOptions);
+        var accessManager = await testAppHelper.CreateAccessManager(fileAccessManagerOptions);
         appOptions ??= testAppHelper.CreateAppOptions();
 
         // create server
@@ -79,11 +78,10 @@ public class AppClientServerDom : IAsyncDisposable
         TestVpnAdapterOptions? adapterOptions = null,
         AdType adProviderAdType = AdType.RewardedAd,
         FileAccessManagerOptions? fileAccessManagerOptions = null,
-        AppOptions? appOptions = null,
-        CancellationToken cancellationToken = default)
+        AppOptions? appOptions = null)
     {
         var device = testAppHelper.CreateDevice(adapterOptions);
-        var accessManager = await testAppHelper.CreateAccessManager(cancellationToken, fileAccessManagerOptions);
+        var accessManager = await testAppHelper.CreateAccessManager(fileAccessManagerOptions);
         appOptions ??= testAppHelper.CreateAppOptions();
 
         // create server
@@ -99,12 +97,9 @@ public class AppClientServerDom : IAsyncDisposable
             device: device);
     }
 
-    public Task Connect(ConnectPlanId planId = ConnectPlanId.Normal, CancellationToken cancellationToken = default)
+    public Task Connect(ConnectPlanId planId = ConnectPlanId.Normal)
     {
-        return App.Connect(
-            vpnProfileId: VpnProfile.VpnProfileId, 
-            planId: planId, 
-            cancellationToken: cancellationToken);
+        return App.Connect(VpnProfile.VpnProfileId, TestAppHelper.TestCt, planId: planId);
     }
 
     public async ValueTask DisposeAsync()

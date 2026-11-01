@@ -26,7 +26,7 @@ public class AdTest : TestAppBase
     public async Task flexible_ad_should_not_close_session_if_load_ad_failed()
     {
         // create server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
@@ -59,7 +59,7 @@ public class AdTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(()
             => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt));
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
     }
 
     [TestMethod]
@@ -67,7 +67,7 @@ public class AdTest : TestAppBase
     public async Task flexible_ad_should_not_be_displayed_on_trial()
     {
         // create server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
@@ -79,8 +79,8 @@ public class AdTest : TestAppBase
         // connect
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(vpnProfile.VpnProfileId, planId: ConnectPlanId.PremiumByTrial);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.Connect(vpnProfile.VpnProfileId, TestCt, planId: ConnectPlanId.PremiumByTrial);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
     }
 
     [TestMethod]
@@ -88,7 +88,7 @@ public class AdTest : TestAppBase
     public async Task Session_must_be_closed_after_few_minutes_if_ad_is_not_accepted()
     {
         // create server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client app
@@ -107,14 +107,14 @@ public class AdTest : TestAppBase
             PlanId = ConnectPlanId.PremiumByRewardedAd
         }, TestCt));
 
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
     }
 
     [TestMethod]
     [DoNotParallelize] // clears the process-global AppUiContext; parallel tests restore it
     public async Task An_app_without_ads_refuses_an_ad_server_with_no_window_too()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // a build with no ad network, as the desktop service runs it: with no window
@@ -127,7 +127,7 @@ public class AdTest : TestAppBase
         var exception = await Assert.ThrowsExactlyAsync<AdException>(() =>
             app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt));
         StringAssert.Contains(exception.Message, "does not support servers that require ads");
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
     }
 
     [TestMethod]
@@ -143,12 +143,12 @@ public class AdTest : TestAppBase
 
         // connect
         if (acceptAd) {
-            await appDom.Connect(ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt);
+            await appDom.Connect(ConnectPlanId.PremiumByRewardedAd);
             Assert.IsNull(appDom.App.State.SessionStatus?.SessionExpirationTime);
         }
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
-                appDom.Connect(ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt));
+                appDom.Connect(ConnectPlanId.PremiumByRewardedAd));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
         }
     }
@@ -166,12 +166,12 @@ public class AdTest : TestAppBase
 
         // connect: NormalByRewardedAd grants a (free) session in exchange for a rewarded ad
         if (acceptAd) {
-            await appDom.Connect(ConnectPlanId.NormalByRewardedAd, cancellationToken: TestCt);
+            await appDom.Connect(ConnectPlanId.NormalByRewardedAd);
             Assert.IsNull(appDom.App.State.SessionStatus?.SessionExpirationTime);
         }
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
-                appDom.Connect(ConnectPlanId.NormalByRewardedAd, cancellationToken: TestCt));
+                appDom.Connect(ConnectPlanId.NormalByRewardedAd));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
         }
     }
@@ -182,7 +182,7 @@ public class AdTest : TestAppBase
     public async Task RewardedAd_expiration_must_be_increased_by_user(bool acceptAd)
     {
         // create server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         accessManager.CanExtendPremiumByAd = true;
         accessManager.RejectAllAds = !acceptAd;
@@ -200,7 +200,7 @@ public class AdTest : TestAppBase
 
         // connect
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(vpnProfile.VpnProfileId, ConnectPlanId.PremiumByTrial);
+        await app.Connect(vpnProfile.VpnProfileId, TestCt, ConnectPlanId.PremiumByTrial);
 
         // assert
         Assert.IsNotNull(app.State.SessionStatus?.SessionExpirationTime);
@@ -215,7 +215,7 @@ public class AdTest : TestAppBase
                 app.Api.App.ExtendByRewardedAd(TestCt));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
             await Task.Delay(500);
-            await app.WaitForState(AppConnectionState.Connected);
+            await app.WaitForState(AppConnectionState.Connected, TestCt);
         }
     }
 
@@ -225,7 +225,7 @@ public class AdTest : TestAppBase
     public async Task RewardedAd_should_toggle_by_access_manager(bool enable)
     {
         // create server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         accessManager.CanExtendPremiumByAd = enable;
 
@@ -242,7 +242,7 @@ public class AdTest : TestAppBase
 
         // connect
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(vpnProfile.VpnProfileId, ConnectPlanId.PremiumByTrial);
+        await app.Connect(vpnProfile.VpnProfileId, TestCt, ConnectPlanId.PremiumByTrial);
 
         // asserts
         Assert.AreEqual(enable, app.State.SessionStatus?.CanExtendByRewardedAd);
@@ -252,7 +252,7 @@ public class AdTest : TestAppBase
     public async Task ShowAd_must_change_state_to_WaitingForAd()
     {
         // create server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
@@ -280,7 +280,7 @@ public class AdTest : TestAppBase
 
         // connect
         _ = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt); // don't await as it will wait for ad to load
-        await app.WaitForState(AppConnectionState.WaitingForAd);
+        await app.WaitForState(AppConnectionState.WaitingForAd, TestCt);
         await AssertEqualsWait(true, () => isAdLoadingStatusMet);
     }
 
@@ -292,7 +292,7 @@ public class AdTest : TestAppBase
         string errorLevel)
     {
         // create server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // the ad's post-load delay keeps the connect waiting
@@ -311,7 +311,7 @@ public class AdTest : TestAppBase
 
         // the person gives up after waiting
         var connectTask = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.WaitingForAd);
+        await app.WaitForState(AppConnectionState.WaitingForAd, TestCt);
         await Task.Delay(TimeSpan.FromSeconds(waitSeconds), TestCt);
         await app.Disconnect();
         await Assert.ThrowsExactlyAsync<UserCanceledException>(() => connectTask);
@@ -327,7 +327,7 @@ public class AdTest : TestAppBase
     [TestMethod]
     public async Task SplitAll_must_on_while_playing_ad_ex()
     {
-        using var accessManager = await TestAppHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestAppHelper.CreateAccessManager();
         await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
 
         // create the server
@@ -357,7 +357,7 @@ public class AdTest : TestAppBase
 
         // we add to exclude but all ip should be split by ad
         _ = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.WaitingForAd);
+        await app.WaitForState(AppConnectionState.WaitingForAd, TestCt);
         await AssertEqualsWait(2, () => adProvider.LoadAdCount);
 
         // all included ips should be split now
@@ -369,7 +369,7 @@ public class AdTest : TestAppBase
         // in ad-split mode, so Connected + a fixed delay is not enough; wait for the post-delay to
         // actually end — AdManager clears the flag only after AdOk has been sent to the service
         showAdCompletionSource.SetResult(ShowAdResult.Closed);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await AssertEqualsWait(false, () => app.AdManager.IsWaitingForPostDelay);
 
         // all included ips should not be split now
@@ -457,7 +457,7 @@ public class AdTest : TestAppBase
         await using var appDom = await AppClientServerDom.Create(TestAppHelper, appOptions: appOptions);
         appDom.TestAdProvider.LoadAdCallback = () => Task.Delay(TimeSpan.FromSeconds(3));
 
-        await appDom.Connect(ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt);
+        await appDom.Connect(ConnectPlanId.PremiumByRewardedAd);
         Assert.AreEqual(1, appDom.TestAdProvider.LoadAdCount);
         Assert.IsNull(appDom.App.State.SessionStatus?.SessionExpirationTime, "The reward must be granted.");
     }
@@ -482,7 +482,7 @@ public class AdTest : TestAppBase
     public async Task Internal_Ad_provider_with_fallback()
     {
         // create server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
@@ -513,12 +513,12 @@ public class AdTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         // connect
         _ = app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt); // don't await as it will wait for ad to load
-        await app.WaitForState(AppConnectionState.WaitingForAd);
+        await app.WaitForState(AppConnectionState.WaitingForAd, TestCt);
         await AssertEqualsWait(true, () => app.State.IsWaitingForInternalAd);
         await AssertEqualsWait(2, () => testAdProvider.LoadAdCount,
             "two times must be tried to reach fallback.");
 
         app.AdManager.AdService.InternalAdDismiss(ShowAdResult.Clicked);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
     }
 }

@@ -52,8 +52,8 @@ public class WebSocketPaddingIntegrationTest : TestBase
             Assert.AreEqual(++reused, client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount);
         }
         // Larger transfers outlive the initial framing and check both directions for data corruption.
-        await TestHelper.Test_TcpUpload(200_000, cancellationToken: TestCt);
-        await TestHelper.Test_TcpDownload(200_000, cancellationToken: TestCt);
+        await TestHelper.Test_TcpUpload(200_000);
+        await TestHelper.Test_TcpDownload(200_000);
     }
 
     [TestMethod]

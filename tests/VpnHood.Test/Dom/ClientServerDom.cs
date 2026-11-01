@@ -27,6 +27,7 @@ internal class ClientServerDom : IAsyncDisposable
     public long OldClientReceivedByteCount { get; private set; }
     public long OldServerSentByteCount { get; private set; }
     public long OldServerReceivedByteCount { get; private set; }
+    private readonly CancellationToken _testCt;
 
     private ClientServerDom(
         Token token,
@@ -34,8 +35,10 @@ internal class ClientServerDom : IAsyncDisposable
         TestVpnAdapter clientVpnAdapter,
         VpnHoodServer server,
         TestAccessManager accessManager,
-        FileAccessManagerOptions fileAccessManagerOptions)
+        FileAccessManagerOptions fileAccessManagerOptions,
+        CancellationToken testCt)
     {
+        _testCt = testCt;
         Token = token;
         Server = server;
         Client = client;
@@ -67,8 +70,7 @@ internal class ClientServerDom : IAsyncDisposable
         ClientOptions? clientOptions = null,
         Traffic? maxSpeedMbps = null,
         ProxyOptions? proxyOptions = null,
-        ISocketFactory? clientSocketFactory = null,
-        CancellationToken cancellationToken = default)
+        ISocketFactory? clientSocketFactory = null)
     {
         TestAccessManager? accessManager = null;
         VpnHoodServer? server = null;
@@ -93,7 +95,7 @@ internal class ClientServerDom : IAsyncDisposable
                     TestWebServerLocalEps.AllocateFreeUdpEndPoint(IPAddress.IPv6Any)
                 ];
 
-            accessManager = await testHelper.CreateAccessManager(cancellationToken, fileAccessManagerOptions);
+            accessManager = await testHelper.CreateAccessManager(fileAccessManagerOptions);
             server = await testHelper.CreateServer(accessManager, socketFactory: testSocketFactory);
             var token = testHelper.CreateAccessToken(server, maxSpeedMbps: maxSpeedMbps);
 
@@ -103,7 +105,7 @@ internal class ClientServerDom : IAsyncDisposable
             client = await testHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter,
                 proxyOptions: proxyOptions, socketFactory: clientSocketFactory);
             var clientServerDom = new ClientServerDom(token, client, clientVpnAdapter, server, accessManager,
-                fileAccessManagerOptions);
+                fileAccessManagerOptions, testHelper.TestCt);
             return clientServerDom;
         }
         catch {
@@ -179,10 +181,10 @@ internal class ClientServerDom : IAsyncDisposable
 
     // A proxied stream counts its bytes once its write returns, which can be after the other end has them and
     // the test's request is done: a count gets a moment to arrive before it is asserted
-    private static async Task WaitForCount(Func<long> count, long exceeded)
+    private async Task WaitForCount(Func<long> count, long exceeded)
     {
         for (var i = 0; i < 50 && count() <= exceeded; i++)
-            await Task.Delay(100);
+            await Task.Delay(100, _testCt);
     }
 
     public async ValueTask DisposeAsync()

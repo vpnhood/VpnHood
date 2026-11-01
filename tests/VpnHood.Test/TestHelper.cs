@@ -50,6 +50,9 @@ public class TestHelper : IDisposable
     public TestWebServer WebServer { get; }
     public NetFilter ClientNetFilter { get; }
     public NetFilter ServerNetFilter { get; }
+
+    // the test's own: a helper lives as long as its test, so every wait it makes ends with the test
+    public CancellationToken TestCt { get; }
     private bool? _isIpV6Supported;
     private int _accessTokenIndex;
 
@@ -59,8 +62,9 @@ public class TestHelper : IDisposable
         VhLogger.AddProvider(new ConsoleLoggerProvider());
     }
 
-    public TestHelper()
+    public TestHelper(CancellationToken testCt)
     {
+        TestCt = testCt;
         TransportDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
@@ -130,8 +134,7 @@ public class TestHelper : IDisposable
         return Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
     }
 
-    // the token first: a required one can't follow the optional parameters
-    public async Task<TestAccessManager> CreateAccessManager(CancellationToken cancellationToken,
+    public async Task<TestAccessManager> CreateAccessManager(
         FileAccessManagerOptions? options = null,
         string? storagePath = null,
         string? serverLocation = null)
@@ -139,12 +142,11 @@ public class TestHelper : IDisposable
         storagePath ??= CreateAccessManagerWorkingDir();
         if (!string.IsNullOrEmpty(serverLocation)) {
             Directory.CreateDirectory(storagePath);
-            await File.WriteAllTextAsync(Path.Combine(storagePath, "server_location"), serverLocation,
-                cancellationToken);
+            await File.WriteAllTextAsync(Path.Combine(storagePath, "server_location"), serverLocation, TestCt);
         }
 
         options ??= CreateFileAccessManagerOptions();
-        return await TestAccessManager.Create(storagePath, options, cancellationToken);
+        return await TestAccessManager.Create(storagePath, options, TestCt);
     }
 
     public FileAccessManagerOptions CreateFileAccessManagerOptions()
@@ -220,8 +222,7 @@ public class TestHelper : IDisposable
         INetConfigurationProvider? netConfigurationProvider = null,
         ISwapMemoryProvider? swapMemoryProvider = null,
         IVpnAdapter? vpnAdapter = null,
-        ISocketFactory? socketFactory = null,
-        CancellationToken cancellationToken = default)
+        ISocketFactory? socketFactory = null)
     {
         if (accessManager != null && fileAccessManagerOptions != null)
             throw new InvalidOperationException(
@@ -229,7 +230,7 @@ public class TestHelper : IDisposable
 
         var autoDisposeAccessManager = false;
         if (accessManager == null) {
-            accessManager = await CreateAccessManager(cancellationToken, fileAccessManagerOptions);
+            accessManager = await CreateAccessManager(fileAccessManagerOptions);
             autoDisposeAccessManager = true;
         }
 
@@ -258,7 +259,7 @@ public class TestHelper : IDisposable
         // Create server
         var server = new VpnHoodServer(accessManager, serverOptions);
         if (autoStart) {
-            await server.Start(cancellationToken);
+            await server.Start(TestCt);
             Assert.AreEqual(ServerState.Ready, server.State);
         }
 
@@ -356,7 +357,7 @@ public class TestHelper : IDisposable
                 proxyOptions: proxyOptions,
                 store: new ProxyEndPointStore(Path.Combine(WorkingPath, "ClientCore", "proxies", "proxies.db")),
                 serverCheckTimeout: clientOptions.Transport.ServerQueryTimeout,
-                cancellationToken: CancellationToken.None),
+                cancellationToken: TestCt),
             _ => null
         };
     }
@@ -390,7 +391,7 @@ public class TestHelper : IDisposable
 
         // test starting the client
         if (autoConnect)
-            await client.Connect(CancellationToken.None);
+            await client.Connect(TestCt);
 
         return client;
     }

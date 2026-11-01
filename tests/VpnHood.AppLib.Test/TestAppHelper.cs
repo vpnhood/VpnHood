@@ -19,7 +19,7 @@ using VpnHood.Core.Client.Abstractions;
 
 namespace VpnHood.AppLib.Test;
 
-public class TestAppHelper : TestHelper
+public class TestAppHelper(CancellationToken testCt) : TestHelper(testCt)
 {
     // The asset folder the VpnHood.Net.IpLocations.Assets.Ip2LocationLite package's build places
     // assembly. The package ships no code, so the name is the contract - named here for the tests

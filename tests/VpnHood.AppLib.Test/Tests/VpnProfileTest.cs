@@ -91,7 +91,7 @@ public class VpnProfileTest : TestAppBase
     [DoNotParallelize] // mutates the process-global AppRegionInfo
     public async Task ClientPolicy()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
 
         var appOptions = TestAppHelper.CreateAppOptions();
         var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
@@ -565,7 +565,7 @@ public class VpnProfileTest : TestAppBase
     [DoNotParallelize] // mutates the process-global AppRegionInfo
     public async Task ClientPolicy_PurchaseUrl()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
 
         var appOptions = TestAppHelper.CreateAppOptions();
         var accountProvider = new TestAccountProvider();
@@ -648,7 +648,7 @@ public class VpnProfileTest : TestAppBase
     [DoNotParallelize] // mutates the process-global AppRegionInfo
     public async Task ClientPolicy_PurchaseUrl_is_never_shown_by_a_store_build()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
 
         // a build shipped through a store: it may not steer a buyer to an outside shop, whatever the
         // token says — and the token is the one place the URL comes from, so this is the whole guard
@@ -696,7 +696,7 @@ public class VpnProfileTest : TestAppBase
     [TestMethod]
     public async Task A_build_that_takes_no_typed_code_still_shows_the_code_it_holds()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
 
         // the App Store head: App Review 3.1.1 reads a typed premium code as a license key, so this
         // build ships no box to type one — but the buyer's own subscription still produced a code,
@@ -733,7 +733,7 @@ public class VpnProfileTest : TestAppBase
     [DoNotParallelize] // mutates the process-global AppRegionInfo
     public async Task ClientPolicy_sold_premium_is_ignored_by_a_build_without_premium()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
 
         // a CLIENT-like build: no premium tier at all, so it IS the full app and sells nothing —
         // however hard the operator's policy advertises ways to buy one

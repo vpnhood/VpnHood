@@ -31,8 +31,8 @@ public class FilteringTest : TestAppBase
         app.UserSettings.SplitTunneling.DnsMode = SplitDnsMode.DefaultRoute;
 
         // connect
-        await appDom.Connect(cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await appDom.Connect();
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // test includes
         var oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
@@ -67,8 +67,8 @@ public class FilteringTest : TestAppBase
         app.UserSettings.SplitTunneling.DnsMode = SplitDnsMode.DefaultRoute;
 
         // connect
-        await appDom.Connect(cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await appDom.Connect();
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // test includes
         var oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
@@ -97,8 +97,8 @@ public class FilteringTest : TestAppBase
         app.SettingsService.SplitDomainSettings.Blocks = MockEps.HttpsUrl1.Host;
 
         // connect
-        await appDom.Connect(cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await appDom.Connect();
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // blocked HTTPS should fail
         Log("Testing blocked HTTPS domain...");
@@ -124,8 +124,8 @@ public class FilteringTest : TestAppBase
         app.SettingsService.SplitDomainSettings.Blocks = MockEps.QuicUrl1.Host;
 
         // connect
-        await appDom.Connect(cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await appDom.Connect();
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // blocked QUIC should fail
         Log("Testing blocked QUIC domain...");
@@ -171,7 +171,7 @@ public class FilteringTest : TestAppBase
         app.SettingsService.SplitIpViaAppSettings.Includes = targetIps1.ToText();
         app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps2.ToText();
         await app.Connect(appDom.VpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await TestHelper.Test_Ping(ipAddress: MockEps.PingV4Address1);
 
         Log("Starting IpFilters_TestInclude...");
@@ -184,7 +184,7 @@ public class FilteringTest : TestAppBase
         app.SettingsService.SplitIpViaAppSettings.Includes = targetIps2.ToText();
         app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps1.ToText();
         await app.Connect(appDom.VpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         Log("Starting IpFilters_TestExclude...");
         await IpFilters_AssertInclude(TestHelper, app, udpEchoEndPoint2, httpsUrl2);
@@ -211,7 +211,7 @@ public class FilteringTest : TestAppBase
         // *** TEST ***: Block target1 IPs via AppBlocks
         app.SettingsService.SplitIpViaAppSettings.Blocks = blockedIps.ToText();
         await app.Connect(appDom.VpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // blocked HTTPS should fail
         Log("Testing blocked HTTPS...");
@@ -253,7 +253,7 @@ public class FilteringTest : TestAppBase
         app.SettingsService.SplitIpViaAppSettings.Includes = targetIps1.ToText();
         app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps2.ToText();
         await app.Connect(appDom.VpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         Log("Asserting the initial filters...");
         await IpFilters_AssertInclude(TestHelper, app, udpEchoEndPoint1, httpsUrl1);
@@ -283,8 +283,8 @@ public class FilteringTest : TestAppBase
         app.SettingsService.SplitDomainSettings.Excludes = MockEps.HttpsUrl2.Host;
 
         // connect
-        await appDom.Connect(cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await appDom.Connect();
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // initial: url1 tunnels, url2 bypasses
         var oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
@@ -320,18 +320,18 @@ public class FilteringTest : TestAppBase
     {
         // Echo
         if (udpEchoEndPint != null) {
-            var oldStat = await app.GetSessionStatusAsync();
+            var oldStat = await app.GetSessionStatusAsync(testHelper.TestCt);
             await testHelper.Test_UdpEcho(udpEchoEndPint);
-            var newStat = await app.GetSessionStatusAsync();
+            var newStat = await app.GetSessionStatusAsync(testHelper.TestCt);
             Assert.AreNotEqual(oldStat.SessionTraffic, newStat.SessionTraffic);
             Assert.AreEqual(oldStat.SessionSplitTraffic, newStat.SessionSplitTraffic);
         }
 
         // Http
         if (url != null) {
-            var oldStat = await app.GetSessionStatusAsync();
+            var oldStat = await app.GetSessionStatusAsync(testHelper.TestCt);
             await testHelper.Test_Https(url);
-            var newStat = await app.GetSessionStatusAsync();
+            var newStat = await app.GetSessionStatusAsync(testHelper.TestCt);
             Assert.AreNotEqual(oldStat.SessionTraffic.Received, newStat.SessionTraffic.Received, delta: receiveDelta);
             Assert.AreNotEqual(oldStat.SessionTraffic.Sent, newStat.SessionTraffic.Sent, delta: 50);
             Assert.AreEqual(oldStat.SessionSplitTraffic.Received, newStat.SessionSplitTraffic.Received, delta: receiveDelta);
@@ -344,9 +344,9 @@ public class FilteringTest : TestAppBase
     {
         // NameServer
         if (udpEchoEndPint != null) {
-            var oldStat = await app.GetSessionStatusAsync();
+            var oldStat = await app.GetSessionStatusAsync(testHelper.TestCt);
             await testHelper.Test_UdpEcho(udpEchoEndPint);
-            var newStat = await app.GetSessionStatusAsync();
+            var newStat = await app.GetSessionStatusAsync(testHelper.TestCt);
 
             Assert.AreEqual(oldStat.SessionTraffic, newStat.SessionTraffic,
                 $"Udp to {udpEchoEndPint} should go to tunnel.");
@@ -357,9 +357,9 @@ public class FilteringTest : TestAppBase
 
         // Http
         if (url != null) {
-            var oldStat = await app.GetSessionStatusAsync();
+            var oldStat = await app.GetSessionStatusAsync(testHelper.TestCt);
             await testHelper.Test_Https(url);
-            var newStat = await app.GetSessionStatusAsync();
+            var newStat = await app.GetSessionStatusAsync(testHelper.TestCt);
             Assert.AreEqual(oldStat.SessionTraffic.Received, newStat.SessionTraffic.Received, delta: receiveDelta);
             Assert.AreEqual(oldStat.SessionTraffic.Sent, newStat.SessionTraffic.Sent, delta: 50);
             Assert.AreNotEqual(oldStat.SessionSplitTraffic.Received, newStat.SessionSplitTraffic.Received, delta: receiveDelta);

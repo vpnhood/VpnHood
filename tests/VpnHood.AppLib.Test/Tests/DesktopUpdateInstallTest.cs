@@ -54,19 +54,19 @@ public class DesktopUpdateInstallTest : TestAppBase
         using var idleUpdateInstaller = new IdleUpdateInstaller(app, updater, IdleWait);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await AddDownload(updater);
 
         // a switch disconnects first, then connects at once
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await Task.Delay(IdleWait * 2, TestCt);
         Assert.AreEqual(0, updater.InstallerRuns, "a server switch");
 
         // a disconnect, and a connect again at once
         await app.Disconnect();
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await Task.Delay(IdleWait * 2, TestCt);
         Assert.AreEqual(0, updater.InstallerRuns, "a quick reconnect");
 

@@ -28,7 +28,7 @@ public class DiagnoserTest : TestAppBase
         clientApp.Diagnoser.TestNsIpEndPoints = [MockEps.HttpV4EndPointInvalid];
         clientApp.Diagnoser.TestPingIpAddresses = [MockEps.IpInvalid];
         await Assert.ThrowsExactlyAsync<NoInternetException>(() =>
-            clientApp.Connect(vpnProfile.VpnProfileId));
+            clientApp.Connect(vpnProfile.VpnProfileId, TestCt));
 
         Assert.AreEqual(nameof(NoInternetException), clientApp.State.LastError?.TypeName);
     }
@@ -46,7 +46,7 @@ public class DiagnoserTest : TestAppBase
         // ************
         // NoInternetException
         await Assert.ThrowsExactlyAsync<UnreachableServerException>(() =>
-            dom.App.Connect(vpnProfile.VpnProfileId, diagnose: true));
+            dom.App.Connect(vpnProfile.VpnProfileId, TestCt, diagnose: true));
 
         Assert.AreEqual(nameof(UnreachableServerException), dom.App.State.LastError?.TypeName);
     }

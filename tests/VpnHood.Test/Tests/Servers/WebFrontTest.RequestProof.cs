@@ -44,7 +44,7 @@ public partial class WebFrontTest
     [DataRow(14, true)]
     public async Task Protocol15_minimum_rejects_legacy_headers_before_body_or_upgrade(int httpVersion, bool upgrade)
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.SessionOptions.MinClientProtocolVersion = 15;
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
@@ -63,7 +63,7 @@ public partial class WebFrontTest
     public async Task Protocol15_upgrade_requires_proof_while_lower_minimums_keep_legacy_compatibility(
         int minimumVersion, int httpVersion)
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         if (minimumVersion != 0)
             accessManager.ServerConfig.SessionOptions.MinClientProtocolVersion = minimumVersion;
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -107,7 +107,7 @@ public partial class WebFrontTest
     public async Task Protocol15_hello_omits_the_farm_secret_even_for_an_older_binary_session(
         int httpVersion, int binaryVersion, bool sendsSecret)
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.SessionProtocolVersion = binaryVersion;
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);

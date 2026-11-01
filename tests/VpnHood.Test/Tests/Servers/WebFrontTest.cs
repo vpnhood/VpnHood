@@ -24,7 +24,7 @@ public partial class WebFrontTest : TestBase
     [TestMethod]
     public async Task A_request_without_our_headers_gets_kestrels_401_and_the_connection_stays()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         using var tcpClient = new TcpClient();
@@ -263,7 +263,7 @@ public partial class WebFrontTest : TestBase
     [TestMethod]
     public async Task The_cap_closes_the_server_s_oldest_connection_of_the_busiest_address()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.SessionOptions.MaxUnauthenticatedConnectionCount = 3;
         await using var server = await TestHelper.CreateServer(accessManager);
         var serverEndPoint = server.ServerHost.TcpEndPoints.First();
@@ -294,7 +294,7 @@ public partial class WebFrontTest : TestBase
     [DataRow(true)]
     public async Task A_client_s_connections_leave_the_count(bool pipelineAfterAnonymousRequest)
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         using var tcpClient = new TcpClient();

@@ -36,9 +36,9 @@ public class ClientAppTest : TestAppBase
         // ************
         // Test: With diagnose
         await app.Connect(vpnProfile1.VpnProfileId, diagnose: true, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected, 10000);
+        await app.WaitForState(AppConnectionState.Connected, TestCt, 10000);
         await app.Disconnect();
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.IsTrue(app.State.LogExists);
         Assert.IsTrue(app.State.HasDiagnoseRequested);
         Assert.IsTrue(app.State.IsIdle);
@@ -51,9 +51,9 @@ public class ClientAppTest : TestAppBase
         // ************
         // Test: Without diagnose
         await app.Connect(vpnProfile1.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await app.Disconnect();
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
 
         Assert.IsTrue(app.State.IsIdle);
         Assert.IsFalse(app.State.HasDiagnoseRequested);
@@ -76,9 +76,9 @@ public class ClientAppTest : TestAppBase
 
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await app.Disconnect();
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.IsNull(app.State.LastError);
     }
 
@@ -97,7 +97,7 @@ public class ClientAppTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExactlyAsync<UnreachableServerException>(() => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken));
 
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.IsTrue(app.State.LogExists);
         Assert.IsFalse(app.State.HasDiagnoseRequested);
         Assert.IsNotNull(app.State.LastError);
@@ -108,7 +108,7 @@ public class ClientAppTest : TestAppBase
     public async Task State_Waiting()
     {
         // create Access Manager and token
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         var token = TestHelper.CreateAccessToken(accessManager);
 
         // create server
@@ -122,7 +122,7 @@ public class ClientAppTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // dispose server and wait for waiting state
         // UnstableTimeout only lower-bounds the Waiting transition: it fires on the next request
@@ -162,7 +162,7 @@ public class ClientAppTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         await Assert.ThrowsExactlyAsync<ConnectionTimeoutException>(() => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken));
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName);
     }
 
@@ -181,7 +181,7 @@ public class ClientAppTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // get data through tunnel
         await TestHelper.Test_Https();
@@ -193,14 +193,14 @@ public class ClientAppTest : TestAppBase
 
         // test disconnect
         await app.Disconnect();
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
     }
 
     [TestMethod]
     public async Task update_server_token_url_from_server()
     {
         // create Access Manager and token
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         var token = TestHelper.CreateAccessToken(accessManager);
 
         // Update ServerTokenUrl after token creation
@@ -216,7 +216,7 @@ public class ClientAppTest : TestAppBase
 
         // wait for connect
         await app.Connect(vpnProfile1.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         Assert.AreEqual(accessManager.ServerConfig.ServerTokenUrls.First(),
             app.VpnProfileService.GetToken(token.TokenId).ServerToken.Urls?.First());
@@ -232,7 +232,7 @@ public class ClientAppTest : TestAppBase
     public async Task update_token_from_server()
     {
         // create Access Manager and token
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         var token = TestHelper.CreateAccessToken(accessManager, expirationTime: DateTime.UtcNow.AddDays(-1));
         var orgTokenName = token.Name;
 
@@ -265,7 +265,7 @@ public class ClientAppTest : TestAppBase
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions1.TcpEndPoints = [tcpEndPoint];
         fileAccessManagerOptions1.ServerTokenUrls = [$"http://{endPoint1}/accesskey", $"http://{endPoint2}/accesskey"];
-        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1);
+        using var accessManager1 = await TestHelper.CreateAccessManager(fileAccessManagerOptions1);
         await using var server1 = await TestHelper.CreateServer(accessManager1);
         var token1 = TestHelper.CreateAccessToken(server1);
         // ReSharper disable once DisposeOnUsingVariable
@@ -274,7 +274,7 @@ public class ClientAppTest : TestAppBase
         // create server 2
         await Task.Delay(1100, TestContext.CancellationToken); // wait for new CreatedTime
         fileAccessManagerOptions1.TcpEndPoints = [TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback)];
-        var accessManager2 = await TestHelper.CreateAccessManager(TestCt, storagePath: accessManager1.StoragePath,
+        var accessManager2 = await TestHelper.CreateAccessManager(storagePath: accessManager1.StoragePath,
             options: fileAccessManagerOptions1);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
         var token2 = TestHelper.CreateAccessToken(server2);
@@ -335,7 +335,7 @@ public class ClientAppTest : TestAppBase
 
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.ServerTokenUrls = [$"http://{endPoint}/accesskey"];
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(fileAccessManagerOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -371,10 +371,10 @@ public class ClientAppTest : TestAppBase
         var vpnProfile2 = app.VpnProfileService.ImportAccessKey(token2.ToAccessKey());
 
         await app.Connect(vpnProfile1.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         await app.Connect(vpnProfile2.VpnProfileId, cancellationToken: TestContext.CancellationToken);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
             "Could not connect to new server!");
@@ -400,7 +400,7 @@ public class ClientAppTest : TestAppBase
     public async Task ServerLocation_must_reset_to_default_for_no_server_error()
     {
         // Create Server 1
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt, serverLocation: "US/california");
+        using var accessManager = await TestHelper.CreateAccessManager(serverLocation: "US/california");
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create Client
@@ -435,7 +435,7 @@ public class ClientAppTest : TestAppBase
         var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         accessManagerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         accessManagerOptions.SessionOptions.SyncCacheSize = 50;
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt, accessManagerOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(accessManagerOptions);
 
         // create server
         await using var server = await TestHelper.CreateServer(accessManager);

@@ -27,7 +27,7 @@ public class Http3TunnelLifetimeTest : TestBase
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         deadline.CancelAfter(TimeSpan.FromSeconds(15));
         var cancellationToken = deadline.Token;
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         var quicServer = new MsQuicServer();
         await using var listener = await quicServer.ListenAsync(new QuicListenerOptions {
             ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0),
@@ -92,7 +92,7 @@ public class Http3TunnelLifetimeTest : TestBase
         var accessOptions = TestHelper.CreateFileAccessManagerOptions();
         accessOptions.SessionOptions.ChannelIdleTimeout = TimeSpan.FromMinutes(5);
         accessOptions.SessionOptions.MinClientProtocolVersion = 15;
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt, accessOptions);
+        using var accessManager = await TestHelper.CreateAccessManager(accessOptions);
         await using var server = await TestHelper.CreateServer(accessManager,
             socketFactory: TestHelper.CreateTestSocketFactory(adapter));
 

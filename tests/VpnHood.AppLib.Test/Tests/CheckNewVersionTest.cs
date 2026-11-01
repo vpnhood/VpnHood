@@ -115,7 +115,7 @@ public class CheckNewVersionTest : TestAppBase
             DateTime.UtcNow, TimeSpan.Zero);
 
         await Task.Delay(100); // wait for CheckInterval
-        await app.Connect(vpnProfile.VpnProfileId);
+        await app.Connect(vpnProfile.VpnProfileId, TestCt);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.UpdaterStatus?.VersionStatus);
     }
 
@@ -177,8 +177,8 @@ public class CheckNewVersionTest : TestAppBase
         // set new version
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
             DateTime.UtcNow, TimeSpan.Zero);
-        await app.Connect(vpnProfile.VpnProfileId);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.Connect(vpnProfile.VpnProfileId, TestCt);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.UpdaterStatus?.VersionStatus);
     }
 

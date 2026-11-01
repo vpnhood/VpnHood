@@ -21,18 +21,18 @@ public static class TestHelperTransferExtensions
             ipAddress ??= testHelper.WebServer.MockEps.PingV4Address1;
             timeout ??= TestConstants.DefaultHttpTimeout;
             ping ??= pingTmp;
-            var pingReply = await ping.SendPingAsync(ipAddress, timeout.Value, new byte[1024]);
+            var pingReply = await ping.SendPingAsync(ipAddress, timeout.Value, new byte[1024],
+                cancellationToken: testHelper.TestCt);
             if (pingReply.Status != IPStatus.Success)
                 throw new PingException($"Ping failed. Status: {pingReply.Status}, Address: {ipAddress}, Timeout: {timeout}");
         }
 
-        public async Task Test_Dns(IPEndPoint? nsEndPoint = null, TimeSpan? timeout = null,
-            CancellationToken cancellationToken = default)
+        public async Task Test_Dns(IPEndPoint? nsEndPoint = null, TimeSpan? timeout = null)
         {
             timeout ??= TimeSpan.FromSeconds(3);
             var hostEntry = await DnsUtils.GetHostEntry("www.google.com",
                 nsEndPoint ?? testHelper.WebServer.MockEps.UdpV4EndPoint1,
-                timeout.Value, cancellationToken);
+                timeout.Value, testHelper.TestCt);
             Assert.IsNotNull(hostEntry);
             Assert.IsNotEmpty(hostEntry.AddressList);
         }
@@ -56,18 +56,20 @@ public static class TestHelperTransferExtensions
             udpEndPoint ??= testHelper.WebServer.MockEps.UdpV4EndPoint1;
             var buffer = new byte[1024];
             new Random().NextBytes(buffer);
-            var sentBytes = await udpClient.SendAsync(buffer, udpEndPoint, new CancellationTokenSource(timeout.Value).Token);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(testHelper.TestCt);
+            cts.CancelAfter(timeout.Value);
+            var sentBytes = await udpClient.SendAsync(buffer, udpEndPoint, cts.Token);
             Assert.AreEqual(buffer.Length, sentBytes);
-            using var cts = new CancellationTokenSource(timeout.Value);
+            cts.CancelAfter(timeout.Value);
             var res = await udpClient.ReceiveAsync(cts.Token);
             CollectionAssert.AreEquivalent(buffer, res.Buffer);
         }
 
-        public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null,
-            CancellationToken cancellationToken = default)
+        public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null)
         {
             timeout ??= TestConstants.DefaultUdpTimeout;
-            var result = await DnsUtils.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, cancellationToken);
+            var result = await DnsUtils.GetHostEntry("www.google.com", udpEndPoint, timeout.Value,
+                testHelper.TestCt);
             Assert.IsNotEmpty(result.AddressList);
         }
 
@@ -92,7 +94,8 @@ public static class TestHelperTransferExtensions
             data.CopyTo(datagram, 4);
 
             using var udpClient = new UdpClient(udpEndPoint.AddressFamily);
-            using var cts = new CancellationTokenSource(timeout.Value);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(testHelper.TestCt);
+            cts.CancelAfter(timeout.Value);
             await udpClient.SendAsync(datagram, udpEndPoint, cts.Token);
 
             var result = await udpClient.ReceiveAsync(cts.Token);
@@ -113,7 +116,8 @@ public static class TestHelperTransferExtensions
             };
 
             using var udpClient = new UdpClient(udpEndPoint.AddressFamily);
-            using var cts = new CancellationTokenSource(timeout.Value);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(testHelper.TestCt);
+            cts.CancelAfter(timeout.Value);
             await udpClient.SendAsync(request, udpEndPoint, cts.Token);
 
             var result = await udpClient.ReceiveAsync(cts.Token);
@@ -155,7 +159,7 @@ public static class TestHelperTransferExtensions
             var data = new byte[1024 * 1024 * 10];
             Random.Shared.NextBytes(data);
             try {
-                var response = await quicTesterClient.SendAndReceive(data, CancellationToken.None);
+                var response = await quicTesterClient.SendAndReceive(data, testHelper.TestCt);
                 if (!throwError)
                     return data.SequenceEqual(response);
                 CollectionAssert.AreEquivalent(data, response);
@@ -167,7 +171,7 @@ public static class TestHelperTransferExtensions
         }
 
         public async Task Test_QuicUpload(int byteCount = 50_000, IPEndPoint? quicEndPoint = null,
-            TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+            TimeSpan? timeout = null)
         {
             quicEndPoint ??= testHelper.WebServer.MockEps.QuicUploadEndPoint1;
             timeout ??= TestConstants.DefaultQuicTimeout;
@@ -179,7 +183,7 @@ public static class TestHelperTransferExtensions
                 expectedChecksum += b;
 
             using var cts = new CancellationTokenSource(timeout.Value);
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, testHelper.TestCt);
 
             var options = new System.Net.Quic.QuicClientConnectionOptions {
                 RemoteEndPoint = quicEndPoint,
@@ -213,13 +217,13 @@ public static class TestHelperTransferExtensions
         }
 
         public async Task Test_QuicDownload(int byteCount = 50_000, IPEndPoint? quicEndPoint = null,
-            TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+            TimeSpan? timeout = null)
         {
             quicEndPoint ??= testHelper.WebServer.MockEps.QuicDownloadEndPoint1;
             timeout ??= TestConstants.DefaultQuicTimeout;
 
             using var cts = new CancellationTokenSource(timeout.Value);
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, testHelper.TestCt);
 
             var options = new System.Net.Quic.QuicClientConnectionOptions {
                 RemoteEndPoint = quicEndPoint,
@@ -268,7 +272,7 @@ public static class TestHelperTransferExtensions
                 ipAddress = testHelper.TestIps.MapToRemote(IPAddress.Parse(testHelper.WebServer.LocalEps.HttpsUrl2.Host));
             try {
                 VhLogger.Instance.LogInformation(GeneralEventId.Test, "Fetching a test uri. Url: {uri}", uri);
-                Assert.IsTrue(await SendHttpGet(testHelper, uri, ipAddress, timeout),
+                Assert.IsTrue(await SendHttpGet(testHelper, uri, ipAddress, timeout, testHelper.TestCt),
                     $"Could not fetch the test uri: {uri}");
                 return true;
             }
@@ -278,8 +282,7 @@ public static class TestHelperTransferExtensions
         }
 
         public async Task Test_TcpUpload(int byteCount = 50_000,
-            IPEndPoint? tcpEndPoint = null, TimeSpan? timeout = null,
-            CancellationToken cancellationToken = default)
+            IPEndPoint? tcpEndPoint = null, TimeSpan? timeout = null)
         {
             tcpEndPoint ??= testHelper.WebServer.MockEps.TcpUploadEndPoint1;
             timeout ??= TestConstants.DefaultHttpTimeout;
@@ -292,7 +295,7 @@ public static class TestHelperTransferExtensions
                 expectedChecksum += b;
 
             using var cts = new CancellationTokenSource(timeout.Value);
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, testHelper.TestCt);
 
             using var tcpClient = new TcpClient();
             await tcpClient.ConnectAsync(tcpEndPoint, linkedCts.Token);
@@ -313,14 +316,13 @@ public static class TestHelperTransferExtensions
         }
 
         public async Task Test_TcpDownload(int byteCount = 50_000,
-            IPEndPoint? tcpEndPoint = null, TimeSpan? timeout = null,
-            CancellationToken cancellationToken = default)
+            IPEndPoint? tcpEndPoint = null, TimeSpan? timeout = null)
         {
             tcpEndPoint ??= testHelper.WebServer.MockEps.TcpDownloadEndPoint1;
             timeout ??= TestConstants.DefaultHttpTimeout;
 
             using var cts = new CancellationTokenSource(timeout.Value);
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, testHelper.TestCt);
             using var tcpClient = new TcpClient();
             await tcpClient.ConnectAsync(tcpEndPoint, linkedCts.Token);
             var stream = tcpClient.GetStream();
@@ -347,7 +349,7 @@ public static class TestHelperTransferExtensions
     }
 
     private static async Task<bool> SendHttpGet(TestHelper testHelper, Uri uri, IPAddress? ipAddress,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout, CancellationToken cancellationToken)
     {
         using var handler = new SocketsHttpHandler();
         handler.SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
@@ -371,7 +373,8 @@ public static class TestHelperTransferExtensions
         // ReSharper disable once ShortLivedHttpClient
         using var httpClient = new HttpClient(handler);
         timeout ??= TestConstants.DefaultHttpTimeout;
-        using var cts = new CancellationTokenSource(timeout.Value);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(timeout.Value);
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
         if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint) &&
             testHelper.ClientNetFilter.IpMapper?.ToHost(IpProtocol.Tcp, ipEndPoint.ToValue(), out var newEndPoint) == true)

@@ -52,7 +52,7 @@ public class UserAgentTest : TestAppBase
     [TestMethod]
     public async Task The_trackers_name_the_model_and_the_server_does_not()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -64,7 +64,7 @@ public class UserAgentTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions, device);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // the app's tracker, and the VPN service's, made at the connect from the saved options
         var made = RecordingTrackerFactory.Made.ToArray();

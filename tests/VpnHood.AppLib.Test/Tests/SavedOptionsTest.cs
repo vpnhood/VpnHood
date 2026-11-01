@@ -105,9 +105,9 @@ public class SavedOptionsTest : TestAppBase
             var vpnProfile = app.VpnProfileService.ImportAccessKey(
                 accessKey ?? TestHelper.CreateAccessToken(server).ToAccessKey());
             await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-            await app.WaitForState(AppConnectionState.Connected);
+            await app.WaitForState(AppConnectionState.Connected, TestCt);
             await app.Disconnect();
-            await app.WaitForState(AppConnectionState.None);
+            await app.WaitForState(AppConnectionState.None, TestCt);
             return app;
         }
         catch {

@@ -38,7 +38,7 @@ public class ClientServerTest : TestBase
     {
         // Create Server 1
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1);
+        using var accessManager1 = await TestHelper.CreateAccessManager(fileAccessManagerOptions1);
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // Create Server 2
@@ -46,7 +46,7 @@ public class ClientServerTest : TestBase
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions2.TcpEndPoints = [serverEndPoint2];
         using var accessManager2 =
-            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions2, accessManager1.StoragePath);
+            await TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
 
         // redirect server1 to server2
@@ -65,7 +65,7 @@ public class ClientServerTest : TestBase
     {
         // Create Server 1
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager1 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1);
+        using var accessManager1 = await TestHelper.CreateAccessManager(fileAccessManagerOptions1);
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // Create Server 2
@@ -73,7 +73,7 @@ public class ClientServerTest : TestBase
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions2.TcpEndPoints = [serverEndPoint2];
         using var accessManager2 =
-            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions2, accessManager1.StoragePath);
+            await TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
         var token = accessManager2.CreateToken();
 
@@ -95,13 +95,13 @@ public class ClientServerTest : TestBase
         // Create Server 1
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         using var accessManager1 =
-            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1, serverLocation: "US/california");
+            await TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "US/california");
         await using var server1 = await TestHelper.CreateServer(accessManager1);
         var token1 = accessManager1.CreateToken();
 
         // Create Server 2
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager2 = await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions2,
+        using var accessManager2 = await TestHelper.CreateAccessManager(fileAccessManagerOptions2,
             accessManager1.StoragePath, serverLocation: "UK/london");
         await using var server2 = await TestHelper.CreateServer(accessManager2);
         var token2 = accessManager2.CreateToken();
@@ -127,7 +127,7 @@ public class ClientServerTest : TestBase
         // Create Server
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         using var accessManager1 =
-            await TestHelper.CreateAccessManager(TestCt, fileAccessManagerOptions1, serverLocation: "US/california");
+            await TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "US/california");
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // create client
@@ -331,7 +331,7 @@ public class ClientServerTest : TestBase
         vpnAdapter.Dispose();
 
         Log("Waiting for Disposed state...");
-        await client.WaitForState(ClientState.Disposed);
+        await client.WaitForState(ClientState.Disposed, TestCt);
     }
 
     [TestMethod]
@@ -460,7 +460,7 @@ public class ClientServerTest : TestBase
         await Task.Delay(1000); // wait to finish session time after first error
         await Assert.ThrowsAsync<Exception>(() => TestHelper.Test_Https());
 
-        await client.WaitForState(ClientState.Disposed);
+        await client.WaitForState(ClientState.Disposed, TestCt);
     }
 
     [TestMethod]
@@ -510,7 +510,7 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Client_disposed_while_waiting_for_ad_does_not_start_its_adapter()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
@@ -521,7 +521,7 @@ public class ClientServerTest : TestBase
         vpnAdapter.Starting += (_, _) => isAdapterStarted = true;
         await using var client = await TestHelper.CreateClient(token, vpnAdapter, autoConnect: false);
         var connectTask = client.Connect(TestCt);
-        await client.WaitForState(ClientState.WaitingForAd);
+        await client.WaitForState(ClientState.WaitingForAd, TestCt);
 
         // the user disconnects meanwhile: the start ends there, and no error is left to show
         await client.DisposeAsync();
@@ -535,7 +535,7 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Session_closed_by_server_while_waiting_for_ad_fails_the_start_with_its_error()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
@@ -546,7 +546,7 @@ public class ClientServerTest : TestBase
         vpnAdapter.Starting += (_, _) => isAdapterStarted = true;
         await using var client = await TestHelper.CreateClient(token, vpnAdapter, autoConnect: false);
         var connectTask = client.Connect(TestCt);
-        await client.WaitForState(ClientState.WaitingForAd);
+        await client.WaitForState(ClientState.WaitingForAd, TestCt);
 
         // the start's packet channel is in first: its request, still under way, would find out instead
         await VhTestUtil.AssertEqualsWait(1, () => client.RequiredSession.Status.ActivePacketChannelCount);
@@ -571,7 +571,7 @@ public class ClientServerTest : TestBase
         using var udpClient = new UdpClient();
         using var ping = new Ping();
 
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -631,7 +631,7 @@ public class ClientServerTest : TestBase
     public async Task Disconnect_if_session_closed_by_server()
     {
         // create server
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
 
@@ -656,7 +656,7 @@ public class ClientServerTest : TestBase
             // ignored
         }
 
-        await client.WaitForState(ClientState.Disposed);
+        await client.WaitForState(ClientState.Disposed, TestCt);
     }
 
     [TestMethod]
@@ -665,7 +665,7 @@ public class ClientServerTest : TestBase
         // --------
         // Check: AccessManager is on at start
         // --------
-        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
 
         await server.DisposeAsync();
@@ -702,7 +702,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.HttpAccessManagerServer.Start();
         await using var client2 = await CreateClientAsync(autoConnect: true);
-        await client2.WaitForState(ClientState.Connected);
+        await client2.WaitForState(ClientState.Connected, TestCt);
 
         // ----------
         // Check: Go Maintenance mode after server started by replying 503 from access-server
@@ -717,7 +717,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = null;
         await using var client4 = await CreateClientAsync(autoConnect: true);
-        await client4.WaitForState(ClientState.Connected);
+        await client4.WaitForState(ClientState.Connected, TestCt);
     }
 
     [TestMethod]
@@ -1048,7 +1048,7 @@ public class ClientServerTest : TestBase
 
         // create app
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
-        await client.WaitForState(ClientState.Connected);
+        await client.WaitForState(ClientState.Connected, TestCt);
 
         Assert.IsNotEmpty(client.RequiredSession.Info.DnsConfig.DnsServers);
     }
@@ -1071,7 +1071,7 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(
             TestHelper.CreateClientOptions(TestHelper.CreateAccessToken(server), useTcpProxy: false),
             netFilter: netFilter);
-        await client.WaitForState(ClientState.Connected);
+        await client.WaitForState(ClientState.Connected, TestCt);
         Assert.IsFalse(client.RequiredSession.Status.IsTcpProxy);
 
         // a rule while connected: the next TCP connections go by the proxy, and the blocked name's is dropped

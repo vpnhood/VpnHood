@@ -15,7 +15,7 @@ public class AppCloseTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // the second close comes while the first disconnects
         var firstClose = app.DisposeAsync().AsTask();
@@ -33,7 +33,7 @@ public class AppCloseTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // the graceful close waits for the VPN service to stop when the quick one comes
         var gracefulClose = app.DisposeAsync().AsTask();

@@ -374,12 +374,12 @@ public class VpnAdapterRecoveryTest : TestBase
 
         var adapter = new TestFaultyVpnAdapter(autoRestart: false);
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: adapter);
-        await client.WaitForState(ClientState.Connected);
+        await client.WaitForState(ClientState.Connected, TestCt);
 
         // the adapter's restart fails, and the session ends with the error instead of staying connected
         adapter.FailStart = true;
         await Assert.ThrowsExactlyAsync<IOException>(() => adapter.Restart(TestCt));
-        await client.WaitForState(ClientState.Disposed);
+        await client.WaitForState(ClientState.Disposed, TestCt);
         var ex = client.LastException;
         Assert.IsInstanceOfType<VpnAdapterFailedException>(ex);
         Assert.IsInstanceOfType<IOException>(ex.InnerException);

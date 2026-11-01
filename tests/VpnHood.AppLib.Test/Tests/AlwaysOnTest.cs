@@ -50,14 +50,14 @@ public class AlwaysOnTest : TestAppBase
 
         // on: the next start connects
         await using var app2 = CreateApp(storagePath);
-        await app2.WaitForState(AppConnectionState.Connected);
+        await app2.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.AreEqual(AlwaysOnStatus.On, app2.State.AlwaysOnState?.Status);
     }
 
     [TestMethod]
     public async Task Maintenance_is_tried_again_after_a_pause_that_grows()
     {
-        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
@@ -73,7 +73,7 @@ public class AlwaysOnTest : TestAppBase
 
         // back: the next try connects
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = null;
-        await app.WaitForState(AppConnectionState.Connected, timeout: 15000);
+        await app.WaitForState(AppConnectionState.Connected, TestCt, timeout: 15000);
         Assert.AreEqual(AlwaysOnStatus.On, app.State.AlwaysOnState?.Status);
     }
 
@@ -82,7 +82,7 @@ public class AlwaysOnTest : TestAppBase
     [TestMethod]
     public async Task A_server_out_of_reach_is_tried_again_and_a_session_that_held_starts_the_pauses_over()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         var token = TestHelper.CreateAccessToken(accessManager);
         var (storagePath, _) = await SaveSettings(token, alwaysOn: true);
 
@@ -93,7 +93,7 @@ public class AlwaysOnTest : TestAppBase
         var first = await WaitForRetry(app, previousRetryTime: null);
         Assert.AreEqual(nameof(UnreachableServerException), first.Error?.TypeName);
         await using var server = await TestHelper.CreateServer(accessManager);
-        await app.WaitForState(AppConnectionState.Connected, timeout: 10000);
+        await app.WaitForState(AppConnectionState.Connected, TestCt, timeout: 10000);
 
         // the session holds past the reset time, then the server goes and the network ends the session (the
         // transport's SessionTimeout): tried again, after the short pause
@@ -131,7 +131,7 @@ public class AlwaysOnTest : TestAppBase
     [TestMethod]
     public async Task A_persons_disconnect_stops_it_until_a_persons_connect()
     {
-        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager(TestCt));
+        var accessManager = TestHttpAccessManager.Create(await TestHelper.CreateAccessManager());
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         var (storagePath, vpnProfileId) = await SaveSettings(token, alwaysOn: true);
@@ -151,10 +151,10 @@ public class AlwaysOnTest : TestAppBase
 
         // a person's connect starts it again, and a disconnect of a session stops it again
         await app.Connect(vpnProfileId, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.AreEqual(AlwaysOnStatus.On, app.State.AlwaysOnState?.Status);
         await app.Disconnect();
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         await Task.Delay(Pause * 3, TestCt);
         Assert.AreEqual(AppConnectionState.None, app.State.ConnectionState);
         Assert.AreEqual(AlwaysOnStatus.Stopped, app.State.AlwaysOnState?.Status);
@@ -170,9 +170,9 @@ public class AlwaysOnTest : TestAppBase
 
         // another app takes the tunnel: always on stops
         await using var app = CreateApp(storagePath, tunnelLock);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
-        await app.WaitForState(AppConnectionState.None);
+        await app.WaitForState(AppConnectionState.None, TestCt);
         await AssertEqualsWait(AlwaysOnStatus.Stopped, () => app.State.AlwaysOnState?.Status);
         Assert.AreEqual(nameof(VpnServiceRevokedException), app.State.AlwaysOnState?.Error?.TypeName);
         // ReSharper disable once DisposeOnUsingVariable
@@ -186,7 +186,7 @@ public class AlwaysOnTest : TestAppBase
 
         // a person's connect takes it back, and ends the revoke
         await app2.Connect(vpnProfileId, cancellationToken: TestCt);
-        await app2.WaitForState(AppConnectionState.Connected);
+        await app2.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.AreEqual(AlwaysOnStatus.On, app2.State.AlwaysOnState?.Status);
     }
 
@@ -201,7 +201,7 @@ public class AlwaysOnTest : TestAppBase
         var otherHolder = new RecordingVpnTunnelHolder();
 
         await using var app = CreateApp(storagePath, tunnelLock);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         using var otherHold = await tunnelLock.Take(otherHolder, TestCt);
         // ReSharper disable once DisposeOnUsingVariable
         await app.DisposeAsync();
@@ -227,7 +227,7 @@ public class AlwaysOnTest : TestAppBase
 
         // another app takes the tunnel: always on stops for the revoke
         await using var app = CreateApp(storagePath, tunnelLock);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
         await AssertEqualsWait(AlwaysOnStatus.Stopped, () => app.State.AlwaysOnState?.Status);
         Assert.AreEqual(nameof(VpnServiceRevokedException), app.State.AlwaysOnState?.Error?.TypeName);
@@ -240,7 +240,7 @@ public class AlwaysOnTest : TestAppBase
 
         // the restart connects
         await using var app2 = CreateApp(storagePath, tunnelLock);
-        await app2.WaitForState(AppConnectionState.Connected);
+        await app2.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.AreEqual(AlwaysOnStatus.On, app2.State.AlwaysOnState?.Status);
     }
 
@@ -255,7 +255,7 @@ public class AlwaysOnTest : TestAppBase
         // a person's disconnect: it stays disconnected
         var device = CreateDevice();
         await using var app = CreateApp(storagePath, device: device);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await app.Disconnect();
         await app.Connect(uiContext: null, new ConnectOptions { IsAlwaysOn = true }, TestCt);
         Assert.AreEqual(AppConnectionState.None, app.State.ConnectionState);
@@ -273,7 +273,7 @@ public class AlwaysOnTest : TestAppBase
     [TestMethod]
     public async Task A_plan_change_during_a_try_that_stops_makes_it_try_once_more()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         token.IsPublic = true; // a CONNECT-style profile: premium comes from a code alone
@@ -292,14 +292,14 @@ public class AlwaysOnTest : TestAppBase
         device.StartServiceDelay = TimeSpan.Zero;
 
         // the free try is refused, and always on tries once more under the code, and connects
-        await app.WaitForState(AppConnectionState.Connected, timeout: 15000);
+        await app.WaitForState(AppConnectionState.Connected, TestCt, timeout: 15000);
         Assert.AreEqual(AlwaysOnStatus.On, app.State.AlwaysOnState?.Status);
     }
 
     [TestMethod]
     public async Task Without_its_plan_it_is_refused_and_a_plan_change_tries_once_more()
     {
-        using var accessManager = await TestHelper.CreateAccessManager(TestCt);
+        using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var token = TestHelper.CreateAccessToken(server);
         token.IsPublic = true; // a CONNECT-style profile: premium comes from a code alone
@@ -315,7 +315,7 @@ public class AlwaysOnTest : TestAppBase
         var accessCode = TestAppHelper.BuildAccessCode();
         accessManager.AccessCodes.Add(accessCode, TestHelper.CreateAccessToken(server).TokenId);
         app.VpnProfileService.Update(vpnProfileId, new VpnProfileUpdateParams { AccessCode = accessCode });
-        await app.WaitForState(AppConnectionState.Connected, timeout: 10000);
+        await app.WaitForState(AppConnectionState.Connected, TestCt, timeout: 10000);
         Assert.AreEqual(AlwaysOnStatus.On, app.State.AlwaysOnState?.Status);
     }
 
@@ -351,9 +351,9 @@ public class AlwaysOnTest : TestAppBase
 
         // a person's diagnose connect after the start's
         await using var app = CreateApp(storagePath, tunnelLock);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         await app.Connect(vpnProfileId, diagnose: true, cancellationToken: TestCt);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
 
         // another app takes the tunnel: always on stops for the revoke, not for the diagnose's "no error found"
         using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
@@ -372,7 +372,7 @@ public class AlwaysOnTest : TestAppBase
         // timed-out request does
         var device = CreateDevice();
         await using var app = CreateApp(storagePath, device: device, retryPauses: [TimeSpan.FromSeconds(1)]);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         device.StartServiceDelay = TimeSpan.FromSeconds(3);
         using var callerCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         callerCts.CancelAfter(TimeSpan.FromMilliseconds(500));
@@ -384,7 +384,7 @@ public class AlwaysOnTest : TestAppBase
         var retry = await WaitForRetry(app, previousRetryTime: null);
         Assert.IsTrue(retry.Error?.TypeName is nameof(OperationCanceledException) or nameof(TaskCanceledException),
             $"Error: {retry.Error?.TypeName}");
-        await app.WaitForState(AppConnectionState.Connected, timeout: 10000);
+        await app.WaitForState(AppConnectionState.Connected, TestCt, timeout: 10000);
     }
 
     [TestMethod]
@@ -397,7 +397,7 @@ public class AlwaysOnTest : TestAppBase
         // the VPN service ends the session by itself, giving no reason
         var device = CreateDevice();
         await using var app = CreateApp(storagePath, device: device);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         var vpnService = device.VpnService ?? throw new InvalidOperationException("The VPN service is not running.");
         vpnService.OnStop();
 
@@ -421,13 +421,13 @@ public class AlwaysOnTest : TestAppBase
 
         // the session's adapter breaks, as one whose interface is disabled or gone, and stops itself
         await using var app = CreateApp(storagePath, device: device, retryPauses: [TimeSpan.FromSeconds(1)]);
-        await app.WaitForState(AppConnectionState.Connected);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
         adapters.Single().Break();
 
         // tried again, and the next connect's new adapter connects
         var retry = await WaitForRetry(app, previousRetryTime: null);
         Assert.AreEqual(nameof(VpnAdapterFailedException), retry.Error?.TypeName);
-        await app.WaitForState(AppConnectionState.Connected, timeout: 10000);
+        await app.WaitForState(AppConnectionState.Connected, TestCt, timeout: 10000);
         Assert.HasCount(2, adapters);
     }
 

@@ -20,6 +20,9 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class PortalTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     private class TestUiContext : IUiContext
     {
         public Task<bool> IsDestroyed() => Task.FromResult(false);
@@ -92,7 +95,7 @@ public class PortalTest
 
         Assert.IsNull(authenticationProvider.UserId, "no session before sign-in");
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
 
         Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId);
         var request = _portal.Requests.Single(x => x.Route == SignInRoute);
@@ -113,7 +116,7 @@ public class PortalTest
         _portal.Enqueue("GET /auth/password-reset", new { url = pageUrl });
         using var authenticationProvider = CreateAuthenticationProvider();
 
-        var url = await authenticationProvider.GetPasswordResetUrl(CancellationToken.None);
+        var url = await authenticationProvider.GetPasswordResetUrl(TestCt);
 
         Assert.AreEqual(pageUrl, url?.AbsoluteUri);
         var request = _portal.Requests.Single(x => x.Route == "GET /auth/password-reset");
@@ -129,7 +132,7 @@ public class PortalTest
         var uiCulture = CultureInfo.CurrentUICulture;
         CultureInfo.CurrentUICulture = new CultureInfo("fa");
         try {
-            await authenticationProvider.GetPasswordResetUrl(CancellationToken.None);
+            await authenticationProvider.GetPasswordResetUrl(TestCt);
         }
         finally {
             CultureInfo.CurrentUICulture = uiCulture;
@@ -147,11 +150,11 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
 
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
             _portal.BaseUrl, PackageName);
-        var account = await accountProvider.GetAccount(CancellationToken.None);
+        var account = await accountProvider.GetAccount(TestCt);
 
         Assert.IsNotNull(account);
         Assert.AreEqual("buyer@example.com", account.Email);
@@ -182,12 +185,12 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
             _portal.BaseUrl, PackageName);
 
         // one wire read IS the app model — nothing is re-ranked or re-assembled on this side
-        var account = await accountProvider.GetAccount(CancellationToken.None);
+        var account = await accountProvider.GetAccount(TestCt);
         Assert.IsNotNull(account);
         Assert.AreEqual(ExternalUid.ToString(), account.UserId);
         Assert.AreEqual("Alex Smith", account.Name);
@@ -221,19 +224,19 @@ public class PortalTest
 
         // not signed in → PreparePurchase refuses
         await Assert.ThrowsExactlyAsync<AuthenticationException>(() =>
-            orderProcessor.PreparePurchase(CancellationToken.None));
+            orderProcessor.PreparePurchase(TestCt));
 
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
 
-        var attribution = await orderProcessor.PreparePurchase(CancellationToken.None);
+        var attribution = await orderProcessor.PreparePurchase(TestCt);
         // one value for every store: the portal's uid, a UUID so Apple can take it as its
         // appAccountToken without the abstraction carrying a field per store
         Assert.AreEqual(ExternalUid.ToString(), attribution.UserId);
         Assert.IsTrue(Guid.TryParse(attribution.UserId, out _), "every store needs it parseable as a UUID");
 
         await orderProcessor.CompleteOrder(new PurchaseProof { Value = "purchase-token-xyz" },
-            CancellationToken.None);
+            TestCt);
 
         var request = _portal.Requests.Single(x => x.Route == "POST /billing/purchases");
         Assert.AreEqual(StoreIds.GooglePlay, request.Body.GetProperty("storeId").GetString());
@@ -254,7 +257,7 @@ public class PortalTest
 
         var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
             authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-                CancellationToken.None));
+                TestCt));
         Assert.AreEqual(401, exception.StatusCode, "the real HTTP status, not ApiError's 400 default");
         Assert.AreEqual("invalid_id_token", exception.Data["Code"], "clients branch on the machine code");
         Assert.AreEqual("Invalid sign-in token.", exception.Message, "the problem detail, no raw response appended");
@@ -269,10 +272,10 @@ public class PortalTest
         var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
         using var authenticationProvider = CreateAuthenticationProvider(externalProvider);
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
         Assert.IsNotNull(authenticationProvider.UserId);
 
-        await authenticationProvider.SignOut(new TestUiContext(), CancellationToken.None);
+        await authenticationProvider.SignOut(new TestUiContext(), TestCt);
 
         Assert.IsNull(authenticationProvider.UserId);
         Assert.AreEqual(1, externalProvider.SignOutCalls);
@@ -298,12 +301,12 @@ public class PortalTest
                 ProviderId = AuthProviders.Password,
                 UserName = "buyer@example.com",
                 Password = "the-password"
-            }, CancellationToken.None);
+            }, TestCt);
 
         Assert.AreEqual(SignInState.SignedIn, result.State);
         Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId);
 
-        await authenticationProvider.SignOut(null, CancellationToken.None);
+        await authenticationProvider.SignOut(null, TestCt);
         Assert.IsNull(authenticationProvider.UserId);
         Assert.ContainsSingle(_portal.Requests.Where(x => x.Route == SignOutRoute));
     }
@@ -320,9 +323,9 @@ public class PortalTest
         };
         using var authenticationProvider = CreateAuthenticationProvider(externalProvider);
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
 
-        await authenticationProvider.SignOut(null, CancellationToken.None);
+        await authenticationProvider.SignOut(null, TestCt);
 
         Assert.IsNull(authenticationProvider.UserId);
         Assert.AreEqual(1, externalProvider.SignOutCalls);
@@ -337,11 +340,11 @@ public class PortalTest
         var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
         var authenticationProvider = CreateAuthenticationProvider(externalProvider);
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
 
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
             _portal.BaseUrl, PackageName);
-        await accountProvider.DeleteAccount(CancellationToken.None);
+        await accountProvider.DeleteAccount(TestCt);
 
         Assert.IsNotNull(_portal.Requests.SingleOrDefault(x => x.Route == "DELETE /account"));
         // signing this device out is AccountService's half of the act — see
@@ -368,7 +371,7 @@ public class PortalTest
         var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
         using var authenticationProvider = CreateAuthenticationProvider(externalProvider);
 
-        var accessToken = await authenticationProvider.GetAccessToken(CancellationToken.None);
+        var accessToken = await authenticationProvider.GetAccessToken(TestCt);
 
         Assert.AreEqual("old-session-token", accessToken);
         Assert.AreEqual(0, externalProvider.SignInCalls);
@@ -385,12 +388,12 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(),
-            new SignInOptions { ProviderId = AuthProviders.Google }, CancellationToken.None);
+            new SignInOptions { ProviderId = AuthProviders.Google }, TestCt);
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
             _portal.BaseUrl, PackageName);
 
-        await accountProvider.SetAccessCode("TEST-CODE", CancellationToken.None);
-        await accountProvider.SetAccessCode(null, CancellationToken.None);
+        await accountProvider.SetAccessCode("TEST-CODE", TestCt);
+        await accountProvider.SetAccessCode(null, TestCt);
 
         var requests = _portal.Requests.Where(x => x.Route == "PUT /account/access-code").ToArray();
         Assert.AreEqual("TEST-CODE", requests[0].Body.GetProperty("accessCode").GetString());
@@ -408,11 +411,11 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(),
-            new SignInOptions { ProviderId = AuthProviders.Google }, CancellationToken.None);
+            new SignInOptions { ProviderId = AuthProviders.Google }, TestCt);
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
             _portal.BaseUrl, PackageName);
 
-        await accountProvider.ReportAccessCodeRejected("12345678901234567890", CancellationToken.None);
+        await accountProvider.ReportAccessCodeRejected("12345678901234567890", TestCt);
 
         var request = _portal.Requests.Single(x => x.Route == "POST /account/access-code/rejected");
         Assert.AreEqual("12345678901234567890", request.Body.GetProperty("accessCode").GetString());
@@ -435,12 +438,12 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
             _portal.BaseUrl, PackageName);
 
         var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            accountProvider.DeleteAccount(CancellationToken.None));
+            accountProvider.DeleteAccount(TestCt));
 
         Assert.AreEqual(409, exception.StatusCode);
         Assert.AreEqual("deletion_blocked", exception.Data["Code"], "clients branch on the machine code");
@@ -462,12 +465,12 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
             _portal.BaseUrl, PackageName);
 
         var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            accountProvider.GetAccount(CancellationToken.None));
+            accountProvider.GetAccount(TestCt));
 
         Assert.AreEqual(401, exception.StatusCode);
         Assert.IsNull(authenticationProvider.UserId,
@@ -488,11 +491,11 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
             _portal.BaseUrl, PackageName);
 
-        await Assert.ThrowsExactlyAsync<ApiException>(() => accountProvider.GetAccount(CancellationToken.None));
+        await Assert.ThrowsExactlyAsync<ApiException>(() => accountProvider.GetAccount(TestCt));
 
         Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId,
             "only 401 means 'this is not a session'; a broken backend must never sign anyone out");
@@ -519,17 +522,17 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
         var billingProvider = new TestBillingProvider();
         using var accountProvider = new PortalAccountProvider(authenticationProvider, billingProvider,
             _portal.BaseUrl, PackageName);
 
         // this build's store billed the subscription, and it can show the screen → offered
-        var account = await accountProvider.GetAccount(CancellationToken.None);
+        var account = await accountProvider.GetAccount(TestCt);
         Assert.AreEqual(SubscriptionManagement.Available, account?.Subscription?.Management);
 
         // another store billed it → premium still works, but nothing here can manage it
-        account = await accountProvider.GetAccount(CancellationToken.None);
+        account = await accountProvider.GetAccount(TestCt);
         Assert.IsNotNull(account);
         Assert.AreEqual(StoreIds.AppStore, account.Subscription?.StoreId,
             "a cross-store subscription must stay premium, and must name the store that billed it");
@@ -539,7 +542,7 @@ public class PortalTest
         // the right store, on a device that cannot show its screen — a TV. Distinct from the case
         // above: OUR store billed it, so the UI may name it and send the person to another device.
         billingProvider.IsSubscriptionManagementSupported = false;
-        account = await accountProvider.GetAccount(CancellationToken.None);
+        account = await accountProvider.GetAccount(TestCt);
         Assert.AreEqual(StoreIds.GooglePlay, account?.Subscription?.StoreId);
         Assert.AreEqual(SubscriptionManagement.NotOnThisDevice, account?.Subscription?.Management);
     }
@@ -564,11 +567,11 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
         using var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
             _portal.BaseUrl, PackageName);
 
-        var account = await accountProvider.GetAccount(CancellationToken.None);
+        var account = await accountProvider.GetAccount(TestCt);
 
         Assert.IsNotNull(account);
         Assert.AreEqual(StoreIds.GooglePlay, account.Subscription?.StoreId,
@@ -591,11 +594,11 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
-            CancellationToken.None);
+            TestCt);
         using var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
             _portal.BaseUrl, PackageName);
 
-        var account = await accountProvider.GetAccount(CancellationToken.None);
+        var account = await accountProvider.GetAccount(TestCt);
 
         Assert.IsNotNull(account, "the person is still signed in");
         Assert.IsNull(account.Subscription, "the expired subscription must not linger");
@@ -620,10 +623,10 @@ public class PortalTest
         // an id no wired provider declares is refused before any token or portal call
         await Assert.ThrowsExactlyAsync<NotSupportedException>(() =>
             authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = "github" },
-                CancellationToken.None));
+                TestCt));
 
         await authenticationProvider.SignIn(new TestUiContext(),
-            new SignInOptions { ProviderId = AuthProviders.Apple }, CancellationToken.None);
+            new SignInOptions { ProviderId = AuthProviders.Apple }, TestCt);
 
         Assert.AreEqual(0, googleProvider.SignInCalls, "only the selected provider may be asked for a token");
         Assert.AreEqual(1, appleProvider.SignInCalls);
@@ -632,7 +635,7 @@ public class PortalTest
         Assert.AreEqual("apple-id-token", request.Body.GetProperty("idToken").GetString());
 
         // sign-out targets the provider that established the session, not the bystanders
-        await authenticationProvider.SignOut(new TestUiContext(), CancellationToken.None);
+        await authenticationProvider.SignOut(new TestUiContext(), TestCt);
         Assert.AreEqual(0, googleProvider.SignOutCalls);
         Assert.AreEqual(1, appleProvider.SignOutCalls);
     }
@@ -656,7 +659,7 @@ public class PortalTest
                 ProviderId = AuthProviders.Password,
                 UserName = "buyer@example.com",
                 Password = "the-password"
-            }, CancellationToken.None);
+            }, TestCt);
 
         Assert.AreEqual(SignInState.TotpRequired, challenged.State);
         Assert.IsNull(challenged.NewBackupCode, "a challenge carries no backup code");
@@ -665,7 +668,7 @@ public class PortalTest
         // the repeat carries only the code — the provider holds the challenge token
         var completed = await authenticationProvider.SignIn(new TestUiContext(),
             new SignInOptions { ProviderId = AuthProviders.Password, TwoFactorCode = "123456" },
-            CancellationToken.None);
+            TestCt);
 
         Assert.AreEqual(SignInState.SignedIn, completed.State);
         Assert.AreEqual("backup-2", completed.NewBackupCode, "a spent backup code comes back rotated, shown once");
@@ -690,7 +693,7 @@ public class PortalTest
                     ProviderId = AuthProviders.Password,
                     UserName = "buyer@example.com",
                     Password = "the-password"
-                }, CancellationToken.None));
+                }, TestCt));
 
         // the machine code is the UI's contract: without it the dialog can only show raw English
         Assert.AreEqual("unsupported_two_factor", exception.Data["Code"]);
@@ -701,7 +704,7 @@ public class PortalTest
         await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
             authenticationProvider.SignIn(new TestUiContext(),
                 new SignInOptions { ProviderId = AuthProviders.Password, TwoFactorCode = "123456" },
-                CancellationToken.None));
+                TestCt));
     }
 
     [TestMethod]
@@ -715,7 +718,7 @@ public class PortalTest
         using var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
             _portal.BaseUrl, PackageName);
 
-        var productIds = await accountProvider.GetProductIds(CancellationToken.None);
+        var productIds = await accountProvider.GetProductIds(TestCt);
         CollectionAssert.AreEqual(new[] { "premium", "premium_plus" }, productIds.ToArray());
 
         // the catalog is public: it is read without a session, and the app+store select the rows
@@ -738,11 +741,11 @@ public class PortalTest
         // No embedded stand-in: a purchase started against ids the portal cannot confirm would still
         // charge at the store and then have nowhere to be redeemed. The UI turns this into "the store
         // is unavailable, try again", which is the only honest offer while the backend is down.
-        await Assert.ThrowsExactlyAsync<ApiException>(() => accountProvider.GetProductIds(CancellationToken.None));
+        await Assert.ThrowsExactlyAsync<ApiException>(() => accountProvider.GetProductIds(TestCt));
 
         // ...but an answer of "nothing is sellable" is an answer, not a failure
         _portal.Enqueue("GET /billing/products", Array.Empty<string>());
-        Assert.AreEqual(0, (await accountProvider.GetProductIds(CancellationToken.None)).Count);
+        Assert.AreEqual(0, (await accountProvider.GetProductIds(TestCt)).Count);
     }
 
     [TestMethod]

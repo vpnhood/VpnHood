@@ -18,6 +18,9 @@ namespace VpnHood.AppUi.SmokeTest;
 [TestClass]
 public class WindowsDaemonChannelTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     private const string TestAppId = "com.vpnhood.test.channel";
 
     private static readonly DaemonChannelAnswer TestAnswer = new() {
@@ -48,7 +51,7 @@ public class WindowsDaemonChannelTest
                 "a first instance under a served name");
 
             // a client gets through, trusts the owner, and reads the access list it was given
-            await using var stream = await channel.Connect(CancellationToken.None);
+            await using var stream = await channel.Connect(TestCt);
             var pipe = (NamedPipeClientStream)stream;
             var rules = pipe.GetAccessControl().GetAccessRules(true, false, typeof(SecurityIdentifier)).OfType<PipeAccessRule>().ToArray();
             var users = rules.Single(x => ((SecurityIdentifier)x.IdentityReference).IsWellKnown(WellKnownSidType.AuthenticatedUserSid));
@@ -56,7 +59,7 @@ public class WindowsDaemonChannelTest
             Assert.AreEqual(0, (int)(users.PipeAccessRights & PipeAccessRights.CreateNewInstance), "never an instance");
 
             using var reader = new StreamReader(stream, leaveOpen: true);
-            var received = await DaemonChannelClient.Ask(stream, reader, CancellationToken.None);
+            var received = await DaemonChannelClient.Ask(stream, reader, TestCt);
             Assert.IsNotNull(received);
             Assert.IsNull(received.Refusal, "an elevated caller is an administrator");
             Assert.AreEqual(TestAnswer.ApiUrl, received.ApiUrl);
@@ -89,7 +92,7 @@ public class WindowsDaemonChannelTest
                 key.SetValue("DaemonChannel", name);
 
             var error = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
-                new WindowsDaemonChannel(paths).Connect(CancellationToken.None));
+                new WindowsDaemonChannel(paths).Connect(TestCt));
             StringAssert.Contains(error.Message, "not the service's");
         }
         finally {
@@ -115,7 +118,7 @@ public class WindowsDaemonChannelTest
                 pipe.Connect(5000);
             }
 
-            var answer = await DaemonChannelClient.AskOnce(channel, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+            var answer = await DaemonChannelClient.AskOnce(channel, TestCt).WaitAsync(TimeSpan.FromSeconds(10));
             Assert.AreEqual(Environment.ProcessId, answer.ProcessId, "an administrator is still answered");
         }
         finally {
@@ -130,9 +133,9 @@ public class WindowsDaemonChannelTest
             Assert.Inconclusive("Run elevated: the pipe's owner and HKLM need an administrator.");
     }
 
-    private static async Task<DaemonChannelServer> Serve(WindowsDaemonChannel channel)
+    private async Task<DaemonChannelServer> Serve(WindowsDaemonChannel channel)
     {
-        return await DaemonChannelServer.TryStart(channel, TestAnswer, "no", CancellationToken.None)
+        return await DaemonChannelServer.TryStart(channel, TestAnswer, "no", TestCt)
                ?? throw new InvalidOperationException("The channel could not be opened.");
     }
 

@@ -80,10 +80,10 @@ public class BillingServiceTest : TestAppBase
         };
     }
 
-    private static Task SignIn(AccountService accountService)
+    private Task SignIn(AccountService accountService)
     {
         return accountService.AuthenticationService.SignIn(AppUiContext.RequiredContext,
-            new SignInOptions { ProviderId = AuthProviders.Google }, CancellationToken.None);
+            new SignInOptions { ProviderId = AuthProviders.Google }, TestCt);
     }
 
     [TestMethod]
@@ -96,7 +96,7 @@ public class BillingServiceTest : TestAppBase
         var billingService = GetBillingService(app);
 
         // the seam: the account backend answers WHICH products, the store only prices them
-        await billingService.GetSubscriptionPlans(CancellationToken.None);
+        await billingService.GetSubscriptionPlans(TestCt);
 
         CollectionAssert.AreEqual(new[] { "premium_1m", "premium_1y" },
             accountProvider.TestBillingProvider.LastRequestedProductIds?.ToArray());
@@ -111,7 +111,7 @@ public class BillingServiceTest : TestAppBase
 
         var purchaseParams = new PurchaseParams { PlanToken = "test_plan_1m" };
 
-        await billingService.Purchase(AppUiContext.RequiredContext, purchaseParams, CancellationToken.None);
+        await billingService.Purchase(AppUiContext.RequiredContext, purchaseParams, TestCt);
 
         // the store is told whose account pays, and the order processor is the only one who says so
         var lastAttribution = accountProvider.TestBillingProvider.LastAttribution
@@ -137,11 +137,11 @@ public class BillingServiceTest : TestAppBase
         // Whoever is signed in when the store finally answers is not who bought, so the proof must
         // NOT be redeemed here — it stays valid, and Restore presents it again under the right one.
         accountProvider.TestBillingProvider.WhileStoreIsAnswering = () =>
-            accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
+            accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, TestCt);
 
         await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
             billingService.Purchase(AppUiContext.RequiredContext,
-                new PurchaseParams { PlanToken = "test_plan_1m" }, CancellationToken.None));
+                new PurchaseParams { PlanToken = "test_plan_1m" }, TestCt));
 
         Assert.IsEmpty(accountProvider.TestOrderProcessor.CompletedOrders,
             "paid access must never land in a stranger's account");
@@ -161,7 +161,7 @@ public class BillingServiceTest : TestAppBase
         var billingService = GetBillingService(app);
 
         await Assert.ThrowsExactlyAsync<NotSupportedException>(() =>
-            billingService.OpenSubscriptionManagement(AppUiContext.RequiredContext, CancellationToken.None));
+            billingService.OpenSubscriptionManagement(AppUiContext.RequiredContext, TestCt));
 
         Assert.IsFalse(accountProvider.TestBillingProvider.WasSubscriptionManagementOpened,
             "the store must never be asked once the app has said it cannot show it");
@@ -179,13 +179,13 @@ public class BillingServiceTest : TestAppBase
 
         // sign in so the account (with its active subscription) becomes visible
         await accountService.AuthenticationService.SignIn(AppUiContext.RequiredContext,
-            new SignInOptions { ProviderId = AuthProviders.Google }, CancellationToken.None);
+            new SignInOptions { ProviderId = AuthProviders.Google }, TestCt);
 
         var billingService = GetBillingService(app);
         var purchaseParams = new PurchaseParams { PlanToken = "test_plan_1m" };
 
         await Assert.ThrowsExactlyAsync<AlreadyExistsException>(() =>
-            billingService.Purchase(AppUiContext.RequiredContext, purchaseParams, CancellationToken.None));
+            billingService.Purchase(AppUiContext.RequiredContext, purchaseParams, TestCt));
 
         Assert.HasCount(0, accountProvider.TestOrderProcessor.CompletedOrders);
         Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);
@@ -211,7 +211,7 @@ public class BillingServiceTest : TestAppBase
         var purchaseParams = new PurchaseParams { PlanToken = "test_plan_1m" };
 
         await Assert.ThrowsExactlyAsync<AlreadyExistsException>(() =>
-            billingService.Purchase(AppUiContext.RequiredContext, purchaseParams, CancellationToken.None));
+            billingService.Purchase(AppUiContext.RequiredContext, purchaseParams, TestCt));
 
         // The claim that matters is WHERE it stopped: before the store's payment sheet. After the
         // sheet the money has moved, and on at least one store nothing refunds it automatically.
@@ -234,7 +234,7 @@ public class BillingServiceTest : TestAppBase
 
         var purchaseParams = new PurchaseParams { PlanToken = "test_plan_1m" };
         await Assert.ThrowsExactlyAsync<Exception>(() =>
-            billingService.Purchase(AppUiContext.RequiredContext, purchaseParams, CancellationToken.None));
+            billingService.Purchase(AppUiContext.RequiredContext, purchaseParams, TestCt));
 
         Assert.HasCount(0, accountProvider.TestOrderProcessor.CompletedOrders);
         Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);
@@ -247,7 +247,7 @@ public class BillingServiceTest : TestAppBase
         await using var app = CreateAppWithAccount(accountProvider);
         var billingService = GetBillingService(app);
 
-        var restored = await billingService.RestorePurchase(AppUiContext.RequiredContext, CancellationToken.None);
+        var restored = await billingService.RestorePurchase(AppUiContext.RequiredContext, TestCt);
 
         Assert.IsFalse(restored);
         Assert.HasCount(0, accountProvider.TestOrderProcessor.CompletedOrders);
@@ -263,7 +263,7 @@ public class BillingServiceTest : TestAppBase
         await using var app = CreateAppWithAccount(accountProvider);
         var billingService = GetBillingService(app);
 
-        var restored = await billingService.RestorePurchase(AppUiContext.RequiredContext, CancellationToken.None);
+        var restored = await billingService.RestorePurchase(AppUiContext.RequiredContext, TestCt);
 
         Assert.IsTrue(restored);
         Assert.HasCount(1, accountProvider.TestOrderProcessor.CompletedOrders);
@@ -310,17 +310,17 @@ public class BillingServiceTest : TestAppBase
             return Task.CompletedTask;
         };
 
-        Assert.IsFalse(await accountService.HasSubscription(useCache: false, CancellationToken.None),
+        Assert.IsFalse(await accountService.HasSubscription(useCache: false, TestCt),
             "nothing is bought yet");
 
         await billingService.Purchase(AppUiContext.RequiredContext,
-            new PurchaseParams { PlanToken = "test_plan_1m" }, CancellationToken.None);
+            new PurchaseParams { PlanToken = "test_plan_1m" }, TestCt);
 
-        Assert.IsTrue(await accountService.HasSubscription(useCache: true, CancellationToken.None),
+        Assert.IsTrue(await accountService.HasSubscription(useCache: true, TestCt),
             "the purchase must be visible without another round trip");
 
         // the purchase carries its billing terms, or the UI cannot say what is charged, per what, and when
-        var account = await accountService.GetAccount(CancellationToken.None);
+        var account = await accountService.GetAccount(TestCt);
         Assert.IsNotNull(account);
         Assert.AreEqual(9m, account.Subscription?.PriceAmount);
         Assert.AreEqual("USD", account.Subscription?.PriceCurrency);
@@ -346,10 +346,10 @@ public class BillingServiceTest : TestAppBase
         var expirationTime = DateTime.UtcNow.AddDays(12);
         accountProvider.Account = CreateSubscribedAccount(expirationTime, isAutoRenew: false);
 
-        Assert.IsTrue(await accountService.HasSubscription(useCache: false, CancellationToken.None),
+        Assert.IsTrue(await accountService.HasSubscription(useCache: false, TestCt),
             "a cancelled subscription is still paid for until it expires");
 
-        var account = await accountService.GetAccount(CancellationToken.None);
+        var account = await accountService.GetAccount(TestCt);
         Assert.IsNotNull(account);
         Assert.AreEqual(false, account.Subscription?.IsAutoRenew, "the UI must be able to say 'ends on', not 'renews on'");
         Assert.AreEqual(expirationTime, account.Subscription?.ExpirationTime);
@@ -362,7 +362,7 @@ public class BillingServiceTest : TestAppBase
         // ...and it survives an unreachable backend: the cache is trusted while its own expiry is ahead
         var callsBefore = accountProvider.GetAccountCalls;
         accountProvider.Account = null;
-        Assert.IsTrue(await accountService.HasSubscription(useCache: true, CancellationToken.None));
+        Assert.IsTrue(await accountService.HasSubscription(useCache: true, TestCt));
         Assert.AreEqual(callsBefore, accountProvider.GetAccountCalls,
             "an unexpired account must not need the network to stay premium");
     }
@@ -400,7 +400,7 @@ public class BillingServiceTest : TestAppBase
         await SignIn(accountService);
 
         accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(12), isAutoRenew: false);
-        Assert.IsTrue(await accountService.HasSubscription(useCache: false, CancellationToken.None));
+        Assert.IsTrue(await accountService.HasSubscription(useCache: false, TestCt));
 
         // the paid period runs out; with auto-renew off the backend has no entitlement left to serve
         accountProvider.Account = new Account {
@@ -409,10 +409,10 @@ public class BillingServiceTest : TestAppBase
             Subscription = null
         };
 
-        Assert.IsFalse(await accountService.HasSubscription(useCache: false, CancellationToken.None),
+        Assert.IsFalse(await accountService.HasSubscription(useCache: false, TestCt),
             "an expired subscription is not premium");
 
-        var account = await accountService.GetAccount(CancellationToken.None);
+        var account = await accountService.GetAccount(TestCt);
         Assert.IsNotNull(account, "the person is still signed in, they just have no subscription");
         Assert.IsNull(account.Subscription);
         Assert.IsNull(account.Subscription?.ExpirationTime);
@@ -447,12 +447,12 @@ public class BillingServiceTest : TestAppBase
         await SignIn(accountService);
 
         accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
-        await accountService.Refresh(CancellationToken.None);
+        await accountService.Refresh(TestCt);
         Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
         // the user's own choice, and a reversible one: signing in again fetches the code back, while
         // keeping it would carry paid access into whatever account signs in next
-        await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
+        await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, TestCt);
 
         Assert.IsNull(app.CurrentVpnProfileInfo?.AccessCode);
     }
@@ -466,14 +466,14 @@ public class BillingServiceTest : TestAppBase
         await SignIn(accountService);
 
         accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
-        await accountService.Refresh(CancellationToken.None);
+        await accountService.Refresh(TestCt);
         Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
         // the account was deleted on ANOTHER device. A signed-in device holds only account state, so
         // premium stops here too — the entitlement still exists at the store and comes back with
         // Restore Purchase onto a new account.
         accountProvider.Account = null;
-        await accountService.Refresh(CancellationToken.None);
+        await accountService.Refresh(TestCt);
 
         var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
@@ -489,13 +489,13 @@ public class BillingServiceTest : TestAppBase
         await SignIn(accountService);
 
         accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
-        await accountService.Refresh(CancellationToken.None);
+        await accountService.Refresh(TestCt);
         Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
-        await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
+        await accountService.DeleteAccount(AppUiContext.RequiredContext, TestCt);
 
         Assert.AreEqual(1, accountProvider.DeleteAccountCalls);
-        Assert.IsNull(await accountService.GetAccount(CancellationToken.None));
+        Assert.IsNull(await accountService.GetAccount(TestCt));
         var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNull(profile.AccessCode, "'delete my account' must not leave premium running");
@@ -518,11 +518,11 @@ public class BillingServiceTest : TestAppBase
         var profileId = app.VpnProfileService.List().First().VpnProfileId;
         app.VpnProfileService.Update(profileId,
             new VpnProfileUpdateParams { AccessCode = new Patch<string?>(TestAppHelper.BuildAccessCode()) });
-        await accountService.Refresh(CancellationToken.None);
+        await accountService.Refresh(TestCt);
         Assert.IsNotNull(app.VpnProfileService.Get(profileId).AccessCode);
         Assert.IsTrue(app.VpnProfileService.Get(profileId).IsAccessCodeSynced);
 
-        await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
+        await accountService.DeleteAccount(AppUiContext.RequiredContext, TestCt);
 
         Assert.IsNull(app.VpnProfileService.Get(profileId).AccessCode,
             "the account is gone, and a code it had taken goes with it");
@@ -542,7 +542,7 @@ public class BillingServiceTest : TestAppBase
         // the period is still running, so the store would refuse a second subscription anyway
         await Assert.ThrowsExactlyAsync<AlreadyExistsException>(() =>
             billingService.Purchase(AppUiContext.RequiredContext,
-                new PurchaseParams { PlanToken = "test_plan_1m" }, CancellationToken.None));
+                new PurchaseParams { PlanToken = "test_plan_1m" }, TestCt));
 
         Assert.HasCount(0, accountProvider.TestOrderProcessor.CompletedOrders);
         Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);

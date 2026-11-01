@@ -56,10 +56,10 @@ public class AppApiClientTest : TestAppBase
 
     // The address without the web view's cache-buster: the client builds its own paths on it, and sends the token the
     // address carries, as the window does.
-    private static async Task<HttpClient> CreateHttpClient(VpnHoodApp app)
+    private async Task<HttpClient> CreateHttpClient(VpnHoodApp app)
     {
         var localHost = app.LocalWebHost ?? throw new InvalidOperationException("The app has no local web host.");
-        var localUrl = await localHost.EnsureStarted(CancellationToken.None);
+        var localUrl = await localHost.EnsureStarted(TestCt);
         var http = new HttpClient { BaseAddress = new Uri(localUrl.GetLeftPart(UriPartial.Authority) + "/") };
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
             LocalApiToken.Read(localUrl) ?? throw new InvalidOperationException("The local address carries no token."));
@@ -77,7 +77,7 @@ public class AppApiClientTest : TestAppBase
         var api = VpnHoodApiHttpFactory.Create(http);
 
         // the configuration, whole: the features, the state, the settings, the profiles, the languages
-        var config = await api.App.Configure(new ConfigParams { AvailableCultures = ["en", "fa"] }, CancellationToken.None);
+        var config = await api.App.Configure(new ConfigParams { AvailableCultures = ["en", "fa"] }, TestCt);
         Assert.AreEqual(app.Features.AppId, config.Features.AppId);
         Assert.IsTrue(config.Features.IsSplitCountrySupported, "the test app has the IP-location data");
         Assert.IsFalse(config.IsRemote, "loopback is the app's own web view");
@@ -89,37 +89,38 @@ public class AppApiClientTest : TestAppBase
         // the settings written as one and read back by the app
         var settings = config.UserSettings;
         settings.CultureCode = "fa";
-        await api.App.SetUserSettings(settings, CancellationToken.None);
+        await api.App.SetUserSettings(settings, TestCt);
         Assert.AreEqual("fa", app.UserSettings.CultureCode);
-        var state = await api.App.GetState(CancellationToken.None);
+        var state = await api.App.GetState(TestCt);
         Assert.AreEqual("fa", state.CurrentUiCultureInfo.Code);
 
         // a profile, through its own controller
         var profileId = config.VpnProfileInfos[0].VpnProfileId;
-        var profile = await api.VpnProfiles.Get(profileId, CancellationToken.None);
+        var profile = await api.VpnProfiles.Get(profileId, TestCt);
         Assert.AreEqual(token.Name, profile.VpnProfileName);
         var renamed = await api.VpnProfiles.Update(profileId,
-            new VpnProfileUpdateParams { VpnProfileName = new Patch<string?>("Renamed") }, CancellationToken.None);
+            new VpnProfileUpdateParams { VpnProfileName = new Patch<string?>("Renamed") }, TestCt);
         Assert.AreEqual("Renamed", renamed.VpnProfileName);
 
         // a split list
-        await api.App.SetSplitDomains(new SplitDomains { Excludes = "example.com", Includes = "", Blocks = "" }, CancellationToken.None);
-        var domains = await api.App.GetSplitDomains(CancellationToken.None);
+        await api.App.SetSplitDomains(new SplitDomains { Excludes = "example.com", Includes = "", Blocks = "" },
+            TestCt);
+        var domains = await api.App.GetSplitDomains(TestCt);
         Assert.AreEqual("example.com", domains.Excludes);
 
         // nothing to say is an empty reply, not a failure
-        Assert.IsNull(await api.Account.Get(CancellationToken.None));
-        Assert.IsNull(await api.Account.GetPasswordResetUrl(CancellationToken.None));
-        Assert.IsNull(await api.ProxyEndPoints.GetDevice(CancellationToken.None));
+        Assert.IsNull(await api.Account.Get(TestCt));
+        Assert.IsNull(await api.Account.GetPasswordResetUrl(TestCt));
+        Assert.IsNull(await api.ProxyEndPoints.GetDevice(TestCt));
 
         // the two replies that are not JSON: the log as text, the promotion image as bytes - while
         // the access code IS json, so a quoted empty string must come back as an empty one
-        Assert.IsNotNull(await api.App.Log(CancellationToken.None));
-        Assert.AreEqual(string.Empty, await api.VpnProfiles.GetAccessCode(profileId, CancellationToken.None));
-        await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.App.PromotionImage(CancellationToken.None));
+        Assert.IsNotNull(await api.App.Log(TestCt));
+        Assert.AreEqual(string.Empty, await api.VpnProfiles.GetAccessCode(profileId, TestCt));
+        await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.App.PromotionImage(TestCt));
 
         // a failure the server reported comes back as the exception it names
-        await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.VpnProfiles.Get(Guid.NewGuid(), CancellationToken.None));
+        await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.VpnProfiles.Get(Guid.NewGuid(), TestCt));
     }
 
     // A failure of a type only the app knows - a connect refused while the app installs its update - comes back as an
@@ -140,7 +141,7 @@ public class AppApiClientTest : TestAppBase
         await File.WriteAllTextAsync(Path.Combine(updater.UpdatesPath, "2.0.0-setup.exe"), "setup", TestCt);
         var install = updater.InstallDownloadedUpdate(TestCt);
         var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
-            api.App.Connect(null, null, ConnectPlanId.Normal, CancellationToken.None));
+            api.App.Connect(null, null, ConnectPlanId.Normal, TestCt));
         Assert.AreEqual(new AppUpdatingException().Message, exception.Message);
         Assert.AreEqual(nameof(AppUpdatingException), exception.ExceptionTypeName);
 

@@ -151,6 +151,7 @@ internal static partial class ParityProbes
         SslProtocols protocols)
     {
         return new Probe(name, ProbeKind.Quick, async (target, log, cancellationToken) => {
+            // captured once for both servers' runs, so under neither run's token
             var capture = CapturedHellos.GetOrAdd(name, _ => new Lazy<Task<byte[]>>(() =>
                 TlsHandshake.CaptureClientHello(sni(target), alpn, protocols, CancellationToken.None)));
             var clientHello = await capture.Value.WaitAsync(cancellationToken);

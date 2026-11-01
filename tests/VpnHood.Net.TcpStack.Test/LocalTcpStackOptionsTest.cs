@@ -16,6 +16,9 @@ namespace VpnHood.Net.TcpStack.Test;
 [TestClass]
 public sealed class LocalTcpStackOptionsTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     private static readonly IPAddress ServerIp = IPAddress.Parse("10.0.0.1");
     private static readonly IPAddress ClientIp = IPAddress.Parse("10.0.0.2");
     private const int ServerPort = 8080;
@@ -77,7 +80,7 @@ public sealed class LocalTcpStackOptionsTest
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         var serverSeq = SendSyn(tcpStack, sent, sync, ClientPort, 1000);
         SendFinalAck(tcpStack, ClientPort, 1000, serverSeq);
-        var stream = await AcceptConnectionAsync(listener).WaitAsync(cts.Token);
+        var stream = await AcceptConnectionAsync(listener, TestCt).WaitAsync(cts.Token);
 
         var data = new byte[4096];
         RandomNumberGenerator.Fill(data);
@@ -120,7 +123,7 @@ public sealed class LocalTcpStackOptionsTest
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var serverSeq = SendSyn(tcpStack, sent, sync, ClientPort, 1000);
         SendFinalAck(tcpStack, ClientPort, 1000, serverSeq);
-        var stream = await AcceptConnectionAsync(listener).WaitAsync(cts.Token);
+        var stream = await AcceptConnectionAsync(listener, TestCt).WaitAsync(cts.Token);
         lock (sync) sent.Clear();
 
         var payload = new byte[8 * 1024]; // 4x the ring capacity

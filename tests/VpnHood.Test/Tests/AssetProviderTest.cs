@@ -5,6 +5,9 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class AssetProviderTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     private static string CreateFolder(params (string Path, string Text)[] files)
     {
         var folder = Path.Combine(TestHelper.AssemblyWorkingPath, "assets_" + Guid.CreateVersion7());
@@ -17,11 +20,11 @@ public class AssetProviderTest
         return folder;
     }
 
-    private static async Task<string> ReadText(IAssetProvider provider, string assetPath)
+    private async Task<string> ReadText(IAssetProvider provider, string assetPath)
     {
-        await using var stream = await provider.OpenReadAsync(assetPath, CancellationToken.None);
+        await using var stream = await provider.OpenReadAsync(assetPath, TestCt);
         using var reader = new StreamReader(stream);
-        return await reader.ReadToEndAsync();
+        return await reader.ReadToEndAsync(TestCt);
     }
 
     [TestMethod]
@@ -38,8 +41,8 @@ public class AssetProviderTest
 
             // absent everywhere: the same answer any single provider gives
             await Assert.ThrowsExactlyAsync<AssetNotFoundException>(() =>
-                composite.OpenReadAsync("images/none.png", CancellationToken.None));
-            Assert.IsNull(await composite.TryOpenReadAsync("images/none.png", CancellationToken.None));
+                composite.OpenReadAsync("images/none.png", TestCt));
+            Assert.IsNull(await composite.TryOpenReadAsync("images/none.png", TestCt));
         }
         finally {
             Directory.Delete(overlay, recursive: true);

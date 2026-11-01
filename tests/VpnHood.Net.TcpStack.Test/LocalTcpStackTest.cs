@@ -14,6 +14,9 @@ namespace VpnHood.Net.TcpStack.Test;
 [TestClass]
 public sealed class LocalTcpStackTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     private static readonly IPAddress ServerIp = IPAddress.Parse("10.0.0.1");
     private static readonly IPAddress ClientIp = IPAddress.Parse("10.0.0.2");
     private const int ServerPort = 8080;
@@ -32,7 +35,7 @@ public sealed class LocalTcpStackTest
         tcpStack.OnPacketSend = sentPackets.Add;
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // Act - Send SYN packet
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
@@ -68,7 +71,7 @@ public sealed class LocalTcpStackTest
         tcpStack.OnPacketSend = sentPackets.Add;
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
         tcpStack.ProcessIncoming(synPacket);
@@ -107,7 +110,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
         uint serverSeq;
@@ -153,7 +156,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
         TcpPacket synAck;
@@ -179,7 +182,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
         TcpPacket synAck;
@@ -216,7 +219,7 @@ public sealed class LocalTcpStackTest
         tcpStack.OnPacketSend = sentPackets.Add;
 
         var listener = tcpStack.Listen(new IPEndPoint(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
@@ -266,7 +269,7 @@ public sealed class LocalTcpStackTest
         };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
         tcpStack.ProcessIncoming(synPacket);
@@ -317,7 +320,7 @@ public sealed class LocalTcpStackTest
         };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
         tcpStack.ProcessIncoming(synPacket);
@@ -384,7 +387,7 @@ public sealed class LocalTcpStackTest
         tcpStack.OnPacketSend = p => { lock (lockObj) sentPackets.Add(p); }; // the RTO thread sends too
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
@@ -423,7 +426,7 @@ public sealed class LocalTcpStackTest
         tcpStack.OnPacketSend = p => { lock (lockObj) sentPackets.Add(p); };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
         var serverSeq = SynAckSequence(sentPackets, lockObj, ClientPort);
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
@@ -464,7 +467,7 @@ public sealed class LocalTcpStackTest
 
         // Start echo server
         _ = Task.Run(async () => {
-            await foreach (var stream in listener.AcceptAllAsync(CancellationToken.None)) {
+            await foreach (var stream in listener.AcceptAllAsync(TestCt)) {
                 var buffer = new byte[1024];
                 while (true) {
                     var bytesRead = await stream.Stream.ReadAsync(buffer, 0, buffer.Length);
@@ -531,7 +534,7 @@ public sealed class LocalTcpStackTest
         };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
@@ -600,7 +603,7 @@ public sealed class LocalTcpStackTest
         };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // Complete handshake.
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
@@ -683,7 +686,7 @@ public sealed class LocalTcpStackTest
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
         var accepted = new System.Collections.Concurrent.ConcurrentDictionary<int, ITcpClient>();
         _ = Task.Run(async () => {
-            await foreach (var c in listener.AcceptAllAsync(CancellationToken.None))
+            await foreach (var c in listener.AcceptAllAsync(TestCt))
                 accepted[c.RemoteEndPoint.Port] = c;
         });
 
@@ -733,7 +736,7 @@ public sealed class LocalTcpStackTest
         var completed = false;
 
         var acceptLoop = Task.Run(async () => {
-            await foreach (var _ in listener.AcceptAllAsync(CancellationToken.None)) { }
+            await foreach (var _ in listener.AcceptAllAsync(TestCt)) { }
             completed = true;
         });
 
@@ -763,7 +766,7 @@ public sealed class LocalTcpStackTest
         tcpStack.OnPacketSend = p => { lock (lockObj) sentPackets.Add(p); };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        _ = Task.Run(async () => { await foreach (var _ in listener.AcceptAllAsync(CancellationToken.None)) { } });
+        _ = Task.Run(async () => { await foreach (var _ in listener.AcceptAllAsync(TestCt)) { } });
 
         DoHandshake(tcpStack, sentPackets, lockObj, clientPort: 1001, clientSeq: 1000);
         DoHandshake(tcpStack, sentPackets, lockObj, clientPort: 1002, clientSeq: 2000);
@@ -797,7 +800,7 @@ public sealed class LocalTcpStackTest
             object sync = new();
             tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
             var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-            var acceptTask = AcceptConnectionAsync(listener);
+            var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
             tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
             Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "no connection at the limit");
@@ -862,7 +865,7 @@ public sealed class LocalTcpStackTest
             lock (lockObj) sent.Add(packet);
         };
         var listener = stack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // the SYN-ACK's send throws: the SYN is dropped, its connection with it, and one error line names the exception
         stack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
@@ -918,7 +921,7 @@ public sealed class LocalTcpStackTest
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
         var acceptTask = Task.Run(async () => {
             var clients = new List<ITcpClient>();
-            await foreach (var client in listener.AcceptAllAsync(CancellationToken.None)) {
+            await foreach (var client in listener.AcceptAllAsync(TestCt)) {
                 clients.Add(client);
                 if (clients.Count == 3) break;
             }
@@ -973,7 +976,7 @@ public sealed class LocalTcpStackTest
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
         // the first connection idles out; the sweep then parks on its next tick
-        var acceptA = AcceptConnectionAsync(listener);
+        var acceptA = AcceptConnectionAsync(listener, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
         var clientA = await acceptA.WaitAsync(cts.Token);
         await WaitForCondition(() => tcpStack.Diagnostics.ConnectionCount == 0, cts.Token, 3000);
@@ -981,7 +984,7 @@ public sealed class LocalTcpStackTest
         await Task.Delay(400, cts.Token);
 
         // the second one must idle out too
-        var acceptB = AcceptConnectionAsync(listener);
+        var acceptB = AcceptConnectionAsync(listener, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort + 1, 1000);
         var clientB = await acceptB.WaitAsync(cts.Token);
         await WaitForCondition(() => tcpStack.Diagnostics.ConnectionCount == 0, cts.Token, 3000);
@@ -1005,7 +1008,7 @@ public sealed class LocalTcpStackTest
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
         var acceptTask = Task.Run(async () => {
             var clients = new List<ITcpClient>();
-            await foreach (var client in listener.AcceptAllAsync(CancellationToken.None)) {
+            await foreach (var client in listener.AcceptAllAsync(TestCt)) {
                 clients.Add(client);
                 if (clients.Count == 2) break;
             }
@@ -1046,7 +1049,7 @@ public sealed class LocalTcpStackTest
         var listener = tcpStack.ListenAny();
         var acceptTask = Task.Run(async () => {
             var clients = new List<ITcpClient>();
-            await foreach (var client in listener.AcceptAllAsync(CancellationToken.None)) {
+            await foreach (var client in listener.AcceptAllAsync(TestCt)) {
                 clients.Add(client);
                 if (clients.Count == 2) break;
             }
@@ -1080,7 +1083,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // MSS 1000, NOP, window scale shift 2
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000,
@@ -1145,7 +1148,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
         var serverSeq = SynAckSequence(sent, sync, ClientPort);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -1195,7 +1198,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort, isn);
         var serverSeq = SynAckSequence(sent, sync, ClientPort);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -1235,7 +1238,7 @@ public sealed class LocalTcpStackTest
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
         var acceptTask = Task.Run(async () => {
             var clients = new List<ITcpClient>();
-            await foreach (var client in listener.AcceptAllAsync(CancellationToken.None)) {
+            await foreach (var client in listener.AcceptAllAsync(TestCt)) {
                 clients.Add(client);
                 if (clients.Count == count) break;
             }
@@ -1308,7 +1311,7 @@ public sealed class LocalTcpStackTest
         };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
@@ -1376,7 +1379,7 @@ public sealed class LocalTcpStackTest
         };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
@@ -1438,7 +1441,7 @@ public sealed class LocalTcpStackTest
         };
 
         var listener = tcpStack.Listen(new IpEndPointValue(serverIpV6, serverPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // Act - SYN
         var synPacket = CreateTcpPacket(clientIpV6, clientPort, serverIpV6, serverPort, syn: true, seq: 1000);
@@ -1531,7 +1534,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
         var serverSeq = SynAckSequence(sent, sync, ClientPort);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -1561,7 +1564,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
         var serverSeq = SynAckSequence(sent, sync, ClientPort);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -1586,7 +1589,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
         var serverSeq = SynAckSequence(sent, sync, ClientPort);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -1621,7 +1624,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
         var serverSeq = SynAckSequence(sent, sync, ClientPort);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -1649,7 +1652,7 @@ public sealed class LocalTcpStackTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
         var serverSeq = SynAckSequence(sent, sync, ClientPort);
         lock (sync) sent.Clear();
@@ -1760,7 +1763,7 @@ public sealed class LocalTcpStackTest
         tcpStack.RemoveListener(old);
         Assert.AreSame(replacement, tcpStack.Listen(endPoint), "the replacement stays registered");
 
-        var acceptTask = AcceptConnectionAsync(replacement);
+        var acceptTask = AcceptConnectionAsync(replacement, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var client = await acceptTask.WaitAsync(cts.Token);

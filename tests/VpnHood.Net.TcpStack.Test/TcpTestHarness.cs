@@ -37,9 +37,10 @@ internal static class TcpTestHarness
         return packet;
     }
 
-    public static async Task<ITcpClient> AcceptConnectionAsync(ITcpListener listener)
+    public static async Task<ITcpClient> AcceptConnectionAsync(ITcpListener listener,
+        CancellationToken cancellationToken)
     {
-        await foreach (var client in listener.AcceptAllAsync(CancellationToken.None))
+        await foreach (var client in listener.AcceptAllAsync(cancellationToken))
             return client;
         throw new InvalidOperationException("No connection accepted");
     }

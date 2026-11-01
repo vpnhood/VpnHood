@@ -86,10 +86,10 @@ public class AccountAccessCodeTest : TestAppBase
             new VpnProfileUpdateParams { AccessCode = new Patch<string?>(accessCode) });
     }
 
-    private static Task SignIn(AccountService accountService)
+    private Task SignIn(AccountService accountService)
     {
         return accountService.AuthenticationService.SignIn(AppUiContext.RequiredContext,
-            new SignInOptions { ProviderId = AuthProviders.Google }, CancellationToken.None);
+            new SignInOptions { ProviderId = AuthProviders.Google }, TestCt);
     }
 
     [TestMethod]
@@ -190,7 +190,7 @@ public class AccountAccessCodeTest : TestAppBase
         await SignIn(accountService);
         Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
-        await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
+        await accountService.DeleteAccount(AppUiContext.RequiredContext, TestCt);
 
         var profile = app.CurrentVpnProfileInfo;
         Assert.IsNotNull(profile);
@@ -207,7 +207,7 @@ public class AccountAccessCodeTest : TestAppBase
         var accountService = GetAccountService(app);
         await SignIn(accountService);
 
-        await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
+        await accountService.DeleteAccount(AppUiContext.RequiredContext, TestCt);
 
         Assert.IsNull(accountProvider.TestAuthenticationProvider.UserId,
             "a device still holding a session for an erased account would silently re-create one");
@@ -224,7 +224,7 @@ public class AccountAccessCodeTest : TestAppBase
         // the portal's "deletion_blocked": the person must keep the session to come back and retry
         accountProvider.DeleteAccountException = new InvalidOperationException("deletion_blocked");
         await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
-            accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None));
+            accountService.DeleteAccount(AppUiContext.RequiredContext, TestCt));
 
         Assert.IsNotNull(accountProvider.TestAuthenticationProvider.UserId,
             "sign-out runs only after the backend agreed");
@@ -240,7 +240,7 @@ public class AccountAccessCodeTest : TestAppBase
         await SignIn(accountService);
         Assert.IsNotNull(app.CurrentVpnProfileInfo?.AccessCode);
 
-        await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
+        await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, TestCt);
 
         var profile = app.CurrentVpnProfileInfo;
         Assert.IsNull(profile?.AccessCode,
@@ -265,7 +265,7 @@ public class AccountAccessCodeTest : TestAppBase
         Assert.IsFalse(app.VpnProfileService.Get(profileId).IsAccessCodeSynced,
             "it works on this device before anyone has told the account");
 
-        await accountService.Refresh(CancellationToken.None);
+        await accountService.Refresh(TestCt);
 
         CollectionAssert.AreEqual(new[] { newCode }, accountProvider.SetAccessCodeCalls);
         Assert.AreEqual(newCode, accountProvider.UploadedAccessCode);
@@ -292,7 +292,7 @@ public class AccountAccessCodeTest : TestAppBase
 
         // the connection came up, so the portal is reachable again
         accountProvider.SetAccessCodeException = null;
-        await accountService.Refresh(CancellationToken.None);
+        await accountService.Refresh(TestCt);
 
         var profile = app.VpnProfileService.Get(profileId);
         Assert.AreEqual(typedCode, accountProvider.UploadedAccessCode,
@@ -314,7 +314,7 @@ public class AccountAccessCodeTest : TestAppBase
         accountProvider.SetAccessCodeException = new HttpRequestException("portal unreachable");
         TypeAccessCode(app, profileId, TestAppHelper.BuildAccessCode());
 
-        await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
+        await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, TestCt);
 
         Assert.IsNotNull(app.VpnProfileService.Get(profileId).AccessCode,
             "a code the account never took never became the account's, so it is not the account's to take away");
@@ -334,7 +334,7 @@ public class AccountAccessCodeTest : TestAppBase
         // are the many: every read of theirs must be free.
         var callsAfterSignIn = accountProvider.GetAccountCalls;
         for (var i = 0; i < 5; i++)
-            await accountService.GetAccount(CancellationToken.None);
+            await accountService.GetAccount(TestCt);
 
         Assert.AreEqual(callsAfterSignIn, accountProvider.GetAccountCalls,
             "a device that is fine must cost the portal nothing — no launch poll, no recheck clock");
@@ -356,7 +356,7 @@ public class AccountAccessCodeTest : TestAppBase
         // there is no Remove at all while signed in. Clearing the profile therefore says nothing to
         // the account, and the very next refresh hands the code straight back.
         TypeAccessCode(app, profileId, null);
-        await accountService.Refresh(CancellationToken.None);
+        await accountService.Refresh(TestCt);
 
         Assert.AreEqual(accountCode, app.VpnProfileService.Get(profileId).AccessCode);
         Assert.IsFalse(accountProvider.SetAccessCodeCalls.Any(x => x == null),
@@ -410,7 +410,7 @@ public class AccountAccessCodeTest : TestAppBase
         // the account's code, and the access server has never heard of it
         var deadCode = TestAppHelper.BuildAccessCode();
         var accountProvider = new TestAccountProvider { Account = CreateFreeAccount() };
-        await accountProvider.SetAccessCode(deadCode, CancellationToken.None);
+        await accountProvider.SetAccessCode(deadCode, TestCt);
 
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AccountProvider = accountProvider;
@@ -447,7 +447,7 @@ public class AccountAccessCodeTest : TestAppBase
 
         // Retry, with no second endpoint: writing the code again lifts the refusal, so the code
         // stops being demoted at all
-        await accountProvider.SetAccessCode(deadCode, CancellationToken.None);
+        await accountProvider.SetAccessCode(deadCode, TestCt);
         Assert.IsFalse(accountProvider.RejectedCodes.Contains(deadCode));
         Assert.AreEqual(deadCode, accountProvider.Account?.AccessCodeInfo?.AccessCode);
     }
@@ -462,13 +462,13 @@ public class AccountAccessCodeTest : TestAppBase
         var accountCode = TestAppHelper.BuildAccessCode();
         var strangerCode = BuildDistinctAccessCode(accountCode);
         var accountProvider = new TestAccountProvider { Account = CreateFreeAccount() };
-        await accountProvider.SetAccessCode(accountCode, CancellationToken.None);
+        await accountProvider.SetAccessCode(accountCode, TestCt);
 
         await using var app = CreateAppWithAccount(accountProvider);
         var accountService = GetAccountService(app);
         await SignIn(accountService);
 
-        await accountService.TryReportAccessCodeRejected(strangerCode, CancellationToken.None);
+        await accountService.TryReportAccessCodeRejected(strangerCode, TestCt);
 
         Assert.IsEmpty(accountProvider.ReportedRejections,
             "a code the account is not serving must never be reported against the account's own");
@@ -476,7 +476,7 @@ public class AccountAccessCodeTest : TestAppBase
             "the account's own code is untouched by another code's refusal");
 
         // and the one it IS serving goes through
-        await accountService.TryReportAccessCodeRejected(accountCode, CancellationToken.None);
+        await accountService.TryReportAccessCodeRejected(accountCode, TestCt);
         Assert.HasCount(1, accountProvider.ReportedRejections);
         Assert.IsTrue(accountProvider.RejectedCodes.Contains(accountCode));
     }

@@ -15,6 +15,9 @@ namespace VpnHood.Net.TcpStack.Test;
 [DoNotParallelize] // uses the machine-wide WinDivert adapter
 public sealed class TcpStackIntegrationTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     private static readonly IPAddress TestServerIp = IPAddress.Parse("11.0.0.1");
     private const int TestServerPort = 8080;
     private const int TestDataSize = 20 * 1024 * 1024;  // 20 MB
@@ -99,7 +102,7 @@ public sealed class TcpStackIntegrationTest
         var serverReceivedData = new List<byte>();
         _ = Task.Run(async () => {
             Console.WriteLine("[SERVER] Waiting for connection...");
-            await foreach (var stream in listener.AcceptAllAsync(CancellationToken.None)) {
+            await foreach (var stream in listener.AcceptAllAsync(TestCt)) {
                 Console.WriteLine("[SERVER] ✅ Connection accepted!");
                 try {
                     var buffer = new byte[1024];
@@ -140,7 +143,7 @@ public sealed class TcpStackIntegrationTest
             };
 
             Console.WriteLine("[SETUP] Starting WinDivert adapter...");
-            await adapter.Start(options, CancellationToken.None);
+            await adapter.Start(options, TestCt);
             Console.WriteLine("[SETUP] Adapter started");
 
             // Connect with TcpClient
@@ -280,7 +283,7 @@ public sealed class TcpStackIntegrationTest
 
             Console.WriteLine("[TEST] Starting WinDivert adapter...");
             Console.WriteLine($"[TEST] Include networks: {string.Join(", ", options.IncludeNetworks)}");
-            await adapter.Start(options, CancellationToken.None);
+            await adapter.Start(options, TestCt);
             Console.WriteLine("[TEST] Adapter started successfully");
 
             // Act - Connect with TcpClient and send/receive data
@@ -340,14 +343,14 @@ public sealed class TcpStackIntegrationTest
         }
     }
 
-    private static Task StartEchoServer(LocalTcpListener listener, TaskCompletionSource<bool> completionSource)
+    private Task StartEchoServer(LocalTcpListener listener, TaskCompletionSource<bool> completionSource)
     {
         return Task.Run(async () => {
             try {
                 Console.WriteLine("[ECHO SERVER] Starting...");
                 Console.WriteLine($"[ECHO SERVER] Listening on {listener.LocalEndPoint}");
 
-                await foreach (var stream in listener.AcceptAllAsync(CancellationToken.None)) {
+                await foreach (var stream in listener.AcceptAllAsync(TestCt)) {
                     Console.WriteLine("[ECHO SERVER] ✅ New connection accepted!");
 
                     // Handle connection in background

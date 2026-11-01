@@ -9,6 +9,9 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class CompositeTrackerTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     private int _batchReadCount;
 
     [TestMethod]
@@ -27,7 +30,7 @@ public class CompositeTrackerTest
         var compositeTracker = new CompositeTracker([first, second], isEnabled: true);
 
         // a batch is read once, whatever each member does with it
-        await compositeTracker.Track(ReadBatch(), CancellationToken.None);
+        await compositeTracker.Track(ReadBatch(), TestCt);
         Assert.AreEqual(1, _batchReadCount);
         Assert.HasCount(1, first.TrackEvents);
         Assert.HasCount(1, second.TrackEvents);
@@ -37,7 +40,7 @@ public class CompositeTrackerTest
         Assert.IsFalse(compositeTracker.IsEnabled);
         Assert.IsFalse(first.IsEnabled);
         Assert.IsFalse(second.IsEnabled);
-        await compositeTracker.Track(new TrackEvent { EventName = "test_off" }, CancellationToken.None);
+        await compositeTracker.Track(new TrackEvent { EventName = "test_off" }, TestCt);
         Assert.HasCount(1, first.TrackEvents);
         Assert.HasCount(1, second.TrackEvents);
     }
@@ -48,7 +51,7 @@ public class CompositeTrackerTest
         var after = new TestTracker { IsEnabled = true };
         var compositeTracker = new CompositeTracker([new ThrowingTracker(), after], isEnabled: true);
 
-        await compositeTracker.Track(new TrackEvent { EventName = "test" }, CancellationToken.None);
+        await compositeTracker.Track(new TrackEvent { EventName = "test" }, TestCt);
         Assert.HasCount(1, after.TrackEvents);
     }
 

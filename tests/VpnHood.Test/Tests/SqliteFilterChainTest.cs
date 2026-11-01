@@ -299,7 +299,7 @@ public class SqliteFilterChainTest : TestBase
                 catch (Exception ex) {
                     firstError ??= ex;
                 }
-        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
+        }, TestCt, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
 
         // each round publishes a NEW file (the real versioned flow); the manifest sweep cannot delete
         // the previous db (the chain holds it open) — the swap disposes and deletes it

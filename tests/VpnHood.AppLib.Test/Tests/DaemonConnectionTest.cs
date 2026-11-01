@@ -13,6 +13,9 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class DaemonConnectionTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     private static readonly TimeSpan Wait = TimeSpan.FromSeconds(5);
 
     private static DaemonChannelAnswer Answer(int port, string token)
@@ -24,17 +27,17 @@ public class DaemonConnectionTest
         };
     }
 
-    private static async Task<DaemonChannelServer> Serve(TestDaemonChannel channel, DaemonChannelAnswer answer)
+    private async Task<DaemonChannelServer> Serve(TestDaemonChannel channel, DaemonChannelAnswer answer)
     {
-        return await DaemonChannelServer.TryStart(channel, answer, "Only administrators may use the test app.", CancellationToken.None)
+        return await DaemonChannelServer.TryStart(channel, answer, "Only administrators may use the test app.", TestCt)
                ?? throw new InvalidOperationException("The channel could not be opened.");
     }
 
-    private static Task<DaemonConnection> Open(TestDaemonChannel channel, TestLoopbackPeerCheck? peerCheck = null,
+    private Task<DaemonConnection> Open(TestDaemonChannel channel, TestLoopbackPeerCheck? peerCheck = null,
         TestInstanceController? instance = null)
     {
         return DaemonChannelConnector.Open(channel, peerCheck ?? new TestLoopbackPeerCheck(),
-            instance ?? new TestInstanceController(), new TestDesktopPaths(), CancellationToken.None);
+            instance ?? new TestInstanceController(), new TestDesktopPaths(), TestCt);
     }
 
     private static async Task WaitForChange(DaemonConnection connection, Func<Task> change)
@@ -51,7 +54,7 @@ public class DaemonConnectionTest
         var channel = new TestDaemonChannel();
         await using var server = await Serve(channel, Answer(4711, "t1"));
 
-        var answer = await DaemonChannelClient.AskOnce(channel, CancellationToken.None);
+        var answer = await DaemonChannelClient.AskOnce(channel, TestCt);
         Assert.IsNull(answer.Refusal);
         Assert.AreEqual(4711, answer.ApiUrl?.Port);
         Assert.AreEqual("t1", answer.Token);
@@ -59,13 +62,13 @@ public class DaemonConnectionTest
         Assert.AreEqual("1.2.3", answer.Version);
 
         channel.IsAdministrator = false;
-        var refused = await DaemonChannelClient.AskOnce(channel, CancellationToken.None);
+        var refused = await DaemonChannelClient.AskOnce(channel, TestCt);
         Assert.IsNull(refused.ApiUrl, "a refused caller learns no address");
         Assert.AreEqual("Only administrators may use the test app.", refused.Refusal);
 
         await server.DisposeAsync();
         server.Publish(Answer(4712, "t2")); // a rebind as the service stops: nothing to tell, and no error
-        await Assert.ThrowsAsync<Exception>(() => DaemonChannelClient.AskOnce(channel, CancellationToken.None),
+        await Assert.ThrowsAsync<Exception>(() => DaemonChannelClient.AskOnce(channel, TestCt),
             "nothing serves it now");
     }
 
@@ -75,7 +78,7 @@ public class DaemonConnectionTest
         var channel = new TestDaemonChannel();
         await using var server = await Serve(channel, Answer(4711, "t1"));
 
-        await using var stream = await channel.Connect(CancellationToken.None);
+        await using var stream = await channel.Connect(TestCt);
         var elapsed = Stopwatch.StartNew();
         Assert.IsTrue(await IsClosed(stream, TimeSpan.FromSeconds(15)), "the service closed it");
         Assert.IsTrue(elapsed.Elapsed >= TimeSpan.FromSeconds(4), $"closed after {elapsed.Elapsed}, before its time");
@@ -87,7 +90,7 @@ public class DaemonConnectionTest
         var channel = new TestDaemonChannel();
         await using var server = await Serve(channel, Answer(4711, "t1"));
 
-        await using var stream = await channel.Connect(CancellationToken.None);
+        await using var stream = await channel.Connect(TestCt);
         await stream.WriteAsync(Enumerable.Repeat((byte)'a', 5000).ToArray());
         Assert.IsTrue(await IsClosed(stream, TimeSpan.FromSeconds(2)), "closed long before the silent caller's time");
     }
@@ -98,10 +101,10 @@ public class DaemonConnectionTest
         var channel = new TestDaemonChannel { FailNextAccept = true };
         await using var server = await Serve(channel, Answer(4711, "t1"));
 
-        await Assert.ThrowsAsync<Exception>(() => DaemonChannelClient.AskOnce(channel, CancellationToken.None),
+        await Assert.ThrowsAsync<Exception>(() => DaemonChannelClient.AskOnce(channel, TestCt),
             "the caller whose accept failed is lost");
 
-        var answer = await DaemonChannelClient.AskOnce(channel, CancellationToken.None).WaitAsync(Wait);
+        var answer = await DaemonChannelClient.AskOnce(channel, TestCt).WaitAsync(Wait);
         Assert.AreEqual(4711, answer.ApiUrl?.Port, "the next is answered");
     }
 
@@ -146,7 +149,7 @@ public class DaemonConnectionTest
         var platform = new TestDesktopPlatform { IsUserAdministrator = false };
 
         var refused = await Assert.ThrowsExactlyAsync<DaemonRefusedException>(() =>
-            DaemonChannelConnector.Open(platform, CancellationToken.None));
+            DaemonChannelConnector.Open(platform, TestCt));
         Assert.AreEqual("Only administrators can use VpnHoodTest on this computer.", refused.Message);
     }
 
@@ -183,7 +186,7 @@ public class DaemonConnectionTest
         await using var server = await Serve(channel, Answer(first.Port, "t1"));
         await using var connection = await Open(channel);
 
-        Assert.AreEqual("first", await connection.Api.App.Log(CancellationToken.None));
+        Assert.AreEqual("first", await connection.Api.App.Log(TestCt));
         Assert.IsTrue(first.Requests.TryDequeue(out var request));
         Assert.AreEqual("/api/app/log.txt", request.Target);
         Assert.AreEqual("Bearer t1", request.Authorization);
@@ -193,7 +196,7 @@ public class DaemonConnectionTest
             server.Publish(Answer(second.Port, "t2"));
             return Task.CompletedTask;
         });
-        Assert.AreEqual("second", await connection.Api.App.Log(CancellationToken.None));
+        Assert.AreEqual("second", await connection.Api.App.Log(TestCt));
         Assert.IsTrue(second.Requests.TryDequeue(out request));
         Assert.AreEqual("Bearer t2", request.Authorization);
         Assert.AreEqual(0, first.Requests.Count, "nothing goes to the old address");
@@ -218,7 +221,7 @@ public class DaemonConnectionTest
         server = await Serve(channel, Answer(api.Port, "t1"));
         await using (server) {
             await using var connection = await Open(channel);
-            Assert.AreEqual("ok", await connection.Api.App.Log(CancellationToken.None));
+            Assert.AreEqual("ok", await connection.Api.App.Log(TestCt));
             Assert.AreEqual(2, api.Requests.Count, "once refused, once more with the new token");
             Assert.IsTrue(api.Requests.TryDequeue(out var refused) && refused.Authorization == "Bearer t1");
             Assert.IsTrue(api.Requests.TryDequeue(out var retried) && retried.Authorization == "Bearer t2");
@@ -234,7 +237,7 @@ public class DaemonConnectionTest
         var peerCheck = new TestLoopbackPeerCheck { Answer = (remote, _) => remote.Port != api.Port };
         await using var connection = await Open(channel, peerCheck);
 
-        var error = await Assert.ThrowsAsync<Exception>(() => connection.Api.App.Log(CancellationToken.None));
+        var error = await Assert.ThrowsAsync<Exception>(() => connection.Api.App.Log(TestCt));
         var messages = string.Join(" | ", Unwrap(error).Select(x => x.Message));
         StringAssert.Contains(messages, "held by another program");
         await Task.Delay(200);
@@ -242,7 +245,7 @@ public class DaemonConnectionTest
 
         // the process the channel named is what the check is given
         peerCheck.Answer = (_, processId) => processId == Environment.ProcessId;
-        Assert.AreEqual("ok", await connection.Api.App.Log(CancellationToken.None));
+        Assert.AreEqual("ok", await connection.Api.App.Log(TestCt));
     }
 
     private static IEnumerable<Exception> Unwrap(Exception exception)

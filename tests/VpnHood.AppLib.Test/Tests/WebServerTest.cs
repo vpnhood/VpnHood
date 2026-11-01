@@ -67,7 +67,7 @@ public class WebServerTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions);
         var local = RequireHost(app.LocalWebHost, "local");
         var remote = RequireHost(app.RemoteWebHost, "remote");
-        var localUrl = await local.EnsureStarted(CancellationToken.None);
+        var localUrl = await local.EnsureStarted(TestCt);
         // no redirects and no cookie jar: the pairing handshake is asserted step by step
         using var http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
         Assert.IsTrue(local.IsActive);
@@ -76,7 +76,7 @@ public class WebServerTest : TestAppBase
 
         // start: one listener per LAN address, every address carrying the pairing token; the same
         // answer reaches a UI through the API's remote-access state
-        var pairUrl = await remote.EnsureStarted(CancellationToken.None);
+        var pairUrl = await remote.EnsureStarted(TestCt);
         var urls = remote.Urls;
         Assert.IsTrue(remote.IsActive);
         Assert.IsFalse(remote.IsAlwaysOn);
@@ -87,7 +87,7 @@ public class WebServerTest : TestAppBase
             StringAssert.StartsWith(url.Query, "?pair=");
         }
 
-        var remoteAccess = await app.Api.App.GetRemoteAccess(CancellationToken.None);
+        var remoteAccess = await app.Api.App.GetRemoteAccess(TestCt);
         Assert.IsTrue(remoteAccess.IsActive);
         Assert.IsFalse(remoteAccess.IsAlwaysOn);
         CollectionAssert.AreEqual(urls.ToArray(), remoteAccess.Urls.ToArray());
@@ -203,19 +203,20 @@ public class WebServerTest : TestAppBase
 
         // presence: the paired requests above came in from the LAN address, so that device shows as connected
         CollectionAssert.Contains(remote.ConnectedDevices.ToArray(), IPAddress.Parse(root.Host));
-        CollectionAssert.Contains((await app.Api.App.GetRemoteAccess(CancellationToken.None)).ConnectedDevices, IPAddress.Parse(root.Host));
+        CollectionAssert.Contains((await app.Api.App.GetRemoteAccess(TestCt)).ConnectedDevices,
+            IPAddress.Parse(root.Host));
 
         // a repeat start keeps the listeners, the port and the token where they are
-        Assert.AreEqual(pairUrl, await remote.EnsureStarted(CancellationToken.None));
-        Assert.AreEqual(pairUrl, (await app.Api.App.StartRemoteAccess(CancellationToken.None)).Urls[0]);
+        Assert.AreEqual(pairUrl, await remote.EnsureStarted(TestCt));
+        Assert.AreEqual(pairUrl, (await app.Api.App.StartRemoteAccess(TestCt)).Urls[0]);
 
         // stop: the remote listeners are gone, the web view's own is not, and a poll starts nothing
-        await remote.Stop(CancellationToken.None);
+        await remote.Stop(TestCt);
         Assert.IsFalse(remote.IsActive);
         Assert.AreEqual(0, remote.Urls.Count);
         await Assert.ThrowsExactlyAsync<HttpRequestException>(() => http.GetStringAsync(root));
         StringAssert.Contains(await http.GetStringAsync(localUrl), PageTitle);
-        Assert.IsFalse((await app.Api.App.GetRemoteAccess(CancellationToken.None)).IsActive);
+        Assert.IsFalse((await app.Api.App.GetRemoteAccess(TestCt)).IsActive);
         Assert.IsFalse(remote.IsActive);
 
         // recovery heals only a listener that is held: the resume probe brings nothing back after a stop
@@ -226,7 +227,7 @@ public class WebServerTest : TestAppBase
 
         // a new start in the same run is the same pairing, address and token alike: the phone's
         // cookie from before the stop still opens it, so an accidental close costs no rescan
-        Assert.AreEqual(pairUrl, await remote.EnsureStarted(CancellationToken.None));
+        Assert.AreEqual(pairUrl, await remote.EnsureStarted(TestCt));
         Assert.IsTrue(remote.IsActive);
         using var keptCookie = await http.GetAsync(new Uri(root, "api/app/state"));
         Assert.AreEqual(HttpStatusCode.OK, keptCookie.StatusCode);
@@ -244,7 +245,7 @@ public class WebServerTest : TestAppBase
         var appOptions = CreateWebHostOptions(isDebugMode: false);
         appOptions.WebRootZipAsset = TestAppHelper.CreateWebRootZip("{appName}|{logoUrl}");
         await using var app = TestAppHelper.CreateClientApp(appOptions);
-        var localUrl = await RequireHost(app.LocalWebHost, "local").EnsureStarted(CancellationToken.None);
+        var localUrl = await RequireHost(app.LocalWebHost, "local").EnsureStarted(TestCt);
         using var http = new HttpClient();
 
         StringAssert.Contains(await http.GetStringAsync(localUrl),
@@ -261,7 +262,7 @@ public class WebServerTest : TestAppBase
         appOptions.UiZipAssets = [TestAppHelper.CreateZip("ui", ($"themes/{appOptions.UiTheme}/manifest.json",
             """{ "colors": { "windowBackground": "#1940b0", "progressBar": "#23c99d" } }"""u8.ToArray()))];
         await using var app = TestAppHelper.CreateClientApp(appOptions);
-        var localUrl = await RequireHost(app.LocalWebHost, "local").EnsureStarted(CancellationToken.None);
+        var localUrl = await RequireHost(app.LocalWebHost, "local").EnsureStarted(TestCt);
         using var http = new HttpClient();
 
         StringAssert.Contains(await http.GetStringAsync(localUrl), "<title>#1940b0ff|#23c99dff</title>");
@@ -279,7 +280,7 @@ public class WebServerTest : TestAppBase
             ("index.html", Encoding.UTF8.GetBytes($"<html><title>{PageTitle}</title></html>")),
             ("main.js.gz", gzip));
         await using var app = TestAppHelper.CreateClientApp(appOptions);
-        var localUrl = await RequireHost(app.LocalWebHost, "local").EnsureStarted(CancellationToken.None);
+        var localUrl = await RequireHost(app.LocalWebHost, "local").EnsureStarted(TestCt);
         using var http = new HttpClient(); // asks for no encoding and unpacks nothing itself
 
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(localUrl, "/main.js"));
@@ -311,7 +312,7 @@ public class WebServerTest : TestAppBase
         PlantPromotionImage(appOptions);
         await using var app = TestAppHelper.CreateClientApp(appOptions);
         var local = RequireHost(app.LocalWebHost, "local");
-        var localUrl = await local.EnsureStarted(CancellationToken.None);
+        var localUrl = await local.EnsureStarted(TestCt);
         var token = LocalApiToken.Read(localUrl);
         Assert.IsNotNull(token, "the local address carries its token after #");
         using var http = new HttpClient(new HttpClientHandler { UseCookies = false });
@@ -368,19 +369,19 @@ public class WebServerTest : TestAppBase
         Assert.IsTrue(remote.IsAlwaysOn);
         Assert.IsTrue(remote.IsActive);
 
-        var url = await remote.EnsureStarted(CancellationToken.None);
+        var url = await remote.EnsureStarted(TestCt);
         var urls = remote.Urls;
         Assert.AreNotEqual(0, urls.Count, "the machine running the test has no LAN address");
         foreach (var address in urls)
             Assert.AreEqual(string.Empty, address.Query, "no pairing for a developer");
 
-        var remoteAccess = await app.Api.App.GetRemoteAccess(CancellationToken.None);
+        var remoteAccess = await app.Api.App.GetRemoteAccess(TestCt);
         Assert.IsTrue(remoteAccess.IsAlwaysOn);
         Assert.IsTrue(remoteAccess.IsActive);
 
         // a bare address answers, and the web view's own listener is still loopback
         StringAssert.Contains(await http.GetStringAsync(url), PageTitle);
-        var localUrl = await local.EnsureStarted(CancellationToken.None);
+        var localUrl = await local.EnsureStarted(TestCt);
         Assert.IsTrue(IPAddress.IsLoopback(IPAddress.Parse(localUrl.Host)));
         StringAssert.Contains(await http.GetStringAsync(localUrl), PageTitle);
 
@@ -402,7 +403,7 @@ public class WebServerTest : TestAppBase
         Assert.AreEqual(HttpStatusCode.Forbidden, reboundResponse.StatusCode);
 
         // a stop is refused by a host nothing holds
-        await remote.Stop(CancellationToken.None);
+        await remote.Stop(TestCt);
         Assert.IsTrue(remote.IsActive);
         Assert.IsTrue(remote.IsAlwaysOn);
         StringAssert.Contains(await http.GetStringAsync(url), PageTitle);

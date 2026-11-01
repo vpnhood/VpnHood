@@ -33,7 +33,7 @@ public class VpnServiceManagerTest : TestBase
         using var readCts = new CancellationTokenSource();
         var readTask = Task.Run(async () => {
             while (!readCts.IsCancellationRequested)
-                await manager.RefreshState(CancellationToken.None);
+                await manager.RefreshState(TestCt);
         }, TestCt);
 
         // the service writes its state as VpnServiceContext does: a write a reader kept out throws, and the
@@ -60,7 +60,7 @@ public class VpnServiceManagerTest : TestBase
         using var device = new TestDevice(TestHelper, _ => new TestNullVpnAdapter()) {
             RequestVpnServiceHandler = async cancellationToken => {
                 var answer = new TaskCompletionSource();
-                await asks.Writer.WriteAsync(answer, CancellationToken.None);
+                await asks.Writer.WriteAsync(answer, TestCt);
                 await answer.Task;
                 cancellationToken.ThrowIfCancellationRequested();
             }

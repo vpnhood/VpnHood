@@ -23,6 +23,7 @@ public sealed class LossRecoveryTest
     private const int ServerPort = 8080;
     private const int ClientPort = 54321;
     public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
 
     /// <summary>
     /// Tail loss: the LAST data segment of a burst produces no duplicate ACKs (nothing arrives after
@@ -203,7 +204,7 @@ public sealed class LossRecoveryTest
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         // the ACK lands after the final SYN-ACK: the last interval is granted in full
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
@@ -1609,7 +1610,7 @@ public sealed class LossRecoveryTest
 
     /// <summary>Five segments of 536 bytes, all lost, and the RTO's retransmission of the first: a recovery. Returns a
     /// reader of the data segments sent since its last call, by their offset in the stream.</summary>
-    private static async Task<(ITcpClient stream, uint serverSeq, Func<int[]> sentOffsets)> LoseFiveSegmentsAsync(
+    private async Task<(ITcpClient stream, uint serverSeq, Func<int[]> sentOffsets)> LoseFiveSegmentsAsync(
         LocalTcpStack tcpStack)
     {
         var sent = new List<IpPacket>();
@@ -1636,11 +1637,11 @@ public sealed class LossRecoveryTest
     }
 
     /// <summary>Completes a handshake and returns the accepted client plus the server's ISN.</summary>
-    private static async Task<(ITcpClient client, uint serverSeq)> EstablishAsync(
+    private async Task<(ITcpClient client, uint serverSeq)> EstablishAsync(
         LocalTcpStack tcpStack, List<IpPacket> sent, object sync)
     {
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        var acceptTask = AcceptConnectionAsync(listener);
+        var acceptTask = AcceptConnectionAsync(listener, TestCt);
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
         uint serverSeq;

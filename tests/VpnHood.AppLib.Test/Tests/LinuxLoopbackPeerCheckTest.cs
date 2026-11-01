@@ -8,6 +8,9 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class LinuxLoopbackPeerCheckTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     [TestMethod]
     public async Task The_far_end_is_this_process_and_not_another()
     {
@@ -24,12 +27,12 @@ public class LinuxLoopbackPeerCheckTest
         var remote = client.Client.RemoteEndPoint as IPEndPoint ?? throw new InvalidOperationException("no remote end");
         var check = new LinuxLoopbackPeerCheck();
 
-        Assert.IsTrue(await check.IsOwnedBy(local, remote, Environment.ProcessId, CancellationToken.None),
+        Assert.IsTrue(await check.IsOwnedBy(local, remote, Environment.ProcessId, TestCt),
             "the listener is this process, which runs as this user");
         Assert.AreEqual(Environment.UserName == "root",
-            await check.IsOwnedBy(local, remote, int.MaxValue - 1, CancellationToken.None),
+            await check.IsOwnedBy(local, remote, int.MaxValue - 1, TestCt),
             "another process is the service, which runs as root");
         Assert.IsFalse(await check.IsOwnedBy(local, new IPEndPoint(IPAddress.Loopback, 1), Environment.ProcessId,
-            CancellationToken.None), "no such connection");
+            TestCt), "no such connection");
     }
 }

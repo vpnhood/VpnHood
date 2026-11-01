@@ -6,6 +6,9 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class TcpMessageTest
 {
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
     [TestMethod]
     public async Task Client_should_reconnect_after_listener_restart()
     {
@@ -14,14 +17,14 @@ public class TcpMessageTest
             using var client = new TcpMessageClient(configFolder);
 
             using (var listener = new TcpMessageListener(configFolder)) {
-                var listenerTask = listener.Start(Echo, CancellationToken.None);
+                var listenerTask = listener.Start(Echo, TestCt);
                 await AssertEcho(client, "first");
                 listener.Dispose();
                 await listenerTask.WaitAsync(TimeSpan.FromSeconds(5));
             }
 
             using (var listener = new TcpMessageListener(configFolder)) {
-                var listenerTask = listener.Start(Echo, CancellationToken.None);
+                var listenerTask = listener.Start(Echo, TestCt);
                 await AssertEcho(client, "second");
                 listener.Dispose();
                 await listenerTask.WaitAsync(TimeSpan.FromSeconds(5));
@@ -46,7 +49,7 @@ public class TcpMessageTest
                 requestReceived.TrySetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
                 return Memory<byte>.Empty;
-            }, CancellationToken.None);
+            }, TestCt);
 
             var sendTask = client.SendAsync(new byte[] { 1 }, requestCts.Token);
             await requestReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), requestCts.Token);
@@ -69,10 +72,10 @@ public class TcpMessageTest
         return Task.FromResult(request);
     }
 
-    private static async Task AssertEcho(TcpMessageClient client, string message)
+    private async Task AssertEcho(TcpMessageClient client, string message)
     {
         var request = Encoding.UTF8.GetBytes(message);
-        var response = await client.SendAsync(request, CancellationToken.None);
+        var response = await client.SendAsync(request, TestCt);
         CollectionAssert.AreEqual(request, response.ToArray());
     }
 

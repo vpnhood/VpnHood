@@ -8,9 +8,9 @@ namespace VpnHood.AppUi.Hosting.Desktop.Daemon.Updaters;
 // session has ended and the app has stayed idle for the idle wait (DefaultIdleWait), the update the updater downloaded
 // meanwhile goes to the installer (DesktopAppUpdaterProvider.InstallDownloadedUpdate), one try per session's end. The
 // wait passes over a connect that disconnects first - a server switch - and a person who connects again at once; a
-// connect within it puts the install off to the next end. Not at the app's start, idle before always on or anyone has
-// connected: the updater's own run at boot sees to that. Disposed before the app, whose disconnect at a stop must
-// install nothing.
+// connect within it, or before the installer has started, puts the install off to the next end. Not at the app's
+// start, idle before always on or anyone has connected: the updater's own run at boot sees to that. Disposed before the
+// app, whose disconnect at a stop must install nothing.
 public sealed class IdleUpdateInstaller : IDisposable
 {
     // short of always on's first pause (AppAlwaysOnOptions.RetryPauses, 30 s less a fifth at most), so a session's end
@@ -71,13 +71,24 @@ public sealed class IdleUpdateInstaller : IDisposable
                 return;
 
             // the next try waits for the next session's end
-            _waitCts?.Dispose();
-            _waitCts = null;
             _hasBeenInUse = false;
         }
 
-        // a run of its own from here: the wait's token source is gone, and an install runs to its end
-        await _updater.InstallDownloadedUpdate(CancellationToken.None).Vhc();
+        // under the wait's token until the installer starts, so a connect or a stop by then puts the install off
+        try {
+            await _updater.InstallDownloadedUpdate(cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            // put off
+        }
+
+        lock (_lock) {
+            // the wait's own, unless a connect or a stop has ended it
+            if (_waitCts is { } waitCts && waitCts.Token == cancellationToken) {
+                waitCts.Dispose();
+                _waitCts = null;
+            }
+        }
     }
 
     // under the lock

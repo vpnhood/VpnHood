@@ -97,7 +97,8 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     /// <summary>
     /// The automatic update's part in the service, with the VPN idle again: a release downloaded already - by the
     /// updater while the VPN was in use, or by the notice's Update - and newer than this app, installed now, while
-    /// automatic updates are on. An install stops this service; else this logs why there was none. Not beside the
+    /// automatic updates are on. An install stops this service; else this logs why there was none. A cancel before
+    /// the installer starts puts the install off; the installer, once started, runs to its end. Not beside the
     /// notice's own Install or Update.
     /// </summary>
     public async Task InstallDownloadedUpdate(CancellationToken cancellationToken)
@@ -110,6 +111,8 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
                 if (_isInstalling || _downloadTask is { IsCompleted: false })
                     return;
 
+                // the cancel's last chance: from here the app is Updating, which refuses a connect
+                cancellationToken.ThrowIfCancellationRequested();
                 _isInstalling = true;
             }
 
@@ -128,6 +131,9 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
                     lock (_stateLock)
                         _isInstalling = false;
             }
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not install the downloaded update.");

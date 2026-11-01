@@ -24,9 +24,24 @@ internal sealed class TestDesktopUpdaterProvider(string folderPath)
     public int InstallerRuns => _installerRuns;
     private int _installerRuns;
 
-    public override Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    // The platform's check of its switch before an install, held until the test ends it, if the test gives it one: a
+    // check that ends after its cancel, as a tool already done does. Its token, for the test to see the cancel. The
+    // app's own update check, made with no token, is answered at once.
+    public TaskCompletionSource? CheckEnd { get; set; }
+    public TaskCompletionSource CheckStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public CancellationToken CheckToken { get; private set; }
+
+    public override async Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
     {
-        return Task.FromResult(IsOn);
+        if (!cancellationToken.CanBeCanceled)
+            return IsOn;
+
+        CheckToken = cancellationToken;
+        CheckStarted.TrySetResult();
+        if (CheckEnd is { } checkEnd)
+            await checkEnd.Task;
+
+        return IsOn;
     }
 
     public override Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)

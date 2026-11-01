@@ -9,8 +9,8 @@ using VpnHood.AppUi.Hosting.Desktop.Daemon.Updaters;
 namespace VpnHood.AppLib.Test.Tests;
 
 // The desktop service's install of a downloaded update (IdleUpdateInstaller, DesktopAppUpdaterProvider): it waits for
-// the VPN to stay idle, so a server switch or a quick reconnect never meets it, and while the installer runs the app
-// is Updating, which refuses connects.
+// the VPN to stay idle, so a server switch or a quick reconnect never meets it, a connect or a stop before the
+// installer starts puts it off, and while the installer runs the app is Updating, which refuses connects.
 [TestClass]
 public class DesktopUpdateInstallTest : TestAppBase
 {
@@ -76,6 +76,61 @@ public class DesktopUpdateInstallTest : TestAppBase
         await Task.Delay(IdleWait * 2, TestCt);
         Assert.AreEqual(1, updater.InstallerRuns, "one try per session's end");
         Assert.AreEqual(AppConnectionState.None, app.State.ConnectionState);
+    }
+
+    [TestMethod]
+    public async Task A_connect_before_the_installer_starts_puts_the_install_off()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        var updater = CreateUpdater();
+        updater.InstallerEnd.SetResult("The installed version is up to date.");
+        updater.CheckEnd = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var app = CreateApp(updater);
+        using var idleUpdateInstaller = new IdleUpdateInstaller(app, updater, IdleWait);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
+        await AddDownload(updater);
+
+        // the wait is over and the switch's check under way when a person connects
+        await app.Disconnect();
+        await updater.CheckStarted.Task.WaitAsync(IdleWait * 10, TestCt);
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
+        await AssertEqualsWait(true, () => updater.CheckToken.IsCancellationRequested);
+        updater.CheckEnd.SetResult();
+        await Task.Delay(IdleWait * 2, TestCt);
+        Assert.AreEqual(0, updater.InstallerRuns, "a connect during the check");
+
+        // put off to the next session's end
+        await app.Disconnect();
+        await AssertEqualsWait(1, () => updater.InstallerRuns);
+    }
+
+    [TestMethod]
+    public async Task A_stop_before_the_installer_starts_installs_nothing()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        var updater = CreateUpdater();
+        updater.InstallerEnd.SetResult("The installed version is up to date.");
+        updater.CheckEnd = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var app = CreateApp(updater);
+        using var idleUpdateInstaller = new IdleUpdateInstaller(app, updater, IdleWait);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
+        await AddDownload(updater);
+
+        // the wait is over and the switch's check under way when the service stops
+        await app.Disconnect();
+        await updater.CheckStarted.Task.WaitAsync(IdleWait * 10, TestCt);
+        idleUpdateInstaller.Dispose();
+        Assert.IsTrue(updater.CheckToken.IsCancellationRequested);
+        updater.CheckEnd.SetResult();
+        await Task.Delay(IdleWait * 2, TestCt);
+        Assert.AreEqual(0, updater.InstallerRuns);
     }
 
     // each test's own install folder

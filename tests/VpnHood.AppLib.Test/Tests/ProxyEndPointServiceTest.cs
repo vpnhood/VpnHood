@@ -615,7 +615,7 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         // the core downloads and merges the list in the background; wait until it lands in the db
         await VhTestUtil.AssertEqualsWait(2, async () =>
-            (await ListProxies(dom.App.Services.ProxyEndPointService)).TotalCount);
+            (await ListProxies(dom.App.Services.ProxyEndPointService)).TotalCount, cancellationToken: TestCt);
 
         // check is proxies are added
         var endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;

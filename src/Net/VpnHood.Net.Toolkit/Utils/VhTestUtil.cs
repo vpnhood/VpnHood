@@ -6,6 +6,9 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
+// The token stays optional: the waits between reads end at their own timeout. A read under way - an awaited task or
+// factory - is not cut by it, as it may take the whole timeout and still bring the value; its own limit or the
+// caller's token ends it.
 public static class VhTestUtil
 {
     public class AssertException(string? message = null, Exception? innerException = null) :
@@ -33,13 +36,13 @@ public static class VhTestUtil
     {
         const int waitTime = 100;
         CancellationTokenSource cancellationTokenSource = new(timeout);
-        var actualValue = await valueFactory().Vhc();
+        var actualValue = await valueFactory().WaitAsync(cancellationToken).Vhc();
         while (!cancellationTokenSource.IsCancellationRequested) {
             if (Equals(expectedValue, actualValue))
                 return actualValue;
 
             await Task.Delay(waitTime, cancellationToken).Vhc();
-            actualValue = await valueFactory().Vhc();
+            actualValue = await valueFactory().WaitAsync(cancellationToken).Vhc();
         }
 
         return actualValue;

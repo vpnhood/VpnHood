@@ -104,7 +104,7 @@ public class ClientTunnelTest : TestBase
             await VhInvoker.TryInvokeAsync("try a UDP echo", LogLevel.Debug,
                 () => TestHelper.Test_UdpEcho(timeout: TimeSpan.FromMilliseconds(500))); // just try transfer
             return clientServerDom.Client.RequiredSession.Status.SessionPacketChannelCount >= 3;
-        }, timeout: 6000);
+        }, timeout: 6000, cancellationToken: TestCt);
     }
 
 

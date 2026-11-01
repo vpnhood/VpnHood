@@ -111,7 +111,7 @@ public class AccessTest : TestBase
         await VhTestUtil.AssertEqualsWait(SessionErrorCode.AccessTrafficOverflow, async () => {
             await TestHelper.Test_Https(timeout: TimeSpan.FromMilliseconds(2000), throwError: false);
             return client1.GetSessionErrorCode();
-        });
+        }, cancellationToken: TestCt);
 
         // ----------
         // check: client must disconnect at hello on traffic overflow

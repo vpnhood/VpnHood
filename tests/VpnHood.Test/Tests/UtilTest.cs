@@ -46,4 +46,16 @@ public class UtilTest : TestBase
         Assert.AreEqual(2, reportCounter.ReportedCount);
         await VhTestUtil.AssertEqualsWait(3, () => reportCounter.ReportedCount);
     }
+
+    // a read that never ends outlasts the wait's timeout, which is checked between reads: the caller's token ends it
+    [TestMethod]
+    public async Task AssertEqualsWait_ends_a_read_that_never_ends_with_the_token()
+    {
+        var never = new TaskCompletionSource<int>().Task;
+        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        cancellationTokenSource.CancelAfter(200);
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+                VhTestUtil.AssertEqualsWait(1, never, cancellationToken: cancellationTokenSource.Token))
+            .WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+    }
 }

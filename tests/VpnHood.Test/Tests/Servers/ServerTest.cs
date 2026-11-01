@@ -698,7 +698,7 @@ public class ServerTest : TestBase
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
             return client.State;
-        });
+        }, cancellationToken: TestCt);
         Assert.AreEqual(SessionErrorCode.AccessError, client.GetSessionErrorCode());
     }
 

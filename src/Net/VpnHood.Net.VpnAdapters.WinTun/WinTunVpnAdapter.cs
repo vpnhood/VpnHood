@@ -69,7 +69,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on WinTun.");
 
-    private static Guid BuildGuidFromName(string adapterName)
+    // The adapter's own GUID, the same for its name at each start; a kill switch finds its interface by it.
+    public static Guid BuildGuidFromName(string adapterName)
     {
         adapterName = $"VpnHood.{adapterName}"; // make sure it is unique
         using var sha1 = SHA1.Create();

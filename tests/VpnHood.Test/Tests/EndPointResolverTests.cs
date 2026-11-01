@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -35,6 +36,20 @@ public class EndPointResolverTests : TestBase
 
         Assert.IsFalse(results.All(ep => tokenEndPoints.Contains(ep)),
             "DnsOnly strategy should not include token-provided endpoints.");
+    }
+
+    // Under the kill switch's block the name is asked of the network's resolvers from this process, as the OS's
+    // resolver asks from a process of its own, which the block stops.
+    [TestMethod]
+    public async Task DnsOnly_by_own_resolver_resolves_the_name()
+    {
+        var serverToken = CreateServerToken(true);
+        var tokenEndPoints = serverToken.HostEndPoints ?? [];
+        var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.DnsOnly,
+            TestCt, ownResolverSocketFactory: new TestSocketFactory());
+
+        Assert.IsNotEmpty(results);
+        Assert.IsFalse(results.Any(ep => tokenEndPoints.Contains(ep)));
     }
 
     [TestMethod]

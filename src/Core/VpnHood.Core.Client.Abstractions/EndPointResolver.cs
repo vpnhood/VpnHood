@@ -4,22 +4,26 @@ using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Abstractions;
 
 public static class EndPointResolver
 {
+    private static readonly TimeSpan OwnResolverTimeout = TimeSpan.FromSeconds(5);
+
     private static async Task<IEnumerable<IPEndPoint>> TryGetEndPointFromDns(ServerToken serverToken,
-        CancellationToken cancellationToken)
+        ISocketFactory? ownResolverSocketFactory, CancellationToken cancellationToken)
     {
         try {
             VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...",
                 VhLogger.FormatHostName(serverToken.HostName));
-            var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName, cancellationToken).Vhc();
+            var addresses = ownResolverSocketFactory != null
+                ? await ResolveByOwnResolver(serverToken.HostName, ownResolverSocketFactory, cancellationToken).Vhc()
+                : (await Dns.GetHostEntryAsync(serverToken.HostName, cancellationToken).Vhc()).AddressList;
 
-            return hostEntities.AddressList
-                .Select(x => new IPEndPoint(x, serverToken.HostPort));
+            return addresses.Select(x => new IPEndPoint(x, serverToken.HostPort));
         }
         catch (OperationCanceledException) {
             throw;
@@ -30,8 +34,38 @@ public static class EndPointResolver
         }
     }
 
+    // The name asked of the network's resolvers from this process, over sockets the factory makes: under the
+    // kill switch's block, which lets only the VPN service's own traffic out, the OS's resolver cannot answer,
+    // as it asks from a process of its own (Windows' DNS Client, systemd-resolved).
+    private static async Task<IPAddress[]> ResolveByOwnResolver(string hostName, ISocketFactory socketFactory,
+        CancellationToken cancellationToken)
+    {
+        var dnsServers = DnsUtils.GetNetworkDnsServers();
+        foreach (var dnsServer in dnsServers) {
+            try {
+                using var udpClient = socketFactory.CreateUdpClient(dnsServer.AddressFamily);
+                var hostEntry = await DnsUtils.GetHostEntry(hostName, new IPEndPoint(dnsServer, 53), udpClient,
+                    OwnResolverTimeout, cancellationToken).Vhc();
+                if (hostEntry.AddressList.Length > 0)
+                    return hostEntry.AddressList;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                throw;
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "A network's resolver could not resolve the server's name. DnsServer: {DnsServer}",
+                    VhLogger.Format(dnsServer));
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"The network's resolvers could not resolve the server's name. DnsServers: {dnsServers.Count}");
+    }
+
+    // ownResolverSocketFactory: where the kill switch is on, the name is asked from this process
+    // (ResolveByOwnResolver), over sockets it makes.
     public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken,
-        EndPointStrategy strategy, CancellationToken cancellationToken)
+        EndPointStrategy strategy, CancellationToken cancellationToken, ISocketFactory? ownResolverSocketFactory = null)
     {
         // use token strategy if auto
         if (strategy == EndPointStrategy.Auto)
@@ -63,7 +97,7 @@ public static class EndPointResolver
         // if token has host name, try to resolve it
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
         var dnsEndPoints = serverToken.IsValidHostName
-            ? await TryGetEndPointFromDns(serverToken, cancellationToken).Vhc()
+            ? await TryGetEndPointFromDns(serverToken, ownResolverSocketFactory, cancellationToken).Vhc()
             : [];
 
         // follow the end point strategy to combine the endpoints

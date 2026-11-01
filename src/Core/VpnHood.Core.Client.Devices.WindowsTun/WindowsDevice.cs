@@ -24,7 +24,7 @@ public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
     public bool IsIncludeAppsSupported => isDebugMode;
     public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsAlwaysOnSupported => true;
-    public IVpnKillSwitch? KillSwitch => null;
+    public IVpnKillSwitch KillSwitch { get; } = new WindowsVpnKillSwitch();
     public bool IsTv => false;
     public bool IsWaitingForVpnPermission => false;
 
@@ -65,7 +65,7 @@ public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
     public Task StartVpnService(CancellationToken cancellationToken)
     {
         if (_vpnService == null || _vpnService.IsDisposed)
-            _vpnService = new WindowsVpnService(VpnServiceConfigFolder);
+            _vpnService = new WindowsVpnService(VpnServiceConfigFolder, KillSwitch);
 
         _vpnService.OnConnect();
         return Task.CompletedTask;

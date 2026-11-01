@@ -15,7 +15,8 @@ public class WindowsVpnService : IVpnServiceHandler, IDisposable
     public bool IsDisposed => _disposed;
 
     public WindowsVpnService(
-        string configFolder)
+        string configFolder,
+        IVpnKillSwitch killSwitch)
     {
         _vpnServiceHost = new VpnServiceHost(
             configFolder,
@@ -24,7 +25,8 @@ public class WindowsVpnService : IVpnServiceHandler, IDisposable
             socketFactory: new MsQuicSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),
             withLogger: false,
-            tunnelLock: new WindowsVpnTunnelLock());
+            tunnelLock: new WindowsVpnTunnelLock(),
+            killSwitch: killSwitch);
     }
 
     public void OnConnect()

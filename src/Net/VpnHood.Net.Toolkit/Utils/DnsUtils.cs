@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using VpnHood.Net.Toolkit.Extensions;
@@ -7,6 +8,21 @@ namespace VpnHood.Net.Toolkit.Utils;
 
 public static class DnsUtils
 {
+    // The resolvers of the networks the machine reaches beyond itself by: adapters up with a gateway, no
+    // loopback or tunnel. Not Windows' fec0:0:0:ffff:: placeholders, which it lists where IPv6 has none.
+    public static IReadOnlyList<IPAddress> GetNetworkDnsServers()
+    {
+        return NetworkInterface.GetAllNetworkInterfaces()
+            .Where(x => x.OperationalStatus == OperationalStatus.Up &&
+                        x.NetworkInterfaceType is not (NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel))
+            .Select(x => x.GetIPProperties())
+            .Where(x => x.GatewayAddresses.Count > 0)
+            .SelectMany(x => x.DnsAddresses)
+            .Where(x => !x.IsIPv6SiteLocal)
+            .Distinct()
+            .ToArray();
+    }
+
     public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
         TimeSpan timeout, CancellationToken cancellationToken)
     {

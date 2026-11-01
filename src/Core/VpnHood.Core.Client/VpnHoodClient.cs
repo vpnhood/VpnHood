@@ -158,7 +158,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null,
             proxyConnector: ProxyConnector,
-            includeIpV6: _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6));
+            includeIpV6: _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
+            useKillSwitch: options.UseKillSwitch);
 
         // SNI extraction is sensitive and costly, so it runs only while a domain rule could consume it
         // (or SNI logging is forced). Nobody tells the client: it derives the answer from its own pipe

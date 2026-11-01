@@ -31,6 +31,7 @@ public class ServerFinder(
     ITracker? tracker,
     IProxyConnector? proxyConnector,
     bool includeIpV6,
+    bool useKillSwitch,
     int maxDegreeOfParallelism = 10)
 {
     private ProgressMonitor? _progressMonitor;
@@ -73,8 +74,8 @@ public class ServerFinder(
             try {
                 var endpoints = customServerEndpoints.Any()
                     ? customServerEndpoints
-                    : await EndPointResolver.ResolveHostEndPoints(
-                        serverToken, endPointStrategy, cancellationToken).Vhc();
+                    : await EndPointResolver.ResolveHostEndPoints(serverToken, endPointStrategy, cancellationToken,
+                        ownResolverSocketFactory: useKillSwitch ? socketFactory : null).Vhc();
 
                 return endpoints.Select(ep => CreateVpnEndPoint(ep, serverToken)).ToArray();
             }

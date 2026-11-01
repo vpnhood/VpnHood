@@ -31,12 +31,27 @@ internal class TestAccountProvider : IAccountProvider
         return Task.FromResult(ProductIds);
     }
 
-    public Task<Account?> GetAccount(CancellationToken cancellationToken)
+    /// <summary>Set to hold the answer until the test ends it, as a slow portal does; a cancel ends the wait.</summary>
+    public TaskCompletionSource? GetAccountEnd { get; set; }
+    public TaskCompletionSource GetAccountHeld { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>Set to make the read fail the way a network outage does.</summary>
+    public Exception? GetAccountException { get; set; }
+
+    public async Task<Account?> GetAccount(CancellationToken cancellationToken)
     {
         GetAccountCalls++;
+        if (GetAccountEnd is { } getAccountEnd) {
+            GetAccountHeld.TrySetResult();
+            await getAccountEnd.Task.WaitAsync(cancellationToken);
+        }
+
+        if (GetAccountException != null)
+            throw GetAccountException;
+
         // an account provider answers for the SIGNED-IN person: no session, no account
         // (PortalAccountProvider.GetAccount returns null the same way)
-        return Task.FromResult(TestAuthenticationProvider.UserId == null ? null : Account);
+        return TestAuthenticationProvider.UserId == null ? null : Account;
     }
 
     public List<string?> SetAccessCodeCalls { get; } = [];

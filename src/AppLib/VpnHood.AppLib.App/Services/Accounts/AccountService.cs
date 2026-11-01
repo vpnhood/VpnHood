@@ -116,6 +116,10 @@ public class AccountService
         try {
             await Refresh(cancellationToken).Vhc();
         }
+        // the caller's own cancel, not an HTTP timeout's, which is an outage
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
         catch (Exception ex) when (_account != null) {
             // A rejected session is not an outage. The authentication provider has already dropped
             // it, so the account held here belongs to someone the server no longer knows — serving
@@ -187,6 +191,9 @@ public class AccountService
         try {
             await UploadPendingAccessCode(cancellationToken).Vhc();
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not upload the pending access code to the account.");
         }
@@ -227,6 +234,9 @@ public class AccountService
 
         try {
             await _accountProvider.ReportAccessCodeRejected(refusedAccessCode, cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not tell the account that its access code was refused.");

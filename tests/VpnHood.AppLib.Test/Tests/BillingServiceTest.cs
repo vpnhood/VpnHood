@@ -368,6 +368,30 @@ public class BillingServiceTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task A_cancel_is_not_an_outage_that_serves_the_cached_account()
+    {
+        var accountProvider = new TestAccountProvider();
+        await using var app = CreateAppWithAccount(accountProvider);
+        var accountService = GetAccountService(app);
+        await SignIn(accountService);
+        accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(12), isAutoRenew: true);
+        Assert.IsTrue(await accountService.HasSubscription(useCache: false, TestCt));
+
+        // a portal that times out, which HttpClient reports as a cancel of its own: the cached account stands
+        accountProvider.GetAccountException = new TaskCanceledException("The request timed out.");
+        Assert.IsTrue(await accountService.HasSubscription(useCache: false, TestCt));
+
+        // a caller that gives up while the portal is slow gets its cancel back
+        accountProvider.GetAccountException = null;
+        accountProvider.GetAccountEnd = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        var hasSubscriptionTask = accountService.HasSubscription(useCache: false, cancellationTokenSource.Token);
+        await accountProvider.GetAccountHeld.Task.WaitAsync(TestCt);
+        await cancellationTokenSource.CancelAsync();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => hasSubscriptionTask);
+    }
+
+    [TestMethod]
     public async Task Expired_subscription_leaves_its_code_for_the_server_to_refuse()
     {
         var accountProvider = new TestAccountProvider();

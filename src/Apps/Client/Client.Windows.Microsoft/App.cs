@@ -27,11 +27,12 @@ internal static class App
     }
 
     // The product's options, and the Store's lines on top: its own update, offered once its automatic update
-    // has had PromptDelay, and its rating dialog. Usage data asks as on every other channel, iOS's too: first only
-    // where the law wants a yes first, as the privacy policy says. No release before it left a folder to import.
+    // has had PromptDelay, and its rating dialog; usage data only after the person's own tick, in every
+    // region (Store Policies 10.5.2). No release before it left a folder to import.
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
         var options = ClientAppOptions.Create(context, ClientAppConfigs.Load());
+        options.IsAnonymousTrackerOptInRequired = true;
         options.UserReviewProvider = new MicrosoftStoreInAppUserReviewProvider();
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdaterProvider = new MicrosoftStoreAppUpdaterProvider()

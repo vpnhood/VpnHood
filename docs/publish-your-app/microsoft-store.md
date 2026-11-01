@@ -126,10 +126,9 @@ handle cards to PCI DSS.
    capability's reason is read then, and a refusal names the policy it failed.
 2. **The publish waits for you** (step 5, Submission options): once certified, **Publish now** on the
    product's page releases it.
-3. **Usage data asks as on the other stores:** on the first-run page, box unticked, where the law wants
-   a yes first (the EEA, the UK, Switzerland); elsewhere it is on until the person turns it off, as the
-   privacy policy says. Store Policies 10.5.2 reads as an opt-in before personal information reaches a
-   third party: a build that should ask everywhere sets `IsAnonymousTrackerOptInRequired`.
+3. **Usage data asks first.** Microsoft wants the person's opt-in, in the app, before personal
+   information reaches a third party (Store Policies 10.5.2), which the analytics' data is: the Store
+   heads ask on the first-run page, box unticked, in every region (`IsAnonymousTrackerOptInRequired`).
 
 ---
 

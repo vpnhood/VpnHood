@@ -1,6 +1,6 @@
 # VpnHood! CLIENT - Privacy Policy
 
-*Effective: 2026-10-11.*
+*Effective: 2026-11-01.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy.
 This policy applies only to the official **VpnHood! CLIENT** app.
@@ -35,8 +35,9 @@ from an earlier version keeps the Client ID it had, which was derived from your 
 Analytics is controlled by **Settings → Privacy → "Share anonymous usage data"**. Turning it off
 stops analytics and is remembered for later launches. In the European Economic Area, the United
 Kingdom and Switzerland, as your device's region setting or your connection tells, analytics stays
-off until you agree: the app asks you once, with a box you tick yourself. The iOS build does not
-load Google Analytics or Firebase and does not send analytics or reports to Google.
+off until you agree: the app asks you once, with a box you tick yourself. The Microsoft Store
+edition asks so everywhere. The iOS build does not load Google Analytics or Firebase and does not
+send analytics or reports to Google.
 
 ## Feedback and the App's Log
 

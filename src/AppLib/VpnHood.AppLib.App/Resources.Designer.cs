@@ -79,7 +79,7 @@ namespace VpnHood.AppLib.App {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0} Access key has been added..
+        ///   Looks up a localized string similar to {0} access key has been added..
         /// </summary>
         internal static string MsgAccessKeyAdded {
             get {

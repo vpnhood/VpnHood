@@ -2167,7 +2167,7 @@ public sealed partial class Strings
     /// <summary>Open</summary>
     public string Open => Get("OPEN");
 
-    /// <summary>{0} Access key has been added.</summary>
+    /// <summary>{0} access key has been added.</summary>
     public string MsgAccessKeyAdded => Get("MSG_ACCESS_KEY_ADDED");
 
     /// <summary>{0} access key has been updated.</summary>

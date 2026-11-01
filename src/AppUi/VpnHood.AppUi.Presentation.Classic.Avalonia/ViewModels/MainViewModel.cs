@@ -653,6 +653,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The web UI's LocationList: Free and Premium cards when the profile has both and the person is
     // not premium; only the premium rows when the person is; one card of everything otherwise.
+    // In an app that sells no premium too: the one premium mark it shows, since it compares a key's
+    // locations only with each other, and a free key's premium location fails without an ad
+    // (connection-options.md).
     private static IReadOnlyList<LocationGroup> BuildGroups(VpnProfileInfo? profile, bool isNested, bool isActiveProfile)
     {
         if (profile == null)

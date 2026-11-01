@@ -29,6 +29,10 @@ public partial class HomeView : UserControl, IPage
         _host = host;
         DataContext = viewModel;
         InitializeComponent();
+
+        // no premium mark on the home of an app that sells none: its keys come from different owners,
+        // any of whom can mark a key premium, and the home must not rank them (connection-options.md)
+        CountdownCrown.IsVisible = VhApp.IsPremiumSupported;
         viewModel.PropertyChanged += (_, e) => {
             if (e.PropertyName is nameof(MainViewModel.CountdownKind) or "")
                 UpdateCountdownColor();

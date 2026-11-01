@@ -44,7 +44,7 @@ Store policy and legal checkpoints a publisher must clear:
 
 | Document | What it covers |
 | --- | --- |
-| [connection-options.md](connection-options.md) | What a user is offered per location: free, ad-unlocked, trial, purchase, code. |
+| [connection-options.md](connection-options.md) | What a user is offered per location: free, ad-unlocked, trial, purchase, code; and where an app shows premium, or never does. |
 | [accounts/account-lifecycle.md](accounts/account-lifecycle.md) | Sign-in, subscriptions, access codes, renewals, refunds — the business flow end to end. |
 
 ## Engineering notes

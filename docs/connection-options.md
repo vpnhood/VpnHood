@@ -61,3 +61,21 @@ If it is not enabled, the option simply does not appear.
 If a user is already premium, none of the options above are offered. The app treats every
 location as a normal connection and connects directly — premium users never see ads, trials,
 or the option prompt.
+
+## Where the app shows premium
+
+An app either **sells premium** — it has its own premium plan, as VpnHood! CONNECT does — or it
+**sells none**, as VpnHood! CLIENT does: there people add access keys they got from anyone.
+
+- **An app that sells premium** marks it wherever it applies: the crown on the session countdown,
+  the gold connection circle, "You are premium", "Go premium", and the crown on premium settings
+  and premium locations. Premium there is the app's own plan.
+- **An app that sells none shows no premium mark**, with one exception below. Its keys come from
+  different companies and people, and the app must not make them compete: any key's owner can
+  mark the key premium, even all of it, and a premium mark on the home screen would tell the user
+  it is a better connection when it may be a poor server.
+- **The exception: a key's own location list.** When a key has both free and premium locations,
+  the list shows them apart, with the crown on the premium ones. There the mark compares one
+  owner's locations with each other, which is meaningful. It also warns ahead: a free public key's
+  premium location needs a rewarded ad to connect, which such an app does not show, so the connect
+  would fail.

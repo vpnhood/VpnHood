@@ -81,7 +81,7 @@
           <!-- CountDown: the time left in a trial or a rewarded session, and the way to extend it -->
           <Border x:Name="CountdownChip" Classes="chip countdown comfortable" IsVisible="{Binding ShowCountdown}">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Classes="mdi countdown-crown" FontSize="18" Text="{x:Static res:Mdi.Crown}" />
+              <TextBlock x:Name="CountdownCrown" Classes="mdi countdown-crown" FontSize="18" Text="{x:Static res:Mdi.Crown}" />
               <TextBlock Text="{Binding CountdownText}" Width="63" />
               <Button Classes="pill small bold countdown-extend" IsVisible="{Binding CanExtendByRewardedAd}" Click="OnExtendClick">
                 <StackPanel Orientation="Horizontal" Spacing="2">

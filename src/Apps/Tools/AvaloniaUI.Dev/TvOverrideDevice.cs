@@ -1,5 +1,6 @@
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
 namespace VpnHood.App.AvaloniaUI.Dev;
@@ -17,6 +18,7 @@ internal sealed class TvOverrideDevice(IDevice inner, bool isTv) : IDevice
     public bool IsBindProcessToVpnSupported => inner.IsBindProcessToVpnSupported;
     public bool IsQuicSupported => inner.IsQuicSupported;
     public bool IsAlwaysOnSupported => inner.IsAlwaysOnSupported;
+    public IVpnKillSwitch? KillSwitch => inner.KillSwitch;
     public string OsInfo => inner.OsInfo;
     public DeviceUserAgentInfo UserAgentInfo => inner.UserAgentInfo;
     public DeviceMemInfo? MemInfo => inner.MemInfo;

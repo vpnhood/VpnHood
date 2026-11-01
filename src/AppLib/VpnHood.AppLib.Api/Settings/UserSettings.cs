@@ -18,6 +18,10 @@ public class UserSettings
     // Where the app keeps always on itself (AlwaysOnSupport.App): the service connects when it starts,
     // before anyone signs in, and again after a failure.
     public bool AlwaysOn { get; set; }
+
+    // Where the device has a kill switch (IDevice.KillSwitch): nothing leaves outside the tunnel from a
+    // connect until a person disconnects, through an error stop, a crash and a reboot.
+    public bool KillSwitch { get; set; }
     public SplitTunnelingSettings SplitTunneling { get; set; } = new();
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; }

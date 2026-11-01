@@ -1,4 +1,5 @@
 ﻿using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
 namespace VpnHood.Core.Client.Devices.Abstractions;
@@ -21,6 +22,10 @@ public interface IDevice : IDisposable
     // Whether the app keeps always on itself (the app's AlwaysOn setting): a desktop's service, which
     // starts at boot. Android's is the system's, which the app only opens.
     bool IsAlwaysOnSupported { get; }
+
+    // The kill switch's block, where the device has one (a desktop's service); null elsewhere. The device
+    // holds it, as it outlives each connect's VPN service, which gets the same one.
+    IVpnKillSwitch? KillSwitch { get; }
     string OsInfo { get; }
     DeviceUserAgentInfo UserAgentInfo { get; }
     DeviceMemInfo? MemInfo { get; }

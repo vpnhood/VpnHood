@@ -13,5 +13,6 @@ public class ClientReconfigureParams
     public required ChannelProtocol ChannelProtocol { get; set; }
     public required SplitUnsupportedIpMode UnroutedIpMode { get; set; }
     public required SplitUnsupportedIpMode UnsupportedIpV6Mode { get; set; }
+    public required bool UseKillSwitch { get; set; }
     public required ProxyOptions ProxyOptions { get; set; } = new();
 }

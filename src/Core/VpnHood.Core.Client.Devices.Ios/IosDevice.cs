@@ -4,6 +4,7 @@ using VpnHood.Core.Client.Devices.Ios.Extensions;
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Quic.Ios;
 using VpnHood.Net.Toolkit.Extensions;
@@ -73,6 +74,7 @@ public class IosDevice : IDevice
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsAlwaysOnSupported => false;
+    public IVpnKillSwitch? KillSwitch => null;
     public string OsInfo { get; } = $"{UIDevice.CurrentDevice.SystemName}: {UIDevice.CurrentDevice.Model}, {(OperatingSystem.IsTvOS() ? "tvOS" : "iOS")}: {UIDevice.CurrentDevice.SystemVersion}";
     public DeviceUserAgentInfo UserAgentInfo { get; } = CreateUserAgentInfo();
     public bool IsTv => OperatingSystem.IsTvOS();

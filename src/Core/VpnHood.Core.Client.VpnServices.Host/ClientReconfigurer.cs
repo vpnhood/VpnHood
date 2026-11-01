@@ -25,6 +25,10 @@ internal class ClientReconfigurer(VpnServiceHost vpnServiceHost)
     public async Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+
+        // the kill switch at once, a session's or a start's: the block is up before the session
+        await vpnServiceHost.ReconfigureKillSwitch(reconfigureParams.UseKillSwitch, cancellationToken).Vhc();
+
         var client = vpnServiceHost.Client;
         if (client?.Session == null) {
             // the usage-data switch at once where there is a client: it tracks while it connects

@@ -449,6 +449,7 @@ public class VpnServiceManager : IDisposable
             ChannelProtocol = clientOptions.ChannelProtocol,
             UnroutedIpMode = clientOptions.UnroutedIpMode,
             UnsupportedIpV6Mode = clientOptions.UnsupportedIpV6Mode,
+            UseKillSwitch = clientOptions.UseKillSwitch,
             ProxyOptions = serviceOptions.ProxyOptions ?? new ProxyOptions()
         };
 

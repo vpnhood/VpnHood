@@ -11,6 +11,7 @@ using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Net.Quic.Android;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Extensions;
@@ -32,6 +33,7 @@ public class AndroidDevice : IDevice
     public bool IsIncludeAppsSupported => true;
     public bool IsQuicSupported => AndroidQuicClient.IsSupported;
     public bool IsAlwaysOnSupported => false; // the system's
+    public IVpnKillSwitch? KillSwitch => null; // the system's, "Block connections without VPN"
     public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
     public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
         Platform = $"Linux; Android {Build.VERSION.Release}",

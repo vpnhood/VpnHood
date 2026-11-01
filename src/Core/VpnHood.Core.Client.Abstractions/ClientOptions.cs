@@ -95,6 +95,11 @@ public class ClientOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsAlwaysOn { get; set; }
 
+    // The kill switch, where the device has one (IVpnKillSwitch): the app sends it on only where the person
+    // turned it on and the plan allows it, so the service obeys it as it is.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool UseKillSwitch { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public UserReview? UserReview { get; set; }
 

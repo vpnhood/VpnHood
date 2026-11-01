@@ -411,6 +411,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a settings change", LogLevel.Warning,
                 () => ReconfigureVpnService(CancellationToken.None));
 
+            // The kill switch turned off lifts the block at once, one an error stop left too, which no session
+            // holds; the reconfigure takes it from a session. Turned on, the reconfigure puts a session's up.
+            if (oldUserSettings.KillSwitch && !UserSettings.KillSwitch)
+                _ = VhInvoker.TryInvokeAsync("lift the kill switch's block", LogLevel.Error,
+                    () => UnblockKillSwitch(CancellationToken.None));
+
             if (ConnectionInfo.IsStarted()) {
                 // Settings that only apply at connect, judged on EFFECTIVE split values so flipping the
                 // split-tunneling toggle asks for a reconnect only when it changes something the adapter
@@ -1089,6 +1095,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             SessionName = Features.IsAddAccessKeySupported ? profileInfo.VpnProfileName : null,
             CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
             AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
+            UseKillSwitch = IsKillSwitchOn,
             UserReview = Settings.UserReview
         };
 
@@ -1497,11 +1504,31 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // A person's disconnect, which also stops always on until a person connects or the service restarts.
-    public Task Disconnect()
+    // A person's disconnect, which also stops always on until a person connects or the service restarts. It
+    // lifts the kill switch's block too, and only it does, not an error stop, a crash or a reboot (owner,
+    // 2026-10-31: "the block should stay until the user disconnects manually"), even when the stop failed.
+    // No lockdown, which would keep it after a disconnect too: a hotel's sign-in page would then need the
+    // switch turned off (owner, 2026-10-31: dropped). Not under the caller's token: a person's disconnect
+    // is finished whoever stops waiting for it.
+    public async Task Disconnect()
     {
         _alwaysOnService.PersonDisconnecting();
-        return DisconnectCore(connectNumber: null);
+        try {
+            await DisconnectCore(connectNumber: null).Vhc();
+        }
+        finally {
+            await UnblockKillSwitch(CancellationToken.None).Vhc();
+        }
+    }
+
+    // The kill switch as a connect runs with it: the person's, where the device has one and the plan allows it.
+    private bool IsKillSwitchOn =>
+        UserSettings.KillSwitch && _device.KillSwitch != null && IsPremiumFeatureAllowed(AppFeature.KillSwitch);
+
+    // This app's block, if one is up; another app's stays, as that app holds the tunnel.
+    private Task UnblockKillSwitch(CancellationToken cancellationToken)
+    {
+        return _device.KillSwitch?.Unblock(anyApp: false, cancellationToken) ?? Task.CompletedTask;
     }
 
     private readonly AsyncLock _disconnectLock = new();

@@ -94,6 +94,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     public event EventHandler? Disposed;
     public event EventHandler<Exception>? Failed;
+    public event EventHandler<VpnAdapterOptions>? Started;
     public string AdapterName { get; }
     public IPAddress? PrimaryAdapterIpV4 { get; private set; } = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
     public IPAddress? PrimaryAdapterIpV6 { get; private set; } = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
@@ -337,6 +338,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             }
 
             VhLogger.Instance.LogInformation("TUN adapter started.");
+
+            // a failed handler must not fail the start
+            VhInvoker.TryInvoke("raise the adapter's Started event", LogLevel.Error,
+                () => Started?.Invoke(this, options));
         }
         catch (Exception ex) {
             // when a concurrent Stop() tears the adapter down mid-start, or the start is cancelled (a

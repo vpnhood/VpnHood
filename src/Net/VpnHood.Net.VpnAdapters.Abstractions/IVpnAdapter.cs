@@ -20,6 +20,11 @@ public interface IVpnAdapter : IPacketTransport
     /// raised with AutoRestart, where the adapter retries instead.
     /// </summary>
     event EventHandler<Exception>? Failed;
+    /// <summary>
+    /// The adapter is up, with these options: the owner's start and each restart, which may make the
+    /// interface anew. What is pointed at the interface from outside, a kill switch's block, follows it.
+    /// </summary>
+    event EventHandler<VpnAdapterOptions>? Started;
     bool IsStarted { get; }
     /// <summary>
     /// Whether the adapter's NAT translates this IP version; a server sends one it does not by its proxy.

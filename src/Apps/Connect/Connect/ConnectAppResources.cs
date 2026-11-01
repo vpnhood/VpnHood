@@ -7,6 +7,7 @@ public static class ConnectAppResources
     public static AppFeature[] PremiumFeatures { get; } = [
         AppFeature.CustomDns,
         AppFeature.AlwaysOn,
+        AppFeature.KillSwitch,
         AppFeature.QuickLaunch,
         AppFeature.SplitIpViaApp,
         AppFeature.SplitIpViaDevice,

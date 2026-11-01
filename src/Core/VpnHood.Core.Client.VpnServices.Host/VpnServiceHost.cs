@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
@@ -9,6 +10,7 @@ using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -22,9 +24,13 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
     private readonly IVpnTunnelLock? _tunnelLock;
+    private readonly IVpnKillSwitch? _killSwitch;
+    private readonly AsyncLock _killSwitchLock = new();
     private readonly string _dataFolder;
     private readonly LogService? _logService;
     private IDisposable? _tunnelHold;
+    private bool _useKillSwitch;
+    private VpnKillSwitchRules? _killSwitchRules; // this connect's, while it may change the block; null once it may not
     private IVpnAdapter? _vpnAdapter; // the last connect's, which a revoke takes down at once
     private Exception? _disconnectException;
     private CancellationTokenSource _connectCts = new();
@@ -55,13 +61,15 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 
     // configFolder and dataFolder: IDevice's VpnServiceConfigFolder and VpnServiceDataFolder.
     // tunnelLock: the machine's one tunnel, where the platform has one (the desktops).
+    // killSwitch: the device's kill switch, where it has one (IDevice.KillSwitch).
     public VpnServiceHost(string configFolder,
         string dataFolder,
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,
         IMessageListener messageListener,
         bool withLogger = true,
-        IVpnTunnelLock? tunnelLock = null)
+        IVpnTunnelLock? tunnelLock = null,
+        IVpnKillSwitch? killSwitch = null)
     {
         // the service may start before the app has made its folder: always-on, after an update
         Directory.CreateDirectory(configFolder);
@@ -73,6 +81,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
         _tunnelLock = tunnelLock;
+        _killSwitch = killSwitch;
 
         // A log file of its own where the VPN service has a process of its own (withLogger), opened at
         // each start request; in the app's process its lines go to the app's file, through the same
@@ -222,12 +231,16 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             if (_tunnelLock != null && !clientOptions.UseNullCapture && _tunnelHold == null)
                 _tunnelHold = await _tunnelLock.Take(this, cancellationToken).Vhc();
 
+            // the kill switch's block, before the adapter and the connect's first packet
+            await StartKillSwitch(clientOptions, cancellationToken).Vhc();
+
             // null-capture is host debug plumbing, so the adapter is resolved here and handed to the
             // handler ready-made
             var vpnAdapter = clientOptions.UseNullCapture
                 ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
                 : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1);
             _vpnAdapter = vpnAdapter;
+            vpnAdapter.Started += VpnAdapter_Started;
 
             // assign Client member to monitor states while connecting, even if the client is not connected yet.
             // This is important to update the connection info file and notification correctly.
@@ -395,6 +408,10 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             // a start still on its way - waiting for the tunnel, say - ends too, rather than connecting after
             _connectCts.TryCancel();
 
+            // the block stays as it is: lifting it is a person's disconnect's, the app's; this connect changes
+            // it no more, not even by a re-point under way, which may otherwise land after that lift
+            await EndKillSwitchChanges().Vhc();
+
             // the session this disconnect ends, so its end cannot land on a newer one
             var sessionId = Context.SessionId;
 
@@ -429,6 +446,121 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         _disconnectException = exception;
         _vpnAdapter?.Dispose();
         _ = TryDisconnect(exception);
+    }
+
+    // Whether the tunnel's block is this host's to change: the tunnel's holder's, or any host's where the
+    // platform has no tunnel lock.
+    private bool IsTunnelHeld => _tunnelLock == null || _tunnelHold != null;
+
+    // A connect's block, before its adapter: up where the switch is on, else none. The tunnel is this host's
+    // now, so a block a crashed or revoked holder left is its to replace or remove. Fail-closed: a block that
+    // cannot go up fails the connect, which says why.
+    private async Task StartKillSwitch(ClientOptions clientOptions, CancellationToken cancellationToken)
+    {
+        if (clientOptions.UseKillSwitch) {
+            if (_killSwitch == null)
+                throw new NotSupportedException("This device has no kill switch.");
+
+            // nothing would let the tunnel's traffic through: a null-capture makes no adapter of its own
+            if (clientOptions.UseNullCapture)
+                throw new NotSupportedException("The kill switch cannot work with a null-capture.");
+        }
+
+        using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
+        _useKillSwitch = clientOptions.UseKillSwitch;
+        _killSwitchRules = clientOptions.UseNullCapture ? null : CreateKillSwitchRules(clientOptions);
+        await ApplyKillSwitch(cancellationToken).Vhc();
+    }
+
+    // Before a session, by the person's settings: the server's own exclusions come only with a session, and
+    // so does its DNS plan, so no resolver passes yet.
+    private static VpnKillSwitchRules CreateKillSwitchRules(ClientOptions clientOptions)
+    {
+        var includeIpRanges = clientOptions.IncludeIpRangesByDevice.ToOrderedList();
+        if (clientOptions.SplitLocalNetwork) {
+            includeIpRanges = includeIpRanges
+                .Exclude(IpNetwork.LocalNetworks.ToIpRanges())
+                .Exclude(IpNetwork.MulticastNetworks.ToIpRanges())
+                .Exclude(IPAddress.Broadcast);
+        }
+
+        return new VpnKillSwitchRules {
+            AdapterName = clientOptions.AdapterName,
+            PassIpRanges = includeIpRanges.Invert(),
+            DnsServers = []
+        };
+    }
+
+    // A session's adapter start: what its routes leave out, as the adapter has them.
+    private static VpnKillSwitchRules CreateKillSwitchRules(string adapterName, VpnAdapterOptions adapterOptions)
+    {
+        var includeIpRanges = adapterOptions.IncludeNetworks.ToIpRanges();
+        var passIpRanges = includeIpRanges.Invert();
+        if (adapterOptions.ServerIp != null)
+            passIpRanges = passIpRanges.Exclude(adapterOptions.ServerIp);
+
+        return new VpnKillSwitchRules {
+            AdapterName = adapterName,
+            PassIpRanges = passIpRanges,
+            DnsServers = adapterOptions.DnsServers.Where(x => !includeIpRanges.Contains(x)).ToArray()
+        };
+    }
+
+    // Each start of this connect's adapter, a restart's too, which may make its interface anew: the block
+    // follows it, with what the session's routes leave out. Until it does, the tunnel's own traffic is
+    // blocked too, which fails closed.
+    private void VpnAdapter_Started(object? sender, VpnAdapterOptions adapterOptions)
+    {
+        if (sender != _vpnAdapter)
+            return;
+
+        _ = VhInvoker.TryInvokeAsync("point the kill switch's block at the tunnel", LogLevel.Error,
+            () => RepointKillSwitch(adapterOptions, CancellationToken.None));
+    }
+
+    private async Task RepointKillSwitch(VpnAdapterOptions adapterOptions, CancellationToken cancellationToken)
+    {
+        using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
+        if (_killSwitchRules == null)
+            return;
+
+        _killSwitchRules = CreateKillSwitchRules(_killSwitchRules.AdapterName, adapterOptions);
+        if (_useKillSwitch)
+            await ApplyKillSwitch(cancellationToken).Vhc();
+    }
+
+    // The switch, turned on or off while a connect of this host holds the tunnel: on, the block goes up with
+    // the rules as they are; off, it goes. Otherwise the block is no connect's: the app lifts it itself.
+    internal async Task ReconfigureKillSwitch(bool useKillSwitch, CancellationToken cancellationToken)
+    {
+        using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
+        if (_killSwitchRules == null || _useKillSwitch == useKillSwitch)
+            return;
+
+        _useKillSwitch = useKillSwitch;
+        await ApplyKillSwitch(cancellationToken).Vhc();
+    }
+
+    // Under the kill switch's lock.
+    private async Task ApplyKillSwitch(CancellationToken cancellationToken)
+    {
+        if (_killSwitch == null || !IsTunnelHeld)
+            return;
+
+        if (_useKillSwitch && _killSwitchRules != null) {
+            VhLogger.Instance.LogInformation("The kill switch blocks all but the tunnel. PassIpRanges: {Count}",
+                _killSwitchRules.PassIpRanges.Count);
+            await _killSwitch.Block(_killSwitchRules, cancellationToken).Vhc();
+            return;
+        }
+
+        await _killSwitch.Unblock(anyApp: true, cancellationToken).Vhc();
+    }
+
+    private async Task EndKillSwitchChanges()
+    {
+        using var scope = await _killSwitchLock.LockAsync(CancellationToken.None).Vhc();
+        _killSwitchRules = null;
     }
 
     // Once no adapter of this host is up.

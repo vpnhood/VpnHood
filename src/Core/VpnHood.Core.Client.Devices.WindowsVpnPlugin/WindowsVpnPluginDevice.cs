@@ -64,6 +64,7 @@ public sealed class WindowsVpnPluginDevice : IDevice
     // up. Nor Windows' own Always On (the profile's AlwaysOn, and the person's "Connect automatically"): it would
     // start the VPN host without the app, which Windows freezes between VPN events while no app holds it.
     public bool IsAlwaysOnSupported => false;
+    public IVpnKillSwitch? KillSwitch => null; // the sandbox cannot reach WFP; Windows' own lockdown is set only by MDM
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
     // as Chrome says it here, whose NT version reads 10.0 on Windows 11 too

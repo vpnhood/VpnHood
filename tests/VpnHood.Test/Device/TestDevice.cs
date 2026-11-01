@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Net.Toolkit.Logging;
@@ -39,6 +40,9 @@ public class TestDevice(
 
     // the machine's one tunnel, where a test plays a desktop
     public IVpnTunnelLock? TunnelLock { get; init; }
+
+    // the kill switch's block, where a test plays a desktop
+    public IVpnKillSwitch? KillSwitch { get; init; }
 
     // the VPN permission's ask, where a test plays the person: the answer may come late, past the start's cancel
     public Func<CancellationToken, Task>? RequestVpnServiceHandler { get; init; }
@@ -81,7 +85,7 @@ public class TestDevice(
         // create service
         if (VpnService == null || VpnService.IsDisposed)
             VpnService = new TestVpnService(VpnServiceConfigFolder, testHelper.ClientNetFilter, vpnAdapterFactory,
-                TunnelLock);
+                TunnelLock, KillSwitch);
 
         VpnService.OnConnect();
     }

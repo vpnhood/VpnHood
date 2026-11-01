@@ -1,5 +1,6 @@
 ﻿using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Quic.MsQuic;
 
@@ -23,6 +24,7 @@ public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
     public bool IsIncludeAppsSupported => isDebugMode;
     public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsAlwaysOnSupported => true;
+    public IVpnKillSwitch? KillSwitch => null;
     public bool IsTv => false;
     public bool IsWaitingForVpnPermission => false;
 

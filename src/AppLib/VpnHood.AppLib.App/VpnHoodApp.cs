@@ -1022,8 +1022,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw new UserCanceledException("User has cancelled the connection.");
         }
         catch (Exception ex) {
-            // check no internet connection, use the original cancellation token to avoid timeout exception
-            if (Config.AutoDiagnose && !_appPersistState.HasDiagnoseRequested &&
+            // check no internet connection, use the original cancellation token to avoid timeout exception; not for
+            // a try its caller makes again, whose error nobody sees: the check only words that error, and holds
+            // the next try
+            if (Config.AutoDiagnose && !_appPersistState.HasDiagnoseRequested && !connectOptions.IsRetried &&
                 ex is not UserCanceledException && ex is not SessionException) {
                 VhLogger.Instance.LogDebug("Start checking client network...");
 

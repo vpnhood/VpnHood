@@ -170,7 +170,7 @@ public class ClientAppTest : TestAppBase
     [TestMethod]
     public async Task Connect_fail_retried_shows_no_error()
     {
-        // no network yet, as at a wake: the VPN service fails, then the diagnosis
+        // no network yet, as at a wake: the VPN service fails, and the diagnosis would say NoInternet
         await using var server = await TestHelper.CreateServer();
         var token = await TestHelper.CreateAccessToken(server);
         token.ServerToken.HostEndPoints = [MockEps.HttpV4EndPointInvalid];
@@ -183,9 +183,11 @@ public class ClientAppTest : TestAppBase
         app.Diagnoser.TestNsIpEndPoints = [MockEps.HttpV4EndPointInvalid];
         app.Diagnoser.TestPingIpAddresses = [MockEps.IpInvalid];
 
-        // its caller tries again, so neither the app's error nor the VPN service's is shown
-        await Assert.ThrowsExactlyAsync<NoInternetException>(() => app.Connect(uiContext: null,
+        // its caller tries again, so neither the app's error nor the VPN service's is shown, and no diagnosis
+        // words it
+        var ex = await Assert.ThrowsAsync<Exception>(() => app.Connect(uiContext: null,
             new ConnectOptions { VpnProfileId = vpnProfile.VpnProfileId, IsRetried = true }, TestCt));
+        Assert.IsNotInstanceOfType<NoInternetException>(ex);
         Assert.IsTrue(app.State.IsIdle);
         Assert.IsNull(app.State.LastError);
     }

@@ -26,6 +26,8 @@ internal sealed class MsQuicServerStream(QuicStream stream) : Stream, IQuicStrea
     public void AbortRead(long errorCode) => stream.Abort(QuicAbortDirection.Read, errorCode);
     public void AbortWrite(long errorCode) => stream.Abort(QuicAbortDirection.Write, errorCode);
     public void CompleteWrites() => stream.CompleteWrites();
+    public ValueTask WriteFinal(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken) =>
+        stream.WriteAsync(buffer, completeWrites: true, cancellationToken);
     public override void Flush() => stream.Flush();
     public override Task FlushAsync(CancellationToken cancellationToken) => stream.FlushAsync(cancellationToken);
     public override long Seek(long offset, SeekOrigin origin) => stream.Seek(offset, origin);

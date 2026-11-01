@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Net.Quic;
 using System.Text;
-using VpnHood.Net.Http3;
 using VpnHood.Test.KestrelParity.Probing;
 using VpnHood.Test.KestrelParity.Servers;
 
@@ -102,12 +101,12 @@ public partial class Http3FrontTest
     [DataRow(32769)]
     [DataRow(65536)]
     [DataRow(65537)]
-    public async Task Header_and_trailer_octets_before_dispatch_share_the_reference_limit(int decodedBytes)
+    public async Task Header_and_trailer_octets_during_a_held_application_preserve_the_selected_response(int decodedBytes)
     {
         const int headerBytes = 32000;
         var headers = CreateSizedFields(ValidationHeaders(), headerBytes, 8);
         var trailers = CreateMarkedTrailerFields(decodedBytes - headerBytes);
-        await AssertTrailersBeforeDispatch($"headers-and-trailers-octets-{decodedBytes}",
+        await AssertTrailersDuringHeldApplication($"headers-and-trailers-octets-{decodedBytes}",
             BuildLiteralRequest(headers), BuildLiteralRequest(trailers), [],
             decodedBytes > 65536 ? 0x10b : null, decodedBytes > 32768 ? "431" : "401",
             TestContext.CancellationToken);
@@ -119,7 +118,7 @@ public partial class Http3FrontTest
     [DataRow(101)]
     [DataRow(200)]
     [DataRow(201)]
-    public async Task Header_and_trailer_counts_before_dispatch_share_the_reference_limit(int totalCount)
+    public async Task Header_and_trailer_counts_during_a_held_application_preserve_the_selected_response(int totalCount)
     {
         var headers = CreateCountedHeaders();
         IReadOnlyList<(string Name, string Value)> trailers = [
@@ -127,7 +126,7 @@ public partial class Http3FrontTest
             (ReferenceRequestGate.MarkerName, "1")
         ];
         Assert.AreEqual(totalCount, headers.Count + trailers.Count);
-        await AssertTrailersBeforeDispatch($"headers-and-trailers-count-{totalCount}",
+        await AssertTrailersDuringHeldApplication($"headers-and-trailers-count-{totalCount}",
             BuildLiteralRequest(headers), BuildLiteralRequest(trailers), [],
             totalCount > 200 ? 0x10e : null, totalCount > 100 ? "431" : "401",
             TestContext.CancellationToken);
@@ -135,13 +134,13 @@ public partial class Http3FrontTest
 
     [TestMethod]
     [TestCategory("Http3Framing")]
-    public async Task Data_after_trailers_before_dispatch_closes_the_connection()
+    public async Task Data_after_trailers_during_a_held_application_closes_the_connection()
     {
         var headers = BuildLiteralRequest(ValidationHeaders());
         byte[] tail = [.. BuildLiteralRequest([.. Enumerable.Repeat(("x", ""), 8)]), .. Frame(0, [1])];
         // No marker releases the reference application before its parser reaches the invalid DATA frame.
         var expected = await ObserveTrailersBeforeDispatch(headers, tail, [], TestContext.CancellationToken);
-        var actual = await ObserveTrailersBeforeOurDispatch(headers, tail, [], TestContext.CancellationToken);
+        var actual = await ObserveTrailersDuringHeldApplication(headers, tail, [], TestContext.CancellationToken);
         var error = new Http3ProbeResult("", false, QuicError.ConnectionAborted, 0x105);
         Assert.AreEqual(error, expected.Response);
         Assert.AreEqual(error, expected.Write);
@@ -180,18 +179,18 @@ public partial class Http3FrontTest
     [TestCategory("Http3Validation")]
     [DataRow(true)]
     [DataRow(false)]
-    public async Task A_trailer_hard_limit_after_the_soft_limit_response_preserves_431(bool octets)
+    public async Task A_trailer_hard_limit_after_a_selected_response_preserves_its_status(bool octets)
     {
         var headers = octets ? CreateSizedFields(ValidationHeaders(), 32000, 8) : CreateCountedHeaders();
         IReadOnlyList<(string Name, string Value)> prefixFields = octets
             ? CreateMarkedTrailerFields(65536 - 32000)
             : [.. Enumerable.Repeat(("x", ""), 200 - headers.Count - 1),
                 (ReferenceRequestGate.MarkerName, "1")];
-        // One final field crosses the hard boundary, but arrives only after the complete 431.
+        // The reference can select 431 before dispatch; a held application has already selected 401.
         var trailers = BuildLiteralRequest([.. prefixFields, ("x", "")]);
         byte[] tail = [0x21, (byte)'x', 0];
         CollectionAssert.AreEqual(tail, trailers[^tail.Length..]);
-        await AssertTrailersBeforeDispatch($"trailer-hard-limit-after-431-octets-{octets}",
+        await AssertTrailersDuringHeldApplication($"trailer-hard-limit-after-selected-response-octets-{octets}",
             BuildLiteralRequest(headers), trailers[..^tail.Length], tail, null, "431",
             TestContext.CancellationToken);
     }
@@ -223,11 +222,11 @@ public partial class Http3FrontTest
         return [.. fields.Skip(1), marker];
     }
 
-    private async Task AssertTrailersBeforeDispatch(string name, byte[] headers, byte[] trailers, byte[] lateTail,
+    private async Task AssertTrailersDuringHeldApplication(string name, byte[] headers, byte[] trailers, byte[] lateTail,
         long? resetCode, string status, CancellationToken cancellationToken)
     {
         var expected = await ObserveTrailersBeforeDispatch(headers, trailers, lateTail, cancellationToken);
-        var actual = await ObserveTrailersBeforeOurDispatch(headers, trailers, lateTail, cancellationToken);
+        var actual = await ObserveTrailersDuringHeldApplication(headers, trailers, lateTail, cancellationToken);
         if (resetCode != null) {
             Assert.AreEqual(new Http3ProbeResult("", false, QuicError.StreamAborted, resetCode), expected.Response);
             Assert.AreEqual(new Http3ProbeResult("", false, QuicError.StreamAborted, resetCode), expected.Write);
@@ -235,20 +234,26 @@ public partial class Http3FrontTest
         else {
             AssertTrailerResponse(expected, status);
         }
-        AssertRequestEnding(name, expected, actual);
+        if (resetCode != null) {
+            AssertRequestEnding(name, expected, actual);
+            return;
+        }
+        // Production selects before entering the responder, so holding emission freezes its ordinary 401.
+        // Keep the reference's pre-dispatch 431 above, and compare this response with its selected-401 case.
+        var responseFirst = await ObserveAfterResponse(Servers.ReferenceEndPoint, headers,
+            [.. trailers, .. lateTail], cancellationToken);
+        AssertTrailerResponse(responseFirst, "401");
+        AssertRequestEnding(name + "-selected-401", responseFirst, actual);
     }
 
-    private static async Task<RequestEnding> ObserveTrailersBeforeOurDispatch(byte[] headers, byte[] trailers,
+    private static async Task<RequestEnding> ObserveTrailersDuringHeldApplication(byte[] headers, byte[] trailers,
         byte[] lateTail, CancellationToken cancellationToken)
     {
         byte[] prefix = [.. headers, .. trailers];
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(Http3Probe.Timeout);
-        await using var server = await PinnedHttp3Server.Start(Servers.Certificate,
-            new Http3TrailerSchedule(long.MaxValue, double.PositiveInfinity, double.PositiveInfinity), deadline.Token);
-        // The pinned parser-first schedule must see the complete prefix before its available-only inspection.
-        using var buffered = server.BufferedQuic.BufferNextRequest(prefix.Length, static () => { }, finish: false,
-            deadline.Token);
+        await using var server = await GatedHttp3Server.Start(Servers.Certificate,
+            prefix.Length, headers.Length, finish: false, deadline.Token);
         return lateTail.Length == 0
             ? await ObserveRequestEnding(server.EndPoint, prefix, finish: false, atomicFin: false, deadline.Token)
             : await ObserveAfterResponse(server.EndPoint, prefix, lateTail, deadline.Token);
@@ -258,7 +263,7 @@ public partial class Http3FrontTest
         CancellationToken cancellationToken)
     {
         var expected = await ObserveAfterResponse(Servers.ReferenceEndPoint, headers, trailers, cancellationToken);
-        var actual = await ObserveAfterPinnedResponse(headers, trailers, cancellationToken);
+        var actual = await ObserveAfterResponse(Servers.OurEndPoint, headers, trailers, cancellationToken);
         AssertTrailerResponse(expected, "401");
         AssertRequestEnding(name, expected, actual);
     }

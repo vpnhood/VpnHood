@@ -3,37 +3,41 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Http3;
 
-internal static class Http3RequestStream
+internal sealed class Http3RequestStream(Http3StreamReader reader, IQuicStream quic,
+    Action<Exception> onError, IHttp3Responder responder, Http3ServerOptions options) : IAsyncDisposable
 {
-    public static async Task Process(Stream stream, Http3StreamReader reader, IQuicStream quic,
+    private readonly Http3HeaderBudget _headerBudget = new(options);
+    private Http3ResponseDispatch? _responseDispatch;
+
+    public static async Task Process(Http3StreamReader reader, IQuicStream quic,
         Action<Exception> onError, IHttp3Responder responder,
-        Http3ServerOptions options, IHttp3TrailerScheduleSampler trailerScheduleSampler, CancellationToken headersToken,
+        Http3ServerOptions options, CancellationToken headersToken,
         CancellationToken cancellationToken)
     {
-        var headerBudget = new Http3HeaderBudget(options);
-        var head = await ReadHeaders(reader, options, headerBudget, headersToken).Vhc();
+        await using var request = new Http3RequestStream(reader, quic, onError, responder, options);
+        await request.Process(headersToken, cancellationToken).Vhc();
+    }
+
+    private async Task Process(CancellationToken headersToken, CancellationToken cancellationToken)
+    {
+        var head = await ReadHeaders(headersToken).Vhc();
         if (!head.Completed) {
             quic.CompleteWrites();
             return;
         }
-        // Count every inspected byte, including zero-length DATA frame headers and QPACK trailers.
-        // A continuously readable peer must not postpone the application's final response forever.
-        reader.AvailableBytesLimit = options.MaxBodyInspectionBytes;
-        reader.ReadAvailableOnly = true;
-        var dispatch = new Http3ResponseDispatch(stream, quic, responder, head.Request,
-            headerBudget, options, onError);
+        var dispatch = _responseDispatch ??
+            throw new InvalidOperationException("A completed request has no response dispatch.");
         try {
             if (!head.ExceedsRequestLimits) {
                 try {
-                    await ValidateAvailableBody(reader, head.Request.ContentLength, headerBudget,
-                        dispatch, options, trailerScheduleSampler, cancellationToken).Vhc();
+                    await ValidateAvailableBody(reader, head.Request.ContentLength, _headerBudget,
+                        dispatch, options, headersToken).Vhc();
                 }
-                catch (Exception ex) when (ex is Http3ReadPendingException or Http3ReadBudgetExceededException or
+                catch (Exception ex) when (ex is Http3ReadBudgetExceededException or
                                            Http3InspectionCompleteException) {
-                    // Exhausted input, the byte bound or the sampled point ends inspection without waiting.
+                    // The byte bound or completed application ends inspection.
                 }
             }
-            await dispatch.Complete(headersToken).Vhc();
         }
         catch (OperationCanceledException ex) {
             dispatch.Fail(ex);
@@ -43,55 +47,85 @@ internal static class Http3RequestStream
         catch (Exception ex) {
             dispatch.Fail(ex);
         }
-        finally {
-            dispatch.ThrowIfFailed(cancellationToken);
-        }
+        await dispatch.Join(cancellationToken).Vhc();
+    }
+
+    private void StartResponse(Http3RequestHead head, CancellationToken headersToken)
+    {
+        // Count every inspected byte, including zero-length DATA frame headers and QPACK trailers.
+        // A continuously readable peer must not postpone the application's final response forever.
+        reader.BeginBodyInspection(options.MaxBodyInspectionBytes);
+        _responseDispatch = new Http3ResponseDispatch(quic, responder, head.Request,
+            _headerBudget, options, onError, reader, head.Headers);
+        _responseDispatch.Start(headersToken);
     }
 
     private static async Task ValidateAvailableBody(Http3StreamReader reader, long? contentLength,
         Http3HeaderBudget headerBudget, Http3ResponseDispatch dispatch, Http3ServerOptions options,
-        IHttp3TrailerScheduleSampler trailerScheduleSampler, CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         long bodyBytes = 0;
-        Http3TrailerInspection? inspection = null;
-        while (true) {
-            var type = await reader.ReadIntegerOrEnd(inspection, cancellationToken).Vhc();
-            if (type == null) {
-                ValidateBodyLength(bodyBytes, contentLength);
-                return;
-            }
-            var length = await reader.ReadInteger(inspection, cancellationToken).Vhc();
-            if (inspection != null && type is 0 or 1)
-                throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
-            if (type == 0) {
-                while (length > 0) {
-                    var count = await reader.DiscardSome(length, cancellationToken).Vhc();
-                    if (count == 0) {
-                        ValidateBodyLength(bodyBytes, contentLength);
-                        return;
+        var trailersSeen = false;
+        try {
+            while (true) {
+                var type = await reader.ReadIntegerOrEnd(cancellationToken).Vhc();
+                if (type == null) {
+                    ValidateBodyLength(bodyBytes, contentLength);
+                    return;
+                }
+                var length = await reader.ReadInteger(cancellationToken).Vhc();
+                if (trailersSeen && type == 0)
+                    throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
+                if (type == 0) {
+                    while (length > 0) {
+                        var count = await reader.DiscardSome(length, cancellationToken).Vhc();
+                        if (count == 0) {
+                            ValidateBodyLength(bodyBytes, contentLength);
+                            return;
+                        }
+                        bodyBytes += count;
+                        length -= count;
+                        if (contentLength != null && bodyBytes > contentLength)
+                            throw new Http3ProtocolException(Http3Protocol.ProtocolError, connectionError: false);
                     }
-                    bodyBytes += count;
-                    length -= count;
-                    if (contentLength != null && bodyBytes > contentLength)
-                        throw new Http3ProtocolException(Http3Protocol.ProtocolError, connectionError: false);
+                }
+                else if (type == 1) {
+                    if (!await ReadTrailers(reader, length, trailersSeen, headerBudget, options,
+                            cancellationToken).Vhc())
+                        return;
+                    trailersSeen = true;
+                }
+                else {
+                    RejectUnexpected(type.Value, beforeHeaders: false);
+                    await reader.Discard(length, cancellationToken).Vhc();
                 }
             }
-            else if (type == 1) {
-                inspection = new Http3TrailerInspection(trailerScheduleSampler.Sample(), dispatch);
-                inspection.Start();
-                var trailerHeaders = new Http3RequestHeaders(trailers: true, options.MaxRequestLineBytes);
-                var section = await Http3Qpack.ReadSection(reader, length, trailerHeaders.Append,
-                    options, headerBudget, inspection, cancellationToken).Vhc();
-                if (!section.Completed)
-                    return;
-                trailerHeaders.Complete();
-                // Only trailer fields advance selection; emission also counts subsequent frame bytes.
-            }
-            else {
-                RejectUnexpected(type.Value, beforeHeaders: false);
-                await reader.Discard(length, inspection, cancellationToken).Vhc();
-            }
         }
+        catch (Http3ProtocolException ex) {
+            // Report protocol failures before unwinding the parser task. The response is independent
+            // and can otherwise commit its FIN during that unwind.
+            dispatch.Fail(ex);
+            throw;
+        }
+        catch (Http3QpackException ex) {
+            dispatch.Fail(ex);
+            throw;
+        }
+    }
+
+    private static async Task<bool> ReadTrailers(Http3StreamReader reader, long length, bool trailersSeen,
+        Http3HeaderBudget headerBudget, Http3ServerOptions options,
+        CancellationToken cancellationToken)
+    {
+        if (trailersSeen)
+            throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
+        var trailerHeaders = new Http3RequestHeaders(trailers: true, options.MaxRequestLineBytes);
+        var section = await Http3Qpack.ReadSection(reader, length, trailerHeaders.Append,
+            options, headerBudget, cancellationToken).Vhc();
+        if (!section.Completed)
+            return false;
+        trailerHeaders.Complete();
+        return true;
     }
 
     private static void ValidateBodyLength(long bodyBytes, long? contentLength)
@@ -100,8 +134,7 @@ internal static class Http3RequestStream
             throw new Http3ProtocolException(Http3Protocol.ProtocolError, connectionError: false);
     }
 
-    private static async Task<Http3RequestHead> ReadHeaders(Http3StreamReader reader, Http3ServerOptions options,
-        Http3HeaderBudget headerBudget, CancellationToken cancellationToken)
+    private async Task<Http3RequestHead> ReadHeaders(CancellationToken cancellationToken)
     {
         try {
             while (true) {
@@ -110,9 +143,17 @@ internal static class Http3RequestStream
                 if (type == 1) {
                     var headers = new Http3RequestHeaders(trailers: false, options.MaxRequestLineBytes);
                     var section = await Http3Qpack.ReadSection(reader, length, headers.Append,
-                        options, headerBudget, cancellationToken).Vhc();
-                    var request = new Http3Request(headers.Fields, section.Completed ? headers.Complete() : null);
-                    return new Http3RequestHead(section.Completed, section.ExceedsRequestLimits, request);
+                        options, _headerBudget, cancellationToken).Vhc();
+                    if (section.Completed)
+                        headers.ValidateRequiredPseudoHeaders();
+                    var request = new Http3Request(headers.Fields, headers.ContentLength);
+                    var head = new Http3RequestHead(section.Completed, section.ExceedsRequestLimits,
+                        request, headers);
+                    if (head.Completed)
+                        // Kestrel's completed HEADERS callback queues the application before its
+                        // header-reading task unwinds, so buffered body/trailers race the response.
+                        StartResponse(head, cancellationToken);
+                    return head;
                 }
                 RejectUnexpected(type, beforeHeaders: true);
                 // RC3 discards request extensions without a size cap; the header deadline still applies.
@@ -132,5 +173,11 @@ internal static class Http3RequestStream
         // on its control stream. HTTP/3 control-only frames still cannot appear on a request.
         if (type is 3 or 4 or 5 or 7 or 13 || beforeHeaders && type == 0)
             throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_responseDispatch != null)
+            await _responseDispatch.DisposeAsync().Vhc();
     }
 }

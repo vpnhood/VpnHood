@@ -1,4 +1,5 @@
 using VpnHood.Net.Http3;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -11,7 +12,7 @@ public class Http3StreamReaderTest
     public async Task Buffered_integer_payload_and_discard_reads_preserve_wire_order()
     {
         using var source = new MemoryStream([0x40, 0x42, 1, 2, 3, 4, 5]);
-        await using var reader = new Http3StreamReader(source) { ReadAvailableOnly = true };
+        await using var reader = new Http3StreamReader(source);
         Assert.AreEqual(66L, await reader.ReadInteger(TestContext.CancellationToken));
         var bytes = new byte[2];
         Assert.AreEqual(2, await reader.Read(bytes, TestContext.CancellationToken));
@@ -22,31 +23,58 @@ public class Http3StreamReaderTest
     }
 
     [TestMethod]
-    public async Task An_abandoned_read_owns_its_private_buffer_until_disposal_observes_cancellation()
+    public async Task Stopping_inspection_joins_the_native_read_before_releasing_its_buffer()
     {
-        using var source = new PendingReadStream();
-        await using var reader = new Http3StreamReader(source) { ReadAvailableOnly = true };
+        using var source = new Http3PendingReadStream();
+        await using var reader = new Http3StreamReader(source);
+        reader.BeginBodyInspection(64 * 1024);
         byte[] callerBuffer = [0x11, 0x22];
-        await Assert.ThrowsExactlyAsync<Http3ReadPendingException>(() =>
-            reader.Read(callerBuffer, TestContext.CancellationToken).AsTask());
+        var read = reader.Read(callerBuffer, TestContext.CancellationToken).AsTask();
+        await source.WaitForRead(TestContext.CancellationToken);
         Assert.IsFalse(source.ReadCompleted);
         CollectionAssert.AreEqual(new byte[] { 0x11, 0x22 }, callerBuffer);
 
-        await reader.DisposeAsync();
+        reader.StopReading();
+        await Assert.ThrowsExactlyAsync<Http3InspectionCompleteException>(() => read);
         Assert.IsTrue(source.CancellationObserved);
-        Assert.IsTrue(source.ReadCompleted, "Disposal must observe the pending write before returning its pool buffer.");
+        Assert.IsTrue(source.ReadCompleted, "Stopping inspection must observe the native read before releasing its buffer.");
         CollectionAssert.AreEqual(new byte[] { 0x11, 0x22 }, callerBuffer,
             "A late native read must never write into the caller's released temporary buffer.");
+    }
+
+    [TestMethod]
+    public async Task Stopping_inspection_translates_cancellation_during_native_read_setup()
+    {
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        lifetime.CancelAfter(TimeSpan.FromSeconds(5));
+        using var source = new Http3SynchronousReadHoldingStream(lifetime.Token);
+        await using var reader = new Http3StreamReader(source);
+        reader.BeginBodyInspection(64 * 1024);
+        byte[] callerBuffer = [0x11, 0x22];
+        var read = Task.Run(() => reader.Read(callerBuffer, lifetime.Token).AsTask(), lifetime.Token);
+        try {
+            await source.WaitForRead(lifetime.Token);
+            reader.StopReading();
+            source.ReleaseRead();
+
+            await Assert.ThrowsExactlyAsync<Http3InspectionCompleteException>(() => read);
+            CollectionAssert.AreEqual(new byte[] { 0x11, 0x22 }, callerBuffer);
+        }
+        finally {
+            source.ReleaseRead();
+            try { await read; }
+            catch (Exception) {
+                // Observe native completion before the reader and its private buffer are released.
+            }
+        }
     }
 
     [TestMethod]
     public async Task The_available_budget_counts_integer_payload_and_discard_reads()
     {
         using var source = new MemoryStream([0x40, 0x42, 1, 2, 3, 4, 5]);
-        await using var reader = new Http3StreamReader(source) {
-            ReadAvailableOnly = true,
-            AvailableBytesLimit = 6
-        };
+        await using var reader = new Http3StreamReader(source);
+        reader.BeginBodyInspection(6);
         Assert.AreEqual(66L, await reader.ReadInteger(TestContext.CancellationToken));
         Assert.AreEqual(2, await reader.Read(new byte[2], TestContext.CancellationToken));
         Assert.AreEqual(2, await reader.DiscardSome(20, TestContext.CancellationToken));
@@ -54,29 +82,15 @@ public class Http3StreamReaderTest
             reader.ReadByte(TestContext.CancellationToken).AsTask());
     }
 
-    private sealed class PendingReadStream : MemoryStream
+    [TestMethod]
+    [DataRow(false, 4096)]
+    [DataRow(true, 16384)]
+    public async Task Only_request_readers_grow_after_consuming_a_full_buffer(bool allowBufferGrowth, int nextReadSize)
     {
-        public bool CancellationObserved { get; private set; }
-        public bool ReadCompleted { get; private set; }
+        using var source = new Http3ReadSizeRecordingStream(4097);
+        await using var reader = new Http3StreamReader(source, allowBufferGrowth);
+        await reader.Discard(4097, TestContext.CancellationToken);
 
-        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
-            new(ReadUntilCancellation(buffer, cancellationToken));
-
-        private async Task<int> ReadUntilCancellation(Memory<byte> buffer, CancellationToken cancellationToken)
-        {
-            try {
-                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-                return 0;
-            }
-            catch (OperationCanceledException) {
-                CancellationObserved = true;
-                // Model an I/O completion that still touches its destination while cancellation wins.
-                buffer.Span[0] = 0x7e;
-                throw;
-            }
-            finally {
-                ReadCompleted = true;
-            }
-        }
+        CollectionAssert.AreEqual(new[] { 4096, nextReadSize }, source.ReadSizes.ToArray());
     }
 }

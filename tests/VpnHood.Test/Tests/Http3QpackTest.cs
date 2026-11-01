@@ -235,6 +235,35 @@ public class Http3QpackTest
     }
 
     [TestMethod]
+    public async Task Mixed_fields_and_compression_errors_have_the_same_result_at_every_fragment_boundary()
+    {
+        // Exercise literal names, name references, Huffman strings and multibyte indices together.
+        // Every split must preserve both completed fields and the first error without reading the next frame.
+        var valid = Convert.FromHexString("0000d1d7c1508cf1e3c2e5f23a6ba0ab90f4ff21780161ff23");
+        var expected = await ReadHeaders(valid, TestContext.CancellationToken);
+        byte[][] suffixes = [[], [0x5f], [0x50, 2, 0x61], [0xff, 0x24], [0x21, 0x78, 0x81, 0xff]];
+        foreach (var suffix in suffixes) {
+            byte[] block = [.. valid, .. suffix];
+            for (var fragment = 1; fragment <= block.Length; fragment++) {
+                using var stream = new FragmentedReadStream([.. block, 0x40, 0x7f], fragment);
+                await using var reader = new Http3StreamReader(stream);
+                var observed = new List<KeyValuePair<string, string>>();
+                var read = Http3Qpack.ReadSection(reader, block.Length, observed.Add,
+                    new Http3ServerOptions(), TestContext.CancellationToken);
+                if (suffix.Length == 0) {
+                    Assert.IsTrue((await read).Completed);
+                    Assert.AreEqual(0x40, await reader.ReadByte(TestContext.CancellationToken));
+                }
+                else {
+                    await Assert.ThrowsExactlyAsync<Http3QpackException>(() => read);
+                }
+                CollectionAssert.AreEqual(expected.ToArray(), observed.ToArray(),
+                    $"Different fields at fragment size {fragment}, suffix {Convert.ToHexString(suffix)}.");
+            }
+        }
+    }
+
+    [TestMethod]
     [DataRow(0)]
     [DataRow(1)]
     public async Task A_large_declared_string_keeps_pending_reads_bounded(int valueBytesReceived)

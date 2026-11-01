@@ -2,39 +2,28 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Http3;
 
-internal sealed class Http3QpackSectionInput(Http3StreamReader reader, long length, Http3TrailerInspection? inspection)
+internal sealed class Http3QpackSectionInput(Http3StreamReader reader, long length)
 {
-    private bool _fieldsStarted;
     public long Remaining { get; private set; } = length;
 
-    // The QPACK prefix is framing; the sampled distance starts with the encoded fields.
-    public void StartFields() => _fieldsStarted = true;
+    public ReadOnlySpan<byte> GetBufferedBytes() =>
+        reader.GetBufferedBytes((int)Math.Min(Remaining, int.MaxValue));
+
+    public void ConsumeBuffered(int count)
+    {
+        if (count > Remaining || !reader.TryReadBuffered(count, out _))
+            throw new InvalidOperationException("The decoded field bytes are no longer buffered.");
+        Remaining -= count;
+    }
 
     public async ValueTask<byte> ReadByte(CancellationToken cancellationToken)
     {
         if (Remaining == 0)
             throw new Http3QpackException("The field section ended in a compressed value.");
-        if (_fieldsStarted)
-            inspection?.CheckForEmission();
         var value = await reader.ReadByte(cancellationToken).Vhc();
         if (value < 0)
             throw new EndOfStreamException();
         Remaining--;
-        if (_fieldsStarted)
-            inspection?.Advance(1);
         return (byte)value;
-    }
-
-    public async ValueTask<int> Read(Memory<byte> bytes, CancellationToken cancellationToken)
-    {
-        var requested = (int)Math.Min(bytes.Length, Remaining);
-        var allowed = _fieldsStarted && inspection != null ? inspection.LimitRead(requested) : requested;
-        var count = await reader.Read(bytes[..allowed], cancellationToken).Vhc();
-        if (count == 0)
-            throw new EndOfStreamException();
-        Remaining -= count;
-        if (_fieldsStarted)
-            inspection?.Advance(count);
-        return count;
     }
 }

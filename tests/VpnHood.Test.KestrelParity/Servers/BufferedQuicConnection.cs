@@ -21,23 +21,17 @@ internal sealed class BufferedQuicConnection(IQuicServerConnection connection, B
         try {
             if (stream is not IQuicStream quic)
                 throw new InvalidOperationException("The test listener requires QUIC stream controls.");
-            if (!quic.CanRead || !quic.CanWrite)
+            if (!quic.CanRead || !quic.CanWrite || !server.TryClaimRequest())
                 return stream;
-            var request = server.TakeRequest();
-            if (request == null)
-                return stream;
-            using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
-                request.CancellationToken);
-            // Present the complete probe to the production parser in one available prefix.
-            var prefix = new byte[request.ByteCount];
-            await stream.ReadExactlyAsync(prefix, lifetime.Token);
-            if (request.Finish) {
-                // The available-only parser must see FIN in the same buffered input as the DATA.
+            // Preserve the request bytes while making parser progress independent of native receive timing.
+            var prefix = new byte[server.ByteCount];
+            await stream.ReadExactlyAsync(prefix, cancellationToken);
+            if (server.Finish) {
                 var end = new byte[1];
-                if (await stream.ReadAsync(end, lifetime.Token) != 0)
+                if (await stream.ReadAsync(end, cancellationToken) != 0)
                     throw new InvalidOperationException("The buffered request contains data beyond its expected end.");
             }
-            return new BufferedQuicStream(stream, quic, prefix, request.OnPrefixConsumed, request.Finish);
+            return new BufferedQuicStream(stream, quic, prefix, server.HeaderByteCount, server.Gate, server.Finish);
         }
         catch {
             await stream.DisposeAsync();

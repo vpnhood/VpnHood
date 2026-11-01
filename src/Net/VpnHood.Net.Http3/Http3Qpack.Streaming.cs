@@ -1,4 +1,3 @@
-using System.Buffers;
 using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Http3;
@@ -13,20 +12,16 @@ internal static partial class Http3Qpack
         Action<KeyValuePair<string, string>>? onField, Http3ServerOptions options, CancellationToken cancellationToken) =>
         ReadSection(reader, length, onField, options, new Http3HeaderBudget(options), cancellationToken);
 
-    public static Task<Http3FieldSection> ReadSection(Http3StreamReader reader, long length,
-        Action<KeyValuePair<string, string>>? onField, Http3ServerOptions options, Http3HeaderBudget budget,
-        CancellationToken cancellationToken) =>
-        ReadSection(reader, length, onField, options, budget, null, cancellationToken);
-
     public static async Task<Http3FieldSection> ReadSection(Http3StreamReader reader, long length,
         Action<KeyValuePair<string, string>>? onField, Http3ServerOptions options, Http3HeaderBudget budget,
-        Http3TrailerInspection? inspection, CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(length);
         // The frame's declared size is not an allocation request. Decode each field as its bytes arrive,
         // keeping only bounded strings and at most the reference's 200-field parsing allowance.
-        var input = new Http3QpackSectionInput(reader, length, inspection);
+        var input = new Http3QpackSectionInput(reader, length);
         var fields = new List<KeyValuePair<string, string>>();
+        using var decoder = new FieldDecoder(options.MaxFieldBytes);
         try {
             var first = await input.ReadByte(cancellationToken).Vhc();
             if (await ReadInteger(input, first, 8, cancellationToken).Vhc() != 0)
@@ -36,14 +31,20 @@ internal static partial class Http3Qpack
             if (await ReadInteger(input, first, 7, cancellationToken).Vhc() != 0)
                 throw new Http3QpackException("The field section has a nonzero Delta Base.");
 
-            input.StartFields();
             while (input.Remaining > 0) {
-                var field = await ReadField(input, options.MaxFieldBytes, cancellationToken).Vhc();
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!ReadBufferedField(input, decoder, out var completed, out var field)) {
+                    var value = await input.ReadByte(cancellationToken).Vhc();
+                    completed = decoder.ReadByte(value, input.Remaining + 1, out field);
+                }
+                if (!completed)
+                    continue;
                 budget.Append(field);
                 onField?.Invoke(field);
                 fields.Add(field);
-                inspection?.FieldCompleted();
             }
+            if (decoder.HasPendingField)
+                throw new Http3QpackException("The field section ended in a compressed value.");
             return new Http3FieldSection(fields, true, budget.ExceedsRequestLimits);
         }
         catch (EndOfStreamException) when (fields.Count > 0) {
@@ -53,26 +54,23 @@ internal static partial class Http3Qpack
         }
     }
 
-    private static async ValueTask<KeyValuePair<string, string>> ReadField(Http3QpackSectionInput input,
-        int maximumFieldBytes, CancellationToken cancellationToken)
+    private static bool ReadBufferedField(Http3QpackSectionInput input, FieldDecoder decoder,
+        out bool completed, out KeyValuePair<string, string> field)
     {
-        var first = await input.ReadByte(cancellationToken).Vhc();
-        switch (GetFieldKind(first)) {
-            case Http3QpackFieldKind.Indexed:
-                return Http3QpackStaticTable.Get(await ReadInteger(input, first, 6, cancellationToken).Vhc());
-            case Http3QpackFieldKind.NameReference:
-                var index = await ReadInteger(input, first, 4, cancellationToken).Vhc();
-                var name = Http3QpackStaticTable.Get(index).Key;
-                first = await input.ReadByte(cancellationToken).Vhc();
-                var value = await ReadString(input, first, 7, 0x80, maximumFieldBytes, cancellationToken).Vhc();
-                return new KeyValuePair<string, string>(name, value);
-            default:
-                name = await ReadString(input, first, 3, 0x08, maximumFieldBytes, cancellationToken).Vhc();
-                if (name.Length == 0)
-                    throw new Http3QpackException("A literal field name is empty.");
-                first = await input.ReadByte(cancellationToken).Vhc();
-                value = await ReadString(input, first, 7, 0x80, maximumFieldBytes, cancellationToken).Vhc();
-                return new KeyValuePair<string, string>(name, value);
+        var bytes = input.GetBufferedBytes();
+        if (bytes.IsEmpty) {
+            completed = false;
+            field = default;
+            return false;
+        }
+        var consumed = 0;
+        try {
+            completed = decoder.Read(bytes, input.Remaining, out consumed, out field);
+            return true;
+        }
+        finally {
+            if (consumed != 0)
+                input.ConsumeBuffered(consumed);
         }
     }
 
@@ -92,46 +90,14 @@ internal static partial class Http3Qpack
         throw new Http3QpackException("A QPACK integer has too many continuation bytes.");
     }
 
-    private static async ValueTask<string> ReadString(Http3QpackSectionInput input, byte first, int prefixBits,
-        int huffmanMask, int maximumFieldBytes, CancellationToken cancellationToken)
+    private static string DecodeFieldString(ReadOnlySpan<byte> encoded, bool huffman, int maximumFieldBytes)
     {
-        var huffman = (first & huffmanMask) != 0;
-        var length = await ReadInteger(input, first, prefixBits, cancellationToken).Vhc();
-        if (length > (ulong)maximumFieldBytes)
-            throw new Http3QpackException("A QPACK string exceeds the reference's individual string limit.");
-        if (length > (ulong)input.Remaining)
-            throw new Http3QpackException("A compressed string is truncated.");
-        if (length == 0)
-            return "";
-
-        // Do not reserve a declared 32 KB value while its sender provides no value bytes. Start only
-        // after the first byte arrives, then grow geometrically as the current small buffer fills.
-        var firstValue = await input.ReadByte(cancellationToken).Vhc();
-        var encoded = ArrayPool<byte>.Shared.Rent(Math.Min((int)length, 256));
-        var count = 1;
-        encoded[0] = firstValue;
         try {
-            while ((ulong)count < length) {
-                if (count == encoded.Length) {
-                    var larger = ArrayPool<byte>.Shared.Rent(Math.Min((int)length, encoded.Length * 2));
-                    encoded.AsSpan(0, count).CopyTo(larger);
-                    ArrayPool<byte>.Shared.Return(encoded);
-                    encoded = larger;
-                }
-                var wanted = Math.Min((int)length - count, encoded.Length - count);
-                count += await input.Read(encoded.AsMemory(count, wanted), cancellationToken).Vhc();
-            }
-            try {
-                return DecodeString(encoded.AsSpan(0, count), huffman, maximumFieldBytes);
-            }
-            catch (Http3HeaderLimitException) {
-                // An individual Huffman string over the reference's decoder limit is a compression
-                // error. A completed section's total size is checked separately for an HTTP 431.
-                throw new Http3QpackException("A decoded QPACK string exceeds the reference's string limit.");
-            }
+            return DecodeString(encoded, huffman, maximumFieldBytes);
         }
-        finally {
-            ArrayPool<byte>.Shared.Return(encoded);
+        catch (Http3HeaderLimitException) {
+            // A single oversized Huffman string is a compression error, not an HTTP 431.
+            throw new Http3QpackException("A decoded QPACK string exceeds the reference's string limit.");
         }
     }
 }

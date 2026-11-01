@@ -83,11 +83,12 @@ tunnel) and a responder (the 401), and its unauthenticated budget closes connect
 the existing QUIC provider and adds no production framework or package dependency. Kestrel is only the
 differential-test reference.
 
-Anonymous streams use a pooled 4 KB reader. HEADERS are decoded incrementally instead of allocating
-their declared size; QPACK strings grow only as bytes arrive, within fixed limits, and no dynamic table is kept.
-After headers, at most 64 KB of already available input is inspected before the final response stops
-further reads. This also bounds a continuous sequence of empty DATA frames. Pending reads retain their
-own buffer until cancellation is observed, so returning a temporary decode buffer cannot race native I/O.
+Anonymous request streams start with a pooled 4 KB reader that grows to 16 KB only after a full
+buffer is received and consumed. Unidirectional control and QPACK readers remain at 4 KB. HEADERS are
+decoded incrementally instead of allocating their declared size; QPACK strings grow only as bytes
+arrive, within fixed limits, and no dynamic table is kept. After headers, the parser inspects at most
+64 KB while the queued response runs; response completion stops further reads. This also bounds a
+continuous sequence of empty DATA frames.
 
 Existing clients still send HTTP/1.1 headers and custom tunnel framing inside QUIC. A separate admission
 gate captures at most 4096 bytes and verifies a protocol-15 proof before handing that stream to the
@@ -131,21 +132,32 @@ route with a valid request and a correctly signed expired request, and confirm t
 ordinary 401. Never put proofs or access keys in URLs or deployment logs.
 
 HTTP/3 behavior is checked against the installed reference version, including malformed probes; this
-does not promise complete undetectability. Anonymous requests with readable trailer bursts imitate
-Kestrel's proportions of 401, 431 and resets using a randomized parsing schedule calibrated on one
-host. Response selection follows a drawn number of completed trailer fields; a separate draw sets
-an encoded-byte distance based on the selected response, with a chance of immediate emission.
-Parsing continues for that distance, including frames after the trailers. The schedule ends as soon
-as readable input or the inspection budget ends; it never waits for more input and adds nothing to
-the authenticated tunnel path. The reference's own odds vary with host and load,
-and other field layouts are not covered by this calibration. The post-header body/framing race remains
-an open follow-up. Two broader scheduling candidates were
-rejected after they regressed existing trailer comparisons, so no broader parity claim follows from
-the current trailer calibration. The twelve post-header measurement rows remain in the test suite;
-they are not a passed release gate. Controlled cases pin the schedule; burst cases print both
-distributions, compare outcome shares within a tolerance, and require outcomes
-common on either server to appear on the other. The field-count hard-limit row checks only presence
-because the reference's reset share varied widely. GOAWAY drain is compared without an artificial wake-up.
+does not promise complete undetectability. The application is queued after complete request headers,
+while the parser continues through DATA, frames and trailers. Request metadata is validated before
+the application freezes the live header/trailer limit decision. Application completion, submission of
+response bytes with FIN, native write completion and transport abort completion are separate events.
+The response dispatch joins its writes and abort callbacks during asynchronous disposal before the
+request owner releases the stream. A protocol abort precedes native I/O cancellation so cancellation
+cannot replace the intended error code.
+
+Application completion stops pending/future reads; already buffered bytes remain eligible for parsing.
+The 64 KB inspection budget also bounds a peer that never pauses. The pooled request reader starts
+at 4 KB and grows to 16 KB only after receiving and consuming a full buffer; control and QPACK readers
+stay at 4 KB. A large advertised frame length does not reserve a large buffer. Buffered QPACK names
+and values decode in place, with bounded incremental decoding for fragmented fields. Authenticated
+tunnels bypass this reader and scheduling entirely.
+
+Controlled tests gate input bytes or response submission at parser/application boundaries. Burst
+comparisons sample independent connection pairs, reuse each pair for 20 streams, and retain every
+observation with the existing share, outcome-presence and exact wire/error checks. Every burst row
+defaults to 200 samples. Separate 500-stream tests check cleanup and reuse. The reference's odds
+vary with host and load; the field-count hard-limit row checks only outcome presence because its
+reset share varies widely.
+
+Post-header scheduling is implemented and built locally. Its parity rows have not been run on this
+code and must be run before release. DATA-after-trailers remains an open difference: ours answers
+401 more often than the reference. Post-header distribution acceptance remains open. GOAWAY drain
+is compared without an artificial wake-up.
 Native Android/iOS device interoperability and memory measurements remain release checks. The
 [release checklist](ip-blocking-release.md) covers full-suite validation, package/dependent-reference
 checks and the end-user documentation to publish alongside the enforcing server release.

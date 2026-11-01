@@ -8,6 +8,8 @@ namespace VpnHood.Test.KestrelParity;
 
 public partial class Http3FrontTest
 {
+    private const int BurstStreamsPerConnection = 20;
+
     [TestMethod]
     [TestCategory("Http3Validation")]
     [DataRow(true, 32769)]
@@ -29,30 +31,15 @@ public partial class Http3FrontTest
         bool allowLimitResponse, bool presenceOnly, CancellationToken cancellationToken)
     {
         var sampleCount = GetBurstSampleCount();
-        using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        startup.CancelAfter(Http3Probe.Timeout);
-        // Stream resets leave the connection usable for the next sample.
-        await using var reference = await CreateProbe().Connect(Servers.ReferenceEndPoint, 3, startup.Token);
-        await using var ours = await CreateProbe().Connect(Servers.OurEndPoint, 3, startup.Token);
-        await using var referenceControl = await reference.OpenOutboundStreamAsync(QuicStreamType.Unidirectional,
-            startup.Token);
-        await using var ourControl = await ours.OpenOutboundStreamAsync(QuicStreamType.Unidirectional, startup.Token);
-        await referenceControl.WriteAsync(new byte[] { 0, 4, 0 }, startup.Token);
-        await ourControl.WriteAsync(new byte[] { 0, 4, 0 }, startup.Token);
         var expected = new List<(Http3ProbeResult Response, Http3ProbeResult Write)>(sampleCount);
         var actual = new List<(Http3ProbeResult Response, Http3ProbeResult Write)>(sampleCount);
         try {
-            for (var sample = 0; sample < sampleCount; sample++) {
-                // Alternate the first server without adding concurrent load or a parser barrier.
-                if (sample % 2 == 0) {
-                    expected.Add(await ObserveBurst(reference, bytes, cancellationToken));
-                    actual.Add(await ObserveBurst(ours, bytes, cancellationToken));
-                }
-                else {
-                    actual.Add(await ObserveBurst(ours, bytes, cancellationToken));
-                    expected.Add(await ObserveBurst(reference, bytes, cancellationToken));
-                }
-            }
+            // Stream outcomes on one connection are correlated. Two identical RC3 listeners exceeded
+            // the share tolerance when all 300 samples used one pair. Use independent pairs while
+            // still exercising stream reuse; retain every observation and the same acceptance bounds.
+            for (var firstSample = 0; firstSample < sampleCount; firstSample += BurstStreamsPerConnection)
+                await ObserveReusedBurstBatch(bytes, firstSample,
+                    Math.Min(BurstStreamsPerConnection, sampleCount - firstSample), expected, actual, cancellationToken);
         }
         finally {
             WriteBurstDistribution(name + " reference", expected);
@@ -61,6 +48,59 @@ public partial class Http3FrontTest
 
         AssertBurstDistributions(name, expected, actual, QuicError.StreamAborted, errorCode,
             allowLimitResponse, presenceOnly);
+    }
+
+    private static async Task ObserveReusedBurstBatch(byte[] bytes, int firstSample, int sampleCount,
+        List<(Http3ProbeResult Response, Http3ProbeResult Write)> expected,
+        List<(Http3ProbeResult Response, Http3ProbeResult Write)> actual, CancellationToken cancellationToken)
+    {
+        using var startup = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        startup.CancelAfter(Http3Probe.Timeout);
+        // Alternate connection startup as well as request order across batches.
+        var referenceFirst = firstSample / BurstStreamsPerConnection % 2 == 0;
+        await using var first = await CreateProbe().Connect(
+            referenceFirst ? Servers.ReferenceEndPoint : Servers.OurEndPoint, 3, startup.Token);
+        await using var second = await CreateProbe().Connect(
+            referenceFirst ? Servers.OurEndPoint : Servers.ReferenceEndPoint, 3, startup.Token);
+        await using var firstControl = await first.OpenOutboundStreamAsync(QuicStreamType.Unidirectional,
+            startup.Token);
+        await using var secondControl = await second.OpenOutboundStreamAsync(QuicStreamType.Unidirectional, startup.Token);
+        await firstControl.WriteAsync(new byte[] { 0, 4, 0 }, startup.Token);
+        await secondControl.WriteAsync(new byte[] { 0, 4, 0 }, startup.Token);
+        var reference = referenceFirst ? first : second;
+        var ours = referenceFirst ? second : first;
+        for (var sample = 0; sample < sampleCount; sample++) {
+            if ((sample % 2 == 0) == referenceFirst) {
+                expected.Add(await ObserveBurst(reference, bytes, cancellationToken));
+                actual.Add(await ObserveBurst(ours, bytes, cancellationToken));
+            }
+            else {
+                actual.Add(await ObserveBurst(ours, bytes, cancellationToken));
+                expected.Add(await ObserveBurst(reference, bytes, cancellationToken));
+            }
+        }
+    }
+
+    [TestMethod]
+    [DataRow("long-body")]
+    [DataRow("short-body-fin")]
+    public async Task Repeated_stream_errors_release_request_slots_on_a_connection(string layout)
+    {
+        using var startup = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        startup.CancelAfter(Http3Probe.Timeout);
+        await using var connection = await CreateProbe().Connect(Servers.OurEndPoint, 3, startup.Token);
+        await using var control = await connection.OpenOutboundStreamAsync(QuicStreamType.Unidirectional, startup.Token);
+        await control.WriteAsync(new byte[] { 0, 4, 0 }, startup.Token);
+        var bytes = BuildPostHeaderBurst(layout);
+        // More than four times the server's concurrent-stream allowance. Each completed/reset stream
+        // must release its slot, including any pending read, write and queued abort operation.
+        for (var sample = 0; sample < 500; sample++) {
+            var result = await ObserveBurst(connection, bytes, TestContext.CancellationToken);
+            GetBurstOutcome(result.Response, QuicError.StreamAborted, 0x101, allowLimitResponse: false);
+        }
+        var ordinary = await ObserveBurst(connection, BuildLiteralRequest(ValidationHeaders()),
+            TestContext.CancellationToken);
+        Assert.IsTrue(IsCompleteBurstResponse(ordinary.Response, "401"));
     }
 
     [TestMethod]

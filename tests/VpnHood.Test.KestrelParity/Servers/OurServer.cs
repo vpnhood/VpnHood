@@ -65,9 +65,11 @@ internal sealed class OurServer : IAsyncDisposable
             var serverToken = accessManager.GetToken(accessToken).ServerToken;
             var hostName = serverToken.HostName;
             var certificatePath = Path.Combine(accessManager.CertsFolderPath, "default.pfx");
+            var secret = serverToken.Secret ??
+                throw new InvalidOperationException("The parity server token has no secret.");
             await server.Start(cancellationToken);
             await RequireOwnRedirect(tlsEndPoint.Port, cancellationToken);
-            return new OurServer(server, tlsEndPoint, hostName, certificatePath, serverToken.Secret!);
+            return new OurServer(server, tlsEndPoint, hostName, certificatePath, secret);
         }
         catch {
             await server.DisposeAsync();

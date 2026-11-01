@@ -2,32 +2,17 @@ using VpnHood.Net.Quic.Abstractions;
 
 namespace VpnHood.Test.KestrelParity.Servers;
 
-internal sealed class BufferedQuicServer(IQuicServer server) : IQuicServer
+internal sealed class BufferedQuicServer(IQuicServer server, Http3RequestGate gate, int byteCount,
+    int headerByteCount, bool finish) : IQuicServer
 {
-    private BufferedQuicRequest? _nextRequest;
+    private int _claimed;
 
-    public IDisposable BufferNextRequest(int byteCount, Action onPrefixConsumed, bool finish,
-        CancellationToken cancellationToken)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(byteCount);
-        cancellationToken.ThrowIfCancellationRequested();
-        var request = new BufferedQuicRequest(this, byteCount, onPrefixConsumed, finish,
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken));
-        if (Interlocked.CompareExchange(ref _nextRequest, request, null) != null) {
-            request.Dispose();
-            throw new InvalidOperationException("A request is already waiting to be buffered.");
-        }
-        return request;
-    }
+    public int ByteCount => byteCount;
+    public int HeaderByteCount => headerByteCount;
+    public bool Finish => finish;
+    public Http3RequestGate Gate => gate;
 
-    internal BufferedQuicRequest? TakeRequest()
-    {
-        var request = Volatile.Read(ref _nextRequest);
-        return request is { } && request.TryClaim() ? request : null;
-    }
-
-    internal void ReleaseRequest(BufferedQuicRequest request) =>
-        Interlocked.CompareExchange(ref _nextRequest, null, request);
+    public bool TryClaimRequest() => Interlocked.CompareExchange(ref _claimed, 1, 0) == 0;
 
     public async ValueTask<IQuicListener> ListenAsync(QuicListenerOptions options,
         CancellationToken cancellationToken)

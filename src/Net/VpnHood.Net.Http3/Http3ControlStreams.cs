@@ -5,12 +5,22 @@ namespace VpnHood.Net.Http3;
 
 // One instance per connection. Control and QPACK streams may arrive concurrently, but each type
 // has exactly one owner. The front advertises zero QPACK capacity and never sends dynamic references.
-internal sealed class Http3ControlStreams(Http3ServerOptions options, Action beginGracefulClose,
-    Action controlInputPending)
+internal sealed class Http3ControlStreams(Http3ServerOptions options,
+    IHttp3GracefulCloseCallbacks gracefulCloseCallbacks) : IHttp3ReadPendingCallbacks
 {
     private int _controlOpened;
     private int _encoderOpened;
     private int _decoderOpened;
+    private bool _gracefulCloseRequested;
+    private Http3StreamReader? _controlReader;
+
+    void IHttp3ReadPendingCallbacks.OnReadPending(Http3StreamReader reader)
+    {
+        // Only the control reader can finish GOAWAY validation; another critical stream waiting for
+        // input says nothing about coalesced control frames that have not yet been checked.
+        if (ReferenceEquals(_controlReader, reader) && _gracefulCloseRequested)
+            gracefulCloseCallbacks.OnControlInputPending();
+    }
 
     public async Task Process(Http3StreamReader reader, IQuicStream stream, CancellationToken cancellationToken)
     {
@@ -24,6 +34,7 @@ internal sealed class Http3ControlStreams(Http3ServerOptions options, Action beg
                 case 0:
                     if (Interlocked.Exchange(ref _controlOpened, 1) != 0)
                         throw new Http3ProtocolException(Http3Protocol.StreamCreationError);
+                    _controlReader = reader;
                     await ProcessControl(reader, cancellationToken).Vhc();
                     break;
                 case 2:
@@ -100,10 +111,10 @@ internal sealed class Http3ControlStreams(Http3ServerOptions options, Action beg
                     break;
                 case 7: // Client GOAWAY requests a graceful close; its push ID is otherwise unused.
                     await ReadSingleInteger(reader, length, cancellationToken).Vhc();
-                    beginGracefulClose();
+                    gracefulCloseCallbacks.BeginGracefulClose();
                     // Keep validating coalesced frames first: GOAWAY followed by an invalid DATA
                     // frame must still report that protocol error, not an early normal close.
-                    reader.OnReadPending = controlInputPending;
+                    _gracefulCloseRequested = true;
                     break;
                 default:
                     // The reference also ignores HTTP/2-reserved frame types on its control stream.

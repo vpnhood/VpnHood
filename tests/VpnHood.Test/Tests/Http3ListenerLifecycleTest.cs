@@ -263,6 +263,12 @@ public class Http3ListenerLifecycleTest : TestBase
         public void AbortRead(long errorCode) { }
         public void AbortWrite(long errorCode) { }
         public void CompleteWrites() { }
+        public ValueTask WriteFinal(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+        {
+            var write = WriteAsync(buffer, cancellationToken);
+            CompleteWrites();
+            return write;
+        }
 
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
             Position < Length

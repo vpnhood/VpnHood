@@ -25,4 +25,10 @@ public interface IQuicStream
 
     /// <summary>Sends FIN after the pending writes without closing the reading side.</summary>
     void CompleteWrites();
+
+    /// <summary>
+    /// Sends the final bytes and FIN together. The caller retains the buffer until the returned operation
+    /// completes, including after cancellation.
+    /// </summary>
+    ValueTask WriteFinal(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken);
 }

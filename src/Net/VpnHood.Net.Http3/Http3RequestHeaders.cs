@@ -8,6 +8,15 @@ namespace VpnHood.Net.Http3;
 internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes)
 {
     private static readonly UTF8Encoding HeaderEncoding = new(false, throwOnInvalidBytes: true);
+    private static readonly SearchValues<char> InvalidValueCharacters = SearchValues.Create(
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u000a\u000b\u000c\u000d\u000e\u000f" +
+        "\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f\u007f");
+    private static readonly SearchValues<char> LowerTokenCharacters = SearchValues.Create(
+        "abcdefghijklmnopqrstuvwxyz0123456789!#$%&'*+-.^_`|~");
+    private static readonly SearchValues<char> TokenCharacters = SearchValues.Create(
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-.^_`|~");
+    private static readonly SearchValues<char> HostCharacters = SearchValues.Create(
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!$&'()-._~");
     private readonly Dictionary<string, string> _pseudo = new(StringComparer.Ordinal);
     private readonly List<KeyValuePair<string, string>> _fields = [];
     private bool _regularSeen;
@@ -16,6 +25,7 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
     private long? _contentLength;
 
     public IReadOnlyList<KeyValuePair<string, string>> Fields => _fields;
+    public long? ContentLength => _contentLength;
 
     public void Append(KeyValuePair<string, string> field)
     {
@@ -24,7 +34,7 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
         // Validate each decoded field immediately. A bad field followed by FIN must remain an
         // error even when the peer's declared HEADERS frame never finishes.
         // Preserve surrounding SP/HTAB as the reference does.
-        if (name.Length == 0 || value.Any(c => c is '\0' or '\r' or '\n' or '\x7f' || c < ' ' && c != '\t'))
+        if (name.Length == 0 || value.AsSpan().ContainsAny(InvalidValueCharacters))
             Reject();
         if (name[0] == ':') {
             if (trailers || _regularSeen || name is not (":method" or ":scheme" or ":path" or ":authority" or ":protocol") ||
@@ -34,7 +44,7 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
             return;
         }
         _regularSeen = true;
-        if (!name.All(IsLowerToken) || name is "connection" or "proxy-connection" or "keep-alive" or
+        if (name.AsSpan().ContainsAnyExcept(LowerTokenCharacters) || name is "connection" or "proxy-connection" or "keep-alive" or
             "transfer-encoding" or "upgrade" || name == "te" && value != "trailers")
             Reject();
         if (name == "host") {
@@ -55,10 +65,22 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
     {
         if (trailers)
             return null;
+        ValidateRequiredPseudoHeaders();
+        ValidateRequest();
+        return _contentLength;
+    }
+
+    public void ValidateRequiredPseudoHeaders()
+    {
         if (!_pseudo.TryGetValue(":method", out var method) || method != "CONNECT" &&
             (!_pseudo.ContainsKey(":scheme") || !_pseudo.ContainsKey(":path")))
             Reject();
-        if (method.Length == 0 || !method.All(IsToken))
+    }
+
+    public void ValidateRequest()
+    {
+        var method = _pseudo[":method"];
+        if (method.Length == 0 || method.AsSpan().ContainsAnyExcept(TokenCharacters))
             Reject(Http3Protocol.ProtocolError);
 
         var pseudoAuthority = _pseudo.GetValueOrDefault(":authority", "");
@@ -78,7 +100,8 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
             var path = _pseudo.GetValueOrDefault(":path", "");
             var scheme = _pseudo.GetValueOrDefault(":scheme", "");
             if (!scheme.Equals("https", StringComparison.OrdinalIgnoreCase) || path.Length == 0 ||
-                path[0] != '/' && !(path == "*" && method == "OPTIONS") || path.Any(c => c <= ' ' || c == '#'))
+                path[0] != '/' && !(path == "*" && method == "OPTIONS") ||
+                path.AsSpan().ContainsAnyInRange('\0', ' ') || path.Contains('#'))
                 Reject(Http3Protocol.ProtocolError);
             // Kestrel approximates the request line with these decoded pseudo-header values.
             if (!(path == "*" && method == "OPTIONS") &&
@@ -94,7 +117,6 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
                 !Ascii.IsValid(path.AsSpan(0, queryIndex)))
                 Reject(Http3Protocol.ProtocolError);
         }
-        return _contentLength;
     }
 
     private static string DecodeValue(string octets)
@@ -136,17 +158,13 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
         }
         if (authority[0] == ':')
             return false;
-        for (var i = 0; i < authority.Length; i++)
-            if (!(char.IsAsciiLetterOrDigit(authority[i]) || "!$&'()-._~".Contains(authority[i])))
-                return IsValidPort(authority.AsSpan(i));
-        return true;
+        var suffix = authority.AsSpan().IndexOfAnyExcept(HostCharacters);
+        return suffix < 0 || IsValidPort(authority.AsSpan(suffix));
     }
 
     private static bool IsValidPort(ReadOnlySpan<char> suffix) =>
         suffix.Length > 1 && suffix[0] == ':' && suffix[1..].IndexOfAnyExceptInRange('0', '9') < 0;
 
-    private static bool IsLowerToken(char value) => !char.IsAsciiLetterUpper(value) && IsToken(value);
-    private static bool IsToken(char value) => char.IsAsciiLetterOrDigit(value) || "!#$%&'*+-.^_`|~".Contains(value);
     [System.Diagnostics.CodeAnalysis.DoesNotReturn]
     private static void Reject(long errorCode = Http3Protocol.MessageError) =>
         throw new Http3ProtocolException(errorCode, connectionError: false);

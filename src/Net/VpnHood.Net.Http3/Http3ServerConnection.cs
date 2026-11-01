@@ -6,10 +6,9 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.Net.Http3;
 
 public sealed class Http3ServerConnection(IQuicServerConnection connection, Http3ServerOptions options,
-    IHttp3StreamFilter filter, IHttp3StreamRunner runner, IHttp3Responder responder)
+    IHttp3StreamFilter filter, IHttp3StreamRunner runner, IHttp3Responder responder) : IHttp3GracefulCloseCallbacks
 {
     private readonly Http3ServerOptions _options = options.Validate();
-    private readonly IHttp3TrailerScheduleSampler _trailerScheduleSampler = Http3TrailerScheduleSampler.Shared;
     private readonly CancellationTokenSource _abort = new();
     private readonly CancellationTokenSource _idle = new();
     private readonly Lock _stateLock = new();
@@ -24,19 +23,12 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
     private bool _gracefulCloseRequested;
     private bool _controlInputPending;
 
-    internal Http3ServerConnection(IQuicServerConnection connection, Http3ServerOptions options,
-        IHttp3StreamFilter filter, IHttp3StreamRunner runner, IHttp3Responder responder,
-        IHttp3TrailerScheduleSampler trailerScheduleSampler) : this(connection, options, filter, runner, responder)
-    {
-        _trailerScheduleSampler = trailerScheduleSampler;
-    }
-
     public async Task Run(CancellationToken cancellationToken)
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _abort.Token, _idle.Token);
         var token = lifetime.Token;
         _idle.CancelAfter(_options.KeepAliveTimeout);
-        var control = new Http3ControlStreams(_options, BeginGracefulClose, OnControlInputPending);
+        var control = new Http3ControlStreams(_options, this);
         var streams = new List<Task>();
         // A peer granting no incoming uni-stream credit must not block request acceptance.
         var controlTask = SendControl(token);
@@ -112,7 +104,7 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
                 throw new NotSupportedException("The server QUIC stream must expose stream control.");
             }
             if (!quic.CanWrite) {
-                await ProcessHttp3(stream, stream, quic, control, cancellationToken, cancellationToken).Vhc();
+                await ProcessHttp3(stream, quic, control, cancellationToken, cancellationToken).Vhc();
                 return;
             }
             if (!requestStarted) {
@@ -148,7 +140,7 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
             await runner.Run(_context, replay, cancellationToken).Vhc();
         }
         else {
-            await ProcessHttp3(replay, stream, quic, control, headers.Token, cancellationToken).Vhc();
+            await ProcessHttp3(replay, quic, control, headers.Token, cancellationToken).Vhc();
         }
     }
 
@@ -165,15 +157,16 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
         }
     }
 
-    private async Task ProcessHttp3(Stream input, Stream output, IQuicStream quic, Http3ControlStreams control,
+    private async Task ProcessHttp3(Stream input, IQuicStream quic, Http3ControlStreams control,
         CancellationToken headersToken, CancellationToken cancellationToken)
     {
-        var reader = new Http3StreamReader(input);
+        var reader = new Http3StreamReader(input, allowBufferGrowth: quic.CanWrite,
+            readPendingCallbacks: quic.CanWrite ? null : control, quic: quic);
         var errors = new Http3StreamErrorHandler(quic, reader, Close, AbortStream, cancellationToken);
         try {
             if (quic.CanWrite)
-                await Http3RequestStream.Process(output, reader, quic, errors.Handle, responder,
-                    _options, _trailerScheduleSampler, headersToken, cancellationToken).Vhc();
+                await Http3RequestStream.Process(reader, quic, errors.Handle, responder,
+                    _options, headersToken, cancellationToken).Vhc();
             else
                 await control.Process(reader, quic, cancellationToken).Vhc();
         }
@@ -217,7 +210,7 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
         }
     }
 
-    private void BeginGracefulClose()
+    void IHttp3GracefulCloseCallbacks.BeginGracefulClose()
     {
         lock (_stateLock) {
             _gracefulCloseRequested = true;
@@ -225,7 +218,7 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
         }
     }
 
-    private void OnControlInputPending()
+    void IHttp3GracefulCloseCallbacks.OnControlInputPending()
     {
         if (MarkControlInputPending())
             FinishGracefulClose();

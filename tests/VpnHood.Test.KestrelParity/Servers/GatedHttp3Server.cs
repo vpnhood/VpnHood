@@ -9,24 +9,27 @@ using VpnHood.Test.KestrelParity.Probing;
 
 namespace VpnHood.Test.KestrelParity.Servers;
 
-internal sealed class PinnedHttp3Server(IQuicListener listener, BufferedQuicServer bufferedQuic,
-    CancellationTokenSource lifetime, Task run) : IAsyncDisposable
+internal sealed class GatedHttp3Server(IQuicListener listener, CancellationTokenSource lifetime, Task run) : IAsyncDisposable
 {
     public IPEndPoint EndPoint => listener.LocalEndPoint;
-    public BufferedQuicServer BufferedQuic => bufferedQuic;
 
-    public static async Task<PinnedHttp3Server> Start(X509Certificate2 certificate,
-        Http3TrailerSchedule schedule, CancellationToken cancellationToken)
+    public static async Task<GatedHttp3Server> Start(X509Certificate2 certificate,
+        int byteCount, int headerByteCount, bool finish, CancellationToken cancellationToken)
     {
-        var bufferedQuic = new BufferedQuicServer(new MsQuicServer());
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(byteCount);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(headerByteCount);
+        if (headerByteCount >= byteCount)
+            throw new ArgumentOutOfRangeException(nameof(headerByteCount));
         var options = Http3ServerOptionsFactory.Create();
         var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var gate = new Http3RequestGate();
+        var bufferedQuic = new BufferedQuicServer(new MsQuicServer(), gate, byteCount, headerByteCount, finish);
         try {
             var listenerOptions = QuicListenerOptionsFactory.Create(
                 VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback), new FixedQuicCertificateSelector(certificate));
             var listener = await bufferedQuic.ListenAsync(listenerOptions, lifetime.Token);
-            var run = Run(listener, options, schedule, lifetime.Token);
-            return new PinnedHttp3Server(listener, bufferedQuic, lifetime, run);
+            var run = Run(listener, options, gate, lifetime.Token);
+            return new GatedHttp3Server(listener, lifetime, run);
         }
         catch {
             lifetime.Dispose();
@@ -35,7 +38,7 @@ internal sealed class PinnedHttp3Server(IQuicListener listener, BufferedQuicServ
     }
 
     private static async Task Run(IQuicListener listener, Http3ServerOptions options,
-        Http3TrailerSchedule schedule, CancellationToken cancellationToken)
+        Http3RequestGate gate, CancellationToken cancellationToken)
     {
         try {
             var connection = await listener.AcceptConnectionAsync(cancellationToken);
@@ -44,9 +47,8 @@ internal sealed class PinnedHttp3Server(IQuicListener listener, BufferedQuicServ
                 throw new InvalidOperationException("The controlled fixture requires a server QUIC connection.");
             }
             var streams = new AnonymousHttp3Streams();
-            // Keep response composition in Core.Server; only the anonymous parser's schedule is pinned.
             var front = new Http3ServerConnection(serverConnection, options, streams, streams,
-                new Http3UnauthorizedResponder(), new PinnedHttp3TrailerScheduleSampler(schedule));
+                new GatedHttp3Responder(gate, new Http3UnauthorizedResponder()));
             await front.Run(cancellationToken);
         }
         catch (OperationCanceledException) {

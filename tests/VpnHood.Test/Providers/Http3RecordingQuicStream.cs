@@ -2,7 +2,7 @@ using VpnHood.Net.Quic.Abstractions;
 
 namespace VpnHood.Test.Providers;
 
-internal sealed class Http3RecordingQuicStream : IQuicStream
+internal sealed class Http3RecordingQuicStream(Stream output) : IQuicStream
 {
     public long StreamId => 0;
     public bool CanRead => true;
@@ -14,6 +14,12 @@ internal sealed class Http3RecordingQuicStream : IQuicStream
     public long? WriteAbortCode { get; private set; }
 
     public void CompleteWrites() => CompletedWrites++;
+    public ValueTask WriteFinal(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+    {
+        var write = output.WriteAsync(buffer, cancellationToken);
+        CompleteWrites();
+        return write;
+    }
     public void AbortRead(long errorCode) => ReadAbortCode = errorCode;
     public void AbortWrite(long errorCode) => WriteAbortCode = errorCode;
 }

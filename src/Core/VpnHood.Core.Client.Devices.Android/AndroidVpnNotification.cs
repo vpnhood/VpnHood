@@ -7,12 +7,12 @@ namespace VpnHood.Core.Client.Devices.Android;
 
 public sealed class AndroidVpnNotification : IDisposable
 {
-    private readonly string _sessionName;
-    private readonly VpnServiceLocalization _localization;
+    private string _sessionName;
+    private VpnServiceLocalization _localization;
     private const string DisconnectAction = "disconnect";
     private const string ChannelGeneralId = "general";
     private const string ChannelGeneralName = "General";
-    private readonly Notification.Builder _notificationBuilder;
+    private Notification.Builder _notificationBuilder;
     private readonly Lock _stateLock = new();
     private ClientState? _lastClientState;
     public const int NotificationId = 3500;
@@ -28,7 +28,30 @@ public sealed class AndroidVpnNotification : IDisposable
         Update(ClientState.None);
     }
 
-    public Notification Build() => _notificationBuilder.Build();
+    public Notification Build()
+    {
+        lock (_stateLock)
+            return _notificationBuilder.Build();
+    }
+
+    // The localization and the session's name can come once the notification is up (AndroidVpnService),
+    // and the buttons carry the localization too: a new builder. A state the host has given is shown again
+    // at once; before one, the promotion's notification stays until the host's first state.
+    public void SetLocalization(Context context, VpnServiceLocalization serviceLocalization, string sessionName)
+    {
+        lock (_stateLock) {
+            var notificationBuilder = CreateNotificationBuilder(context, serviceLocalization);
+            _notificationBuilder.Dispose();
+            _notificationBuilder = notificationBuilder;
+            _localization = serviceLocalization;
+            _sessionName = sessionName;
+
+            if (_lastClientState is { } clientState && clientState != ClientState.None)
+                Show(clientState);
+            else
+                _lastClientState = null;
+        }
+    }
 
     private static Notification.Builder CreateNotificationBuilder(Context context,
         VpnServiceLocalization serviceLocalization)
@@ -100,33 +123,39 @@ public sealed class AndroidVpnNotification : IDisposable
             if (_lastClientState == clientState)
                 return;
 
-            // connection status
-            // Set subtitle
-            var sessionName = _sessionName;
-            _notificationBuilder.SetContentTitle(sessionName);
-            _notificationBuilder.SetSubText(StateText(clientState));
-
-            // progress
-            if (clientState != ClientState.Connected)
-                _notificationBuilder.SetProgress(100, 0, true);
-            else
-                _notificationBuilder.SetProgress(0, 0, false);
-
-
-            // show or hide
-            var notificationManager =
-                (NotificationManager?)Application.Context.GetSystemService(Context.NotificationService);
-            if (notificationManager == null)
-                return;
-
-            if (clientState != ClientState.None)
-                notificationManager.Notify(NotificationId, _notificationBuilder.Build());
-            else
-                notificationManager.Cancel(NotificationId);
-
-            // set it at the end of method to make sure change is applied without any exception
-            _lastClientState = clientState;
+            Show(clientState);
         }
+    }
+
+    // under _stateLock
+    private void Show(ClientState clientState)
+    {
+        // connection status
+        // Set subtitle
+        var sessionName = _sessionName;
+        _notificationBuilder.SetContentTitle(sessionName);
+        _notificationBuilder.SetSubText(StateText(clientState));
+
+        // progress
+        if (clientState != ClientState.Connected)
+            _notificationBuilder.SetProgress(100, 0, true);
+        else
+            _notificationBuilder.SetProgress(0, 0, false);
+
+
+        // show or hide
+        var notificationManager =
+            (NotificationManager?)Application.Context.GetSystemService(Context.NotificationService);
+        if (notificationManager == null)
+            return;
+
+        if (clientState != ClientState.None)
+            notificationManager.Notify(NotificationId, _notificationBuilder.Build());
+        else
+            notificationManager.Cancel(NotificationId);
+
+        // set it at the end of method to make sure change is applied without any exception
+        _lastClientState = clientState;
     }
 
     // The connection's state as the app's main page says it; a step on the way ends in "…". The

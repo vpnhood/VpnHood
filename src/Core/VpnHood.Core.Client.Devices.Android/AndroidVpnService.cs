@@ -68,7 +68,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         // continuing would let the system kill the process ten seconds later with
         // ForegroundServiceDidNotStartInTimeException, and returning Sticky would restart it into the
         // same failure.
-        if (!TryShowNotification(VpnServiceHost.DefaultConnectionInfo, CancellationToken.None)) {
+        if (!TryShowNotification(VpnServiceHost.DefaultConnectionInfo)) {
             StopSelf(startId);
             return StartCommandResult.NotSticky;
         }
@@ -173,17 +173,17 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
-        TryShowNotification(connectionInfo, cancellationToken);
+        TryShowNotification(connectionInfo);
     }
 
     // Promotes the service to the foreground on first use, then keeps the notification in step with
     // the connection state. Returns false when the system refused the promotion. One at a time with
     // StopNotification: start commands come on the main thread and the host's calls on its own, and a
     // notification stopped in between would be updated after its disposal.
-    private bool TryShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
+    private bool TryShowNotification(ConnectionInfo connectionInfo)
     {
         lock (_notificationLock) {
-            var notification = _notification ?? TryStartForeground(cancellationToken);
+            var notification = _notification ?? TryStartForeground();
             if (notification == null)
                 return false;
 
@@ -196,31 +196,47 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     // the system has accepted the promotion, so a failed attempt (the builder, Build() and
     // StartForeground can all throw) leaves nothing behind and the next start command retries.
     // Reports the failure instead of throwing: a throw from OnStartCommand leaves no returned mode
-    // and Android would restart the service into a back-off crash loop. A cancel goes on: only the
-    // host's calls bring a token that can be cancelled.
-    private AndroidVpnNotification? TryStartForeground(CancellationToken cancellationToken)
+    // and Android would restart the service into a back-off crash loop.
+    private AndroidVpnNotification? TryStartForeground()
     {
         VhLogger.Instance.LogDebug("Create and show the notification for the VPN service.");
         try {
-            // The words and the session's name of the app's last connect, which its options file keeps,
-            // as the notification comes before the host reads them: English before any connect, and the
-            // app's name where the app names no session. Blocked on: OnStartCommand must have the promotion's
-            // answer before it returns.
-            var serviceOptions = new VpnServiceOptionsFile(VpnServiceConfigFolder).TryRead(cancellationToken)
-                .GetAwaiter().GetResult();
-            var notification = new AndroidVpnNotification(this,
-                serviceOptions?.Localization ?? new VpnServiceLocalization(),
-                serviceOptions?.ClientOptions.SessionName ?? AndroidUtils.GetAppName(this));
+            // English and the app's name until the app's localization is read (ApplyLocalization)
+            var notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), AndroidUtils.GetAppName(this));
             StartForeground(AndroidVpnNotification.NotificationId, notification.Build());
             _notification = notification;
+            _ = Task.Run(() => ApplyLocalization(notification));
             return notification;
-        }
-        catch (OperationCanceledException) {
-            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not promote the VPN service to the foreground.");
             return null;
+        }
+    }
+
+    // The localization and the session's name of the app's last connect, which its options file keeps:
+    // English before any connect, and the app's name where the app names no session. Read after the
+    // promotion and off the main thread: Android's window for the promotion counts from the start request,
+    // the process's start included, and a new process's first read takes about half a second (its code
+    // loading; a second read, milliseconds) - enough to miss the window on a slow phone's cold start.
+    private async Task ApplyLocalization(AndroidVpnNotification notification)
+    {
+        try {
+            var serviceOptions = await new VpnServiceOptionsFile(VpnServiceConfigFolder)
+                .TryRead(CancellationToken.None).Vhc();
+            if (serviceOptions == null)
+                return;
+
+            lock (_notificationLock) {
+                if (_notification != notification)
+                    return; // stopped since
+
+                notification.SetLocalization(this, serviceOptions.Localization,
+                    serviceOptions.ClientOptions.SessionName ?? AndroidUtils.GetAppName(this));
+            }
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not apply the app's localization to the VPN service's notification.");
         }
     }
 

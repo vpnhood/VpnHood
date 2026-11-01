@@ -876,11 +876,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var connectNumber = Interlocked.Increment(ref _connectNumber);
         Exception? failure = null;
         try {
-            VhLogger.Instance.LogInformation(
-                "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}, AlwaysOn: {AlwaysOn}",
-                connectOptions.VpnProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
-                connectOptions.Diagnose, connectOptions.IsAlwaysOn);
-
             // The update this app installs stops it in a moment, so a connect would only be dropped. Refused with
             // no last error, as nothing failed; always on waits its pause, and the new version's start connects it.
             if (ConnectionState == AppConnectionState.Updating)
@@ -975,6 +970,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             //logOptions.
             VhLogger.Instance.LogDebug("Starting the log service...");
             _logService.Start(GetLogOptions());
+
+            // after the start, as the log opens empty at each connect: so the log says who asked for the connect -
+            // a person, always on, or the reconnect after a wake (Retried)
+            VhLogger.Instance.LogInformation(
+                "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}, AlwaysOn: {AlwaysOn}, Retried: {Retried}",
+                connectOptions.VpnProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
+                connectOptions.Diagnose, connectOptions.IsAlwaysOn, connectOptions.IsRetried);
 
             // set the current profile only if it has been updated to avoid unnecessary new config time
             if (vpnProfile.VpnProfileId != UserSettings.VpnProfileId ||

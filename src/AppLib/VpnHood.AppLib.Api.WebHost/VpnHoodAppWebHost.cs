@@ -308,7 +308,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     {
         lock (_lock) {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            _watchdogTimer ??= new Timer(_ => RestartIfDown(), null, WatchdogInterval, WatchdogInterval);
+            _watchdogTimer ??= new Timer(_ => _ = RestartIfDown(), null, WatchdogInterval, WatchdogInterval);
         }
     }
 
@@ -325,45 +325,69 @@ public class VpnHoodAppWebHost : IAppWebHost
     // BindListeners, never restarted where it stood: whatever took it down may have taken its port
     // with it, and BindListeners is the only thing allowed to pick another one - it is also what
     // retries an address that failed to bind last time, since _addresses says what should be up.
-    // Returns whether anything was rebound. Under the lock.
-    private bool RebindListeners(IReadOnlyList<WebServerListener> lost)
+    // An address the device no longer has (not in present) waits: a bind there fails every time, and
+    // _addresses keeps it, so the first signal that finds it back binds it. Returns whether anything
+    // was rebound. Under the lock.
+    private bool RebindListeners(IReadOnlyList<WebServerListener> lost, IReadOnlyList<IPAddress> present)
     {
         if (_disposed || _addresses.Count == 0)
             return false;
 
         // the signal may have judged listeners this host has already replaced or let go of
         var dead = _listeners.Where(lost.Contains).ToArray();
-        if (dead.Length == 0 && _listeners.Count == _addresses.Count)
+        var alive = _listeners.Except(dead).ToArray();
+        var wanted = _addresses.Where(present.Contains).ToArray();
+        if (dead.Length == 0 && wanted.All(x => alive.Any(y => y.Address.Equals(x))))
             return false;
 
         VhLogger.Instance.LogWarning(
             "The {Name} web host is short of listeners; binding again. Dead: {Dead}, Alive: {Alive}, Wanted: {Wanted}",
-            _isRemote ? "remote" : "local", dead.Length, _listeners.Count, _addresses.Count);
+            _isRemote ? "remote" : "local", dead.Length, alive.Length, wanted.Length);
 
-        _listeners = _listeners.Except(dead).ToArray();
+        _listeners = alive;
         foreach (var listener in dead)
             listener.Dispose();
 
-        BindListeners(_addresses);
+        // none of its addresses on the device: nothing can bind until one is back
+        if (wanted.Length > 0)
+            BindListeners(wanted);
+
         _urls = _listeners.Select(x => BuildUrl(x.Address)).ToArray();
         return true;
     }
 
-    // Watchdog: each listener's own state, which costs no network. Tell the caller, so assets
-    // interrupted by the outage are loaded again even when the main document had already finished
-    // loading - and so a caller asks for the address again, which is how it follows a moved port.
-    private void RestartIfDown()
+    // Watchdog: each listener's own state, which costs no network; the device's addresses are read
+    // only while one it wants has no live listener, to see whether it is back. Tell the caller, so
+    // assets interrupted by the outage are loaded again even when the main document had already
+    // finished loading - and so a caller asks for the address again, which is how it follows a moved
+    // port.
+    private async Task RestartIfDown()
     {
         try {
+            var lost = FindLostListeners();
+            if (lost == null)
+                return;
+
+            var present = await GetAddresses().Vhc();
             bool restarted;
             lock (_lock)
-                restarted = RebindListeners(_listeners.Where(x => !x.IsListening).ToArray());
+                restarted = RebindListeners(lost, present);
 
             if (restarted)
                 Restarted?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "The web host's watchdog failed.");
+        }
+    }
+
+    // The listeners that stopped, or null while every address this host wants has a live one
+    private IReadOnlyList<WebServerListener>? FindLostListeners()
+    {
+        lock (_lock) {
+            var lost = _listeners.Where(x => !x.IsListening).ToArray();
+            var isShort = lost.Length > 0 || _listeners.Count < _addresses.Count;
+            return !_disposed && _addresses.Count > 0 && isShort ? lost : null;
         }
     }
 
@@ -380,21 +404,22 @@ public class VpnHoodAppWebHost : IAppWebHost
         if (unreachable.Count == 0)
             return;
 
+        var present = await GetAddresses().Vhc();
         bool restarted;
         lock (_lock)
-            restarted = RebindListeners(unreachable);
+            restarted = RebindListeners(unreachable, present);
 
         if (restarted)
             Restarted?.Invoke(this, EventArgs.Empty);
     }
 
     // Every listener bound again, as recovery binds a dead one - a new local token, perhaps a new
-    // port: a test's way to a rebind.
+    // port: a test's way to a rebind, on the addresses as they were asked for.
     internal void Rebind()
     {
         bool restarted;
         lock (_lock)
-            restarted = RebindListeners(_listeners);
+            restarted = RebindListeners(_listeners, _addresses);
 
         if (restarted)
             Restarted?.Invoke(this, EventArgs.Empty);

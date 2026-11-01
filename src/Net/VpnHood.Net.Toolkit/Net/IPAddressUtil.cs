@@ -330,10 +330,17 @@ public static class IPAddressUtil
 
     // Mobile broadband: a carrier's address, which nothing on the local network can reach. Windows
     // types it; Linux names it ww<...>, the kernel's wwan<n> and systemd's predictable names alike.
+    // Phones type none, so their names settle it: Apple's cellular interfaces are pdp_ip<n>, Android's
+    // rmnet<...> on Qualcomm's modems and ccmni<n> on MediaTek's. A listener there also dies with the
+    // carrier's address whenever the phone lets cellular data idle.
     private static bool IsMobileBroadbandAdapter(NetworkInterface networkInterface)
     {
+        var name = networkInterface.Name;
         return networkInterface.NetworkInterfaceType is NetworkInterfaceType.Wwanpp or NetworkInterfaceType.Wwanpp2 ||
-               (OperatingSystem.IsLinux() && networkInterface.Name.StartsWith("ww", StringComparison.Ordinal));
+               (OperatingSystem.IsLinux() && name.StartsWith("ww", StringComparison.Ordinal)) ||
+               name.StartsWith("pdp_ip", StringComparison.Ordinal) ||
+               name.StartsWith("rmnet", StringComparison.Ordinal) ||
+               name.StartsWith("ccmni", StringComparison.Ordinal);
     }
 
     public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)

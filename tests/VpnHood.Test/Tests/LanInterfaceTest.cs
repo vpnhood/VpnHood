@@ -20,6 +20,7 @@ public class LanInterfaceTest
     [DataRow("Ethernet", NetworkInterfaceType.Ethernet, "Microsoft Hyper-V Network Adapter")] // a Hyper-V guest's own card
     [DataRow("eth0", NetworkInterfaceType.Ethernet, "eth0")]
     [DataRow("wlan0", NetworkInterfaceType.Unknown, "wlan0")] // Android 11+ types nothing
+    [DataRow("en0", NetworkInterfaceType.Unknown, "en0")] // an iPhone's Wi-Fi
     public void LanCardIsKept(string name, NetworkInterfaceType type, string description)
     {
         Assert.IsTrue(IsLanInterface(name, type, description));
@@ -42,6 +43,9 @@ public class LanInterfaceTest
     [DataRow("lo", NetworkInterfaceType.Loopback, "lo")] // where WSL puts 10.255.255.254
     [DataRow("Cellular", NetworkInterfaceType.Wwanpp, "Generic Mobile Broadband Adapter")]
     [DataRow("Cellular 2", NetworkInterfaceType.Wwanpp2, "Generic Mobile Broadband Adapter")]
+    [DataRow("pdp_ip0", NetworkInterfaceType.Unknown, "pdp_ip0")] // an iPhone's cellular data
+    [DataRow("rmnet_data0", NetworkInterfaceType.Unknown, "rmnet_data0")] // Android's, on a Qualcomm modem
+    [DataRow("ccmni0", NetworkInterfaceType.Unknown, "ccmni0")] // Android's, on a MediaTek modem
     [DataRow("vEthernet (Default Switch)", NetworkInterfaceType.Ethernet, "Hyper-V Virtual Ethernet Adapter")]
     [DataRow("Ethernet 3", NetworkInterfaceType.Ethernet, "Hyper-V Virtual Ethernet Adapter")] // a renamed host vNIC
     [DataRow("VirtualBox Host-Only Network", NetworkInterfaceType.Ethernet, "VirtualBox Host-Only Ethernet Adapter")]

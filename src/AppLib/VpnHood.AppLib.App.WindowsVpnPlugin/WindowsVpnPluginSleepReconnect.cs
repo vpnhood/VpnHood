@@ -11,8 +11,9 @@ namespace VpnHood.AppLib.App.WindowsVpnPlugin;
 // made - a timer's - keeps the screen off and soon sleeps again, maybe by a hibernate out of Modern Standby, which takes
 // Windows' teardown of a VPN dialed meanwhile half-way: the dial after that wake hung in Windows. So the connect waits
 // for the person, through more sleeps if need be. Once the VPN is down - Windows may still be ending it - the app
-// connects, and again every 5 s for 2 minutes while that fails, the network still coming back. A VPN that outlived the
-// sleep, a connect the person makes meanwhile, or one cancelled, ends it.
+// connects, and again every 5 s for 2 minutes while that fails, the network still coming back; only the last try's
+// failure is shown, as an earlier one's would stand over the VPN the next try connects. A VPN that outlived the sleep,
+// a connect the person makes meanwhile, or one cancelled, ends it.
 internal sealed class WindowsVpnPluginSleepReconnect : IDisposable
 {
     private static readonly TimeSpan DownWait = TimeSpan.FromSeconds(30);
@@ -98,11 +99,12 @@ internal sealed class WindowsVpnPluginSleepReconnect : IDisposable
             VhLogger.Instance.LogInformation("The machine woke with its VPN ended by the sleep, so the app connects again.");
             var deadline = DateTime.UtcNow + RetryTime;
             while (true) {
+                var isRetried = DateTime.UtcNow < deadline; // the first try after the 2 minutes is the last
                 try {
-                    await _app.Connect(uiContext: null, connectOptions: null, cancellationToken).Vhc();
+                    await _app.Connect(uiContext: null, new ConnectOptions { IsRetried = isRetried }, cancellationToken).Vhc();
                     return;
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException && DateTime.UtcNow < deadline) {
+                catch (Exception ex) when (ex is not OperationCanceledException && isRetried) {
                     VhLogger.Instance.LogWarning(ex, "The connect after the wake failed; the app tries again.");
                 }
 

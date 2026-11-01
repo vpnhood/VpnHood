@@ -918,8 +918,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (connectNumber != _connectNumber)
                 throw;
 
-            _appPersistState.LastError = ex.ToApiError();
-            await TryDisconnect(connectNumber).Vhc(); // await, to prevent VpnService_StateChanged clear the LastError
+            // A failure its caller tries again is not shown, nor the VPN service's word on it once it has stopped.
+            // The app turns idle, where an error shows, only as this connect ends.
+            if (connectOptions.IsRetried) {
+                await TryDisconnect(connectNumber).Vhc();
+                ClearLastError();
+            }
+            else {
+                _appPersistState.LastError = ex.ToApiError();
+                await TryDisconnect(connectNumber).Vhc(); // await, to prevent VpnService_StateChanged clear the LastError
+            }
+
             failure = ex;
             throw;
         }

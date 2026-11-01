@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Exceptions;
+using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.AppLib.Test.Providers;
@@ -164,6 +165,29 @@ public class ClientAppTest : TestAppBase
         await Assert.ThrowsExactlyAsync<ConnectionTimeoutException>(() => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken));
         await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName);
+    }
+
+    [TestMethod]
+    public async Task Connect_fail_retried_shows_no_error()
+    {
+        // no network yet, as at a wake: the VPN service fails, then the diagnosis
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        token.ServerToken.HostEndPoints = [MockEps.HttpV4EndPointInvalid];
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AutoDiagnose = true;
+        appOptions.ConnectTimeout = TimeSpan.FromSeconds(30);
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        app.Diagnoser.TestHttpUris = [MockEps.HttpUrlInvalid];
+        app.Diagnoser.TestNsIpEndPoints = [MockEps.HttpV4EndPointInvalid];
+        app.Diagnoser.TestPingIpAddresses = [MockEps.IpInvalid];
+
+        // its caller tries again, so neither the app's error nor the VPN service's is shown
+        await Assert.ThrowsExactlyAsync<NoInternetException>(() => app.Connect(uiContext: null,
+            new ConnectOptions { VpnProfileId = vpnProfile.VpnProfileId, IsRetried = true }, TestCt));
+        Assert.IsTrue(app.State.IsIdle);
+        Assert.IsNull(app.State.LastError);
     }
 
 

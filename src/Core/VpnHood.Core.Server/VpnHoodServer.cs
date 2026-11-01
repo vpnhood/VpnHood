@@ -292,7 +292,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             }
 
             // Reconfigure server host
-            _reverseProxyTrust.Configure(serverConfig.ReverseProxyProvidersValue, serverConfig.ReverseProxyIpRangesValue);
+            await _reverseProxyTrust.Configure(serverConfig.ReverseProxyProvidersValue,
+                serverConfig.ReverseProxyIpRangesValue, cancellationToken).Vhc();
             _unauthenticatedConnections.MaxCount = serverConfig.SessionOptions.MaxUnauthenticatedConnectionCountValue;
             _endPointStatusesSent = false;
             var endPointStatuses = await ServerHost.Configure(new ServerHostConfiguration {

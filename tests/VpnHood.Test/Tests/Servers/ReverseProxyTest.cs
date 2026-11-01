@@ -49,10 +49,10 @@ public class ReverseProxyTest : TestBase
         """;
 
     [TestMethod]
-    public void The_client_is_the_last_entry_outside_the_trusted_ranges()
+    public async Task The_client_is_the_last_entry_outside_the_trusted_ranges()
     {
         using var trust = new ReverseProxyTrust(CreateStoragePath(), httpMessageHandler: null);
-        trust.Configure(providers: [], ipRanges: [IpRange.Parse("2.2.2.0/24")]);
+        await trust.Configure(providers: [], ipRanges: [IpRange.Parse("2.2.2.0/24")], TestCt);
         var proxyIp = IPAddress.Parse("2.2.2.1");
 
         // what the proxy saw, not what its sender wrote before it
@@ -82,7 +82,7 @@ public class ReverseProxyTest : TestBase
         ReverseProxyProvider[] providers = [ReverseProxyProvider.Cloudflare, ReverseProxyProvider.CloudFront];
 
         using var trust = new ReverseProxyTrust(storagePath, new FeedHandler(CloudflareList, CloudFrontList));
-        trust.Configure(providers, ipRanges: []);
+        await trust.Configure(providers, ipRanges: [], TestCt);
         await trust.RefreshNow(TestCt);
         Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudflareIp, Forwarded(ForwardedIp)));
         Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudFrontIp, Forwarded(ForwardedIp)));
@@ -91,7 +91,7 @@ public class ReverseProxyTest : TestBase
 
         // the next start can't fetch: the lists the last fetch left stand
         using var nextTrust = new ReverseProxyTrust(storagePath, new FeedHandler(null, null));
-        nextTrust.Configure(providers, ipRanges: []);
+        await nextTrust.Configure(providers, ipRanges: [], TestCt);
         await nextTrust.RefreshNow(TestCt);
         Assert.AreEqual(ForwardedIp, nextTrust.GetClientIp(CloudflareIp, Forwarded(ForwardedIp)));
         Assert.AreEqual(ForwardedIp, nextTrust.GetClientIp(CloudFrontIp, Forwarded(ForwardedIp)));
@@ -101,7 +101,7 @@ public class ReverseProxyTest : TestBase
     public async Task A_provider_never_fetched_is_not_trusted()
     {
         using var trust = new ReverseProxyTrust(CreateStoragePath(), new FeedHandler(null, null));
-        trust.Configure([ReverseProxyProvider.Cloudflare], [IpRange.Parse("10.0.0.0/8")]);
+        await trust.Configure([ReverseProxyProvider.Cloudflare], [IpRange.Parse("10.0.0.0/8")], TestCt);
         await trust.RefreshNow(TestCt);
         Assert.AreEqual(CloudflareIp, trust.GetClientIp(CloudflareIp, Forwarded(ForwardedIp)));
 
@@ -114,7 +114,7 @@ public class ReverseProxyTest : TestBase
     public async Task A_cloudflare_worker_request_names_no_client()
     {
         using var trust = new ReverseProxyTrust(CreateStoragePath(), new FeedHandler(CloudflareList, CloudFrontList));
-        trust.Configure([ReverseProxyProvider.Cloudflare], ipRanges: []);
+        await trust.Configure([ReverseProxyProvider.Cloudflare], ipRanges: [], TestCt);
         await trust.RefreshNow(TestCt);
         Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudflareIp, Forwarded(ForwardedIp)));
 
@@ -128,9 +128,24 @@ public class ReverseProxyTest : TestBase
     {
         var feedHandler = new FeedHandler(CloudflareList, CloudFrontList);
         using var trust = new ReverseProxyTrust(CreateStoragePath(), feedHandler);
-        trust.Configure(providers: [], ipRanges: []);
+        await trust.Configure(providers: [], ipRanges: [], TestCt);
         await trust.RefreshNow(TestCt);
         Assert.AreEqual(0, feedHandler.RequestCount);
+    }
+
+    // its file can't take the list: a folder stands in its place
+    [TestMethod]
+    public async Task A_failed_write_leaves_the_fetched_list_in_use()
+    {
+        var storagePath = CreateStoragePath();
+        var folderPath = Path.Combine(storagePath, "reverse-proxies");
+        Directory.CreateDirectory(Path.Combine(folderPath, "cloudflare.json"));
+
+        using var trust = new ReverseProxyTrust(storagePath, new FeedHandler(CloudflareList, CloudFrontList));
+        await trust.Configure([ReverseProxyProvider.Cloudflare], ipRanges: [], TestCt);
+        await trust.RefreshNow(TestCt);
+        Assert.AreEqual(ForwardedIp, trust.GetClientIp(CloudflareIp, Forwarded(ForwardedIp)));
+        Assert.IsEmpty(Directory.GetFiles(folderPath), "the write leaves no temporary file");
     }
 
     // the client IP the hello names is the one the access manager gets; the tests' servers have no provider

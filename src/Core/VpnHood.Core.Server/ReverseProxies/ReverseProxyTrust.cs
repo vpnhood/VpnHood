@@ -37,10 +37,16 @@ internal class ReverseProxyTrust : IDisposable
         });
     }
 
-    public void Configure(IReadOnlyList<ReverseProxyProvider> providers, IReadOnlyList<IpRange> ipRanges)
+    public async Task Configure(IReadOnlyList<ReverseProxyProvider> providers, IReadOnlyList<IpRange> ipRanges,
+        CancellationToken cancellationToken)
     {
+        // until its first fetch, a provider has the list its last fetch left
+        var lastIpRanges = new Dictionary<ReverseProxyProvider, IReadOnlyList<IpRange>>();
+        foreach (var provider in GetProvidersWithoutList(providers))
+            lastIpRanges[provider] = await ReadFile(provider, cancellationToken).Vhc();
+
         // a provider new to the configuration is fetched at once, then daily with the rest
-        if (Apply(providers, ipRanges))
+        if (Apply(providers, ipRanges, lastIpRanges))
             _ = RefreshNow(CancellationToken.None);
     }
 
@@ -82,16 +88,23 @@ internal class ReverseProxyTrust : IDisposable
         return remoteIp;
     }
 
-    private bool Apply(IReadOnlyList<ReverseProxyProvider> providers, IReadOnlyList<IpRange> ipRanges)
+    private IReadOnlyList<ReverseProxyProvider> GetProvidersWithoutList(IReadOnlyList<ReverseProxyProvider> providers)
+    {
+        lock (_lock)
+            return providers.Distinct().Where(x => !_providerIpRanges.ContainsKey(x)).ToArray();
+    }
+
+    private bool Apply(IReadOnlyList<ReverseProxyProvider> providers, IReadOnlyList<IpRange> ipRanges,
+        IReadOnlyDictionary<ReverseProxyProvider, IReadOnlyList<IpRange>> lastIpRanges)
     {
         lock (_lock) {
             var hasNewProvider = providers.Any(x => !_providers.Contains(x));
             _providers = providers.Distinct().ToArray();
             _ipRanges = ipRanges.ToArray();
 
-            // until its first fetch, a provider has the list its last fetch left
-            foreach (var provider in _providers.Where(x => !_providerIpRanges.ContainsKey(x)))
-                _providerIpRanges[provider] = ReadFile(provider);
+            // a fetch that ended while the files were read is newer than they are
+            foreach (var (provider, providerIpRanges) in lastIpRanges)
+                _providerIpRanges.TryAdd(provider, providerIpRanges);
 
             Rebuild();
             return hasNewProvider;
@@ -119,9 +132,9 @@ internal class ReverseProxyTrust : IDisposable
                 Rebuild();
             }
 
-            WriteFile(provider, ipRanges);
             VhLogger.Instance.LogInformation(
                 "The reverse proxy addresses of {Provider} have been refreshed. Count: {Count}", provider, ipRanges.Count);
+            await TryWriteFile(provider, ipRanges, cancellationToken).Vhc();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
@@ -156,7 +169,8 @@ internal class ReverseProxyTrust : IDisposable
         return Path.Combine(_folderPath, $"{provider.ToString().ToLowerInvariant()}.json");
     }
 
-    private IReadOnlyList<IpRange> ReadFile(ReverseProxyProvider provider)
+    private async Task<IReadOnlyList<IpRange>> ReadFile(ReverseProxyProvider provider,
+        CancellationToken cancellationToken)
     {
         var filePath = GetFilePath(provider);
         if (!File.Exists(filePath)) {
@@ -167,8 +181,11 @@ internal class ReverseProxyTrust : IDisposable
         }
 
         try {
-            return JsonSerializer.Deserialize<IpRange[]>(File.ReadAllText(filePath))
+            return JsonSerializer.Deserialize<IpRange[]>(await File.ReadAllTextAsync(filePath, cancellationToken).Vhc())
                    ?? throw new FormatException("The file holds no list.");
+        }
+        catch (OperationCanceledException) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex,
@@ -177,14 +194,24 @@ internal class ReverseProxyTrust : IDisposable
         }
     }
 
-    // through a temporary file, so a write cut short never replaces the last list
-    private void WriteFile(ReverseProxyProvider provider, IReadOnlyList<IpRange> ipRanges)
+    // Replaced whole, so a write cut short never replaces the last list. The fetched list is in use already: a write
+    // that fails leaves the next start the last list kept.
+    private async Task TryWriteFile(ReverseProxyProvider provider, IReadOnlyList<IpRange> ipRanges,
+        CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(_folderPath);
-        var filePath = GetFilePath(provider);
-        var tempFilePath = filePath + ".tmp";
-        File.WriteAllText(tempFilePath, JsonSerializer.Serialize(ipRanges));
-        File.Move(tempFilePath, filePath, overwrite: true);
+        try {
+            Directory.CreateDirectory(_folderPath);
+            await FileUtils.WriteAllTextAtomicAsync(GetFilePath(provider), JsonSerializer.Serialize(ipRanges),
+                cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex,
+                "Could not keep the reverse proxy addresses of {Provider}; the next start reads the last list kept.",
+                provider);
+        }
     }
 
     // a server behind a proxy that no list names takes the proxy for every client

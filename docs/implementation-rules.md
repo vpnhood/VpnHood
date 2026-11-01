@@ -71,7 +71,11 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     I/O has no async form (SQLite opening its databases), or under a caller that is sync by contract
     and needs the answer before it returns, which then blocks on the task (Android's `OnStartCommand`,
     Avalonia's `Main`). A constructor is not such a caller: a type that must wait to be made gets a
-    static async `Create`.
+    static async `Create`. The app's own state stays sync: `VpnHoodApp.Init` and the services it makes
+    read their small files (settings, profiles, saved state, update state, the portal sign-in) sync, at
+    the start or behind a sync property. Every head starts the app from such an entry point on the main
+    thread (`OnCreate`, `FinishedLaunching`, `Main`), where a blocked task freezes the start if anything
+    below awaits without `ConfigureAwait(false)`.
 
 ## Design
 

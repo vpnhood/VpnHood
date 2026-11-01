@@ -31,14 +31,14 @@ internal static class App
     }
 
     // The product's options, and the Store's lines on top: its own update, offered once its automatic update
-    // has had PromptDelay, and its rating dialog; usage data only after the person's own tick, in every
-    // region (Store Policies 10.5.2). Microsoft lets a non-game app on PCs sell through its own shop (10.8.1
-    // and 10.8.6), so the website edition's: a typed code and the portal's checkout in the browser.
+    // has had PromptDelay, and its rating dialog. Usage data asks as on every other channel, iOS's too: first only
+    // where the law wants a yes first, as the privacy policy says. Microsoft lets a non-game app on PCs sell through
+    // its own shop (10.8.1 and 10.8.6), so the website edition's: a typed code and the portal's checkout in the
+    // browser.
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
         var appConfigs = ConnectAppConfigs.Load(typeof(App).Assembly);
         var options = ConnectAppOptions.Create(context, appConfigs);
-        options.IsAnonymousTrackerOptInRequired = true;
         options.UserReviewProvider = new MicrosoftStoreInAppUserReviewProvider();
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdaterProvider = new MicrosoftStoreAppUpdaterProvider()

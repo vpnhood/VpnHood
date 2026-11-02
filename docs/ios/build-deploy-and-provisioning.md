@@ -227,5 +227,5 @@ via `POST /v1/billing/purchases` + the daily reconciliation.
 Billing goes through `VpnHoodStoreKit.xcframework` (Swift), which the `VpnHood.AppLib.Stores.AppStore.Native`
 package carries; it is built from that package's own repo, not from this one.
 It is committed so CI needs no Swift toolchain; rebuild with `./build-xcframework.sh` only when
-`StoreKitBridge.swift` changes, and verify the four `vhsk_*` symbols with
+`StoreKitBridge.swift` changes, and verify the five `vhsk_*` symbols with
 `nm -gU …/VpnHoodStoreKit.framework/VpnHoodStoreKit | grep vhsk`.

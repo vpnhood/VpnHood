@@ -80,6 +80,12 @@ public class PortalWebBillingProvider : IBillingProvider
         return Task.FromResult<PurchaseProof?>(null);
     }
 
+    // never called: this provider answers no proof
+    public Task FinishPurchase(PurchaseProof purchaseProof, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
         _httpClient.Dispose();

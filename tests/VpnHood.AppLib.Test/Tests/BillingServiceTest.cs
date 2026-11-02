@@ -122,6 +122,47 @@ public class BillingServiceTest : TestAppBase
         Assert.HasCount(1, accountProvider.TestOrderProcessor.CompletedOrders);
         Assert.AreEqual("test_purchase_data", accountProvider.TestOrderProcessor.CompletedOrders[0].Value);
         Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);
+
+        // and once the backend has it, the store is told it is delivered
+        Assert.HasCount(1, accountProvider.TestBillingProvider.FinishedPurchases);
+        Assert.AreSame(accountProvider.TestOrderProcessor.CompletedOrders[0],
+            accountProvider.TestBillingProvider.FinishedPurchases[0]);
+    }
+
+    [TestMethod]
+    public async Task Purchase_stays_open_at_the_store_when_the_backend_does_not_redeem_it()
+    {
+        var accountProvider = new TestAccountProvider {
+            TestOrderProcessor = { OnCompleteOrder = _ => throw new HttpRequestException("The portal is down.") }
+        };
+        await using var app = CreateAppWithAccount(accountProvider);
+        var billingService = GetBillingService(app);
+
+        await Assert.ThrowsExactlyAsync<HttpRequestException>(() =>
+            billingService.Purchase(AppUiContext.RequiredContext,
+                new PurchaseParams { PlanToken = "test_plan_1m" }, TestCt));
+
+        // StoreKit keeps an unfinished purchase, so Restore can still present it to the backend
+        Assert.IsEmpty(accountProvider.TestBillingProvider.FinishedPurchases,
+            "a purchase the backend has not redeemed must not be closed at the store");
+        Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);
+    }
+
+    [TestMethod]
+    public async Task Purchase_succeeds_when_the_store_cannot_be_told_it_is_delivered()
+    {
+        var accountProvider = new TestAccountProvider {
+            TestBillingProvider = { FinishException = new InvalidOperationException("StoreKit call failed.") }
+        };
+        await using var app = CreateAppWithAccount(accountProvider);
+        var billingService = GetBillingService(app);
+
+        // the money has moved and the account has the purchase: the person sees no error for it
+        await billingService.Purchase(AppUiContext.RequiredContext,
+            new PurchaseParams { PlanToken = "test_plan_1m" }, TestCt);
+
+        Assert.HasCount(1, accountProvider.TestOrderProcessor.CompletedOrders);
+        Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);
     }
 
     [TestMethod]
@@ -145,6 +186,8 @@ public class BillingServiceTest : TestAppBase
 
         Assert.IsEmpty(accountProvider.TestOrderProcessor.CompletedOrders,
             "paid access must never land in a stranger's account");
+        Assert.IsEmpty(accountProvider.TestBillingProvider.FinishedPurchases,
+            "an unredeemed purchase stays open at the store");
         Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);
     }
 
@@ -269,6 +312,10 @@ public class BillingServiceTest : TestAppBase
         Assert.HasCount(1, accountProvider.TestOrderProcessor.CompletedOrders);
         Assert.AreEqual("restored_purchase_data", accountProvider.TestOrderProcessor.CompletedOrders[0].Value);
         Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);
+
+        // a purchase whose first redeeming failed is closed at the store when Restore redeems it
+        Assert.HasCount(1, accountProvider.TestBillingProvider.FinishedPurchases);
+        Assert.AreEqual("restored_purchase_data", accountProvider.TestBillingProvider.FinishedPurchases[0].Value);
     }
 
     [TestMethod]

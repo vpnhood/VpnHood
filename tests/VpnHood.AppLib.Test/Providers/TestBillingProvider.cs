@@ -66,6 +66,19 @@ internal class TestBillingProvider : IBillingProvider
         return Task.FromResult(RestoreResult);
     }
 
+    /// <summary>The proofs the store was told are delivered, in order.</summary>
+    public List<PurchaseProof> FinishedPurchases { get; } = [];
+    public Exception? FinishException { get; set; }
+
+    public Task FinishPurchase(PurchaseProof purchaseProof, CancellationToken cancellationToken)
+    {
+        if (FinishException != null)
+            throw FinishException;
+
+        FinishedPurchases.Add(purchaseProof);
+        return Task.CompletedTask;
+    }
+
     public PurchaseState PurchaseState => PurchaseState.None;
 
     public void Dispose()

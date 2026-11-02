@@ -56,5 +56,13 @@ public interface IBillingProvider : IDisposable
     /// </summary>
     Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Tells the store the purchase behind this proof is delivered: the account backend has redeemed
+    /// it. Called only then, so a purchase whose redeeming failed stays open where the store keeps one
+    /// open (StoreKit's unfinished transaction), and a later Restore presents it again. A store whose
+    /// backend closes the purchase itself (Play's acknowledgement) has nothing to do here.
+    /// </summary>
+    Task FinishPurchase(PurchaseProof purchaseProof, CancellationToken cancellationToken);
+
     PurchaseState PurchaseState { get; }
 }

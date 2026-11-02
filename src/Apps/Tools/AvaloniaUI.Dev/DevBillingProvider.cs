@@ -47,6 +47,11 @@ internal sealed class DevBillingProvider(string storeId, bool isSubscriptionMana
         return Task.FromResult<PurchaseProof?>(null);
     }
 
+    public Task FinishPurchase(PurchaseProof purchaseProof, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
     }

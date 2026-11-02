@@ -1,8 +1,10 @@
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services.Accounts;
@@ -98,6 +100,18 @@ public class BillingService(
                 "The signed-in account changed while the store was answering; the purchase was not redeemed here.");
 
         await _orderProcessor.CompleteOrder(purchaseProof, cancellationToken).Vhc();
+
+        // Only a redeemed purchase is closed at the store. A failure to close it is no failure of the
+        // purchase - the account has it already, and the store presents it again - so it is logged,
+        // never thrown at the person who has just paid.
+        try {
+            await _billingProvider.FinishPurchase(purchaseProof, cancellationToken).Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not finish the purchase at the store. ProviderId: {ProviderId}",
+                _billingProvider.ProviderId);
+        }
+
         await accountService.Refresh(cancellationToken).Vhc();
     }
 

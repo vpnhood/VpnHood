@@ -296,6 +296,12 @@ public class GooglePlayBillingProvider : IBillingProvider
         return purchase == null ? null : new PurchaseProof { Value = purchase.PurchaseToken };
     }
 
+    // the backend acknowledges a Play purchase itself, once it has provisioned it
+    public Task FinishPurchase(PurchaseProof purchaseProof, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
     /// <summary>The newest subscription this store account already owns, or null when it owns none.</summary>
     private async Task<Purchase?> GetOwnedSubscription(CancellationToken cancellationToken)
     {

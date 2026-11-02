@@ -2,13 +2,15 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Utils;
+using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Test.Device;
 
 namespace VpnHood.AppLib.Test.Tests;
 
 // The kill switch as the app and its VPN service run it (IVpnKillSwitch), the OS's block played in memory:
 // up before a connect's adapter, pointed at each adapter start, kept through an error stop, lifted by a
-// person's disconnect or the switch turned off, and fail-closed; kept while disconnected where that is on.
+// person's disconnect, the switch turned off or another app's take of the tunnel, and fail-closed; kept while
+// disconnected where that is on.
 [TestClass]
 public class KillSwitchTest : TestAppBase
 {
@@ -37,7 +39,7 @@ public class KillSwitchTest : TestAppBase
         Assert.IsFalse(killSwitch.IsUp);
     }
 
-    // An end that is no person's disconnect - here another app's take of the tunnel - leaves the block up,
+    // An end that is no person's disconnect - here an adapter that stopped on its own - leaves the block up,
     // with no session, until a person disconnects.
     [TestMethod]
     public async Task An_error_stop_keeps_the_block_until_a_person_disconnects()
@@ -45,13 +47,13 @@ public class KillSwitchTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
-        var tunnelLock = new TestVpnTunnelLock();
-        await using var app = CreateApp(CreateDevice(killSwitch, tunnelLock), killSwitchOn: true);
+        var adapter = new BreakableVpnAdapter();
+        await using var app = CreateApp(CreateDevice(killSwitch, adapter: adapter), killSwitchOn: true);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
 
-        using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
+        adapter.Break();
         await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.IsNotNull(app.State.LastError);
         Assert.IsTrue(killSwitch.IsUp);
@@ -113,18 +115,60 @@ public class KillSwitchTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
-        var tunnelLock = new TestVpnTunnelLock();
-        await using var app = CreateApp(CreateDevice(killSwitch, tunnelLock), killSwitchOn: true);
+        var adapter = new BreakableVpnAdapter();
+        await using var app = CreateApp(CreateDevice(killSwitch, adapter: adapter), killSwitchOn: true);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
-        using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
+        adapter.Break();
         await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.IsTrue(killSwitch.IsUp);
 
         app.UserSettings.KillSwitch = false;
         app.SettingsService.Save();
         await AssertEqualsWait(false, () => killSwitch.IsUp);
+    }
+
+    // Another app's take of the tunnel is a disconnect too: this app's block goes at once, where the taker's
+    // connect would replace or lift it a moment later - here never, as the stand-in taker connects nothing - and
+    // the app does not say it blocks.
+    [TestMethod]
+    public async Task Another_apps_take_of_the_tunnel_lifts_the_block_as_a_disconnect_does()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        var killSwitch = new TestVpnKillSwitch();
+        var tunnelLock = new TestVpnTunnelLock();
+        await using var app = CreateApp(CreateDevice(killSwitch, tunnelLock), killSwitchOn: true);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
+
+        using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
+        await app.WaitForState(AppConnectionState.None, TestCt);
+        await AssertEqualsWait(false, () => killSwitch.IsUp);
+        Assert.IsFalse(app.State.IsKillSwitchBlocking);
+    }
+
+    // Kept while disconnected, the block is left for the app that took the tunnel, whose connect replaces it with
+    // no gap between the two blocks; the app does not say it blocks, as the taker's block is no longer its own.
+    [TestMethod]
+    public async Task Lockdown_leaves_the_block_to_the_app_that_took_the_tunnel()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        var killSwitch = new TestVpnKillSwitch();
+        var tunnelLock = new TestVpnTunnelLock();
+        await using var app = CreateApp(CreateDevice(killSwitch, tunnelLock), killSwitchOn: true,
+            killSwitchLockdown: true);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
+
+        using var otherHold = await tunnelLock.Take(new RecordingVpnTunnelHolder(), TestCt);
+        await app.WaitForState(AppConnectionState.None, TestCt);
+        await AssertEqualsWait(false, () => app.State.IsKillSwitchBlocking);
+        Assert.IsTrue(killSwitch.IsUp);
     }
 
     // The switch applies to a session at once, through its reconfigure: on puts the block up, off takes it
@@ -226,9 +270,10 @@ public class KillSwitchTest : TestAppBase
     }
 
     // a desktop's device, which has a kill switch
-    private TestDevice CreateDevice(TestVpnKillSwitch killSwitch, TestVpnTunnelLock? tunnelLock = null)
+    private TestDevice CreateDevice(TestVpnKillSwitch killSwitch, TestVpnTunnelLock? tunnelLock = null,
+        IVpnAdapter? adapter = null)
     {
-        return new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter()) {
+        return new TestDevice(TestAppHelper, _ => adapter ?? new TestNullVpnAdapter()) {
             KillSwitch = killSwitch,
             TunnelLock = tunnelLock
         };

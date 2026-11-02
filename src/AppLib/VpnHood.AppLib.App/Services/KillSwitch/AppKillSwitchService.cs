@@ -10,7 +10,8 @@ namespace VpnHood.AppLib.App.Services.KillSwitch;
 
 // The kill switch as the app keeps it, where the device has one (a desktop's IVpnKillSwitch). While a session runs,
 // the block is the VPN service's, put up at its connect; this keeps what lies around sessions. The block stays
-// through an error stop, a crash and a reboot, and only a person's disconnect lifts it, or the switch turned off.
+// through an error stop, a crash and a reboot, and only a person's disconnect lifts it, or the switch turned off,
+// or another app's take of the tunnel, which is a disconnect too.
 // Add no reconnect of the switch's own: a free session may need an ad, so the block waits for a person, unless
 // always on reconnects. Lockdown keeps it while disconnected too (an option, off by default, as a hotel's Wi-Fi
 // sign-in needs it off): up by the settings' split at a person's disconnect, when the option is turned on and at
@@ -60,6 +61,16 @@ internal sealed class AppKillSwitchService(VpnHoodApp app, IVpnKillSwitch killSw
             () => Read(CancellationToken.None)));
     }
 
+    // Another app took the tunnel, and its connect replaces this app's block or lifts it: a read now could come
+    // before that and claim a block that is gone. So none is claimed after. Released here as a person's disconnect
+    // releases it, which a taker's connect that failed first does not; kept while disconnected, the block is left
+    // for the taker to replace, with no gap between the two.
+    public void TunnelTaken()
+    {
+        Task.Run(() => VhInvoker.TryInvokeAsync("hand the kill switch's block to the app that took the tunnel",
+            LogLevel.Warning, () => HandOver(CancellationToken.None)));
+    }
+
     // A person's disconnect lifts this app's block, even when the stop failed; kept while disconnected, the block
     // stays, by the settings' split.
     public Task PersonDisconnected(CancellationToken cancellationToken)
@@ -103,5 +114,14 @@ internal sealed class AppKillSwitchService(VpnHoodApp app, IVpnKillSwitch killSw
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
         _isBlocking = await killSwitch.IsBlocking(cancellationToken).Vhc();
+    }
+
+    private async Task HandOver(CancellationToken cancellationToken)
+    {
+        using var scope = await _lock.LockAsync(cancellationToken).Vhc();
+        if (!IsLockdownOn)
+            await killSwitch.Unblock(anyApp: false, cancellationToken).Vhc();
+
+        _isBlocking = false;
     }
 }

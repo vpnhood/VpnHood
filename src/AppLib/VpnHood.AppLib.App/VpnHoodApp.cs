@@ -34,6 +34,7 @@ using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -751,8 +752,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (connectionState == AppConnectionState.None && lastConnectionState is not null)
                 _alwaysOnService.SessionEnded(_appPersistState.LastError ?? ConnectionInfo.Error);
 
-            if (connectionState == AppConnectionState.None)
-                _killSwitchService?.SessionEnded();
+            // the kill switch's block: handed over where another app took the tunnel, else as the OS has it
+            if (_killSwitchService != null && connectionState == AppConnectionState.None) {
+                if (lastConnectionState is not null &&
+                    (_appPersistState.LastError ?? ConnectionInfo.Error)?.Is<VpnServiceRevokedException>() == true)
+                    _killSwitchService.TunnelTaken();
+                else
+                    _killSwitchService.SessionEnded();
+            }
         }
 
         Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));

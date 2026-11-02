@@ -1,11 +1,13 @@
 # VpnHood on Linux
 
-Ubuntu and Debian are what this is tested on; anything with systemd will do. One binary is
-installed, and it is three things depending on the first word you give it:
+Ubuntu and Debian are what this is tested on; anything with systemd will do. The app's binary is
+three things depending on the first word you give it, and a second binary beside it, the VPN host,
+holds each connection:
 
 | | What it is | Who runs it |
 | --- | --- | --- |
-| **The service** | Holds the VPN — the tunnel device, the routes, the DNS. Shows nothing. | root, by systemd |
+| **The service** | The app: your servers, settings and connects. Shows nothing. | root, by systemd |
+| **The VPN host** | The VPN service — the tunnel device, the routes, the DNS — one per connection. | the service, at each connect |
 | **The window** | The app, in a window. Holds no VPN of its own. | you, from the app menu |
 | **The commands** | `connect`, `status`, `profile`… | you, from a terminal |
 
@@ -15,8 +17,8 @@ machine loses the window and nothing else.
 
 Why the split: creating a tun device, editing the routing table and calling `resolvectl` all
 require root, but a *window* must not run as root — a root GUI is refused outright by Wayland, and
-it would open your links and write your files as root. So root is confined to the one process that
-needs it.
+it would open your links and write your files as root. So root is confined to the service and the
+VPN host it starts.
 
 ---
 
@@ -305,9 +307,19 @@ each platform implements (`LinuxDesktopPlatform`, `WindowsDesktopPlatform`). Onl
 UI's, not the platform's (`AvaloniaDesktopUi`).
 `VpnHood.AppLib.App.Linux` is back to the one thing it always was, `VpnHoodLinuxApp`.
 
+Beside each desktop head is its VPN host head (`Client.Linux.VpnHost`, `Client.Windows.VpnHost`), whose
+`Main` is one call into the device's project, `LinuxVpnHost.Run` or `WindowsVpnHost.Run`: Core alone, no
+AppLib. The desktop head references it, so a build puts both executables in one folder over one runtime,
+and the app finds it there by the name its build records (`VhAppVpnHostName`, `<package title>VpnHost`).
+The service starts it at each connect, and it ends with its session; with the service too - on Linux the
+unit's stop sends it SIGTERM, which closes its session, and on Windows a kill-on-close job ends it with
+the service's process. It writes the service's sinks from its first line (the journal, the Event Log)
+and its own `vpn.log`, which `service log` shows beside the app's.
+
 **In a debugger** a head runs `dev`, which the desktop heads' launch profiles pass: the daemon and
 the window in one process, so a breakpoint in the app, its tunnel or its UI is reached from one run
 with no service installed. The window still reaches the app over loopback, as it reaches the service.
+The VPN service runs in that process too, as no VPN host is started outside the service.
 The app keeps its storage in the person's own folder of the app (`IAppDesktopPaths.DevStoragePath`:
 `%LOCALAPPDATA%\<app id>`, `~/.local/share/<app id>`; a Debug build's id ends in `.debug`, so it is
 never a release's) and runs as whoever started

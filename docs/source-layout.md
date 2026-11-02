@@ -126,8 +126,10 @@ src/Apps/
 │   ├── Client.Android.Web/         the APK from our site
 │   ├── Client.Ios.Apple/           the App Store distribution
 │   ├── Client.Ios.Extension/       the Network Extension it bundles
+│   ├── Client.Linux.VpnHost/       the VPN host the Linux heads' service starts at each connect
 │   ├── Client.Linux.Web/
 │   ├── Client.Windows.Microsoft/   the Microsoft Store distribution, an MSIX package
+│   ├── Client.Windows.VpnHost/     the VPN host the WinTun heads' service starts at each connect
 │   ├── Client.Windows.VpnPlugin/   the VPN host that package carries
 │   └── Client.Windows.Web/
 ├── Connect/                        the same set, with Connect's own product project
@@ -146,10 +148,11 @@ folder, and a head's folder is `<Product>.<Platform>.<Channel>` without the `Vpn
 Store, `Web` is our own site. Every head names its channel, so
 a second one on the same platform is a sibling rather than a rename.
 
-Two folders are not heads and do not follow that rule. `*.Ios.Extension` is the Network Extension
-the iOS app bundles, and `*.Windows.VpnPlugin` the VPN host a Windows package carries: each belongs
-to the platform rather than to a channel, so every channel of a product on that platform would
-reuse the same one. The Windows setup is not a folder of the product's: one NSIS
+Some folders are not heads and do not follow that rule. `*.Ios.Extension` is the Network Extension
+the iOS app bundles, `*.Windows.VpnPlugin` the VPN host a Windows package carries, and
+`*.Windows.VpnHost` and `*.Linux.VpnHost` the VPN host beside a desktop head, which its service starts:
+each belongs to the platform rather than to a channel, so every channel of a product on that platform
+would reuse the same one. The Windows setup is not a folder of the product's: one NSIS
 script for every app, `pub/lib/vh-installer/win/install-client.nsi`, takes the app's names from its
 identity.
 

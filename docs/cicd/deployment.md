@@ -220,8 +220,8 @@ runner, whose image carries `makensis` (else Chocolatey installs it); it needs n
 
 **Code signing (optional, `publish_client.yml` (in `Vpnhood.App.Client`)):** signing is **off unless the Azure
 credential and the Trusted Signing target are both present**, in which case the build signs
-every published binary that does not already carry a vendor signature (the apphost `.exe` plus our
-own `VpnHood*.dll` assemblies, and the install root's two launchers; the .NET runtime and WinDivert
+every published binary that does not already carry a vendor signature (the two apphost `.exe`s - the
+app's and its VPN host's - plus our own `VpnHood*.dll` assemblies, and the install root's two launchers; the .NET runtime and WinDivert
 keep their Microsoft/vendor signatures) and then the setup and the uninstaller inside it (NSIS's
 `!uninstfinalize` runs `pub/lib/Sign-File.ps1` on it while it packs it), via Azure Trusted Signing — now surfaced as
 **Artifact Signing** (`sign code artifact-signing`; the old `trusted-signing` verb still works but the

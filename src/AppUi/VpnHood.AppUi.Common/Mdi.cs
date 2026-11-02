@@ -53,10 +53,8 @@ public static class Mdi
     public const string DotsVertical = "\U000F01D9";
     public const string Earth = "\U000F01E7";
     public const string EmailOutline = "\U000F01F0";
-    public const string EmoticonSadOutline = "\U000F01F8";
     public const string Eye = "\U000F0208";
     public const string EyeOff = "\U000F0209";
-    public const string EyeOffOutline = "\U000F06D1";
     public const string EyeOutline = "\U000F06D0";
     public const string FilterVariant = "\U000F0236";
     public const string Information = "\U000F02FC";

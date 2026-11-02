@@ -1,0 +1,87 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.RateFace">
+  <!-- One of the review dialog's faces, drawn: the icon font has only the sad one, and a colour
+       emoji beside it reads as another set. An outline in the rate-icon colour; picked, it fills
+       with its mood's colour over a halo of the same, its features cut out in the dialog's. -->
+  <UserControl.Styles>
+    <Style Selector="Ellipse#Head">
+      <Setter Property="Stroke" Value="{StaticResource RateIconBrush}" />
+    </Style>
+    <Style Selector="Ellipse.eye">
+      <Setter Property="Fill" Value="{StaticResource RateIconBrush}" />
+    </Style>
+    <Style Selector="Path#Mouth">
+      <Setter Property="Stroke" Value="{StaticResource RateIconBrush}" />
+    </Style>
+    <Style Selector="Panel#Root.sad Path#Mouth">
+      <Setter Property="Data" Value="M15,35 Q24,26 33,35" />
+    </Style>
+    <Style Selector="Panel#Root.neutral Path#Mouth">
+      <Setter Property="Data" Value="M16,32 L32,32" />
+    </Style>
+    <Style Selector="Panel#Root.happy Path#Mouth">
+      <Setter Property="Data" Value="M14,28 Q24,38 34,28" />
+    </Style>
+
+    <Style Selector="Ellipse#Halo">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Viewbox#Face">
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Panel#Root.picked Ellipse#Halo">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Panel#Root.picked Viewbox#Face">
+      <Setter Property="RenderTransform" Value="scale(1.1)" />
+    </Style>
+    <Style Selector="Panel#Root.picked Ellipse.eye">
+      <Setter Property="Fill" Value="{StaticResource GeneralDialogBrush}" />
+    </Style>
+    <Style Selector="Panel#Root.picked Path#Mouth">
+      <Setter Property="Stroke" Value="{StaticResource GeneralDialogBrush}" />
+    </Style>
+    <Style Selector="Panel#Root.picked.sad Ellipse#Head">
+      <Setter Property="Stroke" Value="{StaticResource ErrorBrush}" />
+      <Setter Property="Fill" Value="{StaticResource ErrorBrush}" />
+    </Style>
+    <Style Selector="Panel#Root.picked.sad Ellipse#Halo">
+      <Setter Property="Fill" Value="{StaticResource ErrorTonalBrush}" />
+    </Style>
+    <Style Selector="Panel#Root.picked.neutral Ellipse#Head">
+      <Setter Property="Stroke" Value="{StaticResource WarningBrush}" />
+      <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
+    </Style>
+    <Style Selector="Panel#Root.picked.neutral Ellipse#Halo">
+      <Setter Property="Fill" Value="{StaticResource WarningTonalBrush}" />
+    </Style>
+    <Style Selector="Panel#Root.picked.happy Ellipse#Head">
+      <Setter Property="Stroke" Value="{StaticResource ActiveBrush}" />
+      <Setter Property="Fill" Value="{StaticResource ActiveBrush}" />
+    </Style>
+    <Style Selector="Panel#Root.picked.happy Ellipse#Halo">
+      <Setter Property="Fill" Value="{StaticResource ActiveTonalBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <Panel x:Name="Root">
+    <Ellipse x:Name="Halo" />
+    <Viewbox x:Name="Face" Margin="8">
+      <Canvas Width="48" Height="48">
+        <Ellipse x:Name="Head" Canvas.Left="3" Canvas.Top="3" Width="42" Height="42" StrokeThickness="3" />
+        <Ellipse Classes="eye" Canvas.Left="14" Canvas.Top="16" Width="6" Height="6" />
+        <Ellipse Classes="eye" Canvas.Left="28" Canvas.Top="16" Width="6" Height="6" />
+        <Path x:Name="Mouth" StrokeThickness="3" StrokeLineCap="Round" />
+      </Canvas>
+    </Viewbox>
+  </Panel>
+</UserControl>

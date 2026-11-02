@@ -1,6 +1,7 @@
 ﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:res="using:VpnHood.AppUi.Common"
+                    xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.UserReviewDialog">
   <!-- The web UI's UserReviewDialog: three faces to pick from; the sad ones open a box for the
@@ -17,25 +18,25 @@
       <StackPanel x:Name="RateStep" Spacing="16">
         <TextBlock Classes="h3" TextAlignment="Center" Text="{Binding Feedback, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="FeedbackDescText" Classes="body-large dialog-text" TextAlignment="Center" />
-        <StackPanel Orientation="Horizontal" Spacing="28" HorizontalAlignment="Center">
-          <Button x:Name="Rate1" Classes="icon" Width="60" Height="60" CornerRadius="30" Click="OnRate1Click"
+        <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Center">
+          <Button x:Name="Rate1" Classes="icon" Width="64" Height="64" CornerRadius="32" Click="OnRate1Click"
                   AutomationProperties.Name="{Binding Bad, Source={x:Static res:Strings.Current}}">
-            <TextBlock Classes="mdi" FontSize="48" Text="{x:Static res:Mdi.EmoticonSadOutline}" />
+            <controls:RateFace x:Name="Face1" Rating="1" />
           </Button>
-          <Button x:Name="Rate2" Classes="icon" Width="60" Height="60" CornerRadius="30" Click="OnRate2Click"
+          <Button x:Name="Rate2" Classes="icon" Width="64" Height="64" CornerRadius="32" Click="OnRate2Click"
                   AutomationProperties.Name="{Binding Ok, Source={x:Static res:Strings.Current}}">
-            <TextBlock FontSize="44" FontWeight="Bold" Text="😐" />
+            <controls:RateFace x:Name="Face2" Rating="2" />
           </Button>
-          <Button x:Name="Rate3" Classes="icon" Width="60" Height="60" CornerRadius="30" Click="OnRate3Click"
+          <Button x:Name="Rate3" Classes="icon" Width="64" Height="64" CornerRadius="32" Click="OnRate3Click"
                   AutomationProperties.Name="{Binding Good, Source={x:Static res:Strings.Current}}">
-            <TextBlock FontSize="44" Text="😊" />
+            <controls:RateFace x:Name="Face3" Rating="3" />
           </Button>
         </StackPanel>
       </StackPanel>
 
       <!-- step 2: the words, for a sad face -->
       <StackPanel x:Name="TextStep" Spacing="12" IsVisible="False">
-        <TextBlock Classes="mdi" FontSize="80" HorizontalAlignment="Center" Text="{x:Static res:Mdi.EmoticonSadOutline}" />
+        <controls:RateFace x:Name="PickedFace" IsPicked="True" Width="88" Height="88" HorizontalAlignment="Center" />
         <TextBlock Classes="label-large" Text="{Binding UserReviewSorryMsg, Source={x:Static res:Strings.Current}}" TextWrapping="Wrap" />
         <TextBox x:Name="ReviewBox" Classes="outlined multiline" MaxLength="500" MinHeight="90" />
       </StackPanel>

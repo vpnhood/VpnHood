@@ -41,12 +41,17 @@ public partial class UserReviewDialog : DialogBase
     private void OnRate2Click(object? sender, RoutedEventArgs e) => Pick(2);
     private void OnRate3Click(object? sender, RoutedEventArgs e) => Pick(3);
 
+    // the faces not picked can still be picked: fading them below 0.7 takes them under 3:1 against
+    // the dialog in either theme
     private void Pick(int rate)
     {
         _rate = rate;
-        Rate1.Opacity = rate == 1 ? 1 : 0.4;
-        Rate2.Opacity = rate == 2 ? 1 : 0.4;
-        Rate3.Opacity = rate == 3 ? 1 : 0.4;
+        Face1.IsPicked = rate == 1;
+        Face2.IsPicked = rate == 2;
+        Face3.IsPicked = rate == 3;
+        Rate1.Opacity = rate == 1 ? 1 : 0.7;
+        Rate2.Opacity = rate == 2 ? 1 : 0.7;
+        Rate3.Opacity = rate == 3 ? 1 : 0.7;
         SubmitButton.IsEnabled = true;
     }
 
@@ -76,6 +81,7 @@ public partial class UserReviewDialog : DialogBase
             }
 
             RateStep.IsVisible = false;
+            PickedFace.Rating = _rate;
             TextStep.IsVisible = true;
             SubmitButton.IsVisible = false;
             SendButton.IsVisible = true;

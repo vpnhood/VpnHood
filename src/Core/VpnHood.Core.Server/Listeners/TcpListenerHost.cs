@@ -187,17 +187,7 @@ internal class TcpListenerHost(
         var sslStream = new SslStream(tcpClient.GetStream(), true);
 
         try {
-            await sslStream.AuthenticateAsServerAsync(
-                new SslServerAuthenticationOptions {
-                    ClientCertificateRequired = false,
-                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                    ServerCertificateSelectionCallback = ServerCertificateSelectionCallback,
-                    // Kestrel's list with HTTP/2 off, so a hello gets what such a web server gives it: http/1.1 when
-                    // offered, no ALPN when it offers none, as older clients do, and a failed handshake when it offers
-                    // only h2. A server that never answers ALPN stands out to a prober.
-                    ApplicationProtocols = [SslApplicationProtocol.Http11]
-                },
-                ct).Vhc();
+            await sslStream.AuthenticateAsServerAsync(ServerOptionsSelectionCallback, null, ct).Vhc();
 
             var tcpConnection = new TcpStreamConnection(tcpClient, sslStream, connectionName: "tunnel", isServer: true);
             return tcpConnection;
@@ -208,13 +198,24 @@ internal class TcpListenerHost(
         }
     }
 
-    private X509Certificate ServerCertificateSelectionCallback(object sender, string? hostname)
+    // the certificate's prepared chain, not the certificate itself, which SslStream would build a chain for again
+    private ValueTask<SslServerAuthenticationOptions> ServerOptionsSelectionCallback(SslStream sslStream,
+        SslClientHelloInfo clientHelloInfo, object? state, CancellationToken cancellationToken)
     {
         var certificate =
-            _certificates.SingleOrDefault(x => x.HostName.Equals(hostname, StringComparison.OrdinalIgnoreCase))
+            _certificates.SingleOrDefault(x =>
+                x.HostName.Equals(clientHelloInfo.ServerName, StringComparison.OrdinalIgnoreCase))
             ?? _certificates.First();
 
-        return certificate.Certificate;
+        return ValueTask.FromResult(new SslServerAuthenticationOptions {
+            ClientCertificateRequired = false,
+            CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+            ServerCertificateContext = certificate.CertificateContext,
+            // Kestrel's list with HTTP/2 off, so a hello gets what such a web server gives it: http/1.1 when
+            // offered, no ALPN when it offers none, as older clients do, and a failed handshake when it offers
+            // only h2. A server that never answers ALPN stands out to a prober.
+            ApplicationProtocols = [SslApplicationProtocol.Http11]
+        });
     }
 
     public async ValueTask DisposeAsync()

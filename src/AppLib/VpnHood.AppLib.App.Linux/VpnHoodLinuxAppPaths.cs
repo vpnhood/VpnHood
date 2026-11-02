@@ -15,4 +15,8 @@ public class VpnHoodLinuxAppPaths
     // The install's way out of the kill switch's block (AppOptions.KillSwitchOffScriptPath), which the host knows;
     // null outside an install.
     public string? KillSwitchOffScriptPath { get; init; }
+
+    // The VPN host the service starts at each connect, the VPN service's process (LinuxVpnHost); null in a debugger's
+    // run, where the VPN service runs in the app's process.
+    public string? VpnHostPath { get; init; }
 }

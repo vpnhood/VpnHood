@@ -10,4 +10,11 @@ public class VpnHoodWindowsAppPaths
     // Where a run as the person keeps its single-instance lock, a folder of their own (InstanceLockFile); null for
     // the service, whose lock only administrators can reach.
     public string? LockFolderPath { get; init; }
+
+    // The service the app runs in, whose processes the kill switch's block lets out; null in a run as the person.
+    public string? ServiceName { get; init; }
+
+    // The VPN host the service starts at each connect, the VPN service's process (WindowsVpnHost); null in a run as
+    // the person, where the VPN service runs in the app's process.
+    public string? VpnHostPath { get; init; }
 }

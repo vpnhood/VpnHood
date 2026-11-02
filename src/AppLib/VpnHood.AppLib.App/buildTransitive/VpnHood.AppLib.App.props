@@ -25,6 +25,10 @@
 	     window's executable, and Linux's launcher script. The package title and "Cli" unless the app
 	     states its own, so a fork's name clashes with nobody's.
 
+	     VhAppVpnHostName is the VPN host's, the VPN service's own executable on Windows and Linux, which
+	     the service starts at each connect: its head makes it its AssemblyName, and it reads this file too,
+	     as it references nothing of the app. The package title and "VpnHost" unless the app states its own.
+
 	     Product is the name the executable's details show and the Windows service is listed under.
 	     Set here because the SDK sets it to the assembly's name before a targets file could, and so it
 	     does Company: whether the app stated one is noted here, while it still shows. Copyright follows
@@ -32,6 +36,7 @@
 	<PropertyGroup Condition="'$(VhAppName)' != ''">
 		<VhAppPackageTitle Condition="'$(VhAppPackageTitle)' == ''">$([System.Text.RegularExpressions.Regex]::Replace('$(VhAppName)', '[^A-Za-z0-9]', ''))</VhAppPackageTitle>
 		<VhAppCommandName Condition="'$(VhAppCommandName)' == ''">$(VhAppPackageTitle)Cli</VhAppCommandName>
+		<VhAppVpnHostName Condition="'$(VhAppVpnHostName)' == ''">$(VhAppPackageTitle)VpnHost</VhAppVpnHostName>
 		<Product Condition="'$(Product)' == ''">$(VhAppName)</Product>
 		<_VhAppHasCompany Condition="'$(Company)' != ''">true</_VhAppHasCompany>
 		<Copyright Condition="'$(Copyright)' == '' And '$(Company)' != ''">&#169; $(Company). All rights reserved.</Copyright>

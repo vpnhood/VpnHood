@@ -22,6 +22,8 @@ internal static class ServiceRegistration
     private const int ServiceConfigDescription = 1;
     private const int ServiceConfigFailureActions = 2;
     private const int ServiceConfigFailureActionsFlag = 4;
+    private const int ServiceConfigServiceSidInfo = 5;
+    private const uint ServiceSidTypeUnrestricted = 1;
     private const int ScActionRestart = 1;
     private const int ErrorServiceExists = 1073;
     private const int DaclSecurityInformation = 4;
@@ -48,8 +50,8 @@ internal static class ServiceRegistration
         }
     }
 
-    // Automatic, LocalSystem, restarted on failure, startable by interactive users. On a service
-    // already registered, the same settings are written over whatever it has.
+    // Automatic, LocalSystem, restarted on failure, startable by interactive users, with a SID of its
+    // own. On a service already registered, the same settings are written over whatever it has.
     public static void Register(string serviceName, string displayName, string description, string commandLine)
     {
         var scm = OpenSCManager(null, null, ScManagerConnect | ScManagerCreateService);
@@ -78,6 +80,7 @@ internal static class ServiceRegistration
                 SetDescription(service, description);
                 SetFailureActions(service);
                 SetStartRights(service);
+                SetSidType(service);
             }
             finally {
                 CloseServiceHandle(service);
@@ -154,6 +157,16 @@ internal static class ServiceRegistration
             throw new Win32Exception();
     }
 
+    // Windows puts the service's SID in its token and in every process it starts only when its type is
+    // unrestricted; the kill switch's block lets them out by it (WindowsVpnKillSwitch). Taken at the
+    // service's next start, which an install's and an update's setup make after this.
+    private static void SetSidType(IntPtr service)
+    {
+        var info = new ServiceSidInfo { dwServiceSidType = ServiceSidTypeUnrestricted };
+        if (!ChangeServiceConfig2(service, ServiceConfigServiceSidInfo, ref info))
+            throw new Win32Exception();
+    }
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct ServiceDescription
     {
@@ -184,6 +197,12 @@ internal static class ServiceRegistration
         public bool fFailureActionsOnNonCrashFailures;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ServiceSidInfo
+    {
+        public uint dwServiceSidType;
+    }
+
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern IntPtr OpenSCManager(string? machineName, string? databaseName, uint desiredAccess);
 
@@ -212,6 +231,10 @@ internal static class ServiceRegistration
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool ChangeServiceConfig2(IntPtr service, int infoLevel, ref ServiceFailureActionsFlag info);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ChangeServiceConfig2(IntPtr service, int infoLevel, ref ServiceSidInfo info);
 
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

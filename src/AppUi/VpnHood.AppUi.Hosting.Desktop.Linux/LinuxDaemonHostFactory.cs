@@ -21,7 +21,8 @@ public sealed class LinuxDaemonHostFactory(AppInitParams initParams, LinuxDeskto
         var appPaths = new VpnHoodLinuxAppPaths {
             StoragePath = paths.StoragePath,
             LockFolderPath = paths.RuntimePath,
-            KillSwitchOffScriptPath = paths.KillSwitchOffScriptPath
+            KillSwitchOffScriptPath = paths.KillSwitchOffScriptPath,
+            VpnHostPath = paths.VpnHostPath
         };
         return new LinuxDaemonHost(initParams, appPaths, isService: true);
     }

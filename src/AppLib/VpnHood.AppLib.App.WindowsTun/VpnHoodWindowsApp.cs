@@ -10,16 +10,19 @@ namespace VpnHood.AppLib.App.WindowsTun;
 // runs, touches nothing, not even the head's options - then starts the app. Stopping it is disposing
 // it, and asynchronously, so the tunnel comes down before the process ends. The storage path is the
 // host's (the service's folder under ProgramData), so the init params name no folder here. What a
-// window shows of it - the tray, the window itself - runs in the person's own process, over the API.
+// window shows of it - the tray, the window itself - runs in the person's own process, over the API;
+// the VPN service runs in a process of its own too, the VPN host, which the service starts at a connect.
 public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
 {
     private static IDisposable? _singleInstanceLock;
     private readonly VpnHoodApp _app;
     private bool _disposed;
 
-    private VpnHoodWindowsApp(AppOptions appOptions)
+    private VpnHoodWindowsApp(AppOptions appOptions, VpnHoodWindowsAppPaths paths)
     {
-        _app = VpnHoodApp.Init(new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode), appOptions);
+        var device = new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode,
+            serviceName: paths.ServiceName, vpnHostPath: paths.VpnHostPath);
+        _app = VpnHoodApp.Init(device, appOptions);
     }
 
     public static VpnHoodWindowsApp Init(AppInitParams initParams, VpnHoodWindowsAppPaths paths)
@@ -52,7 +55,7 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
         // the service control manager stops the daemon, and the tunnel must end with it
         appOptions.DisconnectOnDispose = true;
 
-        return new VpnHoodWindowsApp(appOptions);
+        return new VpnHoodWindowsApp(appOptions, paths);
     }
 
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.

@@ -156,8 +156,10 @@
     <Project Path="src/Apps/Client/Client.Ios.Extension/VpnHood.App.Client.Ios.Extension.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
+    <Project Path="src/Apps/Client/Client.Linux.VpnHost/VpnHood.App.Client.Linux.VpnHost.csproj" />
     <Project Path="src/Apps/Client/Client.Linux.Web/VpnHood.App.Client.Linux.Web.csproj" />
     <Project Path="src/Apps/Client/Client.Windows.Microsoft/VpnHood.App.Client.Windows.Microsoft.csproj" />
+    <Project Path="src/Apps/Client/Client.Windows.VpnHost/VpnHood.App.Client.Windows.VpnHost.csproj" />
     <Project Path="src/Apps/Client/Client.Windows.VpnPlugin/VpnHood.App.Client.Windows.VpnPlugin.csproj">
       <Platform Project="x64" />
     </Project>
@@ -178,8 +180,10 @@
     <Project Path="src/Apps/Connect/Connect.Ios.Extension/VpnHood.App.Connect.Ios.Extension.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
+    <Project Path="src/Apps/Connect/Connect.Linux.VpnHost/VpnHood.App.Connect.Linux.VpnHost.csproj" />
     <Project Path="src/Apps/Connect/Connect.Linux.Web/VpnHood.App.Connect.Linux.Web.csproj" />
     <Project Path="src/Apps/Connect/Connect.Windows.Microsoft/VpnHood.App.Connect.Windows.Microsoft.csproj" />
+    <Project Path="src/Apps/Connect/Connect.Windows.VpnHost/VpnHood.App.Connect.Windows.VpnHost.csproj" />
     <Project Path="src/Apps/Connect/Connect.Windows.VpnPlugin/VpnHood.App.Connect.Windows.VpnPlugin.csproj">
       <Platform Project="x64" />
     </Project>

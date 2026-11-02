@@ -55,6 +55,8 @@
 		<ProjectReference Include="..\Connect\VpnHood.App.Connect.csproj" />
 		<!-- Windows as this head runs on it: the service, the window and its tray, the commands. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Desktop.WindowsTun\VpnHood.AppUi.Hosting.Desktop.WindowsTun.csproj" />
+		<!-- The VPN host, the VPN service's own process, which the service starts beside this executable. -->
+		<ProjectReference Include="..\Connect.Windows.VpnHost\VpnHood.App.Connect.Windows.VpnHost.csproj" />
 	</ItemGroup>
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way

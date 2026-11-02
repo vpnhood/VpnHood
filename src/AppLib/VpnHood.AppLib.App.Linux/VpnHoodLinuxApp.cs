@@ -12,16 +12,18 @@ namespace VpnHood.AppLib.App.Linux;
 // restarted while one still runs, touches nothing, not even the head's options - then starts the
 // app and clears what a crashed run left. Stopping it is disposing it, and asynchronously, so the
 // tunnel comes down before the process ends. The storage path is the host's (the daemon's folder
-// beside its versions), so the init params name no folder here.
+// beside its versions), so the init params name no folder here. The VPN service runs in a process of
+// its own, the VPN host, which the service starts at a connect.
 public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 {
     private static FileStream? _singleInstanceLock;
     private readonly VpnHoodApp _app;
     private bool _disposed;
 
-    private VpnHoodLinuxApp(AppOptions appOptions)
+    private VpnHoodLinuxApp(AppOptions appOptions, VpnHoodLinuxAppPaths paths)
     {
-        _app = VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath), appOptions);
+        _app = VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath, vpnHostPath: paths.VpnHostPath),
+            appOptions);
     }
 
     public static VpnHoodLinuxApp Init(AppInitParams initParams, VpnHoodLinuxAppPaths paths)
@@ -59,7 +61,7 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
         LinuxTunVpnAdapter.RemoveLeftovers(initParams.AppId,
             LinuxTunVpnAdapter.GetValidAdapterName(AppUtils.GetAdapterName(appOptions)));
 
-        return new VpnHoodLinuxApp(appOptions);
+        return new VpnHoodLinuxApp(appOptions, paths);
     }
 
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.

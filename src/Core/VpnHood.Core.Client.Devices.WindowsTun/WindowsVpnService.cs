@@ -11,12 +11,18 @@ namespace VpnHood.Core.Client.Devices.WindowsTun;
 public class WindowsVpnService : IVpnServiceHandler, IDisposable
 {
     private readonly VpnServiceHost _vpnServiceHost;
+    private readonly TaskCompletionSource _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool _disposed;
     public bool IsDisposed => _disposed;
 
+    // Its end, with which the VPN host's process ends (WindowsVpnHost).
+    public Task Stopped => _stopped.Task;
+
+    // withLogger: a log file of its own (vpn.log), where it runs in a process of its own - the VPN host
     public WindowsVpnService(
         string configFolder,
-        IVpnKillSwitch killSwitch)
+        IVpnKillSwitch killSwitch,
+        bool withLogger)
     {
         _vpnServiceHost = new VpnServiceHost(
             configFolder,
@@ -24,7 +30,7 @@ public class WindowsVpnService : IVpnServiceHandler, IDisposable
             vpnServiceHandler: this,
             socketFactory: new MsQuicSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),
-            withLogger: false,
+            withLogger: withLogger,
             tunnelLock: new WindowsVpnTunnelLock(),
             killSwitch: killSwitch);
     }
@@ -88,5 +94,6 @@ public class WindowsVpnService : IVpnServiceHandler, IDisposable
             return;
 
         _vpnServiceHost.Dispose();
+        _stopped.TrySetResult();
     }
 }

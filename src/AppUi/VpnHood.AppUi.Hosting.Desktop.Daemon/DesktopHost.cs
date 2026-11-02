@@ -9,7 +9,8 @@ namespace VpnHood.AppUi.Hosting.Desktop.Daemon;
 // One binary, three jobs, chosen by the first word on the command line: the daemon that holds the
 // app, the window that shows it, and the commands that drive it from a shell. A head is then the
 // product facts only it can give (DesktopInitParams), a platform package is the machine facts only it
-// can give (IDesktopPlatform), and this joins them.
+// can give (IDesktopPlatform), and this joins them. The VPN service is a binary of its own beside it,
+// the VPN host, which the daemon starts at each connect; `dev` keeps it in its one process.
 //
 // Run alone, the window's executable opens the window, which is what a desktop entry means by it,
 // and the command a person types prints its help, as a terminal's command does.

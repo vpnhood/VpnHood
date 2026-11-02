@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- the VPN host an install carries, not a NuGet package -->
+		<Description>The VPN host of VpnHood's Linux Client app: the VPN service in a process of its own, which the app's service starts at each connect</Description>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net11.0</TargetFramework>
+		<!-- A plain target framework names no platform, so the head does. -->
+		<VhAppPlatform>linux</VhAppPlatform>
+		<!-- The service starts it by this name, which its desktop head writes into its own assembly (VhAppVpnHostName,
+		     ../Directory.Build.props). -->
+		<AssemblyName>$(VhAppVpnHostName)</AssemblyName>
+		<!-- no command of its own -->
+		<VhAppCommandName />
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Linux\VpnHood.Core.Client.Devices.Linux.csproj" />
+	</ItemGroup>
+</Project>

@@ -34,6 +34,8 @@
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 		<!-- Windows as this head runs on it: the service, the window and its tray, the commands. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Desktop.WindowsTun\VpnHood.AppUi.Hosting.Desktop.WindowsTun.csproj" />
+		<!-- The VPN host, the VPN service's own process, which the service starts beside this executable. -->
+		<ProjectReference Include="..\Client.Windows.VpnHost\VpnHood.App.Client.Windows.VpnHost.csproj" />
 		<!-- The UI this head runs, in its own window. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Desktop\VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->

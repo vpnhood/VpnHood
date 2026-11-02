@@ -35,6 +35,17 @@ public class LinuxDesktopPaths(string appId) : IAppDesktopPaths
     public bool IsStartedAsCommand =>
         Environment.GetEnvironmentVariable(LauncherNameVariable) is { Length: > 0 };
 
+    // The VPN host, which the service starts at each connect, beside the binary in the version's folder: the name
+    // the app's identity writes into its assembly (VhAppVpnHostName).
+    public string VpnHostPath => Path.Combine(AppContext.BaseDirectory,
+        string.IsNullOrEmpty(_vpnHostName)
+            ? throw new InvalidOperationException("This app is built without a VPN host (VhAppVpnHostName).")
+            : _vpnHostName);
+
+    private readonly string? _vpnHostName = Assembly.GetEntryAssembly()?
+        .GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(x => x.Key == "VhAppVpnHostName")?.Value;
+
     // /opt/VpnHoodClient/bin/<version>/VpnHoodClient -> /opt/VpnHoodClient/storage, which is what every
     // release of this package has used and where an advanced user's settings.json already is.
     public string StoragePath {

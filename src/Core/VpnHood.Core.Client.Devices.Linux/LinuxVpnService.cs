@@ -10,18 +10,23 @@ namespace VpnHood.Core.Client.Devices.Linux;
 public class LinuxVpnService : IVpnServiceHandler, IDisposable
 {
     private readonly VpnServiceHost _vpnServiceHost;
+    private readonly TaskCompletionSource _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool _disposed;
     public bool IsDisposed => _disposed;
 
-    public LinuxVpnService(string configFolder, IVpnKillSwitch killSwitch)
+    // Its end, with which the VPN host's process ends (LinuxVpnHost).
+    public Task Stopped => _stopped.Task;
+
+    // withLogger: a log file of its own (vpn.log), where it runs in a process of its own - the VPN host
+    public LinuxVpnService(string configFolder, IVpnKillSwitch killSwitch, bool withLogger)
     {
         _vpnServiceHost = new VpnServiceHost(
-            configFolder: configFolder, 
+            configFolder: configFolder,
             dataFolder: configFolder,
             vpnServiceHandler: this,
             socketFactory: new MsQuicSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),
-            withLogger: false,
+            withLogger: withLogger,
             tunnelLock: new LinuxVpnTunnelLock(),
             killSwitch: killSwitch);
     }
@@ -34,6 +39,12 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
     public void OnDisconnect()
     {
         _ = _vpnServiceHost.TryDisconnect();
+    }
+
+    // The session's graceful end, as the app's disconnect asks for it.
+    public Task TryDisconnect()
+    {
+        return _vpnServiceHost.TryDisconnect();
     }
 
     public VpnHoodClientFactory CreateClientFactory()
@@ -76,5 +87,6 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
             return;
 
         _vpnServiceHost.Dispose();
+        _stopped.TrySetResult();
     }
 }

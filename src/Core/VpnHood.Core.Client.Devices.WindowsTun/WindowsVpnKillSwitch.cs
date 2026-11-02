@@ -1,7 +1,9 @@
+using System.Buffers.Binary;
 using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Devices.WindowsTun.WinNative;
@@ -24,8 +26,9 @@ namespace VpnHood.Core.Client.Devices.WindowsTun;
 // up and around the block while none is. The Hyper-V firewall could stop it only while the service runs, never
 // after a crash. The keys are the SDK's, so every app built on VpnHood shares the one block; the provider's data
 // names the app whose block it is by its storage folder, which an update keeps, where the exe's folder changes.
-// Needs an administrator: the service, which runs as SYSTEM.
-public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
+// Needs an administrator: the service, which runs as SYSTEM. serviceName: the service whose processes the block lets
+// out; null in a run as the person, whose block lets out none of its processes.
+public sealed class WindowsVpnKillSwitch(string owner, string? serviceName) : IVpnKillSwitch
 {
     private static readonly Guid ProviderKey = new("7e45054d-79d4-41a8-9bc4-f1409b25dcfe");
     private static readonly Guid SubLayerKey = new("552f1197-0054-4f0b-bc94-d9225d265b5b");
@@ -34,9 +37,12 @@ public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
     private static readonly Guid FilterKeyBase = new("146ff0ba-f091-48a7-b02e-585acdfbdb00");
     private const int MaxFilterCount = 64;
 
-    // Only SYSTEM's processes match the service's permit: the window runs the same exe as a person, and its
-    // traffic is no service's (D: allow FWP_ACTRL_MATCH_FILTER and READ_CONTROL to LocalSystem).
-    private const string ServiceUserSddl = "O:SYD:(A;;CCRC;;;SY)";
+    // The service's permit: the service and every process it starts - the app, and its VPN host - by the SID Windows
+    // puts in their tokens, the service's SID type being unrestricted ("service install" sets it). No other process
+    // has it: not the window or a command, which run as the person, nor another SYSTEM process. Made from the name,
+    // so both processes write the same filters (D: allow FWP_ACTRL_MATCH_FILTER and READ_CONTROL to the SID).
+    private readonly string? _serviceUserSddl =
+        serviceName is null ? null : $"O:SYD:(A;;CCRC;;;{GetServiceSid(serviceName)})";
 
     // The weights within our sublayer, the highest matching filter deciding.
     private const byte WeightService = 15;
@@ -55,8 +61,6 @@ public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
 
     // one change at a time in this process; the engine's transaction keeps other processes' apart
     private static readonly Lock ChangeLock = new();
-    private readonly string _exePath = Environment.ProcessPath ??
-                                       throw new InvalidOperationException("The process has no path.");
 
     public Task<bool> IsBlocking(CancellationToken cancellationToken)
     {
@@ -219,8 +223,7 @@ public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
     // The block's filters, by the weights above; a family's filter that would have no address left goes.
     private List<FilterSpec> CreateFilters(VpnKillSwitchRules rules, ulong? tunnelLuid, NativeMemory native)
     {
-        var appId = native.AppId(_exePath);
-        var serviceUser = native.SecurityDescriptor(ServiceUserSddl);
+        var serviceUser = _serviceUserSddl is null ? IntPtr.Zero : native.SecurityDescriptor(_serviceUserSddl);
         var filters = new List<FilterSpec>();
         foreach (var addressFamily in new[] { AddressFamily.InterNetwork, AddressFamily.InterNetworkV6 }) {
             var isV6 = addressFamily == AddressFamily.InterNetworkV6;
@@ -239,10 +242,10 @@ public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
                 };
                 var name = $"{(isOutbound ? "out" : "in")} {familyName}";
 
-                filters.Add(new FilterSpec($"the service, {name}", layerKey, WeightService, true, [
-                    native.ByteBlobCondition(WfpNative.ConditionAleAppId, appId),
-                    native.SecurityDescriptorCondition(WfpNative.ConditionAleUserId, serviceUser)
-                ]));
+                if (serviceUser != IntPtr.Zero)
+                    filters.Add(new FilterSpec($"the service, {name}", layerKey, WeightService, true, [
+                        native.SecurityDescriptorCondition(WfpNative.ConditionAleUserId, serviceUser)
+                    ]));
 
                 if (tunnelLuid != null)
                     filters.Add(new FilterSpec($"the tunnel, {name}", layerKey, WeightTunnel, true, [
@@ -325,6 +328,18 @@ public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
         return WfpNative.ConvertInterfaceGuidToLuid(ref adapterGuid, out var luid) == 0 ? luid : null;
     }
 
+    // A service's SID as Windows makes it from the name (sc showsid): SHA-1 of the name in capitals, UTF-16, read
+    // as five little-endian numbers after S-1-5-80. Made here rather than looked up, since a run as the person, or a
+    // service not yet registered, has nothing to look up.
+    private static string GetServiceSid(string serviceName)
+    {
+        var hash = SHA1.HashData(Encoding.Unicode.GetBytes(serviceName.ToUpperInvariant()));
+        var subAuthorities = Enumerable.Range(0, 5)
+            .Select(i => BinaryPrimitives.ReadUInt32LittleEndian(hash.AsSpan(i * 4)))
+            .ToArray();
+        return "S-1-5-80-" + string.Join('-', subAuthorities);
+    }
+
     private static Guid GetFilterKey(int index)
     {
         var bytes = FilterKeyBase.ToByteArray();
@@ -382,7 +397,6 @@ public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
     private sealed class NativeMemory : IDisposable
     {
         private readonly List<IntPtr> _hGlobals = [];
-        private readonly List<IntPtr> _wfpAllocations = [];
         private readonly List<IntPtr> _localAllocations = [];
 
         public IntPtr Bytes(byte[] bytes)
@@ -419,14 +433,6 @@ public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
             };
         }
 
-        // the exe's id as the connect and accept layers see a process's
-        public IntPtr AppId(string filePath)
-        {
-            Check(WfpNative.FwpmGetAppIdFromFileName0(filePath, out var appId), "get the service's app id");
-            _wfpAllocations.Add(appId);
-            return appId;
-        }
-
         public IntPtr SecurityDescriptor(string sddl)
         {
             if (!WfpNative.ConvertStringSecurityDescriptorToSecurityDescriptor(sddl, 1, out var sd, out var size))
@@ -434,15 +440,6 @@ public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
 
             _localAllocations.Add(sd);
             return Struct(new WfpNative.FwpByteBlob { Size = size, Data = sd });
-        }
-
-        public WfpNative.FwpmFilterCondition ByteBlobCondition(Guid fieldKey, IntPtr blob)
-        {
-            return new WfpNative.FwpmFilterCondition {
-                FieldKey = fieldKey,
-                MatchType = WfpNative.MatchEqual,
-                ConditionValue = new WfpNative.FwpValue { Type = WfpNative.DataTypeByteBlob, Value = blob }
-            };
         }
 
         public WfpNative.FwpmFilterCondition SecurityDescriptorCondition(Guid fieldKey, IntPtr sdBlob)
@@ -506,11 +503,6 @@ public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
         {
             foreach (var ptr in _hGlobals)
                 Marshal.FreeHGlobal(ptr);
-
-            for (var i = 0; i < _wfpAllocations.Count; i++) {
-                var ptr = _wfpAllocations[i];
-                WfpNative.FwpmFreeMemory0(ref ptr);
-            }
 
             foreach (var ptr in _localAllocations)
                 WfpNative.LocalFree(ptr);

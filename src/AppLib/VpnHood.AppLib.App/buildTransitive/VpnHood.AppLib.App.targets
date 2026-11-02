@@ -81,6 +81,12 @@
 		<AssemblyMetadata Include="VhAppCommandName" Value="$(VhAppCommandName)" />
 	</ItemGroup>
 
+	<!-- The VPN host's name (VhAppVpnHostName), where the desktop host reads it to start the VPN host
+	     beside the app's files. -->
+	<ItemGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppIsApp)' == 'true' And '$(VhAppVpnHostName)' != ''">
+		<AssemblyMetadata Include="VhAppVpnHostName" Value="$(VhAppVpnHostName)" />
+	</ItemGroup>
+
 	<!-- The name this build shows (VhAppDisplayName), a head's and the product library's alike. Debug
 	     says so in the name. -->
 	<PropertyGroup Condition="'$(VhAppIdBase)' != ''">

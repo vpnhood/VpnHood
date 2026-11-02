@@ -6,8 +6,18 @@ using VpnHood.Net.Quic.MsQuic;
 
 namespace VpnHood.Core.Client.Devices.WindowsTun;
 
-public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
+// serviceName: the service the app runs in, whose processes the kill switch's block lets out; null in a run as the
+// person, whose block lets out none of its processes.
+// vpnHostPath: the VPN host the service starts at each connect (WindowsVpnHost); null where the VPN service runs in
+// this process - a run as the person, which a debugger then follows in one process.
+public class WindowsDevice(string storageFolder, bool isDebugMode, string? serviceName = null, string? vpnHostPath = null)
+    : IDevice
 {
+    private readonly WindowsVpnHostProcess? _vpnHostProcess = vpnHostPath is null
+        ? null
+        : new WindowsVpnHostProcess(vpnHostPath, storageFolder,
+            serviceName ?? throw new ArgumentNullException(nameof(serviceName), "A VPN host needs its service's name."));
+
     private WindowsVpnService? _vpnService;
     public bool IsBindProcessToVpnSupported => false;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
@@ -18,13 +28,13 @@ public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
                    (Environment.Is64BitOperatingSystem ? "; Win64; x64" : ""),
         Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: false)
     };
-    public string VpnServiceConfigFolder { get; } = Path.Combine(storageFolder, "vpn-service");
+    public string VpnServiceConfigFolder { get; } = GetVpnServiceConfigFolder(storageFolder);
     public string VpnServiceDataFolder => VpnServiceConfigFolder; // nothing backs up a desktop app's data
     public bool IsExcludeAppsSupported => isDebugMode;
     public bool IsIncludeAppsSupported => isDebugMode;
     public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsAlwaysOnSupported => true;
-    public IVpnKillSwitch KillSwitch { get; } = new WindowsVpnKillSwitch(owner: storageFolder);
+    public IVpnKillSwitch KillSwitch { get; } = new WindowsVpnKillSwitch(owner: storageFolder, serviceName);
     public bool IsTv => false;
     public bool IsWaitingForVpnPermission => false;
 
@@ -64,11 +74,20 @@ public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
 
     public Task StartVpnService(CancellationToken cancellationToken)
     {
+        if (_vpnHostProcess != null)
+            return _vpnHostProcess.Start(cancellationToken);
+
         if (_vpnService == null || _vpnService.IsDisposed)
-            _vpnService = new WindowsVpnService(VpnServiceConfigFolder, KillSwitch);
+            _vpnService = new WindowsVpnService(VpnServiceConfigFolder, KillSwitch, withLogger: false);
 
         _vpnService.OnConnect();
         return Task.CompletedTask;
+    }
+
+    // The VPN service's folder in the app's storage, where the VPN host finds it too.
+    internal static string GetVpnServiceConfigFolder(string storageFolder)
+    {
+        return Path.Combine(storageFolder, "vpn-service");
     }
 
     public IMessageClient CreateMessageClient()
@@ -83,6 +102,7 @@ public class WindowsDevice(string storageFolder, bool isDebugMode) : IDevice
 
     public void Dispose()
     {
+        _vpnHostProcess?.Dispose();
         _vpnService?.Dispose();
         _vpnService = null;
     }

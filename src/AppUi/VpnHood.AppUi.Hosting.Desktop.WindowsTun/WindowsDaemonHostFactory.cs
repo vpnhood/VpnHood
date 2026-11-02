@@ -17,7 +17,11 @@ public sealed class WindowsDaemonHostFactory(AppInitParams initParams, WindowsDe
                 "The VPN service must run as a service or as an administrator: it creates the network adapter and edits the routes. " +
                 $"Try: {paths.CommandName} service start");
 
-        var appPaths = new VpnHoodWindowsAppPaths { StoragePath = WindowsServiceStorage.Prepare(paths) };
+        var appPaths = new VpnHoodWindowsAppPaths {
+            StoragePath = WindowsServiceStorage.Prepare(paths),
+            ServiceName = paths.InstanceName,
+            VpnHostPath = paths.VpnHostPath
+        };
         var daemonHost = new WindowsDaemonHost(initParams, appPaths, isService: true);
 
         // the windows and trays an update's setup closed, open again now that the service is up to answer them

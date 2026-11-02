@@ -29,6 +29,17 @@ public class WindowsDesktopPaths(string appId) : IAppDesktopPaths
         .GetCustomAttributes<AssemblyMetadataAttribute>()
         .FirstOrDefault(x => x.Key == "VhAppCommandName")?.Value;
 
+    // The VPN host, which the service starts at each connect, beside the app's own files - the version's folder,
+    // through "current" in an install: the name the app's identity writes into its assembly (VhAppVpnHostName).
+    public string VpnHostPath => Path.Combine(AppContext.BaseDirectory,
+        (string.IsNullOrEmpty(_vpnHostName)
+            ? throw new InvalidOperationException("This app is built without a VPN host (VhAppVpnHostName).")
+            : _vpnHostName) + ".exe");
+
+    private readonly string? _vpnHostName = Assembly.GetEntryAssembly()?
+        .GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(x => x.Key == "VhAppVpnHostName")?.Value;
+
     public bool IsStartedAsCommand =>
         !string.IsNullOrEmpty(_commandName) &&
         string.Equals(Path.GetFileNameWithoutExtension(Environment.ProcessPath), _commandName,

@@ -28,7 +28,6 @@ internal static class WfpNative
     public const uint DataTypeUInt32 = 3;
     public const uint DataTypeUInt64 = 4;
     public const uint DataTypeByteArray16 = 11;
-    public const uint DataTypeByteBlob = 12;
     public const uint DataTypeSecurityDescriptor = 14;
     public const uint DataTypeRange = 258;
 
@@ -44,7 +43,6 @@ internal static class WfpNative
     public static readonly Guid LayerIpForwardV4 = new("a82acc24-4ee1-4ee1-b465-fd1d25cb10a4");
     public static readonly Guid LayerIpForwardV6 = new("7b964818-19c7-493a-b71f-832c3684d28c");
 
-    public static readonly Guid ConditionAleAppId = new("d78e1e87-8644-4ea5-9437-d809ecefc971");
     public static readonly Guid ConditionAleUserId = new("af043a0a-b34d-4f86-979c-c90371af6e66");
     public static readonly Guid ConditionIpLocalInterface = new("4cd62a49-59c3-4969-b7f3-bda5d32890a4");
     public static readonly Guid ConditionIpForwardInterface = new("1076b8a5-6323-4c5e-9810-e8d3fc9e6136");
@@ -192,9 +190,6 @@ internal static class WfpNative
 
     [DllImport("fwpuclnt.dll")]
     public static extern uint FwpmFilterDeleteByKey0(IntPtr engineHandle, ref Guid key);
-
-    [DllImport("fwpuclnt.dll", CharSet = CharSet.Unicode)]
-    public static extern uint FwpmGetAppIdFromFileName0(string fileName, out IntPtr appId);
 
     [DllImport("fwpuclnt.dll")]
     public static extern void FwpmFreeMemory0(ref IntPtr p);

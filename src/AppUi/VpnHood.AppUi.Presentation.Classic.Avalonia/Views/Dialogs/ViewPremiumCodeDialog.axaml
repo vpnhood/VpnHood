@@ -1,0 +1,32 @@
+﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:res="using:VpnHood.AppUi.Common"
+                    xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.ViewPremiumCodeDialog">
+  <!-- The premium code, large enough to read off and selectable, with a Copy button a thumb finds:
+       the account page's row has room for neither. -->
+  <Border Classes="dialog" MaxWidth="440">
+    <StackPanel Spacing="16">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="dialog-title" VerticalAlignment="Center" Text="{Binding PremiumCode, Source={x:Static res:Strings.Current}}" />
+        <Button Grid.Column="1" Classes="tonal-icon" Click="OnCloseClick" AutomationProperties.Name="{Binding Close, Source={x:Static res:Strings.Current}}">
+          <TextBlock Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.Close}" />
+        </Button>
+      </Grid>
+      <!-- one line, shrunk to the window rather than broken at a dash -->
+      <Border Background="{StaticResource ColoredBgDarkBrush}" CornerRadius="16" Padding="16,20">
+        <Viewbox StretchDirection="DownOnly">
+          <SelectableTextBlock x:Name="CodeText" FontSize="28" FontWeight="Bold" LetterSpacing="1"
+                               Foreground="{StaticResource ActiveBrush}" />
+        </Viewbox>
+      </Border>
+      <TextBlock Classes="dialog-text" TextAlignment="Center" Text="{Binding UseCodeOnOtherDevices, Source={x:Static res:Strings.Current}}" />
+      <Button x:Name="CopyButton" Classes="pill btn1 block" MinHeight="48" HorizontalContentAlignment="Center" Click="OnCopyClick">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock x:Name="CopyGlyph" Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.ContentCopy}" />
+          <TextBlock VerticalAlignment="Center" Text="{Binding CopyCode, Source={x:Static res:Strings.Current}}" />
+        </StackPanel>
+      </Button>
+    </StackPanel>
+  </Border>
+</dialogs:DialogBase>

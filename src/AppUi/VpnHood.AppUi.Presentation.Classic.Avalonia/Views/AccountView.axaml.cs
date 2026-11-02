@@ -1,12 +1,9 @@
 ﻿using Avalonia;
-using Avalonia.Automation;
 using Avalonia.Controls;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using VpnHood.AppUi.Common;
-using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 using VpnHood.AppLib.Api.Accounts;
@@ -24,9 +21,6 @@ public partial class AccountView : UserControl, IPage
     private const string OneYear = "P1Y";
 
     private readonly MainView _host;
-    private string? _premiumCode;
-    private bool _isCodeRevealed;
-    private TextBlock? _codeText;
 
     public AccountView(MainView host)
     {
@@ -150,108 +144,50 @@ public partial class AccountView : UserControl, IPage
         MoreDetailsButton.IsVisible = access != null;
     }
 
-    private const string MaskedCode = "••••-••••-••••-••••-••••";
-
+    // the code itself opens in a dialog of its own, large enough to read and to copy
     private void AddCodeRow()
     {
         var s = Strings.Current;
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(0, 4) };
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(7, 4) };
         var label = new TextBlock { Text = $"{s.Code}:", VerticalAlignment = VerticalAlignment.Center };
         label.Classes.Add("label-large");
         label.Classes.Add("disabled");
         row.Children.Add(label);
 
-        var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
-        _codeText = new TextBlock { Text = MaskedCode, VerticalAlignment = VerticalAlignment.Center };
-        _codeText.Classes.Add("label-large");
-        _codeText.Classes.Add("active");
-        line.Children.Add(_codeText);
-
-        var eye = new Button { Content = new TextBlock { Text = Mdi.EyeOutline, FontSize = 18 } };
-        eye.Classes.Add("icon");
-        eye.Classes.Add("small");
-        ((TextBlock)eye.Content).Classes.Add("mdi");
-        ((TextBlock)eye.Content).Classes.Add("disabled");
-        AutomationProperties.SetName(eye, s.ShowCode);
-        eye.Click += async (_, _) => {
+        var glyph = new TextBlock { Text = Mdi.EyeOutline, FontSize = 18 };
+        glyph.Classes.Add("mdi");
+        var text = new TextBlock { Text = s.ShowCode, VerticalAlignment = VerticalAlignment.Center };
+        var show = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { glyph, text } } };
+        show.Classes.Add("pill");
+        show.Classes.Add("tonal-highlight");
+        show.Click += async (_, _) => {
             try {
-                await ToggleReveal(eye, CancellationToken.None);
+                await ShowCode(CancellationToken.None);
             }
             catch (Exception ex) {
                 await this.ReportError(ex);
             }
         };
-        line.Children.Add(eye);
-
-        var copy = new Button { Content = new TextBlock { Text = Mdi.ContentCopy, FontSize = 18 } };
-        copy.Classes.Add("icon");
-        copy.Classes.Add("small");
-        ((TextBlock)copy.Content).Classes.Add("mdi");
-        ((TextBlock)copy.Content).Classes.Add("disabled");
-        AutomationProperties.SetName(copy, s.CopyCode);
-        copy.Click += async (_, _) => {
-            try {
-                await CopyCode(copy, CancellationToken.None);
-            }
-            catch (Exception ex) {
-                await this.ReportError(ex);
-            }
-        };
-        line.Children.Add(copy);
-
-        Grid.SetColumn(line, 1);
-        row.Children.Add(line);
+        Grid.SetColumn(show, 1);
+        row.Children.Add(show);
         CodeRows.Children.Add(row);
     }
 
     // fetched on demand, never on arrival: the raw code leaves the app only when asked for
-    private async Task<string?> LoadPremiumCode(CancellationToken cancellationToken)
+    private async Task ShowCode(CancellationToken cancellationToken)
     {
-        if (_premiumCode != null)
-            return _premiumCode;
-
-        var profileId = VhApp.VpnProfileId;
-        if (profileId == null) {
-            _premiumCode = Strings.Current.CouldNotGetVpnProfileId;
-            return null;
+        if (VhApp.VpnProfileId is not { } profileId) {
+            await _host.ShowError(Strings.Current.CouldNotGetVpnProfileId);
+            return;
         }
 
-        var code = await VhApp.Api.VpnProfiles.GetAccessCode(profileId.Value, cancellationToken);
-        _premiumCode = string.IsNullOrEmpty(code) ? Strings.Current.CouldNotGetPremiumCode : Format.CodeGroups(code);
-        return _premiumCode;
-    }
+        var code = await VhApp.Api.VpnProfiles.GetAccessCode(profileId, cancellationToken);
+        if (string.IsNullOrEmpty(code)) {
+            await _host.ShowError(Strings.Current.CouldNotGetPremiumCode);
+            return;
+        }
 
-    private async Task ToggleReveal(Button eye, CancellationToken cancellationToken)
-    {
-        if (!_isCodeRevealed)
-            await LoadPremiumCode(cancellationToken);
-        _isCodeRevealed = !_isCodeRevealed;
-        if (_codeText != null)
-            _codeText.Text = _isCodeRevealed ? _premiumCode ?? MaskedCode : MaskedCode;
-        if (eye.Content is TextBlock glyph)
-            glyph.Text = _isCodeRevealed ? Mdi.EyeOffOutline : Mdi.EyeOutline;
-        AutomationProperties.SetName(eye, _isCodeRevealed ? Strings.Current.HideCode : Strings.Current.ShowCode);
-    }
-
-    private async Task CopyCode(Button copy, CancellationToken cancellationToken)
-    {
-        var code = await LoadPremiumCode(cancellationToken);
-        if (code == null)
-            return;
-        // through the host's shell where it names one (a sandboxed app's, AvaloniaUiHosting.Shell)
-        if (AvaloniaUiHosting.Shell is { } shell)
-            shell.CopyText(code);
-        else if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-            await clipboard.SetTextAsync(code);
-        else
-            return;
-        if (copy.Content is not TextBlock glyph)
-            return;
-        glyph.Text = Mdi.Check;
-        glyph.Classes.Set("active", true);
-        await Task.Delay(2000, cancellationToken);
-        glyph.Text = Mdi.ContentCopy;
-        glyph.Classes.Set("active", false);
+        await _host.ShowDialog(new ViewPremiumCodeDialog(code));
     }
 
     // a label and a value, zebra-striped as the web UI's lists are

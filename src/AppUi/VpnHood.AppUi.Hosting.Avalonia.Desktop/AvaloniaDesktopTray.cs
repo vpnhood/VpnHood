@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
@@ -14,7 +15,7 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
 // The app's icon in the tray, beside the window: the connection at a glance - its state's icon, and
 // in words when pointed at - and a menu that opens the window, connects, disconnects and ends the UI.
-// It follows the connection by asking the app each second over the window's API, so it shows the
+// It follows the connection as the app's state is read each second (AvaloniaAppStateFollower), the
 // service's app and the one in this process alike. Its words are the UI's, in the language the UI
 // shows; its pictures the app's own icon with the connection's badge (AvaloniaTrayBadge). On the UI
 // thread throughout.
@@ -23,8 +24,8 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 // Disconnect", which disconnects first while connected. The service runs on.
 internal sealed class AvaloniaDesktopTray : IDisposable
 {
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
     private readonly VpnHoodApi _api;
+    private readonly AvaloniaAppStateFollower _stateFollower;
     private readonly string _appName;
     private readonly Action _showWindow;
     private readonly Action _exit;
@@ -39,17 +40,19 @@ internal sealed class AvaloniaDesktopTray : IDisposable
     private readonly CancellationTokenSource _cancellation = new();
     private AppState? _state;
 
-    public AvaloniaDesktopTray(Application application, VpnHoodApi api, string appName, Action showWindow, Action exit)
+    public AvaloniaDesktopTray(Application application, VpnHoodApi api, AvaloniaAppStateFollower stateFollower,
+        string appName, Action showWindow, Action exit)
     {
         _api = api;
+        _stateFollower = stateFollower;
         _appName = appName;
         _showWindow = showWindow;
         _exit = exit;
         var appIcon = ReadAppIcon();
         try {
-            _connectedIcon = AvaloniaTrayBadge.Connected(appIcon);
-            _connectingIcon = AvaloniaTrayBadge.Connecting(appIcon);
-            _disconnectedIcon = AvaloniaTrayBadge.Disconnected(appIcon);
+            _connectedIcon = AvaloniaTrayBadge.Create(appIcon, DesktopConnectionBadge.Connected);
+            _connectingIcon = AvaloniaTrayBadge.Create(appIcon, DesktopConnectionBadge.Connecting);
+            _disconnectedIcon = AvaloniaTrayBadge.Create(appIcon, DesktopConnectionBadge.Disconnected);
         }
         finally {
             foreach (var picture in appIcon)
@@ -75,11 +78,9 @@ internal sealed class AvaloniaDesktopTray : IDisposable
         UpdateWords();
         Strings.Current.PropertyChanged += Strings_PropertyChanged;
 
-        // attached to the application, which removes it from the tray when the UI thread ends; the
-        // state followed once the UI thread's loop runs, where its awaits come back to
+        // attached to the application, which removes it from the tray when the UI thread ends
         TrayIcon.SetIcons(application, new TrayIcons { _trayIcon });
-        var cancellationToken = _cancellation.Token;
-        Dispatcher.UIThread.Post(() => _ = Follow(cancellationToken));
+        _stateFollower.StateRead += StateFollower_StateRead;
     }
 
     private static NativeMenuItem CreateItem(Action click)
@@ -125,26 +126,14 @@ internal sealed class AvaloniaDesktopTray : IDisposable
             Update(_state);
     }
 
-    // The app's state each second; one that cannot be read - a service restarting - is asked again.
-    private async Task Follow(CancellationToken cancellationToken)
+    private void StateFollower_StateRead(object? sender, AppState state)
     {
-        while (!cancellationToken.IsCancellationRequested) {
-            try {
-                var state = await _api.App.GetState(cancellationToken);
-                if (!cancellationToken.IsCancellationRequested && IsChanged(_state, state))
-                    Update(state);
-                _state = state;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
-                return;
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogDebug(ex, "The tray could not read the app's state.");
-            }
+        if (_cancellation.IsCancellationRequested)
+            return;
 
-            await Task.Delay(PollInterval, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing |
-                                                                             ConfigureAwaitOptions.ContinueOnCapturedContext);
-        }
+        if (IsChanged(_state, state))
+            Update(state);
+        _state = state;
     }
 
     private static bool IsChanged(AppState? drawn, AppState state)
@@ -156,9 +145,11 @@ internal sealed class AvaloniaDesktopTray : IDisposable
 
     private void Update(AppState state)
     {
-        _trayIcon.Icon = state.ConnectionState == AppConnectionState.Connected ? _connectedIcon
-            : state.IsIdle ? _disconnectedIcon
-            : _connectingIcon;
+        _trayIcon.Icon = AvaloniaTrayBadge.ForState(state) switch {
+            DesktopConnectionBadge.Connected => _connectedIcon,
+            DesktopConnectionBadge.Connecting => _connectingIcon,
+            _ => _disconnectedIcon
+        };
         _trayIcon.ToolTipText = state.IsKillSwitchBlocking
             ? $"{_appName} - {Strings.Current.KillSwitchBlockingMsg}"
             : $"{_appName} - {Strings.Current.ConnectionStateText(state.ConnectionState)}";
@@ -214,6 +205,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
             return;
 
         _cancellation.TryCancel();
+        _stateFollower.StateRead -= StateFollower_StateRead;
         Strings.Current.PropertyChanged -= Strings_PropertyChanged;
         _trayIcon.Dispose();
         _cancellation.Dispose();

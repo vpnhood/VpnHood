@@ -22,7 +22,8 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 // window only hides it: the tray's Open and a second launch bring it back, and the run ends with the
 // tray's Exit or Shutdown. Without one, or where the desktop shows none, closing the window ends the
 // run - or, with the app in this process and its VPN up, hides it until the VPN is down
-// (keepRunningWhileConnected). The service lives on either way. Run takes the calling thread as the UI
+// (keepRunningWhileConnected). The service lives on either way. On Windows the window's taskbar button
+// carries the connection's badge too (AvaloniaTaskbarBadge). Run takes the calling thread as the UI
 // thread until then.
 public static class AvaloniaDesktopHost
 {
@@ -120,10 +121,13 @@ public static class AvaloniaDesktopHost
         AppUiContext.Context = new AvaloniaUiContext(window);
         window.Activated += (_, _) => AppUiContext.NotifyResumed();
 
+        // the connection outside the window: on the tray's icon, and on the window's taskbar button
+        using var stateFollower = new AvaloniaAppStateFollower(api);
         using var tray = trayArea == null
             ? null
             : new AvaloniaDesktopTray(Application.Current ?? throw new InvalidOperationException("Avalonia has no application."),
-                api, VhApp.Features.AppName, ShowMainWindow, () => lifetime.Shutdown());
+                api, stateFollower, VhApp.Features.AppName, ShowMainWindow, () => lifetime.Shutdown());
+        using var taskbarBadge = AvaloniaTaskbarBadge.Create(window, stateFollower, shell);
 
         // Start shows the main window it is given; one kept back waits for ShowMainWindow, unless a
         // launch has asked for it already

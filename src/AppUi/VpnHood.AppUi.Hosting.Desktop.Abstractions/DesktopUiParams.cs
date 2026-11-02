@@ -37,8 +37,8 @@ public class DesktopUiParams
     // again.
     public required bool KeepRunningWhileConnected { get; init; }
 
-    // The OS's ways for links and the clipboard where the UI framework's own are refused, a sandboxed app's
-    // (IDesktopShell); null: the framework's own.
+    // The OS's ways for links, the clipboard and the taskbar button's badge where the UI framework's own, or the
+    // host's, are refused, a sandboxed app's (IDesktopShell); null: the framework's and the host's own.
     public required IDesktopShell? Shell { get; init; }
 
     // The access key this launch was given - a file opened with the app - which the UI imports once it

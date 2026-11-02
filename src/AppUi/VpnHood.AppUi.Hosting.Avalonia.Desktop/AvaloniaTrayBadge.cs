@@ -2,14 +2,17 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
-// The tray's three pictures: the app's own icon (AvaloniaAppIcon) with the connection's state in a
-// badge on its lower right - a tick, an exclamation mark, a cross - which carries no brand, so a
-// fork's icon is its tray's with nothing more to supply. With no icon, the badge alone, still a
-// picture a person finds. Each is an icon file of every size a tray takes at its scalings: Windows'
-// picks the one nearest its own (16 px at 100%), Linux's the largest, which it scales.
+// The connection's state in a badge - a tick, an exclamation mark, a cross - which carries no brand, so a
+// fork has nothing more to supply. The tray's three pictures are the app's own icon (AvaloniaAppIcon) with
+// the badge on its lower right; with no icon, the badge alone, still a picture a person finds. Each is an
+// icon file of every size a tray takes at its scalings: Windows' picks the one nearest its own (16 px at
+// 100%), Linux's the largest, which it scales. The taskbar button's overlay is the badge alone, which
+// Windows lays on the app's icon itself (AvaloniaTaskbarBadge).
 internal static class AvaloniaTrayBadge
 {
     private static readonly int[] Sizes = [16, 20, 24, 28, 32, 40, 48, 64];
@@ -17,26 +20,33 @@ internal static class AvaloniaTrayBadge
     private static readonly Color ConnectingColor = Color.FromRgb(0xD5, 0xA4, 0x10);
     private static readonly Color DisconnectedColor = Color.FromRgb(0xDA, 0x24, 0x2A);
 
-    public static WindowIcon Connected(IReadOnlyList<Bitmap> appIcon)
+    // connected; idle; and on its way between them, an unstable connection too
+    public static DesktopConnectionBadge ForState(AppState state)
     {
-        return Create(appIcon, ConnectedColor, DrawTick);
+        return state.ConnectionState == AppConnectionState.Connected ? DesktopConnectionBadge.Connected
+            : state.IsIdle ? DesktopConnectionBadge.Disconnected
+            : DesktopConnectionBadge.Connecting;
     }
 
-    public static WindowIcon Connecting(IReadOnlyList<Bitmap> appIcon)
+    public static WindowIcon Create(IReadOnlyList<Bitmap> appIcon, DesktopConnectionBadge badge)
     {
-        return Create(appIcon, ConnectingColor, DrawExclamationMark);
-    }
-
-    public static WindowIcon Disconnected(IReadOnlyList<Bitmap> appIcon)
-    {
-        return Create(appIcon, DisconnectedColor, DrawCross);
-    }
-
-    private static WindowIcon Create(IReadOnlyList<Bitmap> appIcon, Color color,
-        Action<DrawingContext, Rect, IPen> drawMark)
-    {
-        var pictures = Sizes.Select(size => (size, Draw(appIcon, size, color, drawMark))).ToArray();
+        var pictures = Sizes.Select(size => (size, Draw(appIcon, size, badge))).ToArray();
         return new WindowIcon(new MemoryStream(ToIconFile(pictures)));
+    }
+
+    // The badge alone at one size, as PNG.
+    public static byte[] DrawAlone(DesktopConnectionBadge badge, int size)
+    {
+        return Draw([], size, badge);
+    }
+
+    private static byte[] Draw(IReadOnlyList<Bitmap> appIcon, int size, DesktopConnectionBadge badge)
+    {
+        return badge switch {
+            DesktopConnectionBadge.Connected => Draw(appIcon, size, ConnectedColor, DrawTick),
+            DesktopConnectionBadge.Connecting => Draw(appIcon, size, ConnectingColor, DrawExclamationMark),
+            _ => Draw(appIcon, size, DisconnectedColor, DrawCross)
+        };
     }
 
     // One size, as PNG: the icon with a gap cut around the badge, so the badge reads on any icon,

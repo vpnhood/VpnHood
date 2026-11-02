@@ -30,6 +30,9 @@ $companyName = Get-ProjectProperty $projectFile "Company";
 if (-not $assemblyName) { throw "The project has no AssemblyName: '$projectFile'." };
 if (-not $launcherName) { $launcherName = Get-ProjectProperty $projectFile "VhAppCommandName"; }
 if (-not $launcherName) { throw "The project names no command (VhAppCommandName), and none was passed: '$projectFile'." };
+# the VPN host beside the binary, which a desktop client's service starts at each connect (VhAppVpnHostName); a
+# server has none
+$vpnHostName = Get-ProjectProperty $projectFile "VhAppVpnHostName";
 
 Write-Host;
 Write-Host "*** Creating $assemblyName-$runtime Module ..." -BackgroundColor Blue -ForegroundColor White;
@@ -111,6 +114,7 @@ $installScript = $installScript.Replace('$(versionTagParam)', "$versionTag");
 $installScript = $installScript.Replace('$(productNameParam)', "$productName");
 $installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName");
 $installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName");
+$installScript = $installScript.Replace('$(vpnHostNameParam)', "$vpnHostName");
 $installScript = $installScript.Replace('$(companyNameParam)', "$companyName");
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
@@ -153,6 +157,7 @@ if ([string]::IsNullOrWhiteSpace($installationPageUrl)) { $installationPageUrl =
 $json = @{
     Version = $versionParam;
     ExeFile = $launcher_exeFile;
+    VpnHostFile = $(if ($vpnHostName) { "bin/$versionTag/$vpnHostName" } else { "" });
     UpdateInfoUrl = "$repoBaseUrl/releases/latest/download/$module_infoFileName";
     InstallScriptUrl = $module_installerUrl;
     PackageUrl = "$releaseUrl/$module_packageFileName";

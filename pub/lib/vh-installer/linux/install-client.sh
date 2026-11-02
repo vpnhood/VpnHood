@@ -35,6 +35,7 @@ versionTag="$(versionTagParam)";
 assemblyName="$(assemblyNameParam)";
 productName="$(productNameParam)";
 launcher="$(launcherNameParam)";
+vpnHostName="$(vpnHostNameParam)";
 
 # Calculated path
 destinationPath="/opt/$assemblyName";
@@ -421,7 +422,8 @@ replace_file "$infoDir/vhuninstall" "$destinationPath/vhuninstall" 755;
 replace_file "$infoDir/kill-switch-off" "$destinationPath/kill-switch-off" 755;
 replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
 replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
-chmod +x "$binDir/$assemblyName";
+# a package made on Windows carries no exec bit: the binary, and the VPN host it starts at each connect
+chmod +x "$binDir/$assemblyName" "$binDir/$vpnHostName";
 
 # Old versions go only here, at an update: one stays while it is the version this run installs, among
 # the three newest, was installed in the last 30 days or a process still runs from it, such as a

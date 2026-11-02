@@ -57,6 +57,8 @@ $productName = Get-ProjectProperty $projectFile "Product";
 $assemblyName = Get-ProjectProperty $projectFile "AssemblyName";
 # the console launcher's name; the build writes it beside the window's exe (VhAppCommandName)
 $commandName = Get-ProjectProperty $projectFile "VhAppCommandName";
+# the VPN host beside the window's exe, which the service starts at each connect (VhAppVpnHostName)
+$vpnHostName = Get-ProjectProperty $projectFile "VhAppVpnHostName";
 $targetFramework = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.TargetFramework;
 $publishDir = "$projectDir/bin/Publish-$distribution";
 # the install root's two launchers, over current\<app>.dll, which only the setup installs
@@ -115,9 +117,12 @@ if ($doPublish) {
 
 	# The apphosts are the files Windows shows in the UAC/SmartScreen prompt, so none may slip through
 	# unsigned when signing is configured (a renamed AssemblyName would silently miss the glob above):
-	# the window's exe and the console launcher beside it, in the version's folder and in the root.
+	# the window's exe and the console launcher beside it, in the version's folder and in the root, and the VPN
+	# host, in the version's folder alone: the kill switch's block names no executable, so it needs no launcher.
 	$appHostNames = @("$assemblyName.exe") + @(if ($commandName) { "$commandName.exe" });
-	foreach ($appHostFile in @($appHostNames | ForEach-Object { "$publishDir/$_"; "$launchersDir/$_" })) {
+	$appHostFiles = @($appHostNames | ForEach-Object { "$publishDir/$_"; "$launchersDir/$_" }) +
+		@(if ($vpnHostName) { "$publishDir/$vpnHostName.exe" });
+	foreach ($appHostFile in $appHostFiles) {
 		if (-not (Test-Path $appHostFile)) { Throw "The build did not make '$appHostFile'."; }
 		if ($signEnabled -and -not (Get-AuthenticodeSignature $appHostFile).SignerCertificate) {
 			Throw "Signing is configured but '$appHostFile' is still unsigned after the signing step.";

@@ -30,6 +30,9 @@ exeFile="$curDir/$exeFileR";
 # The installer has already done this as root. Here it is a best effort for a build run from a
 # folder nobody installed, and must not make a normal user's launch fail.
 [ -x "$exeFile" ] || chmod +x "$exeFile" 2>/dev/null;
+# and so for the VPN host, which a desktop client's service starts beside the binary; a server has none
+vpnHostFileR=$(json_extract VpnHostFile "$publishInfoJson");
+[ -z "$vpnHostFileR" ] || [ -x "$curDir/$vpnHostFileR" ] || chmod +x "$curDir/$vpnHostFileR" 2>/dev/null;
 
 # The binary cannot know what a person typed to get here - "vhclient" is on the PATH and
 # "VpnHoodClient" is not - so the hints it prints are told (LinuxDesktopPaths.LauncherNameVariable).

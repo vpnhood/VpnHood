@@ -41,8 +41,8 @@ the attempt. If another request corrects the clock meanwhile, a 401 permits that
 applying its potentially stale Date. A correction before the proof is selected can permit an
 unnecessary retry, still within the one-retry limit. Authorization exceptions carry only the server's
 Date; no correction number crosses the transport, and the signing key stays in the signer.
-The operating-system clock never changes, and a 401 never downgrades the HTTP protocol. Other
-HTTP headers and any binary body remain available to callers of `HttpUtils.ReadResponse`.
+The operating-system clock never changes, and only the hello may change the HTTP protocol after a
+401, as "Rollout and compatibility" says. Other HTTP headers and any binary body remain available to callers of `HttpUtils.ReadResponse`.
 
 Redirects stay in the access key's farm. A redirect token without a `Secret` uses the key's
 `ServerToken.Secret`, even when its hostname differs. A saved server after a crash is tried with
@@ -58,8 +58,14 @@ that shape together: the HTTP version number
 does not distinguish the two proof formats, and either mixed pair fails authentication. Publish the
 current source under a new package version. Compatibility with HTTP versions 8–14 remains as follows.
 
-1. Update servers before deploying protocol-15 clients. These clients send HTTP version 15 from
-   the initial probe and hello onward and cannot connect to an older server that rejects it.
+1. Servers and apps update in either order. A protocol-15 app sends HTTP 15 with its proof. A
+   server older than 15 answers that with a 401, which the app cannot tell from a refused proof, so
+   its hello tries the legacy HTTP once: no proof, and version 8 until the hello agrees on a binary
+   version, then that one below 15. The app remembers, per server and farm and for its process,
+   which way worked. A server that took 15 is never asked the legacy way again, so no 401 talks the
+   app down from the proof there; one that took only the legacy way is asked that way first, and 15
+   again once it refuses that. A legacy session carries no proof and no padding, gets the hello's
+   farm secret as older apps do, and a QUIC port only from a server older than 15.
 2. Update users' apps. The server's default minimum stays at 8 during rollout, allowing older
    clients' existing unauthenticated HTTP entry path. With a minimum below 15, the gate admits
    HTTP versions 8–14 without a proof; after checking the key, the hello checks the negotiated

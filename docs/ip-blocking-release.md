@@ -100,17 +100,19 @@ carrying the tunnel over standard HTTP/3 through web frontends remains future wo
 
 ## Rollout and documentation
 
-1. Release and update servers first, keeping the minimum at its current default of 8 during app
-   rollout. Verify the artifact's source commit and the deployed checks above.
+1. Release servers and apps in either order: a protocol-15 app falls back to the legacy HTTP on a
+   server before 15 ([protocol-15.md](protocol-15.md#rollout-and-compatibility)). Keep the minimum at
+   its default of 8 during the rollout. Verify the artifact's source commit and the deployed checks above.
 2. Release the protocol-15 apps through the brand workflows. The 9.0.860 NuGet packages and server
    prerelease use the earlier host-bearing proof. Clients and servers using that shape must move
-   together: neither mixed combination can authenticate. The server-first rolling upgrade applies to
-   HTTP 8–14 clients; arrange a coordinated cutover for users already on the earlier protocol-15 shape.
+   together: neither mixed combination can authenticate, and an app on that shape has no fallback.
+   Arrange a coordinated cutover for users already on it.
 3. Publish the minimum-protocol instructions on the IP-blocking page alongside the server release
    that enforces the setting before a body or upgrade. The MANAGER instructions belong in its server
    profile documentation; the server page links there. Use this release text:
 
-   > Update your servers first, then your users' apps. Once all users have updated, set
+   > Update your servers and your users' apps in either order: an updated app still connects to a
+   > server not yet updated. Once all users have updated, set
    > `MinClientProtocolVersion` to `15` in the server's session options, or in its MANAGER server
    > profile. The server then refuses older clients before reading a request body or upgrading the
    > connection. Older apps cannot connect and receive no update message, so do not raise this
@@ -118,7 +120,7 @@ carrying the tunnel over standard HTTP/3 through web frontends remains future wo
    >
    > If you already use the 9.0.860 protocol-15 server prerelease or apps built with its packages,
    > coordinate the server and app updates together: that earlier proof format cannot connect to
-   > this one. The server-first rollout applies to apps still using HTTP versions 8–14.
+   > this one.
 
 4. Enable minimum 15 after the app rollout, then repeat the legacy probes on each actual route.
    Raising it early disconnects older apps. Lowering it restores their older unauthenticated entry

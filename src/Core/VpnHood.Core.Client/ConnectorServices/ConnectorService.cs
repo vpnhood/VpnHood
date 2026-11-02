@@ -60,9 +60,12 @@ internal class ConnectorService : IAsyncDisposable
     internal static TimeSpan MaxConnectionLifespan { get; set; } = TimeSpan.FromMinutes(10);
 
     public ConnectorStat Stat { get; }
-    // The HTTP proof stays at 15 even if the server selects an older
-    // binary session format. A 401 never sends us back to an unauthenticated HTTP version.
-    public int ProtocolVersion => RequestProof.ProtocolVersion;
+    // HTTP 15 carries the request proof, and stays 15 even if the server selects an older binary session format.
+    // A server older than 15 answers it with a 401, as one does a refused proof; to such a server the app speaks
+    // the HTTP of the apps before 15: no proof, and 8 until the hello agrees on a version, then that one below
+    // 15, the versions the server's legacy entry takes. The hello alone decides which (ClientSessionBuilder).
+    public int ProtocolVersion { get; private set; } = RequestProof.ProtocolVersion;
+    public bool IsLegacyProtocol => ProtocolVersion < RequestProof.ProtocolVersion;
     public VpnEndPoint VpnEndPoint { get; init; }
     public TimeSpan RequestTimeout { get; set; }
     public bool UseQuic { get; set; }
@@ -108,6 +111,12 @@ internal class ConnectorService : IAsyncDisposable
         _idleConnectionTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
     }
 
+    public void UseProofProtocol() => ProtocolVersion = RequestProof.ProtocolVersion;
+
+    public void UseLegacyProtocol(int protocolVersion) =>
+        ProtocolVersion = Math.Clamp(protocolVersion, VpnHoodClientConfig.MinProtocolVersion,
+            RequestProof.ProtocolVersion - 1);
+
     public void Init(TimeSpan channelIdleTimeout, bool useWebSocket,
         TimeSpan requestTimeout, bool useQuic, IPEndPoint? quicEndPoint)
     {
@@ -134,13 +143,13 @@ internal class ConnectorService : IAsyncDisposable
     private static string BuildPostRequest(
         string hostName, string? pathBase,
         TunnelStreamType streamType, int protocolVersion,
-        int contentLength, string connectionId, string proofToken)
+        int contentLength, string connectionId, string? proofToken)
     {
         // write HTTP request
         var headerBuilder = new StringBuilder()
             .Append($"POST {BuildRequestPath(pathBase)} HTTP/1.1\r\n")
             .Append($"Host: {hostName}\r\n")
-            .Append($"Authorization: Bearer {proofToken}\r\n")
+            .Append(proofToken != null ? $"Authorization: Bearer {proofToken}\r\n" : "")
             .Append($"Content-Length: {contentLength}\r\n")
             .Append("Content-Type: application/octet-stream\r\n")
             .Append("User-Agent: Hood\r\n")
@@ -156,7 +165,7 @@ internal class ConnectorService : IAsyncDisposable
 
     private async Task<IStreamConnection> CreateWebSocketConnection(
         IStreamConnection streamConnection, ReuseConnectionCallback? reuseCallback,
-        string proofToken, bool isTcpPacketChannel, CancellationToken callerCancellationToken,
+        string? proofToken, bool isTcpPacketChannel, CancellationToken callerCancellationToken,
         CancellationToken cancellationToken)
     {
         var useStandardMasking = InitialPadding.OffersMasking(isTcpPacketChannel);
@@ -166,7 +175,7 @@ internal class ConnectorService : IAsyncDisposable
         var headerBuilder = new StringBuilder()
             .Append($"GET /{BuildRequestPath(VpnEndPoint.PathBase)} HTTP/1.1\r\n")
             .Append($"Host: {VpnEndPoint.HostName}\r\n")
-            .Append($"Authorization: Bearer {proofToken}\r\n")
+            .Append(proofToken != null ? $"Authorization: Bearer {proofToken}\r\n" : "")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
             .Append($"X-ConnectionId: {streamConnection.ConnectionId}\r\n")
@@ -208,7 +217,7 @@ internal class ConnectorService : IAsyncDisposable
     }
 
     private async Task<IStreamConnection> CreateSimpleConnection(IStreamConnection streamConnection, int contentLength,
-        string proofToken, CancellationToken callerCancellationToken, CancellationToken cancellationToken)
+        string? proofToken, CancellationToken callerCancellationToken, CancellationToken cancellationToken)
     {
         // write HTTP request
         var header = BuildPostRequest(hostName: VpnEndPoint.HostName, pathBase: VpnEndPoint.PathBase,
@@ -222,7 +231,7 @@ internal class ConnectorService : IAsyncDisposable
     }
 
     private Task<IStreamConnection> CreateHttpConnection(IStreamConnection streamConnection, int contentLength,
-        ReuseConnectionCallback? reuseCallback, string proofToken, bool isTcpPacketChannel,
+        ReuseConnectionCallback? reuseCallback, string? proofToken, bool isTcpPacketChannel,
         CancellationToken callerCancellationToken, CancellationToken cancellationToken)
     {
         return _useWebSocket
@@ -289,14 +298,16 @@ internal class ConnectorService : IAsyncDisposable
         CancellationToken cancellationToken) => GetConnectionToServer(streamId, contentLength, isTcpPacketChannel,
             onConnectAttempt, cancellationToken, cancellationToken);
 
+    // the recovery corrects the proof's clock: the legacy protocol has no proof
     public Task RecoverQuicRequest(string connectionId, CancellationToken cancellationToken) =>
-        UseQuic ? _quicRequestRecovery.Recover(connectionId, cancellationToken) : Task.CompletedTask;
+        UseQuic && !IsLegacyProtocol ? _quicRequestRecovery.Recover(connectionId, cancellationToken) : Task.CompletedTask;
 
     public void RecordQuicRequestFailure(IStreamConnection connection, CancellationToken callerCancellationToken)
     {
         // These callers have an established stream but no usable admission response. A timeout can
         // mean an expired proof; stopping the request or failing before stream creation cannot.
-        if (connection is QuicStreamConnection && !callerCancellationToken.IsCancellationRequested && !_disposed)
+        if (connection is QuicStreamConnection && !IsLegacyProtocol &&
+            !callerCancellationToken.IsCancellationRequested && !_disposed)
             _quicRequestRecovery.RequireRecovery();
     }
 
@@ -337,7 +348,7 @@ internal class ConnectorService : IAsyncDisposable
 
             try {
                 // Connection waits can outlast a proof; select it only after connect and TLS finish.
-                var proofToken = _requestSigner.Sign();
+                var proofToken = IsLegacyProtocol ? null : _requestSigner.Sign();
                 var connection = await CreateHttpConnection(rawConnection, contentLength, reuseCallback,
                     proofToken, isTcpPacketChannel, callerCancellationToken, cancellationToken).Vhc();
                 lock (Stat) Stat.CreatedConnectionCount++;

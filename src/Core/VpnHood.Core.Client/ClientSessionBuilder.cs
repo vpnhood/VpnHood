@@ -100,7 +100,8 @@ internal class ClientSessionBuilder(
                 VhLogger.Format(vpnEndPoint.TcpEndPoint));
             setState(ClientState.Connecting);
 
-            var requestSigner = new ClientRequestSigner(serverFinder.GetServerSecret(vpnEndPoint));
+            var farmSecret = serverFinder.GetServerSecret(vpnEndPoint);
+            var requestSigner = new ClientRequestSigner(farmSecret);
             var connectorService = new ConnectorService(
                 new ConnectorServiceOptions {
                     ProxyConnector = proxyConnector,
@@ -135,15 +136,18 @@ internal class ClientSessionBuilder(
                 AllowAnonymousTracker = config.AllowAnonymousTracker
             };
 
-            var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
+            var requestResult = await SendHello(requestSender, helloRequest, farmSecret, cancellationToken).Vhc();
             _ = requestResult.TryDisposeAsync();
             connectorService.AllowChannelReuse = config.AllowStreamReuse;
 
             var helloResponse = requestResult.Response;
-            connectorService.InitialPadding.Enable(helloResponse.StartPadding);
+            // padding rides on the WebSocket masking a server takes only at HTTP 15
+            connectorService.InitialPadding.Enable(helloResponse.StartPadding && !connectorService.IsLegacyProtocol);
             if (helloResponse.ProtocolVersion < VpnHoodClientConfig.MinProtocolVersion ||
                 helloResponse.ProtocolVersion > VpnHoodClientConfig.MaxProtocolVersion)
                 throw new NotSupportedException("The server does not support the requested protocol version.");
+            if (connectorService.IsLegacyProtocol)
+                connectorService.UseLegacyProtocol(helloResponse.ProtocolVersion);
             if (helloResponse.ClientPublicAddress is null)
                 throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
 
@@ -398,6 +402,44 @@ internal class ClientSessionBuilder(
             CloseRequestSender(requestSender);
             throw;
         }
+    }
+
+    // The hello goes the way its server took last, at first HTTP 15 with its proof. A 401 the clock does not explain
+    // comes from a server older than 15 as it does from one refusing the proof, so the hello tries the other way
+    // once, but not on a server that took 15 before: no 401 talks the app down from the proof there.
+    private static async Task<ConnectorRequestResult<HelloResponse>> SendHello(RequestSender requestSender,
+        HelloRequest helloRequest, byte[] farmSecret, CancellationToken cancellationToken)
+    {
+        var connectorService = requestSender.ConnectorService;
+        var endPoint = connectorService.VpnEndPoint.TcpEndPoint;
+        var wasLegacy = ServerProtocolMemory.IsLegacy(endPoint, farmSecret);
+        if (wasLegacy == true)
+            connectorService.UseLegacyProtocol(VpnHoodClientConfig.MinProtocolVersion);
+
+        try {
+            return await SendHelloAndRecord(requestSender, helloRequest, farmSecret, cancellationToken).Vhc();
+        }
+        catch (RequestAuthorizationException) when (wasLegacy != false) {
+            var refusedVersion = connectorService.ProtocolVersion;
+            if (connectorService.IsLegacyProtocol)
+                connectorService.UseProofProtocol();
+            else
+                connectorService.UseLegacyProtocol(VpnHoodClientConfig.MinProtocolVersion);
+
+            VhLogger.Instance.LogInformation(GeneralEventId.Session,
+                "The server refused HTTP protocol {RefusedVersion}; trying {ProtocolVersion}. EndPoint: {EndPoint}",
+                refusedVersion, connectorService.ProtocolVersion, VhLogger.Format(endPoint));
+            return await SendHelloAndRecord(requestSender, helloRequest, farmSecret, cancellationToken).Vhc();
+        }
+    }
+
+    private static async Task<ConnectorRequestResult<HelloResponse>> SendHelloAndRecord(RequestSender requestSender,
+        HelloRequest helloRequest, byte[] farmSecret, CancellationToken cancellationToken)
+    {
+        var ret = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
+        ServerProtocolMemory.Record(requestSender.ConnectorService.VpnEndPoint.TcpEndPoint, farmSecret,
+            requestSender.ConnectorService.IsLegacyProtocol);
+        return ret;
     }
 
     // not waited for: its connections' closes may wait for their peers, and the connect's error would wait with them

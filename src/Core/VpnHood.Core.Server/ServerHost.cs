@@ -44,6 +44,10 @@ public class ServerHost : IAsyncDisposable
     public const int MaxProtocolVersion = 15;
     public const int MinProtocolVersion = 8;
 
+    // the newest HTTP version its requests may use; settable for tests, where 14 makes a server before protocol 15,
+    // which answers an app's HTTP 15 with the web front's 401
+    internal int MaxHttpProtocolVersion { get; set; } = MaxProtocolVersion;
+
     // the setting can only raise it: the server speaks nothing older than MinProtocolVersion
     internal int MinClientProtocolVersion =>
         Math.Max(MinProtocolVersion, _sessionManager.SessionOptions.MinClientProtocolVersion ?? 0);
@@ -180,7 +184,7 @@ public class ServerHost : IAsyncDisposable
     {
         var headers = request.Headers;
         if (!ClientRequestAuthenticator.TryAuthenticate(request, _sessionManager.RequestProof,
-                MinClientProtocolVersion, MaxProtocolVersion, out var protocolVersion))
+                MinClientProtocolVersion, MaxHttpProtocolVersion, out var protocolVersion))
             return null;
 
         Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);

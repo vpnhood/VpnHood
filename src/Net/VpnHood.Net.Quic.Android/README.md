@@ -51,8 +51,8 @@ we never touch OpenSSL from managed code).
 
 This project is **pure managed code**. The native `libmsquic.so` and the MsQuic C# P/Invoke bindings
 (`Microsoft.Quic` namespace) both come from the self-contained package
-**`VpnHood.Net.Quic.MsQuic.AndroidNative`**, which this project references (a local `ProjectReference`
-today, the published NuGet later). That package exposes the `Microsoft.Quic` binding types as **public**
+**`VpnHood.Net.Quic.MsQuic.AndroidNative`**, which this project references as a NuGet
+package pinned to one version. That package exposes the `Microsoft.Quic` binding types as **public**
 API, so all native-linking complexity is hidden behind one reference. Unmanaged callbacks here are
 `[UnmanagedCallersOnly(CallConvs=[CallConvCdecl])]` statics that resolve the managed instance from a
 `GCHandle` passed as the callback context.

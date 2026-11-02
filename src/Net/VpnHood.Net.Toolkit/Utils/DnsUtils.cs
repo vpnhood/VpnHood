@@ -9,16 +9,41 @@ namespace VpnHood.Net.Toolkit.Utils;
 public static class DnsUtils
 {
     // The resolvers of the networks the machine reaches beyond itself by: adapters up with a gateway, no
-    // loopback or tunnel. Not Windows' fec0:0:0:ffff:: placeholders, which it lists where IPv6 has none.
+    // loopback or tunnel. Not Windows' fec0:0:0:ffff:: placeholders, which it lists where IPv6 has none, nor a
+    // resolver on this machine: a stub, which asks from a process of its own. Linux's .NET reads /etc/resolv.conf
+    // for every adapter, which names only systemd-resolved's stub (127.0.0.53) where it runs, so the upstream list
+    // it writes stands in (seen on Ubuntu 26.04, where the kill switch's block stopped the stub's own lookups).
     public static IReadOnlyList<IPAddress> GetNetworkDnsServers()
     {
-        return NetworkInterface.GetAllNetworkInterfaces()
+        var dnsServers = NetworkInterface.GetAllNetworkInterfaces()
             .Where(x => x.OperationalStatus == OperationalStatus.Up &&
                         x.NetworkInterfaceType is not (NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel))
             .Select(x => x.GetIPProperties())
             .Where(x => x.GatewayAddresses.Count > 0)
             .SelectMany(x => x.DnsAddresses)
-            .Where(x => !x.IsIPv6SiteLocal)
+            .Where(x => !x.IsIPv6SiteLocal && !IPAddress.IsLoopback(x))
+            .Distinct()
+            .ToArray();
+
+        return dnsServers.Length == 0 && OperatingSystem.IsLinux()
+            ? ReadResolvConf(SystemdResolvedUpstreamFilePath)
+            : dnsServers;
+    }
+
+    private const string SystemdResolvedUpstreamFilePath = "/run/systemd/resolve/resolv.conf";
+
+    // A resolv.conf's nameservers, but loopback ones; none where the file is missing.
+    private static IPAddress[] ReadResolvConf(string filePath)
+    {
+        if (!File.Exists(filePath))
+            return [];
+
+        return File.ReadAllLines(filePath)
+            .Select(x => x.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+            .Where(x => x.Length >= 2 && x[0] == "nameserver")
+            .Select(x => IPAddress.TryParse(x[1], out var address) ? address : null)
+            .OfType<IPAddress>()
+            .Where(x => !IPAddress.IsLoopback(x))
             .Distinct()
             .ToArray();
     }

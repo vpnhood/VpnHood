@@ -1,7 +1,10 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading.Channels;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Test.Device;
 
@@ -117,6 +120,59 @@ public class VpnServiceManagerTest : TestBase
         }
         finally {
             adapterRelease.TrySetResult();
+        }
+
+        await AssertEqualsWait(dropQuic, () => manager.ConnectionInfo.SessionStatus?.IsDropQuic,
+            "the session's QUIC drop");
+    }
+
+    // A reconfigure that comes while a start brings its service up, before the service opens its channel: no
+    // error, and the service starts with it, as it reads its options after it opens the channel. The channel file
+    // is none yet, or an ended service's, as a Windows VPN host that its service's job ended leaves it.
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_reconfigure_before_the_service_opens_its_channel_goes_into_its_start(bool endedServicesFile)
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+
+        // the start held at the VPN permission's ask, before it starts the service
+        var asked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var device = new TestDevice(TestHelper, _ => new TestNullVpnAdapter()) {
+            RequestVpnServiceHandler = async _ => {
+                asked.TrySetResult();
+                await release.Task;
+            }
+        };
+        using var manager = new VpnServiceManager(device, eventWatcherInterval: null);
+        if (endedServicesFile) {
+            // a port that answers nothing, as the ended service's listener is gone
+            using var gone = new TcpListener(IPAddress.Loopback, 0);
+            gone.Start();
+            var goneEndPoint = (IPEndPoint)gone.LocalEndpoint;
+            gone.Stop();
+            await File.WriteAllTextAsync(TcpMessageTransport.GetApiFilePath(device.VpnServiceConfigFolder),
+                JsonSerializer.Serialize(new TcpApiBootstrap { ApiEndPoint = goneEndPoint, ApiKey = new byte[32] }),
+                TestCt);
+        }
+
+        var clientOptions = TestHelper.CreateClientOptions(token);
+        var dropQuic = !clientOptions.DropQuic;
+        var start = manager.Start(uiContext: null, new VpnServiceOptions { ClientOptions = clientOptions }, TestCt);
+        try {
+            await asked.Task.WaitAsync(TimeSpan.FromSeconds(30), TestCt);
+
+            // Dropping QUIC is the setting to watch: the test server carries TCP only by the proxy, which drops it
+            var reconfiguredOptions = TestHelper.CreateClientOptions(token);
+            reconfiguredOptions.DropQuic = dropQuic;
+            await manager.Reconfigure(new VpnServiceOptions { ClientOptions = reconfiguredOptions }, TestCt);
+            release.TrySetResult();
+            await start;
+        }
+        finally {
+            release.TrySetResult();
         }
 
         await AssertEqualsWait(dropQuic, () => manager.ConnectionInfo.SessionStatus?.IsDropQuic,

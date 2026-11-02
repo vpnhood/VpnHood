@@ -472,6 +472,13 @@ public class VpnServiceManager : IDisposable
             await SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken).Vhc();
             Reconfigured?.Invoke(this, reconfigureParams);
         }
+        catch (Exception ex) when (_startState.IsInitializing &&
+                                   ex is VpnServiceNotReadyException or VpnServiceUnreachableException) {
+            // A start still bringing its service up, whose channel is not open yet: no file, or an ended
+            // service's, which a VPN host its service's job ended leaves (Windows). The service reads its
+            // options after it opens the channel, so it starts with these, saved above.
+            VhLogger.Instance.LogDebug(ex, "The VPN service starts with the reconfigure: its channel is not up yet.");
+        }
         finally {
             IsReconfiguring = false;
         }

@@ -64,12 +64,30 @@ public sealed class TestPortalServer : IDisposable
 
     public TestPortalServer()
     {
-        var endPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
+        (_listener, var endPoint) = StartListener();
         BaseUrl = new Uri($"http://{endPoint}/api.php");
-        _listener = new HttpListener();
-        _listener.Prefixes.Add($"http://{endPoint}/");
-        _listener.Start();
         _ = AcceptLoop();
+    }
+
+    // A free port is released before the listener takes it, and in a full run another test's connection may get it
+    // first (HttpListenerException: used by another process), so another port is tried.
+    private static (HttpListener Listener, IPEndPoint EndPoint) StartListener()
+    {
+        const int maxAttempts = 10;
+        for (var attempt = 1; ; attempt++) {
+            var endPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
+            var listener = new HttpListener();
+            listener.Prefixes.Add($"http://{endPoint}/");
+            try {
+                listener.Start();
+                return (listener, endPoint);
+            }
+            catch (HttpListenerException) {
+                listener.Close();
+                if (attempt == maxAttempts)
+                    throw;
+            }
+        }
     }
 
     /// <summary>

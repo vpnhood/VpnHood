@@ -248,9 +248,23 @@ public class VpnServiceManager : IDisposable
         using var scopeLock = await _connectionInfoLock.LockAsync(updateCts.Token).Vhc();
 
         // read from cache if not expired
-        if (_startState.IsInitializing ||
-            (!force && FastDateTime.UtcNow - _connectionInfoRefreshedTime < _connectionInfoTimeSpan))
+        if (!force && FastDateTime.UtcNow - _connectionInfoRefreshedTime < _connectionInfoTimeSpan)
             return _status.ConnectionInfo;
+
+        // A start owns the state until the service has written its own, which the service may do long before the start
+        // ends: Windows' VPN plug-in dial returns only once the channel is up, its session finding and connecting to the
+        // server meanwhile. The start wrote Initializing to the file, so a state of a service at work there is this
+        // service's; a Disposed may be an older one's, should the start's write have failed, and is left to the start's
+        // end. No request: a failed one would end the start's state.
+        if (_startState.IsInitializing) {
+            if (_status.TryRead() is { ClientState: not (ClientState.None or ClientState.Initializing or ClientState.Disposed) } serviceInfo) {
+                _status.ConnectionInfo = serviceInfo;
+                CheckForEvents();
+            }
+
+            _connectionInfoRefreshedTime = FastDateTime.UtcNow;
+            return _status.ConnectionInfo;
+        }
 
         // update from file to make sure there is no error
         // VpnClient always update the file when ConnectionState changes

@@ -18,16 +18,7 @@ public class VpnServiceManagerTest : TestBase
         var statusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
 
         // while the service disconnects, the manager learns its state from the file alone
-        var statusJson = JsonSerializer.Serialize(new ConnectionInfo {
-            ClientState = ClientState.Disconnecting,
-            CreatedTime = DateTime.UtcNow,
-            ClientStateChangedTime = null,
-            ClientStateProgress = null,
-            ProxyConnectorStatus = null,
-            SessionInfo = null,
-            SessionStatus = null,
-            Error = null
-        });
+        var statusJson = StatusJson(ClientState.Disconnecting);
 
         // the manager reads as fast as it can
         using var readCts = new CancellationTokenSource();
@@ -130,5 +121,59 @@ public class VpnServiceManagerTest : TestBase
 
         await AssertEqualsWait(dropQuic, () => manager.ConnectionInfo.SessionStatus?.IsDropQuic,
             "the session's QUIC drop");
+    }
+
+    // Windows' VPN plug-in dial returns only once the channel is up, while the service finds and connects to the
+    // server: the state it writes meanwhile shows before the start ends, but an older service's end does not.
+    [TestMethod]
+    public async Task A_start_still_running_shows_the_state_its_service_wrote()
+    {
+        // the start held at the VPN permission's ask, as Windows' dial holds the plug-in's
+        var asked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var device = new TestDevice(TestHelper, _ => new TestNullVpnAdapter()) {
+            RequestVpnServiceHandler = async cancellationToken => {
+                asked.TrySetResult();
+                await release.Task;
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+        };
+        using var manager = new VpnServiceManager(device, eventWatcherInterval: null);
+        var statusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
+        using var startCts = new CancellationTokenSource();
+        var start = manager.Start(uiContext: null,
+            new VpnServiceOptions { ClientOptions = TestHelper.CreateClientOptions() }, startCts.Token);
+        try {
+            await asked.Task.WaitAsync(TimeSpan.FromSeconds(30), TestCt);
+
+            await File.WriteAllTextAsync(statusFilePath, StatusJson(ClientState.Disposed), TestCt);
+            await manager.RefreshState(TestCt);
+            Assert.AreEqual(ClientState.Initializing, manager.ConnectionInfo.ClientState, "an older service's end");
+
+            await File.WriteAllTextAsync(statusFilePath, StatusJson(ClientState.Connecting), TestCt);
+            await manager.RefreshState(TestCt);
+            Assert.AreEqual(ClientState.Connecting, manager.ConnectionInfo.ClientState, "the service's own state");
+        }
+        finally {
+            await startCts.CancelAsync();
+            release.TrySetResult();
+        }
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => start);
+    }
+
+    // the status file as the service writes it
+    private static string StatusJson(ClientState clientState)
+    {
+        return JsonSerializer.Serialize(new ConnectionInfo {
+            ClientState = clientState,
+            CreatedTime = DateTime.UtcNow,
+            ClientStateChangedTime = null,
+            ClientStateProgress = null,
+            ProxyConnectorStatus = null,
+            SessionInfo = null,
+            SessionStatus = null,
+            Error = null
+        });
     }
 }

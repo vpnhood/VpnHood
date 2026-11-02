@@ -107,6 +107,19 @@
       </Grid>
     </Border>
 
+    <!-- the kill switch's block with no session, in the reconnect bar's place, which shows only in a session: the
+         internet is blocked until a person disconnects, or, where it is kept while disconnected, until that is
+         turned off on the Kill Switch page -->
+    <Border x:Name="KillSwitchBar" Classes="reconnect-bar" VerticalAlignment="Top" IsVisible="False" Margin="0,78,0,0">
+      <Grid ColumnDefinitions="*,Auto" MaxWidth="720">
+        <TextBlock Text="{Binding KillSwitchBlockingMsg, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center"
+                   TextWrapping="Wrap" />
+        <Button Grid.Column="1" Classes="alert-link" Click="OnKillSwitchBarClick" Margin="8,0">
+          <TextBlock x:Name="KillSwitchBarLink" />
+        </Button>
+      </Grid>
+    </Border>
+
     <!-- the drawer, off the TV UI: a scrim, and the panel from the start edge. Both are animated
          from the code-behind, as Vuetify's temporary navigation drawer animates them. -->
     <Panel x:Name="DrawerLayer" IsVisible="False">

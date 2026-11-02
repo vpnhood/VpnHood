@@ -122,6 +122,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool IsConnectEnabled { get; private set => Set(ref field, value); } = true;
     public bool IsReconnectRequired { get; private set => Set(ref field, value); }
 
+    // the kill switch's block with no session, and whether it is kept while disconnected, which a disconnect then
+    // does not lift
+    public bool IsKillSwitchBlocking { get; private set => Set(ref field, value); }
+    public bool IsKillSwitchLockdown { get; private set => Set(ref field, value); }
+
     // the system bars drawn over the window, in device pixels: MainView keeps clear of them
     public int SystemBarsTopHeight { get; private set => Set(ref field, value); }
     public int SystemBarsBottomHeight { get; private set => Set(ref field, value); }
@@ -330,6 +335,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             };
         IsConnectEnabled = connectionState == AppConnectionState.None || state.CanDisconnect;
         IsReconnectRequired = state.IsReconnectRequired && IsConnected;
+        IsKillSwitchBlocking = state.IsKillSwitchBlocking;
+        IsKillSwitchLockdown = VhApp.UserSettings.KillSwitchLockdown;
         SystemBarsTopHeight = state.SystemBarsInfo.TopHeight;
         SystemBarsBottomHeight = state.SystemBarsInfo.BottomHeight;
 

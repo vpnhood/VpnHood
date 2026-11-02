@@ -74,6 +74,8 @@ public partial class MainView : UserControl
         ViewModel.PropertyChanged += (_, e) => {
             if (e.PropertyName is nameof(MainViewModel.IsReconnectRequired) or "")
                 ReconnectBar.IsVisible = ViewModel.IsReconnectRequired;
+            if (e.PropertyName is nameof(MainViewModel.IsKillSwitchBlocking) or nameof(MainViewModel.IsKillSwitchLockdown) or "")
+                ShowKillSwitchBar();
             if (e.PropertyName is nameof(MainViewModel.SystemBarsTopHeight) or nameof(MainViewModel.SystemBarsBottomHeight) or "")
                 ApplySystemBars();
         };
@@ -780,6 +782,27 @@ public partial class MainView : UserControl
     {
         try {
             await ViewModel.ClearReconnectRequired(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    // ---- the kill switch bar ----
+
+    private void ShowKillSwitchBar()
+    {
+        KillSwitchBar.IsVisible = ViewModel.IsKillSwitchBlocking;
+        KillSwitchBarLink.Text = ViewModel.IsKillSwitchLockdown ? Strings.Current.TurnOff : Strings.Current.Disconnect;
+    }
+
+    private async void OnKillSwitchBarClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            if (ViewModel.IsKillSwitchLockdown)
+                Navigate(FeaturePages.KillSwitch(this));
+            else
+                await ViewModel.Disconnect(CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

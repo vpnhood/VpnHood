@@ -150,7 +150,8 @@ internal sealed class AvaloniaDesktopTray : IDisposable
     private static bool IsChanged(AppState? drawn, AppState state)
     {
         return drawn == null || drawn.ConnectionState != state.ConnectionState ||
-               drawn.CanConnect != state.CanConnect || drawn.CanDisconnect != state.CanDisconnect;
+               drawn.CanConnect != state.CanConnect || drawn.CanDisconnect != state.CanDisconnect ||
+               drawn.IsKillSwitchBlocking != state.IsKillSwitchBlocking;
     }
 
     private void Update(AppState state)
@@ -158,9 +159,12 @@ internal sealed class AvaloniaDesktopTray : IDisposable
         _trayIcon.Icon = state.ConnectionState == AppConnectionState.Connected ? _connectedIcon
             : state.IsIdle ? _disconnectedIcon
             : _connectingIcon;
-        _trayIcon.ToolTipText = $"{_appName} - {Strings.Current.ConnectionStateText(state.ConnectionState)}";
+        _trayIcon.ToolTipText = state.IsKillSwitchBlocking
+            ? $"{_appName} - {Strings.Current.KillSwitchBlockingMsg}"
+            : $"{_appName} - {Strings.Current.ConnectionStateText(state.ConnectionState)}";
         _connectItem.IsEnabled = state.CanConnect;
-        _disconnectItem.IsEnabled = state.CanDisconnect;
+        // the kill switch's block with no session, which a person's disconnect lifts
+        _disconnectItem.IsEnabled = state.CanDisconnect || state.IsKillSwitchBlocking;
     }
 
     private void ShowWindow()

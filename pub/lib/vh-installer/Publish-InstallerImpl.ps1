@@ -139,6 +139,15 @@ $installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName")
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$publish_uninstallerFile" -Encoding ASCII -Force -NoNewline;
 
+# the kill switch's way out, which needs neither the service nor the app: a desktop client's (install-client.sh
+# places it beside the launcher); Windows' setup has its own (install-client.nsi)
+if ($installTemplate -eq "install-client") {
+	Write-Output "Creating kill switch script...";
+	$installScript = Get-Content -Path "$templateDir/kill-switch-off.$shellExt" -Raw;
+	$installScript = $installScript -replace "`r`n", $lineEnding;
+	$installScript  | Out-File -FilePath "$publish_infoDir/kill-switch-off$publishFileExt" -Encoding ASCII -Force -NoNewline;
+}
+
 # publish info: the updater's, and the app's feed (PublishInfo), which reads the same file
 if ([string]::IsNullOrWhiteSpace($installationPageUrl)) { $installationPageUrl = "$repoBaseUrl/releases/latest"; }
 $json = @{

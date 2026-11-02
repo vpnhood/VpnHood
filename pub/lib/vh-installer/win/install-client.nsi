@@ -7,6 +7,7 @@
 ;   <root>\<version>\                 each version's own folder; the one before is kept
 ;   <root>\<version>\publish.json     the release's feed file, whose feed the app's updater reads
 ;   <root>\vhupdate.ps1               the updater, which its task runs at boot and every 12 hours
+;   <root>\kill-switch-off.ps1        the kill switch's way out, which needs neither the service nor the app
 ;   <root>\updates\, update.log       the updater's and the app's downloads, and what the updater last did
 ;   <root>\update.missed              there while the updater's last run could not reach the server
 ;   <root>\uninstall\uninstall.exe    out of the root, which is on the PATH
@@ -63,6 +64,10 @@ SetCompressor /SOLID lzma
 !define RUN_KEY "Software\Microsoft\Windows\CurrentVersion\Run"
 !define CURRENT_FOLDER "current"   ; WindowsDesktopPaths.CurrentFolderName
 !define UNINSTALL_FOLDER "uninstall"
+; the kill switch's way out in the Start menu, named after the app first, as the Start menu lists by name (owner,
+; 2026-10-31); the Kill Switch page names it so (FeaturePages.KillSwitchOffEntryName)
+!define KILL_SWITCH_OFF_LINK "$SMPROGRAMS\${PRODUCT_NAME} - Turn off kill switch.lnk"
+!define KILL_SWITCH_OFF_SCRIPT "kill-switch-off.ps1" ; WindowsDesktopPaths.KillSwitchOffScriptName
 
 Name "${PRODUCT_NAME}"
 OutFile "${OUTPUT_FILE}"
@@ -348,6 +353,7 @@ Section "Install"
 	SetOutPath "$INSTDIR"
 	File "${LAUNCHERS_DIR}\*.exe"
 	File "/oname=vhupdate.ps1" "${__FILEDIR__}\install-client-updater.ps1"
+	File "/oname=${KILL_SWITCH_OFF_SCRIPT}" "${__FILEDIR__}\install-client-kill-switch-off.ps1"
 
 	StrCpy $JunctionLink "$INSTDIR\${CURRENT_FOLDER}"
 	StrCpy $JunctionTarget "$INSTDIR\${VERSION}"
@@ -377,6 +383,11 @@ Section "Install"
 	${If} $IsServerCore != 1
 		CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}.lnk" "$INSTDIR\${INSTANCE_NAME}.exe"
 		CreateShortcut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${INSTANCE_NAME}.exe"
+		; for a person whose app cannot open while the kill switch blocks the internet: the script asks for an
+		; administrator's OK itself, and says what it did in a message box
+		CreateShortcut "${KILL_SWITCH_OFF_LINK}" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" \
+			'-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\${KILL_SWITCH_OFF_SCRIPT}" -productName "${PRODUCT_NAME}"' \
+			"$INSTDIR\${INSTANCE_NAME}.exe" 0
 		WriteRegStr HKLM "${RUN_KEY}" "${INSTANCE_NAME}" '"$INSTDIR\${INSTANCE_NAME}.exe" ui --tray'
 	${EndIf}
 
@@ -442,8 +453,15 @@ Section "Uninstall"
 	Push "$INSTDIR"
 	Call un.CloseProcesses
 
+	; The kill switch's block, which outlives the app's stop by design (a crash's, a reboot's), goes with the app
+	; (owner, 2026-10-31): by its way out, which needs neither the service nor the app, so a broken install's
+	; uninstall lifts it too; after the service, which could put it back.
+	nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\${KILL_SWITCH_OFF_SCRIPT}" -quiet'
+	Pop $0
+
 	DeleteRegValue HKLM "${RUN_KEY}" "${INSTANCE_NAME}"
 	Delete "$SMPROGRAMS\${PRODUCT_NAME}.lnk"
+	Delete "${KILL_SWITCH_OFF_LINK}"
 	Delete "$DESKTOP\${PRODUCT_NAME}.lnk"
 	DeleteRegKey HKLM "${UNINSTALL_KEY}"
 

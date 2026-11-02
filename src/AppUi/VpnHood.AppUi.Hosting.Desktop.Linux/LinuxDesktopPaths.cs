@@ -64,6 +64,17 @@ public class LinuxDesktopPaths(string appId) : IAppDesktopPaths
         }
     }
 
+    // Beside the launcher, as the installer places it: kill-switch-off.sh's copy.
+    public string? KillSwitchOffScriptPath {
+        get {
+            var scriptPath = Path.Combine(Path.GetDirectoryName(StoragePath) ?? "", KillSwitchOffScriptName);
+            return Path.IsPathRooted(scriptPath) && File.Exists(scriptPath) ? scriptPath : null;
+        }
+    }
+
+    // the installer's name for it (install-client.sh)
+    public const string KillSwitchOffScriptName = "kill-switch-off";
+
     // The service's folder under /run, which only root writes: nobody else takes a name in it first.
     public string RuntimePath => Path.Combine("/run", InstanceName);
 

@@ -14,10 +14,18 @@ public sealed record FeaturePageOptions
     public bool IsActionAvailable { get; init; }
     public bool ShowSkip { get; init; }
 
-    // a Switch page's: the switch's title, where it stands, and what turning it writes
+    // a Switch page's: the switch's title, its note, where it stands, and what turning it writes
     public string? SwitchTitle { get; init; }
+    public string? SwitchDescription { get; init; }
     public bool IsSwitchOn { get; init; }
     public Func<bool, Task>? SwitchAction { get; init; }
+
+    // a Switch page's second switch, under the first and shown while that is on: an option of the feature's own
+    // (the kill switch's block while disconnected)
+    public string? SubSwitchTitle { get; init; }
+    public string? SubSwitchDescription { get; init; }
+    public bool IsSubSwitchOn { get; init; }
+    public Func<bool, Task>? SubSwitchAction { get; init; }
 
     // opened on its own by what the person just did, not chosen: it ends with OK, since the back
     // button would read as undoing that (cloak mode's page, when Cloak is first turned on)

@@ -51,6 +51,15 @@ public class AppFeatures
 
     public required AlwaysOnSupport AlwaysOnSupport { get; init; }
 
+    // Whether the app keeps a kill switch of its own (UserSettings.KillSwitch), a desktop's; Android's is the
+    // system's setting, which its page opens (DeviceIntentFeatures.IsKillSwitchSettingsSupported).
+    public required bool IsKillSwitchSupported { get; init; }
+
+    // The installer's script that lifts the kill switch's block with neither the service nor the app (the way
+    // out, AppOptions.KillSwitchOffScriptPath), which Linux's Kill Switch page prints as a command; null outside
+    // an install, and on Windows, whose page names the Start menu's entry.
+    public required string? KillSwitchOffScriptPath { get; init; }
+
     // Whether the settings turn the automatic update on and off: an install's own updater, a desktop's
     // (IAppApi.GetAutomaticUpdate). A store keeps its own setting.
     public required bool IsAutomaticUpdateSupported { get; init; }

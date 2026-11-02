@@ -30,4 +30,7 @@ internal sealed class TestDesktopPlatform : IDesktopPlatform
         run(cancellationToken, QuickCloseToken);
 
     public void StartUiAgain(bool startHidden) => throw new NotSupportedException();
+
+    public Task<int> RunKillSwitchOffScript(string scriptPath, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
 }

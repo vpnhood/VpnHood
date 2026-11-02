@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App.Linux;
 using VpnHood.AppUi.Hosting.Desktop.Daemon;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
+using VpnHood.AppUi.Hosting.Desktop.Linux.Utils;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Linux;
@@ -43,6 +45,17 @@ public sealed class LinuxDesktopPlatform : IDesktopPlatform
 
     public Task<int> HostDaemon(DaemonRun run, CancellationToken cancellationToken) =>
         DesktopHost.HostDaemonStoppedBySignal(run, cancellationToken);
+
+    // Root's alone, as the block is: a person's terminal is told to ask sudo, which asks for the password there.
+    public async Task<int> RunKillSwitchOffScript(string scriptPath, CancellationToken cancellationToken)
+    {
+        if (!LinuxUser.IsRoot)
+            throw new InvalidOperationException($"Only root can lift the block. Try: sudo {_paths.CommandName} kill-switch off");
+
+        using var process = Start(scriptPath, []);
+        await process.WaitForExitAsync(cancellationToken).Vhc();
+        return process.ExitCode;
+    }
 
     // As a unit of the person's systemd: a desktop runs the window as a unit of its own - the sign-in tray's is a
     // service (systemd-xdg-autostart-generator) - and a process the window left in it would end with the window.

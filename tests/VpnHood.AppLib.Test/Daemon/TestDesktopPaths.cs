@@ -11,4 +11,5 @@ internal sealed class TestDesktopPaths(string instanceName = "VpnHoodTest") : IA
     public bool IsStartedAsCommand => false;
     public string StoragePath => Path.Combine(TestHelper.AssemblyWorkingPath, InstanceName, "storage");
     public string UiDataPath => Path.Combine(TestHelper.AssemblyWorkingPath, InstanceName, "ui");
+    public string? KillSwitchOffScriptPath => null;
 }

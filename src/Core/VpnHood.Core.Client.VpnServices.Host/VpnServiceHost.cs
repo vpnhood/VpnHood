@@ -468,27 +468,11 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 
         using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
         _useKillSwitch = clientOptions.UseKillSwitch;
-        _killSwitchRules = clientOptions.UseNullCapture ? null : CreateKillSwitchRules(clientOptions);
+        _killSwitchRules = clientOptions.UseNullCapture
+            ? null
+            : VpnKillSwitchRules.CreateBySettings(clientOptions.AdapterName, clientOptions.IncludeIpRangesByDevice,
+                clientOptions.SplitLocalNetwork);
         await ApplyKillSwitch(cancellationToken).Vhc();
-    }
-
-    // Before a session, by the person's settings: the server's own exclusions come only with a session, and
-    // so does its DNS plan, so no resolver passes yet.
-    private static VpnKillSwitchRules CreateKillSwitchRules(ClientOptions clientOptions)
-    {
-        var includeIpRanges = clientOptions.IncludeIpRangesByDevice.ToOrderedList();
-        if (clientOptions.SplitLocalNetwork) {
-            includeIpRanges = includeIpRanges
-                .Exclude(IpNetwork.LocalNetworks.ToIpRanges())
-                .Exclude(IpNetwork.MulticastNetworks.ToIpRanges())
-                .Exclude(IPAddress.Broadcast);
-        }
-
-        return new VpnKillSwitchRules {
-            AdapterName = clientOptions.AdapterName,
-            PassIpRanges = includeIpRanges.Invert(),
-            DnsServers = []
-        };
     }
 
     // A session's adapter start: what its routes leave out, as the adapter has them.

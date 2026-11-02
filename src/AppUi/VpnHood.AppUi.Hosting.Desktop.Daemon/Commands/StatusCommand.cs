@@ -87,6 +87,9 @@ internal static class StatusCommand
         if (state.AlwaysOnState != null)
             fields.Add(("Always on", Describe(state.AlwaysOnState)));
 
+        if (state.IsKillSwitchBlocking)
+            fields.Add(("Kill switch", "blocking the internet"));
+
         if (Describe(state.UpdaterStatus, isAutomaticUpdateOn) is { } update)
             fields.Add(("Update", update));
 

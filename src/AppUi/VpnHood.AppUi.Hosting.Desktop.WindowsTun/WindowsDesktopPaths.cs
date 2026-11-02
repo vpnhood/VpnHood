@@ -68,6 +68,20 @@ public class WindowsDesktopPaths(string appId) : IAppDesktopPaths
     // (VpnHood.AppUi.Hosting.Desktop.WindowsTun.targets) and the installer name it too.
     public const string CurrentFolderName = "current";
 
+    // In the install root, as the setup places it (install-client.nsi): install-client-kill-switch-off.ps1's copy.
+    public string? KillSwitchOffScriptPath {
+        get {
+            if (InstallRootPath is not { } installRootPath)
+                return null;
+
+            var scriptPath = Path.Combine(installRootPath, KillSwitchOffScriptName);
+            return File.Exists(scriptPath) ? scriptPath : null;
+        }
+    }
+
+    // the setup's name for it (install-client.nsi)
+    public const string KillSwitchOffScriptName = "kill-switch-off.ps1";
+
     // The root's window launcher, over "current".
     public string? InstalledLauncherPath =>
         InstallRootPath is { } installRootPath ? Path.Combine(installRootPath, InstanceName + ".exe") : null;

@@ -2,6 +2,7 @@
 using Avalonia.Interactivity;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
@@ -12,12 +13,14 @@ public partial class FeaturePageView : UserControl, IPage
     private readonly MainView _host;
     private readonly Func<Task>? _action;
     private readonly Func<bool, Task>? _switchAction;
+    private readonly Func<bool, Task>? _subSwitchAction;
 
     public FeaturePageView(MainView host, FeaturePageOptions options)
     {
         _host = host;
         _action = options.Action;
         _switchAction = options.SwitchAction;
+        _subSwitchAction = options.SubSwitchAction;
         InitializeComponent();
 
         Header.SetLargeTitle(TitleText, options.Title);
@@ -38,7 +41,12 @@ public partial class FeaturePageView : UserControl, IPage
             case FeaturePageKind.Switch when !options.IsPremium || VhApp.IsPremiumUser:
                 SwitchItem.IsVisible = true;
                 SwitchItem.Title = options.SwitchTitle ?? "";
+                SwitchItem.Description = options.SwitchDescription;
                 SwitchItem.IsOn = options.IsSwitchOn;
+                SubSwitchItem.Title = options.SubSwitchTitle ?? "";
+                SubSwitchItem.Description = options.SubSwitchDescription;
+                SubSwitchItem.IsOn = options.IsSubSwitchOn;
+                ShowSubSwitch();
                 break;
 
             case FeaturePageKind.Switch:
@@ -111,19 +119,41 @@ public partial class FeaturePageView : UserControl, IPage
     private async void OnSwitchToggled(object? sender, EventArgs e)
     {
         try {
-            if (_switchAction == null)
-                return;
-            try {
-                await _switchAction(SwitchItem.IsOn);
-            }
-            catch (Exception ex) {
-                SwitchItem.IsOn = !SwitchItem.IsOn;
-                await _host.ProcessError(ex);
-            }
+            await Toggle(SwitchItem, _switchAction);
+            ShowSubSwitch();
         }
         catch (Exception ex) {
             await this.ReportError(ex);
         }
+    }
+
+    private async void OnSubSwitchToggled(object? sender, EventArgs e)
+    {
+        try {
+            await Toggle(SubSwitchItem, _subSwitchAction);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async Task Toggle(SettingsToggleItem switchItem, Func<bool, Task>? switchAction)
+    {
+        if (switchAction == null)
+            return;
+        try {
+            await switchAction(switchItem.IsOn);
+        }
+        catch (Exception ex) {
+            switchItem.IsOn = !switchItem.IsOn;
+            await _host.ProcessError(ex);
+        }
+    }
+
+    // the option goes with its switch
+    private void ShowSubSwitch()
+    {
+        SubSwitchItem.IsVisible = _subSwitchAction != null && SwitchItem.IsVisible && SwitchItem.IsOn;
     }
 
     private void OnSkipClick(object? sender, RoutedEventArgs e)

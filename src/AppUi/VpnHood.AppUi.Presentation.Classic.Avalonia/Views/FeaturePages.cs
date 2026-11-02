@@ -62,8 +62,40 @@ public static class FeaturePages
         });
     }
 
+    // The installers' own words for the way out, in English as they are (install-client.nsi, install-client.sh):
+    // the page names them as a person finds them.
+    private const string KillSwitchOffEntryName = "Turn off kill switch";
+
+    // the app's own switch where the app keeps a kill switch itself (a desktop's), with the way out a person needs
+    // if the app cannot open while the internet is blocked (owner, 2026-10-31), and the block kept while
+    // disconnected as an option of it; else the steps to the device's setting (Android's)
     public static FeaturePageView KillSwitch(MainView host)
     {
+        var features = VhApp.Features;
+        if (features.IsKillSwitchSupported) {
+            var appName = features.AppName;
+            return new FeaturePageView(host, new FeaturePageOptions {
+                Title = S.KillSwitchColored,
+                Description = S.KillSwitchDesc,
+                Image = "kill-switch.webp",
+                Kind = FeaturePageKind.Switch,
+                SwitchTitle = S.KillSwitch,
+                SwitchDescription = features.OsType switch {
+                    AppOsType.Windows => S.KillSwitchWayOutWindows(appName, $"{appName} - {KillSwitchOffEntryName}"),
+                    AppOsType.Linux when features.KillSwitchOffScriptPath != null =>
+                        S.KillSwitchWayOutLinux(appName, KillSwitchOffEntryName, $"sudo {features.KillSwitchOffScriptPath}"),
+                    _ => null
+                },
+                IsSwitchOn = VhApp.UserSettings.KillSwitch,
+                SwitchAction = isOn => SetKillSwitch(isOn, CancellationToken.None),
+                SubSwitchTitle = S.KillSwitchLockdown,
+                SubSwitchDescription = S.KillSwitchLockdownDesc,
+                IsSubSwitchOn = VhApp.UserSettings.KillSwitchLockdown,
+                SubSwitchAction = isOn => SetKillSwitchLockdown(isOn, CancellationToken.None),
+                IsPremium = VhApp.IsPremiumFeature(AppFeature.KillSwitch)
+            });
+        }
+
         return new FeaturePageView(host, new FeaturePageOptions {
             Title = S.KillSwitchColored,
             Description = S.KillSwitchDesc,
@@ -73,6 +105,20 @@ public static class FeaturePages
             Action = () => VhApp.Api.Intents.OpenKillSwitchSettings(CancellationToken.None),
             IsActionAvailable = VhApp.Intents.IsKillSwitchSettingsSupported
         });
+    }
+
+    private static async Task SetKillSwitch(bool isOn, CancellationToken cancellationToken)
+    {
+        var settings = VhApp.UserSettings;
+        settings.KillSwitch = isOn;
+        await VhApp.SaveUserSettings(settings, cancellationToken);
+    }
+
+    private static async Task SetKillSwitchLockdown(bool isOn, CancellationToken cancellationToken)
+    {
+        var settings = VhApp.UserSettings;
+        settings.KillSwitchLockdown = isOn;
+        await VhApp.SaveUserSettings(settings, cancellationToken);
     }
 
     // the app's own switch where the app keeps always on itself (a desktop's service); else the steps to

@@ -751,6 +751,21 @@ public sealed partial class Strings
     /// <summary>Enable &lt;strong&gt;Always-on VPN&lt;/strong&gt; and &lt;strong&gt;Block connections without VPN&lt;/strong&gt;</summary>
     public string KillSwitchHowToTurnOnStep3 => Get("KILL_SWITCH_HOW_TO_TURN_ON_STEP_3");
 
+    /// <summary>The kill switch is blocking the internet.</summary>
+    public string KillSwitchBlockingMsg => Get("KILL_SWITCH_BLOCKING_MSG");
+
+    /// <summary>If {appName} won't open while the internet is blocked, open the Start menu and choose "{shortcutName}". Uninstalling ...</summary>
+    public string KillSwitchWayOutWindows(object appName, object shortcutName) => Get("KILL_SWITCH_WAY_OUT_WINDOWS", ("appName", appName), ("shortcutName", shortcutName));
+
+    /// <summary>If {appName} won't open while the internet is blocked, right-click {appName} in the app menu and choose "{actionName}...</summary>
+    public string KillSwitchWayOutLinux(object appName, object actionName, object command) => Get("KILL_SWITCH_WAY_OUT_LINUX", ("appName", appName), ("actionName", actionName), ("command", command));
+
+    /// <summary>Block the internet while disconnected</summary>
+    public string KillSwitchLockdown => Get("KILL_SWITCH_LOCKDOWN");
+
+    /// <summary>Turn this off before you sign in to Wi-Fi at a hotel or an airport.</summary>
+    public string KillSwitchLockdownDesc => Get("KILL_SWITCH_LOCKDOWN_DESC");
+
     /// <summary>Notifications</summary>
     public string Notifications => Get("NOTIFICATIONS");
 

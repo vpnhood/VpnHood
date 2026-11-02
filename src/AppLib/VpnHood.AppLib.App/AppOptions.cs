@@ -111,6 +111,13 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
     public AppAlwaysOnOptions AlwaysOnOptions { get; set; } = new();
+
+    // The installer's script that lifts the kill switch's block with neither the service nor the app's exe: a
+    // person's way out when the app cannot run at all (owner, 2026-10-31: "we don't want the user to get stuck").
+    // Its menu entry, the command line and the uninstallers run it too. Set by the Linux platform, which knows its
+    // install, for the Kill Switch page to print as a command; Windows' page names the Start menu's entry instead.
+    // Null outside an install.
+    public string? KillSwitchOffScriptPath { get; set; }
     public bool AllowEndPointTracker { get; set; }
     public string? DeviceId { get; set; }
     public TimeSpan? EventWatcherInterval { get; set; } // set if you don't call State periodically

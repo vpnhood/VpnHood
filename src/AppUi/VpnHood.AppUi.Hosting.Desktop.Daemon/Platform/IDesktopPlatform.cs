@@ -49,6 +49,10 @@ public interface IDesktopPlatform
     // its own, which outlives this one; nothing for a copy run where it lies, which has no such launcher.
     void StartUiAgain(bool startHidden);
 
+    // The installer's way out of the kill switch's block (IAppDesktopPaths.KillSwitchOffScriptPath), for
+    // "kill-switch off" when the service is not running: run as an administrator, waited for; its exit code.
+    Task<int> RunKillSwitchOffScript(string scriptPath, CancellationToken cancellationToken);
+
     // The daemon's run as the platform's service manager hosts it, with the time the stop leaves the
     // app's graceful close (DaemonRun), so the adapter is released before the manager ends the process.
     // Windows' stops it with a call rather than a signal (the service control manager, through

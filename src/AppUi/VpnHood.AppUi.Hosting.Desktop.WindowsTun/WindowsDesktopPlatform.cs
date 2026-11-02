@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.App.WindowsTun;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
+using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
@@ -56,5 +57,23 @@ public sealed class WindowsDesktopPlatform : IDesktopPlatform
         if (startHidden)
             startInfo.ArgumentList.Add("--tray");
         Process.Start(startInfo)?.Dispose();
+    }
+
+    // By Windows' own PowerShell, which asks for an administrator's OK itself (UAC) where this console has none;
+    // -quiet: its answer is a line here rather than a message box.
+    public async Task<int> RunKillSwitchOffScript(string scriptPath, CancellationToken cancellationToken)
+    {
+        var startInfo = new ProcessStartInfo {
+            FileName = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe"),
+            UseShellExecute = false
+        };
+        string[] arguments = ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", scriptPath, "-quiet"];
+        foreach (var argument in arguments)
+            startInfo.ArgumentList.Add(argument);
+
+        using var process = Process.Start(startInfo) ??
+                            throw new InvalidOperationException($"Could not run {scriptPath}.");
+        await process.WaitForExitAsync(cancellationToken).Vhc();
+        return process.ExitCode;
     }
 }

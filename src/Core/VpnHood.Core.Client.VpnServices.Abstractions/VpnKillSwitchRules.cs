@@ -21,4 +21,25 @@ public class VpnKillSwitchRules
     // The resolvers DNS may reach outside the tunnel: an out-of-tunnel plan's. Every other DNS query outside
     // it is blocked, a LAN router's too, which would otherwise learn every name.
     public required IReadOnlyList<IPAddress> DnsServers { get; init; }
+
+    // By the person's settings, with no session: a connect's block until its adapter starts, and the app's own
+    // while disconnected with the block kept (UserSettings.KillSwitchLockdown). The server's own exclusions come
+    // only with a session, and so does its DNS plan, so no resolver passes.
+    public static VpnKillSwitchRules CreateBySettings(string adapterName,
+        IReadOnlyList<IpRange> includeIpRangesByDevice, bool splitLocalNetwork)
+    {
+        var includeIpRanges = includeIpRangesByDevice.ToOrderedList();
+        if (splitLocalNetwork) {
+            includeIpRanges = includeIpRanges
+                .Exclude(IpNetwork.LocalNetworks.ToIpRanges())
+                .Exclude(IpNetwork.MulticastNetworks.ToIpRanges())
+                .Exclude(IPAddress.Broadcast);
+        }
+
+        return new VpnKillSwitchRules {
+            AdapterName = adapterName,
+            PassIpRanges = includeIpRanges.Invert(),
+            DnsServers = []
+        };
+    }
 }

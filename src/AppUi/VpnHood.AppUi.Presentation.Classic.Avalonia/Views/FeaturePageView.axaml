@@ -30,8 +30,10 @@
           </StackPanel>
         </Border>
 
-        <!-- a setting the app keeps itself: its switch in place of the steps -->
+        <!-- a setting the app keeps itself: its switch in place of the steps, and an option of its own under it,
+             shown while it is on -->
         <controls:SettingsToggleItem x:Name="SwitchItem" Margin="0" IsVisible="False" Toggled="OnSwitchToggled" />
+        <controls:SettingsToggleItem x:Name="SubSwitchItem" Margin="0" IsVisible="False" Toggled="OnSubSwitchToggled" />
 
         <!-- the pitch, where the feature is sold -->
         <Border x:Name="PremiumCard" Classes="card-on-grad" Padding="16,12" IsVisible="False">

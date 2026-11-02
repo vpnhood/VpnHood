@@ -7,6 +7,7 @@
 # What this writes:
 #   /opt/<name>/bin/<version>/   the self-contained build, the old ones removed at an update
 #   /opt/<name>/storage/         settings.json, profiles, the log  (root's alone, 700)
+#   /opt/<name>/kill-switch-off  the kill switch's way out, which needs neither the service nor the app
 #   /usr/local/bin/<launcher>    so the commands can be typed from anywhere
 #   /etc/systemd/system/<name>.service           the root service, headless
 #   /etc/systemd/system/<name>Updater.service    the updater, vhupdate, run by its timer
@@ -417,6 +418,7 @@ function replace_file() {
 }
 replace_file "$infoDir/vhupdate" "$destinationPath/vhupdate" 755;
 replace_file "$infoDir/vhuninstall" "$destinationPath/vhuninstall" 755;
+replace_file "$infoDir/kill-switch-off" "$destinationPath/kill-switch-off" 755;
 replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
 replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
 chmod +x "$binDir/$assemblyName";
@@ -596,11 +598,17 @@ if [ "$withDesktop" == "y" ]; then
 
 	# Uninstall on the entry's own right-click menu, where the desktops put it for the apps their
 	# software centre installed; Linux has no list of installed apps for a script's install to join,
-	# and an uninstall icon of its own in the app grid is clutter. pkexec asks for an administrator's
-	# password; without it the uninstall stays a command.
+	# and an uninstall icon of its own in the app grid is clutter. Beside it the kill switch's way out,
+	# for a person whose app cannot open while the internet is blocked, under the app's name, which heads
+	# the menu (the Kill Switch page names it: FeaturePages.KillSwitchOffEntryName). pkexec asks for an
+	# administrator's password; without it both stay commands.
 	actionLines="";
 	if command -v pkexec >/dev/null 2>&1; then
-		actionLines="Actions=Uninstall;
+		actionLines="Actions=KillSwitchOff;Uninstall;
+
+[Desktop Action KillSwitchOff]
+Name=Turn off kill switch
+Exec=pkexec \"$destinationPath/kill-switch-off\"
 
 [Desktop Action Uninstall]
 Name=Uninstall

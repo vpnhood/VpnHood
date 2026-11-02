@@ -24,4 +24,8 @@ public interface IAppDesktopPaths : IDesktopUiPaths
     // may not write the daemon's: the person's folder of the app, a Debug build's id being its own. A
     // platform whose UI folder is a cache keeps it elsewhere.
     string DevStoragePath => UiDataPath;
+
+    // The installer's script that lifts the kill switch's block with neither the service nor the app's exe (the
+    // way out), which the command line runs when the service does not answer; null outside an install.
+    string? KillSwitchOffScriptPath { get; }
 }

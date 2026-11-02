@@ -8,7 +8,7 @@ namespace VpnHood.AppLib.Test.Tests;
 
 // The kill switch as the app and its VPN service run it (IVpnKillSwitch), the OS's block played in memory:
 // up before a connect's adapter, pointed at each adapter start, kept through an error stop, lifted by a
-// person's disconnect or the switch turned off, and fail-closed.
+// person's disconnect or the switch turned off, and fail-closed; kept while disconnected where that is on.
 [TestClass]
 public class KillSwitchTest : TestAppBase
 {
@@ -55,9 +55,56 @@ public class KillSwitchTest : TestAppBase
         await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.IsNotNull(app.State.LastError);
         Assert.IsTrue(killSwitch.IsUp);
+        await AssertEqualsWait(true, () => app.State.IsKillSwitchBlocking);
 
         await app.Disconnect();
         Assert.IsFalse(killSwitch.IsUp);
+        Assert.IsFalse(app.State.IsKillSwitchBlocking);
+    }
+
+    // Kept while disconnected: a person's disconnect leaves the block up, by the settings' split with no session,
+    // and turning that off lifts it.
+    [TestMethod]
+    public async Task Lockdown_keeps_the_block_after_a_persons_disconnect()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        var killSwitch = new TestVpnKillSwitch();
+        await using var app = CreateApp(CreateDevice(killSwitch), killSwitchOn: true, killSwitchLockdown: true);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
+        var sessionRules = killSwitch.Rules;
+
+        // put up again by the settings' split, as no session's
+        await app.Disconnect();
+        Assert.IsTrue(killSwitch.IsUp);
+        Assert.AreNotSame(sessionRules, killSwitch.Rules);
+        Assert.IsTrue(app.State.IsKillSwitchBlocking);
+
+        app.UserSettings.KillSwitchLockdown = false;
+        app.SettingsService.Save();
+        await AssertEqualsWait(false, () => killSwitch.IsUp);
+        await AssertEqualsWait(false, () => app.State.IsKillSwitchBlocking);
+    }
+
+    // Kept while disconnected, turned on with no session: the block goes up at once; the switch turned off lifts it.
+    [TestMethod]
+    public async Task Lockdown_turned_on_while_disconnected_blocks_at_once()
+    {
+        var killSwitch = new TestVpnKillSwitch();
+        await using var app = CreateApp(CreateDevice(killSwitch), killSwitchOn: true);
+        Assert.IsFalse(killSwitch.IsUp);
+
+        app.UserSettings.KillSwitchLockdown = true;
+        app.SettingsService.Save();
+        await AssertEqualsWait(true, () => killSwitch.IsUp);
+        await AssertEqualsWait(true, () => app.State.IsKillSwitchBlocking);
+
+        app.UserSettings.KillSwitch = false;
+        app.SettingsService.Save();
+        await AssertEqualsWait(false, () => killSwitch.IsUp);
+        await AssertEqualsWait(false, () => app.State.IsKillSwitchBlocking);
     }
 
     [TestMethod]
@@ -187,7 +234,8 @@ public class KillSwitchTest : TestAppBase
         };
     }
 
-    private VpnHoodApp CreateApp(TestDevice device, bool killSwitchOn, AppPremiumOptions? premium = null)
+    private VpnHoodApp CreateApp(TestDevice device, bool killSwitchOn, AppPremiumOptions? premium = null,
+        bool killSwitchLockdown = false)
     {
         var appOptions = TestAppHelper.CreateAppOptions();
         if (premium != null)
@@ -195,6 +243,7 @@ public class KillSwitchTest : TestAppBase
 
         var app = TestAppHelper.CreateClientApp(appOptions, device);
         app.UserSettings.KillSwitch = killSwitchOn;
+        app.UserSettings.KillSwitchLockdown = killSwitchLockdown;
         app.SettingsService.Save();
         return app;
     }

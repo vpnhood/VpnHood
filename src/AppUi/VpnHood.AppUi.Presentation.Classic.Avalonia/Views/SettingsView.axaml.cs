@@ -80,7 +80,13 @@ public partial class SettingsView : UserControl, IPage
         PrivacyItem.Subtitle = VhApp.IsAnonymousTrackerSupported ? s.PrivacyDesc : "";
         KillSwitchItem.Title = s.KillSwitch;
         KillSwitchItem.Subtitle = s.KillSwitchDesc;
-        KillSwitchItem.IsVisible = intents.IsKillSwitchSettingsSupported;
+        // the app's own switch (a desktop's), or the device's setting (Android's), whose state the app cannot read
+        var isKillSwitchSupported = VhApp.Features.IsKillSwitchSupported;
+        KillSwitchItem.IsVisible = isKillSwitchSupported || intents.IsKillSwitchSettingsSupported;
+        if (isKillSwitchSupported) {
+            KillSwitchItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.KillSwitch);
+            KillSwitchItem.SetStatus(settings.KillSwitch, s.On, s.Off);
+        }
         AlwaysOnItem.Title = s.AlwaysOn;
         AlwaysOnItem.Subtitle = s.AlwaysOnDesc;
         AlwaysOnItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn);

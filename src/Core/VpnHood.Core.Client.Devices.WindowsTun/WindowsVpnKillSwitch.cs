@@ -17,8 +17,12 @@ namespace VpnHood.Core.Client.Devices.WindowsTun;
 // loads them at boot, before any app starts, so the block holds through both (owner, 2026-10-31: "if the system
 // crashes, we should not lift the kill switch; that's the whole purpose"). Not a dynamic session's, which the
 // engine deletes with its process: WireGuard for Windows uses one, and its block goes with a crash. The connect
-// and accept layers (ALE) judge a connection once, nothing per packet; the forward layers judge what Windows
-// forwards for WSL2, Hyper-V's switches and Docker, which would otherwise go around the block. The keys are the
+// and accept layers (ALE) judge a connection once, nothing per packet; the forward layers judge what Windows routes
+// itself, which would otherwise go around the block. They have no port field, so DNS routed to an address of the
+// split passes. A known limit (owner, 2026-11-01): WinNAT's traffic - WSL2's NAT mode, so Docker Desktop's too -
+// is seen by no WFP layer (a block at the forward, IP packet, transport, connect and vSwitch layers stopped none of
+// it, seen on Windows Server 2025 with WSL 3.0.3), so it goes into the tunnel while one is up and around the block
+// while none is. The Hyper-V firewall could stop it only while the service runs, never after a crash. The keys are the
 // SDK's, so every app built on VpnHood shares the one block; the provider's data names the app whose block it
 // is (owner: the app's own storage folder, which an update keeps, where the exe's folder changes). Needs an
 // administrator: the service, which runs as SYSTEM.

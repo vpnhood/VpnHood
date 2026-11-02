@@ -21,7 +21,7 @@ namespace VpnHood.Core.Client.Devices.Linux;
 // blocks the rest. A blocked TCP connect is reset, so it fails at once: of a dropped SYN the kernel only sends
 // another, and the app hangs till its own timeout (seen on Ubuntu 26.04); a dropped UDP send fails at once
 // (EPERM). The forward chain does the same for forwarded traffic (Docker, libvirt), which would otherwise go
-// around it.
+// around it; its DNS rules too, or a container's lookups reach the LAN's router (seen with Docker on Ubuntu 26.04).
 // The kernel keeps the table through a crash, not a reboot, so a block also goes to a file that a boot unit of
 // its own loads before the network comes up (the block holds through a reboot, owner, 2026-10-31). That copy
 // leaves the service's rule out: nft resolves a cgroup when it loads the rule, and the service's is not there
@@ -157,12 +157,7 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
         builder.Append("    udp sport 546 udp dport 547 accept\n");
         builder.Append("    icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, " +
                        "nd-neighbor-advert, nd-redirect } accept\n");
-        if (dnsV4.Length > 0)
-            builder.Append("    meta l4proto { tcp, udp } th dport 53 ip daddr @dns_v4 accept\n");
-        if (dnsV6.Length > 0)
-            builder.Append("    meta l4proto { tcp, udp } th dport 53 ip6 daddr @dns_v6 accept\n");
-        builder.Append("    tcp dport 53 reject with tcp reset\n");
-        builder.Append("    udp dport 53 drop\n");
+        AppendDnsRules(builder, dnsV4.Length > 0, dnsV6.Length > 0);
         AppendPassRules(builder, passV4.Length > 0, passV6.Length > 0);
         AppendBlockRules(builder);
         builder.Append("  }\n");
@@ -171,6 +166,7 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
         builder.Append("    type filter hook forward priority filter; policy accept;\n");
         builder.Append($"    oifname \"{tunName}\" accept\n");
         builder.Append($"    iifname \"{tunName}\" accept\n");
+        AppendDnsRules(builder, dnsV4.Length > 0, dnsV6.Length > 0);
         AppendPassRules(builder, passV4.Length > 0, passV6.Length > 0);
         AppendBlockRules(builder);
         builder.Append("  }\n");
@@ -188,6 +184,18 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
         builder.Append($"    type {type}; flags interval; auto-merge;\n");
         builder.Append($"    elements = {{ {string.Join(", ", list)} }}\n");
         builder.Append("  }\n");
+    }
+
+    // DNS outside the tunnel only to an out-of-tunnel plan's resolvers, never to a LAN router, which would otherwise
+    // learn every name; ahead of the split, which holds the LAN
+    private static void AppendDnsRules(StringBuilder builder, bool hasV4, bool hasV6)
+    {
+        if (hasV4)
+            builder.Append("    meta l4proto { tcp, udp } th dport 53 ip daddr @dns_v4 accept\n");
+        if (hasV6)
+            builder.Append("    meta l4proto { tcp, udp } th dport 53 ip6 daddr @dns_v6 accept\n");
+        builder.Append("    tcp dport 53 reject with tcp reset\n");
+        builder.Append("    udp dport 53 drop\n");
     }
 
     private static void AppendBlockRules(StringBuilder builder)

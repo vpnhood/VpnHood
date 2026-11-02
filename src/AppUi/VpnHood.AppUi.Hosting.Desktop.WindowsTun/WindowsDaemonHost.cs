@@ -17,10 +17,10 @@ internal sealed class WindowsDaemonHost : IAppDaemonHost
     private readonly IdleUpdateInstaller? _idleUpdateInstaller;
     private readonly MissedUpdateRetrier? _missedUpdateRetrier;
 
-    public WindowsDaemonHost(AppInitParams initParams, string storagePath, string? lockFolderPath, bool isService)
+    public WindowsDaemonHost(AppInitParams initParams, VpnHoodWindowsAppPaths appPaths, bool isService)
     {
         // AnotherInstanceIsRunningException passes through as it is: its message is the answer.
-        _windowsApp = VpnHoodWindowsApp.Init(initParams, storagePath, lockFolderPath);
+        _windowsApp = VpnHoodWindowsApp.Init(initParams, appPaths);
         if (isService && VpnHoodApp.Instance.Services.UpdaterService?.UpdaterProvider is DesktopAppUpdaterProvider updater) {
             _idleUpdateInstaller =
                 new IdleUpdateInstaller(VpnHoodApp.Instance, updater, IdleUpdateInstaller.DefaultIdleWait);

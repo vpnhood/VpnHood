@@ -16,11 +16,10 @@ internal sealed class LinuxDaemonHost : IAppDaemonHost
     private readonly IdleUpdateInstaller? _idleUpdateInstaller;
     private readonly MissedUpdateRetrier? _missedUpdateRetrier;
 
-    public LinuxDaemonHost(AppInitParams initParams, string storagePath, string lockFolderPath, bool isService,
-        string? killSwitchOffScriptPath)
+    public LinuxDaemonHost(AppInitParams initParams, VpnHoodLinuxAppPaths appPaths, bool isService)
     {
         // AnotherInstanceIsRunningException passes through as it is: its message is the answer.
-        _linuxApp = VpnHoodLinuxApp.Init(initParams, storagePath, lockFolderPath, killSwitchOffScriptPath);
+        _linuxApp = VpnHoodLinuxApp.Init(initParams, appPaths);
         if (isService && VpnHoodApp.Instance.Services.UpdaterService?.UpdaterProvider is DesktopAppUpdaterProvider updater) {
             _idleUpdateInstaller =
                 new IdleUpdateInstaller(VpnHoodApp.Instance, updater, IdleUpdateInstaller.DefaultIdleWait);

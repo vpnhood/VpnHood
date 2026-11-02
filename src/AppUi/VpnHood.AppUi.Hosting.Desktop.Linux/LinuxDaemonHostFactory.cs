@@ -1,4 +1,5 @@
 using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.Linux;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Linux.Utils;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
@@ -17,14 +18,22 @@ public sealed class LinuxDaemonHostFactory(AppInitParams initParams, LinuxDeskto
                 "The VPN service must run as root: it creates the tunnel device and edits the routing table. " +
                 $"Try: sudo systemctl start {paths.InstanceName}");
 
-        return new LinuxDaemonHost(initParams, paths.StoragePath, lockFolderPath: paths.RuntimePath, isService: true,
-            killSwitchOffScriptPath: paths.KillSwitchOffScriptPath);
+        var appPaths = new VpnHoodLinuxAppPaths {
+            StoragePath = paths.StoragePath,
+            LockFolderPath = paths.RuntimePath,
+            KillSwitchOffScriptPath = paths.KillSwitchOffScriptPath
+        };
+        return new LinuxDaemonHost(initParams, appPaths, isService: true);
     }
 
     // Its lock in its own storage: a run as the person cannot write the service's folder.
     public IAppDaemonHost CreateDev(string storagePath)
     {
-        return new LinuxDaemonHost(initParams, storagePath, lockFolderPath: storagePath, isService: false,
-            killSwitchOffScriptPath: paths.KillSwitchOffScriptPath);
+        var appPaths = new VpnHoodLinuxAppPaths {
+            StoragePath = storagePath,
+            LockFolderPath = storagePath,
+            KillSwitchOffScriptPath = paths.KillSwitchOffScriptPath
+        };
+        return new LinuxDaemonHost(initParams, appPaths, isService: false);
     }
 }

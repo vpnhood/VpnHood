@@ -34,7 +34,8 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         // instead (VpnHood.AppUi.Hosting.Desktop.WindowsTun), its window unelevated. It keeps no tray, so
         // the app ends with its window.
         var storagePath = initParams.ResolveStoragePath();
-        VpnHoodWindowsApp.Init(initParams, storagePath, lockFolderPath: storagePath);
+        VpnHoodWindowsApp.Init(initParams,
+            new VpnHoodWindowsAppPaths { StoragePath = storagePath, LockFolderPath = storagePath });
 
         // initialize VpnHoodApp
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;

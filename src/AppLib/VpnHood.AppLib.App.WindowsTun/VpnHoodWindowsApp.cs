@@ -22,25 +22,23 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
         _app = VpnHoodApp.Init(new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode), appOptions);
     }
 
-    // lockFolderPath: where a run as the person keeps its single-instance lock, a folder of their own
-    // (InstanceLockFile); null for the service, whose lock only administrators can reach.
-    public static VpnHoodWindowsApp Init(AppInitParams initParams, string storagePath, string? lockFolderPath)
+    public static VpnHoodWindowsApp Init(AppInitParams initParams, VpnHoodWindowsAppPaths paths)
     {
         // this process already holds the lock; taking it again would call itself another instance
         if (IsInit)
             return Instance;
 
-        _singleInstanceLock = lockFolderPath is null
+        _singleInstanceLock = paths.LockFolderPath is null
             ? ServiceInstanceLock.Take(initParams.AppId)
-            : InstanceLockFile.Take(lockFolderPath, initParams.AppId);
+            : InstanceLockFile.Take(paths.LockFolderPath, initParams.AppId);
 
-        Directory.CreateDirectory(storagePath);
+        Directory.CreateDirectory(paths.StoragePath);
         var context = new AppOptionsContext {
             AppId = initParams.AppId,
             AppName = initParams.AppName,
             AppVersion = initParams.AppVersion,
-            StoragePath = storagePath,
-            NoBackupStoragePath = storagePath, // nothing backs up a desktop app's data
+            StoragePath = paths.StoragePath,
+            NoBackupStoragePath = paths.StoragePath, // nothing backs up a desktop app's data
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };
 

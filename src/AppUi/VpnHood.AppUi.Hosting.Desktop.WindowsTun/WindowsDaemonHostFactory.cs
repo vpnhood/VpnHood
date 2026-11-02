@@ -1,4 +1,5 @@
 using VpnHood.AppLib.App;
+using VpnHood.AppLib.App.WindowsTun;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.AppUi.Hosting.Desktop.WindowsTun.Utils;
@@ -16,8 +17,8 @@ public sealed class WindowsDaemonHostFactory(AppInitParams initParams, WindowsDe
                 "The VPN service must run as a service or as an administrator: it creates the network adapter and edits the routes. " +
                 $"Try: {paths.CommandName} service start");
 
-        var storagePath = WindowsServiceStorage.Prepare(paths);
-        var daemonHost = new WindowsDaemonHost(initParams, storagePath, lockFolderPath: null, isService: true);
+        var appPaths = new VpnHoodWindowsAppPaths { StoragePath = WindowsServiceStorage.Prepare(paths) };
+        var daemonHost = new WindowsDaemonHost(initParams, appPaths, isService: true);
 
         // the windows and trays an update's setup closed, open again now that the service is up to answer them
         WindowsUiRelaunch.Run(paths);
@@ -27,6 +28,7 @@ public sealed class WindowsDaemonHostFactory(AppInitParams initParams, WindowsDe
     // Its lock in its own storage: a run as the person cannot reach the service's.
     public IAppDaemonHost CreateDev(string storagePath)
     {
-        return new WindowsDaemonHost(initParams, storagePath, lockFolderPath: storagePath, isService: false);
+        var appPaths = new VpnHoodWindowsAppPaths { StoragePath = storagePath, LockFolderPath = storagePath };
+        return new WindowsDaemonHost(initParams, appPaths, isService: false);
     }
 }

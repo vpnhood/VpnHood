@@ -24,28 +24,23 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
         _app = VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath), appOptions);
     }
 
-    // lockFolderPath: where the single-instance lock lives (InstanceLockFile), which the host names -
-    // the service's folder under /run, which only root may write, so nobody takes the lock first, or a
-    // debugger's run's own storage. Not an abstract socket name, which anyone may take first.
-    // killSwitchOffScriptPath: the install's way out of the kill switch's block (AppOptions.KillSwitchOffScriptPath),
-    // which the host knows; null outside an install.
-    public static VpnHoodLinuxApp Init(AppInitParams initParams, string storagePath, string lockFolderPath,
-        string? killSwitchOffScriptPath)
+    public static VpnHoodLinuxApp Init(AppInitParams initParams, VpnHoodLinuxAppPaths paths)
     {
         // this process already holds the lock; taking it again would call itself another instance
         if (IsInit)
             return Instance;
 
-        _singleInstanceLock = InstanceLockFile.Take(lockFolderPath, initParams.AppId);
+        _singleInstanceLock = InstanceLockFile.Take(paths.LockFolderPath, initParams.AppId);
 
         // its owner's alone, as the installer makes it; one made here is made so too
-        Directory.CreateDirectory(storagePath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        Directory.CreateDirectory(paths.StoragePath,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         var context = new AppOptionsContext {
             AppId = initParams.AppId,
             AppName = initParams.AppName,
             AppVersion = initParams.AppVersion,
-            StoragePath = storagePath,
-            NoBackupStoragePath = storagePath, // nothing backs up a desktop app's data
+            StoragePath = paths.StoragePath,
+            NoBackupStoragePath = paths.StoragePath, // nothing backs up a desktop app's data
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };
 
@@ -57,7 +52,7 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 
         // the service manager stops the daemon with a signal, and the tunnel must end with it
         appOptions.DisconnectOnDispose = true;
-        appOptions.KillSwitchOffScriptPath ??= killSwitchOffScriptPath;
+        appOptions.KillSwitchOffScriptPath ??= paths.KillSwitchOffScriptPath;
 
         // after the lock, so a tun of this app id is never one another of its instances is using, and before
         // the app, whose always on connects as it starts; the adapter's name as LinuxVpnService gives it

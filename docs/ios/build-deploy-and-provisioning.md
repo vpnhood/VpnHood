@@ -81,8 +81,15 @@ open "$WRAP"
 ```
 - Verify first with the "Diagnose a stale profile" commands below — both `embedded.mobileprovision`
   files must list the Mac's provisioning UDID or the launch is refused.
-- The VPN approval prompt appears in **System Settings → VPN**; extension logs are readable live in
-  Console.app (no container-pull needed).
+- The VPN approval is an alert over the app's window ("… Would Like to Add VPN Configurations", macOS
+  26), so the app's window must be on screen; extension logs are readable live in Console.app (no
+  container-pull needed).
+- An older wrapper or build output of the same bundle id stays registered with LaunchServices, and the
+  VPN service may pick ITS extension. That, and an appex PlugInKit does not know yet, fail with
+  PlugInKit `-10819` (in `neagent`'s log): unregister and delete the stale copies (`lsregister -dump |
+  grep '^path:'` lists them, `lsregister -u <path>`; `lsregister` is in
+  `/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/`),
+  then `pluginkit -a` the current appex.
 - **One-time unlock per profile generation — the Xcode shim** (proven 2026-08-24, full tunnel
   Connected on an M2): out of the box the appex will NOT spawn — AMFI vetoes it with
   `-413 No matching profile found` (watch live: `/usr/bin/log stream --predicate 'process IN
@@ -100,7 +107,7 @@ open "$WRAP"
   appex: `pluginkit -a "<wrapper>/Wrapper/<app>.app/PlugIns/<ext>.appex"` (verify with
   `pluginkit -m -v -i <ext-bundle-id>` — the shim's registration wins until swapped).
 - Extension logs on the Mac are plain files — `~/Library/GroupContainersAlias/group.<bundle-id>/
-  vpn-service/vpn.log` (+ `vpn.status`) — no container pull, `tail -f` works.
+  vpn-service-config/vpn.log` (+ `vpn.status`) — no container pull, `tail -f` works.
 - macOS has no ~52 MB jetsam ceiling — a build that runs here can still die on device; keep tuning
   against the iOS limit.
 - App Store availability on Mac is a separate, server-side switch (App Store Connect → Pricing and

@@ -13,6 +13,10 @@ It ships targeted at **Connect** (`com.vpnhood.connect.ios` + "VpnHood Connect D
 1. Open `Shim.xcodeproj` in Xcode, destination **My Mac (Designed for iPad)**, **⌘R**.
 2. When the stub window appears, press **Stop (■)** in Xcode — its debug session squats on the
    bundle id and blocks the real app's launch (`open` fails with -1712; SIGKILL won't clear it).
+   Steps 1 and 2 can run from a script in the desktop session (a `.command` file, which Terminal runs
+   there; macOS may ask once to let Terminal control Xcode): Xcode's AppleScript sets the open
+   workspace's `active run destination` to the one named "My Mac (Designed for iPad)", `run`s it, and
+   `stop`s it once the run's `status` is `running`.
 3. Delete `~/Library/Developer/Xcode/DerivedData/Shim-*`, then re-register the real appex:
    `pluginkit -a "<wrapper>/Wrapper/<app>.app/PlugIns/<ext>.appex"`
    (verify with `pluginkit -m -v -i <ext-bundle-id>`).

@@ -600,15 +600,16 @@ if [ "$withDesktop" == "y" ]; then
 	# software centre installed; Linux has no list of installed apps for a script's install to join,
 	# and an uninstall icon of its own in the app grid is clutter. Beside it the kill switch's way out,
 	# for a person whose app cannot open while the internet is blocked, under the app's name, which heads
-	# the menu (the Kill Switch page names it: FeaturePages.KillSwitchOffEntryName). pkexec asks for an
-	# administrator's password; without it both stay commands.
+	# the menu (the Kill Switch page names it: FeaturePages.KillSwitchOffEntryName), which says what it did in a
+	# notification. pkexec asks for an administrator's password; without it both stay commands. GNOME's menu
+	# shows an action an update adds only from the next sign-in (seen on Ubuntu 26.04).
 	actionLines="";
 	if command -v pkexec >/dev/null 2>&1; then
 		actionLines="Actions=KillSwitchOff;Uninstall;
 
 [Desktop Action KillSwitchOff]
 Name=Turn off kill switch
-Exec=pkexec \"$destinationPath/kill-switch-off\"
+Exec=pkexec \"$destinationPath/kill-switch-off\" -notify \"$productName\"
 
 [Desktop Action Uninstall]
 Name=Uninstall

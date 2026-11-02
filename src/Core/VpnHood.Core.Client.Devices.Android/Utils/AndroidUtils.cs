@@ -106,6 +106,22 @@ public static class AndroidUtils
     public static bool IsPhone(Context? context = null)
     {
         var ctx = context ?? Application.Context;
-        return !IsTv(ctx) && ctx.Resources?.Configuration?.SmallestScreenWidthDp < 600;
+        return !IsTv(ctx) && GetSmallestScreenWidthDp(ctx) < 600;
+    }
+
+    // An activity is measured by the largest window the display gives it, not by its own window: once
+    // upright on a folded phone, it is letterboxed when the fold opens into a tablet, and the
+    // letterbox is a phone's width, so its own size would keep it upright for good. Any other context,
+    // or an Android before 11, has only its configuration.
+    private static int? GetSmallestScreenWidthDp(Context context)
+    {
+        if (OperatingSystem.IsAndroidVersionAtLeast(30) &&
+            context is Activity { WindowManager: { } windowManager } &&
+            context.Resources?.DisplayMetrics is { } displayMetrics) {
+            var bounds = windowManager.MaximumWindowMetrics.Bounds;
+            return (int)(Math.Min(bounds.Width(), bounds.Height()) / displayMetrics.Density);
+        }
+
+        return context.Resources?.Configuration?.SmallestScreenWidthDp;
     }
 }

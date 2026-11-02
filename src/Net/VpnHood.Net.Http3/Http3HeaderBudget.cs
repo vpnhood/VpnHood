@@ -11,6 +11,7 @@ internal sealed class Http3HeaderBudget(Http3ServerOptions options)
 
     public void Append(KeyValuePair<string, string> field)
     {
+        // Kestrel counts name plus value, without the 32 bytes per field of HTTP/3's field-section size.
         var bytes = _bytes + field.Key.Length + field.Value.Length;
         Volatile.Write(ref _bytes, bytes);
         if (bytes > (long)options.MaxHeaderBytes * 2)

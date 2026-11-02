@@ -37,6 +37,7 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
         if (name.Length == 0 || value.AsSpan().ContainsAny(InvalidValueCharacters))
             Reject();
         if (name[0] == ':') {
+            // The reference accepts :protocol on any method, not only on an extended CONNECT.
             if (trailers || _regularSeen || name is not (":method" or ":scheme" or ":path" or ":authority" or ":protocol") ||
                 !_pseudo.TryAdd(name, value))
                 Reject();
@@ -44,6 +45,7 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
             return;
         }
         _regularSeen = true;
+        // The reference takes te's "trailers" case-sensitively.
         if (name.AsSpan().ContainsAnyExcept(LowerTokenCharacters) || name is "connection" or "proxy-connection" or "keep-alive" or
             "transfer-encoding" or "upgrade" || name == "te" && value != "trailers")
             Reject();

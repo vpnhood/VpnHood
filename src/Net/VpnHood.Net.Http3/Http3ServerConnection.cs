@@ -310,7 +310,8 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
         lock (_stateLock) {
             if (--_activeRequests != 0)
                 return;
-            // RC3 resumes a completed GOAWAY drain only when its accept loop next wakes.
+            // RC3 resumes a completed GOAWAY drain only when its accept loop next wakes, so no idle timer
+            // runs here; the application's connection limit bounds the connections this keeps.
             if (!_gracefulCloseRequested)
                 _idle.CancelAfter(_options.KeepAliveTimeout);
         }

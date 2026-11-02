@@ -5,6 +5,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<!-- Tests only: the server uses the public surface, as any application does. -->
 		<InternalsVisibleTo Include="VpnHood.Test" />
 		<InternalsVisibleTo Include="VpnHood.Test.KestrelParity" />
 	</ItemGroup>

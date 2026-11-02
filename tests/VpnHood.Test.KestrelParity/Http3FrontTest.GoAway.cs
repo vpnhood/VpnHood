@@ -37,8 +37,10 @@ public partial class Http3FrontTest
     {
         var keepAlive = new KestrelServerOptions().Limits.KeepAliveTimeout;
         var results = await Task.WhenAll(
-            ObserveActiveClientGoAway(Servers.ReferenceEndPoint, keepAlive, TestContext.CancellationToken),
-            ObserveActiveClientGoAway(Servers.OurEndPoint, keepAlive, TestContext.CancellationToken));
+            ObserveActiveClientGoAway(Servers.ReferenceEndPoint, keepAlive, requireAcceptWake: false,
+                cancellationToken: TestContext.CancellationToken),
+            ObserveActiveClientGoAway(Servers.OurEndPoint, keepAlive, requireAcceptWake: true,
+                cancellationToken: TestContext.CancellationToken));
         var expected = results[0];
         TestContext.WriteLine($"Reference active GOAWAY: {expected}; " +
                               $"server identifiers=[{string.Join(",", expected.ServerGoAwayIds)}].");
@@ -62,7 +64,7 @@ public partial class Http3FrontTest
     }
 
     private async Task<ActiveGoAwayObservation> ObserveActiveClientGoAway(IPEndPoint endPoint,
-        TimeSpan keepAlive, CancellationToken cancellationToken)
+        TimeSpan keepAlive, bool requireAcceptWake, CancellationToken cancellationToken)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(keepAlive + Http3Probe.Timeout + Http3Probe.Timeout);
@@ -102,19 +104,24 @@ public partial class Http3FrontTest
             var completedRequest = await ReadCompleteResponse(original, deadline.Token);
             TestContext.WriteLine($"Active GOAWAY at {endPoint}: rejected={rejectedRequest}; " +
                                   $"completed={completedRequest}; closed early={closedBeforeOriginalCompleted}.");
-            // RC3's keep-alive and request completion cannot wake an existing GOAWAY drain.
-            // Keep both critical streams open past keep-alive before providing a new accept event.
+            // The reference may close after the accepted request drains, or wait for an accept-loop
+            // wake. Require our connection to keep the drain alive until that wake in either case.
             var drainedAt = Stopwatch.GetTimestamp();
             var observation = Task.Delay(keepAlive + TimeSpan.FromSeconds(2), deadline.Token);
             var first = await Task.WhenAny(close, observation);
             deadline.Token.ThrowIfCancellationRequested();
-            Assert.AreSame(observation, first,
-                $"{endPoint}: drained connection closed without another accept: {DescribeClose(close)}.");
-            await observation;
+            if (requireAcceptWake)
+                Assert.AreSame(observation, first,
+                    $"{endPoint}: drained connection closed without another accept: {DescribeClose(close)}.");
+            if (first == observation)
+                await observation;
             var idleElapsed = Stopwatch.GetElapsedTime(drainedAt);
-            Assert.IsFalse(close.IsCompleted, $"{endPoint}: drained connection closed at keep-alive.");
-            Assert.IsFalse(frames.IsCompleted, $"{endPoint}: server control stream ended during the drain.");
-            await WakeGoAwayAcceptLoop(connection, deadline.Token);
+            if (requireAcceptWake)
+                Assert.IsFalse(close.IsCompleted, $"{endPoint}: drained connection closed at keep-alive.");
+            if (!close.IsCompleted) {
+                Assert.IsFalse(frames.IsCompleted, $"{endPoint}: server control stream ended during the drain.");
+                await WakeGoAwayAcceptLoop(connection, deadline.Token);
+            }
             await Task.WhenAll(close, frames);
             return new ActiveGoAwayObservation(rejectedRequest, completedRequest, await close, await frames,
                 closedBeforeOriginalCompleted, idleElapsed);

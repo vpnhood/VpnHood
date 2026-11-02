@@ -19,7 +19,12 @@ internal sealed class Http3StreamReader(Stream stream, bool allowBufferGrowth = 
     private long _availableBytesRead;
     private long _availableBytesLimit = long.MaxValue;
     private CancellationTokenSource? _readCancellation;
+    private readonly Lock _readStateLock = new();
     private bool _readingStopped;
+    private bool _responseSubmitted;
+    private bool _responseComplete;
+    private bool _nativeReadPending;
+    private int _readCompletionStarted;
     private byte[] Buffer => _buffer ??= ArrayPool<byte>.Shared.Rent(BufferSize);
     public bool IsCritical { get; set; }
 
@@ -38,14 +43,48 @@ internal sealed class Http3StreamReader(Stream stream, bool allowBufferGrowth = 
         _readCancellation?.TryCancel();
     }
 
+    public void ResponseSubmitted()
+    {
+        // One read already in flight may deliver the burst that raced the final response. New
+        // reads may consume immediately available bytes, but never wait for later peer input.
+        Volatile.Write(ref _responseSubmitted, true);
+    }
+
     public void CompleteResponse()
     {
+        bool stopPendingRead;
+        lock (_readStateLock) {
+            _responseComplete = true;
+            stopPendingRead = _nativeReadPending;
+        }
+        // Kestrel finishes the frames in its current pipe buffer after application completion.
+        // Keep reading bytes the transport returns synchronously, but never wait for new input.
+        if (stopPendingRead)
+            AbortInputWithNoError();
+    }
+
+    public void FinishInspection()
+    {
+        // Reaching the byte budget has no pending read to wake. Once the parser and response have
+        // joined successfully, ask a peer with unfinished input to stop sending.
+        if (!_endOfStream)
+            AbortInputWithNoError();
+    }
+
+    private void AbortInputWithNoError()
+    {
         var quicStream = quic ?? throw new InvalidOperationException("The reader has no native stream control.");
+        if (Interlocked.Exchange(ref _readCompletionStarted, 1) != 0)
+            return;
         // Native abort can resume the parser inline. Publish completion first, then send H3_NO_ERROR
         // before token cancellation can make the transport use its default reset code.
         Volatile.Write(ref _readingStopped, true);
-        quicStream.AbortRead(Http3Protocol.NoError);
-        _readCancellation?.TryCancel();
+        try {
+            quicStream.AbortRead(Http3Protocol.NoError);
+        }
+        finally {
+            _readCancellation?.TryCancel();
+        }
     }
 
     public ValueTask<int> ReadByte(CancellationToken cancellationToken)
@@ -182,6 +221,7 @@ internal sealed class Http3StreamReader(Stream stream, bool allowBufferGrowth = 
         // Dispatch reports the protocol error before StopReading cancels native input; linking the
         // deadline here could let a transport's default cancellation reset win that race.
         var readToken = _readCancellation?.Token ?? cancellationToken;
+        var responseWasSubmitted = Volatile.Read(ref _responseSubmitted);
         var buffer = Buffer;
         if (allowBufferGrowth && _readFilledBuffer && _bufferSize < MaximumBufferSize) {
             // Only requests grow after a consumed full read. Long-lived control/QPACK streams keep
@@ -193,12 +233,28 @@ internal sealed class Http3StreamReader(Stream stream, bool allowBufferGrowth = 
         }
         try {
             var read = stream.ReadAsync(buffer.AsMemory(0, _bufferSize), readToken);
-            if (!read.IsCompleted) {
-                // The control stream uses this boundary to finish already available frame validation
-                // before acting on GOAWAY. The read stays owned here through cancellation and completion.
-                readPendingCallbacks?.OnReadPending(this);
+            var wasPending = !read.IsCompleted;
+            try {
+                if (wasPending) {
+                    bool stopPendingRead;
+                    lock (_readStateLock) {
+                        _nativeReadPending = true;
+                        stopPendingRead = responseWasSubmitted || _responseComplete;
+                    }
+                    // The control stream uses this boundary to finish already available frame
+                    // validation before acting on GOAWAY. Native completion remains owned below.
+                    readPendingCallbacks?.OnReadPending(this);
+                    if (stopPendingRead)
+                        AbortInputWithNoError();
+                }
+                _count = await read.Vhc();
             }
-            _count = await read.Vhc();
+            finally {
+                if (wasPending) {
+                    lock (_readStateLock)
+                        _nativeReadPending = false;
+                }
+            }
         }
         catch (Exception) {
             if (Volatile.Read(ref _readingStopped) && !cancellationToken.IsCancellationRequested)

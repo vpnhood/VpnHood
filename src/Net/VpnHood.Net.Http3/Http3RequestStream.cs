@@ -48,6 +48,9 @@ internal sealed class Http3RequestStream(Http3StreamReader reader, IQuicStream q
             dispatch.Fail(ex);
         }
         await dispatch.Join(cancellationToken).Vhc();
+        // A bounded inspection may end without a pending read or peer FIN. Send H3_NO_ERROR only
+        // after Join confirms that no parser error needs a different stream error code.
+        reader.FinishInspection();
     }
 
     private void StartResponse(Http3RequestHead head, CancellationToken headersToken)

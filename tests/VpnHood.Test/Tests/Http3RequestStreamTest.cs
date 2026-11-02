@@ -74,7 +74,10 @@ public class Http3RequestStreamTest
             Assert.AreEqual("example.com", responder.Request.Headers.Single(x => x.Key == ":authority").Value);
         }
         Assert.AreEqual(1, quic.CompletedWrites);
-        Assert.AreEqual(Http3Protocol.NoError, quic.ReadAbortCode);
+        if (responderCalled)
+            Assert.IsNull(quic.ReadAbortCode, "The parser consumed peer FIN on the complete request.");
+        else
+            Assert.AreEqual(Http3Protocol.NoError, quic.ReadAbortCode);
     }
 
     [TestMethod]

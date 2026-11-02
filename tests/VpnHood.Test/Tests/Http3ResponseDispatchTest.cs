@@ -27,10 +27,12 @@ public class Http3ResponseDispatchTest
         dispatch.Start(lifetime.Token);
         try {
             await output.WaitForWrite(lifetime.Token);
+            Assert.IsFalse(inspection.IsCompleted,
+                "An in-flight read remains owned while the native write is pending.");
+            output.ReleaseWrite();
             Assert.IsTrue(await inspection.WaitAsync(lifetime.Token),
                 "The pending parser must observe its stop inside the native AbortRead call.");
             Assert.IsEmpty(failures);
-            output.ReleaseWrite();
             await dispatch.Join(lifetime.Token);
 
             Assert.AreEqual("401", await ReadStatus(output.ToArray(), lifetime.Token));
@@ -41,6 +43,46 @@ public class Http3ResponseDispatchTest
         }
         finally {
             output.ReleaseWrite();
+        }
+    }
+
+    [TestMethod]
+    public async Task An_inflight_hard_trailer_overrun_remains_visible_while_the_native_write_is_pending()
+    {
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        lifetime.CancelAfter(TimeSpan.FromSeconds(5));
+        using var output = new Http3PendingWriteStream(lifetime.Token);
+        var quic = new Http3RecordingQuicStream(output);
+        // Two trailer fields follow three initial fields. Only the final trailer exceeds the
+        // hard count of four. Its native read starts before response submission and completes
+        // while the final response write is still pending.
+        byte[] trailers = [0, 0, 0x21, (byte)'x', 0, 0x21, (byte)'x', 0];
+        using var source = new Http3GatedReadStream();
+        await using var reader = new Http3StreamReader(source, quic: quic);
+        reader.BeginBodyInspection(64 * 1024);
+        var options = new Http3ServerOptions { MaxHeaderCount = 2 };
+        var budget = new Http3HeaderBudget(options);
+        for (var i = 0; i < 3; i++)
+            budget.Append(new KeyValuePair<string, string>("header", ""));
+
+        var section = Http3Qpack.ReadSection(reader, trailers.Length, null, options, budget, lifetime.Token);
+        await source.WaitForRead(lifetime.Token);
+        var write = quic.WriteFinal(new byte[] { 1 }, lifetime.Token).AsTask();
+        try {
+            await output.WaitForWrite(lifetime.Token);
+            reader.ResponseSubmitted();
+            source.Release(trailers);
+            var error = await Assert.ThrowsExactlyAsync<Http3ProtocolException>(() => section);
+
+            Assert.AreEqual(Http3Protocol.MessageError, error.ErrorCode);
+            Assert.IsFalse(write.IsCompleted, "Parsing must not wait for native response completion.");
+            Assert.IsNull(quic.ReadAbortCode, "Already available bytes must not be discarded at submission.");
+        }
+        finally {
+            source.Release(trailers);
+            output.ReleaseWrite();
+            await write.WaitAsync(lifetime.Token);
+            reader.CompleteResponse();
         }
     }
 
@@ -326,6 +368,34 @@ public class Http3ResponseDispatchTest
     }
 
     [TestMethod]
+    public async Task A_hard_trailer_error_after_native_fin_still_aborts_before_the_parser_joins()
+    {
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        lifetime.CancelAfter(TimeSpan.FromSeconds(5));
+        using var output = new MemoryStream();
+        var quic = new Http3RecordingQuicStream(output);
+        var failures = new List<Exception>();
+        var options = new Http3ServerOptions();
+        await using var input = new Http3StreamReader(Stream.Null, quic: quic);
+        await using var dispatch = new Http3ResponseDispatch(quic, new Http3RecordingResponder(),
+            new Http3Request([], null), new Http3HeaderBudget(options), options, error => {
+                quic.AbortWrite(((Http3ProtocolException)error).ErrorCode);
+                failures.Add(error);
+            }, input, CreateHeaders(options));
+
+        dispatch.Start(lifetime.Token);
+        await dispatch.ResponseCompleted.WaitAsync(lifetime.Token);
+        var error = new Http3ProtocolException(Http3Protocol.RequestRejected, connectionError: false);
+        dispatch.Fail(error);
+
+        Assert.AreSame(error, await Assert.ThrowsExactlyAsync<Http3ProtocolException>(
+            () => dispatch.Join(lifetime.Token)));
+        Assert.AreSame(error, failures.Single());
+        Assert.AreEqual(Http3Protocol.RequestRejected, quic.WriteAbortCode);
+        Assert.AreEqual(1, quic.CompletedWrites);
+    }
+
+    [TestMethod]
     public async Task A_joined_dispatch_does_not_accept_a_late_connection_error()
     {
         using var output = new MemoryStream();
@@ -351,15 +421,20 @@ public class Http3ResponseDispatchTest
         lifetime.CancelAfter(TimeSpan.FromSeconds(5));
         using var headers = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         using var output = new MemoryStream();
+        using var source = new Http3PendingReadStream();
         var quic = new Http3RecordingQuicStream(output);
         var failures = new List<Exception>();
         var options = new Http3ServerOptions();
-        await using var input = new Http3StreamReader(Stream.Null, quic: quic);
+        await using var input = new Http3StreamReader(source, quic: quic);
+        input.BeginBodyInspection(options.MaxBodyInspectionBytes);
+        var read = input.ReadByte(lifetime.Token).AsTask();
+        await source.WaitForRead(lifetime.Token);
         await using var dispatch = new Http3ResponseDispatch(quic, new Http3RecordingResponder(),
             new Http3Request([], null), new Http3HeaderBudget(options), options, failures.Add, input, CreateHeaders(options));
 
         dispatch.Start(headers.Token);
         await dispatch.Join(lifetime.Token);
+        await Assert.ThrowsExactlyAsync<Http3InspectionCompleteException>(() => read);
         var response = output.ToArray();
         await headers.CancelAsync();
         await dispatch.Join(lifetime.Token);

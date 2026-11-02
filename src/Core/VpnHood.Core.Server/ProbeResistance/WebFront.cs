@@ -29,7 +29,9 @@ internal static class WebFront
         if (start < 0)
             return null;
 
-        using var headersCts = new CancellationTokenSource(Heartbeat(RequestHeadersTimeout));
+        // Kestrel starts this deadline from its last heartbeat, not from the instant it reads a byte.
+        // Use one heartbeat of grace so a reused connection does not wait an extra rounded second.
+        using var headersCts = new CancellationTokenSource(RequestHeadersTimeout + TimeSpan.FromSeconds(1));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(headersCts.Token, cancellationToken);
         try {
             return await HttpRequestHeadReader.Read(stream, linkedCts.Token,

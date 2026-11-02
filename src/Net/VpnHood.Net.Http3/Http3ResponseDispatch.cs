@@ -20,6 +20,11 @@ internal sealed class Http3ResponseDispatch(IQuicStream quic,
     private bool _aborting;
     private bool _joined;
 
+    // The application/native-write task can finish before the parser. The owner still calls Join
+    // after parsing so protocol errors discovered in that interval are not lost.
+    internal Task ResponseCompleted => _responseTask ??
+        throw new InvalidOperationException("The response has not been queued.");
+
     public void Start(CancellationToken cancellationToken)
     {
         if (_responseTask != null)
@@ -86,10 +91,10 @@ internal sealed class Http3ResponseDispatch(IQuicStream quic,
                     write = quic.WriteFinal(bytes, cancellationToken).AsTask();
                 else
                     quic.CompleteWrites();
-                // Application completion ends request-body inspection. The transport still owns
-                // its submitted bytes until the write is joined below; these are separate events.
+                // Submission starts draining bytes already available to the parser. A pending read
+                // still stops at once; the native write remains owned until it is joined below.
             }
-            reader.CompleteResponse();
+            reader.ResponseSubmitted();
         }
         catch (OperationCanceledException ex) {
             Fail(ex);
@@ -108,7 +113,25 @@ internal sealed class Http3ResponseDispatch(IQuicStream quic,
             catch (Exception ex) {
                 Fail(ex);
             }
-            Volatile.Write(ref _completed, true);
+            bool completeReader;
+            lock (_stateLock)
+                completeReader = !_aborting;
+            if (completeReader) {
+                // A completed native write releases a stalled read promptly. The parser may still
+                // consume bytes returned synchronously until it reaches the next pending read.
+                try {
+                    reader.CompleteResponse();
+                }
+                catch (OperationCanceledException ex) {
+                    Fail(ex);
+                }
+                catch (Exception ex) {
+                    Fail(ex);
+                }
+            }
+            // A final trailer error remains eligible until the reader has actually stopped.
+            lock (_stateLock)
+                _completed = true;
         }
     }
 
@@ -126,10 +149,11 @@ internal sealed class Http3ResponseDispatch(IQuicStream quic,
     {
         TaskCompletionSource completion;
         lock (_stateLock) {
-            // FIN ends this response, not the connection. Already buffered framing can still reveal
-            // a connection error before the parser joins us. Deadlines cannot undo a completed write.
+            // Native FIN can finish before the parser reaches the last buffered trailer field.
+            // Parser errors remain eligible until Join seals the request; a later deadline cannot
+            // undo the already completed response.
             if (_joined || _failure != null ||
-                _completed && error is not Http3ProtocolException { ConnectionError: true })
+                _completed && error is not (Http3ProtocolException or Http3QpackException or EndOfStreamException))
                 return;
             _failure = error;
             _aborting = true;

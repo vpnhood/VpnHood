@@ -34,14 +34,13 @@ dotnet test tests/VpnHood.Test.KestrelParity --no-restore -m:4 --results-directo
 
 The parity suite runs both TCP and HTTP/3 against the installed Kestrel reference. Its reports name
 that version; retain it with the results. Every burst row defaults to 200 samples, including
-DATA-after-trailers. Post-header scheduling is implemented and built locally. Its parity rows have
-not been run on this code and must be run before release.
-
-DATA-after-trailers remains an open difference: ours answers 401 more often than the reference.
-Post-header distribution acceptance remains open. Run and report all twelve
+DATA-after-trailers. On the 2026-11-01 candidate, the full suite passed 221/222 cases:
+all 669 TCP probes, DATA-after-trailers and both GOAWAY cases passed, but the 65,537-byte trailer
+burst exceeded the fixed 22-point distribution bound (431: reference 65/200, ours 117/200).
+Stage 5 distribution acceptance remains open. Run and report all twelve
 `Post_header_burst_distributions_match_reference_shares` rows and existing trailer-distribution rows
-for the release candidate. Copy the reports under `$env:TMP/vh/VpnHood.Test.KestrelParity` before a
-filtered retry overwrites them.
+for the final release candidate, without changing the sample count or bounds. Copy the reports under
+`$env:TMP/vh/VpnHood.Test.KestrelParity` before a filtered retry overwrites them.
 
 For each failure, distinguish a production difference, a test failure and a host setup failure using
 its captured output. An isolated retry is additional evidence; keep the original failure in the report.
@@ -89,8 +88,8 @@ does not prove a deployed server includes these changes: record the source commi
 | Padding captures | Capture outer TLS records with padding off/on in both directions, on fresh and reused connections, on Android, iOS and deployment platforms. Confirm first-record effects using the actual TLS implementations. |
 | Padding bandwidth | Measure added bytes across realistic page loads and calibrate the experimental ranges before broad enablement. Keep `StartPadding` off until that evidence is accepted. |
 
-The HTTP/3 post-header scheduler's parity rows must be run before release; the DATA-after-trailers
-difference remains open alongside direct QUIC deployment checks.
+The 65,537-byte trailer distribution must pass before release, alongside the direct QUIC deployment
+checks and native device checks.
 A successful direct QUIC tunnel does not establish parity for anonymous requests. Automatic Alt-Svc remains off;
 carrying the tunnel over standard HTTP/3 through web frontends remains future work.
 

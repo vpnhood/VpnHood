@@ -43,6 +43,79 @@ public class Http3StreamReaderTest
     }
 
     [TestMethod]
+    public async Task A_new_pending_read_after_response_submission_stops_without_waiting_for_peer_input()
+    {
+        using var source = new Http3PendingReadStream();
+        var quic = new Http3RecordingQuicStream(Stream.Null);
+        await using var reader = new Http3StreamReader(source, quic: quic);
+        reader.BeginBodyInspection(64 * 1024);
+        reader.ResponseSubmitted();
+
+        await Assert.ThrowsExactlyAsync<Http3InspectionCompleteException>(() =>
+            reader.ReadByte(TestContext.CancellationToken).AsTask());
+
+        Assert.IsTrue(source.CancellationObserved);
+        Assert.IsTrue(source.ReadCompleted);
+        Assert.AreEqual(Http3Protocol.NoError, quic.ReadAbortCode);
+    }
+
+    [TestMethod]
+    public async Task A_completed_response_still_inspects_synchronously_available_bytes()
+    {
+        // The second byte is in a new native read, as a trailer field may be after a full buffer.
+        using var source = new MemoryStream(new byte[4097]);
+        var quic = new Http3RecordingQuicStream(Stream.Null);
+        await using var reader = new Http3StreamReader(source, quic: quic);
+        reader.BeginBodyInspection(64 * 1024);
+        Assert.AreEqual(4096, await reader.DiscardSome(4096, TestContext.CancellationToken));
+
+        reader.ResponseSubmitted();
+        reader.CompleteResponse();
+
+        Assert.AreEqual(0, await reader.ReadByte(TestContext.CancellationToken));
+        Assert.AreEqual(-1, await reader.ReadByte(TestContext.CancellationToken));
+        reader.FinishInspection();
+        Assert.IsNull(quic.ReadAbortCode, "FIN was consumed without a pending native read.");
+    }
+
+    [TestMethod]
+    public async Task Exhausted_inspection_budget_still_aborts_unfinished_input()
+    {
+        using var source = new MemoryStream([1, 2]);
+        var quic = new Http3RecordingQuicStream(Stream.Null);
+        await using var reader = new Http3StreamReader(source, quic: quic);
+        reader.BeginBodyInspection(1);
+        Assert.AreEqual(1, await reader.ReadByte(TestContext.CancellationToken));
+        await Assert.ThrowsExactlyAsync<Http3ReadBudgetExceededException>(() =>
+            reader.ReadByte(TestContext.CancellationToken).AsTask());
+
+        reader.ResponseSubmitted();
+        reader.CompleteResponse();
+        reader.FinishInspection();
+
+        Assert.AreEqual(Http3Protocol.NoError, quic.ReadAbortCode);
+    }
+
+    [TestMethod]
+    public async Task A_completed_response_aborts_the_next_pending_native_read()
+    {
+        using var source = new Http3PendingReadStream();
+        var quic = new Http3RecordingQuicStream(Stream.Null);
+        await using var reader = new Http3StreamReader(source, quic: quic);
+        reader.BeginBodyInspection(64 * 1024);
+        reader.ResponseSubmitted();
+        reader.CompleteResponse();
+        Assert.IsNull(quic.ReadAbortCode, "A completed response must wait for the next native read boundary.");
+
+        await Assert.ThrowsExactlyAsync<Http3InspectionCompleteException>(() =>
+            reader.ReadByte(TestContext.CancellationToken).AsTask());
+
+        Assert.IsTrue(source.CancellationObserved);
+        Assert.IsTrue(source.ReadCompleted);
+        Assert.AreEqual(Http3Protocol.NoError, quic.ReadAbortCode);
+    }
+
+    [TestMethod]
     public async Task Stopping_inspection_translates_cancellation_during_native_read_setup()
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
@@ -93,4 +166,5 @@ public class Http3StreamReaderTest
 
         CollectionAssert.AreEqual(new[] { 4096, nextReadSize }, source.ReadSizes.ToArray());
     }
+
 }

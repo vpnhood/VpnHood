@@ -140,8 +140,10 @@ The response dispatch joins its writes and abort callbacks during asynchronous d
 request owner releases the stream. A protocol abort precedes native I/O cancellation so cancellation
 cannot replace the intended error code.
 
-Application completion stops pending/future reads; already buffered bytes remain eligible for parsing.
-The 64 KB inspection budget also bounds a peer that never pauses. The pooled request reader starts
+Response submission stops a newly pending read; a read already in flight may finish while the native
+response write is pending. After that write completes, the parser can still consume bytes returned
+without waiting, then aborts the first pending read with H3_NO_ERROR. Inspection also closes unfinished
+input after its 64 KB byte budget. The pooled request reader starts
 at 4 KB and grows to 16 KB only after receiving and consuming a full buffer; control and QPACK readers
 stay at 4 KB. A large advertised frame length does not reserve a large buffer. Buffered QPACK names
 and values decode in place, with bounded incremental decoding for fragmented fields. Authenticated
@@ -154,10 +156,11 @@ defaults to 200 samples. Separate 500-stream tests check cleanup and reuse. The 
 vary with host and load; the field-count hard-limit row checks only outcome presence because its
 reset share varies widely.
 
-Post-header scheduling is implemented and built locally. Its parity rows have not been run on this
-code and must be run before release. DATA-after-trailers remains an open difference: ours answers
-401 more often than the reference. Post-header distribution acceptance remains open. GOAWAY drain
-is compared without an artificial wake-up.
+Post-header scheduling is implemented and tested locally. On the 2026-11-01 candidate,
+the full reference suite passed 221/222 cases and all 669 TCP probes. The remaining failure is the
+65,537-byte trailer burst: the reference returned 431 on 65/200 requests and ours on 117/200,
+outside the fixed 22-point bound. DATA-after-trailers and both GOAWAY cases passed in that run.
+Stage 5 distribution acceptance remains open; rerun the full suite on the final source before release.
 Native Android/iOS device interoperability and memory measurements remain release checks. The
 [release checklist](ip-blocking-release.md) covers full-suite validation, package/dependent-reference
 checks and the end-user documentation to publish alongside the enforcing server release.

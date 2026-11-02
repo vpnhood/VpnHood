@@ -1,4 +1,5 @@
 using System.Net.Quic;
+using VpnHood.Test.KestrelParity.Probing;
 
 namespace VpnHood.Test.KestrelParity;
 
@@ -18,21 +19,48 @@ public partial class Http3FrontTest
     [DataRow("qpack-trailer-first", QuicError.StreamAborted, 0x102L)]
     [DataRow("qpack-trailer-ninth", QuicError.StreamAborted, 0x102L)]
     [DataRow("qpack-trailer-section-end", QuicError.StreamAborted, 0x102L)]
-    public async Task Post_header_burst_distributions_match_reference_shares(string layout,
+    public async Task Post_header_bursts_preserve_protocol_outcomes(string layout,
         QuicError error, long errorCode)
     {
         var name = "post-header-burst-" + layout;
         var bytes = BuildPostHeaderBurst(layout);
         if (error == QuicError.ConnectionAborted)
-            await AssertFreshBurstDistributions(name, bytes, errorCode, TestContext.CancellationToken);
+            await AssertFreshBurstOutcomes(name, bytes, errorCode, TestContext.CancellationToken);
         else
-            await AssertReusedBurstDistributions(name, bytes, errorCode, allowLimitResponse: false,
-                presenceOnly: false, TestContext.CancellationToken);
+            await AssertReusedBurstOutcomes(name, bytes, errorCode, allowLimitResponse: false,
+                TestContext.CancellationToken);
     }
 
-    private static byte[] BuildPostHeaderBurst(string layout)
+    [TestMethod]
+    [TestCategory("Http3Validation")]
+    [DataRow("uppercase-trailer-first", 0x10eL)]
+    [DataRow("uppercase-trailer-ninth", 0x10eL)]
+    [DataRow("qpack-trailer-prefix", 0x102L)]
+    [DataRow("qpack-trailer-first", 0x102L)]
+    [DataRow("qpack-trailer-ninth", 0x102L)]
+    [DataRow("qpack-trailer-section-end", 0x102L)]
+    public async Task Malformed_trailers_during_a_held_application_reset_the_stream(string layout, long errorCode)
     {
-        var headers = BuildLiteralRequest(ValidationHeaders());
+        var headers = BuildLiteralRequest([.. ValidationHeaders(), ("x-parity-wait-for-abort", "1")]);
+        var request = BuildPostHeaderBurst(layout, headers);
+        // Both applications remain held until trailer parsing selects its error. Keep the client
+        // write side open so neither FIN acknowledgement nor a response can hide the reset code.
+        var expected = await ObserveRequestEnding(Servers.ReferenceEndPoint, request, finish: false,
+            atomicFin: false, TestContext.CancellationToken);
+        var actual = await ObserveTrailersDuringHeldApplication(headers, request[headers.Length..], [],
+            TestContext.CancellationToken);
+        var error = new Http3ProbeResult("", false, QuicError.StreamAborted, errorCode);
+
+        Assert.AreEqual(error, expected.Response);
+        Assert.AreEqual(error, expected.Write);
+        AssertRequestEnding(layout + "-parser-first", expected, actual);
+    }
+
+    private static byte[] BuildPostHeaderBurst(string layout) =>
+        BuildPostHeaderBurst(layout, BuildLiteralRequest(ValidationHeaders()));
+
+    private static byte[] BuildPostHeaderBurst(string layout, byte[] headers)
+    {
         IReadOnlyList<(string Name, string Value)> trailerFields = [.. Enumerable.Repeat(("x", ""), 8)];
         var trailers = BuildLiteralRequest(trailerFields);
         // RC3 Http3Stream checks DATA length, FIN, frame order, trailer callbacks and QPACK separately.

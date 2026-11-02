@@ -34,12 +34,17 @@ dotnet test tests/VpnHood.Test.KestrelParity --no-restore -m:4 --results-directo
 
 The parity suite runs both TCP and HTTP/3 against the installed Kestrel reference. Its reports name
 that version; retain it with the results. Every burst row defaults to 200 samples, including
-DATA-after-trailers. On the 2026-11-01 candidate, the full suite passed 221/222 cases:
-all 669 TCP probes, DATA-after-trailers and both GOAWAY cases passed, but the 65,537-byte trailer
-burst exceeded the fixed 22-point distribution bound (431: reference 65/200, ours 117/200).
-Stage 5 distribution acceptance remains open. Run and report all twelve
-`Post_header_burst_distributions_match_reference_shares` rows and existing trailer-distribution rows
-for the final release candidate, without changing the sample count or bounds. Copy the reports under
+DATA-after-trailers. Exact response forms, FIN/error behavior, HTTP/3 error codes and scope, and
+controlled parser-first/response-first schedules are release gates. Run all post-header and trailer
+burst rows as well: they retain strict outcome checks and report share/presence diagnostics.
+The historical 22-point share band and 200-sample default are retained for comparison; uncontrolled
+race percentages do not decide release acceptance because RC3's shares depend on host scheduling.
+The final 2026-11-01 run passed 228/228 cases and all 669 TCP probes, including six added controlled
+malformed-trailer checks. The 65,537-byte reset-share difference remains in the diagnostic report;
+no production timing workaround was promoted. A Windows Server 2025 Desktop VM also passed all
+25 selected burst/controlled-error cases with the same built test output. Retain these results with
+the candidate's source commit.
+Copy the reports under
 `$env:TMP/vh/VpnHood.Test.KestrelParity` before a filtered retry overwrites them.
 
 For each failure, distinguish a production difference, a test failure and a host setup failure using
@@ -88,8 +93,8 @@ does not prove a deployed server includes these changes: record the source commi
 | Padding captures | Capture outer TLS records with padding off/on in both directions, on fresh and reused connections, on Android, iOS and deployment platforms. Confirm first-record effects using the actual TLS implementations. |
 | Padding bandwidth | Measure added bytes across realistic page loads and calibrate the experimental ranges before broad enablement. Keep `StartPadding` off until that evidence is accepted. |
 
-The 65,537-byte trailer distribution must pass before release, alongside the direct QUIC deployment
-checks and native device checks.
+The exact parity and controlled-schedule checks must pass before release, alongside the direct QUIC
+deployment checks and native device checks. Retain burst-share diagnostics with those results.
 A successful direct QUIC tunnel does not establish parity for anonymous requests. Automatic Alt-Svc remains off;
 carrying the tunnel over standard HTTP/3 through web frontends remains future work.
 

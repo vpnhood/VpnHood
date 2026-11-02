@@ -523,33 +523,4 @@ public class AlwaysOnTest : TestAppBase
 
         throw new TimeoutException("Always on did not wait to try again.");
     }
-
-    // A null adapter the test breaks: from then on each read fails, until the adapter stops itself on the
-    // errors and tells its owner (IVpnAdapter.Failed), as one whose interface went does.
-    private sealed class BreakableVpnAdapter() : NullVpnAdapter(autoDisposePackets: true, blocking: false)
-    {
-        private readonly ManualResetEventSlim _brokenEvent = new(false);
-
-        public void Break()
-        {
-            _brokenEvent.Set();
-        }
-
-        protected override void WaitForTunRead()
-        {
-            _brokenEvent.Wait();
-        }
-
-        protected override bool ReadPacket(byte[] buffer)
-        {
-            return _brokenEvent.IsSet ? throw new IOException("The test broke the adapter.") : false;
-        }
-
-        protected override void DisposeManaged()
-        {
-            _brokenEvent.Set(); // the reader's wait ends; its run is over by now
-            base.DisposeManaged();
-            _brokenEvent.Dispose();
-        }
-    }
 }

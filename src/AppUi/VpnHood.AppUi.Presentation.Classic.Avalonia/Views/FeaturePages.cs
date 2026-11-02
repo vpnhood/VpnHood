@@ -67,8 +67,10 @@ public static class FeaturePages
     private const string KillSwitchOffEntryName = "Turn off kill switch";
 
     // the app's own switch where the app keeps a kill switch itself (a desktop's), with the way out a person needs
-    // if the app cannot open while the internet is blocked (owner, 2026-10-31), and the block kept while
-    // disconnected as an option of it; else the steps to the device's setting (Android's)
+    // if the app cannot open while the internet is blocked, and the block kept while disconnected as an option of
+    // it; else the steps to the device's setting (Android's). No button for the way out: the window reads
+    // everything from the service, so it does not open while the service is down. Linux's names the command too,
+    // as the right-click action is there only where pkexec is.
     public static FeaturePageView KillSwitch(MainView host)
     {
         var features = VhApp.Features;

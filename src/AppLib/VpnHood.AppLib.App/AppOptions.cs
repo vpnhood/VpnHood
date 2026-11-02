@@ -113,7 +113,7 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     public AppAlwaysOnOptions AlwaysOnOptions { get; set; } = new();
 
     // The installer's script that lifts the kill switch's block with neither the service nor the app's exe: a
-    // person's way out when the app cannot run at all (owner, 2026-10-31: "we don't want the user to get stuck").
+    // person's way out when the app cannot run at all, so they are never stuck behind the block.
     // Its menu entry, the command line and the uninstallers run it too. Set by the Linux platform, which knows its
     // install, for the Kill Switch page to print as a command; Windows' page names the Start menu's entry instead.
     // Null outside an install.

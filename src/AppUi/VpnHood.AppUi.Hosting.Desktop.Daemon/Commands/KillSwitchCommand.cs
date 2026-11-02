@@ -9,7 +9,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Daemon.Commands;
 // the tunnel, through an error stop, a crash and a reboot; "lockdown" keeps the block after a disconnect too
 // (UserSettings.KillSwitchLockdown). A box with no window turns them on and off here; bare, each says which.
 // "off" is also a person's way out where the service does not run: the install's script lifts the block, with
-// the switch left as it is for the service's next start (owner, 2026-10-31: the person must not get stuck).
+// the switch left as it is for the service's next start, so a person is never stuck behind the block.
 internal static class KillSwitchCommand
 {
     public static Command Create(IDesktopPlatform platform)

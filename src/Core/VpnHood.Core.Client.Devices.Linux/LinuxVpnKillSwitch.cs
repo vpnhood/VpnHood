@@ -13,21 +13,21 @@ using VpnHood.Net.VpnAdapters.LinuxTun;
 namespace VpnHood.Core.Client.Devices.Linux;
 
 // The kill switch's block on Linux: an nftables table of ours for both families (inet), replaced whole by one
-// `nft -f`, a transaction with no gap. It sits beside ufw's, firewalld's and Docker's tables, and a drop in any
-// table wins, so ours only adds drops. The output chain lets out the tunnel's interface by name (first, so a
-// tunnel packet costs one compare: the kernel runs the table for every outbound packet while the switch is on,
-// which the owner accepted for the switch, 2026-10-31), loopback, the service by its cgroup, DHCP and NDP, an
+// `nft -f`, a transaction with no gap - nft, not iptables, for one table over both families, one transaction and
+// sets for the ranges. It sits beside ufw's, firewalld's and Docker's tables, and a drop in any table wins, so ours
+// only adds drops. The output chain lets out the tunnel's interface by name (first, so a tunnel packet costs one
+// compare, and a name matches a tun made later), loopback, the service by its cgroup, DHCP and NDP, an
 // out-of-tunnel plan's resolvers, then blocks DNS - a LAN router's too - then lets out the device-level split and
-// blocks the rest. A blocked TCP connect is reset, so it fails at once: of a dropped SYN the kernel only sends
+// blocks the rest. The kernel runs the table for every outbound packet while the switch is on, a cost accepted for
+// the switch: eBPF hooks at connect would be more work and miss unconnected UDP. A blocked TCP connect is reset, so it fails at once: of a dropped SYN the kernel only sends
 // another, and the app hangs till its own timeout (seen on Ubuntu 26.04); a dropped UDP send fails at once
 // (EPERM). The forward chain does the same for forwarded traffic (Docker, libvirt), which would otherwise go
 // around it; its DNS rules too, or a container's lookups reach the LAN's router (seen with Docker on Ubuntu 26.04).
 // The kernel keeps the table through a crash, not a reboot, so a block also goes to a file that a boot unit of
-// its own loads before the network comes up (the block holds through a reboot, owner, 2026-10-31). That copy
-// leaves the service's rule out: nft resolves a cgroup when it loads the rule, and the service's is not there
-// yet; the service is let out again at its next block. The names are the SDK's, so every app built on VpnHood
-// shares the one block; the table's comment names the app whose block it is (owner: the app's own storage
-// folder, which an update keeps). Needs root: the service.
+// its own loads before the network comes up. That copy leaves the service's rule out: nft resolves a cgroup when
+// it loads the rule, and the service's is not there yet; the service is let out again at its next block. The names
+// are the SDK's, so every app built on VpnHood shares the one block; the table's comment names the app whose block
+// it is by its storage folder, which an update keeps. Needs root: the service.
 public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
 {
     private const string TableName = "vpnhood_kill_switch";

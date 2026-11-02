@@ -36,7 +36,10 @@ public static class EndPointResolver
 
     // The name asked of the network's resolvers from this process, over sockets the factory makes: under the
     // kill switch's block, which lets only the VPN service's own traffic out, the OS's resolver cannot answer,
-    // as it asks from a process of its own (Windows' DNS Client, systemd-resolved).
+    // as it asks from a process of its own (Windows' DNS Client, systemd-resolved). Keep no copy of a name's last
+    // addresses for it: a crash's redial tries the dead session's server first (ConnectedServerFile), a connect's
+    // token update brings the server's addresses, and what is left - a farm that gives names only, on a box whose
+    // only resolver is a stub other than systemd-resolved - is where a kept address is likeliest stale.
     private static async Task<IPAddress[]> ResolveByOwnResolver(string hostName, ISocketFactory socketFactory,
         CancellationToken cancellationToken)
     {

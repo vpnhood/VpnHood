@@ -5,9 +5,8 @@ param(
 	[switch]$quiet
 )
 # The kill switch's way out (WindowsVpnKillSwitch): lifts its block with neither the service nor the app's exe, for
-# a person whose app cannot open while the internet is blocked (owner, 2026-10-31: "we don't want the user to get
-# stuck"). The block is the Windows Filtering Platform's persistent provider, sublayer and filters, under keys every
-# app built on VpnHood shares, so this lifts the block whichever app put it up, as the tunnel's holder does. The
+# a person whose app cannot open while the internet is blocked, so they are never stuck behind it. The block is the
+# Windows Filtering Platform's persistent provider, sublayer and filters, under keys every app built on VpnHood shares, so this lifts the block whichever app put it up, as the tunnel's holder does. The
 # setup places it in the install root as kill-switch-off.ps1 (install-client.nsi); its Start-menu entry
 # ("<product> - Turn off kill switch"), "<command> kill-switch off" while the service does not run, and the
 # uninstaller run it. An administrator's: the block is the machine's, so a run without one asks Windows for one

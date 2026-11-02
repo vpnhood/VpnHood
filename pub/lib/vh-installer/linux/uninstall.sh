@@ -96,9 +96,9 @@ if [ -n "$pids" ]; then
 fi
 rm -rf "/run/$assemblyName";
 
-# The client's kill switch block, which outlives the app's stop by design (a crash's, a reboot's), goes with the app
-# (owner, 2026-10-31): by its way out, which needs neither the service nor the app, so a broken install's uninstall
-# lifts it too; after the service, which could put it back.
+# The client's kill switch block, which outlives the app's stop by design (a crash's, a reboot's), goes with the app:
+# by its way out, which needs neither the service nor the app, so a broken install's uninstall lifts it too; after
+# the service, which could put it back.
 if [ -x "$destinationPath/kill-switch-off" ]; then
 	"$destinationPath/kill-switch-off";
 fi

@@ -10,12 +10,12 @@ namespace VpnHood.AppLib.App.Services.KillSwitch;
 
 // The kill switch as the app keeps it, where the device has one (a desktop's IVpnKillSwitch). While a session runs,
 // the block is the VPN service's, put up at its connect; this keeps what lies around sessions. The block stays
-// through an error stop, a crash and a reboot, and only a person's disconnect lifts it, or the switch turned off
-// (owner, 2026-10-31: "the block should stay until the user disconnects manually"). Lockdown keeps it while
-// disconnected too (owner, 2026-11-01: an option, off by default, as a hotel's Wi-Fi sign-in needs it off): up by
-// the settings' split at a person's disconnect, when the option is turned on and at the app's start. Whether this
-// app's block is up is the OS's word, read at each of those and at each session's end, never per state read: on
-// Linux a read runs nft.
+// through an error stop, a crash and a reboot, and only a person's disconnect lifts it, or the switch turned off.
+// Add no reconnect of the switch's own: a free session may need an ad, so the block waits for a person, unless
+// always on reconnects. Lockdown keeps it while disconnected too (an option, off by default, as a hotel's Wi-Fi
+// sign-in needs it off): up by the settings' split at a person's disconnect, when the option is turned on and at
+// the app's start. Whether this app's block is up is the OS's word, read at each of those and at each session's
+// end, never per state read: on Linux a read runs nft.
 internal sealed class AppKillSwitchService(VpnHoodApp app, IVpnKillSwitch killSwitch)
 {
     private readonly AsyncLock _lock = new(); // this app's changes of the block, and its reads of it
@@ -30,7 +30,8 @@ internal sealed class AppKillSwitchService(VpnHoodApp app, IVpnKillSwitch killSw
     private bool IsLockdownOn => IsOn && app.UserSettings.KillSwitchLockdown;
 
     // The block as the OS kept it, through a crash and a reboot; one kept while disconnected is put back too, as
-    // another app's disconnect may have lifted it.
+    // another app's disconnect or the way out may have lifted it. The way out is for an app that cannot run: one
+    // that runs turns the option off.
     public Task Start()
     {
         return VhInvoker.TryInvokeAsync("start the kill switch", LogLevel.Error, () => IsLockdownOn

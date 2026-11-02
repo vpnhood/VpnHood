@@ -24,8 +24,8 @@ public class UserSettings
     public bool KillSwitch { get; set; }
 
     // With the kill switch on, its block stays after a person's disconnect too, by these settings' split, and goes
-    // up at once when this is turned on while disconnected; only turning this or the switch off lifts it (owner,
-    // 2026-11-01: an option, off by default). A hotel's Wi-Fi sign-in page needs it off first.
+    // up at once when this is turned on while disconnected; only turning this or the switch off lifts it. Off by
+    // default: a hotel's Wi-Fi sign-in page needs it off first.
     public bool KillSwitchLockdown { get; set; }
     public SplitTunnelingSettings SplitTunneling { get; set; } = new();
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;

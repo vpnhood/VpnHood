@@ -64,8 +64,8 @@ SetCompressor /SOLID lzma
 !define RUN_KEY "Software\Microsoft\Windows\CurrentVersion\Run"
 !define CURRENT_FOLDER "current"   ; WindowsDesktopPaths.CurrentFolderName
 !define UNINSTALL_FOLDER "uninstall"
-; the kill switch's way out in the Start menu, named after the app first, as the Start menu lists by name (owner,
-; 2026-10-31); the Kill Switch page names it so (FeaturePages.KillSwitchOffEntryName)
+; the kill switch's way out in the Start menu, named after the app first, as the Start menu lists by name; the Kill
+; Switch page names it so (FeaturePages.KillSwitchOffEntryName)
 !define KILL_SWITCH_OFF_LINK "$SMPROGRAMS\${PRODUCT_NAME} - Turn off kill switch.lnk"
 !define KILL_SWITCH_OFF_SCRIPT "kill-switch-off.ps1" ; WindowsDesktopPaths.KillSwitchOffScriptName
 
@@ -384,7 +384,8 @@ Section "Install"
 		CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}.lnk" "$INSTDIR\${INSTANCE_NAME}.exe"
 		CreateShortcut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${INSTANCE_NAME}.exe"
 		; for a person whose app cannot open while the kill switch blocks the internet: the script asks for an
-		; administrator's OK itself, and says what it did in a message box
+		; administrator's OK itself, a UAC prompt that names Windows PowerShell, its host, and says what it did in a
+		; message box
 		CreateShortcut "${KILL_SWITCH_OFF_LINK}" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" \
 			'-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\${KILL_SWITCH_OFF_SCRIPT}" -productName "${PRODUCT_NAME}"' \
 			"$INSTDIR\${INSTANCE_NAME}.exe" 0
@@ -453,9 +454,9 @@ Section "Uninstall"
 	Push "$INSTDIR"
 	Call un.CloseProcesses
 
-	; The kill switch's block, which outlives the app's stop by design (a crash's, a reboot's), goes with the app
-	; (owner, 2026-10-31): by its way out, which needs neither the service nor the app, so a broken install's
-	; uninstall lifts it too; after the service, which could put it back.
+	; The kill switch's block, which outlives the app's stop by design (a crash's, a reboot's), goes with the app: by
+	; its way out, which needs neither the service nor the app, so a broken install's uninstall lifts it too; after
+	; the service, which could put it back.
 	nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\${KILL_SWITCH_OFF_SCRIPT}" -quiet'
 	Pop $0
 

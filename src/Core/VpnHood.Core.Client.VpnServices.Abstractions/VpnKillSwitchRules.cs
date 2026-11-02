@@ -6,8 +6,8 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 // What a kill switch's block lets out besides the tunnel and the VPN service: the device-level split only,
 // what the adapter's routes leave out. The app-level splits (country, IP via app, domain) are the service's:
 // it sends their traffic out itself while connected, which the block lets through as the service's own, so
-// none of their addresses goes into the block, and while blocked with no tunnel they wait for it (owner,
-// 2026-10-31). A country's thousands of ranges would be too many for the OS's firewall anyway.
+// none of their addresses goes into the block, and while blocked with no tunnel they wait for it. A country's
+// thousands of ranges would be too many for the OS's firewall anyway.
 public class VpnKillSwitchRules
 {
     // The tunnel's adapter, by the name its settings give it (ClientOptions.AdapterName): its traffic passes
@@ -24,7 +24,8 @@ public class VpnKillSwitchRules
 
     // By the person's settings, with no session: a connect's block until its adapter starts, and the app's own
     // while disconnected with the block kept (UserSettings.KillSwitchLockdown). The server's own exclusions come
-    // only with a session, and so does its DNS plan, so no resolver passes.
+    // only with a session, and so does its DNS plan, so no resolver passes, nor the LAN unless the person's split
+    // leaves it out - the replies to an inbound connection too, SSH's into a locked-down box.
     public static VpnKillSwitchRules CreateBySettings(string adapterName,
         IReadOnlyList<IpRange> includeIpRangesByDevice, bool splitLocalNetwork)
     {

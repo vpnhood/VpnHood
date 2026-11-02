@@ -14,18 +14,17 @@ namespace VpnHood.Core.Client.Devices.WindowsTun;
 
 // The kill switch's block on Windows: the Windows Filtering Platform's own filters, under a provider and a
 // sublayer of ours. They are persistent: the Base Filtering Engine keeps them through a crash of the service and
-// loads them at boot, before any app starts, so the block holds through both (owner, 2026-10-31: "if the system
-// crashes, we should not lift the kill switch; that's the whole purpose"). Not a dynamic session's, which the
-// engine deletes with its process: WireGuard for Windows uses one, and its block goes with a crash. The connect
-// and accept layers (ALE) judge a connection once, nothing per packet; the forward layers judge what Windows routes
-// itself, which would otherwise go around the block. They have no port field, so DNS routed to an address of the
-// split passes. A known limit (owner, 2026-11-01): WinNAT's traffic - WSL2's NAT mode, so Docker Desktop's too -
-// is seen by no WFP layer (a block at the forward, IP packet, transport, connect and vSwitch layers stopped none of
-// it, seen on Windows Server 2025 with WSL 3.0.3), so it goes into the tunnel while one is up and around the block
-// while none is. The Hyper-V firewall could stop it only while the service runs, never after a crash. The keys are the
-// SDK's, so every app built on VpnHood shares the one block; the provider's data names the app whose block it
-// is (owner: the app's own storage folder, which an update keeps, where the exe's folder changes). Needs an
-// administrator: the service, which runs as SYSTEM.
+// loads them at boot, before any app starts, so the block holds through both: a crash lifting it would defeat
+// its purpose. Not a dynamic session's, which the engine deletes with its process: WireGuard for Windows uses one,
+// and its block goes with a crash. The connect and accept layers (ALE) judge a connection once, nothing per packet;
+// the forward layers judge what Windows routes itself, which would otherwise go around the block. They have no port
+// field, so DNS routed to an address of the split passes. A known limit: WinNAT's traffic - WSL2's NAT mode, so
+// Docker Desktop's too - is seen by no WFP layer (a block at the forward, IP packet, transport, connect and vSwitch
+// layers stopped none of it, seen on Windows Server 2025 with WSL 3.0.3), so it goes into the tunnel while one is
+// up and around the block while none is. The Hyper-V firewall could stop it only while the service runs, never
+// after a crash. The keys are the SDK's, so every app built on VpnHood shares the one block; the provider's data
+// names the app whose block it is by its storage folder, which an update keeps, where the exe's folder changes.
+// Needs an administrator: the service, which runs as SYSTEM.
 public sealed class WindowsVpnKillSwitch(string owner) : IVpnKillSwitch
 {
     private static readonly Guid ProviderKey = new("7e45054d-79d4-41a8-9bc4-f1409b25dcfe");

@@ -1,9 +1,9 @@
-<Project Sdk="MSTest.Sdk/4.4.1">
+<Project Sdk="MSTest.Sdk/4.5.2">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
 		<IsPackable>false</IsPackable>
 		<UseVSTest>true</UseVSTest>
-		<MicrosoftNETTestSdkVersion>18.10.1</MicrosoftNETTestSdkVersion>
+		<MicrosoftNETTestSdkVersion>18.11.0</MicrosoftNETTestSdkVersion>
 	</PropertyGroup>
 
 	<ItemGroup>

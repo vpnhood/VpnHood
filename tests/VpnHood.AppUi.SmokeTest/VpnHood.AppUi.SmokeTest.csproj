@@ -1,4 +1,4 @@
-﻿<Project Sdk="MSTest.Sdk/4.4.1">
+﻿<Project Sdk="MSTest.Sdk/4.5.2">
 	<PropertyGroup>
 		<TargetFramework>net11.0-windows</TargetFramework>
 		<IsPackable>false</IsPackable>
@@ -8,7 +8,7 @@
 		<UseWPF>true</UseWPF>
 		<!--MSTest.Sdk injects the test packages implicitly; override its bundled versions via these properties, NOT
 		    PackageReference Update (which is a no-op against the SDK's late .targets Include).-->
-		<MicrosoftNETTestSdkVersion>18.10.1</MicrosoftNETTestSdkVersion>
+		<MicrosoftNETTestSdkVersion>18.11.0</MicrosoftNETTestSdkVersion>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -159,7 +159,7 @@ else {
 		elseif (-not $settingsText.Contains('"')) { $minClientProtocolWrite = "new"; }
 		elseif ($settingsText -notmatch '"ServerConfig"') { $minClientProtocolWrite = "insert"; }
 		else {
-			throw "Could not set the minimum client protocol version in $settingsFile, which has a ServerConfig of its own. Add `"MinClientProtocolVersion`": $minClientProtocolVersion to its SessionOptions.";
+			throw "Could not set the minimum client protocol version in $settingsFile, which has a ServerConfig of its own. Add `"MinClientProtocolVersion`": $minClientProtocolVersion to its Session.";
 		}
 	}
 }
@@ -312,8 +312,8 @@ if ("$httpBaseUrl" -ne "") {
 if ($minClientProtocolWrite -ne "") {
 	$minClientProtocolSettings = switch ($minClientProtocolWrite) {
 		"replace" { ([regex]'("MinClientProtocolVersion"\s*:\s*)\d+').Replace($settingsText, "`${1}$minClientProtocolVersion", 1) }
-		"insert" { ([regex]'\{').Replace($settingsText, "{`n  `"ServerConfig`": { `"SessionOptions`": { `"MinClientProtocolVersion`": $minClientProtocolVersion } },", 1) }
-		default { "{`n  `"FileAccessManager`": {`n    `"SessionOptions`": {`n      `"MinClientProtocolVersion`": $minClientProtocolVersion`n    }`n  }`n}`n" }
+		"insert" { ([regex]'\{').Replace($settingsText, "{`n  `"ServerConfig`": { `"Session`": { `"MinClientProtocolVersion`": $minClientProtocolVersion } },", 1) }
+		default { "{`n  `"FileAccessManager`": {`n    `"Session`": {`n      `"MinClientProtocolVersion`": $minClientProtocolVersion`n    }`n  }`n}`n" }
 	};
 	New-Item -ItemType Directory -Force -Path "$destinationPath/storage" | Out-Null;
 	[IO.File]::WriteAllText("$settingsFile.new", $minClientProtocolSettings);

@@ -223,7 +223,7 @@ else
 			minClientProtocolWrite="insert";
 		else
 			echo "Could not set the minimum client protocol version in $settingsFile, which has a ServerConfig of its own.";
-			echo "Add \"MinClientProtocolVersion\": $minClientProtocolVersion to its SessionOptions.";
+			echo "Add \"MinClientProtocolVersion\": $minClientProtocolVersion to its Session.";
 			exit 1;
 		fi
 	fi
@@ -407,9 +407,9 @@ function min_client_protocol_settings() {
 	replace)
 		sed -E "0,/(\"MinClientProtocolVersion\"[[:space:]]*:[[:space:]]*)[0-9]+/s//\1$minClientProtocolVersion/" "$settingsFile";;
 	insert)
-		sed "0,/{/s//{\n  \"ServerConfig\": { \"SessionOptions\": { \"MinClientProtocolVersion\": $minClientProtocolVersion } },/" "$settingsFile";;
+		sed "0,/{/s//{\n  \"ServerConfig\": { \"Session\": { \"MinClientProtocolVersion\": $minClientProtocolVersion } },/" "$settingsFile";;
 	*)
-		printf '{\n  "FileAccessManager": {\n    "SessionOptions": {\n      "MinClientProtocolVersion": %s\n    }\n  }\n}\n' \
+		printf '{\n  "FileAccessManager": {\n    "Session": {\n      "MinClientProtocolVersion": %s\n    }\n  }\n}\n' \
 			"$minClientProtocolVersion";;
 	esac
 }

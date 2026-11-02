@@ -19,6 +19,10 @@ launcher="$(launcherNameParam)";
 destinationPath="/opt/$assemblyName";
 packageFile="";
 
+# The client protocols the server speaks, ServerHost's MinProtocolVersion and MaxProtocolVersion
+minProtocolVersion=8;
+maxProtocolVersion=15;
+
 function show_help() {
 	echo "Usage: $assemblyName-linux.sh [options]";
 	echo "  -q                    no questions: what is not given keeps the install's choices,";
@@ -27,6 +31,10 @@ function show_help() {
 	echo "  -noautoupdate         do not update the server by itself";
 	echo "  -httpBaseUrl <url>    the access server; with -httpAuthorization <value>";
 	echo "  -managementSecret <secret>";
+	echo "  -minClientProtocolVersion <n>";
+	echo "                        the oldest app protocol accepted, $minProtocolVersion-$maxProtocolVersion: $minProtocolVersion, the oldest supported, keeps";
+	echo "                        the gate open to every app; $maxProtocolVersion resists probes, and older apps";
+	echo "                        cannot connect. Not with -httpBaseUrl: its server profile sets it";
 	echo "  -h, -help             this";
 	echo "Options take one dash or two: -noautoupdate or --noautoupdate.";
 }
@@ -74,6 +82,10 @@ elif [ "$lastArg" = "-httpAuthorization" ]; then
 
 elif [ "$lastArg" = "-managementSecret" ]; then
 	managementSecret=$arg;
+	lastArg=""; continue;
+
+elif [ "$lastArg" = "-minClientProtocolVersion" ]; then
+	minClientProtocolVersion=$arg;
 	lastArg=""; continue;
 
 elif [ "$lastArg" = "-packageUrl" ]; then
@@ -159,6 +171,62 @@ if [ "$container" != "y" ]; then
 	fi
 	autostart=${autostart:-$defaultAutostart};
 	autoupdate=${autoupdate:-$defaultAutoupdate};
+fi
+
+# The minimum client protocol, for a server that keeps its own access keys: a managed one takes it from
+# its server profile, which a value here would override. Asked unless -q, with the settings' own as the
+# answer Enter gives, else the oldest supported. Settled here, how it is written too, before anything
+# changes.
+settingsFile="$destinationPath/storage/appsettings.json";
+function is_protocol_version() {
+	[[ "$1" =~ ^[0-9]{1,3}$ ]] && [ "$((10#$1))" -ge "$minProtocolVersion" ] && [ "$((10#$1))" -le "$maxProtocolVersion" ];
+}
+function ask_protocol_version() {
+	local answer;
+	while true; do
+		read -r -p "Minimum client protocol version ($minProtocolVersion-$maxProtocolVersion, Enter for $1)? " answer;
+		answer="${answer:-$1}";
+		if is_protocol_version "$answer"; then echo "$answer"; return; fi
+		echo "Enter a number from $minProtocolVersion to $maxProtocolVersion." >&2;
+	done
+}
+if [ -n "$minClientProtocolVersion" ] && ! is_protocol_version "$minClientProtocolVersion"; then
+	echo "-minClientProtocolVersion takes a number from $minProtocolVersion to $maxProtocolVersion.";
+	exit 1;
+fi
+if [ -n "$httpBaseUrl" ] || grep -qs '"HttpAccessManager"' "$settingsFile"; then
+	if [ -n "$minClientProtocolVersion" ]; then
+		echo "A managed server takes its minimum client protocol version from its server profile.";
+		exit 1;
+	fi
+else
+	currentMinClientProtocolVersion=$(grep -so '"MinClientProtocolVersion"[[:space:]]*:[[:space:]]*[0-9][0-9]*' "$settingsFile" |
+		head -n 1 | grep -o '[0-9]*$');
+	if [ "$quiet" != "y" ] && [ -z "$minClientProtocolVersion" ]; then
+		echo "The oldest app protocol this server accepts. $minProtocolVersion, the oldest supported, keeps the gate open to";
+		echo "every app; $maxProtocolVersion resists probes, and apps older than it cannot connect.";
+		minClientProtocolVersion=$(ask_protocol_version "${currentMinClientProtocolVersion:-$minProtocolVersion}");
+	fi
+	# as a JSON number: 08 is none
+	[ -n "$minClientProtocolVersion" ] && minClientProtocolVersion=$((10#$minClientProtocolVersion));
+	# Written only when it changes. The settings' own key is replaced where it is. Into settings without
+	# it, a ServerConfig goes first, which the server lays over its access manager's: a second
+	# FileAccessManager would replace the person's whole. Settings with a ServerConfig of their own are
+	# the person's to edit.
+	if [ -n "$minClientProtocolVersion" ] &&
+		[ "$minClientProtocolVersion" != "${currentMinClientProtocolVersion:-$minProtocolVersion}" ]; then
+		if [ -n "$currentMinClientProtocolVersion" ]; then
+			minClientProtocolWrite="replace";
+		elif ! grep -qs '"' "$settingsFile"; then
+			minClientProtocolWrite="new";
+		elif ! grep -q '"ServerConfig"' "$settingsFile"; then
+			minClientProtocolWrite="insert";
+		else
+			echo "Could not set the minimum client protocol version in $settingsFile, which has a ServerConfig of its own.";
+			echo "Add \"MinClientProtocolVersion\": $minClientProtocolVersion to its SessionOptions.";
+			exit 1;
+		fi
+	fi
 fi
 
 # One install at a time from here, where this run starts to change things. Beside another, the one
@@ -331,6 +399,27 @@ remove_old_versions;
 storagePath="$destinationPath/storage";
 if [ "$container" != "y" ]; then
 	mkdir -p "$storagePath" && chmod 700 "$storagePath";
+fi
+
+# The minimum client protocol settled above, through a new file as the settings below
+function min_client_protocol_settings() {
+	case "$minClientProtocolWrite" in
+	replace)
+		sed -E "0,/(\"MinClientProtocolVersion\"[[:space:]]*:[[:space:]]*)[0-9]+/s//\1$minClientProtocolVersion/" "$settingsFile";;
+	insert)
+		sed "0,/{/s//{\n  \"ServerConfig\": { \"SessionOptions\": { \"MinClientProtocolVersion\": $minClientProtocolVersion } },/" "$settingsFile";;
+	*)
+		printf '{\n  "FileAccessManager": {\n    "SessionOptions": {\n      "MinClientProtocolVersion": %s\n    }\n  }\n}\n' \
+			"$minClientProtocolVersion";;
+	esac
+}
+if [ -n "$minClientProtocolWrite" ]; then
+	if ! mkdir -p "$storagePath" || ! min_client_protocol_settings > "$settingsFile.new" ||
+		! chmod 600 "$settingsFile.new" || ! mv -f "$settingsFile.new" "$settingsFile"; then
+		echo "Could not write $settingsFile";
+		exit 1;
+	fi
+	echo "Minimum client protocol version: $minClientProtocolVersion";
 fi
 
 # A value as a JSON string: backslashes and quotes escaped, control characters dropped.

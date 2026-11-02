@@ -15,6 +15,10 @@ $packageFile = "";
 $autostart = "";
 $autoupdate = "";
 
+# The client protocols the server speaks, ServerHost's MinProtocolVersion and MaxProtocolVersion
+$minProtocolVersion = 8;
+$maxProtocolVersion = 15;
+
 # Read arguments. The updater of an installed server runs this script too, with -q.
 for ($i = 0; $i -lt $args.length; $i++) {
 	$arg = $args[$i];
@@ -40,6 +44,10 @@ for ($i = 0; $i -lt $args.length; $i++) {
 		Write-Output "  -noautoupdate         do not update the server by itself";
 		Write-Output "  -httpBaseUrl <url>    the access server; with -httpAuthorization <value>";
 		Write-Output "  -managementSecret <secret>";
+		Write-Output "  -minClientProtocolVersion <n>";
+		Write-Output "                        the oldest app protocol accepted, $minProtocolVersion-${maxProtocolVersion}: $minProtocolVersion, the oldest supported, keeps";
+		Write-Output "                        the gate open to every app; $maxProtocolVersion resists probes, and older apps";
+		Write-Output "                        cannot connect. Not with -httpBaseUrl: its server profile sets it";
 		return;
 	}
 
@@ -53,6 +61,10 @@ for ($i = 0; $i -lt $args.length; $i++) {
 	}
 	elseif ($lastArg -eq "-managementSecret") {
 		$managementSecret = $arg;
+		$lastArg = ""; continue;
+	}
+	elseif ($lastArg -eq "-minClientProtocolVersion") {
+		$minClientProtocolVersion = $arg;
 		$lastArg = ""; continue;
 	}
 	elseif ($lastArg -eq "-packageFile") {
@@ -104,6 +116,53 @@ if ("$quiet" -ne "y") {
 }
 if ($autostart -eq "") { $autostart = $defaultAutostart; }
 if ($autoupdate -eq "") { $autoupdate = $defaultAutoupdate; }
+
+# The minimum client protocol, for a server that keeps its own access keys: a managed one takes it from
+# its server profile, which a value here would override. Asked unless -q, with the settings' own as the
+# answer Enter gives, else the oldest supported. Settled here, how it is written too, before anything
+# changes.
+$settingsFile = "$destinationPath/storage/appsettings.json";
+$settingsText = if (Test-Path $settingsFile) { [IO.File]::ReadAllText($settingsFile) } else { "" };
+$minClientProtocolWrite = "";
+function Test-ProtocolVersion([string]$value) {
+	return $value -match '^\d{1,3}$' -and [int]$value -ge $minProtocolVersion -and [int]$value -le $maxProtocolVersion;
+}
+if ("$minClientProtocolVersion" -ne "" -and -not (Test-ProtocolVersion $minClientProtocolVersion)) {
+	throw "-minClientProtocolVersion takes a number from $minProtocolVersion to $maxProtocolVersion.";
+}
+if ("$httpBaseUrl" -ne "" -or $settingsText -match '"HttpAccessManager"') {
+	if ("$minClientProtocolVersion" -ne "") {
+		throw "A managed server takes its minimum client protocol version from its server profile.";
+	}
+}
+else {
+	$currentMinClientProtocolVersion = if ($settingsText -match '"MinClientProtocolVersion"\s*:\s*(\d+)') { $Matches[1] } else { "" };
+	$defaultMinClientProtocolVersion = if ($currentMinClientProtocolVersion -ne "") { $currentMinClientProtocolVersion } else { "$minProtocolVersion" };
+	if ("$quiet" -ne "y" -and "$minClientProtocolVersion" -eq "") {
+		Write-Output "The oldest app protocol this server accepts. $minProtocolVersion, the oldest supported, keeps the gate open to";
+		Write-Output "every app; $maxProtocolVersion resists probes, and apps older than it cannot connect.";
+		while ($true) {
+			$answer = "$(Read-Host -Prompt "Minimum client protocol version ($minProtocolVersion-$maxProtocolVersion, Enter for $defaultMinClientProtocolVersion)")".Trim();
+			if ($answer -eq "") { $answer = $defaultMinClientProtocolVersion; }
+			if (Test-ProtocolVersion $answer) { $minClientProtocolVersion = $answer; break; }
+			Write-Output "Enter a number from $minProtocolVersion to $maxProtocolVersion.";
+		}
+	}
+	# as a JSON number: 08 is none
+	if ("$minClientProtocolVersion" -ne "") { $minClientProtocolVersion = "$([int]$minClientProtocolVersion)"; }
+	# Written only when it changes. The settings' own key is replaced where it is. Into settings without
+	# it, a ServerConfig goes first, which the server lays over its access manager's: a second
+	# FileAccessManager would replace the person's whole. Settings with a ServerConfig of their own are
+	# the person's to edit.
+	if ("$minClientProtocolVersion" -ne "" -and "$minClientProtocolVersion" -ne $defaultMinClientProtocolVersion) {
+		if ($currentMinClientProtocolVersion -ne "") { $minClientProtocolWrite = "replace"; }
+		elseif (-not $settingsText.Contains('"')) { $minClientProtocolWrite = "new"; }
+		elseif ($settingsText -notmatch '"ServerConfig"') { $minClientProtocolWrite = "insert"; }
+		else {
+			throw "Could not set the minimum client protocol version in $settingsFile, which has a ServerConfig of its own. Add `"MinClientProtocolVersion`": $minClientProtocolVersion to its SessionOptions.";
+		}
+	}
+}
 
 $binDir = "$destinationPath/bin/$versionTag";
 $installFullPath = [IO.Path]::GetFullPath($destinationPath);
@@ -247,6 +306,19 @@ if ("$httpBaseUrl" -ne "") {
 	# publish info
 	New-Item -ItemType Directory -Force -Path "$destinationPath/storage";
 	$appSettings | ConvertTo-Json | Out-File "$destinationPath/storage/appsettings.json";
+}
+
+# The minimum client protocol settled above, through a new file
+if ($minClientProtocolWrite -ne "") {
+	$minClientProtocolSettings = switch ($minClientProtocolWrite) {
+		"replace" { ([regex]'("MinClientProtocolVersion"\s*:\s*)\d+').Replace($settingsText, "`${1}$minClientProtocolVersion", 1) }
+		"insert" { ([regex]'\{').Replace($settingsText, "{`n  `"ServerConfig`": { `"SessionOptions`": { `"MinClientProtocolVersion`": $minClientProtocolVersion } },", 1) }
+		default { "{`n  `"FileAccessManager`": {`n    `"SessionOptions`": {`n      `"MinClientProtocolVersion`": $minClientProtocolVersion`n    }`n  }`n}`n" }
+	};
+	New-Item -ItemType Directory -Force -Path "$destinationPath/storage" | Out-Null;
+	[IO.File]::WriteAllText("$settingsFile.new", $minClientProtocolSettings);
+	Move-Item -Path "$settingsFile.new" -Destination $settingsFile -Force;
+	Write-Output "Minimum client protocol version: $minClientProtocolVersion";
 }
 
 # The server's task, which starts it at boot and keeps it running; stopped above, it stays disabled when

@@ -22,7 +22,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private const int MaxIoErrorCount = 10;
     private readonly bool _autoRestart;
     private int _mtu = 0xFFFF;
-    private int _ioErrorCount;
+
+    // Errors in a row, one count per direction, each its thread's own: the reader succeeds at every quiet poll,
+    // which would otherwise hide a write that always fails, and the reverse.
+    private int _readErrorCount;
+    private int _writeErrorCount;
     private readonly bool _autoMetric;
     private HashSet<IPAddress> _lastPrimaryAdapterAddresses = [];
 
@@ -195,7 +199,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 IsStarted = true;
                 wasStarted = true;
             }
-            _ioErrorCount = 0; // a new run, not the errors that ended the last one
+            // a new run, not the errors that ended the last one
+            _readErrorCount = 0;
+            _writeErrorCount = 0;
 
             // A concurrent Stop() clears the adapter properties when the user disconnects mid-start,
             // so the rest of this method must read these locals, never the properties.
@@ -622,11 +628,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         try {
             SendPacketInternal(ipPacket);
-            _ioErrorCount = 0;
+            _writeErrorCount = 0;
         }
         catch (Exception ex) {
-            _ioErrorCount++;
-            if (_ioErrorCount < MaxIoErrorCount)
+            _writeErrorCount++;
+            if (_writeErrorCount < MaxIoErrorCount)
                 throw;
 
             // too many errors in a row: the adapter is broken, so stop it, and recover or tell the owner
@@ -762,8 +768,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 if (packet == null)
                     WaitForTunRead();
 
-                // reset error counters if not exception, the wait's included
-                _ioErrorCount = 0;
+                // a read with no exception, the wait's included, ends the reader's run of errors
+                _readErrorCount = 0;
                 if (packet == null)
                     continue;
 
@@ -775,8 +781,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in reading packets from TUN adapter.");
-                _ioErrorCount++;
-                if (_ioErrorCount < MaxIoErrorCount)
+                _readErrorCount++;
+                if (_readErrorCount < MaxIoErrorCount)
                     continue;
 
                 // Too many errors in a row: the adapter is broken, so stop it, and recover or tell the

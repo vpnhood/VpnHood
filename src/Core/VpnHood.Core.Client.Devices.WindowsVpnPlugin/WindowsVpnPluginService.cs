@@ -76,7 +76,16 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
 
             // an adapter's start failure surfaces here
             startedTask.GetAwaiter().GetResult();
-            Volatile.Write(ref _connectedChannel, channel);
+
+            // Under the lock StopSelf takes the connection in: a session that ended once its adapter had started
+            // found none to give back, and Windows would hold the VPN connected with no adapter.
+            lock (_hostLock) {
+                if (_channel != channel)
+                    throw new OperationCanceledException("The VPN session ended before its connection was made.");
+
+                Volatile.Write(ref _connectedChannel, channel);
+            }
+
             VhLogger.Instance.LogInformation("The VPN adapter and the Windows VPN channel started.");
         }
         catch (Exception ex) {
@@ -243,13 +252,15 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     public void StopSelf()
     {
         VpnServiceHost? host;
-        lock (_hostLock)
+        VpnChannel? connectedChannel;
+        lock (_hostLock) {
             host = _host;
+            _adapterTcs.TrySetCanceled();
+            _adapter = null;
+            _channel = null;
+            connectedChannel = Interlocked.Exchange(ref _connectedChannel, null);
+        }
 
-        _adapterTcs.TrySetCanceled();
-        _adapter = null;
-        _channel = null;
-        var connectedChannel = Interlocked.Exchange(ref _connectedChannel, null);
         _ = Release(host, connectedChannel, Volatile.Read(ref _connectCount));
     }
 

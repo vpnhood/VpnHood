@@ -351,8 +351,7 @@ public class VpnAdapterRecoveryTest : TestBase
         await adapter.Start(CreateAdapterOptions(), TestCt);
 
         // the write errors stop the adapter on the sender's thread: at once, not after the wait's 5 s.
-        // One packet per batch, as a batch ends at its first error, and fast: the reader's polling
-        // resets the error count every 20 ms, so the spin never sleeps (a sleep lasts a whole timer tick)
+        // One packet per batch, as a batch ends at its first error: each sent before the next is queued
         adapter.FailWrite = true;
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; i < 30 && adapter.IsStarted; i++) {
@@ -364,6 +363,25 @@ public class VpnAdapterRecoveryTest : TestBase
         await AssertEqualsWait(false, () => adapter.IsStarted, timeout: 3000);
         Assert.IsTrue(stopwatch.Elapsed < TimeSpan.FromSeconds(3));
         Assert.IsTrue(adapter.SenderEndedAtClose);
+    }
+
+    [TestMethod]
+    public async Task Write_errors_stop_the_adapter_though_the_reader_polls_between_them()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // a write that keeps failing, slower than the reader's 20 ms polls: the reader's quiet polls
+        // between the failures are no success of the sender's
+        var ex = await WaitForFailed(adapter, async () => {
+            adapter.FailWrite = true;
+            for (var i = 0; i < 15 && adapter.IsStarted; i++) {
+                adapter.SendPacketQueued(BuildPacket());
+                await Task.Delay(60, TestCt);
+            }
+        });
+        Assert.IsInstanceOfType<IOException>(ex);
+        Assert.IsFalse(adapter.IsStarted);
     }
 
     [TestMethod]

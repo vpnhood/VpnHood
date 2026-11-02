@@ -25,6 +25,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
 {
     private const int PollTimeoutMs = 1000;
     private const int ReceivePoolEmptyHResult = unchecked((int)0x8007000E);
+    private static readonly TimeSpan SenderStopWaitTimeout = TimeSpan.FromSeconds(1);
 
     // The MTU and the frame size verified with packets end to end; another pair needs a packet-level test of its own.
     private const int WindowsMaxMtu = 1400;
@@ -129,8 +130,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
     {
         VhLogger.Instance.LogInformation("Starting the Windows VPN plug-in data path...");
 
-        // Recreated here, not in AdapterAdd, because a restart may run AdapterClose and AdapterOpen
-        // without AdapterAdd and would otherwise keep a canceled source.
+        // a start after a stop needs a source of its own: the last one has completed or been cancelled
         if (_started.Task.IsCompleted)
             _started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -173,7 +173,6 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
                 Array.Empty<HostName>()));
         }
 
-        ResetPacketQueue(open: true);
         vpnChannel.StartWithMainTransport(
             _clientIpV4List.Count == 0 ? null : _clientIpV4List,
             _clientIpV6List.Count == 0 ? null : _clientIpV6List,
@@ -185,6 +184,9 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
             false,
             transport);
 
+        // Opened once the channel is: a write before would meet a channel not started. An Encapsulate during the
+        // start finds the gate closed and leaves its buffers to Windows, a drop.
+        ResetPacketQueue(open: true);
         _started.TrySetResult();
         VhLogger.Instance.LogInformation("Windows VPN channel started. MTU: {Mtu}", _mtu);
     }
@@ -192,6 +194,13 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
     protected override void AdapterClose()
     {
         ResetPacketQueue(open: false);
+
+        // The batch being sent leaves before this returns, as the plug-in stops the channel next and a write must not
+        // be inside it then: the batch ends at its next packet, the adapter no longer ready. Bounded, as Windows'
+        // Disconnect waits on it. The reader needs no wait: it touches only the managed queue.
+        if (!WaitForSender(SenderStopWaitTimeout))
+            VhLogger.Instance.LogWarning("The VPN adapter's sender did not leave in time; the channel may stop under it.");
+
         _started.TrySetCanceled();
 
         // The channel stays up: the plug-in stops it in Windows' Disconnect, as a channel it stops by itself is a
@@ -308,8 +317,10 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
 
     protected override bool WritePacket(IpPacket ipPacket)
     {
-        if (_closed || _transport is null)
-            throw new InvalidOperationException("Adapter is not open.");
+        // not open: no channel to take the packet, as a TUN's device before its start
+        if (_closed)
+            return false;
+
         var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
 
         // StartWithMainTransport sizes its receive-buffer pool from the MTU argument. maxFrameSize

@@ -25,6 +25,7 @@ internal sealed class AndroidQuicConnection : IQuicConnection
     private GCHandle _gch;
     private readonly AndroidQuicConnectionState _state;
     private bool _disposed;
+    private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(2);
 
     public IPEndPoint RemoteEndPoint { get; }
     public IPEndPoint LocalEndPoint { get; }
@@ -164,14 +165,29 @@ internal sealed class AndroidQuicConnection : IQuicConnection
         return valid ? QUIC_STATUS_SUCCESS : QUIC_STATUS_BAD_CERTIFICATE;
     }
 
-    public unsafe ValueTask DisposeAsync()
+    private unsafe bool StartShutdown()
     {
-        if (Interlocked.Exchange(ref _disposed, true))
-            return ValueTask.CompletedTask;
+        if (_connection == null)
+            return false;
 
-        _state.CloseInboundStreams();
+        MsQuicApi.Table->ConnectionShutdown(_connection, QUIC_CONNECTION_SHUTDOWN_FLAGS.NONE, 0);
+        return true;
+    }
+
+    private async Task WaitForShutdown()
+    {
+        try {
+            await _state.Shutdown.Task.WaitAsync(ShutdownTimeout).Vhc();
+        }
+        catch (TimeoutException) {
+            VhLogger.Instance.LogDebug("AndroidQuic: the connection's shutdown did not complete within {Timeout}.",
+                ShutdownTimeout);
+        }
+    }
+
+    private unsafe void Release()
+    {
         if (_connection != null) {
-            try { MsQuicApi.Table->ConnectionShutdown(_connection, QUIC_CONNECTION_SHUTDOWN_FLAGS.NONE, 0); } catch { /* ignore */ }
             MsQuicApi.Table->ConnectionClose(_connection); // blocks until callbacks drained
             _connection = null;
         }
@@ -180,6 +196,21 @@ internal sealed class AndroidQuicConnection : IQuicConnection
             _configuration = null;
         }
         if (_gch.IsAllocated) _gch.Free();
-        return ValueTask.CompletedTask;
+    }
+
+    // The handle is freed only after SHUTDOWN_COMPLETE: MsQuic queues the send that carries the shutdown's close frame
+    // behind a ConnectionClose made right after it, and a freed connection sends nothing, so the server would not learn
+    // of the end and would keep the connection until its HTTP/3 idle limit. The event comes with the server's answer,
+    // or at the end of MsQuic's closing period; the limit is for a missing event.
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
+        _state.CloseInboundStreams();
+        if (StartShutdown())
+            await WaitForShutdown().Vhc();
+
+        Release();
     }
 }

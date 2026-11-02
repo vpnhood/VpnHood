@@ -204,6 +204,7 @@ public partial class MainView : UserControl
         // cover its top - its Back, a TV's pairing code; Back to the home brings the notice again
         UpdateNoticeLayer.IsVisible = page is HomeView;
         ApplyUpdateBarRoom(); // the page's padding too
+        ShowKillSwitchBar(); // over the home only, as the update notice
         Dispatcher.UIThread.Post(() => TakeFocus(page, back), DispatcherPriority.Loaded);
     }
 
@@ -790,9 +791,11 @@ public partial class MainView : UserControl
 
     // ---- the kill switch bar ----
 
+    // Over the home only: on another page it covers the title, the Kill Switch page's too, which its own Turn off
+    // opens (seen on Windows 11).
     private void ShowKillSwitchBar()
     {
-        KillSwitchBar.IsVisible = ViewModel.IsKillSwitchBlocking;
+        KillSwitchBar.IsVisible = ViewModel.IsKillSwitchBlocking && Host.Content is HomeView;
         KillSwitchBarLink.Text = ViewModel.IsKillSwitchLockdown ? Strings.Current.TurnOff : Strings.Current.Disconnect;
     }
 

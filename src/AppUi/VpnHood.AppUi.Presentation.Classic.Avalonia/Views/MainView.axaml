@@ -107,9 +107,9 @@
       </Grid>
     </Border>
 
-    <!-- the kill switch's block with no session, in the reconnect bar's place, which shows only in a session: the
-         internet is blocked until a person disconnects, or, where it is kept while disconnected, until that is
-         turned off on the Kill Switch page -->
+    <!-- the kill switch's block with no session, over the home, in the reconnect bar's place, which shows only in a
+         session: the internet is blocked until a person disconnects, or, where it is kept while disconnected, until
+         that is turned off on the Kill Switch page -->
     <Border x:Name="KillSwitchBar" Classes="reconnect-bar" VerticalAlignment="Top" IsVisible="False" Margin="0,78,0,0">
       <Grid ColumnDefinitions="*,Auto" MaxWidth="720">
         <TextBlock Text="{Binding KillSwitchBlockingMsg, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center"

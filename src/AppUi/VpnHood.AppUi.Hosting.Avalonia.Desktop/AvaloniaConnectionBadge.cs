@@ -13,7 +13,7 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 // icon file of every size a tray takes at its scalings: Windows' picks the one nearest its own (16 px at
 // 100%), Linux's the largest, which it scales. The taskbar button's overlay is the badge alone, which
 // Windows lays on the app's icon itself (AvaloniaTaskbarBadge).
-internal static class AvaloniaTrayBadge
+internal static class AvaloniaConnectionBadge
 {
     private static readonly int[] Sizes = [16, 20, 24, 28, 32, 40, 48, 64];
     private static readonly Color ConnectedColor = Color.FromRgb(0x08, 0x87, 0x41);

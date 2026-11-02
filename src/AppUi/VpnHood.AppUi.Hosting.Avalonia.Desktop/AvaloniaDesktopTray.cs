@@ -17,7 +17,7 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 // in words when pointed at - and a menu that opens the window, connects, disconnects and ends the UI.
 // It follows the connection as the app's state is read each second (AvaloniaAppStateFollower), the
 // service's app and the one in this process alike. Its words are the UI's, in the language the UI
-// shows; its pictures the app's own icon with the connection's badge (AvaloniaTrayBadge). On the UI
+// shows; its pictures the app's own icon with the connection's badge (AvaloniaConnectionBadge). On the UI
 // thread throughout.
 //
 // What it cannot do itself it asks of the window's host: bring the window forward, and end - "Exit &
@@ -50,9 +50,9 @@ internal sealed class AvaloniaDesktopTray : IDisposable
         _exit = exit;
         var appIcon = ReadAppIcon();
         try {
-            _connectedIcon = AvaloniaTrayBadge.Create(appIcon, DesktopConnectionBadge.Connected);
-            _connectingIcon = AvaloniaTrayBadge.Create(appIcon, DesktopConnectionBadge.Connecting);
-            _disconnectedIcon = AvaloniaTrayBadge.Create(appIcon, DesktopConnectionBadge.Disconnected);
+            _connectedIcon = AvaloniaConnectionBadge.Create(appIcon, DesktopConnectionBadge.Connected);
+            _connectingIcon = AvaloniaConnectionBadge.Create(appIcon, DesktopConnectionBadge.Connecting);
+            _disconnectedIcon = AvaloniaConnectionBadge.Create(appIcon, DesktopConnectionBadge.Disconnected);
         }
         finally {
             foreach (var picture in appIcon)
@@ -145,7 +145,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
 
     private void Update(AppState state)
     {
-        _trayIcon.Icon = AvaloniaTrayBadge.ForState(state) switch {
+        _trayIcon.Icon = AvaloniaConnectionBadge.ForState(state) switch {
             DesktopConnectionBadge.Connected => _connectedIcon,
             DesktopConnectionBadge.Connecting => _connectingIcon,
             _ => _disconnectedIcon

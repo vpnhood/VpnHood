@@ -61,7 +61,7 @@ internal sealed class AvaloniaTaskbarBadge : IDisposable
         if (_disposed)
             return;
 
-        var shown = (Badge: AvaloniaTrayBadge.ForState(state), Text: Strings.Current.ConnectionStateText(state.ConnectionState));
+        var shown = (Badge: AvaloniaConnectionBadge.ForState(state), Text: Strings.Current.ConnectionStateText(state.ConnectionState));
         if (_shown == shown)
             return;
 
@@ -79,7 +79,7 @@ internal sealed class AvaloniaTaskbarBadge : IDisposable
         if (_shell != null)
             _shell.ShowConnectionBadge(badge);
         else if (_overlay != null && OperatingSystem.IsWindows())
-            _overlay.SetIcon(AvaloniaTrayBadge.DrawAlone(badge, _overlay.IconSize), text);
+            _overlay.SetIcon(AvaloniaConnectionBadge.DrawAlone(badge, _overlay.IconSize), text);
     }
 
     public void Dispose()

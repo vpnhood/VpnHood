@@ -132,10 +132,13 @@ distribution requires its own protocol design. Do not describe JWT expiry as lim
 that has received a long-lived key through those paths.
 
 The local TLS tests exercise signed POSTs, upgrades, proxy-forwarded request headers with a rewritten
-Host, secret rotation, clock correction and status handling. They do not test a deployed CloudFront
-route. Before deployment, verify Authorization forwarding and the configured origin Host on the actual
-route with a valid request and a correctly signed expired request, and confirm the latter gets the
-ordinary 401. Never put proofs or access keys in URLs or deployment logs.
+Host, secret rotation, clock correction and status handling. On deployed routes, CloudFront with
+`AllViewerExceptHostHeader` forwards Authorization on the upgrade's GET, as well as on POSTs, and admission
+does not depend on its rewritten Host; an expired proof gets the ordinary 401 through it and through
+Cloudflare. Cloudflare holds a request until its declared body arrives, so its viewers see the refusal of
+a withheld-body request only after the body; CloudFront forwards the head at once. Verify a new kind of
+route the same way, with a valid request and a correctly signed expired one. Never put proofs or access
+keys in URLs or deployment logs.
 
 HTTP/3 behavior is checked against the installed reference version, including malformed probes; this
 does not promise complete undetectability. The application is queued after complete request headers,

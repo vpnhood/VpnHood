@@ -23,6 +23,7 @@ using VpnHood.AppLib.App.Services;
 using VpnHood.AppLib.App.Services.Accounts;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.App.Services.AlwaysOn;
+using VpnHood.AppLib.App.Services.KillSwitch;
 using VpnHood.AppLib.App.Services.Proxies;
 using VpnHood.AppLib.App.Services.Trackers;
 using VpnHood.AppLib.App.Services.Updaters;
@@ -90,8 +91,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AppWebHostManager _webHostManager;
     private readonly AppErrorReporter _errorReporter;
     private readonly AppAlwaysOnService _alwaysOnService;
-    private readonly AsyncLock _killSwitchLock = new(); // this app's changes of the block, and its reads of it
-    private volatile bool _isKillSwitchBlocking; // the OS's word, read at each change: on Linux a read runs nft
+    private readonly AppKillSwitchService? _killSwitchService;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     internal IIpRangeLocationProvider? IpRangeLocationProvider => _ipRangeLocationProvider;
     public string TempFolderPath => Path.Combine(NoBackupStorageFolderPath, FolderNameTemp);
@@ -266,6 +266,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         VpnProfileService = new VpnProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles), Features);
         _alwaysOnService = new AppAlwaysOnService(this, options.AlwaysOnOptions, _appPersistState);
+        _killSwitchService = device.KillSwitch is { } killSwitch ? new AppKillSwitchService(this, killSwitch) : null;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
         // add a default test public server if not added yet
@@ -370,11 +371,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // before the rest, none of which it needs, so a failure there cannot keep the VPN down
         _alwaysOnService.Start();
 
-        // the block as the OS kept it, through a crash and a reboot; one kept while disconnected is put back too, as
-        // another app's disconnect may have lifted it
-        await VhInvoker.TryInvokeAsync("start the kill switch", LogLevel.Error, () => IsKillSwitchLockdownOn
-            ? UpdateKillSwitchLockdown(CancellationToken.None)
-            : ReadKillSwitch(CancellationToken.None)).Vhc();
+        if (_killSwitchService != null)
+            await _killSwitchService.Start().Vhc();
 
 #pragma warning disable CS0618 // Type or member is obsolete
         MigrateLegacyTempFolder();
@@ -421,16 +419,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a settings change", LogLevel.Warning,
                 () => ReconfigureVpnService(CancellationToken.None));
 
-            // The kill switch turned off lifts the block at once, one an error stop left too, which no session
-            // holds; the reconfigure takes it from a session. Turned on, the reconfigure puts a session's up. Kept
-            // while disconnected, the block with no session follows the settings: up at once, by the split as it is
-            // now, and lifted when that is turned off.
-            if (oldUserSettings.KillSwitch && !UserSettings.KillSwitch)
-                _ = VhInvoker.TryInvokeAsync("lift the kill switch's block", LogLevel.Error,
-                    () => UnblockKillSwitch(CancellationToken.None));
-            else if (UserSettings.KillSwitch && (UserSettings.KillSwitchLockdown || oldUserSettings.KillSwitchLockdown))
-                _ = VhInvoker.TryInvokeAsync("keep the kill switch's block while disconnected", LogLevel.Error,
-                    () => UpdateKillSwitchLockdown(CancellationToken.None));
+            _killSwitchService?.ApplySettings(oldUserSettings);
 
             if (ConnectionInfo.IsStarted()) {
                 // Settings that only apply at connect, judged on EFFECTIVE split values so flipping the
@@ -647,7 +636,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(UserSettings, connectionInfo?.SessionInfo, this),
             SplitTunnelingState = StateHelper.GetSplitTunnelingState(UserSettings, connectionInfo?.SessionInfo, this),
             AlwaysOnState = _alwaysOnService.State,
-            IsKillSwitchBlocking = _isKillSwitchBlocking && IsSessionless,
+            IsKillSwitchBlocking = _killSwitchService?.IsBlocking ?? false,
             SystemBarsInfo = uiContext != null
                 ? Services.DeviceUiProvider.GetBarsInfo(uiContext).ToAppDto()
                 : VpnHood.AppLib.Api.Device.SystemBarsInfo.Default
@@ -762,10 +751,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (connectionState == AppConnectionState.None && lastConnectionState is not null)
                 _alwaysOnService.SessionEnded(_appPersistState.LastError ?? ConnectionInfo.Error);
 
-            // whether the session left its block up, an error stop's; off this lock, as the OS is asked
             if (connectionState == AppConnectionState.None)
-                Task.Run(() => VhInvoker.TryInvokeAsync("read the kill switch's block", LogLevel.Warning,
-                    () => ReadKillSwitch(CancellationToken.None)));
+                _killSwitchService?.SessionEnded();
         }
 
         Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));
@@ -1121,7 +1108,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             SessionName = Features.IsAddAccessKeySupported ? profileInfo.VpnProfileName : null,
             CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
             AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
-            UseKillSwitch = IsKillSwitchOn,
+            UseKillSwitch = _killSwitchService?.IsOn ?? false,
             UserReview = Settings.UserReview
         };
 
@@ -1139,7 +1126,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     // What the adapter's routes take, by the person's IP-via-device list; the kill switch's block lets out the rest.
-    private IpRangeOrderedList GetIncludeIpRangesByDevice(EffectiveSplitTunnelingSettings splitTunneling)
+    internal IpRangeOrderedList GetIncludeIpRangesByDevice(EffectiveSplitTunnelingSettings splitTunneling)
     {
         var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
         if (splitTunneling.UseIpViaDevice) {
@@ -1544,11 +1531,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // A person's disconnect, which also stops always on until a person connects or the service restarts. It
-    // lifts the kill switch's block too, and only it does, not an error stop, a crash or a reboot (owner,
-    // 2026-10-31: "the block should stay until the user disconnects manually"), even when the stop failed;
-    // where the block is kept while disconnected, it stays, by the settings' split. Not under the caller's
-    // token: a person's disconnect is finished whoever stops waiting for it.
+    // A person's disconnect, which also stops always on until a person connects or the service restarts, and is
+    // the one that lifts the kill switch's block, even when the stop failed. Not under the caller's token: a
+    // person's disconnect is finished whoever stops waiting for it.
     public async Task Disconnect()
     {
         _alwaysOnService.PersonDisconnecting();
@@ -1556,67 +1541,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await DisconnectCore(connectNumber: null).Vhc();
         }
         finally {
-            if (IsKillSwitchLockdownOn)
-                await UpdateKillSwitchLockdown(CancellationToken.None).Vhc();
-            else
-                await UnblockKillSwitch(CancellationToken.None).Vhc();
+            if (_killSwitchService != null)
+                await _killSwitchService.PersonDisconnected(CancellationToken.None).Vhc();
         }
     }
 
-    // The kill switch as a connect runs with it: the person's, where the device has one and the plan allows it.
-    private bool IsKillSwitchOn =>
-        UserSettings.KillSwitch && _device.KillSwitch != null && IsPremiumFeatureAllowed(AppFeature.KillSwitch);
-
-    private bool IsKillSwitchLockdownOn => IsKillSwitchOn && UserSettings.KillSwitchLockdown;
-
-    // No session runs or starts, so a block up is no connect's. Not ConnectionState's None: it says Initializing
-    // while a settings change rebuilds a split's list, as the save that turns lockdown on does.
-    private bool IsSessionless => !_isConnecting && !ConnectionInfo.IsStarted();
-
-    // This app's block, if one is up; another app's stays, as that app holds the tunnel.
-    private async Task UnblockKillSwitch(CancellationToken cancellationToken)
-    {
-        if (_device.KillSwitch is not { } killSwitch)
-            return;
-
-        using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
-        await killSwitch.Unblock(anyApp: false, cancellationToken).Vhc();
-        _isKillSwitchBlocking = await killSwitch.IsBlocking(cancellationToken).Vhc();
-    }
-
-    // The block with no session where it is kept while disconnected: up by the settings' split, the tunnel's
-    // adapter by its name, though none is up; else this app's lifted. While a session runs, or a connect starts
-    // one, the block is the service's, and the disconnect comes back here. Another app's connect replaces it, and
-    // that app's disconnect lifts it; this app puts it back at its next start or settings change, not at once.
-    private async Task UpdateKillSwitchLockdown(CancellationToken cancellationToken)
-    {
-        if (_device.KillSwitch is not { } killSwitch)
-            return;
-
-        using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
-        if (IsSessionless) {
-            if (IsKillSwitchLockdownOn) {
-                var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
-                await killSwitch.Block(VpnKillSwitchRules.CreateBySettings(Config.AdapterName,
-                    GetIncludeIpRangesByDevice(splitTunneling), splitTunneling.UseLocalNetwork), cancellationToken).Vhc();
-            }
-            else {
-                await killSwitch.Unblock(anyApp: false, cancellationToken).Vhc();
-            }
-        }
-
-        _isKillSwitchBlocking = await killSwitch.IsBlocking(cancellationToken).Vhc();
-    }
-
-    // Whether this app's block is up, for the state.
-    private async Task ReadKillSwitch(CancellationToken cancellationToken)
-    {
-        if (_device.KillSwitch is not { } killSwitch)
-            return;
-
-        using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
-        _isKillSwitchBlocking = await killSwitch.IsBlocking(cancellationToken).Vhc();
-    }
+    // No session runs or starts, so a kill switch's block up is no connect's. Not ConnectionState's None: it says
+    // Initializing while a settings change rebuilds a split's list, as the save that turns lockdown on does.
+    internal bool IsSessionless => !_isConnecting && !ConnectionInfo.IsStarted();
 
     private readonly AsyncLock _disconnectLock = new();
     private async Task DisconnectCore(int? connectNumber)

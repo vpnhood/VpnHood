@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.AppLib.App.WindowsTun;
+namespace VpnHood.Core.Client.Devices.WindowsTun;
 
 // The Application log as a sink, for the process's life, under the service's name - the source its
 // own start and stop entries have: the service's, and its window's, which runs as the person and may

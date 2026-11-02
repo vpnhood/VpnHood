@@ -6,6 +6,7 @@ using VpnHood.AppUi.Hosting.Desktop.Daemon;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Linux.Utils;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
+using VpnHood.Core.Client.Devices.Linux;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 

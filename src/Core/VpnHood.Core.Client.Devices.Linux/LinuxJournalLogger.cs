@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace VpnHood.AppLib.App.Linux;
+namespace VpnHood.Core.Client.Devices.Linux;
 
 // The console of a systemd service, whose stdout is the journal: a line starts with its level, "<3>"
 // for an error, which the journal files it under and takes off. The journal stamps each line, so its
@@ -30,7 +30,7 @@ public sealed class LinuxJournalLogger : ILogger
     }
 
     // syslog's priority for a level, which the journal files an entry under
-    internal static int GetPriority(LogLevel logLevel)
+    public static int GetPriority(LogLevel logLevel)
     {
         return logLevel switch {
             LogLevel.Critical => 2,

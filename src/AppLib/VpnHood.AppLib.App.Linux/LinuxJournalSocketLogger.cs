@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Devices.Linux;
 
 namespace VpnHood.AppLib.App.Linux;
 

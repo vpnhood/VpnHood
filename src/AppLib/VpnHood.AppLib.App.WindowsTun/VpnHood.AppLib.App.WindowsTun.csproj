@@ -5,11 +5,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- EventLog, for a service's warnings and errors in the Application log. -->
-		<PackageReference Include="System.Diagnostics.EventLog" Version="11.0.0-rc.3.26522.148" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.WindowsTun\VpnHood.Core.Client.Devices.WindowsTun.csproj" />
 	  <ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 	</ItemGroup>

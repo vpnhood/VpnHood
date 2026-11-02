@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Security;
 using Microsoft.Extensions.Logging;
 
-namespace VpnHood.AppLib.App.WindowsTun;
+namespace VpnHood.Core.Client.Devices.WindowsTun;
 
 // Warnings and errors in the Application log: a Windows service's, as .NET's own hosts send them
 // there, and its window's. The rest stays out - the service's in the app's log - since any signed-in

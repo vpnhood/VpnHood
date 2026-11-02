@@ -5,6 +5,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<!-- EventLog, for a service's warnings and errors in the Application log. -->
+		<PackageReference Include="System.Diagnostics.EventLog" Version="11.0.0-rc.3.26522.148" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
 		<ProjectReference Include="..\..\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />

@@ -507,6 +507,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         _isReconfiguredWhileConnecting = true;
         using var scopeLock = await _reconfigureLock.LockAsync(cancellationToken).Vhc();
+        if (_disposed)
+            return; // the app closed while this one waited: nothing of it is left to reconfigure
 
         // publish the current db set BEFORE signaling a running session: it reads the manifests, not the
         // request; a start without the app reads them too
@@ -1756,7 +1758,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (Config.DisconnectOnDispose && ConnectionState.CanDisconnect())
             await TryDisconnect().Vhc();
 
-        Dispose();
+        // a reconfigure under way ends first: it writes the split dbs in the storage, which the next app there - a
+        // restart's, a test's - builds too, over the same temporary files
+        using (await _reconfigureLock.LockAsync(CancellationToken.None).Vhc())
+            Dispose();
     }
 
     protected override void Dispose(bool disposing)

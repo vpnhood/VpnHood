@@ -19,6 +19,7 @@
 * Fix: A VPN started without opening the app - always-on, the quick-settings tile, the phone's VPN settings, or the system restarting it - follows your latest settings, "Share anonymous usage data" among them, and the server and location you chose, never a server you removed #android #ios
 * Fix: Where Google Play works only through the VPN, its update now comes once you connect - after Play has had 3 days to update the app by itself - and an update you started and left comes back when you return to the app #android #store
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
+* Fix: On Android 13 and older, the app connects to a server whose certificate is one of Let's Encrypt's new ones; its certificate check refused it #android
 * Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts #android
 * Fix: On Android 7.0, the app can check for updates, and the app from our website can download them #android
 * Fix: The app from our website removes the update it downloaded as soon as it starts on the new version; the file stayed in the app's storage for up to a day #android

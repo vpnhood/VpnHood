@@ -468,7 +468,12 @@ internal class ConnectorService : IAsyncDisposable
         if (sslPolicyErrors == SslPolicyErrors.None)
             return true;
 
-        var ret = VpnEndPoint.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
+        if (VpnEndPoint.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true)
+            return true;
+
+        // a chain whose only fault is a root this system lacks; a name that doesn't match still fails
+        var ret = sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors && chain != null &&
+                  LetsEncryptRoots.IsChainTrusted(certificate, chain);
         return ret;
     }
 

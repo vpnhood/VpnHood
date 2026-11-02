@@ -12,7 +12,8 @@ namespace VpnHood.Core.Client.Devices.Android;
 // skips the ask on 8.1 only), and Android 9's answers SSL_NULL_WITH_NULL_NULL (dotnet/runtime#136456).
 // So below Android 10 the VPN service takes its TLS from a current Conscrypt - the library Android's
 // own TLS is an old copy of - put first among the providers, where SSLContext.getInstance finds it.
-// On Android it brings no trust manager: the app's network security config still decides the trust.
+// It brings no trust manager: Android's, under the app's network security config, still checks the server's
+// chain, and .NET checks it again against the system's roots alone.
 internal static class AndroidTlsProvider
 {
     private static readonly Lazy<bool> Installed = new(Install);

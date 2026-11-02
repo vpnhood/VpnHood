@@ -20,7 +20,12 @@ public class IosDeviceUiProvider : NullDeviceUiProvider
             if (window == null)
                 return SystemBarsInfo.Default;
 
-            var insets = window.SafeAreaInsets;
+            // iPadOS 26 puts a window's controls in its top-leading corner, outside the plain safe
+            // area, over the UI's menu button: the safe area adapted to that corner vertically has
+            // its top below them.
+            var insets = OperatingSystem.IsIOSVersionAtLeast(26) || OperatingSystem.IsTvOSVersionAtLeast(26)
+                ? window.GetEdgeInsets(UIViewLayoutRegion.CreateSafeAreaLayoutRegion(UIViewLayoutRegionAdaptivityAxis.Vertical))
+                : window.SafeAreaInsets;
             var scale = window.Screen.Scale;
             return new SystemBarsInfo {
                 TopHeight = (int)Math.Ceiling(insets.Top * scale),

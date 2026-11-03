@@ -15,11 +15,7 @@ Write-Host "*** Creating Docker..." -BackgroundColor Blue -ForegroundColor White
 
 # Init script
 $projectDir = Split-Path $PSScriptRoot -Parent;
-$projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 . "$SolutionDir/pub/lib/Common.ps1";
-
-#update project version
-UpdateProjectVersion $projectFile;
 
 # prepare module folders
 $moduleDir = "$packagesRootDir/$packageServerDirName/docker";

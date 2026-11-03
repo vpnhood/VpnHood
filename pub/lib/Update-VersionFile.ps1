@@ -27,8 +27,7 @@ if ( $bump -gt 0 )
 	$versionJson | ConvertTo-Json -depth 10 | Out-File $versionFile;
 
 	# Mirror the version into the root Directory.Build.props — the single <Version> every project (apps +
-	# libraries) inherits. This is the only place the version is stamped now (per-csproj <Version> and
-	# UpdateProjectVersion stamping were retired). CI can still override a pack with -p:Version.
+	# libraries) inherits, and the only place the version is stamped. CI can still override a pack with -p:Version.
 	# Skipped when only the channel changed: the number in the props file is already correct.
 	$srcPropsFile = Join-Path (Split-Path -Parent (Split-Path -Parent $versionFile)) "Directory.Build.props";
 	if ( (-not $markPrereleaseOnly) -and (Test-Path $srcPropsFile) ) {
@@ -61,31 +60,4 @@ elseif ( $bump -gt 0 )
 Function ReportVersion() 
 {
 	Write-Host "version: $versionParam" -ForegroundColor GREEN;
-}
-
-# UpdateProjectVersion
-Function UpdateProjectVersion([string] $projectFile) 
-{
-	$xml = New-Object XML;
-	$xml.PreserveWhitespace = $true;
-	$xml.Load($projectFile);
-	$fileVersion = $xml.SelectSingleNode("Project/PropertyGroup/FileVersion");
-	$packageVersion = $xml.SelectSingleNode("Project/PropertyGroup/Version");
-
-	if ($packageVersion -and $packageVersion.InnerText -ne $versionParam){
-		$fileVersion.InnerText = '$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))';
-		$packageVersion.InnerText = $versionParam;
-
-		# Update Android Version
-		$applicationVersion = $xml.SelectSingleNode("Project/PropertyGroup/ApplicationVersion");
-		$applicationDisplayVersion = $xml.SelectSingleNode("Project/PropertyGroup/ApplicationDisplayVersion");
-		if ($applicationVersion)
-		{
-			$applicationVersion.InnerText = $version.Build;
-			$applicationDisplayVersion.InnerText = $versionParam;
-		}
-
-		# Update project file
-		$xml.Save($projectFile);
-	}
 }

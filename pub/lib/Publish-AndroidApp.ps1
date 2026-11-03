@@ -47,9 +47,6 @@ Write-Host "*** Publishing $projectFile ..." -BackgroundColor Blue -ForegroundCo
 # set default Rollout to 100 if not set
 if ($rollout -le 0 -or $rollout -gt 100) { $rollout = 100; }
 
-#update project version
-UpdateProjectVersion $projectFile;
-
 # prepare module folders (keyed by the stable app folder, not the overridable artifact title)
 $moduleDir = "$packagesRootDir/$appFolder/android-$distribution";
 $moduleDirLatest = "$packagesRootDirLatest/$appFolder/android-$distribution";

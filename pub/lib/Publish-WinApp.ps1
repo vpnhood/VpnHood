@@ -86,9 +86,6 @@ if ($doPublish) {
 	Write-Host;
 	Write-Host "*** [publish] Building $packageFileTitle binary for Windows ..." -BackgroundColor Blue -ForegroundColor White;
 
-	#update project version
-	UpdateProjectVersion $projectFile;
-
 	# publish, with the install root's launchers beside it
 	# NOTE: appSettings will not load from private files if p:SolutionDir=$solutionDir is not set
 	try { Remove-Item -Path $launchersDir -Force -Recurse } catch {}

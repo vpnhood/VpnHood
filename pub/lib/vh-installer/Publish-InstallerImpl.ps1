@@ -43,9 +43,6 @@ Write-Host "*** Creating $assemblyName-$runtime Module ..." -BackgroundColor Blu
 # ".../releases/download//VpnHoodServer-linux-x64.sh".
 $releaseUrl = "$repoBaseUrl/releases/download/$versionTag";
 
-#update project version
-UpdateProjectVersion $projectFile;
-
 # prepare module folders
 $moduleDir = "$packagesRootDir/$publishDirName/$os-$cpu";
 $moduleDirLatest = "$packagesRootDirLatest/$publishDirName/$os-$cpu";

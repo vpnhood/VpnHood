@@ -49,9 +49,6 @@ Assert-DefaultAccessKey $appFolder $distribution -Connect:$connect;
 Write-Host "";
 Write-Host "*** Publishing $projectFile (iOS) ..." -BackgroundColor Blue -ForegroundColor White;
 
-# update project version (shared with the other platforms; stamps <ApplicationDisplayVersion>/etc.)
-UpdateProjectVersion $projectFile;
-
 # prepare module folder (keyed by the stable app folder, not the overridable artifact title)
 $moduleDir = "$packagesRootDir/$appFolder/ios";
 $moduleDirLatest = "$packagesRootDirLatest/$appFolder/ios";

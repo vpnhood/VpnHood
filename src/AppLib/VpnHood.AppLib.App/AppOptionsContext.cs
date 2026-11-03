@@ -1,5 +1,5 @@
-﻿using VpnHood.AppLib.Abstractions;
-using VpnHood.Net.Toolkit.Assets;
+﻿using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Storages;
 
 namespace VpnHood.AppLib.App;
 
@@ -23,10 +23,16 @@ public class AppOptionsContext
     // excludes); on a desktop, where nothing backs up an app's data, the storage folder itself.
     public required string NoBackupStoragePath { get; init; }
 
-    // Where the files under those two folders that the app cannot rebuild are kept (IAppFileStore): plain
-    // files, or on an Apple TV the app's defaults. A provider of the head that keeps one - the sign-in
-    // session - takes it from here.
-    public IAppFileStore FileStore { get; init; } = new FileSystemFileStore();
+    // Where the files under those two folders that the app cannot rebuild are kept - the settings, the
+    // profiles with their keys, the state, the install id, the split lists, the sign-in session: plain
+    // files, or on an Apple TV, which empties every folder an app may write when the device runs low on
+    // storage, the app's defaults. What can be fetched or made again stays in plain files everywhere.
+    public IStorageProvider StorageProvider { get; init; } = new FileSystemStorageProvider();
+
+    // Both folders over the one provider, so on an Apple TV they share its budget. A provider of the head
+    // that keeps a file the app cannot rebuild - the sign-in session - takes its folder from here.
+    public Storage Storage => new(StorageProvider, StoragePath);
+    public Storage NoBackupStorage => new(StorageProvider, NoBackupStoragePath);
 
     // The files the build's asset packages placed with the app - the IP-location database, the
     // UI's store, the browser page - read the way this platform reads them: from the folder beside

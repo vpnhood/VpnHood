@@ -47,7 +47,7 @@ NSFileManager.DefaultManager.GetContainerUrl("group.com.vpnhood.client.ios")?.Pa
 On tvOS both are under the container's `Library/Caches/`: an Apple TV lets an app write nothing else of a shared
 container (a device refuses the rest, though the simulator allows it), and empties it, as it empties the app's
 own folders, when the device runs low on storage. So on a TV the app keeps what it cannot rebuild in its defaults
-(`AppOptionsContext.FileStore`), with a copy of the proxies the person added.
+(`AppOptionsContext.StorageProvider`), with a copy of the proxies the person added.
 
 If `GetContainerUrl` returns `null` (the App Group missing from the entitlements or the provisioning profile), the
 app stops at start with an error naming the group. There is no fallback: `LocalApplicationData` is a different path

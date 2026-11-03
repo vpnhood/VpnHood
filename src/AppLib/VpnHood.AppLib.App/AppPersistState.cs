@@ -1,15 +1,16 @@
 ﻿using System.Text.Json;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Storages;
 
 namespace VpnHood.AppLib.App;
 
-internal class AppPersistState(IAppFileStore fileStore, string filePath)
+internal class AppPersistState(Storage storage)
 {
+    private const string FileName = "state.json";
     private readonly Lock _saveLock = new();
     // defer reading state.json until the persisted state is first accessed
     private readonly Lazy<PersistData> _lazyData =
-        new(() => fileStore.TryReadJson<PersistData>(filePath) ?? new PersistData());
+        new(() => storage.TryReadJson<PersistData>(FileName) ?? new PersistData());
     private PersistData Data => _lazyData.Value;
 
     private class PersistData
@@ -129,20 +130,17 @@ internal class AppPersistState(IAppFileStore fileStore, string filePath)
         }
     }
 
-    internal static AppPersistState Load(IAppFileStore fileStore, string filePath)
+    internal static AppPersistState Load(Storage storage)
     {
-        var ret = new AppPersistState(fileStore, filePath);
+        var ret = new AppPersistState(storage);
         return ret;
     }
 
     private void Save()
     {
         lock (_saveLock) {
-            if (string.IsNullOrEmpty(filePath))
-                return; // loading
-
             var json = JsonSerializer.Serialize(Data, new JsonSerializerOptions { WriteIndented = true });
-            fileStore.Write(filePath, json);
+            storage.Write(FileName, json);
         }
     }
 }

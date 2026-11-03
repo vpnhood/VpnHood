@@ -1,25 +1,24 @@
 ﻿using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Storages;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Settings;
 
 public class AppSettingsService
 {
-    private readonly IAppFileStore _fileStore;
-    private readonly string _storagePath;
+    private const string FileNameSettings = "settings.json";
+    private readonly Storage _storage;
     private readonly Lock _saveLock = new();
-    private string AppSettingsFilePath => Path.Combine(_storagePath, "settings.json");
 
-    // fetched again when gone, so plain files on every platform (IAppFileStore)
-    private string RemoteSettingsFilePath => Path.Combine(_storagePath, "remote_settings.json");
-    private string PromotionFolderPath => Path.Combine(_storagePath, "promotions");
+    // fetched again when gone, so plain files on every platform, not the storage's
+    private string RemoteSettingsFilePath => Path.Combine(_storage.FolderPath, "remote_settings.json");
+    private string PromotionFolderPath => Path.Combine(_storage.FolderPath, "promotions");
 
     public event EventHandler? BeforeSave;
     public AppSettings Settings { get; }
@@ -30,23 +29,23 @@ public class AppSettingsService
     public SplitIpViaDeviceSettings SplitIpViaDeviceSettings { get; }
     public SplitDomainSettings SplitDomainSettings { get; }
 
-    public AppSettingsService(IAppFileStore fileStore, string storagePath, Uri? remoteSettingsUrl)
+    public AppSettingsService(Storage storage, Uri? remoteSettingsUrl)
     {
-        _fileStore = fileStore;
-        _storagePath = storagePath;
+        _storage = storage;
 #pragma warning disable CS0618 // Type or member is obsolete
-        ClientProfileMigration.MigrateSettings(AppSettingsFilePath);
+        ClientProfileMigration.MigrateSettings(Path.Combine(storage.FolderPath, FileNameSettings));
 #pragma warning restore CS0618 // Type or member is obsolete
 
         // A file that cannot be read is replaced by defaults - a new client id among them - so the
         // failure must at least be in the log, or a device that keeps forgetting its settings has
         // nothing to show for it.
-        Settings = fileStore.TryReadJson<AppSettings>(AppSettingsFilePath, logger: VhLogger.Instance) ??
+        Settings = storage.TryReadJson<AppSettings>(FileNameSettings, logger: VhLogger.Instance) ??
                    new AppSettings();
         Settings.AppSettingsService = this;
-        SplitIpViaAppSettings = new SplitIpViaAppSettings(fileStore, Path.Combine(storagePath, "splits", "ips_via_app"));
-        SplitIpViaDeviceSettings = new SplitIpViaDeviceSettings(fileStore, Path.Combine(storagePath, "splits", "ips_via_device"));
-        SplitDomainSettings = new SplitDomainSettings(fileStore, Path.Combine(storagePath, "splits", "domains"));
+        var splitStorage = storage.OpenStorage("splits");
+        SplitIpViaAppSettings = new SplitIpViaAppSettings(splitStorage.OpenStorage("ips_via_app"));
+        SplitIpViaDeviceSettings = new SplitIpViaDeviceSettings(splitStorage.OpenStorage("ips_via_device"));
+        SplitDomainSettings = new SplitDomainSettings(splitStorage.OpenStorage("domains"));
         OldUserSettings = Settings.UserSettings;
 
         // load remote settings
@@ -80,7 +79,7 @@ public class AppSettingsService
         lock (_saveLock) {
             Settings.ConfigTime = DateTime.UtcNow; // full precision: the change detection above (see AppSettings)
             var json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
-            _fileStore.Write(AppSettingsFilePath, json);
+            _storage.Write(FileNameSettings, json);
         }
     }
 

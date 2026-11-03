@@ -3,12 +3,12 @@ using System.Security.Authentication;
 using System.Text.Json;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.App;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Storages;
 using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -80,8 +80,7 @@ public class PortalTest
         params IAuthenticationExternalProvider[] externalProviders)
     {
         return new PortalAuthenticationProvider(
-            new FileSystemFileStore(),
-            _storageFolder,
+            new Storage(new FileSystemStorageProvider(), _storageFolder),
             _portal.BaseUrl,
             PackageName,
             externalProviders.Length > 0
@@ -295,7 +294,8 @@ public class PortalTest
         _portal.Enqueue(SignOutRoute, TestPortalServer.NoContent);
 
         // the desktop service: no window, and no provider that would need one
-        using var authenticationProvider = new PortalAuthenticationProvider(new FileSystemFileStore(), _storageFolder, _portal.BaseUrl,
+        using var authenticationProvider = new PortalAuthenticationProvider(
+            new Storage(new FileSystemStorageProvider(), _storageFolder), _portal.BaseUrl,
             PackageName, authenticationExternalProviders: []);
 
         var result = await authenticationProvider.SignIn(null,

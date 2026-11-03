@@ -62,7 +62,7 @@ internal static class App
                 return null;
 
             // no external identity provider on this head: the portal's own password sign-in serves
-            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.FileStore, context.NoBackupStoragePath,
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.NoBackupStorage,
                 appConfigs.PortalBaseUri, context.AppId, []);
 
             // the web-distribution store: plans priced by the portal, checkout in the browser the

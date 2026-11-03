@@ -1,14 +1,14 @@
 ﻿
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.App.Utils;
+using VpnHood.Net.Toolkit.Storages;
 
 namespace VpnHood.AppLib.App.Settings;
 
 // The split-domain source lists (see SplitTunneling.UseDomain). They feed the split-domain db, which
 // live-applies to a running session through a reconfigure.
-public class SplitDomainSettings(IAppFileStore fileStore, string folderPath)
-    : SplitFileSettings(fileStore, folderPath)
+public class SplitDomainSettings(Storage storage)
+    : SplitFileSettings(storage)
 {
     // Raised by Set when the lists actually changed, AFTER the files are written — a handler that
     // re-reads the settings sees the new content. The owner (VpnHoodApp) reacts.

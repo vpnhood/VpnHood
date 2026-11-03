@@ -1,11 +1,11 @@
 ﻿using Microsoft.Data.Sqlite;
-using VpnHood.AppLib.App;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App.Premium;
 using VpnHood.AppLib.App.Services;
 using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
+using VpnHood.Net.Toolkit.Storages;
 
 namespace VpnHood.Test.Tests;
 
@@ -305,7 +305,8 @@ public class SplitDomainDbTest : TestBase
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, "split-domain-service");
         Directory.CreateDirectory(storagePath);
-        var settingsService = new AppSettingsService(new FileSystemFileStore(), storagePath, remoteSettingsUrl: null);
+        var settingsService = new AppSettingsService(new Storage(new FileSystemStorageProvider(), storagePath),
+            remoteSettingsUrl: null);
         var service = new SplitDomainService(settingsService, new AllowAllPremiumFeatures());
 
         // the service owns its whole activity decision: toggle off ⇒ inactive, nothing built

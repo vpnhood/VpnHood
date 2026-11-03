@@ -4,6 +4,7 @@ using VpnHood.Core.Client.Devices.Ios;
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Storages;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Ios;
@@ -45,9 +46,9 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
             NoBackupStoragePath = noBackupStoragePath,
             // tvOS empties both folders - every folder an app may write is a cache there - when the device
             // runs low on storage, and keeps only the app's defaults
-            FileStore = OperatingSystem.IsTvOS()
+            StorageProvider = OperatingSystem.IsTvOS()
                 ? new UserDefaultsFileStore(storageParentPath)
-                : new FileSystemFileStore(),
+                : new FileSystemStorageProvider(),
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };
 

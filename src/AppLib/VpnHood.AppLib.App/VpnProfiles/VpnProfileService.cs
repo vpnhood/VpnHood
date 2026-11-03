@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.VpnProfiles;
 using VpnHood.Core.Common.Messaging;
@@ -9,6 +8,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Storages;
 using VpnHood.Net.Toolkit.Utils;
 
 using VpnHood.AppLib.App.DtoConverters;
@@ -32,7 +32,7 @@ public class VpnProfileService
     /// </para>
     /// </summary>
     private readonly Lock _storeLock = new();
-    private readonly IAppFileStore _fileStore;
+    private readonly Storage _storage;
     private readonly AppFeatures _appFeatures;
     private VpnProfileInfo? _cashInfo;
     private string? _cashInfoRegion;
@@ -40,17 +40,12 @@ public class VpnProfileService
     // after each write of the store, off the writer's thread and lock
     public event EventHandler? Changed;
 
-    private string VpnProfilesFilePath => GetVpnProfilesFilePath(field);
-
-    private static string GetVpnProfilesFilePath(string folderPath) => Path.Combine(folderPath, FilenameProfiles);
-
-    public VpnProfileService(IAppFileStore fileStore, string folderPath, AppFeatures appFeatures)
+    public VpnProfileService(Storage storage, AppFeatures appFeatures)
     {
-        VpnProfilesFilePath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
-        _fileStore = fileStore;
+        _storage = storage;
         _appFeatures = appFeatures;
 #pragma warning disable CS0618 // Type or member is obsolete
-        ClientProfileMigration.MigrateProfiles(VpnProfilesFilePath);
+        ClientProfileMigration.MigrateProfiles(Path.Combine(storage.FolderPath, FilenameProfiles));
 #pragma warning restore CS0618 // Type or member is obsolete
         _vpnProfiles = [.. Load()];
     }
@@ -436,7 +431,7 @@ public class VpnProfileService
     private void Save()
     {
         lock (_storeLock) {
-            _fileStore.Write(VpnProfilesFilePath, JsonSerializer.Serialize(_vpnProfiles));
+            _storage.Write(FilenameProfiles, JsonSerializer.Serialize(_vpnProfiles));
 
             // clear cache
             _cashInfo = null;
@@ -456,7 +451,7 @@ public class VpnProfileService
     private IEnumerable<VpnProfile> Load()
     {
         try {
-            var json = _fileStore.Read(VpnProfilesFilePath);
+            var json = _storage.Read(FilenameProfiles);
             return json is null ? [] : JsonUtils.Deserialize<VpnProfile[]>(json);
         }
         catch {

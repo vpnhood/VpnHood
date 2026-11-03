@@ -8,7 +8,7 @@ using VpnHood.Test.Device;
 namespace VpnHood.AppLib.Test.Tests;
 
 // tvOS empties every folder an app may write when the device runs low on storage, and keeps only the app's
-// defaults: what the app cannot rebuild lives there (IAppFileStore), the rest is made again.
+// defaults: what the app cannot rebuild lives there (AppOptionsContext.StorageProvider), the rest is made again.
 [TestClass]
 public class TvStorageTest : TestAppBase
 {
@@ -24,7 +24,7 @@ public class TvStorageTest : TestAppBase
         var storagePath = Path.Combine(root, "app");
         var noBackupStoragePath = Path.Combine(root, "no-backup", "app");
         var appOptions = TestAppHelper.CreateAppOptions(storagePath: storagePath,
-            noBackupStoragePath: noBackupStoragePath, fileStore: new TestKeyValueFileStore(root));
+            noBackupStoragePath: noBackupStoragePath, storageProvider: new TestKeyValueFileStore(root));
 
         // a first run: the terms accepted, a key added, a split list written
         string clientId;
@@ -58,18 +58,18 @@ public class TvStorageTest : TestAppBase
     public void A_change_past_the_budget_fails_and_keeps_what_was_there()
     {
         var root = Path.Combine(TestAppHelper.WorkingPath, "tv_" + Guid.CreateVersion7());
-        var fileStore = new TestKeyValueFileStore(root, budget: 1024);
+        var storageProvider = new TestKeyValueFileStore(root, budget: 1024);
         var filePath = Path.Combine(root, "app", "settings.json");
-        fileStore.Write(filePath, "small");
+        storageProvider.Write(filePath, "small");
 
-        Assert.ThrowsExactly<IOException>(() => fileStore.Write(filePath, new string('x', 2048)));
-        Assert.AreEqual("small", fileStore.Read(filePath));
+        Assert.ThrowsExactly<IOException>(() => storageProvider.Write(filePath, new string('x', 2048)));
+        Assert.AreEqual("small", storageProvider.Read(filePath));
 
         // what a deletion frees is there to take again, and nothing outside the root is taken at all
-        fileStore.Delete(filePath);
-        fileStore.Write(Path.Combine(root, "app", "profiles", "vpn_profiles.json"), new string('x', 900));
+        storageProvider.Delete(filePath);
+        storageProvider.Write(Path.Combine(root, "app", "profiles", "vpn_profiles.json"), new string('x', 900));
         Assert.ThrowsExactly<ArgumentException>(() =>
-            fileStore.Write(Path.Combine(root, "..", "elsewhere.json"), "x"));
+            storageProvider.Write(Path.Combine(root, "..", "elsewhere.json"), "x"));
     }
 
     [TestMethod]
@@ -77,7 +77,7 @@ public class TvStorageTest : TestAppBase
     {
         var root = Path.Combine(TestAppHelper.WorkingPath, "tv_" + Guid.CreateVersion7());
         var appOptions = TestAppHelper.CreateAppOptions(storagePath: Path.Combine(root, "app"),
-            fileStore: new TestKeyValueFileStore(root));
+            storageProvider: new TestKeyValueFileStore(root));
         appOptions.IsVpnServiceDataPurgeable = true;
 
         // added by hand - one of them then turned off - and pasted as a list, one of which goes again

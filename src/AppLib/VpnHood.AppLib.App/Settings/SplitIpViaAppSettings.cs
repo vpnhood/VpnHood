@@ -1,14 +1,14 @@
 ﻿
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.App.Utils;
+using VpnHood.Net.Toolkit.Storages;
 
 namespace VpnHood.AppLib.App.Settings;
 
 // The split-ip-via-app source lists (see SplitTunneling.UseIpViaApp). They feed the split-ip db, which
 // live-applies to a running session through a reconfigure.
-public class SplitIpViaAppSettings(IAppFileStore fileStore, string folderPath)
-    : SplitFileSettings(fileStore, folderPath)
+public class SplitIpViaAppSettings(Storage storage)
+    : SplitFileSettings(storage)
 {
     // Raised by Set when the lists actually changed, AFTER the files are written — a handler that
     // re-reads the settings sees the new content. The owner (VpnHoodApp) reacts.

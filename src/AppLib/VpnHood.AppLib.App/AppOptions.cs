@@ -11,6 +11,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Storages;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App.WebHosting;
 
@@ -31,11 +32,12 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     internal bool IsSingleton { get; set; } = true;
     public string StorageFolderPath => context.StoragePath;
     public string NoBackupStorageFolderPath => context.NoBackupStoragePath;
-    public IAppFileStore FileStore => context.FileStore;
+    public Storage Storage => context.Storage;
+    public Storage NoBackupStorage => context.NoBackupStorage;
 
     // tvOS empties the VPN service's data folder - in the App Group's Caches, the only folder there an app
-    // may write - when the device runs low on storage, so the proxies the person added are kept in the file
-    // store too (ProxyEndPointCopy). Tests set it to see that work off a TV.
+    // may write - when the device runs low on storage, so the proxies the person added are kept in the
+    // storage too (ProxyEndPointCopy). Tests set it to see that work off a TV.
     internal bool IsVpnServiceDataPurgeable { get; set; } = OperatingSystem.IsTvOS();
 
     // Transport tuning handed to the client untouched. Its timeouts default themselves; the buffer

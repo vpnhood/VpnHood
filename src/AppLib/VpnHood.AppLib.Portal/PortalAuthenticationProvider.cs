@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Portal.Dto;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Storages;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.Abstractions.UiContexts;
 
@@ -25,6 +25,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     /// choice, so it deliberately does not appear in AuthProviders.
     /// </summary>
     private const string RestoreCredentialMethodId = "restorecredential";
+    private const string SessionFileName = "portalSession.json";
 
     private bool _disposed;
     private bool _restoreSignInAttempted;
@@ -32,13 +33,12 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     private Task? _restoreEnrolTask;
     private readonly IRestoreCredentialProvider? _restoreCredentialProvider;
     private readonly IReadOnlyList<IAuthenticationExternalProvider> _authenticationExternalProviders;
-    private readonly IAppFileStore _fileStore;
+    private readonly Storage _accountStorage;
     private readonly HttpClient _httpClient;
     private readonly string _packageName;
     private readonly Lock _sessionLock = new();
     private PortalSession? _session;
     private PortalSignInChallenge? _pendingChallenge;
-    private string SessionFilePath => Path.Combine(field, "account", "portalSession.json");
 
     // The external providers' self-declared method ids ("google" on Android, "apple" on iOS, any id
     // a third-party provider declares), passed through verbatim — plus "password", which is the
@@ -49,16 +49,14 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     public string? UserId => Session?.UserId;
 
     public PortalAuthenticationProvider(
-        IAppFileStore fileStore,
-        string storageFolderPath,
+        Storage storage,
         Uri portalBaseUrl,
         string packageName,
         IReadOnlyList<IAuthenticationExternalProvider> authenticationExternalProviders,
         IRestoreCredentialProvider? restoreCredentialProvider = null,
         bool ignoreSslVerification = false)
     {
-        SessionFilePath = storageFolderPath;
-        _fileStore = fileStore;
+        _accountStorage = storage.OpenStorage("account");
         _packageName = packageName;
         _authenticationExternalProviders = authenticationExternalProviders;
         _restoreCredentialProvider = restoreCredentialProvider;
@@ -74,7 +72,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         if (ignoreSslVerification) handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         _httpClient = new HttpClient(handler) { BaseAddress = portalBaseUrl };
 
-        _session = fileStore.TryReadJson<PortalSession>(SessionFilePath, logger: VhLogger.Instance);
+        _session = _accountStorage.TryReadJson<PortalSession>(SessionFileName, logger: VhLogger.Instance);
     }
 
     private PortalSession? Session {
@@ -85,9 +83,9 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
             lock (_sessionLock) {
                 _session = value;
                 if (value == null)
-                    _fileStore.Delete(SessionFilePath);
+                    _accountStorage.Delete(SessionFileName);
                 else
-                    _fileStore.Write(SessionFilePath, JsonSerializer.Serialize(value));
+                    _accountStorage.Write(SessionFileName, JsonSerializer.Serialize(value));
             }
         }
     }

@@ -1,11 +1,11 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.Net.Toolkit.Storages;
 
 namespace VpnHood.AppLib.App.Settings;
 
-// List settings core: one text file per list inside the folder, kept by the app's file store. A missing
-// list reads as empty and signs as missing until its first write, so a change signature taken before a
-// build describes what the build reads. Writes validate first: an unparsable list is never kept.
-public abstract class SplitFileSettings(IAppFileStore fileStore, string folderPath)
+// List settings core: one text file per list in the storage. A missing list reads as empty and signs as
+// missing until its first write, so a change signature taken before a build describes what the build
+// reads. Writes validate first: an unparsable list is never kept.
+public abstract class SplitFileSettings(Storage storage)
 {
     // One access at a time: a reconfigure reads the lists, connected or not, while the person may be
     // saving them, and a read and a write that meet on the open file fail one of them.
@@ -17,14 +17,14 @@ public abstract class SplitFileSettings(IAppFileStore fileStore, string folderPa
     protected string Read(string fileTitle)
     {
         lock (_fileLock)
-            return fileStore.Read(GetFilePath(fileTitle)) ?? string.Empty;
+            return storage.Read(GetFileName(fileTitle)) ?? string.Empty;
     }
 
     protected void Write(string fileTitle, string content)
     {
         Validate(content);
         lock (_fileLock)
-            fileStore.Write(GetFilePath(fileTitle), content);
+            storage.Write(GetFileName(fileTitle), content);
     }
 
     // The lists' change signature, stored as the db's source_signature meta so the db builders tell a
@@ -34,11 +34,11 @@ public abstract class SplitFileSettings(IAppFileStore fileStore, string folderPa
     {
         lock (_fileLock)
             return string.Join(',', fileTitles.Select(fileTitle =>
-                $"{fileTitle}:{fileStore.GetSignature(GetFilePath(fileTitle))}"));
+                $"{fileTitle}:{storage.GetSignature(GetFileName(fileTitle))}"));
     }
 
-    private string GetFilePath(string fileTitle)
+    private static string GetFileName(string fileTitle)
     {
-        return Path.Combine(folderPath, fileTitle + ".txt");
+        return fileTitle + ".txt";
     }
 }

@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using TaskExtensions = VpnHood.Net.Toolkit.Extensions.TaskExtensions;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 using VpnHood.AppLib.Abstractions.Device;
@@ -47,6 +46,7 @@ using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Storages;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App.WebHosting;
 using VpnHood.Net.Toolkit.Assets;
@@ -65,12 +65,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // which "service log -f" tells them apart.
     public const string LogAppHeader = "VPN App Log";
     public const string LogVpnServiceHeader = "VPN Service Log";
-    private const string FileNamePersistState = "state.json";
     internal const string FolderNameProfiles = "profiles";
     internal const string FolderNameAccount = "account";
     internal const string FolderNameTemp = "Temp";
     private const string FileNameInstallId = "install_id";
-    private const string FileNameProxyEndPointCopy = "proxies.json";
     private readonly LogService _logService;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
@@ -157,7 +155,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             options.WebUiPort);
 
         _device = device;
-        _appPersistState = AppPersistState.Load(options.FileStore, Path.Combine(StorageFolderPath, FileNamePersistState));
+        _appPersistState = AppPersistState.Load(options.Storage);
         _logService = logService;
 
         Config = new VpnHoodAppConfig {
@@ -268,8 +266,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ChannelProtocols = protocols.Select(x => x.ToAppDto()).ToArray()
         };
 
-        VpnProfileService = new VpnProfileService(options.FileStore, Path.Combine(StorageFolderPath, FolderNameProfiles),
-            Features);
+        VpnProfileService = new VpnProfileService(options.Storage.OpenStorage(FolderNameProfiles), Features);
         _alwaysOnService = new AppAlwaysOnService(this, options.AlwaysOnOptions, _appPersistState);
         _killSwitchService = device.KillSwitch is { } killSwitch ? new AppKillSwitchService(this, killSwitch) : null;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
@@ -323,7 +320,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 deviceUiProvider: deviceUiProvider,
                 settingsService: settingsService,
                 endPointCopy: options.IsVpnServiceDataPurgeable
-                    ? new ProxyEndPointCopy(options.FileStore, Path.Combine(StorageFolderPath, FileNameProxyEndPointCopy))
+                    ? new ProxyEndPointCopy(options.Storage)
                     : null)
         };
 
@@ -779,9 +776,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
         Directory.CreateDirectory(options.NoBackupStorageFolderPath);
 
-        var settingsService =
-            new AppSettingsService(options.FileStore, options.StorageFolderPath, options.RemoteSettingsUrl);
-        var installId = LoadInstallId(options.FileStore, options.NoBackupStorageFolderPath, settingsService);
+        var settingsService = new AppSettingsService(options.Storage, options.RemoteSettingsUrl);
+        var installId = LoadInstallId(options.NoBackupStorage, settingsService);
         var logService = new LogService(Path.Combine(options.NoBackupStorageFolderPath, FileNameLog));
         logService.Start(
             GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
@@ -794,25 +790,23 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // The install's own random id, which the client id comes from where the device has none of its own
     // (iOS, Windows, an Android without its id): in the device-only folder, so a device restored from a
     // backup makes its own rather than sharing the old one's.
-    private static string LoadInstallId(IAppFileStore fileStore, string noBackupStorageFolderPath,
-        AppSettingsService settingsService)
+    private static string LoadInstallId(Storage noBackupStorage, AppSettingsService settingsService)
     {
-        var filePath = Path.Combine(noBackupStorageFolderPath, FileNameInstallId);
 #pragma warning disable CS0618 // Type or member is obsolete
-        MigrateInstallId(fileStore, filePath, settingsService);
+        MigrateInstallId(noBackupStorage, settingsService);
 #pragma warning restore CS0618 // Type or member is obsolete
-        var savedId = TryReadInstallId(fileStore, filePath);
+        var savedId = TryReadInstallId(noBackupStorage);
         if (savedId != null)
             return savedId;
 
         var installId = Guid.NewGuid().ToString();
-        fileStore.Write(filePath, installId);
+        noBackupStorage.Write(FileNameInstallId, installId);
         return installId;
     }
 
-    private static string? TryReadInstallId(IAppFileStore fileStore, string filePath)
+    private static string? TryReadInstallId(Storage noBackupStorage)
     {
-        return Guid.TryParse(fileStore.Read(filePath)?.Trim(), out var installId)
+        return Guid.TryParse(noBackupStorage.Read(FileNameInstallId)?.Trim(), out var installId)
             ? installId.ToString()
             : null;
     }
@@ -831,14 +825,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // written before the settings let it go, so an end between the two loses nothing.
     [Obsolete("Migration (2026-10): drop a few months after it ships, with its call in LoadInstallId, " +
               "AppSettings.ClientId and the An_update_moves_the_install_id_out_of_the_settings test.")]
-    private static void MigrateInstallId(IAppFileStore fileStore, string filePath, AppSettingsService settingsService)
+    private static void MigrateInstallId(Storage noBackupStorage, AppSettingsService settingsService)
     {
         var settings = settingsService.Settings;
         if (settings.ClientId is null)
             return;
 
-        if (TryReadInstallId(fileStore, filePath) is null)
-            fileStore.Write(filePath, settings.ClientId);
+        if (TryReadInstallId(noBackupStorage) is null)
+            noBackupStorage.Write(FileNameInstallId, settings.ClientId);
         settings.ClientId = null;
         settingsService.Save();
     }

@@ -1,9 +1,7 @@
-using VpnHood.AppLib.Abstractions;
+namespace VpnHood.Net.Toolkit.Storages;
 
-namespace VpnHood.AppLib.App;
-
-// The app's files as plain files, where the platform keeps them (IAppFileStore).
-public class FileSystemFileStore : IAppFileStore
+// Small text files as plain files.
+public class FileSystemStorageProvider : IStorageProvider
 {
     public string? Read(string filePath)
     {

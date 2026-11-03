@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.Net.Toolkit.Storages;
 
 namespace VpnHood.AppLib.App;
 
@@ -8,7 +8,7 @@ namespace VpnHood.AppLib.App;
 // defaults: VpnHood.AppLib.App.Ios's UserDefaultsFileStore), one entry per file, named by its path under a
 // root folder. Such a store is small - tvOS ends an app whose defaults reach 1 MB - so the entries share a
 // budget, and a write past it fails with the old content kept.
-public abstract class KeyValueFileStore : IAppFileStore
+public abstract class KeyValueFileStore : IStorageProvider
 {
     private const string KeyPrefix = "VpnHood.AppFiles/";
     private readonly string _rootFolderPath;

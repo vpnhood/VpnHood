@@ -16,5 +16,5 @@ internal sealed class UserDefaultsFileStore(string rootFolderPath)
     protected override void RemoveValue(string key) => Defaults.RemoveObject(key);
 
     protected override IReadOnlyList<string> GetKeys() =>
-        Defaults.ToDictionary().Keys.Select(key => key.ToString()).ToArray();
+        Defaults.ToDictionary().Keys.Select(key => key.ToString() ?? string.Empty).ToArray();
 }

@@ -1,94 +1,62 @@
 # Latest
 
 * Update: A VpnHoodServer of your own must run this release or later before this version can connect to it #android #ios #windows #linux
+* Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
+* Improve: The Android app starts two to four times faster, most of all on budget phones #android #store
+* Improve: The app draws its screens itself rather than as a web page: on Android it no longer needs Android System WebView, and text is easier to read, with more contrast
+* Feature: Always On comes to Windows and Linux: switch it on in Settings, or with the `always-on on` command on a computer with no desktop, and the VPN connects as the computer starts, before anyone signs in. While the server is out of reach it tries again, waiting longer each time. It stops when you disconnect, when another VPN app takes over, or when the server refuses the connection, and the app says why. On VpnHood! CONNECT it needs premium #windows #linux
+* Update: On Windows the VPN runs as a service: it starts with Windows, the connection no longer depends on the window, and the window and its tray no longer ask for administrator rights. The first time you open this version, your settings, profiles, split lists and sign-in move into the service, and your device keeps its identity #windows
+* Update: On Windows and Linux only an administrator can use the app; on a standard account its window says so #windows #linux
+* Update: On Windows and Linux, one VPN app made with VpnHood is connected at a time: connecting another - VpnHood! CLIENT and VpnHood! CONNECT, say - disconnects the first, which says another VPN app took over and stays off, even with Always On, until you connect it again #windows #linux
+* Feature: On Windows and Linux, the app from our website updates itself: it downloads each new version in the background and installs it while the VPN is disconnected; Settings > Automatic Updates turns this off. With Always On, the app tells you after a few days, and its Install updates it at once; on a computer with no desktop, the `update` command does the same #windows #linux
+* Feature: The Android app from our website updates itself: "Update now" downloads the version made for your phone's processor, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store keeps updating there #android
 * Feature: On Windows and iOS, an access key's file (.cdy) and its link (vh:...) open in VpnHood! CLIENT, which adds its server, chooses it and says so, as on Android #windows #ios
 * Update: Access keys start with vh: rather than vh://, so their links open on iPhone and Mac too; a key given out before still works everywhere, and as a link everywhere but on iPhone and Mac
-* Improve: The Android app starts two to four times faster, most of all on budget phones #android
-* Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
-* Feature: Always On comes to Windows and Linux: switch it on in Settings, or with the `always-on on` command on a computer with no desktop, and the VPN connects as the computer starts, before anyone signs in. While the server is out of reach it tries again, waiting longer each time. It stops when you disconnect, when another VPN app takes over, or when the server refuses the connection, and the app says why. On VpnHood! CONNECT it needs premium #windows #linux
-* Update: On Windows and Linux, one VPN app made with VpnHood is connected at a time: connecting another - VpnHood! CLIENT and VpnHood! CONNECT, say - disconnects the first, which says another VPN app took over and stays off, even with Always On, until you connect it again #windows #linux
-* Feature: In the EEA, the UK and Switzerland, the app asks in Google's own form before its ads use your data, and Settings > Privacy > Ad privacy choices changes your answer; with a no you still see ads, but not personalised ones #android #connect #store
+* Feature: On Linux desktops that show tray icons (KDE, or GNOME with the AppIndicator extension), the app sits in the tray: it shows the connection, connects and disconnects, and closing the window keeps the app there. The tray icon is the app's own, with the connection's state on its corner #windows #linux
+* Feature: On Linux the app has an uninstaller: Uninstall on its menu entry's right-click menu, or `sudo /opt/VpnHoodClient/vhuninstall` (`/opt/VpnHoodConnect/vhuninstall` for CONNECT). Settings and profiles stay for a later install unless you add `-purge` #linux
+* Feature: In the EEA, the UK and Switzerland, the app asks in Google's own form before its ads use your data, and Settings > Privacy > Ad privacy choices changes your answer #android #connect #store
 * Feature: In the EEA, the UK and Switzerland, usage data stays off until you agree: the first-run page asks once, with a box you tick yourself, on Google Play and after this update too #android #windows #linux
-* Improve: On the picture pages - a feature's page, Go Premium and the premium offers - the back button stays at the top as you scroll, and the page's title appears there once its large title has scrolled away; on every page, what scrolls up to the top fades out softly instead of being cut along a line #android #ios #windows #linux
-* Fix: On Android, the page's own colours run under the status and navigation bars, where a band of another colour showed: dark navy on CLIENT's home, a lighter one at the bottom of the premium pages; the menu runs the full height of the screen too #android
-* Fix: On Android, a server added from a link or a key file shows on the home page at once and stays selected, and its message no longer says "updated" for a new one #android
-* Fix: An access key's link that opens the app before you have accepted its terms adds its server once you accept, and says so then on the home page, where before it was added at once and its message showed over the terms #android
-* Fix: On Linux each log line appears in the journal once, and whole #linux
+* Update: VpnHood! CLIENT on Windows, on Linux and from our website shares anonymous usage data as its Google Play build does, and shows the switch that turns it off in Settings > Privacy #client #windows #linux #android
+* Update: The Android app from our website no longer contains AppsFlyer, so it no longer reports which link it was installed from #android #connect
+* Update: The app's name on iOS is written as on its other platforms, VpnHood! CONNECT #ios #connect
+* Update: On a plan with a speed limit, the first megabytes after a pause go at full speed, so pages load quickly, and only steady heavy use is held to the limit
+* Improve: Buying on the website opens the checkout in the app's language #connect
+* Fix: Split Local Network does what it says: on, local devices such as a printer or a TV are reached directly; off, their traffic stays in the VPN. It did the opposite while Allow Split Tunneling was off, or on a server that carries local addresses
 * Fix: With "Share anonymous usage data" off, the app no longer reports each start, nor the VPN each connection and its usage, and turning it off while connected stops the VPN's reports at once #android
 * Fix: Where the app asks you to accept its terms at first run, it sends no usage data before you accept them #android #windows #linux
 * Fix: A VPN started without opening the app - always-on, the quick-settings tile, the phone's VPN settings, or the system restarting it - follows your latest settings, "Share anonymous usage data" among them, and the server and location you chose, never a server you removed #android #ios
-* Fix: Where Google Play works only through the VPN, its update now comes once you connect - after Play has had 3 days to update the app by itself - and an update you started and left comes back when you return to the app #android #store
+* Fix: Where Google Play works only through the VPN, the app's update now comes once you connect #android #store
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
 * Fix: On Android 13 and older, the app connects to a server whose certificate is one of Let's Encrypt's new ones; its certificate check refused it #android
-* Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts #android
-* Fix: On Android 7.0, the app can check for updates, and the app from our website can download them #android
-* Fix: The app from our website removes the update it downloaded as soon as it starts on the new version; the file stayed in the app's storage for up to a day #android
-* Fix: On some phones, the quick-settings tile and the app no longer stall as they start, where Android could say the app isn't responding #android
-* Update: The times in the app's log are in UTC #android #ios #windows #linux
-* Fix: On Android, the app could close when you connected or disconnected just as a connection was ending #android
-* Fix: On Android, connecting again right after a disconnect or a failed connect no longer closes the app #android
-* Fix: When the app was updated while connected - and on Android also force stopped, or the phone restarted - the app now opens on Disconnected instead of saying "VPN service encountered an issue" #android #ios
-* Fix: On Android 12 and older, the app no longer closes when Android's quick settings restart just as they show the app's tile #android
+* Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts, and on 7.0 it can check for updates, and the app from our website can download them #android
+* Fix: On Android, the app no longer closes when you connect or disconnect just as a connection is ending, when you connect again right after a disconnect or a failed connect, or, on Android 12 and older, when Android's quick settings restart just as they show the app's tile #android
 * Fix: On Android, going back after an access key's link opened the app over itself no longer leaves the app unable to ask for the VPN permission ("Please open the app and grant VPN permission"), to sign in, to buy or to show ads #android
-* Fix: The "Extend it" button on a session's countdown keeps its label in the last 15 minutes #android #connect
-* Feature: The Android app from our website updates itself: "Update now" downloads the new version, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store keeps updating there #android
-* Update: On most phones, the Android app from our website now updates with the version made for the phone's processor, a third of the download #android
+* Fix: On some phones, the quick-settings tile and the app no longer stall as they start, where Android could say the app isn't responding #android
+* Improve: The Quick Settings tile no longer starts Firebase in its own process, so it appears faster on low-end devices #android #connect
+* Fix: On Android, a server added from a link or a key file shows on the home page at once and stays selected, and its message no longer says "updated" for a new one; a link that opens the app before you have accepted its terms adds its server once you accept #android
+* Fix: When the app was updated while connected - and on Android also force stopped, or the phone restarted - the app now opens on Disconnected instead of saying "VPN service encountered an issue" #android #ios
+* Fix: On Android, Cancel on the system's VPN connection request now stops connecting, instead of showing the request again #android
+* Fix: On Android, the VPN connects when your split by IP addresses on the device leaves out a range that ends just before 127.0.0.0, such as 126.0.0.0/8; it failed with "Bad address" #android
+* Fix: Your settings and servers now go into your phone's backup and come back on a new phone - the backup used to be too big for Google's limit - while your sign-in, the app's logs and its unpacked files stay on the phone they belong to #android #ios
 * Fix: On a slow connection, an ad you chose to watch - Watch Ad, Free Server by Ad, or more minutes for your session - is no longer cut off while it is still loading #android #connect
-* Update: The Android app from our website no longer contains AppsFlyer, so it no longer reports which link it was installed from #android #connect
-* Fix: A VPN service that cannot start says why in its log, and on Windows in the Application event log under the service's name #windows #linux
-* Fix: Disconnecting could take five seconds longer #windows
-* Fix: A connection whose VPN adapter stops on its own, or is disabled under it, now ends with an error, instead of staying connected in name while the device's traffic goes around the VPN #windows #linux
-* Fix: Disconnecting, or the reconnect after a network change, could rarely crash the service while traffic was flowing #windows
-* Update: The app's name on iOS is written as on its other platforms, VpnHood! CONNECT #ios #connect
-* Update: On Windows the VPN runs as a service: it starts with Windows, the connection no longer depends on the window, and the window and its tray no longer ask for administrator rights #windows
-* Update: On Windows and Linux only an administrator can use the app; on a standard account its window says so #windows #linux
-* Update: On Windows, the first time you open this version, your settings, profiles, split lists and sign-in move into the service, and your device keeps its identity #windows
-* Feature: On Windows and Linux, the app from our website updates itself: it downloads each new version in the background and installs it while the VPN is disconnected, and the window opens again on it. Settings > Automatic Updates turns this off. With Always On, which keeps the VPN connected, the app tells you after a few days, and its Install updates it at once, the VPN disconnecting while it installs; on a computer with no desktop, the `update` command does the same #windows #linux
-* Update: VpnHood! CLIENT on Windows, on Linux and from our website shares anonymous usage data as its Google Play build does, and shows the switch that turns it off in Settings > Privacy #windows #linux #android
+* Fix: "Forgot password" on the sign-in form opens the account website's password reset page; it opened the site's home page #connect
+* Fix: After you delete your account, a device still signed in to it signs out, rather than quietly signing in again and making you a new account #connect
+* Fix: The Connect APK from GitHub now applies the app's remote settings, as every other Connect build does #android #connect
+* Fix: A big upload over a slow connection no longer holds up the device's other traffic, such as browsing
+* Fix: A connection whose VPN adapter stops on its own, or is disabled under it, now ends with an error, instead of staying connected in name while the device's traffic goes around the VPN; on Windows, disconnecting or the reconnect after a network change could rarely crash while traffic was flowing #windows #linux
+* Fix: On Linux without systemd-resolved, the VPN never set its DNS servers, so DNS went around the VPN, and its DNS server stayed in resolv.conf after disconnecting; resolvconf now sets and removes them, and where it cannot - NetworkManager without systemd-resolved, as Arch-based systems have by default - connecting stops with an error that says what to turn on #linux
+* Fix: On Linux, signing in and buying from the app's window work, and the checkout opens in your own browser #linux #connect
+* Fix: On Linux, the installer sets up MsQuic, for the QUIC channel - it never found MsQuic's installer, and the app used TCP - on more distributions too: openSUSE, Arch-based ones such as EndeavourOS and Manjaro, and those built on Ubuntu, Debian or RHEL, such as Linux Mint, Pop!_OS, Rocky Linux and AlmaLinux. It installs ICU where it is missing, as on Debian 13's cloud image, where the app did not start #linux
+* Fix: On Linux, the app's installed files belong to root; they kept the user id of the machine that built them, so an account with that id could replace what the VPN service runs as root #linux
+* Fix: On Linux, the install command in the Linux guide works (sudo su -c "bash <(…)"; the installer prints it when run without root); installing or updating removes the downloaded package, an update keeps only the three newest versions and no longer leaves the VPN service stopped when its package does not unpack, and a no to starting at boot no longer turns off updates #linux
+* Fix: The system could kill the app ten seconds after a refused VPN service start instead of the service stopping cleanly #client #android #store
+
+# v8.1.851
+
 * Fix: Rare crash after a cancelled Google sign-in or when the VPN service answered late #android #connect #store
 * Fix: The system could kill the app ten seconds after a refused VPN service start instead of the service stopping cleanly #android #store
 * Fix: Crash when Google Play reported a purchase result without a purchase #android #connect #store
 * Fix: Sign in with Apple could occasionally never finish #ios #connect
-* Fix: "Forgot password" on the sign-in form opens the account website's password reset page, as a code to scan on a TV; it opened the site's home page, and its text was cut off at the form's edge #connect
-* Fix: After you delete your account, a device still signed in to it signs out, rather than quietly signing in again and making you a new account #connect
-* Fix: Your settings and servers now go into your phone's backup and come back on a new phone - the backup used to be too big for Google's limit - while your sign-in, the app's logs and its unpacked files stay on the phone they belong to #android #ios
-* Improve: Buying on the website opens the checkout in the app's language #connect
-* Improve: The Quick Settings tile no longer starts Firebase in its own process, so it appears faster on low-end devices #android #connect
-* Improve: Text is easier to read: descriptions, section titles, buttons and chips have more contrast
-* Fix: Timeouts no longer drift with the device's time zone or a daylight-saving change
-* Fix: On Linux without systemd-resolved, the VPN's DNS server stayed in resolv.conf after disconnecting #linux
-* Fix: On Linux without systemd-resolved, the VPN never set its DNS servers, so DNS went around the VPN; resolvconf now sets them, and where it cannot - NetworkManager without systemd-resolved, as Arch-based systems have by default - connecting stops with an error that says what to turn on #linux
-* Fix: Stopping the VPN service on Linux while connected now ends the session cleanly before the service exits #linux
-* Fix: On Linux, the VPN service's start now clears only its own leftover tunnel, never one another app is using under the same name #linux
-* Fix: On Linux, an app name longer than 15 characters or with spaces no longer keeps the VPN from creating its tunnel #linux
-* Fix: The Connect APK from GitHub now applies the app's remote settings, as every other Connect build does #android #connect
-* Fix: On Linux, signing in and buying from the app's window work, and the checkout opens in your own browser #linux #connect
-* Fix: On Linux, opening the app again brings its open window forward instead of starting another, and on a desktop without tray icons closing the window ends it rather than leaving it running hidden #linux
-* Feature: On Linux desktops that show tray icons (KDE, or GNOME with the AppIndicator extension), the app sits in the tray: it shows the connection, connects and disconnects, and closing the window keeps the app there #linux
-* Update: The tray icon is the app's own icon, with the connection's state on its corner #windows #linux
-* Fix: On a screen without room for the window, such as a 1366x768 laptop's, it opens in landscape, in the middle of the screen, and fits the screen again when its resolution changes: the bottom of a page, the first run's Accept button included, no longer falls under the taskbar #windows #linux
-* Fix: The Servers page's warning that no server is added yet shows its whole text, and names the "Add server" button without asking to click it; it was cut off at the card's edge
-* Fix: The first run's terms page says "By selecting Accept and continue" rather than "By tapping", which fit only a touch screen
-* Fix: On Linux, the app's icon in the dock and the app grid is sharp; it was blurred #linux
-* Update: On Linux, an update removes the app's old versions: the three newest stay, and any installed in the last 30 days or still running, such as a window left open #linux
-* Fix: On Linux, installing or updating no longer leaves the downloaded package behind, and removes the one earlier updates left in / (VpnHoodClient-linux.tar.gz or VpnHoodConnect-linux.tar.gz) #linux
-* Fix: On Linux, an update whose package does not unpack no longer leaves the VPN service stopped #linux
-* Fix: On Linux, the installer installs MsQuic, for the QUIC channel; it looked for MsQuic's installer under the server's name and never found it. Microsoft's package feed, which MsQuic comes from, is removed again unless it was there before #linux
-* Fix: On Linux, the app's installed files belong to root; they kept the user id of the machine that built them, so an account with that id could replace what the VPN service runs as root #linux
-* Fix: On Linux, the install command in the Linux guide works: sudo bash <(…) cannot run the script it is given, so the guide says sudo su -c "bash <(…)", and the installer prints that command when it is run without root #linux
-* Fix: Pairing never offers a mobile broadband address, and it now starts where it found no address: in a Windows virtual machine under Hyper-V, and on a PC that shares its network card with its virtual machines (a Hyper-V external switch)
-* Fix: The language setting no longer invites translations to a folder that moved
-* Update: On a plan with a speed limit, the first megabytes after a pause go at full speed, so pages load quickly, and only steady heavy use is held to the limit
-* Fix: A big upload over a slow connection no longer holds up the device's other traffic, such as browsing
-* Feature: On Linux the app has an uninstaller: Uninstall on its menu entry's right-click menu, or `sudo /opt/VpnHoodClient/vhuninstall` (`/opt/VpnHoodConnect/vhuninstall` for CONNECT). Settings and profiles stay for a later install unless you add `-purge` #linux
-* Update: On Linux updating is no longer tied to starting at boot: a no to starting at boot leaves updates on, which only `-noautoupdate` turns off #linux
-* Feature: On Linux the installer sets up MsQuic, for QUIC, on more distributions: openSUSE, Arch-based ones such as EndeavourOS and Manjaro, and those built on Ubuntu, Debian or RHEL, such as Linux Mint, Pop!_OS, Rocky Linux and AlmaLinux. They used to get none, and the app used TCP #linux
-* Fix: On Linux the installer installs ICU where it is missing, as on Debian 13's cloud image: the app did not start without it #linux
-* Improve: On Linux, the installer and the uninstaller list their options with `-help`, `--help` or `-h`, and take every option with one dash or two: `--noautoupdate` is `-noautoupdate` #linux
-* Fix: On Linux, an install started while the app updates itself waits for the update to finish, so its choices stand; the update could undo them, turning updates back on after `-noautoupdate`. The uninstaller waits too #linux
-* Fix: Split Local Network does what it says: on, local devices such as a printer or a TV are reached directly; off, their traffic stays in the VPN. It did the opposite while Allow Split Tunneling was off, or on a server that carries local addresses
-* Fix: On Android, Cancel on the system's VPN connection request now stops connecting, instead of showing the request again #android
-* Fix: On Android, the VPN connects when your split by IP addresses on the device leaves out a range that ends just before 127.0.0.0, such as 126.0.0.0/8; it failed with "Bad address" #android
 
 # v8.1.849
 

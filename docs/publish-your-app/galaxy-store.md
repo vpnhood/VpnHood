@@ -16,25 +16,34 @@ Work through it in order. Come back to [start here](README.md) when you are done
 
 1. **A Samsung account.** It is your only way into Seller Portal, so open it under an address your
    company keeps, not a person's. Use your company's own mail domain: Samsung asks why when you apply
-   with a public one such as Gmail. Its **country** becomes your Seller Portal country, and cannot be
+   with a public one such as Gmail. *Sign in with Google* makes the account from a Google account's name and
+   address, with no password of its own. Its **country** becomes your Seller Portal country, and cannot be
    changed later without deleting the seller account and starting again.
 2. **Seller Portal** (`seller.samsungapps.com`) → *Sign Up Now*, signed in with that account. Choose
-   **Corporate Seller**, to sell under your company's name. The name you enter must match the
-   government ID you submit exactly.
+   **Corporate Seller**, to sell under your company's name. The form asks for the company's name, address
+   and phone, its **representative**, and a **primary contact**: the person who runs the account, whom
+   Samsung writes to. The address fields reject `#`: write a mailbox or suite number as `PMB` or `Ste`.
+   Samsung then emails a link that completes the sign-up. The name you enter must match the government
+   ID you submit exactly. The profile starts subscribed to *News, Benefits, Newsletter*: untick it under
+   *Profile* → *Edit*, which first asks Samsung to confirm it is you (a one-time email code, for an
+   account made with Google).
 3. **Commercial seller status**: *Request Commercial Seller* on your profile. It is required for
-   free apps too. Samsung verifies the company — a **D‑U‑N‑S number** is the easiest proof, the same
-   one Apple asks for — and the representative, a person, against a government ID. Every document
-   must be in English. Approval takes several days.
-4. **Financial information**: PayPal or a bank account in your company's name, in the same country
-   as the seller account. A bank takes up to ten business days to verify.
+   free apps too. A corporate seller with an Android app must verify a **D‑U‑N‑S number**, the same
+   one Apple asks for: Samsung then copies the company's name, representative and address from that
+   record, read-only. Once you send the request, nothing on it changes except through Samsung's
+   Support, so check it whole first. Approval takes several days.
+4. **Financial information**, on the same request: PayPal or a bank account in your company's name,
+   in the same country as the seller account. Samsung pays by international wire, so a bank account
+   takes its SWIFT code and account number, not a US routing number. With D‑U‑N‑S, the request needs
+   no document uploads. Samsung answers by email in about four business days.
 
 Samsung charges no registration fee.
 
 **What becomes public.** Every app page shows its seller's name, company name, **representative's
 name**, phone number, address, privacy policy URL and support email. The representative is the
 company's legal contact, and with a D‑U‑N‑S number Samsung takes it from that record's Key Principal:
-choose that person, and that phone number and address, knowing they will be published. The person who
-holds the account and proves it with an ID is a different field, and is not in that list.
+choose that person, and that phone number and address, knowing they will be published. The primary
+contact is a different field, and is not in that list.
 
 ---
 

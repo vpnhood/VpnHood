@@ -316,14 +316,14 @@ internal class ClientSessionBuilder(
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
                 sessionInfo.DnsConfig, VhLogger.Format(sessionIncludeIpRangesByDevice.ToIpNetworks()));
 
-            // set minimum of server mtu, client mtu
-            var mtu = Math.Min(helloRequest.Mtu, helloResponse.Mtu);
-            if (mtu < 1000)
+            // the tunnel's MTU, which the adapter takes as its own; below 1280 an adapter carries no IPv6
+            var mtu = ClientHelper.GetTunnelMtu(helloRequest.Mtu, helloResponse);
+            if (mtu < 1280)
                 throw new InvalidOperationException($"The server MTU is too small. MTU: {mtu}");
 
             var adapterOptions = new VpnAdapterOptions {
                 ServerIp = connectorService.VpnEndPoint.TcpEndPoint.Address,
-                Mtu = mtu - TransportDefaults.MtuOverhead,
+                Mtu = mtu,
                 DnsServers = dnsConfig.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,

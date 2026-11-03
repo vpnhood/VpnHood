@@ -50,6 +50,7 @@
 * Fix: On Linux, the app's installed files belong to root; they kept the user id of the machine that built them, so an account with that id could replace what the VPN service runs as root #linux
 * Fix: On Linux, the install command in the Linux guide works (sudo su -c "bash <(…)"; the installer prints it when run without root); installing or updating removes the downloaded package, an update keeps only the three newest versions and no longer leaves the VPN service stopped when its package does not unpack, and a no to starting at boot no longer turns off updates #linux
 * Fix: The system could kill the app ten seconds after a refused VPN service start instead of the service stopping cleanly #client #android #store
+* Fix: Online games that send large packets, such as Counter-Strike 2 and Dota 2 on Steam, work through the VPN; every packet over 1280 bytes was dropped. A VpnHoodServer of your own needs this release too
 
 # v8.1.851
 

@@ -11,9 +11,16 @@ namespace VpnHood.Core.Common.Configuration;
 public static class TransportDefaults
 {
     public const int MaxPacketSize = 1500;
-    public const int MtuOverhead = 60 + 20 + 40; // 60 for ip header + 20 for (TCP or UDP) + 40 for session header
+
+    // Compatibility (2026-11): a server before HelloResponse.TunnelMtu carries packets up to the smaller MTU less this;
+    // drop once VpnHoodClientConfig.MinProtocolVersion is above 15
+    public const int MtuOverhead = 60 + 20 + 40;
     public const int MtuSafety = 100;
     public const int MtuServer = MaxPacketSize;
+
+    // the largest packet a tunnel carries, both ways, which a client asks for and a server holds a session to: the UDP
+    // channel's datagram for it, with its IPv6 and UDP headers, still fits a 1500-byte path. Steam's games send UDP
+    // payloads of up to 1300 bytes, 1328-byte packets
     public const int MtuClient = MaxPacketSize - MtuSafety;
     public const int MaxUdpDatagramSize = 64 * 1024;
 

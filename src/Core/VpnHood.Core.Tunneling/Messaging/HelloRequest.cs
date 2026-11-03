@@ -16,6 +16,6 @@ public class HelloRequest()
     public bool? IsIpV6Supported { get; init; }
     public string? AccessCode { get; set; }
     public UserReview? UserReview { get; init; }
-    public int Mtu { get; init; } = TransportDefaults.MtuClient;
+    public int Mtu { get; init; } = TransportDefaults.MtuClient; // the largest packet the client's tunnel takes
     public bool AllowAnonymousTracker { get; init; } // the user's choice at connect; a client before it sends none, read as no
 }

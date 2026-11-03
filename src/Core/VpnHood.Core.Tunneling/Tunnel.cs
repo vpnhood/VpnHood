@@ -2,7 +2,6 @@ using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.PacketTransports;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -88,7 +87,7 @@ public class Tunnel : PacketTransportBase
     {
         try {
             var channel = FindChannelForPacket(ipPacket);
-            VerifyMtu(ipPacket, TransportDefaults.MtuOverhead);
+            VerifyMtu(ipPacket);
             return channel.SendPacketQueued(ipPacket);
         }
         catch (Exception ex) {
@@ -98,10 +97,11 @@ public class Tunnel : PacketTransportBase
         }
     }
 
-    private void VerifyMtu(IpPacket ipPacket, int overheadSize)
+    // Mtu is the largest packet the other end takes, as the packet is: the channel's overhead is not the packet's. The
+    // reply names that same limit, as one that names a larger one leaves a sender that adapts still sending too big
+    private void VerifyMtu(IpPacket ipPacket)
     {
-        // use RemoteMtu if the channel is streamed
-        if (ipPacket.PacketLength + overheadSize <= Mtu)
+        if (ipPacket.PacketLength <= Mtu)
             return;
 
         var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(ipPacket, (ushort)Mtu);

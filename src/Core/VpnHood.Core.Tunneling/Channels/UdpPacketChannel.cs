@@ -16,8 +16,13 @@ namespace VpnHood.Core.Tunneling.Channels;
 // lock. Its tunnel sends on it while UDP is on; what it receives goes up to the tunnel, on or off
 public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
 {
-    // what a datagram carries at most: the packets fit the tunnel's MTU, which leaves room for the overhead
-    private const int MaxPayloadLength = TransportDefaults.MaxPacketSize - TransportDefaults.MtuOverhead;
+    // what a datagram carries at most: one packet as big as a tunnel carries, so the datagram still fits a 1500-byte path
+    private const int MaxPayloadLength = TransportDefaults.MtuClient;
+
+    // what a datagram of several packets carries at most: small packets that share one must not make it bigger than a
+    // single packet needs, or they stop crossing a path a little under 1500 bytes; only a packet too big to share
+    // makes a bigger datagram, alone
+    private const int MaxBatchLength = 1380;
 
     private readonly bool _isServer;
     // Compatibility (2026-10): a server's session below protocol 14 seals the legacy way; drop with UdpDatagram's
@@ -81,7 +86,7 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
                 continue;
             }
 
-            if (payloadLength + packetBytes.Length > MaxPayloadLength) {
+            if (payloadLength > 0 && payloadLength + packetBytes.Length > MaxBatchLength) {
                 await SendDatagramAsync(route, buffer, payloadLength).Vhc();
                 payloadLength = 0;
             }

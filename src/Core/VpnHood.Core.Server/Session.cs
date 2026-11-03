@@ -170,10 +170,11 @@ public class Session : IDisposable
                 isLegacy: ProtocolVersion < UdpDatagram.MinProtocolVersion)
             : null;
 
-        // Tunnel; a send limit paces its packets
+        // Tunnel; a send limit paces its packets. Its MTU never exceeds what the UDP channel carries in one datagram,
+        // as the tunnel may move its packets onto it at any time
         var tunnelOptions = new TunnelOptions {
             MaxPacketChannelCount = options.MaxPacketChannelCountValue,
-            Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu),
+            Mtu = Math.Min(TransportDefaults.MtuClient, extraData.Mtu),
             UdpChannel = UdpChannel
         };
         Tunnel = TrafficMeter.MaxSpeed.Sent > 0

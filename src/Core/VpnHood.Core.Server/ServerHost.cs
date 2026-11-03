@@ -596,6 +596,7 @@ public class ServerHost : IAsyncDisposable
             ProtocolVersion = sessionResponseEx.ProtocolVersion,
             SuppressedTo = sessionResponseEx.SuppressedTo,
             MaxPacketChannelCount = session.Tunnel.MaxPacketChannelCount,
+            TunnelMtu = session.Tunnel.Mtu,
             IncludeIpRanges = NetFilterIncludeIpRanges,
             VpnAdapterIncludeIpRanges = NetFilterVpnAdapterIncludeIpRanges,
             IsIpV6Supported = IsIpV6Supported,

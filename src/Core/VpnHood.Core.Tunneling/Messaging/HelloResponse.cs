@@ -50,7 +50,13 @@ public class HelloResponse : SessionResponse
     // link. True by default, as an older server sends neither.
     public bool IsQuicPacketSupported { get; set; } = true;
     public bool IsUdpPacketSupported { get; set; } = true;
+
+    // Compatibility (2026-11): a client before TunnelMtu takes the smaller of this and its own MTU, less
+    // TransportDefaults.MtuOverhead, as its adapter's; drop once MinClientProtocolVersion is above 15
     public int Mtu { get; set; } = TransportDefaults.MtuServer;
+
+    // the largest packet the session's tunnel carries both ways, the packet as it is; an older server sends none
+    public int? TunnelMtu { get; set; }
 
     [Obsolete("Deprecated on 2026-10-08: use IsTcpPacketIpV4Supported and IsTcpPacketIpV6Supported. Still " +
               "sent for older clients and read from older servers, for which it meant both IP versions.")]

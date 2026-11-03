@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Configuration;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
@@ -261,5 +262,17 @@ internal static class ClientHelper
 
         if (!helloResponse.IsTcpProxySupported && config.UseTcpProxy)
             VhLogger.Instance.LogWarning("TCP Proxy disabled because the server does not support it.");
+    }
+
+    // The largest packet the tunnel carries both ways, which the adapter takes as its MTU. Never above what the server
+    // carries: an adapter above it gets full-size TCP segments sent that the server drops, as the apps send TCP as
+    // packets by default
+    public static int GetTunnelMtu(int clientMtu, HelloResponse helloResponse)
+    {
+        // Compatibility (2026-11): a server before TunnelMtu carries a packet up to the smaller MTU less MtuOverhead;
+        // drop once VpnHoodClientConfig.MinProtocolVersion is above 15
+        return helloResponse.TunnelMtu is { } tunnelMtu
+            ? Math.Min(clientMtu, tunnelMtu)
+            : Math.Min(clientMtu, helloResponse.Mtu) - TransportDefaults.MtuOverhead;
     }
 }

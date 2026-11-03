@@ -7,10 +7,10 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Devices.WindowsTun;
 
-// The service's side of the VPN host (WindowsVpnHost): its process, started at each connect, one at a time. A job
-// ends it with the service's process, a crash's too; the updater, also the service's child, stays out of the job,
-// as it must outlive the service.
-internal sealed class WindowsVpnHostProcess(string executablePath, string storageFolder, string serviceName)
+// The daemon's side of the VPN host (WindowsVpnHost): its process, started at each connect, one at a time. A job
+// ends it with the daemon's process, a crash's too; the updater, also the daemon's child, stays out of the job,
+// as it must outlive the daemon.
+internal sealed class WindowsVpnHostProcess(string executablePath, string storageFolder, string daemonName)
     : IDisposable
 {
     private readonly KillOnCloseJob _job = new();
@@ -38,15 +38,15 @@ internal sealed class WindowsVpnHostProcess(string executablePath, string storag
             _process = null;
         }
 
-        var startInfo = new ProcessStartInfo(executablePath,
-            [WindowsVpnHost.StorageOption, storageFolder, WindowsVpnHost.ServiceOption, serviceName]) {
+        var hostArgs = new WindowsVpnHostArgs { StorageFolder = storageFolder, DaemonName = daemonName };
+        var startInfo = new ProcessStartInfo(executablePath, hostArgs.ToArgs()) {
             UseShellExecute = false,
             CreateNoWindow = true
         };
         var process = Process.Start(startInfo) ??
                       throw new InvalidOperationException($"Could not start the VPN host. Path: {executablePath}");
 
-        // fail-closed: a VPN host the job does not hold would outlive a crashed service
+        // fail-closed: a VPN host the job does not hold would outlive a crashed daemon
         try {
             _job.Add(process);
         }

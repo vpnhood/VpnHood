@@ -7,7 +7,6 @@ using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.WindowsVpnPlugin;
-using Windows.ApplicationModel;
 using Windows.ApplicationModel.AppService;
 using Windows.Networking.Vpn;
 
@@ -20,7 +19,7 @@ namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 // it forwards here. One per VPN host process, which the bridge keeps.
 public sealed class WindowsVpnPluginService : IVpnServiceHandler
 {
-    internal static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan ConnectTimeout = WindowsVpnPluginDevice.PluginConnectTimeout;
     private static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(15);
     // a connect Windows makes soon after: again within 5 s after a restart, within 2.6 s after an app's switch
     private static readonly TimeSpan SessionWaitTimeout = TimeSpan.FromSeconds(15);
@@ -211,7 +210,7 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     // disconnected, else in SessionWaitTimeout.
     private async Task ExpireWaitingListener(WindowsVpnPluginAppServiceListener listener)
     {
-        var profiles = await TryGetLiveProfiles().Vhc();
+        var profiles = await WindowsVpnPluginDevice.TryGetLiveProfiles().Vhc();
         VhLogger.Instance.LogInformation(
             "The app connected before a connect. Profiles connected or connecting: {Count}", profiles?.Length);
         if (profiles is not { Length: 0 })
@@ -226,24 +225,6 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
 
         VhLogger.Instance.LogInformation("No connect came for the app's connection; closing it.");
         listener.Dispose();
-    }
-
-    // The package's profiles Windows holds other than disconnected; null when Windows does not say.
-    internal static async Task<VpnPlugInProfile[]?> TryGetLiveProfiles()
-    {
-        try {
-            var packageFamilyName = Package.Current.Id.FamilyName;
-            var profiles = await new VpnManagementAgent().GetProfilesAsync().AsTask().Vhc();
-            return profiles.OfType<VpnPlugInProfile>()
-                .Where(x =>
-                    string.Equals(x.VpnPluginPackageFamilyName, packageFamilyName, StringComparison.OrdinalIgnoreCase) &&
-                    x.ConnectionStatus != VpnManagementConnectionStatus.Disconnected)
-                .ToArray();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not read the package's VPN profiles from Windows.");
-            return null;
-        }
     }
 
     // The service host is done with this connection. A connection Windows still holds - the session ended on the app's
@@ -293,7 +274,7 @@ public sealed class WindowsVpnPluginService : IVpnServiceHandler
     {
         try {
             VhLogger.Instance.LogInformation("Asking Windows to disconnect the VPN profile...");
-            var connectedProfiles = await TryGetLiveProfiles().Vhc() ??
+            var connectedProfiles = await WindowsVpnPluginDevice.TryGetLiveProfiles().Vhc() ??
                                     throw new InvalidOperationException("Windows did not list the package's VPN profiles.");
             if (connectedProfiles.Length == 0)
                 throw new InvalidOperationException("Windows lists no connected VPN profile of this package.");

@@ -21,7 +21,8 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
     private VpnHoodWindowsApp(AppOptions appOptions, VpnHoodWindowsAppPaths paths)
     {
         var device = new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode,
-            serviceName: paths.ServiceName, vpnHostPath: paths.VpnHostPath);
+            serviceName: paths.ServiceName, vpnHostPath: paths.VpnHostPath,
+            inProcessVpnServiceFactory: paths.InProcessVpnServiceFactory);
         _app = VpnHoodApp.Init(device, appOptions);
     }
 

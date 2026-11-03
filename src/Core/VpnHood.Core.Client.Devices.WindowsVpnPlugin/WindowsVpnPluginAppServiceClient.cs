@@ -20,7 +20,7 @@ public sealed class WindowsVpnPluginAppServiceClient : IMessageClient
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         using var scopeLock = await _sendLock.LockAsync(cancellationToken).Vhc();
-        var message = new ValueSet { [WindowsVpnPluginAppServiceListener.MessageKey] = request.ToArray() };
+        var message = new ValueSet { [WindowsVpnPluginAppService.MessageKey] = request.ToArray() };
 
         // The VPN host closes the connection when its session ends, or Windows when it ends the service's task:
         // a failure on the open one opens another, once.
@@ -38,7 +38,7 @@ public sealed class WindowsVpnPluginAppServiceClient : IMessageClient
 
         // As a TCP client finds no endpoint file: with the package's profile disconnected, after an update say, no VPN
         // host has a session, and opening the app service would only start one.
-        if (await WindowsVpnPluginService.TryGetLiveProfiles().Vhc() is { Length: 0 })
+        if (await WindowsVpnPluginDevice.TryGetLiveProfiles().Vhc() is { Length: 0 })
             throw new VpnServiceNotReadyException("Windows holds the package's VPN profile disconnected.");
 
         connection = await Open(cancellationToken).Vhc();
@@ -62,7 +62,7 @@ public sealed class WindowsVpnPluginAppServiceClient : IMessageClient
         if (response.Status != AppServiceResponseStatus.Success)
             throw new InvalidOperationException($"The VPN host did not answer. Status: {response.Status}");
 
-        return response.Message.TryGetValue(WindowsVpnPluginAppServiceListener.MessageKey, out var value) &&
+        return response.Message.TryGetValue(WindowsVpnPluginAppService.MessageKey, out var value) &&
                value is byte[] payload
             ? payload
             : throw new InvalidDataException("The VPN host's answer carries no response.");
@@ -71,7 +71,7 @@ public sealed class WindowsVpnPluginAppServiceClient : IMessageClient
     private static async Task<AppServiceConnection> Open(CancellationToken cancellationToken)
     {
         var connection = new AppServiceConnection {
-            AppServiceName = WindowsVpnPluginAppServiceListener.AppServiceName,
+            AppServiceName = WindowsVpnPluginAppService.Name,
             PackageFamilyName = Package.Current.Id.FamilyName
         };
 

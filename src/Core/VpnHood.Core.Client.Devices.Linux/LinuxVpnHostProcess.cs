@@ -6,8 +6,8 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Devices.Linux;
 
-// The service's side of the VPN host (LinuxVpnHost): its process, started at each connect, one at a time. The
-// unit's cgroup ends it with the service: a stop's SIGTERM reaches both, and a crash's restart stops what is left.
+// The daemon's side of the VPN host (LinuxVpnHost): its process, started at each connect, one at a time. The
+// unit's cgroup ends it with the daemon: a stop's SIGTERM reaches both, and a crash's restart stops what is left.
 internal sealed class LinuxVpnHostProcess(string executablePath, string storageFolder) : IDisposable
 {
     private readonly AsyncLock _startLock = new();
@@ -34,7 +34,8 @@ internal sealed class LinuxVpnHostProcess(string executablePath, string storageF
             _process = null;
         }
 
-        var startInfo = new ProcessStartInfo(executablePath, [LinuxVpnHost.StorageOption, storageFolder]) {
+        var hostArgs = new LinuxVpnHostArgs { StorageFolder = storageFolder };
+        var startInfo = new ProcessStartInfo(executablePath, hostArgs.ToArgs()) {
             UseShellExecute = false
         };
         var process = Process.Start(startInfo) ??

@@ -8,6 +8,7 @@ using VpnHood.AppLib.App.WindowsTun;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.App;
 using VpnHood.AppUi.Hosting.WebView;
+using VpnHood.Core.Client.Devices.Abstractions;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppUi.Hosting.Maui;
@@ -25,7 +26,7 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
 
     protected AppWindow? AppWindow;
 
-    private VpnHoodAppMauiWindows(AppInitParams initParams)
+    private VpnHoodAppMauiWindows(AppInitParams initParams, IInProcessVpnServiceFactory inProcessVpnServiceFactory)
     {
         // The platform starts the app, as under any other UI - in this process, under the
         // person's storage folder, which holds its single-instance lock too - and it disconnects on
@@ -34,8 +35,11 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         // instead (VpnHood.AppUi.Hosting.Desktop.WindowsTun), its window unelevated. It keeps no tray, so
         // the app ends with its window.
         var storagePath = initParams.ResolveStoragePath();
-        VpnHoodWindowsApp.Init(initParams,
-            new VpnHoodWindowsAppPaths { StoragePath = storagePath, LockFolderPath = storagePath });
+        VpnHoodWindowsApp.Init(initParams, new VpnHoodWindowsAppPaths {
+            StoragePath = storagePath,
+            LockFolderPath = storagePath,
+            InProcessVpnServiceFactory = inProcessVpnServiceFactory
+        });
 
         // initialize VpnHoodApp
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
@@ -44,9 +48,10 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         WindowHandler.Mapper.AppendToMapping(nameof(IWindow), MappingMethod);
     }
 
-    public static VpnHoodAppMauiWindows Init(AppInitParams initParams)
+    public static VpnHoodAppMauiWindows Init(AppInitParams initParams,
+        IInProcessVpnServiceFactory inProcessVpnServiceFactory)
     {
-        var app = new VpnHoodAppMauiWindows(initParams);
+        var app = new VpnHoodAppMauiWindows(initParams, inProcessVpnServiceFactory);
         app.UpdateIcon();
         return app;
     }

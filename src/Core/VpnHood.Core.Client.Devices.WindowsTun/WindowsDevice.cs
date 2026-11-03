@@ -6,19 +6,21 @@ using VpnHood.Net.Quic.MsQuic;
 
 namespace VpnHood.Core.Client.Devices.WindowsTun;
 
-// serviceName: the service the app runs in, whose processes the kill switch's block lets out; null in a run as the
-// person, whose block lets out none of its processes.
-// vpnHostPath: the VPN host the service starts at each connect (WindowsVpnHost); null where the VPN service runs in
-// this process - a run as the person, which a debugger then follows in one process.
-public class WindowsDevice(string storageFolder, bool isDebugMode, string? serviceName = null, string? vpnHostPath = null)
+// serviceName: the Windows service the daemon runs as, whose processes the kill switch's block lets out; null in a run
+// as the person, whose block lets out none of its processes.
+// vpnHostPath: the VPN host the daemon starts at each connect (WindowsVpnHost); null where the VPN service runs in
+// this process - a run as the person, which a debugger then follows in one process - made by
+// inProcessVpnServiceFactory, which the head hands in.
+public class WindowsDevice(string storageFolder, bool isDebugMode, string? serviceName = null, string? vpnHostPath = null,
+    IInProcessVpnServiceFactory? inProcessVpnServiceFactory = null)
     : IDevice
 {
     private readonly WindowsVpnHostProcess? _vpnHostProcess = vpnHostPath is null
         ? null
         : new WindowsVpnHostProcess(vpnHostPath, storageFolder,
-            serviceName ?? throw new ArgumentNullException(nameof(serviceName), "A VPN host needs its service's name."));
+            serviceName ?? throw new ArgumentNullException(nameof(serviceName), "A VPN host needs the daemon's name."));
 
-    private WindowsVpnService? _vpnService;
+    private IInProcessVpnService? _vpnService;
     public bool IsBindProcessToVpnSupported => false;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
@@ -78,14 +80,16 @@ public class WindowsDevice(string storageFolder, bool isDebugMode, string? servi
             return _vpnHostProcess.Start(cancellationToken);
 
         if (_vpnService == null || _vpnService.IsDisposed)
-            _vpnService = new WindowsVpnService(VpnServiceConfigFolder, KillSwitch, withLogger: false);
+            _vpnService = inProcessVpnServiceFactory?.Create(VpnServiceConfigFolder, KillSwitch) ??
+                          throw new InvalidOperationException(
+                              "The VPN service runs in this process without a VPN host, and the head handed in no factory for it.");
 
         _vpnService.OnConnect();
         return Task.CompletedTask;
     }
 
     // The VPN service's folder in the app's storage, where the VPN host finds it too.
-    internal static string GetVpnServiceConfigFolder(string storageFolder)
+    public static string GetVpnServiceConfigFolder(string storageFolder)
     {
         return Path.Combine(storageFolder, "vpn-service");
     }

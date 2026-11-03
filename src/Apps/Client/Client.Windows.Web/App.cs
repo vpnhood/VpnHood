@@ -5,6 +5,7 @@ using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Hosting.Desktop;
 using VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
+using VpnHood.Core.Client.Devices.WindowsTun;
 
 namespace VpnHood.App.Client.Windows.Web;
 
@@ -28,7 +29,7 @@ internal static class App
             AccessKeyFileExtensions = [".cdy"],
             AccessKeySchemes = [ClientAccessKeys.Scheme1, ClientAccessKeys.Scheme2],
             Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
-        });
+        }, new WindowsVpnServiceFactory());
     }
 
     // The product's options, and this channel's lines on top: the setup from our site, whose notice's

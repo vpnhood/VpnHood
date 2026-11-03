@@ -12,10 +12,6 @@ namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 // one; an open connection's task keeps the host running instead.
 public sealed class WindowsVpnPluginAppServiceListener : IMessageListener
 {
-    // the package manifest's uap:AppService Name, and the one value of each message
-    internal const string AppServiceName = "VpnService";
-    internal const string MessageKey = "Message";
-
     private readonly TaskCompletionSource _startedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource _disposedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private volatile MessageHandler? _messageHandler;
@@ -58,11 +54,11 @@ public sealed class WindowsVpnPluginAppServiceListener : IMessageListener
             if (messageHandler is null)
                 return;
 
-            if (!args.Request.Message.TryGetValue(MessageKey, out var value) || value is not byte[] request)
+            if (!args.Request.Message.TryGetValue(WindowsVpnPluginAppService.MessageKey, out var value) || value is not byte[] request)
                 throw new InvalidDataException("The app's message carries no request.");
 
             var response = await messageHandler(request, CancellationToken.None).Vhc();
-            await args.Request.SendResponseAsync(new ValueSet { [MessageKey] = response.ToArray() }).AsTask().Vhc();
+            await args.Request.SendResponseAsync(new ValueSet { [WindowsVpnPluginAppService.MessageKey] = response.ToArray() }).AsTask().Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not answer the app's request.");

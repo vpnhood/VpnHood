@@ -41,7 +41,10 @@ public sealed class WindowsVpnPluginDevice : IDevice
     // container 5 s on, the app's process with it.
     private static readonly TimeSpan HandoffTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan HandoffPollInterval = TimeSpan.FromMilliseconds(500);
-    private static readonly TimeSpan DialTimeout = WindowsVpnPluginService.ConnectTimeout + TimeSpan.FromSeconds(30);
+
+    // The VPN plug-in's wait for its session at a connect (WindowsVpnPluginService), which a dial outlasts.
+    public static readonly TimeSpan PluginConnectTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan DialTimeout = PluginConnectTimeout + TimeSpan.FromSeconds(30);
     private readonly string _profileName;
 
     // profileName: the profile's name in Windows' VPN settings and quick settings, the app's name
@@ -244,6 +247,25 @@ public sealed class WindowsVpnPluginDevice : IDevice
             return profile.ConnectionStatus;
         }
         catch (COMException ex) when (ex.HResult == InvalidHandleHResult) {
+            return null;
+        }
+    }
+
+    // The package's profiles Windows holds other than disconnected; null when Windows does not say. The app's client
+    // asks before it opens the app service, the VPN plug-in before it waits for a connect.
+    public static async Task<VpnPlugInProfile[]?> TryGetLiveProfiles()
+    {
+        try {
+            var packageFamilyName = Package.Current.Id.FamilyName;
+            var profiles = await new VpnManagementAgent().GetProfilesAsync().AsTask().Vhc();
+            return profiles.OfType<VpnPlugInProfile>()
+                .Where(x =>
+                    string.Equals(x.VpnPluginPackageFamilyName, packageFamilyName, StringComparison.OrdinalIgnoreCase) &&
+                    x.ConnectionStatus != VpnManagementConnectionStatus.Disconnected)
+                .ToArray();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not read the package's VPN profiles from Windows.");
             return null;
         }
     }

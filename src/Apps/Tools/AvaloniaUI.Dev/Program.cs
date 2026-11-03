@@ -114,7 +114,8 @@ internal static class Program
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };
 
-        var device = new TvOverrideDevice(new WindowsDevice(storageFolderPath, appOptions.IsDebugMode), isTv);
+        var device = new TvOverrideDevice(new WindowsDevice(storageFolderPath, appOptions.IsDebugMode,
+            inProcessVpnServiceFactory: new WindowsVpnServiceFactory()), isTv);
         var app = VpnHoodApp.Init(device, appOptions);
         try {
             // the phone's half of the pairing: the server the pairing page hands out the address of,

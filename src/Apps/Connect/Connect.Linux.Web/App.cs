@@ -8,6 +8,7 @@ using VpnHood.AppUi.Hosting.Desktop.Linux;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Core.Client.Devices.Linux;
 
 namespace VpnHood.App.Connect.Linux.Web;
 
@@ -71,6 +72,6 @@ internal static class App
             // no profile to name: the profile commands and --profile are not offered
             IsAddAccessKeySupported = ConnectAppOptions.IsAddAccessKeySupported,
             Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
-        });
+        }, new LinuxVpnServiceFactory());
     }
 }

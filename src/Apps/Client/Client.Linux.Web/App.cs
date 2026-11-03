@@ -4,6 +4,7 @@ using VpnHood.AppUi.Hosting.Desktop.Linux;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
+using VpnHood.Core.Client.Devices.Linux;
 
 // ReSharper disable LocalizableElement
 
@@ -23,7 +24,7 @@ internal static class App
             AppOptionsFactory = CreateAppOptions,
             IsAddAccessKeySupported = ClientAppOptions.IsAddAccessKeySupported,
             Ui = new AvaloniaDesktopUi<ClassicAvaloniaApp>()
-        });
+        }, new LinuxVpnServiceFactory());
     }
 
     // The product's options, and this channel's lines on top: the package from our site, whose notice's

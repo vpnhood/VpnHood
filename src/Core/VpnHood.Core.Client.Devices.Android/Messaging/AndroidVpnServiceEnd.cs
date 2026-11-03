@@ -22,7 +22,7 @@ internal static class AndroidVpnServiceEnd
     // Android has started it again.
     public static bool IsListed()
     {
-        var component = GetServiceComponent();
+        var component = AndroidDevice.VpnServiceComponent;
         return GetActivityManager().GetRunningServices(int.MaxValue)?.Any(x => component.Equals(x.Service)) == true;
     }
 
@@ -31,7 +31,7 @@ internal static class AndroidVpnServiceEnd
         if (!OperatingSystem.IsAndroidVersionAtLeast(34))
             return Ended("not recorded apart before Android 14");
 
-        var statusFile = Path.Combine(AndroidVpnService.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
+        var statusFile = Path.Combine(AndroidDevice.GetVpnServiceConfigFolder(), ClientOptions.VpnStatusFileName);
         var sinceTime = new DateTimeOffset(File.GetLastWriteTimeUtc(statusFile)).ToUnixTimeMilliseconds();
         var exitInfo = FindExitInfo(sinceTime);
         if (exitInfo == null) {
@@ -61,16 +61,14 @@ internal static class AndroidVpnServiceEnd
     {
         var packageManager = Application.Context.PackageManager
             ?? throw new InvalidOperationException("Android gave no package manager.");
-        var processName = packageManager.GetServiceInfo(GetServiceComponent(), PackageManager.ComponentInfoFlags.Of(0))
+        var processName = packageManager.GetServiceInfo(AndroidDevice.VpnServiceComponent,
+                PackageManager.ComponentInfoFlags.Of(0))
             .ProcessName;
 
         return GetActivityManager().GetHistoricalProcessExitReasons(packageName: null, pid: 0, maxNum: 0)
             .Where(x => x.ProcessName == processName && x.Timestamp >= sinceTime)
             .MaxBy(x => x.Timestamp);
     }
-
-    private static ComponentName GetServiceComponent() =>
-        new(Application.Context, Java.Lang.Class.FromType(typeof(AndroidVpnService)));
 
     private static ActivityManager GetActivityManager() =>
         (ActivityManager?)Application.Context.GetSystemService(Context.ActivityService)

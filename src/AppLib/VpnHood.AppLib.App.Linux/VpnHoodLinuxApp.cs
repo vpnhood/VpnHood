@@ -22,8 +22,8 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 
     private VpnHoodLinuxApp(AppOptions appOptions, VpnHoodLinuxAppPaths paths)
     {
-        _app = VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath, vpnHostPath: paths.VpnHostPath),
-            appOptions);
+        _app = VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath, vpnHostPath: paths.VpnHostPath,
+            inProcessVpnServiceFactory: paths.InProcessVpnServiceFactory), appOptions);
     }
 
     public static VpnHoodLinuxApp Init(AppInitParams initParams, VpnHoodLinuxAppPaths paths)

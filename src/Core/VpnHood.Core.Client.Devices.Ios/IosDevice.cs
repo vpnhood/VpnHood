@@ -18,7 +18,7 @@ public class IosDevice : IDevice
 
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
     private const string VpnServiceDataFolderKey = "VpnServiceDataFolder";
-    internal const string VpnServiceConfigFolderName = "vpn-service-config";
+    public const string VpnServiceConfigFolderName = "vpn-service-config"; // the extension's too (IosVpnService)
     private const string VpnServiceDataFolderName = "vpn-service";
 
     // NEVPNProtocol.ServerAddress is a REQUIRED field (SaveToPreferences fails / the Settings entry is

@@ -7,14 +7,16 @@ using VpnHood.Net.Quic.MsQuic;
 
 namespace VpnHood.Core.Client.Devices.Linux;
 
-// vpnHostPath: the VPN host the service starts at each connect (LinuxVpnHost); null where the VPN service runs in
-// this process - a debugger's run, which it then follows in one process.
-public class LinuxDevice(string storageFolder, string? vpnHostPath = null) : IDevice
+// vpnHostPath: the VPN host the daemon starts at each connect (LinuxVpnHost); null where the VPN service runs in
+// this process - a debugger's run, which it then follows in one process - made by inProcessVpnServiceFactory, which
+// the head hands in.
+public class LinuxDevice(string storageFolder, string? vpnHostPath = null,
+    IInProcessVpnServiceFactory? inProcessVpnServiceFactory = null) : IDevice
 {
     private readonly LinuxVpnHostProcess? _vpnHostProcess =
         vpnHostPath is null ? null : new LinuxVpnHostProcess(vpnHostPath, storageFolder);
 
-    private LinuxVpnService? _vpnService;
+    private IInProcessVpnService? _vpnService;
     public bool IsBindProcessToVpnSupported => false;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
@@ -55,14 +57,16 @@ public class LinuxDevice(string storageFolder, string? vpnHostPath = null) : IDe
             return _vpnHostProcess.Start(cancellationToken);
 
         if (_vpnService == null || _vpnService.IsDisposed)
-            _vpnService = new LinuxVpnService(VpnServiceConfigFolder, KillSwitch, withLogger: false);
+            _vpnService = inProcessVpnServiceFactory?.Create(VpnServiceConfigFolder, KillSwitch) ??
+                          throw new InvalidOperationException(
+                              "The VPN service runs in this process without a VPN host, and the head handed in no factory for it.");
 
         _vpnService.OnConnect();
         return Task.CompletedTask;
     }
 
     // The VPN service's folder in the app's storage, where the VPN host finds it too.
-    internal static string GetVpnServiceConfigFolder(string storageFolder)
+    public static string GetVpnServiceConfigFolder(string storageFolder)
     {
         return Path.Combine(storageFolder, "vpn-service");
     }

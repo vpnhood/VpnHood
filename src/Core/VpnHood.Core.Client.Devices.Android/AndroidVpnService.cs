@@ -20,8 +20,10 @@ namespace VpnHood.Core.Client.Devices.Android;
 
 // VPN requires TypeSystemExempted:  https://developer.android.com/about/versions/14/changes/fgs-types-required#system-exempted
 [Service(
+    // the name the app starts it and binds to it by (AndroidDevice.VpnServiceJavaName)
+    Name = AndroidDevice.VpnServiceJavaName,
 #if !DEBUG
-    Process = ProcessName,
+    Process = AndroidDevice.VpnServiceProcessName,
 #endif
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
@@ -35,18 +37,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     private readonly Lock _notificationLock = new();
     private readonly AndroidMessageListener _messageListener = new();
     private volatile int _lastStartId = -1; // -1: no start yet, and a stop then stops all
-    public const string ProcessName = ":vpnhood_process";
-    public const string ActionConnect = "connect";
     public const string ActionDisconnect = "disconnect";
-
-    // the service's own files: Android never puts the no-backup folder in a backup or a transfer
-    public static string VpnServiceConfigFolder =>
-        Path.Combine(Application.Context.NoBackupFilesDir?.AbsolutePath ??
-                     throw new InvalidOperationException("Android named no no-backup folder for the app."), "vpn-service");
-
-    // the person's proxies, beside the app's files, which travel with a backup
-    public static string VpnServiceDataFolder =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
 
     public AndroidVpnService()
     {
@@ -83,7 +74,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         return action switch {
             // signal start command
             null or "android.net.VpnService" => ProcessConnectAction(forceReconnect: false, alwaysOn: true),
-            ActionConnect => ProcessConnectAction(forceReconnect: true, alwaysOn: false),
+            AndroidDevice.VpnServiceActionConnect => ProcessConnectAction(forceReconnect: true, alwaysOn: false),
             ActionDisconnect => ProcessDisconnectAction(),
             _ => ProcessUnknownAction(action)
         };
@@ -108,8 +99,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                 // a log file of its own only in its own process; in the app's (a Debug build) its lines
                 // go to the app's file
                 _vpnServiceHost ??= new VpnServiceHost(
-                    configFolder: VpnServiceConfigFolder,
-                    dataFolder: VpnServiceDataFolder,
+                    configFolder: AndroidDevice.GetVpnServiceConfigFolder(),
+                    dataFolder: AndroidDevice.GetVpnServiceDataFolder(),
                     vpnServiceHandler: this,
                     socketFactory: new AndroidSocketFactory(),
                     messageListener: _messageListener,
@@ -222,7 +213,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     private async Task ApplyLocalization(AndroidVpnNotification notification)
     {
         try {
-            var serviceOptions = await new VpnServiceOptionsFile(VpnServiceConfigFolder)
+            var serviceOptions = await new VpnServiceOptionsFile(AndroidDevice.GetVpnServiceConfigFolder())
                 .TryRead(CancellationToken.None).Vhc();
             if (serviceOptions == null)
                 return;

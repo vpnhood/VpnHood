@@ -12,8 +12,9 @@ namespace VpnHood.Core.Client.Devices.Android.Messaging;
 // reply binder. Nothing may be sent to the app synchronously — the system kills a frozen (cached)
 // process that receives a synchronous transaction, and the app is frozen exactly while it waits for
 // a reply. A oneway transaction is buffered until the app thaws instead. No thread on either side
-// blocks while a request handler runs.
-internal static class AndroidMessageTransport
+// blocks while a request handler runs. Public, as its two ends live in two projects: the app's client here
+// (AndroidMessageClient), the VPN service's listener on the VPN service's side (AndroidMessageListener).
+public static class AndroidMessageTransport
 {
     private const int DefaultMaxIpcSize = 64 * 1024;
     private const int ParcelOverheadAllowance = 4 * 1024;

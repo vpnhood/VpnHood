@@ -120,8 +120,7 @@ public sealed class AndroidMessageClient : IMessageClient
 
             if (!_bindRequested) {
                 var context = Application.Context;
-                var intent = new Intent(context, typeof(AndroidVpnService));
-                intent.SetAction(AndroidMessageTransport.BindAction);
+                var intent = AndroidDevice.CreateVpnServiceIntent(AndroidMessageTransport.BindAction);
 
                 VhLogger.Instance.LogDebug("Binding to the VpnService message channel...");
                 if (!context.BindService(intent, _serviceConnection, 0)) {

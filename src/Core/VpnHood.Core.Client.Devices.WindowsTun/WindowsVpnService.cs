@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Client.VpnServices.Abstractions;
+﻿using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Net.Quic.MsQuic;
@@ -8,7 +9,7 @@ using VpnHood.Net.VpnAdapters.WinTun;
 
 namespace VpnHood.Core.Client.Devices.WindowsTun;
 
-public class WindowsVpnService : IVpnServiceHandler, IDisposable
+public class WindowsVpnService : IVpnServiceHandler, IInProcessVpnService
 {
     private readonly VpnServiceHost _vpnServiceHost;
     private readonly TaskCompletionSource _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);

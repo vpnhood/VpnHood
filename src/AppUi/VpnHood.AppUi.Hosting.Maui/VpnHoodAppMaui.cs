@@ -1,6 +1,7 @@
 ﻿using VpnHood.Net.Toolkit.Utils;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.App;
+using VpnHood.Core.Client.Devices.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Maui;
 
@@ -18,9 +19,12 @@ public class VpnHoodAppMaui : Singleton<VpnHoodAppMaui>, IVpnHoodAppMaui
     // What the MAUI pages talk to: the app's API, the contract every UI uses, here in this process.
     public VpnHoodApi Api => VpnHoodApp.Instance.Api;
 
-    public static VpnHoodAppMaui Init(AppInitParams initParams)
+    // inProcessVpnServiceFactory: the VPN service a MAUI app on Windows runs in its own process
+    // (WindowsVpnServiceFactory), which the head hands in, as only the head references the VPN service's side; null
+    // on Android, whose OS starts the VPN service itself.
+    public static VpnHoodAppMaui Init(AppInitParams initParams, IInProcessVpnServiceFactory? inProcessVpnServiceFactory)
     {
-        return new VpnHoodAppMaui(CreateMauiApp(initParams));
+        return new VpnHoodAppMaui(CreateMauiApp(initParams, inProcessVpnServiceFactory));
     }
 
     protected override void Dispose(bool disposing)
@@ -32,12 +36,15 @@ public class VpnHoodAppMaui : Singleton<VpnHoodAppMaui>, IVpnHoodAppMaui
         base.Dispose(disposing);
     }
 
-    public static IVpnHoodAppMaui CreateMauiApp(AppInitParams initParams)
+    public static IVpnHoodAppMaui CreateMauiApp(AppInitParams initParams,
+        IInProcessVpnServiceFactory? inProcessVpnServiceFactory)
     {
 #if ANDROID
         return VpnHoodAppMauiAndroid.Init(initParams);
 #elif WINDOWS
-        return VpnHoodAppMauiWindows.Init(initParams);
+        return VpnHoodAppMauiWindows.Init(initParams, inProcessVpnServiceFactory ??
+            throw new ArgumentNullException(nameof(inProcessVpnServiceFactory),
+                "A MAUI app on Windows runs the VPN service in its own process."));
 #else
         throw new PlatformNotSupportedException();
 #endif

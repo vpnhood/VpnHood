@@ -20,6 +20,13 @@ namespace VpnHood.Core.Client.Devices.Android;
 
 public class AndroidDevice : IDevice
 {
+    // The VPN service as the app reaches it without referencing it (AndroidVpnService): its Java name, which the
+    // service's [Service] attribute pins - the generated default hashes the namespace and the assembly name, so it is
+    // the name the service shipped under - its process, in Release builds, and the action that connects it.
+    public const string VpnServiceJavaName = "crc64198439f88d18e1a7.AndroidVpnService";
+    public const string VpnServiceProcessName = ":vpnhood_process";
+    public const string VpnServiceActionConnect = "connect";
+
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private const int RequestVpnPermissionId = 20100;
     private volatile bool _isWaitingForVpnPermission;
@@ -40,8 +47,8 @@ public class AndroidDevice : IDevice
         Model = Build.Model,
         Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: AndroidUtils.IsPhone())
     };
-    public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
-    public string VpnServiceDataFolder => AndroidVpnService.VpnServiceDataFolder;
+    public string VpnServiceConfigFolder => GetVpnServiceConfigFolder();
+    public string VpnServiceDataFolder => GetVpnServiceDataFolder();
     public bool IsTv => AndroidUtils.IsTv();
     public bool IsWaitingForVpnPermission => _isWaitingForVpnPermission;
 
@@ -52,6 +59,27 @@ public class AndroidDevice : IDevice
                 "Cannot create AndroidDevice in the VPN service process.");
 
         return new AndroidDevice();
+    }
+
+    // the VPN service's own files: Android never puts the no-backup folder in a backup or a transfer
+    public static string GetVpnServiceConfigFolder()
+    {
+        return Path.Combine(Application.Context.NoBackupFilesDir?.AbsolutePath ??
+                            throw new InvalidOperationException("Android named no no-backup folder for the app."), "vpn-service");
+    }
+
+    // the person's proxies, beside the app's files, which travel with a backup
+    public static string GetVpnServiceDataFolder()
+    {
+        return Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData),
+            "vpn-service");
+    }
+
+    internal static ComponentName VpnServiceComponent => new(Application.Context, VpnServiceJavaName);
+
+    internal static Intent CreateVpnServiceIntent(string action)
+    {
+        return new Intent(action).SetComponent(VpnServiceComponent);
     }
 
     public IReadOnlyList<DeviceAppInfo> InstalledApps {
@@ -169,11 +197,11 @@ public class AndroidDevice : IDevice
     {
         // do not call RequestVpnService for NullCapture. It will close other VPN connections.
         // start service
-        var intent = new Intent(Application.Context, typeof(AndroidVpnService));
+        var intent = CreateVpnServiceIntent(VpnServiceActionConnect);
         intent.PutExtra("manual", true);
         var res = OperatingSystem.IsAndroidVersionAtLeast(26)
-            ? Application.Context.StartForegroundService(intent.SetAction(AndroidVpnService.ActionConnect))
-            : Application.Context.StartService(intent.SetAction(AndroidVpnService.ActionConnect));
+            ? Application.Context.StartForegroundService(intent)
+            : Application.Context.StartService(intent);
 
         return res != null 
             ? Task.CompletedTask 
@@ -218,7 +246,7 @@ public class AndroidDevice : IDevice
         }
     }
 
-    public static bool IsVpnServiceProcess => CurrentProcessName.Contains(AndroidVpnService.ProcessName);
+    public static bool IsVpnServiceProcess => CurrentProcessName.Contains(VpnServiceProcessName);
 
     // The app's own process is the one named after the package. Every other - the VPN service's, the
     // tile's, any a library declares - carries a suffix, so a head must not rename its application's

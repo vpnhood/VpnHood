@@ -123,11 +123,11 @@
 	                             launcher's mask shows; iOS, which shows the whole square, whole
 	       icon_monochrome.svg   the logo in one colour, which the system paints: Android's notifications,
 	                             Quick Settings tile and themed icon (android/mipmap-anydpi-v33)
-	       banner.svg            the wide banner, 16:9: Android TV's
+	       banner.svg            the wide banner, 16:9: Android TV's, and an Apple TV's top shelf
 
-	     An iOS extension takes none: the system shows its app's icon. Nor does an Apple TV build: its icon
-	     is a layered stack with a top shelf image, which the tool does not draw. -->
-	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppIconsDir)' != '' And '$(VhAppIsApp)' == 'true' And '$(VhAppIsTvos)' != 'true'">
+	     An iOS extension takes none: the system shows its app's icon. An Apple TV's, which the tool does
+	     not draw, is VhWriteTvIcon's below. -->
+	<PropertyGroup Condition="'$(VhAppIdBase)' != '' And '$(VhAppIconsDir)' != '' And '$(VhAppIsApp)' == 'true'">
 		<_VhAppIconsDir>$([MSBuild]::EnsureTrailingSlash('$(VhAppIconsDir)'))</_VhAppIconsDir>
 		<AppIcon Condition="'$(AppIcon)' == '' And '$(VhAppPlatform)' == 'ios'">ic_launcher</AppIcon>
 	</PropertyGroup>
@@ -138,9 +138,185 @@
 		<MauiImage Include="$(_VhAppIconsDir)banner.svg" Link="ic_banner.svg" BaseSize="160,90" />
 		<AndroidResource Include="$(MSBuildThisFileDirectory)android\mipmap-anydpi-v33\ic_launcher.xml" Link="Resources\mipmap-anydpi-v33\ic_launcher.xml" />
 	</ItemGroup>
-	<ItemGroup Condition="'$(_VhAppIconsDir)' != '' And '$(VhAppPlatform)' == 'ios'">
+	<ItemGroup Condition="'$(_VhAppIconsDir)' != '' And '$(VhAppPlatform)' == 'ios' And '$(VhAppIsTvos)' != 'true'">
 		<MauiIcon Include="$(_VhAppIconsDir)icon_background.svg" Link="ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)icon_foreground.svg" ForegroundScale="1" />
 	</ItemGroup>
+
+	<!-- An Apple TV's icon is a layered image, a logo before a background, which tvOS moves apart as the
+	     focus passes over it, 5:3 at 400x240 points and 1280x768 for the App Store; beside it go the top
+	     shelf images, opaque: 2320x720, of which tvOS shows the middle 1920 over a blurred mirror of it,
+	     and the older 1920x720. All of them are one brand assets set, ic_launcher (AppIcon), whose layers
+	     and images are the app's own SVGs, reframed by their viewBox: the background covering its frame,
+	     the logo whole in the middle of its frame, the banner covering the 1920x720 that shows - so what a
+	     banner shows must lie within the middle 55% of its height - and, wide, the margins beside it
+	     too. actool draws each at every size and scale tvOS asks for, as it draws any vector image of a
+	     catalog; the App Store's icon alone the build draws, at its one scale. -->
+	<UsingTask TaskName="VhWriteTvIcon" TaskFactory="RoslynCodeTaskFactory"
+	           AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<IconsDir ParameterType="System.String" Required="true" />
+			<OutputDir ParameterType="System.String" Required="true" />
+			<Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+		</ParameterGroup>
+		<Task>
+			<Using Namespace="System.Diagnostics" />
+			<Using Namespace="System.Globalization" />
+			<Using Namespace="System.Runtime.InteropServices" />
+			<Using Namespace="System.Text.RegularExpressions" />
+			<Code Type="Fragment" Language="cs"><![CDATA[
+var iconsDir = IconsDir.Replace('\\', '/');
+var outputDir = OutputDir.Replace('\\', '/');
+const string info = "\"info\" : { \"author\" : \"xcode\", \"version\" : 1 }";
+var background = File.ReadAllText(Path.Combine(iconsDir, "icon_background.svg"));
+var foreground = File.ReadAllText(Path.Combine(iconsDir, "icon_foreground.svg"));
+var banner = File.ReadAllText(Path.Combine(iconsDir, "banner.svg"));
+var files = new List<ITaskItem>();
+
+Func<double, string> number = value => value.ToString("0.###", CultureInfo.InvariantCulture);
+
+// The same drawing in a width x height frame: "cover" crops it to fill the frame, "contain" centres it whole.
+Func<string, int, int, bool, string> reframe = (svg, width, height, cover) => {
+    var head = Regex.Match(svg, "<svg\\b[^>]*>");
+    var viewBox = Regex.Match(head.Value, "viewBox=\"([^\"]+)\"");
+    if (!head.Success || !viewBox.Success)
+        throw new InvalidOperationException("An icon of " + iconsDir + " has no svg element with a viewBox.");
+
+    var box = viewBox.Groups[1].Value.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
+        .Select(x => double.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+    double aspect = (double)width / height;
+    bool heightGoverns = cover == box[2] / box[3] > aspect;
+    double frameWidth = heightGoverns ? box[3] * aspect : box[2];
+    double frameHeight = heightGoverns ? box[3] : box[2] / aspect;
+    var newHead = "<svg width=\"" + width + "\" height=\"" + height + "\" viewBox=\"" +
+                  number(box[0] + (box[2] - frameWidth) / 2) + " " + number(box[1] + (box[3] - frameHeight) / 2) + " " +
+                  number(frameWidth) + " " + number(frameHeight) + "\"" +
+                  Regex.Replace(head.Value, "\\s(width|height|viewBox)=\"[^\"]*\"", "").Substring(4);
+    return svg.Substring(0, head.Index) + newHead + svg.Substring(head.Index + head.Length);
+};
+
+// The wide top shelf: the banner covering all 2320x720, under the banner covering the middle 1920x720 that
+// tvOS shows, so the margins it cuts off are the banner's own colours.
+Func<string, string> wideTopShelf = svg => {
+    var head = Regex.Match(svg, "<svg\\b[^>]*>");
+    var viewBox = Regex.Match(head.Value, "viewBox=\"([^\"]+)\"");
+    var end = svg.LastIndexOf("</svg>", StringComparison.Ordinal);
+    if (!head.Success || !viewBox.Success || end < 0)
+        throw new InvalidOperationException("The banner of " + iconsDir + " has no svg element with a viewBox.");
+
+    var inner = svg.Substring(head.Index + head.Length, end - head.Index - head.Length);
+    Func<int, int, string> frame = (x, width) => "<svg x=\"" + x + "\" y=\"0\" width=\"" + width + "\" height=\"720\" viewBox=\"" +
+        viewBox.Groups[1].Value + "\" preserveAspectRatio=\"xMidYMid slice\">" + inner + "</svg>";
+    return "<svg width=\"2320\" height=\"720\" viewBox=\"0 0 2320 720\"" +
+           Regex.Replace(head.Value, "\\s(width|height|viewBox)=\"[^\"]*\"", "").Substring(4) +
+           frame(0, 2320) + frame(200, 1920) + "</svg>";
+};
+
+// a file, rewritten only when it changes, so actool runs again only for a changed icon; true when it changed
+Func<string, string, bool> save = (filePath, content) => {
+    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+    if (File.Exists(filePath) && File.ReadAllText(filePath) == content)
+        return false;
+
+    File.WriteAllText(filePath, content);
+    return true;
+};
+
+Action<string> add = path => {
+    var item = new TaskItem(Path.Combine(outputDir, path));
+    item.SetMetadata("Link", path);
+    item.SetMetadata("LogicalName", path);
+    item.SetMetadata("TargetPath", path);
+    files.Add(item);
+};
+
+// a file of the catalog, and a file of another form that it replaces, gone
+Action<string, string, string> write = (path, content, replaced) => {
+    save(Path.Combine(outputDir, path), content);
+    if (replaced != null)
+        File.Delete(Path.Combine(outputDir, replaced));
+    add(path);
+};
+
+// an image actool draws at every scale tvOS has
+Action<string, string, string> imageSet = (path, name, svg) => {
+    write(path + "/" + name + ".svg", svg, path + "/" + name + ".png");
+    write(path + "/Contents.json",
+        "{ \"images\" : [ { \"filename\" : \"" + name + ".svg\", \"idiom\" : \"tv\" } ], " + info + " }", null);
+};
+
+// The App Store's icon is 1280x768 at 1x alone, but actool draws an SVG at every scale tvOS has, whatever scale
+// a set names, which would put a 2x of it in the app (2.6 MB tvOS never shows). So its layers go in as PNGs at
+// that size, drawn by macOS's own SVG renderer, actool's (sips). A build that runs elsewhere - from Windows, with
+// a paired Mac - has no sips and keeps the SVGs, and the 2x.
+var sips = "/usr/bin/sips";
+var drawsPngs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && File.Exists(sips);
+Action<string, string, string, int, int> pngImageSet = (path, name, svg, width, height) => {
+    var svgPath = Path.Combine(outputDir, "svg", path, name + ".svg");
+    var pngPath = Path.Combine(outputDir, path, name + ".png");
+    if (save(svgPath, svg) || !File.Exists(pngPath)) {
+        Directory.CreateDirectory(Path.GetDirectoryName(pngPath));
+        var startInfo = new ProcessStartInfo(sips,
+            "-s format png -z " + height + " " + width + " \"" + svgPath + "\" --out \"" + pngPath + "\"") {
+            UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true
+        };
+        using (var process = Process.Start(startInfo)) {
+            process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            if (process.ExitCode != 0 || !File.Exists(pngPath))
+                throw new InvalidOperationException("sips could not draw " + svgPath + ": " + error);
+        }
+    }
+
+    File.Delete(Path.Combine(outputDir, path, name + ".svg"));
+    add(path + "/" + name + ".png");
+    write(path + "/Contents.json", "{ \"images\" : [ { \"filename\" : \"" + name + ".png\", \"idiom\" : \"tv\", \"scale\" : \"1x\" } ], " +
+        info + " }", null);
+};
+
+Action<string, int, int, bool> imageStack = (path, width, height, oneScale) => {
+    write(path + "/Contents.json",
+        "{ \"layers\" : [ { \"filename\" : \"Front.imagestacklayer\" }, { \"filename\" : \"Back.imagestacklayer\" } ], " + info + " }", null);
+    foreach (var layer in new[] { "Front", "Back" }) {
+        var svg = layer == "Front" ? reframe(foreground, width, height, false) : reframe(background, width, height, true);
+        var imageSetPath = path + "/" + layer + ".imagestacklayer/Content.imageset";
+        write(path + "/" + layer + ".imagestacklayer/Contents.json", "{ " + info + " }", null);
+        if (oneScale && drawsPngs)
+            pngImageSet(imageSetPath, layer.ToLowerInvariant(), svg, width, height);
+        else
+            imageSet(imageSetPath, layer.ToLowerInvariant(), svg);
+    }
+};
+
+const string brand = "Assets.xcassets/ic_launcher.brandassets";
+write("Assets.xcassets/Contents.json", "{ " + info + " }", null);
+write(brand + "/Contents.json", "{ \"assets\" : [ " +
+    "{ \"filename\" : \"App Icon - App Store.imagestack\", \"idiom\" : \"tv\", \"role\" : \"primary-app-icon\", \"size\" : \"1280x768\" }, " +
+    "{ \"filename\" : \"App Icon.imagestack\", \"idiom\" : \"tv\", \"role\" : \"primary-app-icon\", \"size\" : \"400x240\" }, " +
+    "{ \"filename\" : \"Top Shelf Image Wide.imageset\", \"idiom\" : \"tv\", \"role\" : \"top-shelf-image-wide\", \"size\" : \"2320x720\" }, " +
+    "{ \"filename\" : \"Top Shelf Image.imageset\", \"idiom\" : \"tv\", \"role\" : \"top-shelf-image\", \"size\" : \"1920x720\" } ], " +
+    info + " }", null);
+imageStack(brand + "/App Icon.imagestack", 400, 240, false);
+imageStack(brand + "/App Icon - App Store.imagestack", 1280, 768, true);
+imageSet(brand + "/Top Shelf Image Wide.imageset", "top_shelf_wide", wideTopShelf(banner));
+imageSet(brand + "/Top Shelf Image.imageset", "top_shelf", reframe(banner, 1920, 720, true));
+Files = files.ToArray();
+]]></Code>
+		</Task>
+	</UsingTask>
+
+	<PropertyGroup Condition="'$(_VhAppIconsDir)' != '' And '$(VhAppIsTvos)' == 'true'">
+		<CompileImageAssetsDependsOn>$(CompileImageAssetsDependsOn);VhWriteTvIcon</CompileImageAssetsDependsOn>
+	</PropertyGroup>
+	<Target Name="VhWriteTvIcon">
+		<VhWriteTvIcon IconsDir="$(_VhAppIconsDir)" OutputDir="$(IntermediateOutputPath)vh-tv-icon">
+			<Output TaskParameter="Files" ItemName="_VhTvIconFile" />
+		</VhWriteTvIcon>
+		<ItemGroup>
+			<ImageAsset Include="@(_VhTvIconFile)" />
+			<FileWrites Include="@(_VhTvIconFile)" />
+		</ItemGroup>
+	</Target>
 
 	<!-- The app's launch colour: what iOS's launch screen and Android's cold start show before any of the
 	     app's code runs, so the UI comes up on the colour already there. The theme's, never the app's:

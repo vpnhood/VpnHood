@@ -155,17 +155,8 @@ public static class IPAddressUtil
         var url = "https://www.cloudflare.com/cdn-cgi/trace";
 
         var handler = new SocketsHttpHandler {
-            ConnectCallback = async (context, token) => {
-                var socket = new Socket(addressFamily, SocketType.Stream, ProtocolType.Tcp);
-                try {
-                    await socket.ConnectAsync(context.DnsEndPoint, token).Vhc();
-                    return new NetworkStream(socket, ownsSocket: true);
-                }
-                catch {
-                    socket.Dispose();
-                    throw;
-                }
-            }
+            ConnectCallback = (context, token) =>
+                AddressFamilyConnector.Connect(context.DnsEndPoint, addressFamily, token)
         };
 
         using var httpClient = CreateHttpClient(handler, userAgent);

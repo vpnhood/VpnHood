@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
@@ -196,7 +197,10 @@ public class ServerApp : IDisposable
     private static HttpAccessManager CreateHttpAccessManager(HttpAccessManagerOptions options)
     {
         VhLogger.Instance.LogInformation("Initializing HttpAccessManager. BaseUrl: {BaseUrl}", options.BaseUrl);
-        var httpAccessManager = new HttpAccessManager(options) {
+        // the status calls take turns over the address families, so the access manager sees a changed IP
+        var httpClient = new HttpClient(new StatusAddressFamilyHandler(
+            [AddressFamily.InterNetwork, AddressFamily.InterNetworkV6]));
+        var httpAccessManager = new HttpAccessManager(httpClient, options) {
             Logger = VhLogger.Instance,
             LoggerEventId = GeneralEventId.AccessManager
         };

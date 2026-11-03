@@ -11,6 +11,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.WindowsTun;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Core.Client.VpnServices.Host.WindowsTun;
 
 namespace VpnHood.App.AvaloniaUI.Dev;
 

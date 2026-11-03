@@ -1,4 +1,4 @@
-using VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation;
+using VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin;
 
 namespace VpnHood.App.Connect.Windows.VpnPlugin;
 

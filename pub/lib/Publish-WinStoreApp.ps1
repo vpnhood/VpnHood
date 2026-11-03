@@ -32,8 +32,8 @@ function Get-ProjectFile([string]$dir) {
 }
 $appProject = Get-ProjectFile $projectDir;
 $vpnHostProject = Get-ProjectFile $vpnHostProjectDir;
-$componentDir = Join-Path $solutionDir "src/Core/VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation";
-$componentName = "VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation";
+$componentDir = Join-Path $solutionDir "src/Core/VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin";
+$componentName = "VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin";
 
 $outDir = Join-Path $projectDir "bin/Publish-microsoft$(if ($store) { '-store' })";
 $appDir = Join-Path $outDir "app";

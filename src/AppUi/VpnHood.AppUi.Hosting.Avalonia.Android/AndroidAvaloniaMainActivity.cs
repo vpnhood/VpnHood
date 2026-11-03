@@ -9,9 +9,9 @@ using AvaloniaApplication = Avalonia.Application;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppLib.App.Android.Activities;
 using VpnHood.AppLib.App;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Android.Utils;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Android;
 

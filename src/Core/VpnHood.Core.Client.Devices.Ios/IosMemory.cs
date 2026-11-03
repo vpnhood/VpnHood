@@ -17,12 +17,12 @@ namespace VpnHood.Core.Client.Devices.Ios;
 /// processes: the app (<c>IosDevice</c> constructor) and the extension (<c>IosVpnService.StartTunnel</c>) — and
 /// each reports its OWN process's footprint, so it works wherever it's asked. Consumers (the iOS QUIC download
 /// brake in IosQuicStream and the TCP stack's +CONN/-CONN log annotation) then read live values without any
-/// dependency on this class. The gated <c>ext-mem.log</c> probe (<see cref="IosMemoryMonitor"/>) also reads the
+/// dependency on this class. The gated <c>ext-mem.log</c> probe (<c>IosMemoryMonitor</c>, the extension's) also reads the
 /// fuller iOS-specific breakdown via <see cref="TryRead"/> on its own thread. System-wide "used" memory is left
 /// <c>null</c> here (it needs <c>host_statistics</c>, not worth the native struct parsing); a non-iOS host can
 /// fill it from <c>GC.GetGCMemoryInfo()</c>.
 /// </remarks>
-internal sealed class IosMemory : VhMemory
+public sealed class IosMemory : VhMemory
 {
     // Per-thread scratch buffer for task_info so a fresh read on the QUIC hot path allocates nothing.
     [ThreadStatic] private static byte[]? _buffer;

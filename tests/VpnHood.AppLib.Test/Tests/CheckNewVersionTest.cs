@@ -7,9 +7,9 @@ using VpnHood.AppLib.Api.WebHost;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.AppLib.Test.Providers;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Test;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.AppLib.Abstractions.UiContexts;
 using ProviderUpdateStage = VpnHood.AppLib.Abstractions.Updaters.AppUpdateStage;
 
 namespace VpnHood.AppLib.Test.Tests;

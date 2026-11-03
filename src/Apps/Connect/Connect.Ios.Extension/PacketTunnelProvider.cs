@@ -1,5 +1,5 @@
 using ObjCRuntime;
-using VpnHood.Core.Client.Devices.Ios;
+using VpnHood.Core.Client.VpnServices.Host.Ios;
 
 namespace VpnHood.App.Connect.Ios.Extension;
 

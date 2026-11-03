@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood's VPN service on iOS and tvOS: the Network Extension's half, which runs the engine</Description>
+		<TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
+		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-tvos'))">17.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<!-- diagnostics-only (this branch): lets the memory probe read SplitSqlite.MemoryUsed(); the
+		     assembly is already in the extension transitively via VpnServices.Host -->
+		<ProjectReference Include="..\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Quic.Ios\VpnHood.Net.Quic.Ios.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.IosTun\VpnHood.Net.VpnAdapters.IosTun.csproj" />
+		<!-- DIAGNOSTIC: the memory probe reads LocalTcpStack's static counters directly. -->
+		<ProjectReference Include="..\..\Net\VpnHood.Net.TcpStack\VpnHood.Net.TcpStack.csproj" />
+	</ItemGroup>
+</Project>

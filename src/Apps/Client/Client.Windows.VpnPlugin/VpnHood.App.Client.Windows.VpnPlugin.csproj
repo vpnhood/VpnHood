@@ -22,6 +22,6 @@
 	<ItemGroup>
 		<!-- WinRT.Host.dll beside the executable: the in-process server the package's manifest names. -->
 		<PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.3.1" />
-		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation\VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.csproj" />
+		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin\VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin.csproj" />
 	</ItemGroup>
 </Project>

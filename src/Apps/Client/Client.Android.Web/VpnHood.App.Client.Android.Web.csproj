@@ -38,6 +38,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Android\VpnHood.AppLib.App.Android.csproj" />
+		<!-- the VPN service, which the APK carries beside the app -->
+		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.Android\VpnHood.Core.Client.VpnServices.Host.Android.csproj" />
 		<!-- The APK updates itself; never in a store's head. -->
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.AndroidWeb\VpnHood.AppLib.Stores.AndroidWeb.csproj" />
 		<!-- The UI this head runs, which MainActivity is the activity of. -->

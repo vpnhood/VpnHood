@@ -212,14 +212,20 @@
     </Project>
     <Project Path="src/Core/VpnHood.Core.Client.Devices.Linux/VpnHood.Core.Client.Devices.Linux.csproj" />
     <Project Path="src/Core/VpnHood.Core.Client.Devices.WindowsTun/VpnHood.Core.Client.Devices.WindowsTun.csproj" />
-    <Project Path="src/Core/VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation/VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.csproj">
-      <Platform Project="x64" />
-    </Project>
     <Project Path="src/Core/VpnHood.Core.Client.Devices.WindowsVpnPlugin/VpnHood.Core.Client.Devices.WindowsVpnPlugin.csproj" />
   </Folder>
   <Folder Name="/src/Core/Client/VpnServices/">
     <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
     <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Host/VpnHood.Core.Client.VpnServices.Host.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Host.Android/VpnHood.Core.Client.VpnServices.Host.Android.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Host.Ios/VpnHood.Core.Client.VpnServices.Host.Ios.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
+    <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Host.Linux/VpnHood.Core.Client.VpnServices.Host.Linux.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Host.WindowsTun/VpnHood.Core.Client.VpnServices.Host.WindowsTun.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin/VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin.csproj">
+      <Platform Project="x64" />
+    </Project>
     <Project Path="src/Core/VpnHood.Core.Client.VpnServices.Manager/VpnHood.Core.Client.VpnServices.Manager.csproj" />
   </Folder>
   <Folder Name="/src/Core/Filtering/">

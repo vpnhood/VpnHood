@@ -5,7 +5,7 @@ using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Hosting.Desktop;
 using VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.Core.Client.Devices.WindowsTun;
+using VpnHood.Core.Client.VpnServices.Host.WindowsTun;
 
 namespace VpnHood.App.Client.Windows.Web;
 

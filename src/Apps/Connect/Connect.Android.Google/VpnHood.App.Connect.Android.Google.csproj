@@ -69,6 +69,8 @@
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.GooglePlay.Core\VpnHood.AppLib.Stores.GooglePlay.Core.csproj" />
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.GooglePlay\VpnHood.AppLib.Stores.GooglePlay.csproj" />
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Android\VpnHood.AppLib.App.Android.csproj" />
+		<!-- the VPN service, which the APK carries beside the app -->
+		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.Android\VpnHood.Core.Client.VpnServices.Host.Android.csproj" />
 		<!-- The UI this head runs, which MainActivity is the activity of. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Android\VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->

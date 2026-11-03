@@ -6,11 +6,11 @@ using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Accounts;
 using VpnHood.AppLib.Test.Providers;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Test.Tests;
 

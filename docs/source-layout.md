@@ -66,15 +66,19 @@ src/Net/
 src/Core/
 ├── VpnHood.Core.Client/
 ├── VpnHood.Core.Client.Abstractions/
-├── VpnHood.Core.Client.Devices.Abstractions/       one IDevice per OS
+├── VpnHood.Core.Client.Devices.Abstractions/       one IDevice per OS: the app's side of the OS
 ├── VpnHood.Core.Client.Devices.Android/
 ├── VpnHood.Core.Client.Devices.Ios/
 ├── VpnHood.Core.Client.Devices.Linux/
 ├── VpnHood.Core.Client.Devices.WindowsTun/
-├── VpnHood.Core.Client.Devices.WindowsVpnPlugin/   the device of an MSIX package, and its VPN host's service
-├── VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation/  the component Windows activates in that VPN host
+├── VpnHood.Core.Client.Devices.WindowsVpnPlugin/   the device of an MSIX package
 ├── VpnHood.Core.Client.VpnServices.Abstractions/   the VPN service host and the manager that talks to it
 ├── VpnHood.Core.Client.VpnServices.Host/
+├── VpnHood.Core.Client.VpnServices.Host.Android/   one OS's VPN service, which runs the engine
+├── VpnHood.Core.Client.VpnServices.Host.Ios/
+├── VpnHood.Core.Client.VpnServices.Host.Linux/
+├── VpnHood.Core.Client.VpnServices.Host.WindowsTun/
+├── VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin/  the component Windows activates in an MSIX package's VPN host
 ├── VpnHood.Core.Client.VpnServices.Manager/
 ├── VpnHood.Core.Common/
 ├── VpnHood.Core.Filtering.Abstractions/
@@ -126,10 +130,10 @@ src/Apps/
 │   ├── Client.Android.Web/         the APK from our site
 │   ├── Client.Ios.Apple/           the App Store distribution
 │   ├── Client.Ios.Extension/       the Network Extension it bundles
-│   ├── Client.Linux.VpnHost/       the VPN host the Linux heads' service starts at each connect
+│   ├── Client.Linux.VpnHost/       the VPN host the Linux heads' daemon starts at each connect
 │   ├── Client.Linux.Web/
 │   ├── Client.Windows.Microsoft/   the Microsoft Store distribution, an MSIX package
-│   ├── Client.Windows.VpnHost/     the VPN host the WinTun heads' service starts at each connect
+│   ├── Client.Windows.VpnHost/     the VPN host the WinTun heads' daemon starts at each connect
 │   ├── Client.Windows.VpnPlugin/   the VPN host that package carries
 │   └── Client.Windows.Web/
 ├── Connect/                        the same set, with Connect's own product project
@@ -150,7 +154,7 @@ a second one on the same platform is a sibling rather than a rename.
 
 Some folders are not heads and do not follow that rule. `*.Ios.Extension` is the Network Extension
 the iOS app bundles, `*.Windows.VpnPlugin` the VPN host a Windows package carries, and
-`*.Windows.VpnHost` and `*.Linux.VpnHost` the VPN host beside a desktop head, which its service starts:
+`*.Windows.VpnHost` and `*.Linux.VpnHost` the VPN host beside a desktop head, which its daemon starts:
 each belongs to the platform rather than to a channel, so every channel of a product on that platform
 would reuse the same one. The Windows setup is not a folder of the product's: one NSIS
 script for every app, `pub/lib/vh-installer/win/install-client.nsi`, takes the app's names from its
@@ -166,16 +170,19 @@ manifest and resources come from the library ([What every Android app shares](#w
 
 | File | What it does |
 | --- | --- |
-| `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id and name, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params and its UI to the platform's host (`WindowsDesktopHost.Run`, `LinuxDesktopHost.Run`), whose service starts the app, or `WindowsVpnPluginDesktopHost.Run`, which starts it in the window's own process. Either way the platform builds its own device and starts `VpnHoodApp` |
+| `App.cs` (or `AppDelegate.cs`) | states the head's init params (`AppInitParams`): the app id and name, the storage folder, and a factory that builds `AppOptions` — it loads the product's settings (`ClientAppConfigs.Load`, or `ConnectAppConfigs.Load`, which adds the head's built-in key), then the product's options (`ClientAppOptions.Create`), which name the logo, the theme and the two zips below, and its channel's lines on top: its update feed and updater, its store's review and billing. On Android and iOS the class derives from its UI's host (`AndroidAvaloniaApplication<TUi>`, `IosAvaloniaAppDelegate<TUi>`), which starts the app and then the UI; on a desktop `Main` hands the params, its UI and the VPN service `dev` runs in its own process (`WindowsVpnServiceFactory`, `LinuxVpnServiceFactory`) to the platform's host (`WindowsDesktopHost.Run`, `LinuxDesktopHost.Run`), whose daemon starts the app, or the params and its UI to `WindowsVpnPluginDesktopHost.Run`, which starts it in the window's own process. Either way the platform builds its own device and starts `VpnHoodApp` |
 | `MainActivity.cs` (Android) | the one activity, Avalonia's: the launcher's, the Quick Settings tile's preferences', and in CLIENT the access keys' links and files (below). Its Java name is pinned to the one the app shipped under, as launchers keep the home-screen icon by it |
 | `_publish.ps1` | the one entry point that builds and packages this head; CI calls exactly this |
 
 The head references its product project, the platform glue it needs from `AppLib`, and the UI
-hosts it mounts from `AppUi`. A desktop head mounts one more host than a mobile one: its platform's
+hosts it mounts from `AppUi`; where it runs the VPN service too, the VPN service's side - an Android
+head `VpnHood.Core.Client.VpnServices.Host.Android`, which its APK carries beside the app, and a desktop
+head its VPN host's head - see [client-architecture.md](client-architecture.md). A desktop head mounts
+one more host than a mobile one: its platform's
 `VpnHood.AppUi.Hosting.Desktop.Linux` or `.Desktop.WindowsTun`, over the shared
-`VpnHood.AppUi.Hosting.Desktop.Daemon`, the service that holds the app and the command line, and
+`VpnHood.AppUi.Hosting.Desktop.Daemon`, the daemon that holds the app and the command line, and
 `VpnHood.AppUi.Hosting.Desktop`, the window that shows it, all in one binary — see [linux/](linux/README.md#how-it-fits-together). The Microsoft Store head mounts
-`.Desktop.WindowsVpnPlugin` instead, over the window's project alone, with no service: the app runs in its window's process, and
+`.Desktop.WindowsVpnPlugin` instead, over the window's project alone, with no daemon: the app runs in its window's process, and
 Windows' VPN host holds the tunnel. It has two files more, `Package.appxmanifest`, its package's
 manifest, which `_publish.ps1` stamps, and `_install.ps1`, which installs that package on this
 machine; both scripts hand over to `pub/lib`'s `Publish-WinStoreApp.ps1` and `Install-WinStoreApp.ps1`,

@@ -3,8 +3,8 @@ using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Ios;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.AppUi.Hosting.WebView;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Graphics;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView.Ios;
 

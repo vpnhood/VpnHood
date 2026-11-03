@@ -3,8 +3,8 @@
 Index for the iOS Client & Connect apps and their Network Extension. The apps are thin: they live in
 `src/Apps/{Client,Connect}/{Client,Connect}.Ios.Apple` (host) + `….Ios.Extension` (`.appex`), and the real
 device/extension/TUN/TCP-stack implementation is in `src/Core/*`
-(`VpnHood.Core.Client.Devices.Ios`, `VpnHood.Net.VpnAdapters.IosTun`, `VpnHood.Net.TcpStack`,
-`VpnHood.Net.Quic.Ios`). Client and Connect share all of it — Connect is just a branding variant whose
+(`VpnHood.Core.Client.Devices.Ios`, `VpnHood.Core.Client.VpnServices.Host.Ios`, `VpnHood.Net.VpnAdapters.IosTun`,
+`VpnHood.Net.TcpStack`, `VpnHood.Net.Quic.Ios`). Client and Connect share all of it — Connect is just a branding variant whose
 ids and name come from its product's identity (`src/Apps/Connect/Directory.Build.props`, see
 [source-layout](../source-layout.md#the-apps-identity)) and whose product settings live in `ConnectAppConfigs`.
 

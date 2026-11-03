@@ -8,7 +8,6 @@ using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.Abstractions;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test;
@@ -16,6 +15,7 @@ using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
 
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Test;
 

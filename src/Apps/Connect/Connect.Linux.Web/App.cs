@@ -8,7 +8,7 @@ using VpnHood.AppUi.Hosting.Desktop.Linux;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Net.Toolkit.Logging;
-using VpnHood.Core.Client.Devices.Linux;
+using VpnHood.Core.Client.VpnServices.Host.Linux;
 
 namespace VpnHood.App.Connect.Linux.Web;
 

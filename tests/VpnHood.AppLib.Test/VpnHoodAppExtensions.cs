@@ -3,8 +3,8 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppLib.App;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Test;
 

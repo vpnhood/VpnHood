@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood's VPN service as the Windows VPN plug-in: the C#/WinRT component Windows activates and calls
+			in the VPN host, and the service it runs</Description>
+		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
+		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+		<Platforms>x64</Platforms>
+		<!-- The object Windows calls must be authored in a C#/WinRT component: in a plain library it compiles but
+		     lacks the callable wrapper Windows needs, and activation fails. So every public type here is a WinRT one;
+		     the service and its listener are internal. -->
+		<CsWinRTComponent>true</CsWinRTComponent>
+		<CsWinRTWindowsMetadata>C:\Windows\System32\WinMetadata</CsWinRTWindowsMetadata>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.3.1" />
+		<ProjectReference Include="..\VpnHood.Core.Client.Devices.WindowsVpnPlugin\VpnHood.Core.Client.Devices.WindowsVpnPlugin.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.WindowsVpnPlugin\VpnHood.Net.VpnAdapters.WindowsVpnPlugin.csproj" />
+	</ItemGroup>
+
+	<!-- The runtime's options: without them, activation fails with 0x80008093. Windows activates the component's
+	     classes by their own names, which WinRT.Host finds by their namespace, so no class is mapped. -->
+	<ItemGroup>
+		<None Update="WinRT.Host.runtimeconfig.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+</Project>

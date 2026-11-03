@@ -308,18 +308,20 @@ UI's, not the platform's (`AvaloniaDesktopUi`).
 `VpnHood.AppLib.App.Linux` is back to the one thing it always was, `VpnHoodLinuxApp`.
 
 Beside each desktop head is its VPN host head (`Client.Linux.VpnHost`, `Client.Windows.VpnHost`), whose
-`Main` is one call into the device's project, `LinuxVpnHost.Run` or `WindowsVpnHost.Run`: Core alone, no
-AppLib. The desktop head references it, so a build puts both executables in one folder over one runtime,
-and the app finds it there by the name its build records (`VhAppVpnHostName`, `<package title>VpnHost`).
-The service starts it at each connect, and it ends with its session; with the service too - on Linux the
-unit's stop sends it SIGTERM, which closes its session, and on Windows a kill-on-close job ends it with
-the service's process. It writes the service's sinks from its first line (the journal, the Event Log)
-and its own `vpn.log`, which `service log` shows beside the app's.
+`Main` is one call into the VPN service's project (`VpnHood.Core.Client.VpnServices.Host.Linux`,
+`.WindowsTun`), `LinuxVpnHost.Run` or `WindowsVpnHost.Run`: Core alone, no AppLib. The desktop head
+references it, so a build puts both executables in one folder over one runtime, and the app finds it
+there by the name its build records (`VhAppVpnHostName`, `<package title>VpnHost`). The daemon starts it
+at each connect, and it ends with its session; with the daemon too - on Linux the unit's stop sends it
+SIGTERM, which closes its session, and on Windows a kill-on-close job ends it with the daemon's process.
+It writes the daemon's sinks from its first line (the journal, the Event Log) and its own `vpn.log`,
+which `service log` shows beside the app's. See [client-architecture.md](../client-architecture.md).
 
 **In a debugger** a head runs `dev`, which the desktop heads' launch profiles pass: the daemon and
 the window in one process, so a breakpoint in the app, its tunnel or its UI is reached from one run
 with no service installed. The window still reaches the app over loopback, as it reaches the service.
-The VPN service runs in that process too, as no VPN host is started outside the service.
+The VPN service runs in that process too, which the head hands its host for it (`LinuxVpnServiceFactory`,
+`WindowsVpnServiceFactory`): `dev` starts no VPN host.
 The app keeps its storage in the person's own folder of the app (`IAppDesktopPaths.DevStoragePath`:
 `%LOCALAPPDATA%\<app id>`, `~/.local/share/<app id>`; a Debug build's id ends in `.debug`, so it is
 never a release's) and runs as whoever started

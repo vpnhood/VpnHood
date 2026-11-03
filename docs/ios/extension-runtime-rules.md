@@ -18,7 +18,7 @@ from the tunnel; `ReadPackets` is one-shot and must be re-armed) are documented 
 
 ## Extension gotchas (do / don't)
 - **`Console.SetOut(TextWriter.Null)` must run before any other Console access.** It lives at the top of
-  `IosVpnService` in `VpnHood.Core.Client.Devices.Ios` (the app-project `PacketTunnelProvider` ctor is
+  `IosVpnService` in `VpnHood.Core.Client.VpnServices.Host.Ios` (the app-project `PacketTunnelProvider` ctor is
   empty and must stay that way). iOS extension stdout has no reader; once the kernel pipe buffer fills,
   `Console.WriteLine` blocks forever and hangs the constructor (extension never reaches `StartTunnel`,
   Documents folder stays empty). Use `System.Diagnostics.Trace.WriteLine` for extension logging.
@@ -35,7 +35,7 @@ from the tunnel; `ReadPackets` is one-shot and must be re-armed) are documented 
 |--|--|--|
 | `GetContainerUrl` returns `null` | App Group entitlement missing from profile | Re-provision both targets (see [build-deploy-and-provisioning.md](build-deploy-and-provisioning.md)) |
 | Extension `EXC_BAD_ACCESS` at startup | trimming removed a needed type | keep `MtouchLink=SdkOnly` (don't use `None`/`Full`) |
-| Extension crashes on launch: `Could not find the assembly …Devices.Ios` | CoreCLR registrar can't load the principal class's assembly | keep the local `PacketTunnelProvider` subclass (see architecture-and-ipc + memory doc) |
+| Extension crashes on launch: `Could not find the assembly …VpnServices.Host.Ios` | CoreCLR registrar can't load the principal class's assembly | keep the local `PacketTunnelProvider` subclass (see architecture-and-ipc + memory doc) |
 | `SaveToPreferences` times out | NEVPNManager needs the first-run permission prompt | accept the VPN permission dialog on device |
 | Extension never reaches `StartTunnel` | bundle-ID / principal-class mismatch | verify `Info.plist NSExtensionPrincipalClass` matches the `[Register]` name |
 | Extension process never starts, Documents empty (`NEVPNErrorDomain Code=1`) | `Console.WriteLine` before `Console.SetOut(...Null)` hung the ctor | keep `Console.SetOut` ahead of every other Console access in `IosVpnService` (above) |

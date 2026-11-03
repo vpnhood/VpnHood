@@ -32,7 +32,7 @@
     <Application
       Id="VpnPluginHost"
       Executable="Stamped.exe"
-      EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnBackgroundTask"
+      EntryPoint="VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin.VpnBackgroundTask"
       uap10:RuntimeBehavior="windowsApp"
       uap10:TrustLevel="appContainer">
       <uap:VisualElements
@@ -43,15 +43,15 @@
         Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <!-- the vpnClient task, without which Windows never activates the plug-in (the fork's lesson 1) -->
-        <Extension Category="windows.backgroundTasks" EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnBackgroundTask">
+        <Extension Category="windows.backgroundTasks" EntryPoint="VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin.VpnBackgroundTask">
           <BackgroundTasks ServerName="Stamped">
             <uap:Task Type="vpnClient" />
           </BackgroundTasks>
         </Extension>
-        <!-- The app's control channel (WindowsVpnPluginAppServiceListener.AppServiceName), run by the same server, the
+        <!-- The app's control channel (WindowsVpnPluginAppService.Name), run by the same server, the
              VPN host: an open connection keeps it running, which Windows freezes between VPN events otherwise, so the
              VPN works while the app runs. -->
-        <uap:Extension Category="windows.appService" EntryPoint="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnAppServiceTask">
+        <uap:Extension Category="windows.appService" EntryPoint="VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin.VpnAppServiceTask">
           <uap:AppService Name="VpnService" ServerName="Stamped" />
         </uap:Extension>
       </Extensions>
@@ -87,8 +87,8 @@
     <Extension Category="windows.activatableClass.inProcessServer">
       <InProcessServer>
         <Path>WinRT.Host.dll</Path>
-        <ActivatableClass ActivatableClassId="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnBackgroundTask" ThreadingModel="both" />
-        <ActivatableClass ActivatableClassId="VpnHood.Core.Client.Devices.WindowsVpnPlugin.Activation.VpnAppServiceTask" ThreadingModel="both" />
+        <ActivatableClass ActivatableClassId="VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin.VpnBackgroundTask" ThreadingModel="both" />
+        <ActivatableClass ActivatableClassId="VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin.VpnAppServiceTask" ThreadingModel="both" />
       </InProcessServer>
     </Extension>
   </Extensions>

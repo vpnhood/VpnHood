@@ -6,6 +6,7 @@ using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 

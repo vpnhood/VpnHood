@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood's VPN service on Android: the VPN service's half, which runs the engine</Description>
+		<TargetFramework>net11.0-android37.0</TargetFramework>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Quic.Android\VpnHood.Net.Quic.Android.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.AndroidTun\VpnHood.Net.VpnAdapters.AndroidTun.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- the VPN service's TLS below Android 10 (AndroidTlsProvider); Java only, so no binding -->
+		<AndroidMavenLibrary Include="org.conscrypt:conscrypt-android" Version="2.8.0" Bind="false" />
+	</ItemGroup>
+</Project>

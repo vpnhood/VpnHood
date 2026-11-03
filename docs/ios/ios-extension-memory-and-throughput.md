@@ -53,7 +53,7 @@ so treat them as the preview.5 baseline).
   real generational GC **absorbs the per-packet allocation churn that Mono spiked on** → flat under load.
 - **CoreCLR boot fix (required):** under CoreCLR's managed-static registrar, pointing
   `NSExtensionPrincipalClass` at the core `IosVpnService` crashes on launch:
-  `ObjCRuntime.RuntimeException: Could not find the assembly VpnHood.Core.Client.Devices.Ios`. Fix = a thin
+  `ObjCRuntime.RuntimeException: Could not find the assembly VpnHood.Core.Client.VpnServices.Host.Ios`. Fix = a thin
   local **`src/Apps/Client/Client.Ios.Extension/PacketTunnelProvider.cs`** subclass of `IosVpnService` (roots the core assembly), with
   `Info.plist NSExtensionPrincipalClass = PacketTunnelProvider`. (Mono tolerated its absence.)
 
@@ -214,7 +214,7 @@ but it is why channel count alone never moved the download number.
 `AppDelegate` overrides the preset for the one case the check cannot see: **"Designed for iPad" running on an
 Apple-silicon Mac**, which has no Network-Extension memory cap and therefore takes `NormalMemory`.
 
-TFM `net11.0-ios` on App + Extension + the iOS core libs (Devices.Ios, IosTun, AppLib.Ios.Common, Quic.Ios).
+TFM `net11.0-ios` on App + Extension + the iOS core libs (Devices.Ios, VpnServices.Host.Ios, IosTun, AppLib.App.Ios, Quic.Ios).
 
 ---
 

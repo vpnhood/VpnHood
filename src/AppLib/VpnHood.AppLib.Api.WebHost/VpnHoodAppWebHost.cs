@@ -10,7 +10,6 @@ using VpnHood.Net.Toolkit.Assets;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.WebHost.Controllers;
 using VpnHood.AppLib.Api.WebHost.Helpers;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Logging;
@@ -19,6 +18,7 @@ using VpnHood.Net.Toolkit.Utils;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using VpnHood.AppLib.App.WebHosting;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Api.WebHost;
 

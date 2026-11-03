@@ -14,6 +14,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Linux\VpnHood.Core.Client.Devices.Linux.csproj" />
+		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.Linux\VpnHood.Core.Client.VpnServices.Host.Linux.csproj" />
 	</ItemGroup>
 </Project>

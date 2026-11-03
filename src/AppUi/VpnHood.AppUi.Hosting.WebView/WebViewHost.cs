@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView;
 

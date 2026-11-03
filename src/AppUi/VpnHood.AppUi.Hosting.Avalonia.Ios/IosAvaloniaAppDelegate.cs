@@ -6,7 +6,7 @@ using Foundation;
 using UIKit;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Ios;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Ios;
 

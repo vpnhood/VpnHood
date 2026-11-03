@@ -5,8 +5,8 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 

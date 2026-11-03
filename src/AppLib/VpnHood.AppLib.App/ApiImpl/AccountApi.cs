@@ -1,9 +1,9 @@
 ﻿using VpnHood.AppLib.Api.Accounts;
 using VpnHood.AppLib.App.Services.Accounts;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.AppLib.App.DtoConverters;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.AppLib.Api;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.App.ApiImpl;
 

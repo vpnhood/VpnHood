@@ -1,4 +1,4 @@
-using VpnHood.Core.Client.Devices.Linux;
+using VpnHood.Core.Client.VpnServices.Host.Linux;
 
 namespace VpnHood.App.Client.Linux.VpnHost;
 

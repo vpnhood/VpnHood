@@ -7,10 +7,10 @@ using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.AppLib.App.Android.Utils;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
+using VpnHood.AppLib.Abstractions.UiContexts;
 using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.AppLib.App.Android.Activities;

@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
 

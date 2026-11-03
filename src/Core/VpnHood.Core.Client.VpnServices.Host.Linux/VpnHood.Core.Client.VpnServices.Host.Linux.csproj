@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood's VPN service on Linux: the VPN host's half, which runs the engine</Description>
+		<TargetFramework>net11.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Linux\VpnHood.Core.Client.Devices.Linux.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
+		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.LinuxTun\VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
+	</ItemGroup>
+</Project>

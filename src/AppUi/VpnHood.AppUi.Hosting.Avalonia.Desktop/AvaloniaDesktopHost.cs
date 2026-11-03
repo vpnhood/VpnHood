@@ -9,10 +9,10 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 

@@ -7,12 +7,12 @@ using Android.Service.QuickSettings;
 using Java.Util.Functions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.App.Android;
 

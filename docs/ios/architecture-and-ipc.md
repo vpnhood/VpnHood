@@ -14,8 +14,8 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
 | Type | Location | Role |
 |--|--|--|
 | `IosDevice` | `src/Core/VpnHood.Core.Client.Devices.Ios/IosDevice.cs` | `IDevice`; NEVPNManager save/load/start, creates the IPC transport |
-| `IosVpnService` | same project | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, and the memory watchdogs (`IosMemoryGuard.Start()` / `IosMemoryMonitor.Start()`) |
-| `IosMessageClient` / `IosMessageListener` | same project | App↔Extension IPC over `SendProviderMessage` / `HandleAppMessage` |
+| `IosVpnService` | `src/Core/VpnHood.Core.Client.VpnServices.Host.Ios/IosVpnService.cs` | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, and the memory watchdogs (`IosMemoryGuard.Start()` / `IosMemoryMonitor.Start()`) |
+| `IosMessageClient` / `IosMessageListener` | the device's project / the VPN service's | App↔Extension IPC over `SendProviderMessage` / `HandleAppMessage` |
 | `IosVpnAdapter` | `src/Net/VpnHood.Net.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
 | `LocalTcpStack` (proxy mode) | `src/Net/VpnHood.Net.TcpStack/` | user-space TCP stack used when `UseTcpProxy=true` |
 
@@ -28,8 +28,10 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
   starts the app and the UI, and returns its `IosInitParams`: `VpnHoodIosApp.Init` builds the `IosDevice` from the App
   Group and the extension's bundle id named there.
 
-Both the host and extension csprojs (`VpnHood.App.Client.Ios.Apple` / `VpnHood.App.Client.Ios.Extension`) `ProjectReference` the core `VpnHood.Core.Client.Devices.Ios` project
-(which transitively brings in Host + iOSTun + TcpStack + Device).
+The host app's csproj (`VpnHood.App.Client.Ios.Apple`) references the app's side, `VpnHood.Core.Client.Devices.Ios`
+(through `VpnHood.AppLib.App.Ios` too); the extension's (`VpnHood.App.Client.Ios.Extension`) references the VPN service's
+side, `VpnHood.Core.Client.VpnServices.Host.Ios`, which brings in the device's project, the engine, IosTun and TcpStack
+(see [client-architecture.md](../client-architecture.md)).
 
 > **Do NOT re-add local `IosDevice.cs` / `IosVpnService.cs` / `IosVpnAdapter.cs` to the app projects.** They live in core
 > to core; a stale local copy diverges from the core API and silently breaks IPC or re-introduces the jetsam kill.

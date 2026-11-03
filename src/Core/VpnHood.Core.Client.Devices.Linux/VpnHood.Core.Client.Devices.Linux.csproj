@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood client device provider for Linux</Description>
+		<Description>VpnHood client device provider for Linux: the app's side, and what its VPN host shares</Description>
 		<TargetFramework>net11.0</TargetFramework>
 	</PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
-    <ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
     <ProjectReference Include="..\..\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
+    <!-- the kill switch and the app's cleanup know the tunnel by the name LinuxTun gives it -->
     <ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.LinuxTun\VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
   </ItemGroup>
 

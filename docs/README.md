@@ -7,6 +7,7 @@ you are trying to do.
 | --- | --- |
 | **Publish my own branded VPN app** to the stores | [publish-your-app/](publish-your-app/README.md) ← start here |
 | Know which component talks to which, and in which direction | [topology.md](topology.md) |
+| Know how a client's app and its VPN service fit together, and which project is which half | [client-architecture.md](client-architecture.md) |
 | Find where something lives in `src/`, or what a platform app is made of | [source-layout.md](source-layout.md) |
 | Ship a set of files with the app — images, fonts, words, a database | [assets.md](assets.md) |
 | Know exactly which credential goes where in CI | [cicd/deployment.md](cicd/deployment.md) |
@@ -54,6 +55,7 @@ Store policy and legal checkpoints a publisher must clear:
 | Source layout | [source-layout.md](source-layout.md) — the five layers under `src/`, what a head is made of, what every Android app shares and how a head overrides it, how the browser page is built and placed |
 | Assets and zips | [assets.md](assets.md) — why data ships as a placed zip and never as an embedded resource, the provider chain that reads one, and why the paired-phone page is WebAssembly |
 | Component topology | [topology.md](topology.md) — who connects to whom, in which direction, and how many of each |
+| Client architecture | [client-architecture.md](client-architecture.md) — the app and its VPN service: where each runs on every platform, the channel between them, and the projects of each half |
 | Protocol 15 | [protocol-15.md](protocol-15.md) — HTTP request proof, rollout order, compatibility and proxy limitations |
 | IP-blocking release checks | [ip-blocking-release.md](ip-blocking-release.md) — integration suites, package checks, deployment/device evidence and the staged rollout |
 | iOS app + Network Extension | [ios/](ios/README.md) — architecture, build & provisioning, memory limits, runtime rules |

@@ -1,4 +1,4 @@
-# Latest
+# v9.1.864
 
 * Feature: VpnHoodServer blocks its users' TCP to port 25 by default, so one user's spam no longer gets the server's IP reported and its mail port cut by the host; mail apps send on 587 or 465 and are not affected. `BlockTcpPorts` and `BlockUdpPorts` in the NetFilter options list the destination ports or ranges to block (`"25"`, `"6881-6889"`); a list that is set replaces the default, and `[]` blocks none.
 * Improve: VpnHoodServer drops a packet its NetFilter blocks without an error for each one; its log counts them per session and names the first one's protocol and port in each report.

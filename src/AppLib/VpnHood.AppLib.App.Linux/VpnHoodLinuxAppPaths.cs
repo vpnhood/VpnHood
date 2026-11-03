@@ -1,5 +1,3 @@
-using VpnHood.Core.Client.Devices.Abstractions;
-
 namespace VpnHood.AppLib.App.Linux;
 
 // Where VpnHoodLinuxApp keeps things, which its host decides by how it runs the app - the service, or a debugger's
@@ -18,11 +16,7 @@ public class VpnHoodLinuxAppPaths
     // null outside an install.
     public string? KillSwitchOffScriptPath { get; init; }
 
-    // The VPN host the daemon starts at each connect, the VPN service's process (LinuxVpnHost); null in a debugger's
-    // run, where the VPN service runs in the app's process, made by InProcessVpnServiceFactory.
-    public string? VpnHostPath { get; init; }
-
-    // The VPN service in the app's process, where there is no VPN host: the head's, as only a head references the VPN
-    // service's side (LinuxVpnServiceFactory).
-    public IInProcessVpnServiceFactory? InProcessVpnServiceFactory { get; init; }
+    // The VPN host the daemon starts at each connect, the VPN service's process (LinuxVpnHost): the service's and a
+    // debugger's run's alike.
+    public required string VpnHostPath { get; init; }
 }

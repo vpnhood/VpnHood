@@ -58,9 +58,10 @@
 
   <ItemGroup>
     <!-- The Network Extension, bundled as a PlugIn (.appex) inside the app, as on iOS
-         (Client.Ios.Apple's csproj says why CodesignProvision is dropped). -->
+         (Client.Ios.Apple's csproj says why CodesignProvision is dropped), never compiled against. -->
     <ProjectReference Include="..\Client.Tvos.Extension\VpnHood.App.Client.Tvos.Extension.csproj">
       <IsAppExtension>true</IsAppExtension>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <UndefineProperties>CodesignProvision</UndefineProperties>
     </ProjectReference>
   </ItemGroup>

@@ -3,9 +3,10 @@
 		<IsPackable>false</IsPackable>	<!-- the VPN host an install carries, not a NuGet package -->
 		<Description>The VPN host of VpnHood's Windows Connect app: the VPN service in a process of its own, which the app's service starts at each connect</Description>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net11.0</TargetFramework>
-		<!-- A plain target framework names no platform, so the head does. -->
-		<VhAppPlatform>windows</VhAppPlatform>
+		<!-- The app head's own, as both executables run from one folder: NuGet then gives them the same build of
+		     each package they share, where a plain net11.0 took another of SQLitePCLRaw's than the app's. -->
+		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
+		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<!-- The service starts it by this name, which its desktop head writes into its own assembly (VhAppVpnHostName,
 		     ../Directory.Build.props). -->
 		<AssemblyName>$(VhAppVpnHostName)</AssemblyName>

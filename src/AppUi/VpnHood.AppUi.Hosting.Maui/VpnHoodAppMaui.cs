@@ -19,12 +19,12 @@ public class VpnHoodAppMaui : Singleton<VpnHoodAppMaui>, IVpnHoodAppMaui
     // What the MAUI pages talk to: the app's API, the contract every UI uses, here in this process.
     public VpnHoodApi Api => VpnHoodApp.Instance.Api;
 
-    // inProcessVpnServiceFactory: the VPN service a MAUI app on Windows runs in its own process
-    // (WindowsVpnServiceFactory), which the head hands in, as only the head references the VPN service's side; null
-    // on Android, whose OS starts the VPN service itself.
-    public static VpnHoodAppMaui Init(AppInitParams initParams, IInProcessVpnServiceFactory? inProcessVpnServiceFactory)
+    // device: on Windows, where a MAUI app has no daemon, the head runs the VPN service in its one process and hands
+    // its device (VpnServices.Host.WindowsTun's WindowsInProcessDevice, on initParams.ResolveStoragePath()), as only a
+    // head references the VPN service's side; none on Android, whose OS starts the VPN service itself.
+    public static VpnHoodAppMaui Init(AppInitParams initParams, IDevice? device = null)
     {
-        return new VpnHoodAppMaui(CreateMauiApp(initParams, inProcessVpnServiceFactory));
+        return new VpnHoodAppMaui(CreateMauiApp(initParams, device));
     }
 
     protected override void Dispose(bool disposing)
@@ -36,15 +36,17 @@ public class VpnHoodAppMaui : Singleton<VpnHoodAppMaui>, IVpnHoodAppMaui
         base.Dispose(disposing);
     }
 
-    public static IVpnHoodAppMaui CreateMauiApp(AppInitParams initParams,
-        IInProcessVpnServiceFactory? inProcessVpnServiceFactory)
+    public static IVpnHoodAppMaui CreateMauiApp(AppInitParams initParams, IDevice? device = null)
     {
 #if ANDROID
-        return VpnHoodAppMauiAndroid.Init(initParams);
+        return device is null
+            ? VpnHoodAppMauiAndroid.Init(initParams)
+            : throw new ArgumentException("Android starts the VPN service itself: a MAUI app there hands no device.",
+                nameof(device));
 #elif WINDOWS
-        return VpnHoodAppMauiWindows.Init(initParams, inProcessVpnServiceFactory ??
-            throw new ArgumentNullException(nameof(inProcessVpnServiceFactory),
-                "A MAUI app on Windows runs the VPN service in its own process."));
+        return VpnHoodAppMauiWindows.Init(initParams, device ??
+            throw new ArgumentNullException(nameof(device),
+                "A MAUI app on Windows runs the VPN service in its own process: hand its device (WindowsInProcessDevice)."));
 #else
         throw new PlatformNotSupportedException();
 #endif

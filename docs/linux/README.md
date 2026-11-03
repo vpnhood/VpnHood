@@ -310,18 +310,22 @@ UI's, not the platform's (`AvaloniaDesktopUi`).
 Beside each desktop head is its VPN host head (`Client.Linux.VpnHost`, `Client.Windows.VpnHost`), whose
 `Main` is one call into the VPN service's project (`VpnHood.Core.Client.VpnServices.Host.Linux`,
 `.WindowsTun`), `LinuxVpnHost.Run` or `WindowsVpnHost.Run`: Core alone, no AppLib. The desktop head
-references it, so a build puts both executables in one folder over one runtime, and the app finds it
-there by the name its build records (`VhAppVpnHostName`, `<package title>VpnHost`). The daemon starts it
+references it marked `VhAppVpnHost`, with `ReferenceOutputAssembly="false"`, and compiles against
+nothing of it: its build and its publish put the VPN host's whole output beside the head's, both
+executables in one folder over one runtime, a file both carry the same file or the build fails
+(`VpnHood.AppUi.Hosting.Desktop.Daemon`'s targets). The app finds
+it there by the name its build records (`VhAppVpnHostName`, `<package title>VpnHost`). The daemon starts it
 at each connect, and it ends with its session; with the daemon too - on Linux the unit's stop sends it
 SIGTERM, which closes its session, and on Windows a kill-on-close job ends it with the daemon's process.
 It writes the daemon's sinks from its first line (the journal, the Event Log) and its own `vpn.log`,
 which `service log` shows beside the app's. See [client-architecture.md](../client-architecture.md).
 
 **In a debugger** a head runs `dev`, which the desktop heads' launch profiles pass: the daemon and
-the window in one process, so a breakpoint in the app, its tunnel or its UI is reached from one run
-with no service installed. The window still reaches the app over loopback, as it reaches the service.
-The VPN service runs in that process too, which the head hands its host for it (`LinuxVpnServiceFactory`,
-`WindowsVpnServiceFactory`): `dev` starts no VPN host.
+the window in one process, with no service installed. The window still reaches the app over loopback, as
+it reaches the service, and the daemon starts the VPN host at each connect, as the service does: a
+breakpoint in the tunnel needs the debugger attached to it. Its first lines go to `vpn-host.log` beside
+`vpn.log` on Windows, as a `dev` run's daemon is no service with an Event Log source, and to the terminal
+on Linux. The app and the tunnel in one process are `AvaloniaUI.Dev`'s (`WindowsInProcessDevice`).
 The app keeps its storage in the person's own folder of the app (`IAppDesktopPaths.DevStoragePath`:
 `%LOCALAPPDATA%\<app id>`, `~/.local/share/<app id>`; a Debug build's id ends in `.debug`, so it is
 never a release's) and runs as whoever started

@@ -1,0 +1,158 @@
+<Project>
+	<!-- The VPN host beside a desktop head's executable: the VPN service's own process, which the daemon starts at each
+	     connect from the app's folder (WindowsDesktopPaths.VpnHostPath, LinuxDesktopPaths.VpnHostPath). The head
+	     references its project marked VhAppVpnHost, with ReferenceOutputAssembly false: a restore and a build take it
+	     first - in the head itself, so that a restore sees it before a package's targets are there - but never as an
+	     assembly to compile against: an app head sees the app's side alone (docs/client-architecture.md). Its whole
+	     output - its executable, its own deps.json and runtimeconfig.json, its libraries and native files - is then
+	     placed beside the app's: its build's for a build, where dev starts it, and its publish for a publish, made with
+	     the app's configuration, runtime and self-containment but its own target framework. -->
+
+	<!-- Visual Studio's fast up-to-date check is off for a head the daemon runs - one with a command: it sees no change
+	     in a project it compiles nothing from, and the VPN host's files beside the head's would stay behind. -->
+	<PropertyGroup Condition="'$(VhAppCommandName)' != '' And ('$(OutputType)' == 'Exe' Or '$(OutputType)' == 'WinExe')">
+		<DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+	</PropertyGroup>
+
+	<!-- The marked reference, before the project references are resolved: never a compile reference, and its build's
+	     output handed back for the placing below. Not the app's output folder either (OutDir, OutputPath: a build's -o),
+	     where the app's copies would land over the VPN host's before they are compared; nor the install root's launchers
+	     (VhRootLaunchersDir), the app's alone, as the VPN host, a window program too, would make its own there. -->
+	<Target Name="_VhPrepareVpnHostReference" BeforeTargets="AssignProjectConfiguration">
+		<ItemGroup>
+			<_VhVpnHostReference Include="@(ProjectReference)" Condition="'%(ProjectReference.VhAppVpnHost)' == 'true'" />
+		</ItemGroup>
+		<Error Condition="'@(_VhVpnHostReference)' != '' And '%(_VhVpnHostReference.ReferenceOutputAssembly)' != 'false'"
+		       Text="The VPN host is built and placed beside the app, never compiled against: reference %(_VhVpnHostReference.Identity) with ReferenceOutputAssembly=&quot;false&quot;." />
+		<ItemGroup>
+			<ProjectReference Condition="'%(ProjectReference.VhAppVpnHost)' == 'true'">
+				<OutputItemType>_VhVpnHostTargetPath</OutputItemType>
+				<GlobalPropertiesToRemove>%(ProjectReference.GlobalPropertiesToRemove);OutDir;OutputPath;VhRootLaunchersDir</GlobalPropertiesToRemove>
+			</ProjectReference>
+		</ItemGroup>
+	</Target>
+
+	<!-- Both executables share one folder and, published, one runtime, so a file both carry must be one file: a
+	     differing one - two versions of a package - fails the build, rather than let either executable load what the
+	     other was not built against. The VPN host's other files are copied in, one already there unchanged left as it
+	     is; not a publish folder its build output holds (the SDK's default PublishDir is inside it). Names compare as
+	     the file system does: case-blind on Windows and macOS, not on Linux. Files: every file of the folder that is the
+	     VPN host's alone, for a build's own list of what it wrote. -->
+	<UsingTask TaskName="VhPlaceVpnHost" TaskFactory="RoslynCodeTaskFactory"
+	           AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<SourceDirectory ParameterType="System.String" Required="true" />
+			<DestinationDirectory ParameterType="System.String" Required="true" />
+			<AppFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" />
+			<Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+		</ParameterGroup>
+		<Task>
+			<Code Type="Method" Language="cs"><![CDATA[
+public override bool Execute()
+{
+    var caseBlind = Path.DirectorySeparatorChar == '\\' ||
+                    System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX);
+    var comparison = caseBlind ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+    // the app's own files, by their path under the folder, and where each is copied from
+    var appFiles = new Dictionary<string, string>(caseBlind ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    foreach (var item in AppFiles ?? new ITaskItem[0])
+        appFiles[item.GetMetadata("RelativePath").Replace('\\', '/')] = item.GetMetadata("FullPath");
+
+    var source = Path.GetFullPath(SourceDirectory).TrimEnd('\\', '/');
+    if (string.Equals(source, Path.GetFullPath(DestinationDirectory).TrimEnd('\\', '/'), comparison)) {
+        Log.LogError("The VPN host is built into the app's own folder, {0}, where neither's files can be told from the other's: build it into its own.", source);
+        return false;
+    }
+
+    var files = new List<ITaskItem>();
+    foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories)) {
+        var relativePath = file.Substring(source.Length).TrimStart('\\', '/');
+        if (relativePath.Replace('\\', '/').StartsWith("publish/", comparison))
+            continue;
+
+        string appFile;
+        if (appFiles.TryGetValue(relativePath.Replace('\\', '/'), out appFile)) {
+            if (!SameContent(file, appFile))
+                Log.LogError("The VPN host and the app carry two different files as {0}, which their one folder cannot hold: {1} and {2}. Give both the same version of what brings it.",
+                    relativePath, file, appFile);
+            continue;
+        }
+
+        // a copy keeps its source's time, so a file of the same length and time is the one copied before
+        var destination = Path.Combine(DestinationDirectory, relativePath);
+        var sourceInfo = new FileInfo(file);
+        var destinationInfo = new FileInfo(destination);
+        if (!destinationInfo.Exists || destinationInfo.Length != sourceInfo.Length ||
+            destinationInfo.LastWriteTimeUtc != sourceInfo.LastWriteTimeUtc) {
+            Directory.CreateDirectory(Path.GetDirectoryName(destination));
+            File.Copy(file, destination, true);
+        }
+
+        files.Add(new TaskItem(destination));
+    }
+
+    Files = files.ToArray();
+    return !Log.HasLoggedErrors;
+}
+
+private static bool SameContent(string file, string otherFile)
+{
+    if (!File.Exists(otherFile) || new FileInfo(file).Length != new FileInfo(otherFile).Length)
+        return false;
+
+    var bytes = File.ReadAllBytes(file);
+    var otherBytes = File.ReadAllBytes(otherFile);
+    for (var i = 0; i < bytes.Length; i++)
+        if (bytes[i] != otherBytes[i])
+            return false;
+
+    return true;
+}
+]]></Code>
+		</Task>
+	</UsingTask>
+
+	<!-- A build: the VPN host's build output, which its reference built first (or Visual Studio did), beside the app's
+	     own files - those it makes (its assembly and symbols, its apphost, its deps.json and runtimeconfig.json), those
+	     it copies, and those its items name. What the VPN host placed is this build's writing too, or the next build's
+	     incremental clean would delete what it found already there. -->
+	<Target Name="_VhPlaceVpnHostInOutput" AfterTargets="CopyFilesToOutputDirectory" Condition="'@(_VhVpnHostTargetPath)' != ''">
+		<ItemGroup>
+			<_VhAppOutputFile Include="@(IntermediateAssembly->'%(FullPath)')" RelativePath="%(Filename)%(Extension)" />
+			<_VhAppOutputFile Include="@(_DebugSymbolsIntermediatePath->'%(FullPath)')" RelativePath="%(Filename)%(Extension)" />
+			<_VhAppOutputFile Include="$(AppHostIntermediatePath)" RelativePath="$(AssemblyName)$(_NativeExecutableExtension)"
+			                  Condition="'$(AppHostIntermediatePath)' != '' And Exists('$(AppHostIntermediatePath)')" />
+			<_VhAppOutputFile Include="$(ProjectDepsFilePath)" RelativePath="$(ProjectDepsFileName)"
+			                  Condition="'$(ProjectDepsFilePath)' != '' And Exists('$(ProjectDepsFilePath)')" />
+			<_VhAppOutputFile Include="$(ProjectRuntimeConfigFilePath)" RelativePath="$([System.IO.Path]::GetFileName('$(ProjectRuntimeConfigFilePath)'))"
+			                  Condition="'$(ProjectRuntimeConfigFilePath)' != '' And Exists('$(ProjectRuntimeConfigFilePath)')" />
+			<_VhAppOutputFile Include="@(ReferenceCopyLocalPaths)"
+			                  RelativePath="%(ReferenceCopyLocalPaths.DestinationSubDirectory)%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)" />
+			<_VhAppOutputFile Include="@(AllItemsFullPathWithTargetPath)" RelativePath="%(AllItemsFullPathWithTargetPath.TargetPath)" />
+		</ItemGroup>
+		<VhPlaceVpnHost SourceDirectory="%(_VhVpnHostTargetPath.RootDir)%(_VhVpnHostTargetPath.Directory)"
+		                DestinationDirectory="$(OutDir)" AppFiles="@(_VhAppOutputFile)">
+			<Output TaskParameter="Files" ItemName="FileWrites" />
+		</VhPlaceVpnHost>
+	</Target>
+
+	<!-- A publish: the VPN host's own publish, with this one's configuration, runtime and self-containment, never its
+	     target framework, which the VPN host states itself, its output folder or the install root's launchers; then
+	     beside the app's published files. -->
+	<Target Name="_VhPlaceVpnHostInPublish" AfterTargets="CopyFilesToPublishDirectory" Condition="'@(_VhVpnHostReference)' != ''">
+		<PropertyGroup>
+			<_VhVpnHostPublishDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'vpn-host-publish'))</_VhVpnHostPublishDir>
+			<_VhVpnHostPublishProperties>Configuration=$(Configuration);PublishDir=$(_VhVpnHostPublishDir)</_VhVpnHostPublishProperties>
+			<_VhVpnHostPublishProperties Condition="'$(RuntimeIdentifier)' != ''">$(_VhVpnHostPublishProperties);RuntimeIdentifier=$(RuntimeIdentifier)</_VhVpnHostPublishProperties>
+			<_VhVpnHostPublishProperties Condition="'$(SelfContained)' != ''">$(_VhVpnHostPublishProperties);SelfContained=$(SelfContained)</_VhVpnHostPublishProperties>
+		</PropertyGroup>
+		<RemoveDir Directories="$(_VhVpnHostPublishDir)" />
+		<MSBuild Projects="@(_VhVpnHostReference)" Targets="Publish" Properties="$(_VhVpnHostPublishProperties)"
+		         RemoveProperties="TargetFramework;OutDir;OutputPath;VhRootLaunchersDir" />
+		<ItemGroup>
+			<_VhAppPublishFile Include="@(ResolvedFileToPublish)" RelativePath="%(ResolvedFileToPublish.RelativePath)" />
+		</ItemGroup>
+		<VhPlaceVpnHost SourceDirectory="$(_VhVpnHostPublishDir)" DestinationDirectory="$(PublishDir)" AppFiles="@(_VhAppPublishFile)" />
+	</Target>
+</Project>

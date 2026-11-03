@@ -6,7 +6,6 @@ using VpnHood.AppUi.Hosting.Desktop.Daemon;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Linux.Utils;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
-using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Linux;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -21,12 +20,12 @@ public sealed class LinuxDesktopPlatform : IDesktopPlatform
 {
     private readonly LinuxDesktopPaths _paths;
 
-    public LinuxDesktopPlatform(DesktopInitParams initParams, IInProcessVpnServiceFactory inProcessVpnServiceFactory)
+    public LinuxDesktopPlatform(DesktopInitParams initParams)
     {
         _paths = new LinuxDesktopPaths(initParams.AppId);
         Instance = new LinuxInstanceController(_paths);
         Channel = new LinuxDaemonChannel(_paths);
-        DaemonHostFactory = new LinuxDaemonHostFactory(initParams, _paths, inProcessVpnServiceFactory);
+        DaemonHostFactory = new LinuxDaemonHostFactory(initParams, _paths);
     }
 
     public IAppDesktopPaths Paths => _paths;

@@ -48,8 +48,9 @@
 		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.App.Linux\VpnHood.AppLib.App.Linux.csproj" />
 		<!-- The command line, and the daemon and window it dispatches to: the same on every Linux head. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Desktop.Linux\VpnHood.AppUi.Hosting.Desktop.Linux.csproj" />
-		<!-- The VPN host, the VPN service's own process, which the service starts beside this binary. -->
-		<ProjectReference Include="..\Connect.Linux.VpnHost\VpnHood.App.Connect.Linux.VpnHost.csproj" />
+		<!-- The VPN host, the VPN service's own process, which the service starts beside this binary: built first
+		     and placed beside it, never compiled against (VhAppVpnHost, VpnHood.AppUi.Hosting.Desktop.Daemon's targets). -->
+		<ProjectReference Include="..\Connect.Linux.VpnHost\VpnHood.App.Connect.Linux.VpnHost.csproj" ReferenceOutputAssembly="false" VhAppVpnHost="true" />
 		<!-- The UI this head runs, in its own window. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Desktop\VpnHood.AppUi.Hosting.Avalonia.Desktop.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->

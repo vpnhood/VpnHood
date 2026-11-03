@@ -8,7 +8,6 @@ using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Devices.WindowsTun;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Core.Client.VpnServices.Host.WindowsTun;
@@ -115,8 +114,9 @@ internal static class Program
             WebHostFactory = new VpnHoodAppWebHostFactory()
         };
 
-        var device = new TvOverrideDevice(new WindowsDevice(storageFolderPath, appOptions.IsDebugMode,
-            inProcessVpnServiceFactory: new WindowsVpnServiceFactory()), isTv);
+        // both halves in this one process, so a debugger follows the tunnel too: an app head's device starts the VPN
+        // host instead
+        var device = new TvOverrideDevice(new WindowsInProcessDevice(storageFolderPath, appOptions.IsDebugMode), isTv);
         var app = VpnHoodApp.Init(device, appOptions);
         try {
             // the phone's half of the pairing: the server the pairing page hands out the address of,

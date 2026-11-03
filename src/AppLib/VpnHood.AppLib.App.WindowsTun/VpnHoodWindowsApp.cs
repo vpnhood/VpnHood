@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Client.Devices.WindowsTun;
+﻿using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.Core.Client.Devices.WindowsTun;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Utils;
@@ -18,19 +19,21 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
     private readonly VpnHoodApp _app;
     private bool _disposed;
 
-    private VpnHoodWindowsApp(AppOptions appOptions, VpnHoodWindowsAppPaths paths)
+    private VpnHoodWindowsApp(AppOptions appOptions, IDevice device)
     {
-        var device = new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode,
-            serviceName: paths.ServiceName, vpnHostPath: paths.VpnHostPath,
-            inProcessVpnServiceFactory: paths.InProcessVpnServiceFactory);
         _app = VpnHoodApp.Init(device, appOptions);
     }
 
-    public static VpnHoodWindowsApp Init(AppInitParams initParams, VpnHoodWindowsAppPaths paths)
+    // device: a head's own, where the head runs the VPN service in its one process - a MAUI app, which has no daemon,
+    // hands VpnServices.Host.WindowsTun's WindowsInProcessDevice on the same storage; null for the daemon, whose device
+    // starts the VPN host (paths.VpnHostPath). The app owns it from here; a started app takes no other.
+    public static VpnHoodWindowsApp Init(AppInitParams initParams, VpnHoodWindowsAppPaths paths, IDevice? device = null)
     {
         // this process already holds the lock; taking it again would call itself another instance
         if (IsInit)
-            return Instance;
+            return device is null
+                ? Instance
+                : throw new InvalidOperationException("The app has started already, with its device: it takes no other.");
 
         _singleInstanceLock = paths.LockFolderPath is null
             ? ServiceInstanceLock.Take(initParams.AppId)
@@ -56,7 +59,10 @@ public class VpnHoodWindowsApp : Singleton<VpnHoodWindowsApp>, IAsyncDisposable
         // the service control manager stops the daemon, and the tunnel must end with it
         appOptions.DisconnectOnDispose = true;
 
-        return new VpnHoodWindowsApp(appOptions, paths);
+        device ??= new WindowsDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode, serviceName: paths.ServiceName,
+            vpnHostPath: paths.VpnHostPath ??
+                         throw new ArgumentException("The daemon's app needs its VPN host.", nameof(paths)));
+        return new VpnHoodWindowsApp(appOptions, device);
     }
 
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.

@@ -26,4 +26,8 @@
   <Import Project="$(MSBuildThisFileDirectory)..\AppUi\VpnHood.AppUi.Hosting.Desktop.Linux\buildTransitive\VpnHood.AppUi.Hosting.Desktop.Linux.targets"
           Condition="'$(VhAppPlatform)' == 'linux'" />
 
+  <!-- The VPN host beside a desktop head's executable, likewise: the daemon's package's targets. They act only on a
+       head that references its VPN host marked VhAppVpnHost. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\AppUi\VpnHood.AppUi.Hosting.Desktop.Daemon\buildTransitive\VpnHood.AppUi.Hosting.Desktop.Daemon.targets" />
+
 </Project>

@@ -2,7 +2,6 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
-using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.WindowsTun;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -17,7 +16,7 @@ public sealed class WindowsDesktopPlatform : IDesktopPlatform
 {
     private readonly WindowsDesktopPaths _paths;
 
-    public WindowsDesktopPlatform(DesktopInitParams initParams, IInProcessVpnServiceFactory inProcessVpnServiceFactory)
+    public WindowsDesktopPlatform(DesktopInitParams initParams)
     {
         _paths = new WindowsDesktopPaths(initParams.AppId);
         var setup = new WindowsServiceSetup(_paths, initParams.AppName, initParams.AccessKeyFileExtensions,
@@ -26,7 +25,7 @@ public sealed class WindowsDesktopPlatform : IDesktopPlatform
         Instance = new WindowsInstanceController(_paths, setup, channel);
         Channel = channel;
         InstanceSetup = setup;
-        DaemonHostFactory = new WindowsDaemonHostFactory(initParams, _paths, inProcessVpnServiceFactory);
+        DaemonHostFactory = new WindowsDaemonHostFactory(initParams, _paths);
     }
 
     public IAppDesktopPaths Paths => _paths;

@@ -3,15 +3,10 @@ using VpnHood.AppLib.App.WindowsTun;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
 using VpnHood.AppUi.Hosting.Desktop.WindowsTun.Utils;
-using VpnHood.Core.Client.Devices.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 
-public sealed class WindowsDaemonHostFactory(
-    AppInitParams initParams,
-    WindowsDesktopPaths paths,
-    IInProcessVpnServiceFactory inProcessVpnServiceFactory)
-    : IAppDaemonHostFactory
+public sealed class WindowsDaemonHostFactory(AppInitParams initParams, WindowsDesktopPaths paths) : IAppDaemonHostFactory
 {
     // Only an administrator can be the service: the adapter, the routes and the storage's own ACL all
     // need one, which is said here rather than by the adapter failing ten layers down.
@@ -34,14 +29,15 @@ public sealed class WindowsDaemonHostFactory(
         return daemonHost;
     }
 
-    // Its lock in its own storage: a run as the person cannot reach the service's. The VPN service runs in this
-    // process too, so one debugger run reaches the tunnel.
+    // Its lock in its own storage: a run as the person cannot reach the service's. It starts the VPN host as the
+    // service does, under no service's name: the head compiles against nothing of the VPN service's side, and a
+    // debugger follows the tunnel in one process under AvaloniaUI.Dev.
     public IAppDaemonHost CreateDev(string storagePath)
     {
         var appPaths = new VpnHoodWindowsAppPaths {
             StoragePath = storagePath,
             LockFolderPath = storagePath,
-            InProcessVpnServiceFactory = inProcessVpnServiceFactory
+            VpnHostPath = paths.VpnHostPath
         };
         return new WindowsDaemonHost(initParams, appPaths, isService: false);
     }

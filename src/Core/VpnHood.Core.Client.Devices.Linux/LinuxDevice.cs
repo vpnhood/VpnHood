@@ -7,16 +7,10 @@ using VpnHood.Net.Quic.MsQuic;
 
 namespace VpnHood.Core.Client.Devices.Linux;
 
-// vpnHostPath: the VPN host the daemon starts at each connect (LinuxVpnHost); null where the VPN service runs in
-// this process - a debugger's run, which it then follows in one process - made by inProcessVpnServiceFactory, which
-// the head hands in.
-public class LinuxDevice(string storageFolder, string? vpnHostPath = null,
-    IInProcessVpnServiceFactory? inProcessVpnServiceFactory = null) : IDevice
+// vpnHostPath: the VPN host the daemon starts at each connect (LinuxVpnHost), the service's and a dev run's alike.
+public class LinuxDevice(string storageFolder, string vpnHostPath) : IDevice
 {
-    private readonly LinuxVpnHostProcess? _vpnHostProcess =
-        vpnHostPath is null ? null : new LinuxVpnHostProcess(vpnHostPath, storageFolder);
-
-    private IInProcessVpnService? _vpnService;
+    private readonly LinuxVpnHostProcess _vpnHostProcess = new(vpnHostPath, storageFolder);
     public bool IsBindProcessToVpnSupported => false;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
@@ -53,16 +47,7 @@ public class LinuxDevice(string storageFolder, string? vpnHostPath = null,
 
     public Task StartVpnService(CancellationToken cancellationToken)
     {
-        if (_vpnHostProcess != null)
-            return _vpnHostProcess.Start(cancellationToken);
-
-        if (_vpnService == null || _vpnService.IsDisposed)
-            _vpnService = inProcessVpnServiceFactory?.Create(VpnServiceConfigFolder, KillSwitch) ??
-                          throw new InvalidOperationException(
-                              "The VPN service runs in this process without a VPN host, and the head handed in no factory for it.");
-
-        _vpnService.OnConnect();
-        return Task.CompletedTask;
+        return _vpnHostProcess.Start(cancellationToken);
     }
 
     // The VPN service's folder in the app's storage, where the VPN host finds it too.
@@ -95,8 +80,6 @@ public class LinuxDevice(string storageFolder, string? vpnHostPath = null,
 
     public void Dispose()
     {
-        _vpnHostProcess?.Dispose();
-        _vpnService?.Dispose();
-        _vpnService = null;
+        _vpnHostProcess.Dispose();
     }
 }

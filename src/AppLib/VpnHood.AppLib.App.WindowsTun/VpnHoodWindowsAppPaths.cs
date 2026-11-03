@@ -1,5 +1,3 @@
-using VpnHood.Core.Client.Devices.Abstractions;
-
 namespace VpnHood.AppLib.App.WindowsTun;
 
 // Where VpnHoodWindowsApp keeps things, which its host decides by how it runs the app - the service, or a run as the
@@ -17,11 +15,7 @@ public class VpnHoodWindowsAppPaths
     // person.
     public string? ServiceName { get; init; }
 
-    // The VPN host the daemon starts at each connect, the VPN service's process (WindowsVpnHost); null in a run as
-    // the person, where the VPN service runs in the app's process, made by InProcessVpnServiceFactory.
+    // The VPN host the daemon starts at each connect, the VPN service's process (WindowsVpnHost), the service's and a
+    // run as the person's alike; null where the head hands the app a device of its own (VpnHoodWindowsApp.Init).
     public string? VpnHostPath { get; init; }
-
-    // The VPN service in the app's process, where there is no VPN host: the head's, as only a head references the VPN
-    // service's side (WindowsVpnServiceFactory).
-    public IInProcessVpnServiceFactory? InProcessVpnServiceFactory { get; init; }
 }

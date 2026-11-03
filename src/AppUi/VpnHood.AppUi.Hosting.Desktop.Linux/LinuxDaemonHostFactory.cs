@@ -3,15 +3,10 @@ using VpnHood.AppLib.App.Linux;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.AppUi.Hosting.Desktop.Linux.Utils;
 using VpnHood.AppUi.Hosting.Desktop.Platform;
-using VpnHood.Core.Client.Devices.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 
-public sealed class LinuxDaemonHostFactory(
-    AppInitParams initParams,
-    LinuxDesktopPaths paths,
-    IInProcessVpnServiceFactory inProcessVpnServiceFactory)
-    : IAppDaemonHostFactory
+public sealed class LinuxDaemonHostFactory(AppInitParams initParams, LinuxDesktopPaths paths) : IAppDaemonHostFactory
 {
     // Only root can be the service: the tun device, the routes and resolvectl belong to root, which is
     // said here rather than by the tun device failing ten layers down. Its lock is in its folder
@@ -32,15 +27,15 @@ public sealed class LinuxDaemonHostFactory(
         return new LinuxDaemonHost(initParams, appPaths, isService: true);
     }
 
-    // Its lock in its own storage: a run as the person cannot write the service's folder. The VPN service runs in
-    // this process too, so one debugger run reaches the tunnel.
+    // Its lock in its own storage: a run as the person cannot write the service's folder. It starts the VPN host as
+    // the service does: the head compiles against nothing of the VPN service's side.
     public IAppDaemonHost CreateDev(string storagePath)
     {
         var appPaths = new VpnHoodLinuxAppPaths {
             StoragePath = storagePath,
             LockFolderPath = storagePath,
             KillSwitchOffScriptPath = paths.KillSwitchOffScriptPath,
-            InProcessVpnServiceFactory = inProcessVpnServiceFactory
+            VpnHostPath = paths.VpnHostPath
         };
         return new LinuxDaemonHost(initParams, appPaths, isService: false);
     }

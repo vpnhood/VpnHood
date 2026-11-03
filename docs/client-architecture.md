@@ -28,9 +28,9 @@ transport for that channel; the desktop uses TCP on loopback.
 | Windows (WinTun) | the daemon, a Windows service; the window is its client | the VPN host, an executable the daemon starts at each connect | `WindowsVpnHost.Run` | `WindowsVpnService` |
 | Linux | the daemon, a systemd unit; the window is its client | the VPN host, as on Windows | `LinuxVpnHost.Run` | `LinuxVpnService` |
 
-The VPN service runs in the app's process in an Android Debug build, in a desktop head's `dev` run, in
-`AvaloniaUI.Dev`, in a MAUI app on Windows and in the tests, through the same channel. A breakpoint in
-the tunnel is then reached from one debugger run.
+The VPN service runs in the app's process in an Android Debug build, in `AvaloniaUI.Dev`, in a MAUI app
+on Windows and in the tests, through the same channel. A breakpoint in the tunnel is then reached from
+one debugger run. A desktop head's `dev` run starts the VPN host, as its service does.
 
 ## The projects
 
@@ -50,7 +50,7 @@ Core.Client.VpnServices.Host.<OS>
 | --- | --- | --- |
 | `Android` | `AndroidDevice`, `AndroidMessageClient` | `AndroidVpnService`, `AndroidMessageListener` |
 | `Ios` | `IosDevice`, `IosMessageClient` | `IosVpnService`, `IosMessageListener` |
-| `WindowsTun` | `WindowsDevice`, `WindowsVpnHostProcess` | `WindowsVpnService`, `WindowsVpnHost` |
+| `WindowsTun` | `WindowsDevice`, `WindowsVpnHostProcess` | `WindowsVpnService`, `WindowsVpnHost`, `WindowsInProcessDevice` |
 | `WindowsVpnPlugin` | `WindowsVpnPluginDevice`, `WindowsVpnPluginAppServiceClient` | `WindowsVpnPluginService`, `WindowsVpnPluginHost` |
 | `Linux` | `LinuxDevice`, `LinuxVpnHostProcess` | `LinuxVpnService`, `LinuxVpnHost` |
 
@@ -67,10 +67,14 @@ The rules the references keep:
 4. **The device stays in Core.** It is how an app drives the VPN service without AppLib: a
    developer's own app references `Core.Client.Devices.<OS>` and `Core.Client.VpnServices.Manager`, and
    none of AppLib.
-5. **A head composes the two.** An app head references `AppLib.App.<OS>`; a VPN service head (an iOS
-   extension, a VPN host, a VPN plug-in) references `Core.Client.VpnServices.Host.<OS>` alone. A head
-   whose package carries both halves (Android's APK), or that runs the VPN service in its own process
-   (a desktop head, for `dev`), references both and hands the device its VPN service.
+5. **A head composes the two, and compiles against the halves it runs.** An app head references
+   `AppLib.App.<OS>` and compiles against nothing of the VPN service's side: a desktop head references its
+   VPN host's project marked `VhAppVpnHost`, which the build puts beside its executable
+   (`VpnHood.AppUi.Hosting.Desktop.Daemon`'s targets), and an iOS head bundles its extension, both
+   referenced with `ReferenceOutputAssembly="false"`. A VPN service head (an iOS extension, a VPN host,
+   a VPN plug-in) references `Core.Client.VpnServices.Host.<OS>` alone. A head that runs both halves in
+   one process makes both: `AvaloniaUI.Dev` and a MAUI app on Windows hand the app a
+   `WindowsInProcessDevice`, and Android's head, whose one APK carries both, references both.
 
 ## Words
 

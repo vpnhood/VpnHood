@@ -1,5 +1,4 @@
-﻿using VpnHood.Core.Client.Devices.Abstractions;
-using VpnHood.Core.Client.VpnServices.Abstractions;
+﻿using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -7,12 +6,11 @@ using VpnHood.Net.VpnAdapters.LinuxTun;
 
 namespace VpnHood.Core.Client.VpnServices.Host.Linux;
 
-public class LinuxVpnService : IVpnServiceHandler, IInProcessVpnService
+public class LinuxVpnService : IVpnServiceHandler, IDisposable
 {
     private readonly VpnServiceHost _vpnServiceHost;
     private readonly TaskCompletionSource _stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool _disposed;
-    public bool IsDisposed => _disposed;
 
     // Its end, with which the VPN host's process ends (LinuxVpnHost).
     public Task Stopped => _stopped.Task;

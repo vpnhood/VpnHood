@@ -11,6 +11,8 @@ namespace VpnHood.Core.Client.VpnServices.Host.WindowsTun;
 // channel and the files in the storage's VPN service folder.
 public static class WindowsVpnHost
 {
+    private const string LogFileName = "vpn-host.log";
+
     public static async Task<int> Run(IReadOnlyList<string> args)
     {
         if (WindowsVpnHostArgs.TryParse(args) is not { } hostArgs) {
@@ -20,10 +22,22 @@ public static class WindowsVpnHost
         }
 
         // The daemon's sink from the first line, under its name: what fails before the VPN service opens its own
-        // log, at the start request, is told where the daemon's own warnings and errors are.
-        VhLogger.AddProvider(new WinEventLogLoggerProvider(hostArgs.DaemonName));
+        // log, at the start request, is told where the daemon's own warnings and errors are. A dev run's daemon is no
+        // service, so no setup registered its name, and its console is not this window program's: a file of the VPN
+        // host's own then, beside vpn.log, as the Store's VPN host has (WindowsVpnPluginHost).
+        var configFolder = WindowsDevice.GetVpnServiceConfigFolder(hostArgs.StorageFolder);
+        if (hostArgs.DaemonName is { } daemonName) {
+            VhLogger.AddProvider(new WinEventLogLoggerProvider(daemonName));
+        }
+        else {
+            Directory.CreateDirectory(configFolder);
+            var fileLogger = new FileLogger(Path.Combine(configFolder, LogFileName)) { AutoFlush = true };
+            fileLogger.Open(deleteOld: true);
+            VhLogger.AddProvider(new TextLoggerProvider(fileLogger));
+        }
+
         try {
-            using var vpnService = new WindowsVpnService(WindowsDevice.GetVpnServiceConfigFolder(hostArgs.StorageFolder),
+            using var vpnService = new WindowsVpnService(configFolder,
                 new WindowsVpnKillSwitch(owner: hostArgs.StorageFolder, hostArgs.DaemonName), withLogger: true);
             vpnService.OnConnect();
             await vpnService.Stopped.Vhc();

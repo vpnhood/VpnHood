@@ -26,20 +26,17 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
 
     protected AppWindow? AppWindow;
 
-    private VpnHoodAppMauiWindows(AppInitParams initParams, IInProcessVpnServiceFactory inProcessVpnServiceFactory)
+    private VpnHoodAppMauiWindows(AppInitParams initParams, IDevice device)
     {
         // The platform starts the app, as under any other UI - in this process, under the
         // person's storage folder, which holds its single-instance lock too - and it disconnects on
         // the way out. In this process on purpose, to keep a MAUI app simple: the tunnel runs here
-        // too, so the app runs elevated. A shipped Windows app keeps the app in the machine service
-        // instead (VpnHood.AppUi.Hosting.Desktop.WindowsTun), its window unelevated. It keeps no tray, so
-        // the app ends with its window.
+        // too, in the head's device, so the app runs elevated. A shipped Windows app keeps the app in the
+        // machine service instead (VpnHood.AppUi.Hosting.Desktop.WindowsTun), its window unelevated. It
+        // keeps no tray, so the app ends with its window.
         var storagePath = initParams.ResolveStoragePath();
-        VpnHoodWindowsApp.Init(initParams, new VpnHoodWindowsAppPaths {
-            StoragePath = storagePath,
-            LockFolderPath = storagePath,
-            InProcessVpnServiceFactory = inProcessVpnServiceFactory
-        });
+        VpnHoodWindowsApp.Init(initParams,
+            new VpnHoodWindowsAppPaths { StoragePath = storagePath, LockFolderPath = storagePath }, device);
 
         // initialize VpnHoodApp
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
@@ -48,10 +45,9 @@ internal class VpnHoodAppMauiWindows : Singleton<VpnHoodAppMauiWindows>, IVpnHoo
         WindowHandler.Mapper.AppendToMapping(nameof(IWindow), MappingMethod);
     }
 
-    public static VpnHoodAppMauiWindows Init(AppInitParams initParams,
-        IInProcessVpnServiceFactory inProcessVpnServiceFactory)
+    public static VpnHoodAppMauiWindows Init(AppInitParams initParams, IDevice device)
     {
-        var app = new VpnHoodAppMauiWindows(initParams, inProcessVpnServiceFactory);
+        var app = new VpnHoodAppMauiWindows(initParams, device);
         app.UpdateIcon();
         return app;
     }

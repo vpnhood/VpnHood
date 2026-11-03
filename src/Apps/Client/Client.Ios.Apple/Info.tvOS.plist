@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
-	<!-- CFBundleIdentifier and CFBundleDisplayName are the build's: ApplicationId and ApplicationTitle,
+	<!-- The Apple TV's manifest (the csproj's AppBundleManifest for the tvOS target); Info.plist is iOS's.
+	     CFBundleIdentifier and CFBundleDisplayName are the build's: ApplicationId and ApplicationTitle,
 	     from the app's identity (VpnHood.AppLib.App.targets), which this file does not state again; so
 	     are the version numbers. -->
-	<!-- As the iOS app's (Client.Ios.Apple's Info.plist says why): NEVER true. -->
+	<!-- As on iOS (Info.plist says why): NEVER true. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<!-- An Apple TV opens no file and no link: the paired phone adds a key (the pairing page). -->

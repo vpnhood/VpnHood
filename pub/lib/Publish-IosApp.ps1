@@ -26,6 +26,9 @@ param(
 . "$PSScriptRoot/Common.ps1"
 
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
+# The iOS target: a head may target the Apple TV too (Client.Ios.Apple, with VhAppleTv), which this does not publish.
+$tfm = "net11.0-ios";
+$rid = "ios-arm64";
 
 # Per-app identity from .user/<appFolder>/publish.json (see AppPublishConfig.ps1). The iOS BUNDLE ID is
 # NOT part of publish.json's schema (it is Android-only), so it is always the head's ApplicationId, as
@@ -33,7 +36,7 @@ $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullNa
 # (optional) iOS block is absent from a strict publish.json.
 $appUserDir = Join-Path "$solutionDir/../.user/" $appFolder;
 $appConfig = Get-AppPublishConfig $appFolder;
-$packageId = Get-ProjectProperty $projectFile "ApplicationId";
+$packageId = Get-ProjectProperty $projectFile "ApplicationId" -framework $tfm;
 if ([string]::IsNullOrWhiteSpace($packageId)) { Throw "The head has no ApplicationId: $projectFile."; }
 $packageFileTitle = $appFolder;
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
@@ -73,8 +76,6 @@ if (Test-Path $signingFile) {
 }
 if ($signed -and (!$appProvision -or !$extProvision)) { Throw "$signingFile is Signed but lacks AppProvision or ExtProvision: the app and its extension each sign with their own App Store profile."; }
 
-$tfm = "net11.0-ios";
-$rid = "ios-arm64";
 $outputPath = Join-Path $projectDir "bin/Release-ios/publish/";
 
 Write-Host;

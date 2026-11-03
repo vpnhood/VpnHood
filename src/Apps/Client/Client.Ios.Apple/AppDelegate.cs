@@ -12,8 +12,8 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Client.Ios.Apple;
 
-// The Avalonia UI's application delegate: it starts the app from the params below as launching
-// finishes, then the UI.
+// The Avalonia UI's application delegate, on iOS and the Apple TV: it starts the app from the params below
+// as launching finishes, then the UI, which takes its TV layout on a TV (IosDevice.IsTv).
 [Register("AppDelegate")]
 public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
 {
@@ -57,6 +57,10 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
             TermsOfUse = options.Links.TermsOfUse ??
                          new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")
         };
+#if TVOS
+        // StoreKit has no in-app rating prompt on tvOS, and a TV is never a Mac.
+        options.Transport = ClientTransportOptions.ForCurrentPlatform();
+#else
         // Native in-app rating dialog (parity with Client.Android.Google's Google Play provider).
         // Like Android Client, AllowRecommendUserReviewByServer stays at its default (false).
         options.UserReviewProvider = new AppStoreInAppUserReviewProvider();
@@ -67,6 +71,7 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         options.Transport = NSProcessInfo.ProcessInfo.IsiOSApplicationOnMac
             ? ClientTransportOptions.NormalMemory
             : ClientTransportOptions.ForCurrentPlatform();
+#endif
         // Log level: Information in production. To investigate, add the "/log:debug" debug command in
         // the UI (Debug Data 1) — the iOS diagnostics gates are computed from VhLogger.MinLogLevel, so
         // below-Information logging auto-enables them in the extension: vpn-ext.log carries the TcpStack

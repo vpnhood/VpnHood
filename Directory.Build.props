@@ -28,7 +28,7 @@
 
   <PropertyGroup>
     <!-- The Apple libraries' targets: iOS, and tvOS beside it only for a build that asks
-         (-p:VhAppleTv=true, the Apple TV heads'): the Apple TV app is not released yet, and no other
+         (-p:VhAppleTv=true, the Apple TV app's, Client.Ios.Apple's second target): the Apple TV app is not released yet, and no other
          build - CI's packages included - has the tvOS workload. A library's tvOS floor is 17, the
          first tvOS with Network Extension. -->
     <VhAppleTargetFrameworks>net11.0-ios</VhAppleTargetFrameworks>

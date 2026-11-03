@@ -41,10 +41,13 @@ $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootD
 # A project property as MSBuild evaluates it: its imports, the app's identity and every condition
 # included. The csproj's XML shows only what is written there, and a head takes its id and names from
 # the app's identity (src/Apps/<Product>/Directory.Build.props, VpnHood.AppLib.App.targets), writing
-# $(VhAppPackageTitle) where its name used to be, or nothing at all.
-function Get-ProjectProperty([string]$projectFile, [string]$name, [string]$configuration = "Release")
+# $(VhAppPackageTitle) where its name used to be, or nothing at all. $framework: one target of a head with
+# several (Client.Ios.Apple's iOS and tvOS), whose platform's properties exist only in that target's build.
+function Get-ProjectProperty([string]$projectFile, [string]$name, [string]$configuration = "Release", [string]$framework = "")
 {
-	$value = & dotnet msbuild $projectFile -nologo "-getProperty:$name" "-p:Configuration=$configuration";
+	$msbuildArgs = @($projectFile, "-nologo", "-getProperty:$name", "-p:Configuration=$configuration");
+	if ($framework) { $msbuildArgs += "-p:TargetFramework=$framework"; }
+	$value = & dotnet msbuild @msbuildArgs;
 	if ($LASTEXITCODE -ne 0) { Throw "Could not evaluate $name of ${projectFile}: $value"; }
 	return "$value".Trim();
 }

@@ -343,18 +343,23 @@ public partial class MainView : UserControl
     }
 
     // A keyboard's stand-ins for the Back key, as on the web UI's TV mode - not Backspace in a
-    // field, where it deletes. Heard on the top level rather than here: a key with nothing focused
-    // (a dialog just closed over a control that is gone) is delivered to the window, above this
-    // view, and Back must work then too. Not on Android, whose Back key reaches Avalonia as Escape
-    // besides BackRequested: from Android 16 (target 36) the key's release raises BackRequested
-    // even after its press was handled here, so one press would close a page and then the app.
+    // field, where it deletes - and the Apple TV remote's Menu (‹ on the newer remotes), which
+    // Avalonia hands over as the context-menu key: tvOS's rule is that it goes back, and leaves
+    // the app from its first page, where GoBack leaves it to the system. Heard on the top level
+    // rather than here: a key with nothing focused (a dialog just closed over a control that is
+    // gone) is delivered to the window, above this view, and Back must work then too. Not on
+    // Android, whose Back key reaches Avalonia as Escape besides BackRequested: from Android 16
+    // (target 36) the key's release raises BackRequested even after its press was handled here,
+    // so one press would close a page and then the app.
     private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
     {
         if (OperatingSystem.IsAndroid())
             return;
 
         var isTyping = _topLevel?.FocusManager.GetFocusedElement() is TextBox;
-        if ((e.Key == Key.Escape || (e.Key == Key.Back && !isTyping)) && GoBack())
+        var isBack = e.Key == Key.Escape || (e.Key == Key.Back && !isTyping) ||
+                     (e.Key == Key.Apps && OperatingSystem.IsTvOS());
+        if (isBack && GoBack())
             e.Handled = true;
     }
 

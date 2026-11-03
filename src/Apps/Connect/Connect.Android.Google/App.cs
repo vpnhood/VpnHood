@@ -198,7 +198,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             var googlePlayBillingProvider = TryCreateBillingClient();
 
             // a Debug build may reach a development portal's certificate
-            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.NoBackupStoragePath,
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.FileStore, context.NoBackupStoragePath,
                 appConfigs.PortalBaseUri, context.AppId, [authenticationExternalProvider],
                 restoreCredentialProvider: new GoogleRestoreCredentialProvider(),
                 ignoreSslVerification: AppConstants.IsDebugMode);

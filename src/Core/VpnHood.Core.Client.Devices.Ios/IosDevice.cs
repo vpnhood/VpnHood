@@ -35,11 +35,13 @@ public class IosDevice : IDevice
     /// The Network Extension's bundle identifier (the Packet Tunnel Provider appex bundle id).
     /// </param>
     /// <param name="sharedContainerPath">
-    /// The App Group's container path, <c>NSFileManager.DefaultManager.GetContainerUrl(appGroupId).Path</c>,
-    /// resolved before <c>VpnHoodApp.Init</c> so it is stable for the whole session. This path is
-    /// forwarded verbatim to the Extension via ProviderConfiguration — an App-Group container is mounted
-    /// at the same absolute path in both processes, so the Extension never needs the App Group id. No
-    /// other folder will do: LocalApplicationData is a different path in each process.
+    /// The folder of the App Group's container the two processes share: the container itself,
+    /// <c>NSFileManager.DefaultManager.GetContainerUrl(appGroupId).Path</c>, or on tvOS its
+    /// <c>Library/Caches</c>, the only folder there an app may write. Resolved before <c>VpnHoodApp.Init</c>
+    /// so it is stable for the whole session. The folders under it are forwarded verbatim to the Extension
+    /// via ProviderConfiguration — an App-Group container is mounted at the same absolute path in both
+    /// processes, so the Extension never needs the App Group id. No other folder will do:
+    /// LocalApplicationData is a different path in each process.
     /// </param>
     /// <param name="localizedDescription">The VPN configuration name shown in iOS Settings.</param>
     public IosDevice(

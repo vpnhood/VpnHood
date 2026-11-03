@@ -32,6 +32,7 @@ public class VpnProfileService
     /// </para>
     /// </summary>
     private readonly Lock _storeLock = new();
+    private readonly IAppFileStore _fileStore;
     private readonly AppFeatures _appFeatures;
     private VpnProfileInfo? _cashInfo;
     private string? _cashInfoRegion;
@@ -43,9 +44,10 @@ public class VpnProfileService
 
     private static string GetVpnProfilesFilePath(string folderPath) => Path.Combine(folderPath, FilenameProfiles);
 
-    public VpnProfileService(string folderPath, AppFeatures appFeatures)
+    public VpnProfileService(IAppFileStore fileStore, string folderPath, AppFeatures appFeatures)
     {
         VpnProfilesFilePath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
+        _fileStore = fileStore;
         _appFeatures = appFeatures;
 #pragma warning disable CS0618 // Type or member is obsolete
         ClientProfileMigration.MigrateProfiles(VpnProfilesFilePath);
@@ -434,8 +436,7 @@ public class VpnProfileService
     private void Save()
     {
         lock (_storeLock) {
-            Directory.CreateDirectory(Path.GetDirectoryName(VpnProfilesFilePath)!);
-            File.WriteAllText(VpnProfilesFilePath, JsonSerializer.Serialize(_vpnProfiles));
+            _fileStore.Write(VpnProfilesFilePath, JsonSerializer.Serialize(_vpnProfiles));
 
             // clear cache
             _cashInfo = null;
@@ -455,9 +456,8 @@ public class VpnProfileService
     private IEnumerable<VpnProfile> Load()
     {
         try {
-            var json = File.ReadAllText(VpnProfilesFilePath);
-            var vpnProfiles = JsonUtils.Deserialize<VpnProfile[]>(json);
-            return vpnProfiles;
+            var json = _fileStore.Read(VpnProfilesFilePath);
+            return json is null ? [] : JsonUtils.Deserialize<VpnProfile[]>(json);
         }
         catch {
             return [];

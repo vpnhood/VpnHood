@@ -6,8 +6,9 @@
 
      This one is deliberately smaller than the app's: the extension links only
      VpnHood.Core.Client.Devices.Ios (no AppLib, no SPA, no GA4, no Firebase), so it collects nothing and
-     never touches NSUserDefaults — the culture provider that does lives in the app process. Keep the two
-     in sync when a reference is added here, and re-check both against the upload's privacy report.
+     never touches NSUserDefaults — what does, the culture provider and an Apple TV's file store, lives
+     in the app process. Keep the two in sync when a reference is added here, and re-check both against
+     the upload's privacy report.
      Identical to the Client extension's manifest: the two appex projects reference the same code and
      differ only in bundle id and signing profile. -->
 <plist version="1.0">

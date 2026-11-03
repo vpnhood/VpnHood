@@ -39,16 +39,22 @@ side, `VpnHood.Core.Client.VpnServices.Host.Ios`, which brings in the device's p
 ## App Group — the IPC channel
 Both targets share App Group `group.com.vpnhood.client.ios`, which the build adds to both targets' entitlements
 from the product's id base (`VpnHood.AppLib.App.targets`; see [source-layout](../source-layout.md#the-apps-identity)).
-The config folder for both sides resolves to:
+The VPN service's two folders are in the group's container: `vpn-service-config/` (each connect's options, the
+status and the log; kept out of backups) and `vpn-service/` (the person's proxies, which travel with a backup):
 ```
-NSFileManager.DefaultManager.GetContainerUrl("group.com.vpnhood.client.ios")?.Path + "/vpn-service/"
+NSFileManager.DefaultManager.GetContainerUrl("group.com.vpnhood.client.ios")?.Path + "/vpn-service-config/"
 ```
+On tvOS both are under the container's `Library/Caches/`: an Apple TV lets an app write nothing else of a shared
+container (a device refuses the rest, though the simulator allows it), and empties it, as it empties the app's
+own folders, when the device runs low on storage. So on a TV the app keeps what it cannot rebuild in its defaults
+(`AppOptionsContext.FileStore`), with a copy of the proxies the person added.
+
 If `GetContainerUrl` returns `null` (the App Group missing from the entitlements or the provisioning profile), the
 app stops at start with an error naming the group. There is no fallback: `LocalApplicationData` is a different path
 in each process, so IPC could not work there. Do **not** change `AppGroupId`; it must match on both sides.
 
 ### Connect flow
-1. **App** (`VpnServiceManager`) writes `vpn.config` (JSON) into the shared `vpn-service/` folder.
+1. **App** (`VpnServiceManager`) writes `vpn.config` (JSON) into the shared `vpn-service-config/` folder.
 2. **App** (`IosDevice.StartVpnService`) saves/loads the NEVPNManager preference and starts the tunnel.
 3. **Extension** (`IosVpnService.StartTunnel`) is launched by iOS, reads `vpn.config` via `VpnServiceHost.TryConnect`.
 4. **Extension** runs a `VpnServiceHost` with a message-based API listener; the App sends API requests over the

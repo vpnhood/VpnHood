@@ -120,7 +120,7 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
             var appStoreBillingProvider = new AppStoreBillingProvider();
 
             // a Debug build may reach a development portal's certificate
-            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.NoBackupStoragePath,
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.FileStore, context.NoBackupStoragePath,
                 appConfigs.PortalBaseUri, context.AppId, [appleAuthenticationProvider],
                 ignoreSslVerification: AppConstants.IsDebugMode);
 

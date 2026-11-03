@@ -305,7 +305,7 @@ public class SplitDomainDbTest : TestBase
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, "split-domain-service");
         Directory.CreateDirectory(storagePath);
-        var settingsService = new AppSettingsService(storagePath, remoteSettingsUrl: null);
+        var settingsService = new AppSettingsService(new FileSystemFileStore(), storagePath, remoteSettingsUrl: null);
         var service = new SplitDomainService(settingsService, new AllowAllPremiumFeatures());
 
         // the service owns its whole activity decision: toggle off ⇒ inactive, nothing built

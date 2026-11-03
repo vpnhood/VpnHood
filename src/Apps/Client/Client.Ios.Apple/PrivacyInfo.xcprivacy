@@ -25,8 +25,9 @@
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- IosAppCultureProvider stores/reads the selected UI culture in NSUserDefaults.
-		     CA92.1 = access info from the app itself or its App Group container. -->
+		<!-- IosAppCultureProvider stores/reads the selected UI culture in NSUserDefaults, and on an Apple TV
+		     UserDefaultsFileStore keeps the app's files there.
+		     CA92.1 = data only the app itself reads and writes (an App Group's would be 1C8F.1). -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>

@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.App.VpnProfiles;
 using VpnHood.Net.Toolkit.Extensions;
@@ -11,16 +12,12 @@ namespace VpnHood.AppLib.App.Settings;
 
 public class AppSettingsService
 {
+    private readonly IAppFileStore _fileStore;
     private readonly string _storagePath;
     private readonly Lock _saveLock = new();
-    private string AppSettingsFilePath => GetAppSettingsFilePath(_storagePath);
+    private string AppSettingsFilePath => Path.Combine(_storagePath, "settings.json");
 
-    // Where the settings of a storage folder are, for a reader that has no service yet
-    // (VpnHoodApp.HasDebugCommand's static form, before the app starts).
-    public static string GetAppSettingsFilePath(string storagePath)
-    {
-        return Path.Combine(storagePath, "settings.json");
-    }
+    // fetched again when gone, so plain files on every platform (IAppFileStore)
     private string RemoteSettingsFilePath => Path.Combine(_storagePath, "remote_settings.json");
     private string PromotionFolderPath => Path.Combine(_storagePath, "promotions");
 
@@ -33,8 +30,9 @@ public class AppSettingsService
     public SplitIpViaDeviceSettings SplitIpViaDeviceSettings { get; }
     public SplitDomainSettings SplitDomainSettings { get; }
 
-    public AppSettingsService(string storagePath, Uri? remoteSettingsUrl)
+    public AppSettingsService(IAppFileStore fileStore, string storagePath, Uri? remoteSettingsUrl)
     {
+        _fileStore = fileStore;
         _storagePath = storagePath;
 #pragma warning disable CS0618 // Type or member is obsolete
         ClientProfileMigration.MigrateSettings(AppSettingsFilePath);
@@ -43,12 +41,12 @@ public class AppSettingsService
         // A file that cannot be read is replaced by defaults - a new client id among them - so the
         // failure must at least be in the log, or a device that keeps forgetting its settings has
         // nothing to show for it.
-        Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath, logger: VhLogger.Instance) ??
+        Settings = fileStore.TryReadJson<AppSettings>(AppSettingsFilePath, logger: VhLogger.Instance) ??
                    new AppSettings();
         Settings.AppSettingsService = this;
-        SplitIpViaAppSettings = new SplitIpViaAppSettings(Path.Combine(storagePath, "splits", "ips_via_app"));
-        SplitIpViaDeviceSettings = new SplitIpViaDeviceSettings(Path.Combine(storagePath, "splits", "ips_via_device"));
-        SplitDomainSettings = new SplitDomainSettings(Path.Combine(storagePath, "splits", "domains"));
+        SplitIpViaAppSettings = new SplitIpViaAppSettings(fileStore, Path.Combine(storagePath, "splits", "ips_via_app"));
+        SplitIpViaDeviceSettings = new SplitIpViaDeviceSettings(fileStore, Path.Combine(storagePath, "splits", "ips_via_device"));
+        SplitDomainSettings = new SplitDomainSettings(fileStore, Path.Combine(storagePath, "splits", "domains"));
         OldUserSettings = Settings.UserSettings;
 
         // load remote settings
@@ -82,7 +80,7 @@ public class AppSettingsService
         lock (_saveLock) {
             Settings.ConfigTime = DateTime.UtcNow; // full precision: the change detection above (see AppSettings)
             var json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(AppSettingsFilePath, json, Encoding.UTF8);
+            _fileStore.Write(AppSettingsFilePath, json);
         }
     }
 

@@ -69,7 +69,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             // No Google sign-in on this head, deliberately: an Android OAuth client is bound to a
             // package name AND signing certificate, and this sideloaded build shares neither with
             // the Play build. The portal's own password sign-in serves.
-            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.NoBackupStoragePath,
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(context.FileStore, context.NoBackupStoragePath,
                 appConfigs.PortalBaseUri, context.AppId, []);
 
             // the web-distribution store: plans priced by the portal, checkout in the browser

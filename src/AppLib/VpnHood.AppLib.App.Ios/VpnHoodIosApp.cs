@@ -28,9 +28,9 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
         // the device-only folder beside the storage, carrying iOS's do-not-back-up flag, takes what must
         // not travel before the head's factory, whose providers read the sign-in session at once
         var storagePath = initParams.ResolveStoragePath();
-        var noBackupStoragePath = initParams.ResolveNoBackupStoragePath(Path.Combine(
-            Path.GetDirectoryName(storagePath) ??
-            throw new InvalidOperationException("The app's storage has no parent folder."), "no-backup"));
+        var storageParentPath = Path.GetDirectoryName(storagePath) ??
+                                throw new InvalidOperationException("The app's storage has no parent folder.");
+        var noBackupStoragePath = initParams.ResolveNoBackupStoragePath(Path.Combine(storageParentPath, "no-backup"));
         IosNoBackupFolder.Create(noBackupStoragePath);
 #pragma warning disable CS0618 // Type or member is obsolete
         AppStorageMigration.MoveToNoBackup(storagePath, noBackupStoragePath);
@@ -43,6 +43,11 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
             AppVersion = initParams.AppVersion,
             StoragePath = storagePath,
             NoBackupStoragePath = noBackupStoragePath,
+            // tvOS empties both folders - every folder an app may write is a cache there - when the device
+            // runs low on storage, and keeps only the app's defaults
+            FileStore = OperatingSystem.IsTvOS()
+                ? new UserDefaultsFileStore(storageParentPath)
+                : new FileSystemFileStore(),
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };
 
@@ -58,12 +63,18 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
     // container path, the app's and the extension's IPC folder, is stable for the whole session.
     private static IosDevice CreateDevice(IosInitParams initParams, string appName)
     {
-        var sharedContainerPath = NSFileManager.DefaultManager.GetContainerUrl(initParams.AppGroupId)?.Path
+        var groupContainerPath = NSFileManager.DefaultManager.GetContainerUrl(initParams.AppGroupId)?.Path
             ?? throw new InvalidOperationException(
                 $"The App Group {initParams.AppGroupId} has no container: add it to the entitlements and the " +
                 "provisioning profiles of both the app and its extension, which share the VPN service's folder there.");
         VhLogger.Instance.LogInformation("GetContainerUrl({AppGroupId}) = {Path}",
-            initParams.AppGroupId, sharedContainerPath);
+            initParams.AppGroupId, groupContainerPath);
+
+        // an Apple TV lets an app write only the Caches of a shared container: a device refuses the rest,
+        // though the simulator allows it
+        var sharedContainerPath = OperatingSystem.IsTvOS()
+            ? Path.Combine(groupContainerPath, "Library", "Caches")
+            : groupContainerPath;
 
         return new IosDevice(
             providerBundleId: initParams.ProviderBundleId,

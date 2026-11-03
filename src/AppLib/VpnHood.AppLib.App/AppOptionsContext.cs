@@ -1,4 +1,5 @@
-﻿using VpnHood.Net.Toolkit.Assets;
+﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppLib.App;
 
@@ -21,6 +22,11 @@ public class AppOptionsContext
     // keeps it out of backups and transfers to a new device (Android's no-backup folder, a folder iOS
     // excludes); on a desktop, where nothing backs up an app's data, the storage folder itself.
     public required string NoBackupStoragePath { get; init; }
+
+    // Where the files under those two folders that the app cannot rebuild are kept (IAppFileStore): plain
+    // files, or on an Apple TV the app's defaults. A provider of the head that keeps one - the sign-in
+    // session - takes it from here.
+    public IAppFileStore FileStore { get; init; } = new FileSystemFileStore();
 
     // The files the build's asset packages placed with the app - the IP-location database, the
     // UI's store, the browser page - read the way this platform reads them: from the folder beside

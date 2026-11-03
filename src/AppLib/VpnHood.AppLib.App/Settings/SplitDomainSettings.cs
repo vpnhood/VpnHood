@@ -1,4 +1,5 @@
 ﻿
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.App.Utils;
 
@@ -6,7 +7,8 @@ namespace VpnHood.AppLib.App.Settings;
 
 // The split-domain source lists (see SplitTunneling.UseDomain). They feed the split-domain db, which
 // live-applies to a running session through a reconfigure.
-public class SplitDomainSettings(string folderPath) : SplitFileSettings(folderPath)
+public class SplitDomainSettings(IAppFileStore fileStore, string folderPath)
+    : SplitFileSettings(fileStore, folderPath)
 {
     // Raised by Set when the lists actually changed, AFTER the files are written — a handler that
     // re-reads the settings sees the new content. The owner (VpnHoodApp) reacts.
@@ -27,13 +29,9 @@ public class SplitDomainSettings(string folderPath) : SplitFileSettings(folderPa
         set => Write("blocks", value);
     }
 
-    // Stat-only change signature of the sources, stored as the db's source_signature meta so
-    // SplitDomainDbBuilder.EnsureAsync detects stale dbs without parsing the text files. Every setting
-    // write rewrites its file, so the signature always changes with the content.
-    public string GetSignature() => AppUtils.BuildFileSignature(
-        GetFilePath("includes"),
-        GetFilePath("excludes"),
-        GetFilePath("blocks"));
+    // The sources' change signature, stored as the db's source_signature meta so
+    // SplitDomainDbBuilder.EnsureAsync detects stale dbs without parsing the lists.
+    public string GetSignature() => GetSignature("includes", "excludes", "blocks");
 
     public SplitDomains Get() => new() {
         Includes = Includes,

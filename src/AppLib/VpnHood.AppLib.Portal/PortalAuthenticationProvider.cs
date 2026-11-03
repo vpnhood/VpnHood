@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Portal.Dto;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
@@ -31,6 +32,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     private Task? _restoreEnrolTask;
     private readonly IRestoreCredentialProvider? _restoreCredentialProvider;
     private readonly IReadOnlyList<IAuthenticationExternalProvider> _authenticationExternalProviders;
+    private readonly IAppFileStore _fileStore;
     private readonly HttpClient _httpClient;
     private readonly string _packageName;
     private readonly Lock _sessionLock = new();
@@ -47,6 +49,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     public string? UserId => Session?.UserId;
 
     public PortalAuthenticationProvider(
+        IAppFileStore fileStore,
         string storageFolderPath,
         Uri portalBaseUrl,
         string packageName,
@@ -55,6 +58,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         bool ignoreSslVerification = false)
     {
         SessionFilePath = storageFolderPath;
+        _fileStore = fileStore;
         _packageName = packageName;
         _authenticationExternalProviders = authenticationExternalProviders;
         _restoreCredentialProvider = restoreCredentialProvider;
@@ -70,7 +74,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         if (ignoreSslVerification) handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         _httpClient = new HttpClient(handler) { BaseAddress = portalBaseUrl };
 
-        _session = JsonUtils.TryDeserializeFile<PortalSession>(SessionFilePath, logger: VhLogger.Instance);
+        _session = fileStore.TryReadJson<PortalSession>(SessionFilePath, logger: VhLogger.Instance);
     }
 
     private PortalSession? Session {
@@ -80,16 +84,10 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
             // in-flight request while the UI thread is signing in or out
             lock (_sessionLock) {
                 _session = value;
-                if (value == null) {
-                    if (File.Exists(SessionFilePath))
-                        File.Delete(SessionFilePath);
-                    return;
-                }
-
-                var directoryPath = Path.GetDirectoryName(SessionFilePath)
-                    ?? throw new InvalidOperationException("Could not get the folder of the portal session file.");
-                Directory.CreateDirectory(directoryPath);
-                File.WriteAllText(SessionFilePath, JsonSerializer.Serialize(value));
+                if (value == null)
+                    _fileStore.Delete(SessionFilePath);
+                else
+                    _fileStore.Write(SessionFilePath, JsonSerializer.Serialize(value));
             }
         }
     }

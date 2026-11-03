@@ -33,9 +33,10 @@ public class TestAppHelper(CancellationToken testCt) : TestHelper(testCt)
     // server's remote access, or trackers, which a Debug build never makes. The log options below are
     // explicit, so the flag changes nothing else.
     // storagePath: another app's, for a test that reopens what it saved. noBackupStoragePath: the
-    // device-only one, as a phone has; the storage itself where null, as on a desktop.
+    // device-only one, as a phone has; the storage itself where null, as on a desktop. fileStore: where
+    // the files the app cannot rebuild are kept, plain files where null.
     public AppOptions CreateAppOptions(bool isDebugMode = true, string? storagePath = null,
-        string? noBackupStoragePath = null)
+        string? noBackupStoragePath = null, IAppFileStore? fileStore = null)
     {
         // a storage of its own per app, since tests run many apps side by side
         var storageFolderPath = storagePath ?? Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7());
@@ -47,6 +48,7 @@ public class TestAppHelper(CancellationToken testCt) : TestHelper(testCt)
                          throw new InvalidOperationException("The library's assembly has no version."),
             StoragePath = storageFolderPath,
             NoBackupStoragePath = noBackupStoragePath ?? storageFolderPath,
+            FileStore = fileStore ?? new FileSystemFileStore(),
             PackagedAssetProvider = AssetProvider
         };
 

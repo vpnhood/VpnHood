@@ -1,9 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>	<!-- app extension, not a NuGet package -->
-    <TargetFramework>net11.0-ios</TargetFramework>
-    <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
-    <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
+    <!-- the app's platforms (Connect.Ios.Apple): iOS, and the Apple TV in a build that asks -->
+    <TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <!-- The bundle id and the App Group come from the app's identity (../Directory.Build.props). -->
@@ -26,6 +25,23 @@
     <MtouchExtraArgs>$(MtouchExtraArgs) --setenv=MONO_GC_PARAMS=soft-heap-limit=8m,nursery-size=2m</MtouchExtraArgs>
   </PropertyGroup>
 
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+    <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
+    <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!-- The Apple TV, as in the app (Connect.Ios.Apple's csproj): the first tvOS with Network Extension, and
+       tvOS's own libsqlite3 for the split filters. The heap cap above is iOS's until an Apple TV's own
+       limit is measured. -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos'">
+    <RuntimeIdentifier>tvos-arm64</RuntimeIdentifier>
+    <SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>
+    <MtouchExtraArgs>$(MtouchExtraArgs) --gcc_flags=-lsqlite3</MtouchExtraArgs>
+  </PropertyGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos'">
+    <ReferenceNativeSymbol Include="sqlite3_enable_load_extension" SymbolType="Function" SymbolMode="Ignore" />
+  </ItemGroup>
+
   <!-- App Store (manual) signing for the Network Extension. The App Store publish (Publish-IosApp.ps1)
        turns AutomaticProvisioning off and passes the *app* profile via a global /p:CodesignProvision;
        that global would otherwise leak onto this .appex and fail codesign (its App ID is the
@@ -43,9 +59,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The iOS Network Extension implementation (abstract IosVpnService) lives in the core Device.iOS
-         project and transitively references the VpnServiceHost + iOSTun adapter. This project only adds
-         the thin [Register("PacketTunnelProvider")] subclass that roots the core assembly. -->
+    <!-- The Network Extension implementation (abstract IosVpnService, on iOS and tvOS) lives in
+         VpnServices.Host.Ios, which references the VpnServiceHost and the iOS TUN adapter. This project
+         only adds the thin [Register("PacketTunnelProvider")] subclass that roots that assembly. -->
     <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.Ios\VpnHood.Core.Client.VpnServices.Host.Ios.csproj" />
   </ItemGroup>
 

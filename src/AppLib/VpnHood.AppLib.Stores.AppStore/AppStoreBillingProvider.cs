@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Runtime.Versioning;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Stores.AppStore.Exceptions;
 using VpnHood.AppLib.Stores.AppStore.Native;
@@ -28,9 +29,11 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
 
     // StoreKit presents Apple's own sheet inside the app, so nothing here opens a URL and the user
     // never leaves. Available since iOS 15, which is this project's minimum — no fallback path, and
-    // no store address anywhere in the codebase.
-    public bool IsSubscriptionManagementSupported => true;
+    // no store address anywhere in the codebase. tvOS has no such sheet: a TV's subscriptions are
+    // managed in its Settings or from another of the person's devices.
+    public bool IsSubscriptionManagementSupported => !OperatingSystem.IsTvOS();
 
+    [UnsupportedOSPlatform("tvos")]
     public Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // Apple's sheet shows over the window

@@ -1,6 +1,6 @@
 namespace VpnHood.App.Connect.Ios.Apple;
 
-// The iOS head's entry point. UIKit's Main creates the UIApplication and an AppDelegate as its
+// The head's entry point, on iOS and the Apple TV. UIKit's Main creates the UIApplication and an AppDelegate as its
 // delegate, which starts the Avalonia UI in this process; it then runs the app's loop and never returns.
 internal static class App
 {

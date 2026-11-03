@@ -2,9 +2,9 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
     <OutputType>Exe</OutputType>
-    <TargetFramework>net11.0-ios</TargetFramework>
-    <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
-    <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
+    <!-- iOS, and the Apple TV beside it in a build that asks (-p:VhAppleTv=true): one app on both, the same
+         bundle id, App Group and extension id, so one App Store record, its subscriptions included. -->
+    <TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
     <!-- The project is named for its channel (the App Store); the bundle's executable is the app's
@@ -18,6 +18,32 @@
     <CodesignKey>Apple Development</CodesignKey>
 
   </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+    <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
+    <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!-- The Apple TV: its own manifest; the first tvOS with Network Extension; and the split filters' SQLite
+       (VpnHood.Core.Filtering.Sqlite), whose package ships no tvOS build of the library, answered by tvOS's
+       own libsqlite3 - all but the one call it leaves out, which the filters never make, so the linker is
+       asked for no such symbol. -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos'">
+    <RuntimeIdentifier>tvos-arm64</RuntimeIdentifier>
+    <SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>
+    <AppBundleManifest>Info.tvOS.plist</AppBundleManifest>
+    <MtouchExtraArgs>$(MtouchExtraArgs) --gcc_flags=-lsqlite3</MtouchExtraArgs>
+  </PropertyGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos'">
+    <ReferenceNativeSymbol Include="sqlite3_enable_load_extension" SymbolType="Function" SymbolMode="Ignore" />
+  </ItemGroup>
+
+  <!-- The Apple libraries target tvOS only for a build that asks (VhAppleTargetFrameworks): said before the
+       package assets are read, which would otherwise fail first, naming no flag. -->
+  <Target Name="VhRequireAppleTv" BeforeTargets="Restore;_GenerateRestoreGraph;ResolvePackageAssets"
+          Condition="'$(VhAppleTv)' != 'true' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos'">
+    <Error Text="Build the Apple TV target with -p:VhAppleTv=true: without it the Apple libraries have no tvOS build to reference." />
+  </Target>
 
 
   <!-- Apple's privacy manifest. MUST sit at the ROOT of the .app bundle for App Store Connect's scanner
@@ -55,7 +81,7 @@
     <ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Ios\VpnHood.AppUi.Hosting.Avalonia.Ios.csproj" />
     <!-- The UI itself: the pages, the controls, the themes. -->
     <ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Presentation.Classic.Avalonia\VpnHood.AppUi.Presentation.Classic.Avalonia.csproj" />
-    <!-- App Store updates and reviews (AppStoreAppUpdaterProvider / AppStoreInAppUserReviewProvider). -->
+    <!-- App Store updates and, on iOS, reviews (AppStoreAppUpdaterProvider / AppStoreInAppUserReviewProvider). -->
     <ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.AppStore.Core\VpnHood.AppLib.Stores.AppStore.Core.csproj" />
     <!-- StoreKit 2 billing + Sign in with Apple (AppStoreBillingProvider / AppleAuthenticationProvider).
          The Swift facade + binding come from the VpnHood.AppLib.Stores.AppStore.Native NuGet it
@@ -72,7 +98,8 @@
          the app's global /p:CodesignProvision (the App Store publish passes the *app* profile) when
          building this reference, so the .appex resolves its OWN App Store profile from its csproj
          instead of being signed with the app profile (App-ID mismatch -> codesign failure). Built and
-         bundled, never compiled against: the app sees nothing of the VPN service's side. -->
+         bundled, never compiled against: the app sees nothing of the VPN service's side. It targets the
+         app's platforms, so each target bundles its own platform's build. -->
     <ProjectReference Include="..\Connect.Ios.Extension\VpnHood.App.Connect.Ios.Extension.csproj">
       <IsAppExtension>true</IsAppExtension>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>

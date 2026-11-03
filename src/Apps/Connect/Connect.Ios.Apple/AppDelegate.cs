@@ -16,8 +16,8 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Ios.Apple;
 
-// The Avalonia UI's application delegate: it starts the app from the params below as launching
-// finishes, then the UI.
+// The Avalonia UI's application delegate, on iOS and the Apple TV: it starts the app from the params below
+// as launching finishes, then the UI, which takes its TV layout on a TV (IosDevice.IsTv).
 [Register("AppDelegate")]
 public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
 {
@@ -61,9 +61,6 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
             TermsOfUse = options.Links.TermsOfUse ??
                          new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")
         };
-        // Native in-app rating dialog; the product lets the server recommend a review (parity with
-        // Connect.Android.Google's Google Play review wiring).
-        options.UserReviewProvider = new AppStoreInAppUserReviewProvider();
         // The premium tier stays as the product builds it, with neither a code box nor a web-purchase
         // link: App Review 3.1.1 forbids unlocking with a license key — a premium code is one by
         // Apple's reading — and 3.1.3 forbids steering a buyer to an outside shop, whatever an
@@ -73,6 +70,13 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         // absent from the embedded appsettings: the app then runs sign-in-less (fail-soft, the
         // same contract as Connect.Android.Google).
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
+#if TVOS
+        // StoreKit has no in-app rating prompt on tvOS, and a TV is never a Mac.
+        options.Transport = ClientTransportOptions.ForCurrentPlatform();
+#else
+        // Native in-app rating dialog; the product lets the server recommend a review (parity with
+        // Connect.Android.Google's Google Play review wiring).
+        options.UserReviewProvider = new AppStoreInAppUserReviewProvider();
         // State only the exception ForCurrentPlatform cannot see: "Designed for iPad" on Apple
         // Silicon runs the extension without the iOS jetsam cap, yet reports IsIOS() with no
         // Mac Catalyst marker. Only Foundation can tell it from a real device; everything else
@@ -80,6 +84,7 @@ public class AppDelegate : IosAvaloniaAppDelegate<ClassicAvaloniaApp>
         options.Transport = NSProcessInfo.ProcessInfo.IsiOSApplicationOnMac
             ? ClientTransportOptions.NormalMemory
             : ClientTransportOptions.ForCurrentPlatform();
+#endif
         // Log level: Information in production. To investigate, add the "/log:debug" debug command in
         // the UI (Debug Data 1) — the iOS diagnostics gates are computed from VhLogger.MinLogLevel, so
         // below-Information logging auto-enables them in the extension: vpn-ext.log carries the TcpStack

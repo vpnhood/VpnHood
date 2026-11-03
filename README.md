@@ -67,6 +67,7 @@ VpnHood underwent a comprehensive security audit by the Open Tech Fund. Read the
 ## FAQ & Documents
 
 * [Publish your own app](docs/publish-your-app/README.md)
+* [Architecture](docs/client-architecture.md): the UI, the app and the VPN engine, and the two contracts that let you replace any of them
 * [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work)
 * [Can a network provider block VpnHood?](https://github.com/vpnhood/VpnHood/wiki/Can-a-network-provider-block-VpnHood)
 * [Changelog](https://github.com/vpnhood/VpnHood/blob/develop/CHANGELOG.md)

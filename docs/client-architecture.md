@@ -1,10 +1,113 @@
-# Client architecture — the app and its VPN service
+# VpnHood Client Architecture
 
-Every VpnHood client is two halves that talk over a channel: **the app**, and **the VPN service**,
-which holds the tunnel. On every platform they run in separate processes, except in a developer's run.
-Knowing which half a type or a project belongs to answers most "where does this go" questions.
+A VpnHood client is a head - the app you publish - over three layers: the user interface, the app's
+logic and the VPN engine, which meet at two contracts. Each layer can be replaced on its own: a
+contract is all the layer beside it relies on.
+
+## The layers and their contracts
+
+```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
+flowchart TB
+    HEAD["<b>Head</b> · the app you publish<br/>its brand, its store, its platform"]
+    UI["<b>AppUi</b> · the user interface<br/>our Avalonia UI, or yours"]
+    APP["<b>AppLib</b> · the app's logic<br/>settings, profiles, accounts, billing"]
+    CORE["<b>Core</b> · the VPN service and its engine<br/>ours, or yours that keeps to contract ②"]
+    NET["<b>Net</b> · networking, no VPN<br/>packets, TCP stack, QUIC, adapters"]
+
+    HEAD --> UI
+    UI <-->|① app API| APP
+    APP <-->|② VPN service contract| CORE
+    CORE --> NET
+
+    classDef head fill:#eceff1,stroke:#546e7a,color:#000
+    classDef appUi fill:#e3f2fd,stroke:#1e88e5,color:#000
+    classDef appLib fill:#e8f5e9,stroke:#43a047,color:#000
+    classDef core fill:#fff3e0,stroke:#fb8c00,color:#000
+    classDef net fill:#f3e5f5,stroke:#8e24aa,color:#000
+    class HEAD head
+    class UI appUi
+    class APP appLib
+    class CORE core
+    class NET net
+```
+
+1. **The head** is the app you publish, one for each platform and store: a thin shell that names the
+   app and its store and hands them to its UI's host, which starts the app's logic, then the UI. Where
+   the VPN service runs apart, the head carries it too: an iOS app bundles its Network Extension, a
+   desktop app its VPN host. CLIENT and CONNECT are our heads; a fork writes its own
+   ([what a head is made of](source-layout.md#what-a-head-is-made-of)).
+2. **① The app API** is everything a UI needs from the app: six interfaces in `VpnHood.AppLib.Api` -
+   the app, profiles, account, billing, intents and proxies. A .NET UI holds them as `VpnHoodApi`: the
+   app's own controllers in its process (`VpnHoodApp.Api`), or the same calls over HTTP
+   (`VpnHoodApiHttpFactory`), as the page a paired phone opens makes them. A UI in any other language
+   makes those calls as HTTP and JSON to the app's web host.
+3. **② The VPN service contract** is everything between the app and the engine: files in a folder both
+   processes reach, and a few JSON requests (below). A .NET app speaks it through Core's manager and
+   device (`Core.Client.VpnServices.Manager`, `Core.Client.Devices.<OS>`), which start the VPN service
+   and carry the requests; an app in another language speaks it itself. The two sides share nothing
+   else, not even memory in one process.
+
+## Use any part
+
+| To build | On our | Through |
+| --- | --- | --- |
+| your own branded app | AppUi, AppLib and Core | a head of your own - see [publish-your-app/](publish-your-app/README.md) |
+| your own UI, in any framework or language | AppLib and Core | ① the app API |
+| your own app in .NET, without AppLib | Core | the manager and the device: `Core.Client.VpnServices.Manager` and `Core.Client.Devices.<OS>` |
+| your own app in another framework or language - Swift, Kotlin, C++ | Core's VPN service | ② the VPN service contract, spoken directly: our .NET device libraries are out of its reach, but the contract is plain files and JSON |
+| your own VPN engine - in C++, say - under our app | AppLib and AppUi | ② the same contract from the other side: read the options, answer the requests, write the status, inside the OS's VPN component that the device starts |
+| networking for any .NET app | Net | its packages, which know nothing of a VPN |
+
+## ② The VPN service contract
+
+The VPN service's config folder (`IDevice.VpnServiceConfigFolder`, which both processes reach - an App
+Group's on iOS) holds the files below, and the channel carries one kind of message. That is the whole
+contract; its C# types are in `VpnHood.Core.Client.VpnServices.Abstractions`, and the rules below keep
+it stable.
+
+1. **The options**, `vpn.config`: JSON (`VpnServiceOptions`) saying what to connect to and how - the
+   access key, the transport, the proxies. The app writes it at each connect and at each change of its
+   settings; the VPN service reads it at each start, including one the OS makes on its own.
+2. **The split-tunnel rules**: SQLite databases the app publishes in folders beside the options, each
+   folder with a manifest naming its databases (`SplitDbManifest`), which the VPN service reads again at
+   each reconfigure.
+3. **The status**, `vpn.status`: JSON (`ConnectionInfo`) that the VPN service writes as its state
+   changes, and the app reads.
+4. **The log**, `vpn.log`: the VPN service's own.
+5. **A request** is two values, each a 4-byte little-endian length followed by UTF-8 JSON: the
+   request's type name (`ApiDisconnectRequest`, `ApiReconfigureRequest`, `ApiGetConnectionInfoRequest`
+   and the ad's), then its body. The answer is one JSON `ApiResponse`: its result, or its error.
+
+| Platform | The channel the requests travel |
+| --- | --- |
+| Windows (WinTun), Linux | TCP on loopback |
+| Android | Binder transactions with the VPN service |
+| iOS, tvOS | the Network Extension's provider messages (`NETunnelProviderSession`) |
+| Windows, Microsoft Store | the package's app service |
+
+### Keeping to the contract
+
+Every AppLib relies on the contract as it is published, so an engine that changes it breaks every app
+built on it. The contract is VpnHood's, and three rules keep it stable:
+
+1. **An engine keeps to the contract as it is.** It adds no request, field or file of its own. What it
+   needs and the contract lacks is a change to the contract itself, asked for in VpnHood.
+2. **The contract only grows.** A release may add a request, a field or a file, but never renames or
+   removes one, and never changes what one means.
+3. **Each side ignores what it does not know.** It skips a field it does not know, and answers a
+   request it does not know with an error, never with silence.
 
 ## The two halves
+
+Every VpnHood client runs as two halves that talk over that channel: **the app** (AppUi and AppLib, with
+Core's manager and device), and **the VPN service**, which holds the tunnel. On every platform they run
+in separate processes, except in a developer's run. Knowing which half a type or a project belongs to
+answers most "where does this go" questions.
 
 | | The app | The VPN service |
 | --- | --- | --- |

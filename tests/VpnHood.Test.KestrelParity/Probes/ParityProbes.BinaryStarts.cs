@@ -16,7 +16,7 @@ internal static partial class ParityProbes
     // what other protocols send first: a TLS record, binary probes such as RDP's and SMB's, and HTTP/2's preface.
     // Kestrel refuses a request line at once once it holds a zero byte, before its line end; other bytes wait
     private static IReadOnlyList<Probe> BinaryStarts() => [
-        .. Enumerable.Range(2, 9).SelectMany(n => Both($"record-prefix-{n}", Record[..n])),
+        .. Enumerable.Range(2, 9).SelectMany(n => Both($"record-prefix-{n}", Record[..n])).ToArray(),
         .. Both("record-tls12", "\u0016\u0003\u0003" + Record[3..]),
         .. Both("record-ssl3", "\u0016\u0003\u0000" + Record[3..]),
         .. Both("record-version-39", "\u0016\u0003\u0009" + Record[3..]),

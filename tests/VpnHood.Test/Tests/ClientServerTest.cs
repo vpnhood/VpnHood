@@ -797,8 +797,11 @@ public class ClientServerTest : TestBase
         _ = httpClient.GetStringAsync($"https://{MockEps.HttpV4EndPointInvalid.Address}:4443", TestCt);
         _ = httpClient.GetStringAsync($"https://{MockEps.HttpV4EndPointInvalid.Address}:4445", TestCt);
 
-        await Task.Delay(500, TestCt);
         var session = server.SessionManager.GetSessionById(client.SessionId);
+        await AssertEqualsWait(fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount, () => session?.TcpConnectWaitCount);
+
+        // reaching the limit proves nothing: the other two must not take it past
+        await Task.Delay(500, TestCt);
         Assert.AreEqual(fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount, session?.TcpConnectWaitCount);
     }
 

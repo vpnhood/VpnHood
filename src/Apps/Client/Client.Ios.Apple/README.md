@@ -34,4 +34,28 @@ xcrun simctl launch <udid> com.vpnhood.client.ios
 
 A simulator build is signed ad hoc (`CodesignKey=-`): it needs no provisioning profile. The
 simulator runs no Network Extension, so Connect ends with `NEVPNErrorDomain Code=5 "IPC failed"`.
-A device build needs tvOS provisioning profiles for both bundle ids, which do not exist yet.
+
+### Build for an Apple TV
+
+1. Pair it with Xcode: on the Apple TV, Settings › Remotes and Devices › Remote App and Devices; on the Mac,
+   Xcode › Window › Devices and Simulators › the Apple TV › Pair, then the code the TV shows. An Apple TV 4K
+   has no USB port: it works over the network.
+2. Register it in the developer account and make **tvOS App Development** profiles for both bundle ids (the
+   app and `….networkextension`), from an Apple Development certificate, with the Apple TV in them. The App
+   IDs' capabilities are the iPhone's, so the profiles carry the packet tunnel and the App Group. Install
+   them on the Mac (`~/Library/Developer/Xcode/UserData/Provisioning Profiles/<UUID>.mobileprovision`).
+3. Build Release, as on the iPhone (Debug's AOT output does not fit the extension's memory), from a session
+   whose keychain is unlocked, then install with `devicectl`:
+
+```bash
+~/.dotnet/dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
+  -f net11.0-tvos -r tvos-arm64 -c Release -p:ArchiveOnBuild=false -p:_DeviceName=:v2:udid=<udid> \
+  -p:SolutionDir="$(pwd)/" -p:ValidateXcodeVersion=false
+xcrun devicectl device install app --device <udid> src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-tvos/tvos-arm64/VpnHoodClient.app
+xcrun devicectl device capture screenshot --device <udid> --destination tv.png
+```
+
+The first Connect asks to add the VPN configuration (Allow, with the remote). The extension's log is in the
+App Group's `Library/Caches/vpn-service-config/vpn.log` (`devicectl device copy from --domain-type
+appGroupDataContainer`), its memory probe in its own container's `Library/Caches/Documents/ext-mem.log`.
+The extension's memory ceiling on tvOS is the iPhone's, 50 MB (footprint plus `os_proc_available_memory`).

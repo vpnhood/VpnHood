@@ -37,4 +37,5 @@ xcrun simctl launch <udid> com.vpnhood.connect.ios
 
 A simulator build is signed ad hoc (`CodesignKey=-`): it needs no provisioning profile. The
 simulator runs no Network Extension, so a connect ends with `NEVPNErrorDomain Code=5 "IPC failed"`.
-A device build needs tvOS provisioning profiles for both bundle ids, which do not exist yet.
+A device build is CLIENT's (`../../Client/Client.Ios.Apple/README.md`, "Build for an Apple TV") with this
+project and `VpnHoodConnect.app`; its tvOS development profiles also carry Sign in with Apple.

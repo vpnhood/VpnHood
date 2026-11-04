@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-11-01.*
+*Effective: 2026-11-03.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to the official **VpnHood! CONNECT** app and to the VPN servers we operate. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -10,11 +10,11 @@ We never sell your data on any platform. In the App Store build, none of it reac
 
 ## What VpnHood! CONNECT Collects
 
-Except on iOS, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics, through Firebase on the Google Play build. It is linked to the Client ID described below and, on the Google Play build, to your device's advertising ID, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. While analytics is on, our VPN servers also report the usage of your connections to Google Analytics, linked to the same Client ID. The iOS build does not load Google Analytics or Firebase, and its connections are not reported.
+Except on Apple devices, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics, through Firebase on the Google Play build. It is linked to the Client ID described below and, on the Google Play build, to your device's advertising ID, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. While analytics is on, our VPN servers also report the usage of your connections to Google Analytics, linked to the same Client ID. The App Store build, for iPhone, iPad and Apple TV, does not load Google Analytics or Firebase, and its connections are not reported.
 
 Some data depends on **where you installed the app from**, because those builds contain different components:
 
-| | App&nbsp;Store (iOS) | Windows, Linux | Google&nbsp;Play (Android) | Our&nbsp;website (Android) |
+| | App&nbsp;Store (iPhone, iPad, Apple&nbsp;TV) | Windows, Linux | Google&nbsp;Play (Android) | Our&nbsp;website (Android) |
 | --- | --- | --- | --- | --- |
 | Pseudonymous analytics | no | yes | yes | yes |
 | Crash reports | no | no | yes | no |
@@ -28,13 +28,13 @@ The app identifies itself with a **Client ID**. It is never your device's serial
 What that underlying value is depends on your platform:
 
 - **Android** — derived from the Android ID, a value Android gives the app, so it **stays the same if you reinstall the app** and changes when the device is factory reset.
-- **iOS, Windows, and Linux** — a random value created inside the app when it first runs. On iOS, deleting and reinstalling the app produces a brand-new Client ID; on Windows and Linux it is kept with the app's data, so updating or reinstalling the app keeps it. A Windows installation updated from an earlier version keeps the Client ID it had, which was derived from your Windows user account.
+- **Apple devices, Windows, and Linux** — a random value created inside the app when it first runs. On Apple devices, deleting and reinstalling the app produces a brand-new Client ID; on Windows and Linux it is kept with the app's data, so updating or reinstalling the app keeps it. A Windows installation updated from an earlier version keeps the Client ID it had, which was derived from your Windows user account.
 
 The Client ID labels analytics on builds that support analytics and is sent to our VPN servers for session management, quotas, and abuse prevention.
 
 ### You can turn analytics off
 
-On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default, except in the European Economic Area, the United Kingdom and Switzerland, as your device's region setting or your connection tells: there it stays off until you agree, and the app asks you once, with a box you tick yourself. The Microsoft Store edition asks so everywhere. Turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches; what our VPN servers report stops from your next connection. Turning it off also keeps the ratings you give in the app out of the analytics; your last rating, without any text you added, still reaches our servers with your next connection, so the app stops asking for one (see [Log Data](#log-data-our-vpn-servers)). The iOS build has no analytics collection to turn on.
+On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default, except in the European Economic Area, the United Kingdom and Switzerland, as your device's region setting or your connection tells: there it stays off until you agree, and the app asks you once, with a box you tick yourself. The Microsoft Store edition asks so everywhere. Turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches; what our VPN servers report stops from your next connection. Turning it off also keeps the ratings you give in the app out of the analytics; your last rating, without any text you added, still reaches our servers with your next connection, so the app stops asking for one (see [Log Data](#log-data-our-vpn-servers)). The App Store build has no analytics collection to turn on.
 
 ### Technical information
 
@@ -72,7 +72,7 @@ In the European Economic Area, the United Kingdom and Switzerland, the app first
 
 You can use the app without an account. Signing in is only ever needed to buy or restore a subscription. Every build can sign in with an email address and a password on our account website, and the store builds also offer their platform's own sign-in:
 
-- **App Store build (iOS)** — **Sign in with Apple**. We receive your **email address**, which may be a private relay address that Apple generates for you (`…@privaterelay.appleid.com`) if you choose to hide your real one; a relay address works exactly as well for us. Payments are processed by **Apple**; we never see your card details.
+- **App Store build (iPhone, iPad and Apple TV)** — **Sign in with Apple**. We receive your **email address**, which may be a private relay address that Apple generates for you (`…@privaterelay.appleid.com`) if you choose to hide your real one; a relay address works exactly as well for us. Payments are processed by **Apple**; we never see your card details.
 - **Google Play build (Android)** — **Sign in with Google**. We receive your **email address and basic public profile information** from Google. Payments are processed by **Google Play**; we never see your card details.
 - **Windows, Linux, and our website's Android build** — the email address and password of your account on our website. The app lists the plans and you buy on our website, where payments are processed by our payment providers; we never see your card details.
 
@@ -102,7 +102,7 @@ Other network addresses in them are replaced by tokens that nobody, including us
 
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 
-Connection activity stays only in server log files; it never enters our database. Our database keeps the rest of what is listed at the start of this section, linked to your Client ID. We also count these records together to see how the service is used, on every platform, iOS included; that stays with us and is shared with no one.
+Connection activity stays only in server log files; it never enters our database. Our database keeps the rest of what is listed at the start of this section, linked to your Client ID. We also count these records together to see how the service is used, on every platform, Apple devices included; that stays with us and is shared with no one.
 
 ## Delete Your Account
 
@@ -167,7 +167,7 @@ record with us.
 
 These companies process data on our behalf or in their own right, and only for the purposes described above:
 
-- **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, non-iOS builds, and the advertising ID, Google Play build), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
+- **Google LLC** — Google Analytics, through Firebase on the Google Play build (pseudonymous analytics and ratings, builds other than the App Store's, and the advertising ID, Google Play build), Firebase Crashlytics (crash reports, Google Play build), Google Forms (feedback you choose to send), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
 - **Apple Inc.** — Sign in with Apple and App Store billing (optional accounts and purchases, App Store build)
 - **Hosting and payment providers** — infrastructure needed to run the VPN and account services, and payment processing for website purchases
 

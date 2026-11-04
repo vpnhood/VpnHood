@@ -1,17 +1,18 @@
 # VpnHood! CLIENT - Privacy Policy
 
-*Effective: 2026-11-01.*
+*Effective: 2026-11-03.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy.
 This policy applies only to the official **VpnHood! CLIENT** app.
 
-We never sell your data on any platform. On iOS, the app sends nothing about you to us or to any
-third party, except what it needs to connect: that goes only to the VPN server you choose and the
-addresses its access key names, as described under [VPN Servers Are Separate](#vpn-servers-are-separate).
+We never sell your data on any platform. On Apple devices - iPhone, iPad and Apple TV - the app
+sends nothing about you to us or to any third party, except what it needs to connect: that goes only
+to the VPN server you choose and the addresses its access key names, as described under
+[VPN Servers Are Separate](#vpn-servers-are-separate).
 
 ## Data We Collect
 
-Except on iOS, the app sends **pseudonymous usage and diagnostic data** to Google Analytics. The data
+Except on Apple devices, the app sends **pseudonymous usage and diagnostic data** to Google Analytics. The data
 is linked to a Client ID, not to your name or contact details. It may include:
 
 - the Client ID;
@@ -27,8 +28,8 @@ We do not send browsing history, websites visited, or traffic content to Google 
 The **Client ID** is a one-way hash that includes the app's identity. It is not a serial number,
 phone number, or advertising ID. On Android, it is derived from the Android ID, a value Android gives
 the app that changes when the device is factory reset, so it may remain the same after reinstalling
-the app. On iOS, Windows, and Linux, it is based on a random value the app creates when it first
-runs; on iOS, reinstalling the app produces a new Client ID, while Windows and Linux keep it with the
+the app. On Apple devices, Windows, and Linux, it is based on a random value the app creates when it first
+runs; on Apple devices, reinstalling the app produces a new Client ID, while Windows and Linux keep it with the
 app's data, so updating or reinstalling the app keeps it. A Windows installation updated
 from an earlier version keeps the Client ID it had, which was derived from your Windows user account.
 
@@ -36,8 +37,8 @@ Analytics is controlled by **Settings → Privacy → "Share anonymous usage dat
 stops analytics and is remembered for later launches. In the European Economic Area, the United
 Kingdom and Switzerland, as your device's region setting or your connection tells, analytics stays
 off until you agree: the app asks you once, with a box you tick yourself. The Microsoft Store
-edition asks so everywhere. The iOS build does not load Google Analytics or Firebase and does not
-send analytics or reports to Google.
+edition asks so everywhere. The builds for Apple devices do not load Google Analytics or Firebase
+and do not send analytics or reports to Google.
 
 ## Feedback and the App's Log
 
@@ -74,7 +75,7 @@ resolved and then only as long as reasonably needed for support, security, or a 
 
 ## Service Provider and International Transfers
 
-**Google LLC** processes analytics for us through Google Analytics on builds other than iOS, and the
+**Google LLC** processes analytics for us through Google Analytics on builds other than those for Apple devices, and the
 feedback you choose to send through Google Forms. We are based in the United States, and Google may process data in the United
 States and other countries. Where required, international transfers use a recognized safeguard, such
 as an adequacy decision or approved standard contractual clauses.

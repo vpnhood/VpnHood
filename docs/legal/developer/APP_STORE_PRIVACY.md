@@ -7,6 +7,10 @@ records where CONNECT differs. Written for forkers; companion to
 [APP_STORE_EXPORT_COMPLIANCE.md](APP_STORE_EXPORT_COMPLIANCE.md). Not legal advice; a fork makes
 its own declarations under its own name.
 
+**Apple TV:** the tvOS build is the same head's second target, under the same App Store record and
+so the same App Privacy panel, and its `AppDelegate` is the iPhone's: everything here holds for it,
+"iOS" meaning both.
+
 This guide covers the **Client model only**: an app the user feeds an **access key** — no
 sign-in, no account, no identity inside the app. Every "No" below leans on that. A **Connect-like
 app** — where the user may log in (Google Sign-In, email account) and which ships ad SDKs — breaks
